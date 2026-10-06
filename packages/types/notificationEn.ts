@@ -100,6 +100,16 @@ export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
     title: 'Monthly report approval revoked',
     body: `Approval for your ${formatReportMonthEn(payload.report_month)} monthly coaching report was revoked.`,
   }),
+  COACH_AVAILABILITY_REMINDER: (payload) =>
+    payload.kind === 'empty'
+      ? {
+          title: 'Add your availability',
+          body: 'You have no availability set, so students cannot send you matching requests.',
+        }
+      : {
+          title: 'Review your availability',
+          body: 'It has been 2 weeks since your last review. Please check your times are still right (daylight saving time can shift them).',
+        },
 };
 
 /** Formats payload.report_month ("YYYY-MM-DD" etc.) as "Month YYYY" for notification body text */

@@ -9,6 +9,8 @@ import {
   GetCoachAvailabilityResult,
   AddCoachAvailabilityResult,
   DeleteCoachAvailabilityResult,
+  GetAvailabilityConfirmedAtResult,
+  ConfirmAvailabilityResult,
 } from '@gabby/types/coachAvailability';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
@@ -80,6 +82,8 @@ export async function getCoachAvailabilityByUserIdCore(coachId: string): Promise
 
 /**
  * ログイン中コーチ自身の空き時間を1件追加する（ポータル共通）
+ * 曜日・時刻はUTC（画面側でコーチの現地時刻から換算する）。日の終わりは "24:00"。
+ * 追加・削除のたびにDBのトリガーで「確認済み」（availability_confirmed_at）になる。
  */
 export async function addAvailabilityCore(values: CoachAvailabilityFormValues): Promise<AddCoachAvailabilityResult> {
   const ctx = await getLogContext();
@@ -146,6 +150,62 @@ export async function deleteAvailabilityCore(availabilityId: string): Promise<De
     return { success: true };
   } catch (err) {
     logger.error('coach_availability:delete_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中コーチ自身の、空き時間を最後に確認した日時を取得する（ポータル共通）
+ */
+export async function getMyAvailabilityConfirmedAtCore(): Promise<GetAvailabilityConfirmedAtResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_m_coach_profile')
+      .select('availability_confirmed_at')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      logger.error('coach_availability:get_confirmed_at_failed', error.message, { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    return { success: true, confirmedAt: data?.availability_confirmed_at ?? null };
+  } catch (err) {
+    logger.error('coach_availability:get_confirmed_at_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中コーチ自身の空き時間を「変更なしで確認」する（ポータル共通）。
+ * 確認日時を更新し、見直しの通知（COACH_AVAILABILITY_REMINDER）を既読にする（confirm_my_coach_availability RPC）。
+ */
+export async function confirmMyAvailabilityCore(): Promise<ConfirmAvailabilityResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase.rpc('confirm_my_coach_availability');
+
+    if (error || !data) {
+      logger.error('coach_availability:confirm_failed', error?.message ?? 'No timestamp returned', { ...ctx, userId: user.id });
+      return { success: false, errorCode: 'db_update_failed' };
+    }
+
+    logger.info('coach_availability:confirm_success', 'Coach availability confirmed without changes', { ...ctx, userId: user.id });
+    return { success: true, confirmedAt: data as string };
+  } catch (err) {
+    logger.error('coach_availability:confirm_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

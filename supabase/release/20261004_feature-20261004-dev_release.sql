@@ -2314,3 +2314,1019 @@ REVOKE EXECUTE ON FUNCTION public.reject_slot_proposal(uuid, text) FROM PUBLIC, 
 GRANT EXECUTE ON FUNCTION public.reject_slot_proposal(uuid, text) TO authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】専属コーチのマッチングの時刻を生徒側で固定する（空き時間のUTC化・申請時の生徒のタイムゾーン）
+-- 追加日: 2026-10-06
+--
+-- 【内容】
+--   コーチ側の夏時間の切り替えで、生徒（日本時間）から見たセッションの時刻が1時間ずれていた問題の対応。
+--   1. com_m_lesson_schedule.coach_timezone を schedule_timezone に名前変更（曜日・時刻を解釈するタイムゾーン。意味は同じ）
+--   2. com_t_matching_request.requested_timezone を追加（申請時の生徒のタイムゾーン。既存行は従来の基準＝コーチのタイムゾーン）
+--   3. com_m_coach_availability を UTC 基準に変換（適用時点のコーチの時差で変換。UTCで日をまたぐ行は2行に分ける。
+--      2回目以降の実行は何もしない）
+--   4. fn_weekly_occurrences（毎週の枠の実際の日時の一覧）を新規作成
+--   5. check_coach_schedule_conflict を実際の日時で比べる形に変更（シグネチャ変更。旧シグネチャは削除）
+--   6. get_coaches_unavailable_slots の戻り値に基準のタイムゾーンを追加（旧定義は削除）
+--   7. fn_generate_sessions_for_schedule: schedule_timezone で各回を作る・BLOCK 例外を実際の日時で比べる
+--   8. fn_commit_matching_schedule: 基準のタイムゾーンを受け取る（シグネチャ変更）・ロックをコーチ単位に
+--   9. approve_matching_request / admin_match_student_with_coach: 申請時の生徒のタイムゾーンで成立させる
+--      （アドミンの直接マッチングは、入力の曜日・時刻を生徒の時刻として扱う）
+--   - 既存の定期スケジュール・セッションは変換しない（コーチのタイムゾーンのまま従来どおり動く。dev/staging/本番とも
+--     テストデータのみのため、コーチ側の夏時間の切り替え後に生徒側の時刻が1時間ずれることは許容する）。
+--
+-- 対応ファイル: DDL/table/com_m_lesson_schedule.sql, DDL/table/com_t_matching_request.sql,
+--   DDL/table/com_m_coach_availability.sql, DDL/function/fn_weekly_occurrences.sql,
+--   DDL/function/check_coach_schedule_conflict.sql, DDL/function/get_coaches_unavailable_slots.sql,
+--   DDL/function/fn_generate_sessions_for_schedule.sql, DDL/function/fn_commit_matching_schedule.sql,
+--   DDL/function/approve_matching_request.sql, DDL/function/admin_match_student_with_coach.sql
+-- 【注意】列名の変更・空き時間の変換・関数のシグネチャ変更があり、旧アプリとは互換性が無い。
+--   適用とアプリ（admin・student・coach）のデプロイを続けて行うこと（間はマッチング・空き時間の画面が正しく動かない）。
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- 追加パッチ: 曜日・時刻の基準を生徒の申請時のタイムゾーンに変更 (2026-10-06)
+-- 既存環境に対しては、このブロックのみを実行してください（何度実行しても安全）。
+---------------------------------------------
+-- 【背景】
+-- day_of_week/start_time/end_time をコーチの現地時刻で持っていたため、コーチ側の夏時間の
+-- 切り替えで、生徒（日本時間）から見たセッションの時刻が1時間ずれていた。
+-- 以後は、成立元の申請（com_t_matching_request.requested_timezone = 生徒の申請時のタイムゾーン）の
+-- 曜日・時刻をそのまま引き継ぎ、セッションもそのタイムゾーンで作る（夏時間をまたいでも生徒側の時刻は変わらない）。
+-- 列は「曜日・時刻を解釈するタイムゾーン」のまま意味を変えないため、名前だけ schedule_timezone に変える。
+-- 既存の行（コーチのタイムゾーンで成立した分）は変換しない（そのタイムゾーンで解釈すれば従来どおり動く）。
+-- start_date/end_date も schedule_timezone での日付として扱う。
+---------------------------------------------
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'com_m_lesson_schedule' AND column_name = 'coach_timezone'
+    ) THEN
+        ALTER TABLE public.com_m_lesson_schedule RENAME COLUMN coach_timezone TO schedule_timezone;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'com_m_lesson_schedule_coach_timezone_fkey') THEN
+        ALTER TABLE public.com_m_lesson_schedule
+            RENAME CONSTRAINT com_m_lesson_schedule_coach_timezone_fkey TO com_m_lesson_schedule_schedule_timezone_fkey;
+    END IF;
+END $$;
+
+COMMENT ON COLUMN public.com_m_lesson_schedule.day_of_week IS '曜日 0:日 ... 6:土（schedule_timezone基準）';
+COMMENT ON COLUMN public.com_m_lesson_schedule.start_time IS 'レッスン開始時刻（schedule_timezoneの現地時刻）';
+COMMENT ON COLUMN public.com_m_lesson_schedule.end_time IS 'レッスン終了時刻（schedule_timezoneの現地時刻、通常25分）';
+COMMENT ON COLUMN public.com_m_lesson_schedule.schedule_timezone IS 'day_of_week/start_time/end_time/start_date/end_dateの解釈に使うIANAタイムゾーン。2026-10-06以降の成立分は生徒の申請時のタイムゾーン（com_t_matching_request.requested_timezone）、それ以前の成立分はコーチの承認時のタイムゾーン。以後のプロフィールのtimezone変更の影響を受けない';
+COMMENT ON COLUMN public.com_m_lesson_schedule.start_date IS 'Session自動生成の起点日（schedule_timezoneの日付）';
+COMMENT ON COLUMN public.com_m_lesson_schedule.end_date IS 'Session自動生成の終点日（通常はライセンス終了日、schedule_timezoneの日付）';
+
+---------------------------------------------
+-- 追加パッチ: 申請時の生徒のタイムゾーン (2026-10-06)
+-- 既存環境に対しては、このブロックのみを実行してください（何度実行しても安全）。
+-- 前提: table/com_m_lesson_schedule.sql の schedule_timezone への列名変更パッチが適用済みであること。
+---------------------------------------------
+-- 【背景】
+-- requested_day_of_week/requested_start_time/requested_end_time をコーチの現地時刻で持っていたため、
+-- コーチ側の夏時間の切り替えで、生徒から見たセッションの時刻が1時間ずれていた。
+-- 以後は、生徒が選んだ曜日・時刻を生徒の現地時刻のまま持ち、そのタイムゾーン（申請時の
+-- com_m_user.timezone のスナップショット）を requested_timezone に保存する。承認時は
+-- com_m_lesson_schedule.schedule_timezone に引き継ぎ、契約期間中の全回を生徒側で同じ時刻にする
+-- （例: 20:00 に申請したら、夏時間の切り替えの前後どちらの回も 20:00）。
+-- アドミンの直接マッチング（admin_match_student_with_coach）も、入力された曜日・時刻を生徒の時刻として扱う。
+--
+-- 【既存行】
+-- 従来の解釈基準（コーチのタイムゾーン）を入れる。承認済みは成立した定期スケジュールの値、
+-- それ以外は宛先コーチの現在のタイムゾーン。
+---------------------------------------------
+ALTER TABLE public.com_t_matching_request
+  ADD COLUMN IF NOT EXISTS requested_timezone text REFERENCES public.com_m_timezone(timezone);
+
+UPDATE public.com_t_matching_request r
+SET requested_timezone = s.schedule_timezone
+FROM public.com_m_lesson_schedule s
+WHERE s.source_request_id = r.request_id AND r.requested_timezone IS NULL;
+
+UPDATE public.com_t_matching_request r
+SET requested_timezone = COALESCE(u.timezone, 'Asia/Tokyo')
+FROM public.com_m_user u
+WHERE u.id = r.coach_id AND r.requested_timezone IS NULL;
+
+ALTER TABLE public.com_t_matching_request ALTER COLUMN requested_timezone SET NOT NULL;
+
+COMMENT ON COLUMN public.com_t_matching_request.requested_day_of_week IS '希望曜日 0:日 ... 6:土（requested_timezone基準）';
+COMMENT ON COLUMN public.com_t_matching_request.requested_start_time IS '希望レッスン開始時刻（requested_timezoneの現地時刻）';
+COMMENT ON COLUMN public.com_t_matching_request.requested_end_time IS '希望レッスン終了時刻（requested_timezoneの現地時刻、通常25分）';
+COMMENT ON COLUMN public.com_t_matching_request.requested_timezone IS '希望曜日・時刻の解釈に使うIANAタイムゾーン（申請時の生徒のcom_m_user.timezone。2026-10-06より前の行はコーチのタイムゾーン）。承認時にcom_m_lesson_schedule.schedule_timezoneへ引き継ぐ';
+
+---------------------------------------------
+-- 追加パッチ: UTC基準への変更 (2026-10-06)
+-- 既存環境に対しては、このブロックのみを実行してください（2回目以降の実行は何もしない）。
+---------------------------------------------
+-- 【背景】
+-- コーチの現地時刻で持つと、コーチ側の夏時間の切り替えで、生徒（日本時間）から見た枠・
+-- セッションの時刻が1時間ずれていた。空き時間をUTCで持ち、生徒から見た枠の時刻を固定する
+-- （申請・定期スケジュールは生徒の申請時のタイムゾーンで持つ。table/com_t_matching_request.sql 参照）。
+--
+-- 【既存行の変換】
+-- 各行を、適用した時点のコーチのタイムゾーン（com_m_user.timezone）の時差でUTCへ変換する
+-- （適用直後のコーチの画面には、変換前と同じ現地時刻で表示される）。UTCで日をまたぐ行は
+-- 2行に分ける（後半を新しい行として追加する）。論理削除済みの行も同じ基準にそろえる。
+-- 変換済みかどうかはテーブルのコメント（'UTC基準'）で判定し、2回目以降は何もしない。
+---------------------------------------------
+DO $$
+BEGIN
+    IF obj_description('public.com_m_coach_availability'::regclass, 'pg_class') LIKE '%UTC基準%' THEN
+        RAISE NOTICE 'com_m_coach_availability is already UTC based. skipped.';
+        RETURN;
+    END IF;
+
+    CREATE TEMP TABLE tmp_availability_utc ON COMMIT DROP AS
+    WITH src AS (
+        SELECT
+            a.availability_id,
+            a.end_time - a.start_time AS duration,
+            -- 現地の今日以降で、最初にその曜日になる日（その日の時差で変換する）
+            ((NOW() AT TIME ZONE tz.name)::date
+                + ((a.day_of_week - EXTRACT(DOW FROM (NOW() AT TIME ZONE tz.name))::int + 7) % 7)
+                + a.start_time) AT TIME ZONE tz.name AS start_ts
+        FROM public.com_m_coach_availability a
+        JOIN public.com_m_user u ON u.id = a.coach_id
+        CROSS JOIN LATERAL (SELECT COALESCE(u.timezone, 'Asia/Tokyo') AS name) tz
+    )
+    SELECT
+        availability_id,
+        (start_ts AT TIME ZONE 'UTC') AS start_utc,
+        (start_ts AT TIME ZONE 'UTC') + duration AS end_utc
+    FROM src;
+
+    -- UTCで日をまたぐ行の後半（翌日の 00:00〜）を新しい行として追加する
+    INSERT INTO public.com_m_coach_availability (coach_id, day_of_week, start_time, end_time, delete_flg, insert_date, update_date)
+    SELECT a.coach_id, EXTRACT(DOW FROM t.end_utc)::smallint, '00:00:00'::time, t.end_utc::time, a.delete_flg, a.insert_date, NOW()
+    FROM tmp_availability_utc t
+    JOIN public.com_m_coach_availability a ON a.availability_id = t.availability_id
+    WHERE t.end_utc::date > t.start_utc::date
+      AND t.end_utc::time > '00:00:00'::time;
+
+    UPDATE public.com_m_coach_availability a
+    SET day_of_week = EXTRACT(DOW FROM t.start_utc)::smallint,
+        start_time = t.start_utc::time,
+        end_time = CASE WHEN t.end_utc::date > t.start_utc::date THEN '24:00:00'::time ELSE t.end_utc::time END,
+        update_date = NOW()
+    FROM tmp_availability_utc t
+    WHERE a.availability_id = t.availability_id;
+
+    COMMENT ON TABLE public.com_m_coach_availability IS 'コーチ空き時間マスタ（週次繰り返しのレッスン可能時間帯。UTC基準）';
+    COMMENT ON COLUMN public.com_m_coach_availability.day_of_week IS '曜日 0:日 1:月 2:火 3:水 4:木 5:金 6:土（UTC基準）';
+    COMMENT ON COLUMN public.com_m_coach_availability.start_time IS '対応可能開始時刻（UTC）';
+    COMMENT ON COLUMN public.com_m_coach_availability.end_time IS '対応可能終了時刻（UTC。日の終わりは24:00:00）';
+END $$;
+
+---------------------------------------------
+-- 毎週の枠の実際の日時の一覧 (2026-10-06 追加)
+---------------------------------------------
+-- 【背景】
+-- 定期スケジュール・マッチング申請の「毎週◯曜◯時」は、それぞれの基準のタイムゾーン
+-- （com_m_lesson_schedule.schedule_timezone / com_t_matching_request.requested_timezone）の現地時刻で持つ。
+-- 基準が生徒ごとに異なり、夏時間のある地域ではUTCでの曜日・時刻が期間の途中で変わるため、
+-- 「同じ曜日・時刻か」の比較では重なりを判定できない。本関数で期間内の各回の実際の日時（UTC）に
+-- 展開してから比べる（check_coach_schedule_conflict 参照）。
+--
+-- 【仕様】
+-- p_timezone の現地の日付で p_from〜p_to の範囲の各日のうち曜日が一致する日について、
+-- その日の p_start_time〜p_end_time を実際の日時に変換して返す。開始が p_from より前、
+-- または終了が p_to より後の回は含めない（セッションの作成 fn_generate_sessions_for_schedule と同じ変換）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_weekly_occurrences(
+    p_timezone text,
+    p_day_of_week smallint,
+    p_start_time time,
+    p_end_time time,
+    p_from timestamptz,
+    p_to timestamptz
+)
+RETURNS TABLE (start_ts timestamptz, end_ts timestamptz)
+LANGUAGE sql
+STABLE
+SET search_path = public
+AS $$
+    SELECT o.start_ts, o.end_ts
+    FROM generate_series(
+        (p_from AT TIME ZONE p_timezone)::date,
+        (p_to AT TIME ZONE p_timezone)::date,
+        interval '1 day'
+    ) AS d(day)
+    CROSS JOIN LATERAL (
+        SELECT (d.day::date + p_start_time) AT TIME ZONE p_timezone AS start_ts,
+               (d.day::date + p_end_time) AT TIME ZONE p_timezone AS end_ts
+    ) o
+    WHERE EXTRACT(DOW FROM d.day)::smallint = p_day_of_week
+      AND o.start_ts >= p_from
+      AND o.end_ts <= p_to;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_weekly_occurrences(text, smallint, time, time, timestamptz, timestamptz) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- コーチの定期スケジュール重複判定ヘルパー関数 (2026-09-03 追加)
+---------------------------------------------
+-- 【背景】
+-- マッチングリクエストの申請時(createMatchingRequestCore)・承認時(approve_matching_request)の
+-- 両方から共通で呼び出す、コーチの既存の稼働中スケジュール(com_m_lesson_schedule.status=1)との
+-- 重複判定。重なる回が1回でもあればtrueを返す。
+--
+-- com_m_lesson_scheduleはRLSで「本人(student_id/coach_id)またはadmin」しか閲覧できないため、
+-- 生徒が別の生徒とコーチの組み合わせの空き状況を判定するにはSECURITY DEFINERが必須。
+-- 戻り値はbooleanのみで行データそのものは返さないため、authenticated全体への公開で問題ない。
+--
+-- 【実際の日時での比較 (2026-10-06変更)】
+-- 申請・定期スケジュールの曜日・時刻は、それぞれの基準のタイムゾーン（生徒の申請時のタイムゾーン等）の
+-- 現地時刻で持つようになった。基準が行ごとに異なり、夏時間のある地域ではUTCでの曜日・時刻が期間の
+-- 途中で変わるため、曜日・時刻の一致ではなく、期間内の各回の実際の日時（fn_weekly_occurrences）が
+-- 重なるかで判定する。
+--   - 候補: p_timezone の現地時刻の毎週 p_day_of_week の p_start_time〜p_end_time（p_from〜p_to の範囲）
+--   - 既存: 稼働中の定期スケジュールの各回（schedule_timezone の start_date〜end_date の範囲）
+-- 旧シグネチャ(uuid, smallint, time, time, date, date)は削除する。
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.check_coach_schedule_conflict(uuid, smallint, time, time, date, date);
+
+CREATE OR REPLACE FUNCTION public.check_coach_schedule_conflict(
+    p_coach_id uuid,
+    p_timezone text,
+    p_day_of_week smallint,
+    p_start_time time,
+    p_end_time time,
+    p_from timestamptz,
+    p_to timestamptz
+)
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.com_m_lesson_schedule s
+    CROSS JOIN LATERAL public.fn_weekly_occurrences(
+        s.schedule_timezone, s.day_of_week, s.start_time, s.end_time,
+        GREATEST(s.start_date::timestamp AT TIME ZONE s.schedule_timezone, p_from),
+        LEAST((s.end_date + 1)::timestamp AT TIME ZONE s.schedule_timezone, p_to)
+    ) existing
+    JOIN public.fn_weekly_occurrences(
+        p_timezone, p_day_of_week, p_start_time, p_end_time, p_from, p_to
+    ) candidate
+      ON existing.start_ts < candidate.end_ts AND existing.end_ts > candidate.start_ts
+    WHERE s.coach_id = p_coach_id
+      AND s.status = 1
+      AND s.start_date::timestamp AT TIME ZONE s.schedule_timezone < p_to
+      AND (s.end_date + 1)::timestamp AT TIME ZONE s.schedule_timezone > p_from
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.check_coach_schedule_conflict(uuid, text, smallint, time, time, timestamptz, timestamptz) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.check_coach_schedule_conflict(uuid, text, smallint, time, time, timestamptz, timestamptz) TO authenticated;
+
+---------------------------------------------
+-- コーチの予約済み枠（曜日・時間帯）一括取得ヘルパー関数 (2026-09-03 追加)
+---------------------------------------------
+-- 【背景】
+-- 生徒向けマッチング申請カレンダー(RequestDialog)で、既に埋まっている曜日・時間帯を
+-- 選択できないよう事前にグレーアウト表示するために使う（旅行・ホテル予約サイトの
+-- 空室検索と同様のUXパターン）。あくまでUI側の事前ガイド（ソフトチェック）であり、
+-- 最終的な整合性はcheck_coach_schedule_conflict()による申請時・承認時のチェックで担保する。
+--
+-- com_m_lesson_schedule/com_t_matching_requestはいずれもRLSで本人・担当コーチ・adminしか
+-- 閲覧できないため、他の生徒の予約状況を横断的に見るにはSECURITY DEFINERが必須。
+-- 戻り値は曜日・時間帯のみで、どの生徒が確保しているか（student_id等）は一切含めない。
+--
+-- 【対象】
+-- 1. com_m_lesson_schedule (status=1: 稼働中) ... 承認済みの確定予約
+-- 2. com_t_matching_request (status=1: pending) ... 承認待ちの申請
+--    （承認待ち同士が重複しても申請時・承認時のハードチェックでは弾かないが、円滑な
+--    マッチングのため、カレンダー上は先に申請された枠として選択不可にしておく）
+--
+-- 契約期間(start_date/end_date)による絞り込みは行わない（コーチのその曜日・時間帯が
+-- 現に埋まっているかどうかの単純な表示用途のため。日付範囲まで含めた厳密な判定は
+-- check_coach_schedule_conflict()側の役割とする）。
+--
+-- 【タイムゾーン (2026-10-06変更)】
+-- 曜日・時間帯は、行ごとの基準のタイムゾーン（定期スケジュールは schedule_timezone、申請は requested_timezone）の
+-- 現地時刻で返す。呼び出し側は直近の回の日時に換算して、UTCの空き時間（com_m_coach_availability）と比べる。
+-- 戻り値の列が増えるため、旧定義を削除してから作り直す。
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.get_coaches_unavailable_slots(uuid[]);
+
+CREATE OR REPLACE FUNCTION public.get_coaches_unavailable_slots(p_coach_ids uuid[])
+RETURNS TABLE (coach_id uuid, timezone text, day_of_week smallint, start_time time, end_time time) AS $$
+  SELECT s.coach_id, s.schedule_timezone, s.day_of_week, s.start_time, s.end_time
+  FROM public.com_m_lesson_schedule s
+  WHERE s.coach_id = ANY(p_coach_ids) AND s.status = 1
+  UNION
+  SELECT r.coach_id, r.requested_timezone, r.requested_day_of_week, r.requested_start_time, r.requested_end_time
+  FROM public.com_t_matching_request r
+  WHERE r.coach_id = ANY(p_coach_ids) AND r.status = 1;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.get_coaches_unavailable_slots(uuid[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coaches_unavailable_slots(uuid[]) TO authenticated;
+
+---------------------------------------------
+-- 定期スケジュールから個別セッションを一括生成するヘルパー関数 (2026-08-15 追加)
+-- 前提: table/com_m_lesson_schedule.sql, table/com_t_session.sql,
+--       table/com_t_coach_availability_exception.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- com_m_lesson_schedule（毎週◯曜◯時の定期パターン）確定時に、
+-- start_date〜end_date（通常はライセンス期間）の範囲で対象曜日の
+-- com_t_session行をまとめて生成する。approve_matching_request() から呼ばれる。
+--
+-- 【タイムゾーン変換】
+-- スケジュールはコーチのローカル時刻（壁時計時刻）で保持しているため、
+-- 各日付ごとに schedule.coach_timezone（承認時点でスナップショットされたコーチの
+-- タイムゾーン）を用いて絶対時刻(timestamptz)へ変換する。com_m_user.timezoneを
+-- ライブ参照しないのは、承認後にコーチがプロフィールのtimezoneを変更しても、
+-- 既に生徒と合意済みの曜日・時刻の意味が事後的にズレないようにするため。
+-- 同一の「毎週火曜18:00」でも、coach_timezone内でDSTが発生する期間をまたぐ場合、
+-- UTC換算のオフセットは日付ごとに自動的に正しく計算される。
+--
+-- 【例外日のスキップ】
+-- com_t_coach_availability_exception に当該日・当該コーチのBLOCK（休み）が
+-- 時間帯重複で存在する場合、その回はスキップする（欠番。振替は別途Phase3のUIで対応）。
+--
+-- 【冪等性】
+-- com_t_session (schedule_id, start_datetime) にUNIQUE制約があるため、
+-- 再実行しても重複は作成されない（ON CONFLICT DO NOTHING）。
+--
+-- 【生成上限 (2026-09-14追加)】
+-- 生成件数がschedule.target_sessions（このコマが契約上持つべき目標セッション数）に
+-- 達したら、end_dateに達していなくてもそこで打ち切る。end_date到達時点で
+-- target_sessionsに満たない場合（マッチング承認が遅れた、BLOCK例外で欠番が出た等）でも
+-- end_dateを超えて延長はしない。その不足はfn_schedule_shortfall()のshortfallとして
+-- 可視化するのみとし、埋めるかどうかはコーチ・アドミンの運用判断に委ねる。
+--
+-- 【不具合修正: ON CONFLICT対象と一意インデックスの不一致 (2026-09-14)】
+-- 2026-09-12の「Wブッキング防止の一意制約を有効な予約枠のみに限定」パッチで
+-- uq_session_schedule_datetimeを「WHERE status = 1」の部分一意インデックスに変更した際、
+-- 本関数のON CONFLICT (schedule_id, start_datetime)にも同じWHERE句を追記する必要が
+-- あったが漏れていた。部分一意インデックスをON CONFLICTの推論対象にするには、
+-- INSERT側のON CONFLICT節にも同一のWHERE句を明示する必要があり(Postgresの仕様)、
+-- 一致しない場合は実際の重複有無に関わらず常にエラー(42P10: no unique or
+-- exclusion constraint matching the ON CONFLICT specification)になる。これにより
+-- 2026-09-12以降、本関数を経由するセッション生成(マッチング承認・アドミン直接
+-- マッチングいずれも)が全件失敗する状態になっていた。
+--
+-- 【p_min_start_datetime追加: 24時間ルールのマッチング申請への適用 (2026-09-15)】
+-- 生徒・コーチ向けの新規予約(create_session_booking_request)・振替候補
+-- (cancel_session/accept_session_reschedule_proposal)には「開始24時間以内の予約不可」
+-- ルールがあるが、マッチング承認時に自動生成される初回セッションにはこれが未適用だった
+-- （曜日パターンの都合で、承認したその日のうちに開始してしまう回が生成され得る）。
+-- 呼び出し元(approve_matching_request)が生成範囲の下限としてp_min_start_datetimeを
+-- 渡せるようにし、これを下回る回はカウントせずスキップして次週に進める（BLOCK例外と
+-- 同様、欠番として扱いfn_schedule_shortfall()のshortfallに反映させる。end_dateを超えた
+-- 延長はしない、という既存方針を踏襲）。アドミン代理マッチング(admin_match_student_with_coach)
+-- はこのルールの対象外のため、NULL（デフォルト、下限なし）のまま呼び出す。
+--
+-- 【ライセンス期間の境目 (2026-10-03)】
+-- start_date/end_date はライセンスの開始・終了日時を日付にした値（DBはUTCのため、JSTの0:00開始は
+-- UTCでは前日）で、各回の日付はコーチの現地日付として扱う。このため境目で「契約開始の直前の回」
+-- 「契約終了の直後の回」が作られ得た（例: NYのコーチの火曜9:00は、水曜0:00 JST開始の契約の前）。
+-- 各回の開始・終了日時をライセンスの開始・終了日時と直接比べ、開始前の回はスキップ（カウントしない）、
+-- 終了を過ぎる回に達したら打ち切る。全ての呼び出し元（承認・アドミン代理・目標数の調整）に効く。
+--
+-- 【基準のタイムゾーン (2026-10-06変更)】
+-- 曜日・時刻は schedule.schedule_timezone（旧 coach_timezone。2026-10-06以降の成立分は生徒の申請時の
+-- タイムゾーン）の現地時刻で解釈する。コーチ側の夏時間の切り替えをまたいでも、生徒側の時刻は全回同じになる。
+-- BLOCK（休み）の例外はコーチの現地の日付・時刻で持つため、コーチの現在のタイムゾーンで実際の日時に
+-- 直してから、各回の日時と重なるかを比べる。
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.fn_generate_sessions_for_schedule(uuid);
+
+CREATE OR REPLACE FUNCTION public.fn_generate_sessions_for_schedule(
+    p_schedule_id uuid,
+    p_min_start_datetime timestamptz DEFAULT NULL
+)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_schedule_tz text;
+    v_coach_tz text;
+    v_cursor_date date;
+    v_start_ts timestamptz;
+    v_end_ts timestamptz;
+    v_generated_count integer := 0;
+    v_license_start timestamptz;
+    v_license_end timestamptz;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    -- com_m_user.timezoneはライブ参照しない（上記【タイムゾーン変換】コメント参照）
+    v_schedule_tz := v_schedule.schedule_timezone;
+    SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_coach_tz FROM public.com_m_user WHERE id = v_schedule.coach_id;
+
+    -- 予約できる範囲（ライセンスの開始・終了日時。上記【ライセンス期間の境目】参照）
+    SELECT l.start_date, l.end_date INTO v_license_start, v_license_end
+    FROM public.com_t_user_session_ticket t
+    JOIN public.com_t_user_license l ON l.license_id = t.license_id
+    WHERE t.ticket_id = v_schedule.ticket_id;
+
+    -- start_date以降で最初にday_of_weekと一致する日付を求める
+    v_cursor_date := v_schedule.start_date
+        + ((v_schedule.day_of_week - EXTRACT(DOW FROM v_schedule.start_date)::int + 7) % 7);
+
+    WHILE v_cursor_date <= v_schedule.end_date AND v_generated_count < v_schedule.target_sessions LOOP
+        v_start_ts := (v_cursor_date + v_schedule.start_time) AT TIME ZONE v_schedule_tz;
+        v_end_ts := (v_cursor_date + v_schedule.end_time) AT TIME ZONE v_schedule_tz;
+
+        -- ライセンスの終了を過ぎる回に達したら打ち切る（以降の回も全て終了後）
+        IF v_end_ts > v_license_end THEN
+            EXIT;
+        END IF;
+
+        -- ライセンスの開始前の回はスキップする（カウントしない）
+        IF v_start_ts < v_license_start THEN
+            v_cursor_date := v_cursor_date + 7;
+            CONTINUE;
+        END IF;
+
+        -- 24時間ルールの下限を下回る回は欠番としてスキップする（上記コメント参照）
+        IF p_min_start_datetime IS NOT NULL AND v_start_ts < p_min_start_datetime THEN
+            v_cursor_date := v_cursor_date + 7;
+            CONTINUE;
+        END IF;
+
+        -- この回と重なるBLOCK例外（コーチの現地の日付・時刻）が無いことを確認
+        -- （タイムゾーンの差で日付がずれるため、前後1日の例外を実際の日時に直して比べる）
+        IF NOT EXISTS (
+            SELECT 1 FROM public.com_t_coach_availability_exception e
+            WHERE e.coach_id = v_schedule.coach_id
+              AND e.exception_date BETWEEN v_cursor_date - 1 AND v_cursor_date + 1
+              AND e.exception_type = 'BLOCK'
+              AND (e.exception_date + e.start_time) AT TIME ZONE v_coach_tz < v_end_ts
+              AND (e.exception_date + e.end_time) AT TIME ZONE v_coach_tz > v_start_ts
+        ) THEN
+            INSERT INTO public.com_t_session (
+                schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status
+            ) VALUES (
+                v_schedule.schedule_id, v_schedule.ticket_id, v_schedule.student_id, v_schedule.coach_id,
+                v_start_ts, v_end_ts, 1
+            )
+            ON CONFLICT (schedule_id, start_datetime) WHERE status = 1 DO NOTHING;
+
+            IF FOUND THEN
+                v_generated_count := v_generated_count + 1;
+            END IF;
+        END IF;
+
+        v_cursor_date := v_cursor_date + 7;
+    END LOOP;
+
+    RETURN v_generated_count;
+END;
+$$;
+
+-- 内部処理専用（approve_matching_request/admin_match_student_with_coach経由以外での
+-- 直接実行は想定しない）
+REVOKE EXECUTE ON FUNCTION public.fn_generate_sessions_for_schedule(uuid, timestamptz) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- マッチング成立処理 共通ヘルパー関数 (2026-09-15 追加)
+---------------------------------------------
+-- 【背景】
+-- approve_matching_request()（生徒申請→コーチ承認の通常フロー）と
+-- admin_match_student_with_coach()（アドミンによる代理即時マッチング）は、
+-- 「承認済みのcom_t_matching_requestが既に存在する前提で、target_sessionsを算出し、
+-- コーチの空き状況をロック付きで再チェックし、com_m_lesson_scheduleを作成し、
+-- com_t_sessionを一括生成する」という承認後ロジックがほぼ丸ごと重複していた
+-- （admin_match_student_with_coachのファイル冒頭コメントで「approve_matching_requestの
+-- 承認後ロジックをそのまま踏襲」と明記されていた通り）。本関数にその共通部分を集約し、
+-- 両者はそれぞれ「com_t_matching_requestの確定方法（既存pending行をUPDATE／新規に
+-- approved行をINSERT）」と「通知内容（コーチへの通知要否）」だけを担当する薄いラッパーとする。
+--
+-- 【呼び出し元の責務分担】
+-- 本関数は対象のcom_t_matching_request行(p_request_id)を一切読み書きしない
+-- （既に存在する前提で、source_request_idとしてFK参照するのみ）。呼び出し元が
+-- 承認フロー(UPDATE status=2)・代理作成フロー(INSERT status=2)いずれの場合も、
+-- 本関数を呼ぶ前後で自身の責務としてリクエスト行を確定させること。
+--
+-- 【24時間ルールとの関係】
+-- p_min_start_datetimeはfn_generate_sessions_for_schedule()にそのまま渡すのみで、
+-- 「アドミンかどうかで下限を変えるか」の判断自体は呼び出し元(approve_matching_request/
+-- admin_match_student_with_coach)の責務のままとする。
+--
+-- 【チャットルーム開設・挨拶メッセージ (2026-09-28追加)】
+-- 成立のたびにfn_send_matching_greeting()で生徒×コーチの1対1チャットルームを用意し（開設済みなら
+-- それを使う）、コーチから生徒へ挨拶メッセージを送る。成立処理と同じトランザクションで行う。
+--
+-- 【基準のタイムゾーン (2026-10-06変更)】
+-- p_day_of_week/p_start_time/p_end_time は p_timezone（申請の requested_timezone = 生徒の申請時のタイムゾーン）の
+-- 現地時刻として受け取り、com_m_lesson_schedule.schedule_timezone にそのまま保存する（従来は承認時のコーチの
+-- タイムゾーンを保存していたため、コーチ側の夏時間の切り替えで生徒側の時刻がずれていた）。
+-- start_date/end_date もこのタイムゾーンの日付にする。重複チェックは実際の日時で比べる
+-- check_coach_schedule_conflict() を使い、基準のタイムゾーンが申請ごとに異なっても曜日をまたいで
+-- 重なり得るため、同時承認を防ぐロックは「コーチ単位」にする（旧: コーチ×曜日）。
+-- シグネチャが変わるため、旧シグネチャを削除してから作り直す。
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, timestamptz);
+
+CREATE OR REPLACE FUNCTION public.fn_commit_matching_schedule(
+    p_request_id uuid,
+    p_ticket_id uuid,
+    p_student_id uuid,
+    p_coach_id uuid,
+    p_slot_no smallint,
+    p_day_of_week smallint,
+    p_start_time time,
+    p_end_time time,
+    p_timezone text,
+    p_min_start_datetime timestamptz DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_license_start timestamptz;
+    v_license_end timestamptz;
+    v_start_date date;
+    v_end_date date;
+    v_schedule_id uuid;
+    v_ticket_total_sessions smallint;
+    v_ticket_weekly_frequency smallint;
+    v_target_sessions smallint;
+BEGIN
+    -- 対象チケットに紐づくライセンス期間(Session生成範囲の基準)と、target_sessions算出用の
+    -- total_sessions/weekly_frequencyを取得
+    SELECT l.start_date, l.end_date, t.total_sessions, t.weekly_frequency
+    INTO v_license_start, v_license_end, v_ticket_total_sessions, v_ticket_weekly_frequency
+    FROM public.com_t_user_session_ticket t
+    JOIN public.com_t_user_license l ON l.license_id = t.license_id
+    WHERE t.ticket_id = p_ticket_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'license not found for ticket %', p_ticket_id;
+    END IF;
+
+    -- 生成範囲は基準のタイムゾーンの日付（各回の日時はfn_generate_sessions_for_schedule()でライセンスの
+    -- 開始・終了日時と直接比べるため、日付は範囲の目安）
+    v_start_date := GREATEST((v_license_start AT TIME ZONE p_timezone)::date, (NOW() AT TIME ZONE p_timezone)::date);
+    v_end_date := (v_license_end AT TIME ZONE p_timezone)::date;
+
+    -- このコマ(slot_no)が契約上持つべき目標セッション数。商をbaseとし、余りはslot_no昇順に
+    -- 1つずつ多く配分する（table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）
+    v_target_sessions := (v_ticket_total_sessions / v_ticket_weekly_frequency)
+        + CASE WHEN p_slot_no <= (v_ticket_total_sessions % v_ticket_weekly_frequency) THEN 1 ELSE 0 END;
+
+    -- 同一コーチへの成立処理を直列化し、重複チェックのレース条件を防ぐ
+    -- （この後にfn_send_matching_greeting()内で生徒×コーチのロックを取るが、そちらの後に
+    -- 別のロックを取る処理は無いため、デッドロックは起こらない）
+    PERFORM pg_advisory_xact_lock(hashtextextended('matching:' || p_coach_id::text, 0));
+
+    IF public.check_coach_schedule_conflict(
+        p_coach_id, p_timezone, p_day_of_week, p_start_time, p_end_time,
+        GREATEST(v_license_start, NOW()), v_license_end
+    ) THEN
+        RAISE EXCEPTION 'SCHEDULE_CONFLICT: coach % already has an overlapping active schedule', p_coach_id;
+    END IF;
+
+    INSERT INTO public.com_m_lesson_schedule (
+        ticket_id, student_id, coach_id, slot_no, day_of_week, start_time, end_time,
+        schedule_timezone, status, start_date, end_date, source_request_id, target_sessions
+    ) VALUES (
+        p_ticket_id, p_student_id, p_coach_id, p_slot_no,
+        p_day_of_week, p_start_time, p_end_time,
+        p_timezone, 1, v_start_date, v_end_date, p_request_id, v_target_sessions
+    )
+    RETURNING schedule_id INTO v_schedule_id;
+
+    PERFORM public.fn_generate_sessions_for_schedule(v_schedule_id, p_min_start_datetime);
+
+    PERFORM public.fn_send_matching_greeting(v_schedule_id);
+
+    RETURN v_schedule_id;
+END;
+$$;
+
+-- 内部処理専用（approve_matching_request/admin_match_student_with_coach経由以外での
+-- 直接実行は想定しない）
+REVOKE EXECUTE ON FUNCTION public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, text, timestamptz) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- マッチングリクエスト承認RPC (2026-08-15 追加)
+-- 前提: table/com_t_matching_request.sql, table/com_m_lesson_schedule.sql,
+--       table/com_t_user_session_ticket.sql, table/com_t_user_license.sql,
+--       function/fn_generate_sessions_for_schedule.sql,
+--       function/check_coach_schedule_conflict.sql,
+--       function/fn_assert_actor_or_admin.sql, function/fn_notify.sql,
+--       function/fn_commit_matching_schedule.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- コーチがマッチングリクエストを承認する唯一の入口。
+-- com_t_matching_request への直接UPDATEはRLSで許可していないため、
+-- 承認処理（ステータス更新 + com_m_lesson_schedule作成 + com_t_session一括生成）は
+-- 必ず本関数を通す。SECURITY DEFINERにより、内部のテーブル操作はRLSをバイパスするが、
+-- 呼び出し元が宛先コーチ本人（またはadmin）であることは関数内で明示的に検証する。
+--
+-- 【二重予約防止 (2026-09-03 追加)】
+-- 申請時(createMatchingRequestCore)にも同一のcheck_coach_schedule_conflict()で重複チェックを
+-- 行うが、申請〜承認の間に別の申請が先に承認される競合（TOCTOU）は申請時チェックだけでは
+-- 防げない。そのため承認時にも必ず同じ関数で再チェックする。
+-- 加えて、ほぼ同時に別々の承認処理（異なるrequest_id、同一コーチ×同一曜日）が走った場合、
+-- どちらも重複チェック時点ではまだ相手のcom_m_lesson_schedule行が存在せず、チェックを
+-- すり抜けてしまうレース条件が起こり得る。これを防ぐため、重複チェックの前に対象
+-- (coach_id, day_of_week)単位のトランザクションアドバイザリロックを取得し、同一コーチ×
+-- 同一曜日への承認処理を直列化する（コミット/ロールバックで自動解放。本関数内で取得する
+-- ロックは常にこの1本のみのため、デッドロックの起こりようがない）。
+--
+-- 【通知 (2026-09-09追加)】
+-- 承認完了時、生徒へマッチング成立を通知する(MATCHING_APPROVED)。コーチは自ら承認操作を
+-- 行っているため通知不要。
+--
+-- 【target_sessionsの確定 (2026-09-14追加)】
+-- com_m_lesson_schedule.target_sessions（このコマが契約上持つべき目標セッション数）を、
+-- 対象チケットのtotal_sessions/weekly_frequencyから算出しここで確定する（table/
+-- com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）。承認が契約開始から遅れても
+-- 目標値自体は変わらないため、fn_generate_sessions_for_schedule()の生成上限、
+-- fn_schedule_shortfall()の期待値が正しく契約のエンタイトルメントを反映するようになる。
+--
+-- 【権限チェック・通知の共通化 (2026-09-15追加)】
+-- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()にそれぞれ集約する
+-- （複数のRPCに渡ってコピー&ペーストされていたパターンの共通化。詳細は各関数の
+-- ファイル自身のコメント参照）。
+--
+-- 【マッチング成立処理の共通化 (2026-09-15追加)】
+-- target_sessions算出〜アドバイザリロック〜空き状況チェック〜com_m_lesson_schedule作成〜
+-- com_t_session一括生成は、admin_match_student_with_coach()とほぼ丸ごと重複していたため
+-- fn_commit_matching_schedule()に切り出した。本関数は「pendingなリクエストを承認済みに
+-- 更新する」責務のみを担い、成立処理そのものは同ヘルパーに委譲する
+-- （詳細はfunction/fn_commit_matching_schedule.sql参照）。
+--
+-- 【24時間ルールの適用 (2026-09-15追加)】
+-- 生徒の個別予約・振替候補と同様、コーチ自身の承認によるマッチング成立でも、承認した
+-- その日のうちに開始してしまう初回セッションが生成され得る（曜日パターンの都合）。
+-- コーチ本人の承認には24時間ルールを適用し、下限を下回る回はfn_generate_sessions_for_schedule()側で
+-- 欠番としてスキップさせる。アドミンが本関数を代理承認する場合（get_jwt_user_type()='0'）は、
+-- admin_match_student_with_coach()と同様このルールの対象外とする。
+--
+-- 【基準のタイムゾーン (2026-10-06追加)】
+-- 申請の曜日・時刻は生徒の申請時のタイムゾーン（requested_timezone）の現地時刻のため、そのタイムゾーンを
+-- fn_commit_matching_schedule() に渡し、定期スケジュール・セッションを生徒側の時刻で作る。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.approve_matching_request(p_request_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_request RECORD;
+    v_schedule_id uuid;
+    v_coach_name text;
+    v_min_start_datetime timestamptz;
+BEGIN
+    SELECT * INTO v_request FROM public.com_t_matching_request WHERE request_id = p_request_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'matching request % not found', p_request_id;
+    END IF;
+
+    PERFORM public.fn_assert_actor_or_admin(v_request.coach_id, 'not authorized to approve this request');
+
+    IF v_request.status <> 1 THEN
+        RAISE EXCEPTION 'matching request % is not pending (status=%)', p_request_id, v_request.status;
+    END IF;
+
+    UPDATE public.com_t_matching_request
+    SET status = 2, responded_by = auth.uid(), responded_at = NOW(), update_date = NOW()
+    WHERE request_id = p_request_id;
+
+    -- アドミン代理承認は24時間ルールの対象外（admin_match_student_with_coach()と同様）
+    IF public.get_jwt_user_type() = '0' THEN
+        v_min_start_datetime := NULL;
+    ELSE
+        v_min_start_datetime := NOW() + interval '24 hours';
+    END IF;
+
+    v_schedule_id := public.fn_commit_matching_schedule(
+        v_request.request_id, v_request.ticket_id, v_request.student_id, v_request.coach_id,
+        v_request.slot_no, v_request.requested_day_of_week, v_request.requested_start_time, v_request.requested_end_time,
+        v_request.requested_timezone, v_min_start_datetime
+    );
+
+    -- 生徒へ、マッチング成立を通知する（コーチは自ら承認操作を行ったため通知不要）
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
+    PERFORM public.fn_notify(
+        v_request.student_id,
+        'MATCHING_APPROVED',
+        jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id),
+        '/live-room'
+    );
+
+    RETURN v_schedule_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.approve_matching_request(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_matching_request(uuid) TO authenticated;
+
+---------------------------------------------
+-- アドミンによる直接マッチングRPC (2026-09-09 追加)
+-- 前提: table/com_t_matching_request.sql, table/com_m_lesson_schedule.sql,
+--       table/com_t_user_session_ticket.sql, table/com_t_user_license.sql,
+--       function/fn_generate_sessions_for_schedule.sql,
+--       function/check_coach_schedule_conflict.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- 通常のマッチングは「生徒がリクエスト→コーチが承認」の2段階を経るが、アドミンの
+-- ライブセッション管理画面からは、この2段階を省略していきなり成立させたい
+-- （契約途中のコーチ交代直後に、生徒・コーチの操作を待たずその場で新しい担当を
+-- 割り当てたいケース等）。本関数はapprove_matching_request()の承認後ロジック
+-- （アドバイザリロックによる直列化、コーチの空き時間衝突チェック、
+-- com_m_lesson_schedule作成、com_t_session一括生成）をそのまま踏襲しつつ、
+-- 事前にpendingなcom_t_matching_requestが存在しない状態から、承認済み(status=2)の
+-- リクエストを直接作成する点のみが異なる。
+--
+-- 同一(ticket_id, slot_no)に既にpending/approvedなリクエストが存在する場合は
+-- 一意制約(uq_matching_request_active_slot)違反として失敗する
+-- （呼び出し元のTypeScript側で23505を捕捉し、分かりやすいエラーメッセージに変換すること。
+-- createMatchingRequestCoreの既存パターンを参照）。
+--
+-- 【通知】
+-- 生徒へMATCHING_APPROVED、コーチへMATCHING_ASSIGNED_TO_COACHをそれぞれ通知する
+-- （どちらも自ら操作していないため、双方に通知が必要）。
+--
+-- 【target_sessionsの確定 (2026-09-14追加)】
+-- approve_matching_requestと同様、com_m_lesson_schedule.target_sessionsをここで確定する
+-- （table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）。
+--
+-- 【権限チェック・通知の共通化 (2026-09-15追加)】
+-- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
+-- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
+--
+-- 【マッチング成立処理の共通化 (2026-09-15追加)】
+-- target_sessions算出〜アドバイザリロック〜空き状況チェック〜com_m_lesson_schedule作成〜
+-- com_t_session一括生成は、approve_matching_request()とほぼ丸ごと重複していたため
+-- fn_commit_matching_schedule()に切り出した。本関数は「承認済みのリクエストを
+-- 生徒の申請・コーチの承認を経ずに直接作成する」責務のみを担い、成立処理そのものは
+-- 同ヘルパーに委譲する（詳細はfunction/fn_commit_matching_schedule.sql参照）。
+--
+-- 【24時間ルールの対象外 (2026-09-15追加)】
+-- 生徒の個別予約・振替候補・通常のマッチング承認(approve_matching_request)には
+-- 「開始24時間以内は不可」ルールを適用するが、本関数はアドミンが人間同士で既に
+-- 調整済みの内容を即時反映するための専用ルートのため対象外とする。そのため
+-- fn_commit_matching_schedule()呼び出し時にp_min_start_datetimeを渡さない
+-- （デフォルトのNULL=下限なしのまま呼ぶ）。
+--
+-- 【曜日・時刻は生徒の時刻 (2026-10-06変更)】
+-- 生徒の申請と同じく、p_day_of_week/p_start_time/p_end_time を生徒の現在のタイムゾーン
+-- （com_m_user.timezone）の現地時刻として扱い、申請の requested_timezone と定期スケジュールの
+-- schedule_timezone に保存する（従来はコーチの現地時刻）。シグネチャは変更しない。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_match_student_with_coach(
+    p_ticket_id uuid,
+    p_coach_id uuid,
+    p_slot_no smallint,
+    p_day_of_week smallint,
+    p_start_time time,
+    p_end_time time
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_student_id uuid;
+    v_schedule_id uuid;
+    v_request_id uuid;
+    v_coach_name text;
+    v_student_name text;
+    v_student_timezone text;
+BEGIN
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to perform admin matching');
+
+    SELECT user_id INTO v_student_id FROM public.com_t_user_session_ticket WHERE ticket_id = p_ticket_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'ticket % not found', p_ticket_id;
+    END IF;
+
+    SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_student_timezone FROM public.com_m_user WHERE id = v_student_id;
+
+    -- 生徒の申請・コーチの承認を経ずに、承認済みのリクエストを直接作成する
+    INSERT INTO public.com_t_matching_request (
+        ticket_id, student_id, coach_id, slot_no, requested_day_of_week, requested_start_time, requested_end_time,
+        requested_timezone, status, responded_by, responded_at
+    ) VALUES (
+        p_ticket_id, v_student_id, p_coach_id, p_slot_no, p_day_of_week, p_start_time, p_end_time,
+        v_student_timezone, 2, auth.uid(), NOW()
+    )
+    RETURNING request_id INTO v_request_id;
+
+    v_schedule_id := public.fn_commit_matching_schedule(
+        v_request_id, p_ticket_id, v_student_id, p_coach_id,
+        p_slot_no, p_day_of_week, p_start_time, p_end_time, v_student_timezone
+    );
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = p_coach_id;
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_student_id;
+
+    PERFORM public.fn_notify(v_student_id, 'MATCHING_APPROVED', jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id), '/live-room');
+    PERFORM public.fn_notify(p_coach_id, 'MATCHING_ASSIGNED_TO_COACH', jsonb_build_object('student_name', v_student_name, 'schedule_id', v_schedule_id), '/students/' || v_student_id);
+
+    RETURN v_schedule_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_match_student_with_coach(uuid, uuid, smallint, smallint, time, time) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_match_student_with_coach(uuid, uuid, smallint, smallint, time, time) TO authenticated;
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】コーチの空き時間の見直し通知（14日ごと・アプリ内通知のみ）
+-- 追加日: 2026-10-06
+--
+-- 【内容】
+--   1. com_m_coach_profile.availability_confirmed_at（空き時間を最後に確認した日時）を追加
+--   2. fn_mark_coach_availability_confirmed / trg_coach_availability_confirmed（空き時間の保存で確認済みにする）、
+--      confirm_my_coach_availability（「変更なしで確認」）、enqueue_coach_availability_reminders（通知の登録）を新規作成
+--   3. pg_cron のジョブ 'coach-availability-reminders-daily'（毎日 00:15 UTC）を作成
+--   - 空き時間が1件以上あるコーチは最後の確認から14日を過ぎたら見直し、0件のコーチには登録を促す
+--     （通知種別 COACH_AVAILABILITY_REMINDER。メールは送らない）。
+--
+-- 対応ファイル: DDL/table/com_m_coach_profile.sql, DDL/function/enqueue_coach_availability_reminders.sql
+-- 【注意】アプリ（コーチの空き時間の画面）が 1・2 を使うため、アプリのデプロイより先に適用すること。
+--   旧アプリは通知種別 COACH_AVAILABILITY_REMINDER の文言を持たないため、適用からデプロイまでの間に
+--   ジョブが動かないよう、適用はデプロイの直前に行う（ジョブは毎日 00:15 UTC のみ）。
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- 追加パッチ: 空き時間の最終確認日時 (2026-10-06)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- 空き時間（com_m_coach_availability）はUTCで持つため、コーチの現地時刻での表示は夏時間の切り替えで
+-- 1時間ずれる。コーチに14日ごとに空き時間の見直しを促す通知を出すため、最後に空き時間を確認した
+-- 日時を持つ（空き時間の保存、または「変更なしで確認」で更新。function/enqueue_coach_availability_reminders.sql）。
+---------------------------------------------
+ALTER TABLE public.com_m_coach_profile
+  ADD COLUMN IF NOT EXISTS availability_confirmed_at timestamp with time zone DEFAULT NULL;
+
+COMMENT ON COLUMN public.com_m_coach_profile.availability_confirmed_at IS '空き時間を最後に確認した日時（空き時間の保存・「変更なしで確認」で更新。NULLは未確認。14日を過ぎると見直しの通知を出す）';
+
+---------------------------------------------
+-- コーチの空き時間の見直し通知 (2026-10-06 追加)
+-- 前提: table/com_m_coach_profile.sql（availability_confirmed_at パッチ）, table/com_m_coach_availability.sql,
+--       table/com_t_notification.sql, function/fn_notify.sql の作成が完了していること。pg_cron が有効であること。
+---------------------------------------------
+-- 【背景】
+-- 空き時間（com_m_coach_availability）はUTCで持つため、コーチの現地時刻での表示は夏時間の切り替えで
+-- 1時間ずれる。また空き時間はコーチの生活の予定に合わせて変わる。そこで、コーチに14日ごとに
+-- 空き時間を見直すようアプリ内通知で促す（メールは送らない。enqueue_notification_mail の対象外）。
+--   - 空き時間が1件以上あるコーチ: 最後の確認（availability_confirmed_at）から14日を過ぎたら見直しを促す（kind = 'review'）
+--   - 空き時間が0件のコーチ: 空き時間を登録するよう促す（kind = 'empty'。マッチングの申請を受けられないため）
+--
+-- 【通知の行】
+-- 通知種別 COACH_AVAILABILITY_REMINDER、集約キー 'availability' の1行をコーチごとに使い回す
+-- （再通知のたびに内容・未読・日時を更新する。一覧に同じ通知が溜まらない）。直近14日に通知した
+-- コーチには出さない。空き時間を保存する・「変更なしで確認」すると、確認日時を更新し、この通知を既読にする。
+--
+-- 【対象のコーチ】
+-- 有効なコーチ（com_m_user.user_type = '2' かつ delete_flg = '0'、プロフィールが有効）。デモコーチ
+-- （demo_user ロール）は除く（通常の生徒のマッチング対象外のため。get_matchable_coach_ids と同じ考え方）。
+---------------------------------------------
+
+-- 確認日時の更新と、見直しの通知の既読化（空き時間の保存・「変更なしで確認」の共通処理。内部処理専用）
+CREATE OR REPLACE FUNCTION public.fn_mark_coach_availability_confirmed(p_coach_id uuid)
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    UPDATE public.com_m_coach_profile
+    SET availability_confirmed_at = NOW()
+    WHERE user_id = p_coach_id;
+
+    UPDATE public.com_t_notification
+    SET is_read = TRUE, read_at = NOW(), update_date = NOW()
+    WHERE user_id = p_coach_id
+      AND notification_type = 'COACH_AVAILABILITY_REMINDER'
+      AND is_read = FALSE;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_mark_coach_availability_confirmed(uuid) FROM PUBLIC, anon, authenticated;
+
+-- 空き時間の追加・変更・削除（論理削除）のたびに確認済みにする
+CREATE OR REPLACE FUNCTION public.trg_coach_availability_confirmed()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    PERFORM public.fn_mark_coach_availability_confirmed(NEW.coach_id);
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_coach_availability_change_confirm ON public.com_m_coach_availability;
+CREATE TRIGGER on_coach_availability_change_confirm
+AFTER INSERT OR UPDATE ON public.com_m_coach_availability
+FOR EACH ROW EXECUTE FUNCTION public.trg_coach_availability_confirmed();
+
+-- 「変更なしで確認」（コーチ本人のみ）
+CREATE OR REPLACE FUNCTION public.confirm_my_coach_availability()
+RETURNS timestamptz
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_confirmed_at timestamptz;
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.com_m_coach_profile WHERE user_id = auth.uid()) THEN
+        RAISE EXCEPTION 'not authorized to confirm availability';
+    END IF;
+
+    PERFORM public.fn_mark_coach_availability_confirmed(auth.uid());
+
+    SELECT availability_confirmed_at INTO v_confirmed_at FROM public.com_m_coach_profile WHERE user_id = auth.uid();
+    RETURN v_confirmed_at;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.confirm_my_coach_availability() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.confirm_my_coach_availability() TO authenticated;
+
+-- 見直しの通知を登録する（pg_cron から毎日実行）。戻り値は通知したコーチの数
+CREATE OR REPLACE FUNCTION public.enqueue_coach_availability_reminders()
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_count integer;
+BEGIN
+    WITH coaches AS (
+        SELECT
+            p.user_id AS coach_id,
+            COUNT(a.availability_id) AS slot_count,
+            -- 確認日時が無い（本機能の追加前から登録している）場合は、空き時間の最終更新を確認日時とみなす
+            COALESCE(p.availability_confirmed_at, MAX(a.update_date)) AS confirmed_at
+        FROM public.com_m_coach_profile p
+        JOIN public.com_m_user u ON u.id = p.user_id AND u.user_type = '2' AND u.delete_flg = '0'
+        LEFT JOIN public.com_m_coach_availability a ON a.coach_id = p.user_id AND a.delete_flg = '0'
+        WHERE p.delete_flg = '0'
+          AND NOT EXISTS (
+              SELECT 1 FROM public.com_t_user_role r
+              WHERE r.user_id = p.user_id AND r.role_id = 'demo_user'
+          )
+        GROUP BY p.user_id, p.availability_confirmed_at
+    ),
+    targets AS (
+        SELECT c.coach_id, CASE WHEN c.slot_count = 0 THEN 'empty' ELSE 'review' END AS kind
+        FROM coaches c
+        WHERE (c.slot_count = 0 OR c.confirmed_at IS NULL OR c.confirmed_at < NOW() - interval '14 days')
+          AND NOT EXISTS (
+              SELECT 1 FROM public.com_t_notification n
+              WHERE n.user_id = c.coach_id
+                AND n.notification_type = 'COACH_AVAILABILITY_REMINDER'
+                AND n.dedup_key = 'availability'
+                AND n.occurred_at >= NOW() - interval '14 days'
+          )
+    ),
+    upserted AS (
+        INSERT INTO public.com_t_notification (user_id, notification_type, dedup_key, payload, link_path)
+        SELECT coach_id, 'COACH_AVAILABILITY_REMINDER', 'availability', jsonb_build_object('kind', kind), '/availability'
+        FROM targets
+        ON CONFLICT (user_id, notification_type, dedup_key) DO UPDATE
+        SET payload = EXCLUDED.payload,
+            link_path = EXCLUDED.link_path,
+            is_read = FALSE,
+            read_at = NULL,
+            occurred_at = NOW(),
+            update_date = NOW()
+        RETURNING 1
+    )
+    SELECT COUNT(*) INTO v_count FROM upserted;
+
+    RETURN v_count;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.enqueue_coach_availability_reminders() FROM PUBLIC, anon, authenticated;
+
+-- 毎日 00:15 UTC（日本 9:15、北米は前日の夕方）に実行する。同名ジョブは入れ替える（何度実行しても安全）
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'coach-availability-reminders-daily';
+
+SELECT cron.schedule(
+    'coach-availability-reminders-daily',
+    '15 0 * * *',
+    $$ SELECT public.enqueue_coach_availability_reminders(); $$
+);
+
+COMMIT;

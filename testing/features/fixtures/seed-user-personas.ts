@@ -863,7 +863,7 @@ for (const key of Object.keys(COACHES) as CoachKey[]) {
   const email = `qa-p-coach-${c.seq}@gabby-qa-test.example`;
   const id = await kit.ensureUser({ email, userType: "2", userName: c.name, clientId: coachClientId, timezone: c.timezone });
   await kit.ensureCoachProfile(id);
-  await live.ensureAvailabilities(id, c.availability);
+  await live.ensureAvailabilities(id, c.timezone, c.availability);
   coachUsers[key] = { id, email, timezone: c.timezone };
   console.log(`- ${email} ${c.name}`);
 }

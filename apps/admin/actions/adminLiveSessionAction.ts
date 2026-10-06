@@ -136,7 +136,7 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
 
     const { data: schedules, error } = await supabase
       .from('com_m_lesson_schedule')
-      .select('schedule_id, ticket_id, slot_no, day_of_week, start_time, end_time, coach_id, status, target_sessions')
+      .select('schedule_id, ticket_id, slot_no, day_of_week, start_time, end_time, schedule_timezone, coach_id, status, target_sessions')
       .eq('ticket_id', ticketId)
       .order('slot_no', { ascending: true });
 

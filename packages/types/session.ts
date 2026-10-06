@@ -363,7 +363,8 @@ export interface CoachLiveSessionShortfallItem {
   student_id: string;
   student_name: string;
   day_of_week: number;
-  start_time: string; // "HH:MM:SS"（コーチのローカル時刻）
+  start_time: string; // "HH:MM:SS"（schedule_timezoneの現地時刻。表示時に閲覧者のタイムゾーンへ換算する）
+  schedule_timezone: string;
   expected_sessions: number;
   actual_sessions: number;
   shortfall: number;

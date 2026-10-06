@@ -568,7 +568,7 @@ async function fetchOwnScheduleShortfalls(
 ): Promise<{ shortfalls: LiveSessionShortfallItem[] } | { errorMessage: string }> {
   const { data: schedules, error: scheduleError } = await supabase
     .from('com_m_lesson_schedule')
-    .select('schedule_id, day_of_week, start_time')
+    .select('schedule_id, day_of_week, start_time, schedule_timezone')
     .eq('coach_id', coachId)
     .eq('student_id', studentId)
     .eq('status', 1);
@@ -599,6 +599,7 @@ async function fetchOwnScheduleShortfalls(
         schedule_id: schedule.schedule_id,
         day_of_week: schedule.day_of_week,
         start_time: schedule.start_time,
+        schedule_timezone: schedule.schedule_timezone,
         expected_sessions: data.expected_sessions,
         actual_sessions: data.actual_sessions,
         shortfall: data.shortfall,

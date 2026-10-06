@@ -116,23 +116,21 @@ export async function loadNotificationFacts({
     }
 
     case 'MATCHING_REJECTED': {
-      // 否認された申請にはセッションが無いため、申請した枠（コーチの現地時刻）の次の回の日時から曜日・時刻を求める
-      // （生徒の申請画面の表示と同じ求め方）
+      // 否認された申請にはセッションが無いため、申請した枠（requested_timezone の現地時刻）の次の回の日時から
+      // 曜日・時刻を求める（生徒の申請画面の表示と同じ求め方）
       const requestId = readText(payload, 'request_id');
       if (!requestId) return {};
       const { data: request, error } = await admin
         .from('com_t_matching_request')
-        .select('coach_id, requested_day_of_week, requested_start_time, requested_end_time, reject_reason')
+        .select('requested_day_of_week, requested_start_time, requested_end_time, requested_timezone, reject_reason')
         .eq('request_id', requestId)
         .maybeSingle();
       if (error) throw new Error(`matching_request_fetch_failed: ${error.message}`);
       if (!request) return {};
-      const { data: coach } = await admin.from('com_m_user').select('timezone').eq('id', request.coach_id).maybeSingle();
-      const coachTimeZone = coach?.timezone ?? 'Asia/Tokyo';
       const { instant } = getFirstLiveSessionOccurrence(
         request.requested_day_of_week,
         request.requested_start_time,
-        coachTimeZone,
+        request.requested_timezone,
         timeZone,
         new Date(nowMs)
       );

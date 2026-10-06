@@ -134,3 +134,41 @@ ALTER TABLE public.com_t_matching_request ADD CONSTRAINT chk_matching_request_st
 );
 
 COMMENT ON COLUMN public.com_t_matching_request.status IS 'ステータス 1:pending(承認待ち) 2:approved(承認) 3:rejected(否認) 4:cancelled(生徒による取消) 5:ended(コーチ交代等によりアドミンが終了)';
+
+---------------------------------------------
+-- 追加パッチ: 申請時の生徒のタイムゾーン (2026-10-06)
+-- 既存環境に対しては、このブロックのみを実行してください（何度実行しても安全）。
+-- 前提: table/com_m_lesson_schedule.sql の schedule_timezone への列名変更パッチが適用済みであること。
+---------------------------------------------
+-- 【背景】
+-- requested_day_of_week/requested_start_time/requested_end_time をコーチの現地時刻で持っていたため、
+-- コーチ側の夏時間の切り替えで、生徒から見たセッションの時刻が1時間ずれていた。
+-- 以後は、生徒が選んだ曜日・時刻を生徒の現地時刻のまま持ち、そのタイムゾーン（申請時の
+-- com_m_user.timezone のスナップショット）を requested_timezone に保存する。承認時は
+-- com_m_lesson_schedule.schedule_timezone に引き継ぎ、契約期間中の全回を生徒側で同じ時刻にする
+-- （例: 20:00 に申請したら、夏時間の切り替えの前後どちらの回も 20:00）。
+-- アドミンの直接マッチング（admin_match_student_with_coach）も、入力された曜日・時刻を生徒の時刻として扱う。
+--
+-- 【既存行】
+-- 従来の解釈基準（コーチのタイムゾーン）を入れる。承認済みは成立した定期スケジュールの値、
+-- それ以外は宛先コーチの現在のタイムゾーン。
+---------------------------------------------
+ALTER TABLE public.com_t_matching_request
+  ADD COLUMN IF NOT EXISTS requested_timezone text REFERENCES public.com_m_timezone(timezone);
+
+UPDATE public.com_t_matching_request r
+SET requested_timezone = s.schedule_timezone
+FROM public.com_m_lesson_schedule s
+WHERE s.source_request_id = r.request_id AND r.requested_timezone IS NULL;
+
+UPDATE public.com_t_matching_request r
+SET requested_timezone = COALESCE(u.timezone, 'Asia/Tokyo')
+FROM public.com_m_user u
+WHERE u.id = r.coach_id AND r.requested_timezone IS NULL;
+
+ALTER TABLE public.com_t_matching_request ALTER COLUMN requested_timezone SET NOT NULL;
+
+COMMENT ON COLUMN public.com_t_matching_request.requested_day_of_week IS '希望曜日 0:日 ... 6:土（requested_timezone基準）';
+COMMENT ON COLUMN public.com_t_matching_request.requested_start_time IS '希望レッスン開始時刻（requested_timezoneの現地時刻）';
+COMMENT ON COLUMN public.com_t_matching_request.requested_end_time IS '希望レッスン終了時刻（requested_timezoneの現地時刻、通常25分）';
+COMMENT ON COLUMN public.com_t_matching_request.requested_timezone IS '希望曜日・時刻の解釈に使うIANAタイムゾーン（申請時の生徒のcom_m_user.timezone。2026-10-06より前の行はコーチのタイムゾーン）。承認時にcom_m_lesson_schedule.schedule_timezoneへ引き継ぐ';

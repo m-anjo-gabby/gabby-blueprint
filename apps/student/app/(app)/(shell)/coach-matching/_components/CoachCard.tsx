@@ -71,7 +71,7 @@ export function CoachCard({
   // 検索フィルターに一致する枠を先頭に、曜日・開始時刻順で並べる（カード内で優先的に見せるため）
   const sortedSlots = useMemo(() => {
     const list: DisplaySlot[] = coach.availability.map((slot) => {
-      const converted = convertWeeklyTimeZone(slot, coach.timezone, studentTimezone);
+      const converted = convertWeeklyTimeZone(slot, 'UTC', studentTimezone);
       const displayDay = converted.day_of_week as DayOfWeek;
       return {
         availability_id: slot.availability_id,
@@ -87,7 +87,7 @@ export function CoachCard({
       return a.displayStartTime.localeCompare(b.displayStartTime);
     });
     return list;
-  }, [coach.availability, coach.timezone, studentTimezone, selectedDays, selectedTimeBuckets]);
+  }, [coach.availability, studentTimezone, selectedDays, selectedTimeBuckets]);
 
   const visibleSlots = showAllSlots ? sortedSlots : sortedSlots.slice(0, VISIBLE_SLOT_COUNT);
   const hiddenSlotCount = sortedSlots.length - visibleSlots.length;

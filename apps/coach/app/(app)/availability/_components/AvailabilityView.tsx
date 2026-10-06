@@ -3,11 +3,13 @@
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Globe } from 'lucide-react';
-import { addAvailability, deleteAvailability } from '@/actions/availabilityAction';
+import { Save, RotateCcw, Globe, CheckCircle2, Info } from 'lucide-react';
+import { addAvailability, deleteAvailability, confirmAvailability } from '@/actions/availabilityAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { getUtcOffsetMinutes, shiftWeeklyMinute } from '@gabby/lib/date/date';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { CoachAvailabilitySlot, DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
@@ -15,8 +17,14 @@ import { WeeklyAvailabilityGrid, SLOTS_PER_DAY, slotKey, slotIndexToLabel } from
 
 interface AvailabilityViewProps {
   initialSlots: CoachAvailabilitySlot[];
+  /** When the coach last reviewed their availability (null if never) */
+  initialConfirmedAt: string | null;
   timezones: TimezoneMaster[];
 }
+
+const SLOT_MINUTES = 30;
+const REVIEW_INTERVAL_DAYS = 14;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 interface TimeRange {
   day: DayOfWeek;
@@ -35,17 +43,31 @@ function timeToSlotIndexEnd(time: string): number {
   return Math.ceil(minutes / 30);
 }
 
-/** Expands stored ranges onto the 30-minute grid, rounding outward so no time is lost. */
-function expandSlotsToSelection(slots: CoachAvailabilitySlot[]): Set<string> {
-  const set = new Set<string>();
+/** Moves every grid cell by offsetMinutes (wrapping around the week). Converts between UTC and local cells. */
+function shiftSelection(selection: Set<string>, offsetMinutes: number): Set<string> {
+  const shifted = new Set<string>();
+  for (const key of selection) {
+    const [day, slotIndex] = key.split('-').map(Number);
+    const moved = shiftWeeklyMinute(day, slotIndex * SLOT_MINUTES, offsetMinutes);
+    shifted.add(slotKey(moved.day_of_week as DayOfWeek, Math.floor(moved.minute_of_day / SLOT_MINUTES)));
+  }
+  return shifted;
+}
+
+/**
+ * Expands stored ranges (UTC) onto the local 30-minute grid, rounding outward so no time is lost.
+ * offsetMinutes is the coach's current UTC offset (local = UTC + offset).
+ */
+function expandSlotsToSelection(slots: CoachAvailabilitySlot[], offsetMinutes: number): Set<string> {
+  const utc = new Set<string>();
   for (const slot of slots) {
     const start = timeToSlotIndex(slot.start_time);
     const end = timeToSlotIndexEnd(slot.end_time);
     for (let i = start; i < end; i++) {
-      set.add(slotKey(slot.day_of_week, i));
+      utc.add(slotKey(slot.day_of_week, i));
     }
   }
-  return set;
+  return shiftSelection(utc, offsetMinutes);
 }
 
 function mergeSelectionToRanges(selection: Set<string>): TimeRange[] {
@@ -78,6 +100,21 @@ function rangeKey(day: DayOfWeek, start: string, end: string): string {
   return `${day}_${start}_${end}`;
 }
 
+/**
+ * Finds the next UTC offset change (daylight saving time) within the given number of days.
+ * Returns the first day with the new offset and how many minutes local times shift, or null.
+ */
+function findUpcomingOffsetChange(timezone: string, withinDays: number): { date: Date; shiftMinutes: number } | null {
+  const now = Date.now();
+  const current = getUtcOffsetMinutes(timezone, new Date(now));
+  for (let d = 1; d <= withinDays; d++) {
+    const at = new Date(now + d * DAY_MS);
+    const offset = getUtcOffsetMinutes(timezone, at);
+    if (offset !== current) return { date: at, shiftMinutes: offset - current };
+  }
+  return null;
+}
+
 /** Derives a "UTC+09:00" style offset label for an IANA timezone name (DST-aware). */
 function getUtcOffsetLabel(timezone: string): string {
   try {
@@ -90,14 +127,20 @@ function getUtcOffsetLabel(timezone: string): string {
   }
 }
 
-export function AvailabilityView({ initialSlots, timezones }: AvailabilityViewProps) {
+export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }: AvailabilityViewProps) {
+  const timezone = useTimezone();
+  // Availability is stored in UTC so students always see the same times. The grid shows it in the coach's
+  // local time using today's offset, so the displayed times shift by an hour when daylight saving time changes.
+  const offsetMinutes = useMemo(() => getUtcOffsetMinutes(timezone), [timezone]);
+  const upcomingOffsetChange = useMemo(() => findUpcomingOffsetChange(timezone, REVIEW_INTERVAL_DAYS), [timezone]);
   const [slots, setSlots] = useState<CoachAvailabilitySlot[]>(initialSlots);
-  const [selection, setSelection] = useState<Set<string>>(() => expandSlotsToSelection(initialSlots));
-  const [originalSelection, setOriginalSelection] = useState<Set<string>>(() => expandSlotsToSelection(initialSlots));
+  const [selection, setSelection] = useState<Set<string>>(() => expandSlotsToSelection(initialSlots, offsetMinutes));
+  const [originalSelection, setOriginalSelection] = useState<Set<string>>(() => expandSlotsToSelection(initialSlots, offsetMinutes));
+  const [confirmedAt, setConfirmedAt] = useState<string | null>(initialConfirmedAt);
   const [isSaving, setIsSaving] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
-  const timezone = useTimezone();
   const timezoneLabel = useMemo(
     () => timezones.find((tz) => tz.timezone === timezone)?.display_name_en ?? timezone,
     [timezones, timezone]
@@ -107,7 +150,24 @@ export function AvailabilityView({ initialSlots, timezones }: AvailabilityViewPr
   const isDirty = !setsEqual(selection, originalSelection);
   const previewRanges = useMemo(() => mergeSelectionToRanges(selection), [selection]);
 
+  const isReviewDue = !confirmedAt || Date.now() - new Date(confirmedAt).getTime() >= REVIEW_INTERVAL_DAYS * DAY_MS;
+
   const handleReset = () => setSelection(new Set(originalSelection));
+
+  const handleConfirm = async () => {
+    setIsConfirming(true);
+    try {
+      const result = await confirmAvailability();
+      if (!result.success) {
+        showToast(result.message, 'error');
+        return;
+      }
+      setConfirmedAt(result.confirmedAt);
+      showToast('Thanks! Your availability is confirmed.', 'success');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   const handleSave = async () => {
     const oldTuples = slots.map((s) => ({
@@ -117,10 +177,12 @@ export function AvailabilityView({ initialSlots, timezones }: AvailabilityViewPr
       end: s.end_time.slice(0, 5),
     }));
     const oldKeyToId = new Map(oldTuples.map((t) => [rangeKey(t.day, t.start, t.end), t.availability_id]));
-    const newKeySet = new Set(previewRanges.map((r) => rangeKey(r.day, r.start_time, r.end_time)));
+    // Save in UTC: move the local cells back by the offset, then merge per UTC day
+    const utcRanges = mergeSelectionToRanges(shiftSelection(selection, -offsetMinutes));
+    const newKeySet = new Set(utcRanges.map((r) => rangeKey(r.day, r.start_time, r.end_time)));
 
     const toDelete = oldTuples.filter((t) => !newKeySet.has(rangeKey(t.day, t.start, t.end)));
-    const toAdd = previewRanges.filter((r) => !oldKeyToId.has(rangeKey(r.day, r.start_time, r.end_time)));
+    const toAdd = utcRanges.filter((r) => !oldKeyToId.has(rangeKey(r.day, r.start_time, r.end_time)));
 
     if (toDelete.length === 0 && toAdd.length === 0) return;
 
@@ -146,9 +208,11 @@ export function AvailabilityView({ initialSlots, timezones }: AvailabilityViewPr
 
       const updatedSlots = [...slots.filter((s) => !deletedIds.has(s.availability_id)), ...addedSlots];
       setSlots(updatedSlots);
-      const updatedSelection = expandSlotsToSelection(updatedSlots);
+      const updatedSelection = expandSlotsToSelection(updatedSlots, offsetMinutes);
       setSelection(updatedSelection);
       setOriginalSelection(updatedSelection);
+      // Saving any change also marks the availability as reviewed (DB trigger)
+      if (deletedIds.size > 0 || addedSlots.length > 0) setConfirmedAt(new Date().toISOString());
 
       if (failedCount === 0) {
         showToast('Availability updated', 'success');
@@ -174,6 +238,8 @@ export function AvailabilityView({ initialSlots, timezones }: AvailabilityViewPr
           </div>
           <CardDescription>
             Click or drag to mark the days and times you are available. Sessions are booked in 30-minute blocks (each lesson runs 25 minutes).
+            Times are shown in your timezone. Students always see these slots at the same times, so when daylight saving time
+            changes, the times shown here shift by one hour.
           </CardDescription>
         </div>
 
@@ -188,6 +254,38 @@ export function AvailabilityView({ initialSlots, timezones }: AvailabilityViewPr
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {upcomingOffsetChange && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <Info size={14} className="mt-0.5 shrink-0" />
+            <p>
+              Daylight saving time changes on {formatDateEn(upcomingOffsetChange.date, timezone)}. From then, your availability
+              will show {Math.abs(upcomingOffsetChange.shiftMinutes) / 60} hour{Math.abs(upcomingOffsetChange.shiftMinutes) === 60 ? '' : 's'}{' '}
+              {upcomingOffsetChange.shiftMinutes > 0 ? 'later' : 'earlier'} in your local time. Please review it after the change.
+            </p>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <p className="text-xs text-slate-600">
+            {slots.length === 0
+              ? 'You have no availability yet. Students cannot send you matching requests until you add some.'
+              : `${confirmedAt ? `Last reviewed ${formatDateEn(confirmedAt, timezone)}.` : 'Not reviewed yet.'}${isReviewDue ? ' Please check that these times still work for you.' : ''}`}
+          </p>
+          {slots.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              pending={isConfirming}
+              icon={<CheckCircle2 size={14} />}
+              onClick={handleConfirm}
+              disabled={isDirty || isSaving || isConfirming}
+            >
+              No changes needed
+            </Button>
+          )}
+        </div>
+
         <WeeklyAvailabilityGrid selection={selection} onChange={setSelection} disabled={isSaving} />
 
         <div className="flex flex-wrap gap-2">

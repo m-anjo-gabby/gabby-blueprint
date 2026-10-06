@@ -10,6 +10,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { signInAsRole } from "../../helpers/auth.ts";
+import { toUtcAvailabilityRows, type LocalWeeklyRange } from "../../helpers/coach-availability.ts";
 
 /** タイムゾーン tz の暦日 date・時刻 time（'HH:MM:SS'）を UTC の Date にする */
 export function zonedToUtc(date: string, time: string, tz: string): Date {
@@ -42,7 +43,8 @@ export interface LiveScheduleSeed {
   studentId: string;
   coach: LiveCoach;
   slotNo: number;
-  /** コーチのローカル時刻基準 */
+  /** コーチのローカル時刻基準（このシードは定期スケジュールの基準のタイムゾーン schedule_timezone をコーチのタイムゾーンにする。
+   *  アプリの申請は生徒の申請時のタイムゾーンを基準にするが、投入済みのデータとそろえるためシードはこのまま） */
   dayOfWeek: number;
   startTime: string;
   endTime: string;
@@ -66,12 +68,11 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
     return client;
   }
 
-  /** 週次の対応可能時間帯（未登録のときだけ作る） */
-  async function ensureAvailabilities(coachId: string, ranges: { days: number[]; start: string; end: string }[]): Promise<void> {
+  /** 週次の対応可能時間帯（未登録のときだけ作る）。ranges はコーチの現地時刻で書き、UTC に換算して保存する */
+  async function ensureAvailabilities(coachId: string, timeZone: string, ranges: LocalWeeklyRange[]): Promise<void> {
     const { data: existing } = await admin.from("com_m_coach_availability").select("availability_id").eq("coach_id", coachId).limit(1);
     if (existing && existing.length > 0) return;
-    const rows = ranges.flatMap((r) => r.days.map((dow) => ({ coach_id: coachId, day_of_week: dow, start_time: r.start, end_time: r.end })));
-    const { error } = await admin.from("com_m_coach_availability").insert(rows);
+    const { error } = await admin.from("com_m_coach_availability").insert(toUtcAvailabilityRows(coachId, ranges, timeZone));
     if (error) throw error;
   }
 
@@ -97,6 +98,7 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
         requested_day_of_week: seed.dayOfWeek,
         requested_start_time: seed.startTime,
         requested_end_time: seed.endTime,
+        requested_timezone: seed.coach.timezone,
         status: seed.terminated ? 5 : 2,
         responded_by: seed.coach.id,
         responded_at: respondedAt,
@@ -117,7 +119,7 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
         day_of_week: seed.dayOfWeek,
         start_time: seed.startTime,
         end_time: seed.endTime,
-        coach_timezone: seed.coach.timezone,
+        schedule_timezone: seed.coach.timezone,
         status: seed.terminated ? 9 : 1,
         start_date: seed.startDate,
         end_date: seed.endDate,

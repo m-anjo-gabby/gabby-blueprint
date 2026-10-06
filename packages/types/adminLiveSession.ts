@@ -29,8 +29,10 @@ export interface AdminScheduleSlotSummary {
   ticket_id: string;
   slot_no: number;
   day_of_week: number;
-  start_time: string; // "HH:MM:SS"（コーチのローカル時刻）
+  start_time: string; // "HH:MM:SS"（schedule_timezoneの現地時刻）
   end_time: string;
+  /** 曜日・時刻の解釈基準のタイムゾーン（2026-10-06以降の成立分は生徒の申請時のタイムゾーン） */
+  schedule_timezone: string;
   coach_id: string;
   coach_name: string;
   status: number; // com_m_lesson_schedule.status (1:active 0:paused 9:terminated)

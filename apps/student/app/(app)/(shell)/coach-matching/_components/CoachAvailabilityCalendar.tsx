@@ -10,10 +10,10 @@ const SLOTS_PER_DAY = 48;
 /** カレンダー上でクリック可能な1つのセッション開始候補（25分セッション、30分刻み） */
 export interface AvailabilityCell {
   key: string;
-  // 送信値：コーチのローカル時刻（DBの解釈基準）
+  // 空き時間の基準（UTC）の曜日・時刻。予約済みの枠との重なりの判定に使う
   sourceDay: DayOfWeek;
   sourceStartTime: string; // "HH:MM"
-  // 表示値：生徒のタイムゾーンに変換した曜日・時刻
+  // 表示値・送信値：生徒のタイムゾーンに変換した曜日・時刻（申請は生徒の現地時刻で送る）
   displayDay: DayOfWeek;
   displayStartTime: string; // "HH:MM"
   displayEndTime: string; // "HH:MM"

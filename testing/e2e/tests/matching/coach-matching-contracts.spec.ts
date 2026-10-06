@@ -96,7 +96,7 @@ test("現在の契約がマッチング済みで次の契約が未選択なら�
     day_of_week: 0,
     start_time: "03:00",
     end_time: "03:25",
-    coach_timezone: "America/New_York",
+    schedule_timezone: "America/New_York",
     start_date: new Date().toISOString().slice(0, 10),
     end_date: new Date(Date.now() + 30 * DAY_MS).toISOString().slice(0, 10),
     target_sessions: 12,

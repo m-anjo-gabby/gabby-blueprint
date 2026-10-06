@@ -156,7 +156,8 @@ export interface CoachSessionListItem {
 export interface LiveSessionShortfallItem {
   schedule_id: string;
   day_of_week: number;
-  start_time: string; // "HH:MM:SS"（コーチのローカル時刻）
+  start_time: string; // "HH:MM:SS"（schedule_timezoneの現地時刻。表示時に閲覧者のタイムゾーンへ換算する）
+  schedule_timezone: string;
   /** 契約のライセンス開始日を起点に、本来確保できたはずのセッション回数 */
   expected_sessions: number;
   /** 実際に生成されたセッション回数 */

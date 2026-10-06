@@ -54,6 +54,10 @@
 -- コーチ本人の承認には24時間ルールを適用し、下限を下回る回はfn_generate_sessions_for_schedule()側で
 -- 欠番としてスキップさせる。アドミンが本関数を代理承認する場合（get_jwt_user_type()='0'）は、
 -- admin_match_student_with_coach()と同様このルールの対象外とする。
+--
+-- 【基準のタイムゾーン (2026-10-06追加)】
+-- 申請の曜日・時刻は生徒の申請時のタイムゾーン（requested_timezone）の現地時刻のため、そのタイムゾーンを
+-- fn_commit_matching_schedule() に渡し、定期スケジュール・セッションを生徒側の時刻で作る。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.approve_matching_request(p_request_id uuid)
 RETURNS uuid
@@ -92,7 +96,7 @@ BEGIN
     v_schedule_id := public.fn_commit_matching_schedule(
         v_request.request_id, v_request.ticket_id, v_request.student_id, v_request.coach_id,
         v_request.slot_no, v_request.requested_day_of_week, v_request.requested_start_time, v_request.requested_end_time,
-        v_min_start_datetime
+        v_request.requested_timezone, v_min_start_datetime
     );
 
     -- 生徒へ、マッチング成立を通知する（コーチは自ら承認操作を行ったため通知不要）

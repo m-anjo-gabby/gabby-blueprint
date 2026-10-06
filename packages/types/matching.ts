@@ -22,9 +22,12 @@ export interface MatchingRequestRecord {
   student_id: string;
   coach_id: string;
   slot_no: number;
+  // requested_day_of_week/start_time/end_time は requested_timezone の現地時刻
+  // （申請時の生徒のタイムゾーン。2026-10-06より前の行はコーチのタイムゾーン）
   requested_day_of_week: DayOfWeek;
   requested_start_time: string; // "HH:MM:SS"
   requested_end_time: string;
+  requested_timezone: string;
   status: MatchingRequestStatus;
   reject_reason: string | null;
   responded_by: string | null;
@@ -50,6 +53,7 @@ export interface CreateMatchingRequestInput {
   ticket_id: string;
   coach_id: string;
   slot_no: number;
+  // 生徒の現地の曜日・時刻（基準のタイムゾーンはサーバー側で生徒のプロフィールから取る）
   day_of_week: DayOfWeek;
   start_time: string; // "HH:MM"
   end_time: string;   // "HH:MM"
@@ -131,10 +135,9 @@ export interface SlotStatusItem {
   day_of_week: DayOfWeek | null;
   start_time: string | null;
   end_time: string | null;
-  // day_of_week/start_time/end_timeの解釈基準（コーチのローカル時刻のタイムゾーン）。
-  // matched: com_m_lesson_schedule.coach_timezone（承認時点のスナップショット）
-  // pending: 未承認のためcom_m_user.timezone（コーチの現在値）をライブ参照
-  coach_timezone: string | null;
+  // day_of_week/start_time/end_timeの解釈基準のタイムゾーン。
+  // matched: com_m_lesson_schedule.schedule_timezone / pending: com_t_matching_request.requested_timezone
+  schedule_timezone: string | null;
   request_id: string | null; // pending時のリクエストID（取消操作用）
   reject_reason: string | null; // 直近が否認だった場合の理由（再リクエストを促す表示用）
 }
@@ -145,6 +148,8 @@ export interface SlotStatusItem {
  * （マッチング申請カレンダーで選択不可として表示するためのソフトチェック用途）。
  */
 export interface CoachUnavailableSlot {
+  /** day_of_week/start_time/end_time の解釈基準のタイムゾーン（定期スケジュール・申請ごとに異なる） */
+  timezone: string;
   day_of_week: DayOfWeek;
   start_time: string;
   end_time: string;
@@ -166,7 +171,8 @@ export interface CoachBrowseItem {
   job_experience: string | null;
   introduction: string | null;
   intro_video_path: string | null;
-  timezone: string; // コーチのIANAタイムゾーン（availabilityの各day_of_week/start_time/end_timeの解釈基準）
+  timezone: string; // コーチのIANAタイムゾーン（コーチの現地時刻の表示用）
+  /** 空き時間（UTCの曜日・時刻） */
   availability: {
     availability_id: string;
     day_of_week: DayOfWeek;
@@ -186,16 +192,15 @@ export interface BookableTicketSlot {
   slot_no: number;
   coach_id: string;
   coach_name: string;
+  /** コーチの現在のタイムゾーン（コーチの現地時刻の参考表示用） */
   coach_timezone: string;
+  /** day_of_week/start_time/end_time の解釈基準のタイムゾーン（com_m_lesson_schedule.schedule_timezone） */
+  schedule_timezone: string;
   day_of_week: DayOfWeek;
-  start_time: string; // "HH:MM:SS"（コーチのローカル時刻、コマ本来の曜日・時刻）
+  start_time: string; // "HH:MM:SS"（schedule_timezoneの現地時刻、コマ本来の曜日・時刻）
   end_time: string;
   /** 現在予約可能な未割当チケット数 */
   shortfall: number;
-  /** 日時選択UI(CoachAvailabilityCalendar)用の、対象コーチの空き時間帯 */
-  availability: { availability_id: string; day_of_week: DayOfWeek; start_time: string; end_time: string }[];
-  /** 日時選択UI用の、対象コーチの予約済み枠(選択不可として表示) */
-  unavailable_slots: CoachUnavailableSlot[];
 }
 
 export type GetMyBookableTicketsResult =

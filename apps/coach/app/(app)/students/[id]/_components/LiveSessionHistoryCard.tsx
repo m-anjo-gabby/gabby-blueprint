@@ -10,12 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getSessionStatusBadge } from '@/constants/session';
-import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
+import { formatWeeklySlotEn } from '@/lib/weeklySlot';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import type { DayOfWeek } from '@gabby/types/coachAvailability';
 import {
   SESSION_STATUS,
   SessionListItem,
@@ -284,7 +283,7 @@ export function LiveSessionHistoryCard({
             <ul className="space-y-1.5 pl-5.5">
               {shortfalls.map((s) => (
                 <li key={s.schedule_id} className="text-[11px] font-semibold text-amber-700">
-                  {DAY_OF_WEEK_SHORT_LABEL_EN[s.day_of_week as DayOfWeek]} {s.start_time.slice(0, 5)}: only {s.actual_sessions} of {s.expected_sessions} sessions scheduled ({s.shortfall} short). The student can request a new booking.
+                  {formatWeeklySlotEn(s, s.schedule_timezone, timezone)}: only {s.actual_sessions} of {s.expected_sessions} sessions scheduled ({s.shortfall} short). The student can request a new booking.
                 </li>
               ))}
             </ul>

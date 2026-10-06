@@ -78,7 +78,7 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
       if (!hasSlotFilter) return [{ coach, matchCount: 0 }];
 
       const matchCount = coach.availability.filter((slot) => {
-        const display = convertWeeklyTimeZone(slot, coach.timezone, studentTimezone);
+        const display = convertWeeklyTimeZone(slot, 'UTC', studentTimezone);
         return slotMatchesFilter(
           display.day_of_week as DayOfWeek,
           display.start_time,
@@ -192,7 +192,7 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                   {slot.coach_name && slot.day_of_week !== null && slot.start_time && slot.end_time && (() => {
                     const display = convertWeeklyTimeZone(
                       { day_of_week: slot.day_of_week, start_time: slot.start_time, end_time: slot.end_time },
-                      slot.coach_timezone || 'Asia/Tokyo',
+                      slot.schedule_timezone || 'Asia/Tokyo',
                       studentTimezone
                     );
                     return (

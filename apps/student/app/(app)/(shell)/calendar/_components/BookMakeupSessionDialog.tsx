@@ -14,8 +14,10 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import {
   generateLessonStartTimeOptions,
+  convertWeeklyTimeZone,
   formatDateTimeByZone,
   isAtLeastHoursFromNow,
   MIN_SESSION_BOOKING_LEAD_HOURS,
@@ -25,6 +27,7 @@ import { createSessionBookingRequest, checkSessionConflict } from '@/actions/ses
 import { BookableTicketSlot } from '@gabby/types/matching';
 import { SESSION_BOOKING_REQUEST_STATUS, MyBookingRequestItem } from '@gabby/types/session';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
+import type { DayOfWeek } from '@gabby/types/coachAvailability';
 
 // セッション枠は30分単位のため、時刻選択もこの粒度に揃える。担当コーチの対応可能時間に
 // 縛られず自由に選べるようにするため、一日全体(00:00-23:59)を対象にする
@@ -58,6 +61,7 @@ function timeStrToMs(time: string): number {
  */
 export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onRequested }: BookMakeupSessionDialogProps) {
   const currentUserId = useUserStore((state) => state.user?.id);
+  const studentTimezone = useTimezone();
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(slots[0]?.schedule_id ?? null);
   const [newDate, setNewDate] = useState(initialDate || tomorrowIsoDate());
   const [newStartTime, setNewStartTime] = useState<string | null>(null);
@@ -174,11 +178,15 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
                 }}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
               >
-                {slots.map((s) => (
-                  <option key={s.schedule_id} value={s.schedule_id}>
-                    {s.coach_name}コーチ（毎週{DAY_OF_WEEK_LABEL_JA[s.day_of_week]} {s.start_time.slice(0, 5)}〜／残り{s.shortfall}回分）
-                  </option>
-                ))}
+                {slots.map((s) => {
+                  // コマの曜日・時刻は schedule_timezone の現地時刻のため、生徒のタイムゾーンで表示する
+                  const weekly = convertWeeklyTimeZone(s, s.schedule_timezone, studentTimezone);
+                  return (
+                    <option key={s.schedule_id} value={s.schedule_id}>
+                      {s.coach_name}コーチ（毎週{DAY_OF_WEEK_LABEL_JA[weekly.day_of_week as DayOfWeek]} {weekly.start_time}〜／残り{s.shortfall}回分）
+                    </option>
+                  );
+                })}
               </select>
             </div>
           )}

@@ -77,7 +77,7 @@ test("キャンセル（振替候補あり）・予約申請の否認・マッ�
       day_of_week: 0,
       start_time: "03:00",
       end_time: "03:25",
-      coach_timezone: coach.timezone,
+      schedule_timezone: coach.timezone,
       start_date: new Date().toISOString().slice(0, 10),
       end_date: new Date(Date.now() + 60 * DAY_MS).toISOString().slice(0, 10),
       target_sessions: 12,
@@ -142,7 +142,7 @@ test("キャンセル（振替候補あり）・予約申請の否認・マッ�
   if (bookingError || !bookingRequest) throw new Error(`予約申請の作成に失敗: ${bookingError?.message}`);
   expect((await coachClient.rpc("reject_slot_proposal", { p_proposal_id: bookingRequest.proposal_id, p_reason: "E2E: 予約の否認理由" })).error).toBeNull();
 
-  // 3. マッチングの否認（コーチの現地時刻の 金曜 20:00〜20:25）。payload に申請のID（request_id）が入る
+  // 3. マッチングの否認（生徒の現地時刻の 金曜 20:00〜20:25。申請時の生徒のタイムゾーンで持つ）。payload に申請のID（request_id）が入る
   const { data: matchingRequest, error: matchingError } = await f.admin
     .from("com_t_matching_request")
     .insert({
@@ -153,6 +153,7 @@ test("キャンセル（振替候補あり）・予約申請の否認・マッ�
       requested_day_of_week: 5,
       requested_start_time: "20:00",
       requested_end_time: "20:25",
+      requested_timezone: STUDENT_TZ,
     })
     .select("request_id")
     .single();
@@ -203,7 +204,7 @@ test("キャンセル（振替候補あり）・予約申請の否認・マッ�
   );
 
   const matchingRejected = await waitForEmail({ to: email, since, subject: /マッチングについて/ });
-  const { instant } = getFirstLiveSessionOccurrence(5, "20:00", coach.timezone, STUDENT_TZ);
+  const { instant } = getFirstLiveSessionOccurrence(5, "20:00", STUDENT_TZ, STUDENT_TZ);
   expect(matchingRejected.text).toContain(
     `【ご希望の曜日・時間】\n${formatWeeklySlot({ startIso: instant.toISOString(), endIso: end(instant).toISOString(), timeZone: STUDENT_TZ, language: "ja" })}`
   );

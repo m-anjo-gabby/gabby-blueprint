@@ -57,7 +57,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
         .order('start_datetime', { ascending: false }),
       supabase
         .from('com_m_lesson_schedule')
-        .select('schedule_id, student_id, day_of_week, start_time')
+        .select('schedule_id, student_id, day_of_week, start_time, schedule_timezone')
         .eq('coach_id', user.id)
         .eq('status', 1),
     ]);
@@ -138,6 +138,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
       student_name: nameById.get(schedule.student_id) ?? '(Unknown)',
       day_of_week: schedule.day_of_week,
       start_time: schedule.start_time,
+      schedule_timezone: schedule.schedule_timezone,
       expected_sessions: row.expected_sessions,
       actual_sessions: row.actual_sessions,
       shortfall: row.shortfall,
