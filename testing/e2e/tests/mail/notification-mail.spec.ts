@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, request, test } from "@playwright/test";
 import {
   cleanupAuthFixture,
   createAuthFixture,
@@ -7,7 +7,8 @@ import {
 } from "../../support/authFixtures.ts";
 import { cronSecret, invokeMailDispatch } from "../../support/mailDispatch.ts";
 import { getPersonaPassword, storageStatePath } from "../../support/personas.ts";
-import { resendReadApiKey, resendTestAddress, waitForEmail } from "../../support/resendInbox.ts";
+import { extractAppLinkPath, resendReadApiKey, resendTestAddress, waitForEmail } from "../../support/resendInbox.ts";
+import { STUDENT_BASE_URL } from "../../support/targets.ts";
 
 /**
  * 出来事の通知メール（testing/e2e/specs/notification/mail-dispatch.md）。
@@ -85,6 +86,36 @@ test("通知の登録ですぐ送るメールが積まれ、送信処理で届�
   expect(mail.subject).toBe("【Gabby Blueprint】予約が承認されました");
   expect(mail.html).toContain("E2Eコーチがセッションの予約を承認しました。");
   expect(mail.html).toContain("/live-room");
+  // ロゴは公開 URL の画像、テキスト版も同じ内容で送る
+  expect(mail.html).toMatch(/<img src="https:\/\/[^"]+\/mail-logo\.png"/);
+  expect(mail.text).toContain("E2Eコーチがセッションの予約を承認しました。");
+  expect(mail.text).toContain("▼ アプリで確認する");
+
+  // ログイン不要の配信停止: 確認画面（GET）では停止せず、ボタン（POST）で「通知」の区分を停止する
+  const unsubscribePath = extractAppLinkPath(mail.html ?? "", "/mail/unsubscribe");
+  expect(mail.text).toContain("/mail/unsubscribe?");
+  const portal = await request.newContext({ baseURL: STUDENT_BASE_URL, ignoreHTTPSErrors: true });
+  try {
+    const confirm = await portal.get(unsubscribePath);
+    expect(confirm.status()).toBe(200);
+    expect(await confirm.text()).toContain("「通知」のメールの配信を停止します。");
+    const settingRows = async () =>
+      (await fixture!.admin.from("com_t_user_mail_setting").select("category, enabled").eq("user_id", studentA)).data ?? [];
+    expect(await settingRows()).toEqual([]);
+
+    const tampered = await portal.post(unsubscribePath.replace(/t=[^&]+/, "t=invalid"), { form: { "List-Unsubscribe": "One-Click" } });
+    expect(tampered.status()).toBe(400);
+    expect(await settingRows()).toEqual([]);
+
+    const done = await portal.post(unsubscribePath, { form: { "List-Unsubscribe": "One-Click" } });
+    expect(done.status()).toBe(200);
+    expect(await done.text()).toContain("「通知」のメールの配信を停止しました。");
+    expect(await settingRows()).toEqual([{ category: "NOTIFICATION", enabled: false }]);
+    // 次のテスト（チャットの新着）は同じ生徒に送るため、配信を元に戻す
+    await fixture!.admin.from("com_t_user_mail_setting").delete().eq("user_id", studentA);
+  } finally {
+    await portal.dispose();
+  }
 });
 
 test("チャットの新着は未読が10分続いたら1通。未読のままの続きはまとめ、既読後の新着は新しい1通", async ({}, testInfo) => {

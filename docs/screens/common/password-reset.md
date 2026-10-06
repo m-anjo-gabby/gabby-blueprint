@@ -82,7 +82,7 @@
 - 処理: `packages/lib/auth/portalActions.ts`（`forgotPassword` / `verifyRecovery` / `hasRecoverySession` / `resetPassword`）、
   `packages/lib/auth/core.ts`（`forgotPasswordCore` / `verifyRecoveryCore` / `resetPasswordCore`）
 - リンク確認済みの判定: `packages/lib/auth/recovery.ts`（確認したセッションに紐づく署名付き Cookie `pw_recovery`、30分）
-- メール: `packages/lib/mail/actions/sendPasswordReset.ts`（有効期限の定数）、`packages/lib/mail/templates/PasswordResetEmailTemplate.tsx`
+- メール: `packages/lib/mail/actions/sendPasswordReset.ts`（有効期限の定数）、`packages/lib/mail/templates/PasswordResetEmailTemplate.ts`（外枠は `packages/lib/mail/layout/`）
   （言語別の文言・件名）。アプリごとの言語は各アプリの `*AuthAction.ts` の `resetMailLanguage`
 - 文言: admin `apps/admin/messages/{ja,en}.json` の `forgotPassword` / `updatePassword` / `passwordFields` / `authErrors`、
   coach `apps/coach/constants/auth.ts`、student `apps/student/constants/auth.ts`（エラーの日本語は `packages/lib/auth/errors.ts`）

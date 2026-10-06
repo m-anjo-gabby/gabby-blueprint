@@ -16,7 +16,7 @@ function toPortalUrl(base: string, path: string): string | null {
  * 生徒には日本語（相手はコーチ）、コーチには英語（相手は生徒）。
  * 主ボタンは、1時間前は入室先（生徒: 通話画面 / コーチ: セッションハブ）、24時間前はセッションの確認先（生徒: ライブセッション画面 / コーチ: セッションハブ）。
  */
-export const liveSessionReminderHandler: MailHandler = async ({ admin, row, recipient, nowMs }) => {
+export const liveSessionReminderHandler: MailHandler = async ({ admin, row, recipient, nowMs, unsubscribeUrl }) => {
   const sessionId = typeof row.payload.session_id === 'string' ? row.payload.session_id : null;
   const lead: ReminderLead = row.payload.lead === '1h' ? '1h' : '24h';
   if (!sessionId) return { skip: 'invalid_payload' };
@@ -55,5 +55,6 @@ export const liveSessionReminderHandler: MailHandler = async ({ admin, row, reci
     }),
     actionUrl: toPortalUrl(portal, actionPath),
     settingsUrl: toPortalUrl(portal, '/profile'),
+    unsubscribeUrl,
   });
 };

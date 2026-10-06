@@ -30,7 +30,7 @@ function isMailTarget(type: string): type is NotificationType {
  * 送る直前にアプリ内通知を読み直し、文面はアプリ内通知と同じタイトル・本文にする（生徒は日本語、コーチは英語）。
  * チャットの新着（CHAT_UNREAD）は、送る時点で既読になっていれば送らない。
  */
-export const notificationHandler: MailHandler = async ({ admin, row, recipient }) => {
+export const notificationHandler: MailHandler = async ({ admin, row, recipient, unsubscribeUrl }) => {
   const notificationId = typeof row.payload.notification_id === 'string' ? row.payload.notification_id : null;
   if (!notificationId) return { skip: 'invalid_payload' };
 
@@ -65,6 +65,7 @@ export const notificationHandler: MailHandler = async ({ admin, row, recipient }
       quoted: !!preview,
       actionUrl,
       settingsUrl,
+      unsubscribeUrl,
     });
   }
 
@@ -77,5 +78,6 @@ export const notificationHandler: MailHandler = async ({ admin, row, recipient }
     body: text.body,
     actionUrl,
     settingsUrl,
+    unsubscribeUrl,
   });
 };

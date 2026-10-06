@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { MailButton, NotifyMailFrame, mailTextStyle } from './NotifyMailFrame';
+import { toPreheader, type MailBlock, type MailDocument } from '../layout/document';
+import { notifyFooter } from '../layout/footers';
 
 /** 通知メールの言語（student: ja / coach: en） */
 export type NotificationMailLanguage = 'ja' | 'en';
@@ -17,6 +17,8 @@ export interface NotificationEmailTemplateProps {
   actionUrl: string | null;
   /** メール通知の設定画面のURL（宛先のポータル） */
   settingsUrl: string | null;
+  /** ログイン不要の配信停止のURL（無ければ案内を出さない） */
+  unsubscribeUrl?: string | null;
 }
 
 const COPY = {
@@ -42,7 +44,7 @@ export function getNotificationSubject(language: NotificationMailLanguage, title
 }
 
 /** 出来事の通知（予約・キャンセル・マッチング・チャット等）。アプリ内通知と同じ内容に、アプリへのボタンを添える */
-export const NotificationEmailTemplate: React.FC<NotificationEmailTemplateProps> = ({
+export function buildNotificationMail({
   language,
   recipientName,
   title,
@@ -50,36 +52,27 @@ export const NotificationEmailTemplate: React.FC<NotificationEmailTemplateProps>
   quoted = false,
   actionUrl,
   settingsUrl,
-}) => {
+  unsubscribeUrl,
+}: NotificationEmailTemplateProps): MailDocument {
   const copy = COPY[language];
-  return (
-    <NotifyMailFrame
-      language={language}
-      footerReason={copy.footer}
-      settingsText={copy.settings}
-      settingsUrl={settingsUrl}
-      settingsLinkLabel={copy.settingsLink}
-    >
-      <p style={mailTextStyle}>{copy.greeting(recipientName)}</p>
-      <p style={{ fontSize: '17px', fontWeight: 'bold', margin: '0 0 12px 0', color: '#111827' }}>{title}</p>
-      {quoted ? (
-        <p
-          style={{
-            fontSize: '15px',
-            margin: '0 0 16px 0',
-            padding: '12px 16px',
-            backgroundColor: '#f3f5fb',
-            borderLeft: '3px solid #0e3196',
-            borderRadius: '4px',
-            whiteSpace: 'pre-wrap',
-          }}
-        >
-          {body}
-        </p>
-      ) : (
-        <p style={{ ...mailTextStyle, whiteSpace: 'pre-wrap' }}>{body}</p>
-      )}
-      {actionUrl && <MailButton href={actionUrl}>{copy.action}</MailButton>}
-    </NotifyMailFrame>
-  );
-};
+  const blocks: MailBlock[] = [
+    { kind: 'paragraph', text: copy.greeting(recipientName) },
+    { kind: 'title', text: title },
+    quoted ? { kind: 'quote', text: body } : { kind: 'paragraph', text: body },
+  ];
+  if (actionUrl) blocks.push({ kind: 'button', label: copy.action, href: actionUrl });
+
+  return {
+    language,
+    preheader: toPreheader(body),
+    blocks,
+    footer: notifyFooter({
+      language,
+      reason: copy.footer,
+      settingsText: copy.settings,
+      settingsUrl,
+      settingsLabel: copy.settingsLink,
+      unsubscribeUrl,
+    }),
+  };
+}

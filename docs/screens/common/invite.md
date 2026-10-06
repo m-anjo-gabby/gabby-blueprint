@@ -53,7 +53,7 @@
 - 処理: `packages/lib/auth/portalActions.ts`（`verifyInvitation` / `acceptInvitation`）、ライセンス発行 `packages/lib/license/issue.ts`（`issueInitialLicense`）、
   `packages/lib/auth/core.ts`（`verifyInvitationCore` / `acceptInvitationCore`。画面へは氏名・メールアドレスだけを返す）
 - 招待の作成・再送: `apps/admin/actions/adminUserAction.ts`（有効期限は `INVITATION_EXPIRES_DAYS`）、テーブル `com_t_invitation`
-- 招待メール: `packages/lib/mail/actions/send{Admin,Coach,}Invitation.ts`・`packages/lib/mail/templates/*InviteEmailTemplate.tsx`
+- 招待メール: `packages/lib/mail/actions/send{Admin,Coach,}Invitation.ts`・`packages/lib/mail/templates/*InviteEmailTemplate.ts`（外枠は `packages/lib/mail/layout/`、組み立ては `render.ts`）
   （admin 向けの文面は `testing/unit/admin-invite-mail-content.test.ts` で検証）
 - 文言: admin `apps/admin/messages/{ja,en}.json` の `invite` / `passwordFields` / `authErrors`、
   coach `apps/coach/constants/auth.ts`、student `apps/student/constants/auth.ts`

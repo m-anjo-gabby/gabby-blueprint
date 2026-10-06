@@ -3,6 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
 import { sendCore } from '../core';
+import { getPortalBaseUrl } from '../../navigation/portalUrl';
+import { buildUnsubscribeUrl, getUnsubscribeSecret, unsubscribeHeaders } from '../unsubscribe/token';
 import { MAIL_TYPES, type MailType } from './registry';
 import type { MailHandlerRegistry, MailOutboxRow, MailRecipient } from './types';
 import { groupSessionReminderHandler } from './handlers/groupSessionReminder';
@@ -117,12 +119,18 @@ async function processRow(admin: SupabaseClient, row: MailOutboxRow, nowMs: numb
     if (!recipient) return await skip('recipient_unavailable');
     if (!(await isCategoryEnabled(admin, row.user_id, row.category))) return await skip('opted_out');
 
-    const built = await handler({ admin, row, recipient, nowMs });
+    const unsubscribeUrl = buildUnsubscribeUrl({
+      portalBaseUrl: getPortalBaseUrl(recipient.userType),
+      userId: recipient.userId,
+      category: row.category,
+      secret: getUnsubscribeSecret(),
+    });
+    const built = await handler({ admin, row, recipient, nowMs, unsubscribeUrl });
     if ('skip' in built) return await skip(built.skip);
     if (isUndeliverableAddress(recipient.email)) return await skip('undeliverable_address');
     if (!isAllowedRecipient(recipient.email)) return await skip('recipient_not_allowlisted');
 
-    const result = await sendCore({ to: recipient.email, subject: built.subject, html: built.html, sender: 'notify' });
+    const result = await sendCore({ to: recipient.email, ...built, sender: 'notify', headers: unsubscribeHeaders(unsubscribeUrl) });
     await updateRow(admin, row.mail_id, {
       status: 'SENT',
       sent_at: new Date().toISOString(),

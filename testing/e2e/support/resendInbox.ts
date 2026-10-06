@@ -25,6 +25,8 @@ interface ResendEmailSummary {
 
 export interface ResendEmail extends ResendEmailSummary {
   html: string | null;
+  /** テキスト版 */
+  text: string | null;
 }
 
 async function resendGet<T>(path: string): Promise<T> {

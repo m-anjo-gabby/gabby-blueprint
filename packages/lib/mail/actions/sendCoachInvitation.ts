@@ -1,9 +1,7 @@
 // packages/lib/mail/actions/sendCoachInvitation.ts
 import 'server-only';
-import * as React from 'react';
-import { renderToString } from 'react-dom/server.edge'; // App RouterのRSCで安全に動く軽量エクスポート
 import { sendCore } from '../core';
-import { CoachInviteEmailTemplate } from '../templates/CoachInviteEmailTemplate';
+import { renderCoachInvitationEmail } from '../render';
 import { createLogger } from '../../logger'; // プロジェクト共通のロガー
 
 const logger = createLogger('mail');
@@ -25,15 +23,7 @@ export async function sendCoachInvitationEmail({
   expiresDays = 3
 }: SendCoachInvitationParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const payload = { userName, inviteUrl, expiresDays };
-
-    const html = renderToString(React.createElement(CoachInviteEmailTemplate, payload));
-
-    const data = await sendCore({
-      to,
-      subject: '[Gabby Blueprint] Coach Account Invitation',
-      html,
-    });
+    const data = await sendCore({ to, ...renderCoachInvitationEmail({ userName, inviteUrl, expiresDays }) });
 
     logger.info('mail:send_coach_invitation_success', `コーチ招待メールを送信しました: ${to}`, { messageId: data?.id });
     return { success: true };

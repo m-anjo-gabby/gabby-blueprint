@@ -5,18 +5,26 @@
  * 送信処理（packages/lib/mail/dispatch/）と同じ文面の組み立て関数を使い、サンプルの値で組み立てる。
  * 宛先は Resend のテスト用アドレス（delivered+mr-<種類>@resend.dev。@ の前は64文字まで）で、実在の人には届かない。
  * 一部だけ送り直す場合は --only=<種類の一部>（例: --only=coach-SESSION_RESCHEDULE）。
+ * 送らずに HTML・テキストをファイルに書き出す場合は --out=<フォルダ>（ロゴは手元の apps/student/public/mail-logo.png を参照する。ブラウザで見た目を確かめる用）。
  * 送信元・API キーは apps/admin/.env.local（MAIL_FROM_NOTIFY、無ければ MAIL_FROM_AUTH）。
  */
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import dotenv from "dotenv";
 import {
   formatReminderSchedule,
+  renderAdminInvitationEmail,
+  renderCoachInvitationEmail,
   renderEventReminderEmail,
   renderLiveSessionReminderEmail,
   renderNotificationEmail,
+  renderPasswordResetEmail,
+  renderStudentInvitationEmail,
+  type RenderedEmail,
 } from "@gabby/lib/mail/render";
+import { getMailLogoUrl } from "@gabby/lib/mail/assets/logo";
+import { buildUnsubscribeUrl, unsubscribeHeaders } from "@gabby/lib/mail/unsubscribe/token";
 import { NOTIFICATION_MESSAGE_BUILDERS, type NotificationType } from "@gabby/types/notification";
 import { NOTIFICATION_MESSAGE_BUILDERS_EN } from "@gabby/types/notificationEn";
 
@@ -29,13 +37,28 @@ if (!API_KEY) throw new Error("apps/admin/.env.local に RESEND_API_KEY があ�
 const STUDENT_URL = "https://localhost:3000";
 const COACH_URL = "https://localhost:3002";
 
-interface Sample {
+interface Sample extends RenderedEmail {
   label: string;
-  subject: string;
-  html: string;
+  /** 配信停止の URL（通知・リマインダーのみ。List-Unsubscribe ヘッダーにも使う） */
+  unsubscribeUrl?: string | null;
 }
 
 const samples: Sample[] = [];
+
+/** 配信停止の URL（サンプル用の鍵で署名する。宛先のユーザーは架空） */
+const sampleUnsubscribeUrl = (portal: string, category: "NOTIFICATION" | "REMINDER") =>
+  buildUnsubscribeUrl({ portalBaseUrl: portal, userId: "00000000-0000-0000-0000-000000000000", category, secret: "sample" });
+const STUDENT_UNSUB = { NOTIFICATION: sampleUnsubscribeUrl(STUDENT_URL, "NOTIFICATION"), REMINDER: sampleUnsubscribeUrl(STUDENT_URL, "REMINDER") };
+const COACH_UNSUB = { NOTIFICATION: sampleUnsubscribeUrl(COACH_URL, "NOTIFICATION"), REMINDER: sampleUnsubscribeUrl(COACH_URL, "REMINDER") };
+
+// ---- アカウント関連（招待・パスワード再設定。送信待ちを通らず、配信停止の対象外） ----
+const INVITE_URL = `${STUDENT_URL}/auth/callback?token_hash=sample-token&type=invite&next=/update-password`;
+samples.push({ label: "auth-student-INVITE", ...renderStudentInvitationEmail({ userName: "山田 太郎", inviteUrl: INVITE_URL }) });
+samples.push({ label: "auth-coach-INVITE", ...renderCoachInvitationEmail({ userName: "Suzanne", inviteUrl: INVITE_URL.replace(STUDENT_URL, COACH_URL) }) });
+samples.push({ label: "auth-admin-INVITE", ...renderAdminInvitationEmail({ userName: "山田 太郎", inviteUrl: INVITE_URL.replace(STUDENT_URL, "https://localhost:3001") }) });
+samples.push({ label: "auth-student-RESET", ...renderPasswordResetEmail({ resetUrl: INVITE_URL.replace("invite", "recovery"), language: "ja" }) });
+samples.push({ label: "auth-coach-RESET", ...renderPasswordResetEmail({ resetUrl: INVITE_URL.replace("invite", "recovery"), language: "en" }) });
+samples.push({ label: "auth-admin-RESET", ...renderPasswordResetEmail({ resetUrl: INVITE_URL.replace("invite", "recovery"), language: "bilingual" }) });
 
 // ---- 出来事の通知（アプリ内通知と同じ文言。生徒は日本語、コーチは英語） ----
 const STUDENT_TYPES: [NotificationType, Record<string, unknown>, string][] = [
@@ -68,7 +91,9 @@ for (const [type, payload, linkPath] of STUDENT_TYPES) {
       body: text.body,
       actionUrl: `${STUDENT_URL}${linkPath}`,
       settingsUrl: `${STUDENT_URL}/profile`,
+      unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION,
     }),
+    unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION,
   });
 }
 for (const [type, payload, linkPath] of COACH_TYPES) {
@@ -82,7 +107,9 @@ for (const [type, payload, linkPath] of COACH_TYPES) {
       body: text.body,
       actionUrl: `${COACH_URL}${linkPath}`,
       settingsUrl: `${COACH_URL}/profile`,
+      unsubscribeUrl: COACH_UNSUB.NOTIFICATION,
     }),
+    unsubscribeUrl: COACH_UNSUB.NOTIFICATION,
   });
 }
 
@@ -97,7 +124,9 @@ samples.push({
     quoted: true,
     actionUrl: `${STUDENT_URL}/chat/sample`,
     settingsUrl: `${STUDENT_URL}/profile`,
+    unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION,
   }),
+  unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION,
 });
 samples.push({
   label: "coach-CHAT_UNREAD",
@@ -109,7 +138,9 @@ samples.push({
     quoted: true,
     actionUrl: `${COACH_URL}/chat/sample`,
     settingsUrl: `${COACH_URL}/profile`,
+    unsubscribeUrl: COACH_UNSUB.NOTIFICATION,
   }),
+  unsubscribeUrl: COACH_UNSUB.NOTIFICATION,
 });
 
 // ---- グループセッションのリマインダー（24時間前・1時間前 × 生徒/コーチ。シリーズあり・参加URLなしの違いも含める） ----
@@ -124,8 +155,10 @@ const reminder = (
   options: { seriesTitle?: string | null; joinUrl?: string | null; timeZone: string }
 ) => {
   const portal = language === "ja" ? STUDENT_URL : COACH_URL;
+  const unsubscribeUrl = (language === "ja" ? STUDENT_UNSUB : COACH_UNSUB).REMINDER;
   samples.push({
     label,
+    unsubscribeUrl,
     ...renderEventReminderEmail({
       language,
       lead,
@@ -137,6 +170,7 @@ const reminder = (
       joinUrl: options.joinUrl === undefined ? "https://zoom.us/j/0000000000" : options.joinUrl,
       detailUrl: `${portal}${language === "ja" ? "/dashboard" : "/calendar"}`,
       settingsUrl: `${portal}/profile`,
+      unsubscribeUrl,
     }),
   });
 };
@@ -150,8 +184,10 @@ const liveEnd = new Date(start.getTime() + 25 * 60 * 1000);
 const liveReminder = (label: string, language: "ja" | "en", lead: "24h" | "1h", timeZone: string) => {
   const isStudent = language === "ja";
   const actionPath = isStudent ? (lead === "1h" ? "/live-room/sample" : "/live-room") : "/students/sample/sessions/sample";
+  const unsubscribeUrl = (isStudent ? STUDENT_UNSUB : COACH_UNSUB).REMINDER;
   samples.push({
     label,
+    unsubscribeUrl,
     ...renderLiveSessionReminderEmail({
       language,
       lead,
@@ -160,6 +196,7 @@ const liveReminder = (label: string, language: "ja" | "en", lead: "24h" | "1h", 
       scheduleLabel: formatReminderSchedule({ startIso: start.toISOString(), endIso: liveEnd.toISOString(), timeZone, language }),
       actionUrl: `${isStudent ? STUDENT_URL : COACH_URL}${actionPath}`,
       settingsUrl: `${isStudent ? STUDENT_URL : COACH_URL}/profile`,
+      unsubscribeUrl,
     }),
   });
 };
@@ -171,14 +208,36 @@ liveReminder("coach-LIVE-1h", "en", "1h", "America/Vancouver");
 // ---- 送信（Resend の送信レートに収めるため1件ずつ間隔を空ける） ----
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const only = process.argv.find((arg) => arg.startsWith("--only="))?.slice("--only=".length);
+const outDir = process.argv.find((arg) => arg.startsWith("--out="))?.slice("--out=".length);
 const targets = only ? samples.filter((sample) => sample.label.includes(only)) : samples;
+
+if (outDir) {
+  // 書き出しのみ（ロゴは本番に未反映でも見られるよう、手元の画像を参照する）
+  mkdirSync(outDir, { recursive: true });
+  const localLogo = pathToFileURL(path.join(REPO_ROOT, "apps/student/public/mail-logo.png")).href;
+  for (const sample of targets) {
+    const html = sample.html.replaceAll(getMailLogoUrl(), localLogo);
+    writeFileSync(path.join(outDir, `${sample.label}.html`), html);
+    writeFileSync(path.join(outDir, `${sample.label}.txt`), `件名: ${sample.subject}\n\n${sample.text}`);
+  }
+  console.log(`${targets.length} 件を ${outDir} に書き出しました`);
+  process.exit(0);
+}
+
 let sent = 0;
 for (const sample of targets) {
   const to = `${`delivered+mr-${sample.label.toLowerCase().replace(/_/g, "-")}`.slice(0, 64)}@resend.dev`;
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: FROM, to: [to], subject: sample.subject, html: sample.html }),
+    body: JSON.stringify({
+      from: FROM,
+      to: [to],
+      subject: sample.subject,
+      html: sample.html,
+      text: sample.text,
+      headers: unsubscribeHeaders(sample.unsubscribeUrl ?? null),
+    }),
   });
   const body = await res.text();
   if (!res.ok) {
@@ -189,4 +248,4 @@ for (const sample of targets) {
   }
   await sleep(700);
 }
-console.log(`\n${sent} / ${targets.length} 件を送信しました（送信元: ${FROM}）`);
+console.log(`\n${sent} /${targets.length} 件を送信しました（送信元: ${FROM}）`);

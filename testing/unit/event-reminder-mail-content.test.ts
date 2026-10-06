@@ -69,9 +69,10 @@ test("コーチ向け（英語）: 日本語を含まない", () => {
 });
 
 test("シリーズに属する回は、セッション名の上にシリーズ名を載せる", () => {
-  const { html } = renderEventReminderEmail({ ...BASE, seriesTitle: "10月の発音グループセッション", language: "ja", lead: "24h" });
+  const { html, text } = renderEventReminderEmail({ ...BASE, seriesTitle: "10月の発音グループセッション", language: "ja", lead: "24h" });
   assert.ok(html.includes("10月の発音グループセッション"));
-  assert.ok(html.indexOf("10月の発音グループセッション") < html.indexOf("英語でおしゃべり会"));
+  // HTML は先頭の要約（プレビュー文）にもセッション名が入るため、並びはテキスト版で確かめる
+  assert.ok(text.includes(["【セッション】", "10月の発音グループセッション", "英語でおしゃべり会"].join("\n")));
 });
 
 test("ライブセッション（生徒・日本語）: 1時間前は入室ボタンと入室できる時刻の案内、相手はコーチ", () => {

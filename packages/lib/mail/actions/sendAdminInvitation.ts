@@ -24,8 +24,7 @@ export async function sendAdminInvitationEmail({
   expiresDays = 3
 }: SendAdminInvitationParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const { subject, html } = renderAdminInvitationEmail({ userName, inviteUrl, expiresDays });
-    const data = await sendCore({ to, subject, html });
+    const data = await sendCore({ to, ...renderAdminInvitationEmail({ userName, inviteUrl, expiresDays }) });
 
     logger.info('mail:send_admin_invitation_success', `管理者招待メールを送信しました: ${to}`, { messageId: data?.id });
     return { success: true };

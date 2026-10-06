@@ -8,25 +8,29 @@
  */
 import * as React from 'react';
 import { renderToString } from 'react-dom/server.edge'; // App RouterのRSCで安全に動く軽量エクスポート
-import { ADMIN_INVITATION_SUBJECT, AdminInviteEmailTemplate } from './templates/AdminInviteEmailTemplate';
+import { renderMailText, type MailDocument } from './layout/document';
+import { MailLayout } from './layout/MailLayout';
+import { ADMIN_INVITATION_SUBJECT, buildAdminInviteMail } from './templates/AdminInviteEmailTemplate';
+import { COACH_INVITATION_SUBJECT, buildCoachInviteMail } from './templates/CoachInviteEmailTemplate';
+import { STUDENT_INVITATION_SUBJECT, buildStudentInviteMail } from './templates/InviteEmailTemplate';
 import {
   PASSWORD_RESET_SUBJECTS,
-  PasswordResetEmailTemplate,
+  buildPasswordResetMail,
   type PasswordResetMailLanguage,
 } from './templates/PasswordResetEmailTemplate';
 import {
-  EventReminderEmailTemplate,
+  buildEventReminderMail,
   getEventReminderSubject,
   type EventReminderEmailTemplateProps,
   type ReminderMailLanguage,
 } from './templates/EventReminderEmailTemplate';
 import {
-  NotificationEmailTemplate,
+  buildNotificationMail,
   getNotificationSubject,
   type NotificationEmailTemplateProps,
 } from './templates/NotificationEmailTemplate';
 import {
-  LiveSessionReminderEmailTemplate,
+  buildLiveSessionReminderMail,
   getLiveSessionReminderSubject,
   type LiveSessionReminderEmailTemplateProps,
 } from './templates/LiveSessionReminderEmailTemplate';
@@ -37,9 +41,18 @@ import {
  */
 export const PASSWORD_RESET_LINK_TTL_MINUTES = 30;
 
-interface RenderedEmail {
+export interface RenderedEmail {
   subject: string;
+  /** HTML 版 */
   html: string;
+  /** テキスト版（HTML と同じ元データから作る。HTML を表示しないメールソフト向け） */
+  text: string;
+}
+
+/** 中身の定義から HTML 版・テキスト版を作る */
+export function renderMailDocument(subject: string, doc: MailDocument): RenderedEmail {
+  const html = `<!DOCTYPE html>${renderToString(React.createElement(MailLayout, { doc }))}`;
+  return { subject, html, text: renderMailText(doc) };
 }
 
 /** パスワード再設定メールの件名・本文を組み立てる */
@@ -51,14 +64,10 @@ export function renderPasswordResetEmail({
   /** メールの言語（student: ja / coach: en / admin: bilingual） */
   language: PasswordResetMailLanguage;
 }): RenderedEmail {
-  const html = renderToString(
-    React.createElement(PasswordResetEmailTemplate, {
-      resetUrl,
-      language,
-      expiresInMinutes: PASSWORD_RESET_LINK_TTL_MINUTES,
-    })
+  return renderMailDocument(
+    PASSWORD_RESET_SUBJECTS[language],
+    buildPasswordResetMail({ resetUrl, language, expiresInMinutes: PASSWORD_RESET_LINK_TTL_MINUTES })
   );
-  return { subject: PASSWORD_RESET_SUBJECTS[language], html };
 }
 
 /** 管理者向け招待メール（日英併記）の件名・本文を組み立てる */
@@ -72,8 +81,33 @@ export function renderAdminInvitationEmail({
   inviteUrl: string;
   expiresDays?: number;
 }): RenderedEmail {
-  const html = renderToString(React.createElement(AdminInviteEmailTemplate, { userName, inviteUrl, expiresDays }));
-  return { subject: ADMIN_INVITATION_SUBJECT, html };
+  return renderMailDocument(ADMIN_INVITATION_SUBJECT, buildAdminInviteMail({ userName, inviteUrl, expiresDays }));
+}
+
+/** コーチ向け招待メール（英語）の件名・本文を組み立てる */
+export function renderCoachInvitationEmail({
+  userName,
+  inviteUrl,
+  expiresDays = 3,
+}: {
+  userName: string;
+  inviteUrl: string;
+  expiresDays?: number;
+}): RenderedEmail {
+  return renderMailDocument(COACH_INVITATION_SUBJECT, buildCoachInviteMail({ userName, inviteUrl, expiresDays }));
+}
+
+/** 生徒向け招待メール（日本語）の件名・本文を組み立てる */
+export function renderStudentInvitationEmail({
+  userName,
+  inviteUrl,
+  expiresDays = 3,
+}: {
+  userName: string;
+  inviteUrl: string;
+  expiresDays?: number;
+}): RenderedEmail {
+  return renderMailDocument(STUDENT_INVITATION_SUBJECT, buildStudentInviteMail({ userName, inviteUrl, expiresDays }));
 }
 
 /**
@@ -110,18 +144,18 @@ export function formatReminderSchedule({
 
 /** グループセッションのリマインダーの件名・本文を組み立てる */
 export function renderEventReminderEmail(props: EventReminderEmailTemplateProps): RenderedEmail {
-  const html = renderToString(React.createElement(EventReminderEmailTemplate, props));
-  return { subject: getEventReminderSubject(props.language, props.lead, props.scheduleLabel), html };
+  return renderMailDocument(getEventReminderSubject(props.language, props.lead, props.scheduleLabel), buildEventReminderMail(props));
 }
 
 /** 出来事の通知メール（予約・キャンセル・マッチング・チャット等）の件名・本文を組み立てる */
 export function renderNotificationEmail(props: NotificationEmailTemplateProps): RenderedEmail {
-  const html = renderToString(React.createElement(NotificationEmailTemplate, props));
-  return { subject: getNotificationSubject(props.language, props.title), html };
+  return renderMailDocument(getNotificationSubject(props.language, props.title), buildNotificationMail(props));
 }
 
 /** ライブセッションのリマインダー（生徒・コーチ）の件名・本文を組み立てる */
 export function renderLiveSessionReminderEmail(props: LiveSessionReminderEmailTemplateProps): RenderedEmail {
-  const html = renderToString(React.createElement(LiveSessionReminderEmailTemplate, props));
-  return { subject: getLiveSessionReminderSubject(props.language, props.lead, props.scheduleLabel), html };
+  return renderMailDocument(
+    getLiveSessionReminderSubject(props.language, props.lead, props.scheduleLabel),
+    buildLiveSessionReminderMail(props)
+  );
 }

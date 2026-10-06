@@ -1,9 +1,7 @@
 // packages/lib/mail/actions/sendInvitation.ts
 import 'server-only';
-import * as React from 'react';
-import { renderToString } from 'react-dom/server.edge'; // App RouterのRSCで安全に動く軽量エクスポート
 import { sendCore } from '../core';
-import { InviteEmailTemplate } from '../templates/InviteEmailTemplate';
+import { renderStudentInvitationEmail } from '../render';
 import { createLogger } from '../../logger'; // プロジェクト共通のロガー
 
 const logger = createLogger('mail');
@@ -25,17 +23,7 @@ export async function sendInvitationEmail({
   expiresDays = 3 
 }: SendInvitationParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const payload = { userName, inviteUrl, expiresDays };
-    
-    // 1. HTMLの生成（唯一のマスターデータ）
-    const html = renderToString(React.createElement(InviteEmailTemplate, payload));
-
-    // 2. コア共通関数を呼び出して送信
-    const data = await sendCore({
-      to,
-      subject: '【Gabby Blueprint】コーパス単語帳利用開始のご案内',
-      html,
-    });
+    const data = await sendCore({ to, ...renderStudentInvitationEmail({ userName, inviteUrl, expiresDays }) });
 
     logger.info('mail:send_invitation_success', `招待メールを送信しました: ${to}`, { messageId: data?.id });
     return { success: true };

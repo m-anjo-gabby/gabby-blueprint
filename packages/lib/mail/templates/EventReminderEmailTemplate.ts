@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { MailButton, NotifyMailFrame, mailTextStyle } from './NotifyMailFrame';
+import type { MailBlock, MailDocument } from '../layout/document';
+import { notifyFooter } from '../layout/footers';
 
 /** リマインダーの言語（student: ja / coach: en） */
 export type ReminderMailLanguage = 'ja' | 'en';
@@ -23,6 +23,8 @@ export interface EventReminderEmailTemplateProps {
   detailUrl: string | null;
   /** メール通知の設定画面のURL（宛先のポータル） */
   settingsUrl: string | null;
+  /** ログイン不要の配信停止のURL（無ければ案内を出さない） */
+  unsubscribeUrl?: string | null;
 }
 
 const COPY = {
@@ -66,11 +68,8 @@ export function getEventReminderSubject(language: ReminderMailLanguage, lead: Re
   return lead === '1h' ? `【Gabby Blueprint】まもなくグループセッションが始まります（${scheduleLabel}）` : `【Gabby Blueprint】グループセッションのご案内（${scheduleLabel}）`;
 }
 
-const labelStyle: React.CSSProperties = { fontSize: '12px', color: '#6b7280', margin: '0 0 2px 0' };
-const valueStyle: React.CSSProperties = { fontSize: '15px', fontWeight: 'bold', margin: '0 0 12px 0', color: '#111827' };
-
 /** グループセッションのリマインダー（24時間前・1時間前） */
-export const EventReminderEmailTemplate: React.FC<EventReminderEmailTemplateProps> = ({
+export function buildEventReminderMail({
   language,
   lead,
   recipientName,
@@ -81,40 +80,35 @@ export const EventReminderEmailTemplate: React.FC<EventReminderEmailTemplateProp
   joinUrl,
   detailUrl,
   settingsUrl,
-}) => {
+  unsubscribeUrl,
+}: EventReminderEmailTemplateProps): MailDocument {
   const copy = COPY[language];
+  const blocks: MailBlock[] = [
+    { kind: 'paragraph', text: copy.greeting(recipientName) },
+    { kind: 'paragraph', text: copy.lead[lead] },
+    {
+      kind: 'details',
+      rows: [
+        { label: copy.titleLabel, value: title, sub: seriesTitle },
+        { label: copy.scheduleLabel, value: scheduleLabel },
+      ],
+      note: description,
+    },
+    joinUrl ? { kind: 'button', label: copy.join, href: joinUrl } : { kind: 'paragraph', text: copy.noJoinUrl },
+  ];
+  if (detailUrl) blocks.push({ kind: 'link', label: copy.detail, href: detailUrl });
 
-  return (
-    <NotifyMailFrame
-      language={language}
-      footerReason={copy.footer}
-      settingsText={copy.settings}
-      settingsUrl={settingsUrl}
-      settingsLinkLabel={copy.settingsLink}
-    >
-      <p style={mailTextStyle}>{copy.greeting(recipientName)}</p>
-      <p style={mailTextStyle}>{copy.lead[lead]}</p>
-
-      <div style={{ backgroundColor: '#f3f5fb', borderRadius: '8px', padding: '20px 20px 8px 20px', margin: '24px 0' }}>
-        <p style={labelStyle}>{copy.titleLabel}</p>
-        {seriesTitle && <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 2px 0' }}>{seriesTitle}</p>}
-        <p style={valueStyle}>{title}</p>
-        <p style={labelStyle}>{copy.scheduleLabel}</p>
-        <p style={valueStyle}>{scheduleLabel}</p>
-        {description && (
-          <p style={{ fontSize: '14px', color: '#4b5563', margin: '0 0 12px 0', whiteSpace: 'pre-wrap' }}>{description}</p>
-        )}
-      </div>
-
-      {joinUrl ? <MailButton href={joinUrl}>{copy.join}</MailButton> : <p style={mailTextStyle}>{copy.noJoinUrl}</p>}
-
-      {detailUrl && (
-        <p style={{ ...mailTextStyle, textAlign: 'center' }}>
-          <a href={detailUrl} style={{ color: '#0e3196' }}>
-            {copy.detail}
-          </a>
-        </p>
-      )}
-    </NotifyMailFrame>
-  );
-};
+  return {
+    language,
+    preheader: `${scheduleLabel} ${title}`,
+    blocks,
+    footer: notifyFooter({
+      language,
+      reason: copy.footer,
+      settingsText: copy.settings,
+      settingsUrl,
+      settingsLabel: copy.settingsLink,
+      unsubscribeUrl,
+    }),
+  };
+}

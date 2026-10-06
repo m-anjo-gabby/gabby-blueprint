@@ -25,6 +25,7 @@
 | 生徒・コーチ | 予約・キャンセル・マッチング・チャット等（通知の元になる操作） | 各画面 | 各RPC（`fn_notify` 等）。メールの扱いは共通のトリガーが受け持つ |
 | アドミン | カレンダーイベント管理（グループセッションの登録・担当コーチ） | `/calendar-events` | 画面仕様: [admin/calendar-events/list.md](../../../../docs/screens/admin/calendar-events/list.md) |
 | （システム） | 送信処理 | `/api/cron/mail-dispatch`（admin、ログイン不要・`CRON_SECRET` で保護） | `dispatchMail` |
+| 生徒・コーチ（ログイン不要） | 配信停止（メールのリンク・メールソフトのワンクリック停止） | `/mail/unsubscribe`（student は日本語、coach は英語。proxy で公開ルート） | `createUnsubscribeRoute`（`packages/lib/mail/unsubscribe/routeHandler.ts`） |
 
 ## 前提条件
 
@@ -59,7 +60,12 @@
    pg_cron の5分ごとのジョブは、送る時刻が来た行（チャットの10分後・失敗の再試行・取りこぼし）がある時だけ呼ぶ（`invoke_mail_dispatch_if_due`）。
 4. **送信**（`dispatchMail`）: 送る時刻が来た行を古い順に最大40件確保し（`claim_mail_outbox`、`FOR UPDATE SKIP LOCKED`）、1件ずつ
    宛先の取得 → 配信設定の確認 → 最新の業務データで文面を組み立て → Resend で送信（送信元 `MAIL_FROM_NOTIFY`、未設定なら `MAIL_FROM_AUTH`）→ `SENT` と送信サービスのメッセージIDを記録。
+   送信時に、ログイン不要の配信停止の URL（宛先のポータルの `/mail/unsubscribe?u=<ユーザーID>&c=<区分>&t=<署名>`）を組み立て、
+   本文のフッターと `List-Unsubscribe`・`List-Unsubscribe-Post: List-Unsubscribe=One-Click` ヘッダーに載せる。
+   署名の鍵 `MAIL_UNSUBSCRIBE_SECRET`（admin・student・coach で同じ値）が未設定の環境では、URL もヘッダーも付けない。
 5. **文面**: 生徒は日本語、コーチは英語。アプリ・設定へのリンクは宛先のポータルのURLで組み立てる。
+   - 外枠はアカウント関連のメールと共通（`packages/lib/mail/layout/`）: ヘッダーはロゴ（本番の生徒ポータルの `https://blueprint.gabbyacademy.com/mail-logo.png` を参照。環境変数 `MAIL_LOGO_URL` で差し替え可。画像を表示しない設定では alt「Gabby Blueprint English」）、
+     受信一覧の要約（プレビュー文）、フッターに会社名・URL。HTML 版とテキスト版を同じ元データから作り、両方を送る。
    - 通知: アプリ内通知と同じタイトル・本文（日本語 `NOTIFICATION_MESSAGE_BUILDERS`、英語 `NOTIFICATION_MESSAGE_BUILDERS_EN`）に「アプリで確認する」（通知の `link_path`）。
      件名「【Gabby Blueprint】<タイトル>」／「[Gabby Blueprint] <タイトル>」。
    - チャット: 「<送信者>さんから新しいメッセージが届いています」／「New message from <sender>」と、メッセージの冒頭（引用）。
@@ -71,6 +77,8 @@
    - グループセッション: シリーズに属する回はセッション名の上にシリーズ名を載せる。日時は受信者のタイムゾーン。参加URL（未設定なら案内文）・アプリの詳細
      （生徒 `/dashboard`、コーチ `/calendar`）。件名: 24時間前「【Gabby Blueprint】グループセッションのご案内（<日時>）」、1時間前「【Gabby Blueprint】まもなくグループセッションが始まります（<日時>）」。
 6. **配信停止**: プロフィールのスイッチ（「通知」「リマインダー」）を切り替えると、その場で配信設定を保存する（失敗したら元に戻す）。停止してもアプリ内の通知は届く。
+   ログインせずに停止する場合は、メールのフッターのリンク（`/mail/unsubscribe`）を開くと確認画面が出て（GET では停止しない。リンクを自動で開くセキュリティ製品で停止されないため）、
+   「配信を停止する」（POST）でそのメールの区分をオフにする。メールソフトのワンクリック停止（`List-Unsubscribe-Post`）も同じ URL への POST。
 
 ## 異常系・バリデーション一覧
 
@@ -93,6 +101,7 @@
 | 15 | チャットの新着が、送る時点（10分後）で既読 | `SKIPPED`（`already_read`） | サーバー |
 | 16 | 送る時点で通知が削除されている | `SKIPPED`（`notification_unavailable`） | サーバー |
 | 17 | 送る時点でライブセッションが予定でない（キャンセル・振替・実施済み）・開始済み | `SKIPPED`（`session_unavailable` / `session_started`）。積む時点で予定でない回は積まない | 両方 |
+| 18 | 配信停止の URL の署名・宛先・区分が一致しない（改ざん・鍵の未設定） | HTTP 400 と案内（プロフィールから設定）。配信設定は変えない | サーバー |
 
 ## 関連RPC・テーブル
 
@@ -103,8 +112,10 @@
 - テーブル: `com_t_mail_outbox`（RLS のポリシーなし＝service_role のみ）、`com_t_user_mail_setting`（本人の行のみ参照・登録・更新）、
   参照: `com_t_notification`・`com_t_session`・`com_m_calendar_event`・`com_t_calendar_event_participant`・`com_t_calendar_event_coach`・`com_m_user`
 - 実装参照: `packages/lib/mail/dispatch/`（`registry.ts`・`dispatchMail.ts`・`handlers/notification.ts`・`handlers/groupSessionReminder.ts`・`handlers/liveSessionReminder.ts`）、
-  `packages/lib/mail/settingsActions.ts`、`packages/lib/mail/templates/`（`NotifyMailFrame.tsx`・`NotificationEmailTemplate.tsx`・`EventReminderEmailTemplate.tsx`・`LiveSessionReminderEmailTemplate.tsx`）・
-  `render.ts`、`packages/types/notification.ts`・`notificationEn.ts`（通知の文言）、`apps/admin/app/api/cron/mail-dispatch/route.ts`
+  `packages/lib/mail/settingsActions.ts`、`packages/lib/mail/layout/`（外枠 `MailLayout.tsx`・中身の定義とテキスト版 `document.ts`・フッター `footers.ts`）、
+  `packages/lib/mail/templates/`（`NotificationEmailTemplate.ts`・`EventReminderEmailTemplate.ts`・`LiveSessionReminderEmailTemplate.ts`）・
+  `render.ts`、`packages/lib/mail/unsubscribe/`（署名 `token.ts`・受け口 `routeHandler.ts`）、`apps/{student,coach}/app/mail/unsubscribe/route.ts`、
+  ロゴ `packages/lib/mail/assets/logo.ts`（URL・表示サイズ）と `apps/student/public/mail-logo.png`（`node scripts/mail-logo/build.mjs` で `logo-01.png` から作る）、`packages/types/notification.ts`・`notificationEn.ts`（通知の文言）、`apps/admin/app/api/cron/mail-dispatch/route.ts`
 - 新しいメールの追加:
   - 出来事の通知: アプリ内通知の種別を `NOTIFICATION_MAIL_TYPES` と `enqueue_notification_mail` の一覧の両方に足す（文面はアプリ内通知の文言を使う）。
   - 時刻で送るメール: `MAIL_TYPES` に種別を足し、`dispatchMail.ts` の `HANDLERS` に組み立て処理を登録し、積む関数を作って `enqueue_scheduled_mails` から呼ぶ（cron のジョブは増やさない）。
@@ -119,10 +130,12 @@
 | 秘密のキーが無い呼び出しは拒否する | `event-reminder.spec.ts` | 高 | 異常系11 |
 | 1時間前・24時間前のリマインダーを送り、配信停止の人と期限外の予定には送らない（届いたメールの件名・本文、再実行で重複しない） | `event-reminder.spec.ts` | 高 | 正常系2〜5、異常系1・12、期限外（開始5時間前の予定）。`RESEND_TEST_READ_API_KEY`・`CRON_SECRET` 未設定ならスキップ |
 | ライブセッションの1時間前のリマインダーを生徒・コーチに積み、生徒に届く。キャンセル済みの回には送らない | `event-reminder.spec.ts` | 高 | 正常系2・4・5（ライブセッション）、異常系17。使い捨ての生徒にライブ付き契約・担当枠・セッションを直接作る（コーチは固定アカウントのため送らずに `undeliverable_address`）。セッションはチケットを直接参照するため、後始末で先に消す |
-| 通知の登録ですぐ送るメールが積まれ、送信処理で届く。達成の通知・配信停止の人には送らない | `notification-mail.spec.ts` | 高 | 正常系1・4・5、異常系1・13。通知は直接登録して確かめる |
+| 通知の登録ですぐ送るメールが積まれ、送信処理で届く。達成の通知・配信停止の人には送らない。届いたメールのリンクから配信停止できる | `notification-mail.spec.ts` | 高 | 正常系1・4・5・6（ログイン不要の停止）、異常系1・13・18。通知は直接登録して確かめる。ロゴの画像 URL・テキスト版も確かめる |
 | チャットの新着は未読が10分続いたら1通。未読のままの続きはまとめ、既読後の新着は新しい1通 | `notification-mail.spec.ts` | 中 | 正常系1（チャット） |
 | プロフィールに「通知」「リマインダー」の切り替えが出る | `notification-mail.spec.ts` | 低 | 閲覧のみ（固定アカウント） |
 
 管理者の操作で通知が登録されないこと（異常系14）は、dev の DB で `fn_notify` を管理者・コーチの JWT で呼び、取り消し（ROLLBACK）付きで確かめた（E2E は無し）。
 メールの文面（日時の表記・言語・参加URLの有無・設定へのリンク・通知の言語）は、送信せずに
-`testing/unit/event-reminder-mail-content.test.ts`・`notification-mail-content.test.ts` で確かめる。
+`testing/unit/event-reminder-mail-content.test.ts`・`notification-mail-content.test.ts`、全メール共通の外枠（ロゴ・プレビュー文・テキスト版）と
+配信停止の署名は `mail-layout.test.ts` で確かめる。全パターンの見た目は `testing/features/branches/feature-20261004-dev/send-mail-samples.ts`
+（Resend のテスト用アドレスへ送信。`--out=<フォルダ>` で送らずに HTML・テキストを書き出す）で確かめる。

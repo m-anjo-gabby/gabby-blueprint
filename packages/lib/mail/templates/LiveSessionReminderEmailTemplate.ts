@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { MailButton, NotifyMailFrame, mailTextStyle } from './NotifyMailFrame';
+import type { MailBlock, MailDocument } from '../layout/document';
+import { notifyFooter } from '../layout/footers';
 import type { ReminderLead, ReminderMailLanguage } from './EventReminderEmailTemplate';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../../liveSessionRoom/constants';
 
@@ -19,6 +19,8 @@ export interface LiveSessionReminderEmailTemplateProps {
   actionUrl: string | null;
   /** メール通知の設定画面のURL（宛先のポータル） */
   settingsUrl: string | null;
+  /** ログイン不要の配信停止のURL（無ければ案内を出さない） */
+  unsubscribeUrl?: string | null;
 }
 
 const COPY = {
@@ -62,11 +64,8 @@ export function getLiveSessionReminderSubject(language: ReminderMailLanguage, le
   return lead === '1h' ? `【Gabby Blueprint】まもなくライブセッションが始まります（${scheduleLabel}）` : `【Gabby Blueprint】ライブセッションのご案内（${scheduleLabel}）`;
 }
 
-const labelStyle: React.CSSProperties = { fontSize: '12px', color: '#6b7280', margin: '0 0 2px 0' };
-const valueStyle: React.CSSProperties = { fontSize: '15px', fontWeight: 'bold', margin: '0 0 12px 0', color: '#111827' };
-
 /** ライブセッションのリマインダー（24時間前・1時間前。生徒・コーチ） */
-export const LiveSessionReminderEmailTemplate: React.FC<LiveSessionReminderEmailTemplateProps> = ({
+export function buildLiveSessionReminderMail({
   language,
   lead,
   recipientName,
@@ -74,33 +73,33 @@ export const LiveSessionReminderEmailTemplate: React.FC<LiveSessionReminderEmail
   scheduleLabel,
   actionUrl,
   settingsUrl,
-}) => {
+  unsubscribeUrl,
+}: LiveSessionReminderEmailTemplateProps): MailDocument {
   const copy = COPY[language];
-  return (
-    <NotifyMailFrame
-      language={language}
-      footerReason={copy.footer}
-      settingsText={copy.settings}
-      settingsUrl={settingsUrl}
-      settingsLinkLabel={copy.settingsLink}
-    >
-      <p style={mailTextStyle}>{copy.greeting(recipientName)}</p>
-      <p style={mailTextStyle}>{copy.lead[lead]}</p>
+  const rows = [
+    ...(counterpartName ? [{ label: copy.counterpartLabel, value: counterpartName }] : []),
+    { label: copy.scheduleLabel, value: scheduleLabel },
+  ];
+  const blocks: MailBlock[] = [
+    { kind: 'paragraph', text: copy.greeting(recipientName) },
+    { kind: 'paragraph', text: copy.lead[lead] },
+    { kind: 'details', rows },
+  ];
+  if (actionUrl) blocks.push({ kind: 'button', label: copy.action[lead], href: actionUrl });
+  if (lead === '1h') blocks.push({ kind: 'paragraph', text: copy.joinNote, small: true, muted: true, center: true });
+  if (copy.cancelNote && lead === '24h') blocks.push({ kind: 'paragraph', text: copy.cancelNote, small: true, muted: true });
 
-      <div style={{ backgroundColor: '#f3f5fb', borderRadius: '8px', padding: '20px 20px 8px 20px', margin: '24px 0' }}>
-        {counterpartName && (
-          <>
-            <p style={labelStyle}>{copy.counterpartLabel}</p>
-            <p style={valueStyle}>{counterpartName}</p>
-          </>
-        )}
-        <p style={labelStyle}>{copy.scheduleLabel}</p>
-        <p style={valueStyle}>{scheduleLabel}</p>
-      </div>
-
-      {actionUrl && <MailButton href={actionUrl}>{copy.action[lead]}</MailButton>}
-      {lead === '1h' && <p style={{ ...mailTextStyle, textAlign: 'center', fontSize: '13px', color: '#6b7280' }}>{copy.joinNote}</p>}
-      {copy.cancelNote && lead === '24h' && <p style={{ ...mailTextStyle, fontSize: '13px', color: '#6b7280' }}>{copy.cancelNote}</p>}
-    </NotifyMailFrame>
-  );
-};
+  return {
+    language,
+    preheader: [scheduleLabel, counterpartName].filter(Boolean).join(' '),
+    blocks,
+    footer: notifyFooter({
+      language,
+      reason: copy.footer,
+      settingsText: copy.settings,
+      settingsUrl,
+      settingsLabel: copy.settingsLink,
+      unsubscribeUrl,
+    }),
+  };
+}
