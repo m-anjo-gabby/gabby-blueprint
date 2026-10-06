@@ -29,17 +29,21 @@ export const MAIL_CATEGORIES = {
 
 export type MailCategory = keyof typeof MAIL_CATEGORIES;
 
-/** メール種別と所属する区分 */
+/**
+ * メール種別と所属する区分。
+ * expiresAfterHours: 送信待ちに積んでからこの時間を過ぎたら送らない（送信処理の停止・送信数の上限で遅れた出来事の通知を、
+ * 古い内容のまま送らないため）。リマインダーは送る時点で開始済みなら送らない判定を各組み立て処理が持つため指定しない。
+ */
 export const MAIL_TYPES = {
   /** グループセッションの24時間前・1時間前（登録: enqueue_event_reminders） */
   GROUP_SESSION_REMINDER: { category: 'REMINDER' },
   /** ライブセッションの24時間前・1時間前（生徒・コーチ。登録: enqueue_live_session_reminders） */
   LIVE_SESSION_REMINDER: { category: 'REMINDER' },
   /** 出来事の通知（予約・キャンセル・マッチング等。登録: アプリ内通知のトリガー enqueue_notification_mail。すぐ送る） */
-  NOTIFICATION: { category: 'NOTIFICATION' },
+  NOTIFICATION: { category: 'NOTIFICATION', expiresAfterHours: 24 },
   /** チャットの新着（登録: 同上。未読が10分続いたら1通） */
-  CHAT_UNREAD: { category: 'NOTIFICATION' },
-} as const satisfies Record<string, { category: MailCategory }>;
+  CHAT_UNREAD: { category: 'NOTIFICATION', expiresAfterHours: 24 },
+} as const satisfies Record<string, { category: MailCategory; expiresAfterHours?: number }>;
 
 /**
  * 通知メールを送るアプリ内通知の種別（宛先は生徒・コーチのみ）。

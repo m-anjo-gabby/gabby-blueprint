@@ -18,17 +18,76 @@
 --   本スクリプトは BEGIN 〜 COMMIT で1トランザクションにまとめているため、
 --   途中でエラーが発生した場合は自動的に何も反映されません（ロールバック相当）。
 --
+-- 【staging・本番の作業手順（手作業を含む。staging で予行演習してから本番で同じ手順を行う）】
+--   このリリースはメールの送信基盤を含み、SQL の適用だけでは完結しない。以下を上から順に行う。
+--   STEP 0. 事前確認
+--     - admin の環境変数 NEXT_PUBLIC_STUDENT_URL / NEXT_PUBLIC_COACH_URL が、その環境の生徒・コーチのポータルの
+--       https の URL になっていること（メール内のリンク・配信停止のリンクに使う。招待メールでも使用中）。
+--       ※ apps/admin/.env.staging の控えは http:// で、NEXT_PUBLIC_SITE_URL が生徒のポータルを指している。Vercel の実際の値を確認する。
+--     - Resend の Domains で送信ドメイン mail.gabbyacademy.com が Verified であること（MAIL_FROM_NOTIFY も同じドメインで送る）。
+--   STEP 1. SQL の適用（アプリのデプロイより先）
+--       node supabase/release/run.mjs 20261004_feature-20261004-dev_release.sql --env=<staging|prod> --sections=pending
+--   STEP 2. アプリの環境変数を Vercel に設定する（下の【アプリの環境変数】。秘密の値は環境ごとに別の値を作る）
+--       ランダムな値の作り方: node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+--   STEP 3. admin・student・coach をデプロイする
+--   STEP 4. Supabase Vault に送信処理の接続先を登録する（下の【Supabase Vault の登録】）
+--       これを行うまで、通知・リマインダーは送信待ちに積まれるだけで送られない（送信処理が呼ばれない）。
+--   STEP 5. Resend の Webhook を登録し、RESEND_WEBHOOK_SECRET を設定して admin を再デプロイする（下の【Resend の Webhook の登録】）
+--   STEP 6. 動作確認（下の【動作確認】）
+--   ※ dev は STEP 4・5 を行わない（ローカルの admin には DB・Resend から届かないため。送信はテストから送信処理を呼んで確かめる）。
+--
 -- 【アプリの環境変数（Vercel。staging・prod それぞれで設定し、再デプロイする）】
 --   このリリースで追加・変更する環境変数の一覧（このスクリプトでは設定されない。手作業）。
 --   | アプリ                | 変数                              | 値・備考
---   | admin                 | CRON_SECRET                       | 十分に長いランダムな文字列。Vault の mail_dispatch_secret と同じ値（下記「メール基盤」セクションの a・b）
---   | admin                 | MAIL_FROM_NOTIFY                  | 通知・リマインダーの送信元（例: Gabby Blueprint <notify@mail.gabbyacademy.com>）
---   | admin                 | MAIL_DISPATCH_RECIPIENT_ALLOWLIST | staging のみ "resend.dev,gabbyacademy.com,gvtech.co.jp"（本番は設定しない）
+--   | admin                 | CRON_SECRET                       | 十分に長いランダムな文字列。Vault の mail_dispatch_secret と同じ値（STEP 4）
+--   | admin                 | MAIL_FROM_NOTIFY                  | 通知・リマインダーの送信元（例: Gabby Blueprint <notify@mail.gabbyacademy.com>。staging は先頭に [STG] を付ける）
+--   | admin                 | MAIL_DISPATCH_MODE                | 【必須】通知・リマインダーのメールの送信の範囲。本番 "all"、staging "allowlist"。
+--   |                       |                                   | 未設定・"off" は送らない（緊急停止にも使う。招待・パスワード再設定は対象外）
+--   | admin                 | MAIL_DISPATCH_RECIPIENT_ALLOWLIST | staging のみ "resend.dev,gabbyacademy.com,gvtech.co.jp"（MAIL_DISPATCH_MODE=allowlist の送信先。本番は設定しない）
+--   | admin                 | RESEND_WEBHOOK_SECRET             | Resend の Webhook の Signing Secret（whsec_...。STEP 5 で表示される値。環境ごとに別）
+--   | admin                 | MAIL_OPS_ALERT_TO                 | 運営向けのメール配信の日次の要約の宛先（カンマ区切り。問題があった日だけ 09:00 JST に送る。
+--   |                       |                                   | 未設定なら送らない。staging は運営の社内アドレス、または設定しない）
 --   | admin・student・coach | MAIL_UNSUBSCRIBE_SECRET           | 3アプリで同じ値（十分に長いランダムな文字列）。ログイン不要の配信停止リンクの署名鍵。
 --   |                       |                                   | 未設定でもメールは送られるが、配信停止リンク・List-Unsubscribe ヘッダーが付かない
 --   | （任意）admin・student・coach | MAIL_LOGO_URL             | 通常は設定しない（メールのロゴは本番の https://blueprint.gabbyacademy.com/mail-logo.png）。
 --   |                       |                                   | 本番に未反映の画像で staging を確認する場合だけ https://<student の staging>/mail-logo.png
 --   メールのロゴは生徒アプリの public/mail-logo.png のため、本番の生徒アプリをデプロイするまで、どの環境のメールでもロゴは表示されない。
+--
+-- 【Supabase Vault の登録（STEP 4。その環境の Supabase の SQL エディタで1回）】
+--   pg_cron・通知の登録時に、DB から admin の送信処理（/api/cron/mail-dispatch）を呼ぶための接続先と秘密のキー。
+--     SELECT vault.create_secret('https://<admin のURL>/api/cron/mail-dispatch', 'mail_dispatch_url');
+--     SELECT vault.create_secret('<admin の CRON_SECRET と同じ値>', 'mail_dispatch_secret');
+--   本番の admin の URL は https://blueprint-admin.gabbyacademy.com。
+--   既に登録済みの場合は、SELECT id, name FROM vault.secrets WHERE name LIKE 'mail_dispatch_%'; で id を確認し、
+--   vault.update_secret('<id>', '<新しい値>') で更新する（同じ名前で create_secret すると重複エラーになる）。
+--
+-- 【Resend の Webhook の登録（STEP 5。環境ごとに1つ）】
+--   メールの到達状況（到達・不達・迷惑メールの報告等）を admin の /api/webhooks/resend で受け取り、com_t_mail_event に記録する。
+--   1. Resend のダッシュボード → Webhooks → Add Webhook
+--   2. Endpoint URL: https://<admin のURL>/api/webhooks/resend
+--      （本番: https://blueprint-admin.gabbyacademy.com/api/webhooks/resend）
+--   3. Events: email.sent / email.delivered / email.delivery_delayed / email.bounced / email.complained /
+--      email.failed / email.suppressed の7つを選ぶ（email.opened・email.clicked・contact.*・domain.* は不要）
+--   4. 作成後に表示される Signing Secret（whsec_...）を、その環境の admin の環境変数 RESEND_WEBHOOK_SECRET に設定し、admin を再デプロイする
+--   ※ Resend の Webhook はアカウント単位のため、dev・staging・本番が同じ Resend のアカウントを使うと、各エンドポイントに
+--     全環境のメールの出来事が届く。送信時に付けるタグ env（Supabase のプロジェクトID）で、自分の環境のメールの出来事だけを記録する
+--     （他の環境の出来事は 200 を返して捨てる）。staging と本番でそれぞれ1つずつ登録する。
+--   ※ RESEND_WEBHOOK_SECRET が未設定・不一致の間は 401 を返す（Resend が再送を続けた後、失敗として記録される）。
+--     登録から再デプロイまでの間に送ったメールの到達状況は記録されないことがある（送信自体には影響しない）。
+--
+-- 【動作確認（STEP 6。その環境の Supabase の SQL エディタ）】
+--   a. pg_cron のジョブが3つあること
+--        SELECT jobname, schedule, active FROM cron.job WHERE jobname LIKE 'mail-%' ORDER BY jobname;
+--        → mail-daily-report（0 0 * * *）・mail-dispatch-every-5min（*/5 * * * *）・mail-history-purge-daily（30 18 * * *）
+--   b. 送信処理の呼び出しが成功していること（5分ほど待ってから。status_code が 200）
+--        SELECT created, status_code, left(content, 200) FROM net._http_response ORDER BY created DESC LIMIT 5;
+--      401 の場合は Vault の mail_dispatch_secret と admin の CRON_SECRET の不一致、404 は mail_dispatch_url の誤り。
+--   c. 到達状況の記録: 自分のアドレスへパスワード再設定のメールを送り、数分後に記録されていること
+--        SELECT event_type, mail_kind, recipient, occurred_at FROM com_t_mail_event ORDER BY occurred_at DESC LIMIT 5;
+--      （email.sent・email.delivered が password_reset で記録される。記録されない場合は Resend の Webhooks の画面で配信結果を確認する）
+--   d. 送信待ちに滞留・失敗が無いこと
+--        SELECT status, count(*) FROM com_t_mail_outbox GROUP BY status;
+--      PENDING が増え続ける場合は MAIL_DISPATCH_MODE の設定漏れ（STEP 2）か Vault の未登録（STEP 4）。
 -- =========================================================================
 
 BEGIN;
@@ -1639,5 +1698,419 @@ SET link_path = '/monthly-reports?month=' || LEFT(payload->>'report_month', 7),
 WHERE notification_type IN ('COACH_REPORT_APPROVED', 'COACH_REPORT_APPROVAL_REVOKED')
   AND payload->>'report_month' IS NOT NULL
   AND link_path = '/monthly-reports';
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】メール基盤の改善（到達状況の記録・送信履歴の保管期限）
+-- 追加日: 2026-10-06
+--
+-- 【内容】
+--   1. com_t_mail_outbox に到達状況（delivery_status / delivery_detail / delivery_updated_at）と、
+--      メッセージIDの索引を追加
+--   2. com_t_mail_event（到達状況の出来事。Resend の Webhook。招待・パスワード再設定を含む）を新規作成
+--   3. record_mail_event()（出来事の記録・送信待ちの到達状況の更新・迷惑メールの報告で区分の配信停止）を新規作成
+--   4. private.purge_mail_history()（送り終えた送信待ち・出来事を180日で削除）と、pg_cron の毎日のジョブ
+--      'mail-history-purge-daily'（03:30 JST）を作成
+--
+-- 対応ファイル: DDL/table/com_t_mail_outbox.sql, DDL/table/com_t_mail_event.sql,
+--   DDL/function/record_mail_event.sql, DDL/function/purge_mail_history.sql
+-- 【注意】第2セクション（メール基盤）の後に適用すること。admin の Webhook の受け口（/api/webhooks/resend）が 2・3 を使うため、
+--   アプリのデプロイより先に適用すること。
+-- 【適用後の手作業（staging・prod。環境ごとに1回）】
+--   a. Resend の Webhooks で、エンドポイント https://<admin のURL>/api/webhooks/resend を追加する
+--      （イベント: email.sent / email.delivered / email.delivery_delayed / email.bounced / email.complained /
+--      email.failed / email.suppressed）。表示された Signing Secret を admin の環境変数 RESEND_WEBHOOK_SECRET に設定して再デプロイする
+--   b. admin の環境変数 MAIL_DISPATCH_MODE を設定して再デプロイする（本番 "all"、staging "allowlist"）。
+--      未設定のままでは通知・リマインダーのメールが送られない（送信待ちに残り、設定後に送る。積んでから24時間を過ぎた通知は送らない）
+--   dev は Resend の Webhook を登録しない（ローカルの admin には Resend から届かないため）。
+-- =========================================================================
+
+BEGIN;
+
+
+ALTER TABLE public.com_t_mail_outbox
+    ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS delivery_detail TEXT,
+    ADD COLUMN IF NOT EXISTS delivery_updated_at TIMESTAMP WITH TIME ZONE;
+
+ALTER TABLE public.com_t_mail_outbox DROP CONSTRAINT IF EXISTS chk_mail_outbox_delivery_status;
+ALTER TABLE public.com_t_mail_outbox
+    ADD CONSTRAINT chk_mail_outbox_delivery_status
+    CHECK (delivery_status IN ('DELAYED', 'DELIVERED', 'BOUNCED', 'FAILED', 'SUPPRESSED', 'COMPLAINED'));
+
+COMMENT ON COLUMN public.com_t_mail_outbox.delivery_status IS '到達状況 (Resend の Webhook。DELAYED: 遅延 / DELIVERED: 到達 / BOUNCED: 不達 / FAILED: 送信失敗 / SUPPRESSED: 送信停止中の宛先 / COMPLAINED: 迷惑メールの報告)';
+COMMENT ON COLUMN public.com_t_mail_outbox.delivery_detail IS '到達状況の詳細（不達の理由等）';
+COMMENT ON COLUMN public.com_t_mail_outbox.delivery_updated_at IS '到達状況の更新日時';
+
+CREATE INDEX IF NOT EXISTS idx_mail_outbox_provider_message ON public.com_t_mail_outbox (provider_message_id) WHERE provider_message_id IS NOT NULL;
+
+
+---------------------------------------------
+-- DDL: com_t_mail_event (メールの到達状況の出来事) (2026-10-06 追加)
+---------------------------------------------
+-- 【背景】
+-- Resend の Webhook（admin の /api/webhooks/resend）で届く出来事（送信・到達・遅延・不達・迷惑メールの報告等）を記録する。
+-- 送信待ち（com_t_mail_outbox）を通らない招待・パスワード再設定のメールも記録するため、
+-- 「メールが届かない」という問い合わせを、宛先のアドレスで調べられる。
+-- 送信待ちを通ったメールは、mail_id（送信時に Resend のタグで付けた送信待ちの行）で送信待ちの行と結び付き、
+-- record_mail_event が送信待ちの行の到達状況（delivery_status）も更新する。
+--
+-- 【重複】
+-- Webhook は同じ出来事を再送しうるため、webhook_id（Resend の svix-id ヘッダー）で一意にする。
+--
+-- 【保管期限】
+-- 送信待ちと同じく、purge_mail_history（pg_cron の毎日のジョブ）が一定期間を過ぎた行を消す。
+--
+-- 生徒・コーチ・管理者の画面からは参照しない（RLSを有効にしてポリシーを作らない＝service_roleのみ）。
+---------------------------------------------
+CREATE TABLE public.com_t_mail_event (
+    event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    webhook_id VARCHAR(100) NOT NULL UNIQUE,
+    event_type VARCHAR(40) NOT NULL,
+    provider_message_id VARCHAR(100) NOT NULL,
+    mail_id UUID,
+    mail_kind VARCHAR(50),
+    recipient TEXT,
+    subject TEXT,
+    detail TEXT,
+    occurred_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_t_mail_event IS 'メールの到達状況の出来事（Resend の Webhook。招待・パスワード再設定を含むすべてのメール）';
+COMMENT ON COLUMN public.com_t_mail_event.event_id IS '出来事ID';
+COMMENT ON COLUMN public.com_t_mail_event.webhook_id IS 'Webhook の配信ID（svix-id。同じ出来事の再送を1件にする）';
+COMMENT ON COLUMN public.com_t_mail_event.event_type IS '出来事の種類 (email.sent / email.delivered / email.delivery_delayed / email.bounced / email.complained / email.failed / email.suppressed)';
+COMMENT ON COLUMN public.com_t_mail_event.provider_message_id IS '送信サービス(Resend)のメッセージID';
+COMMENT ON COLUMN public.com_t_mail_event.mail_id IS '送信待ちの行 (com_t_mail_outbox.mail_id。送信待ちを通らないメールは NULL。送信待ちの行が消えても残すため外部キーにしない)';
+COMMENT ON COLUMN public.com_t_mail_event.mail_kind IS 'メールの種類（送信時の Resend のタグ kind。例: account_invite_student / password_reset / NOTIFICATION）';
+COMMENT ON COLUMN public.com_t_mail_event.recipient IS '宛先のメールアドレス';
+COMMENT ON COLUMN public.com_t_mail_event.subject IS '件名';
+COMMENT ON COLUMN public.com_t_mail_event.detail IS '詳細（不達・送信失敗の理由等）';
+COMMENT ON COLUMN public.com_t_mail_event.occurred_at IS '出来事の日時（Resend が記録した日時）';
+COMMENT ON COLUMN public.com_t_mail_event.insert_date IS '登録日時';
+
+CREATE INDEX idx_mail_event_message ON public.com_t_mail_event (provider_message_id);
+CREATE INDEX idx_mail_event_recipient ON public.com_t_mail_event (lower(recipient), occurred_at DESC);
+CREATE INDEX idx_mail_event_occurred ON public.com_t_mail_event (occurred_at DESC);
+
+---------------------------------------------
+-- 行レベルセキュリティ (RLS)
+-- ポリシーを作らない（service_role の Webhook の受け口と SECURITY DEFINER 関数だけが読み書きする）
+---------------------------------------------
+ALTER TABLE public.com_t_mail_event ENABLE ROW LEVEL SECURITY;
+
+
+---------------------------------------------
+-- record_mail_event: メールの到達状況の出来事を記録する (2026-10-06 追加)
+---------------------------------------------
+-- 前提: table/com_t_mail_event.sql, table/com_t_mail_outbox.sql, table/com_t_user_mail_setting.sql の作成が完了していること。
+-- 呼び出し元: admin の /api/webhooks/resend（Resend の Webhook。署名を確かめたうえで service_role で呼ぶ）
+--
+-- 1. 出来事を com_t_mail_event に登録する（同じ webhook_id の再送は何もしない）
+-- 2. 送信待ちを通ったメール（mail_id、無ければ provider_message_id で特定）は、送信待ちの行の到達状況を更新する。
+--    出来事は順不同で届くため、より重い状況で上書きされないようにする
+--    （遅延 < 到達 < 不達・送信失敗・送信停止中の宛先 < 迷惑メールの報告。email.sent は到達状況を変えない）
+-- 3. 迷惑メールの報告（email.complained）は、そのメールの区分（通知・リマインダー）の配信を停止する
+--    （報告が続くと送信元ドメインの評価が下がるため。プロフィールの「メール通知」から再開できる）
+-- 戻り値: 新たに記録した場合は TRUE（再送で既に記録済みなら FALSE）
+---------------------------------------------
+-- 到達状況の重さ（未記録 0 < 遅延 1 < 到達 2 < 不達・送信失敗・送信停止中の宛先 3 < 迷惑メールの報告 4）
+CREATE OR REPLACE FUNCTION public.fn_mail_delivery_rank(p_status text)
+RETURNS integer
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT CASE p_status
+        WHEN 'DELAYED' THEN 1
+        WHEN 'DELIVERED' THEN 2
+        WHEN 'BOUNCED' THEN 3
+        WHEN 'FAILED' THEN 3
+        WHEN 'SUPPRESSED' THEN 3
+        WHEN 'COMPLAINED' THEN 4
+        ELSE 0
+    END;
+$$;
+
+DROP FUNCTION IF EXISTS public.record_mail_event(text, text, text, uuid, text, text, text, text, timestamptz);
+
+CREATE OR REPLACE FUNCTION public.record_mail_event(
+    p_webhook_id text,
+    p_event_type text,
+    p_provider_message_id text,
+    p_mail_id uuid,
+    p_mail_kind text,
+    p_recipient text,
+    p_subject text,
+    p_detail text,
+    p_occurred_at timestamptz
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_status text;
+    v_outbox public.com_t_mail_outbox%ROWTYPE;
+BEGIN
+    INSERT INTO public.com_t_mail_event (
+        webhook_id, event_type, provider_message_id, mail_id, mail_kind, recipient, subject, detail, occurred_at
+    )
+    VALUES (
+        p_webhook_id, p_event_type, p_provider_message_id, p_mail_id, p_mail_kind, p_recipient, p_subject, p_detail, p_occurred_at
+    )
+    ON CONFLICT (webhook_id) DO NOTHING;
+    IF NOT FOUND THEN
+        RETURN FALSE;
+    END IF;
+
+    v_status := CASE p_event_type
+        WHEN 'email.delivery_delayed' THEN 'DELAYED'
+        WHEN 'email.delivered' THEN 'DELIVERED'
+        WHEN 'email.bounced' THEN 'BOUNCED'
+        WHEN 'email.failed' THEN 'FAILED'
+        WHEN 'email.suppressed' THEN 'SUPPRESSED'
+        WHEN 'email.complained' THEN 'COMPLAINED'
+    END;
+    IF v_status IS NULL THEN
+        RETURN TRUE;
+    END IF;
+
+    SELECT * INTO v_outbox
+    FROM public.com_t_mail_outbox
+    WHERE (p_mail_id IS NOT NULL AND mail_id = p_mail_id)
+       OR (p_mail_id IS NULL AND provider_message_id = p_provider_message_id)
+    LIMIT 1
+    FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN TRUE;
+    END IF;
+
+    IF public.fn_mail_delivery_rank(v_status) >= public.fn_mail_delivery_rank(v_outbox.delivery_status) THEN
+        UPDATE public.com_t_mail_outbox
+        SET delivery_status = v_status,
+            delivery_detail = p_detail,
+            delivery_updated_at = NOW(),
+            provider_message_id = COALESCE(provider_message_id, p_provider_message_id),
+            update_date = NOW()
+        WHERE mail_id = v_outbox.mail_id;
+    END IF;
+
+    IF v_status = 'COMPLAINED' THEN
+        INSERT INTO public.com_t_user_mail_setting (user_id, category, enabled)
+        VALUES (v_outbox.user_id, v_outbox.category, FALSE)
+        ON CONFLICT (user_id, category) DO UPDATE SET enabled = FALSE, update_date = NOW();
+    END IF;
+
+    RETURN TRUE;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.record_mail_event(text, text, text, uuid, text, text, text, text, timestamptz) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_mail_event(text, text, text, uuid, text, text, text, text, timestamptz) TO service_role;
+
+
+---------------------------------------------
+-- purge_mail_history: メールの送信履歴・到達状況の保管期限 (2026-10-06 追加)
+---------------------------------------------
+-- 前提: table/com_t_mail_outbox.sql, table/com_t_mail_event.sql の作成が完了していること。
+-- 送信待ち（com_t_mail_outbox）の送り終えた行（SENT / SKIPPED / FAILED）と、到達状況の出来事（com_t_mail_event）のうち、
+-- 登録から p_retention_days 日を過ぎたものを消す（送信待ち・確保中の行は消さない）。
+-- 問い合わせの調査に使う期間として180日残す。pg_cron の毎日のジョブ 'mail-history-purge-daily'（03:30 JST）から呼ぶ。
+-- 戻り値: 消した行の数（送信待ち＋出来事）
+---------------------------------------------
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+CREATE OR REPLACE FUNCTION private.purge_mail_history(p_retention_days integer DEFAULT 180)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_outbox integer;
+    v_event integer;
+BEGIN
+    DELETE FROM public.com_t_mail_outbox
+    WHERE status IN ('SENT', 'SKIPPED', 'FAILED')
+      AND insert_date < NOW() - make_interval(days => p_retention_days);
+    GET DIAGNOSTICS v_outbox = ROW_COUNT;
+
+    DELETE FROM public.com_t_mail_event
+    WHERE insert_date < NOW() - make_interval(days => p_retention_days);
+    GET DIAGNOSTICS v_event = ROW_COUNT;
+
+    RETURN v_outbox + v_event;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.purge_mail_history(integer) FROM PUBLIC, anon, authenticated;
+
+-- 同名ジョブが既に存在する場合は入れ替える（何度再実行しても安全）
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'mail-history-purge-daily';
+
+SELECT cron.schedule(
+    'mail-history-purge-daily',
+    '30 18 * * *',
+    $$ SELECT private.purge_mail_history(); $$
+);
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】運営向けのメール配信の日次の要約
+-- 追加日: 2026-10-06
+--
+-- 【内容】
+--   1. private.invoke_mail_dispatch に送信処理へ渡す JSON の引数（p_body、既定は {}）を追加（旧シグネチャは削除）
+--   2. pg_cron の毎日のジョブ 'mail-daily-report'（09:00 JST）を作成。送信処理を task=daily_report で呼び、
+--      直近24時間の送信失敗・不達・迷惑メールの報告・送信待ちの滞留があれば、運営のアドレス（admin の MAIL_OPS_ALERT_TO）へ要約を送る
+--   （DDL/function/invoke_mail_dispatch.sql を再適用。'mail-dispatch-every-5min' は入れ替わるだけで内容は同じ）
+--
+-- 対応ファイル: DDL/function/invoke_mail_dispatch.sql
+-- 【注意】第7セクション（到達状況の記録）の後に適用すること。アプリ（task=daily_report を受け付ける送信処理）のデプロイ前に
+--   ジョブが動いた場合は、通常の送信処理として扱われる（害はない）。
+-- 【適用後の手作業（staging・prod）】
+--   admin の環境変数 MAIL_OPS_ALERT_TO に運営のアドレスを設定して再デプロイする（未設定なら要約は送らない）。
+-- =========================================================================
+
+BEGIN;
+
+
+---------------------------------------------
+-- invoke_mail_dispatch: メールの送信処理（admin の /api/cron/mail-dispatch）を呼び出す＋5分ごとのジョブ (2026-10-05 追加)
+---------------------------------------------
+-- 【方式】
+-- 送信処理は Next.js（admin アプリ）の Route Handler で、メールの文面（React のテンプレート）を
+-- 組み立てて Resend で送る。DB から HTTP で呼ぶため pg_net を使う（呼び出しは処理の確定後に行われる）。
+-- 送信処理を呼ぶのは次の2つ（送信の cron のジョブは1つだけで、メールの種類が増えても増やさない）。
+--   1. すぐ送るメールを送信待ちに積んだ時（on_mail_outbox_inserted。通知メール等。1つの処理の中では1回だけ呼ぶ）
+--   2. pg_cron の5分ごとのジョブ: 時刻で送るメールの登録（enqueue_scheduled_mails。グループセッション・ライブセッションの
+--      リマインダー）の後、送る時刻が来た送信待ち
+--      （チャットの10分後・失敗の再試行・取りこぼし）がある時だけ呼ぶ（invoke_mail_dispatch_if_due）
+-- 別に、pg_cron の毎日のジョブ 'mail-daily-report'（09:00 JST）が、運営向けのメール配信の日次の要約を
+-- task=daily_report で呼ぶ（2026-10-06 追加。送る相手は admin の環境変数 MAIL_OPS_ALERT_TO。問題が無い日は送らない）。
+--
+-- 【接続先の設定（環境ごとに1回、手作業）】
+-- 送信処理のURLと秘密のキーは Supabase Vault に保存する（リポジトリには置かない）。
+--   SELECT vault.create_secret('https://<admin のURL>/api/cron/mail-dispatch', 'mail_dispatch_url');
+--   SELECT vault.create_secret('<admin の環境変数 CRON_SECRET と同じ値>', 'mail_dispatch_secret');
+-- 変更する場合は vault.update_secret(<id>, '<新しい値>') を使う。
+-- どちらかが未設定の環境（ローカルの admin しか無い dev 等）では呼び出しを行わない
+-- （登録だけ行い、送信は手元から /api/cron/mail-dispatch を呼んで確認する）。
+---------------------------------------------
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+-- p_body: 送信処理に渡す JSON（{"task":"daily_report"} で日次の要約。既定は送信処理）(2026-10-06 引数を追加)
+DROP FUNCTION IF EXISTS private.invoke_mail_dispatch();
+
+CREATE OR REPLACE FUNCTION private.invoke_mail_dispatch(p_body jsonb DEFAULT '{}'::jsonb)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_url text;
+    v_secret text;
+BEGIN
+    SELECT decrypted_secret INTO v_url FROM vault.decrypted_secrets WHERE name = 'mail_dispatch_url';
+    SELECT decrypted_secret INTO v_secret FROM vault.decrypted_secrets WHERE name = 'mail_dispatch_secret';
+    IF v_url IS NULL OR v_secret IS NULL THEN
+        RETURN;
+    END IF;
+
+    PERFORM net.http_post(
+        url := v_url,
+        headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || v_secret),
+        body := p_body,
+        timeout_milliseconds := 60000
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.invoke_mail_dispatch(jsonb) FROM PUBLIC, anon, authenticated;
+
+-- 1つのトランザクションの中で送信処理を呼ぶのは1回だけにする（1つの処理で複数の通知が積まれても1回）
+CREATE OR REPLACE FUNCTION private.request_mail_dispatch()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF current_setting('gabby.mail_dispatch_requested', true) = 'on' THEN
+        RETURN;
+    END IF;
+    PERFORM set_config('gabby.mail_dispatch_requested', 'on', true);
+    PERFORM private.invoke_mail_dispatch();
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.request_mail_dispatch() FROM PUBLIC, anon, authenticated;
+
+-- 送る時刻が来た送信待ち（または送信処理が止まって確保されたままの行）がある時だけ、送信処理を呼ぶ（5分ごとのジョブ用）
+CREATE OR REPLACE FUNCTION private.invoke_mail_dispatch_if_due()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_mail_outbox
+        WHERE (status = 'PENDING' AND scheduled_at <= NOW())
+           OR (status = 'SENDING' AND locked_at < NOW() - INTERVAL '10 minutes')
+    ) THEN
+        PERFORM private.request_mail_dispatch();
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.invoke_mail_dispatch_if_due() FROM PUBLIC, anon, authenticated;
+
+-- すぐ送るメール（送る時刻が来ている行）が積まれたら、処理の確定後に送信処理を呼ぶ
+CREATE OR REPLACE FUNCTION private.on_mail_outbox_inserted()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM new_rows WHERE status = 'PENDING' AND scheduled_at <= NOW()) THEN
+        PERFORM private.request_mail_dispatch();
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.on_mail_outbox_inserted() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS trg_mail_outbox_dispatch ON public.com_t_mail_outbox;
+CREATE TRIGGER trg_mail_outbox_dispatch
+AFTER INSERT ON public.com_t_mail_outbox
+REFERENCING NEW TABLE AS new_rows
+FOR EACH STATEMENT EXECUTE FUNCTION private.on_mail_outbox_inserted();
+
+-- 同名ジョブが既に存在する場合は入れ替える（何度再実行しても安全）
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'mail-dispatch-every-5min';
+
+SELECT cron.schedule(
+    'mail-dispatch-every-5min',
+    '*/5 * * * *',
+    $$ SELECT public.enqueue_scheduled_mails(); SELECT private.invoke_mail_dispatch_if_due(); $$
+);
+
+-- 運営向けのメール配信の日次の要約（毎日 09:00 JST。問題が無い日・宛先が未設定の環境では送信処理が送らない）
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'mail-daily-report';
+
+SELECT cron.schedule(
+    'mail-daily-report',
+    '0 0 * * *',
+    $$ SELECT private.invoke_mail_dispatch('{"task":"daily_report"}'::jsonb); $$
+);
 
 COMMIT;

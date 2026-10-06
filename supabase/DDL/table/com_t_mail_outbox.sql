@@ -22,6 +22,10 @@
 -- 送信に失敗した行は attempts を加算して PENDING に戻し、次回の送信処理で再試行する。
 -- SENDING のまま一定時間経った行（送信処理の異常終了）は、次回の確保時に再度対象にする（claim_mail_outbox）。
 --
+-- 【到達状況 (2026-10-06 追加)】
+-- 送信後の到達状況（届いた・届かなかった・迷惑メールの報告等）は、Resend の Webhook（admin の /api/webhooks/resend）が
+-- record_mail_event で delivery_status に記録する（出来事の一覧は com_t_mail_event）。status は送信処理の状態のまま変えない。
+--
 -- 生徒・コーチ・管理者の画面からは参照しない（RLSを有効にしてポリシーを作らない＝service_roleのみ）。
 ---------------------------------------------
 CREATE TABLE public.com_t_mail_outbox (
@@ -38,10 +42,14 @@ CREATE TABLE public.com_t_mail_outbox (
     last_error TEXT,
     provider_message_id TEXT,
     sent_at TIMESTAMP WITH TIME ZONE,
+    delivery_status VARCHAR(20),
+    delivery_detail TEXT,
+    delivery_updated_at TIMESTAMP WITH TIME ZONE,
     insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 
     CONSTRAINT chk_mail_outbox_status CHECK (status IN ('PENDING', 'SENDING', 'SENT', 'SKIPPED', 'FAILED')),
+    CONSTRAINT chk_mail_outbox_delivery_status CHECK (delivery_status IN ('DELAYED', 'DELIVERED', 'BOUNCED', 'FAILED', 'SUPPRESSED', 'COMPLAINED')),
     UNIQUE (user_id, mail_type, dedup_key)
 );
 
@@ -59,11 +67,15 @@ COMMENT ON COLUMN public.com_t_mail_outbox.locked_at IS '送信処理が確保�
 COMMENT ON COLUMN public.com_t_mail_outbox.last_error IS '直近の失敗内容、または送らなかった理由';
 COMMENT ON COLUMN public.com_t_mail_outbox.provider_message_id IS '送信サービス(Resend)のメッセージID';
 COMMENT ON COLUMN public.com_t_mail_outbox.sent_at IS '送信日時';
+COMMENT ON COLUMN public.com_t_mail_outbox.delivery_status IS '到達状況 (Resend の Webhook。DELAYED: 遅延 / DELIVERED: 到達 / BOUNCED: 不達 / FAILED: 送信失敗 / SUPPRESSED: 送信停止中の宛先 / COMPLAINED: 迷惑メールの報告)';
+COMMENT ON COLUMN public.com_t_mail_outbox.delivery_detail IS '到達状況の詳細（不達の理由等）';
+COMMENT ON COLUMN public.com_t_mail_outbox.delivery_updated_at IS '到達状況の更新日時';
 COMMENT ON COLUMN public.com_t_mail_outbox.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_t_mail_outbox.update_date IS '更新日時';
 
 CREATE INDEX idx_mail_outbox_pending ON public.com_t_mail_outbox (scheduled_at) WHERE status IN ('PENDING', 'SENDING');
 CREATE INDEX idx_mail_outbox_user ON public.com_t_mail_outbox (user_id, insert_date DESC);
+CREATE INDEX idx_mail_outbox_provider_message ON public.com_t_mail_outbox (provider_message_id) WHERE provider_message_id IS NOT NULL;
 
 ---------------------------------------------
 -- 行レベルセキュリティ (RLS)

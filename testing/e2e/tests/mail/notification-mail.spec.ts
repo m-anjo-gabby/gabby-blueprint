@@ -3,6 +3,7 @@ import {
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableStudent,
+  grantAppLicense,
   type AuthFixture,
 } from "../../support/authFixtures.ts";
 import { cronSecret, invokeMailDispatch } from "../../support/mailDispatch.ts";
@@ -50,7 +51,7 @@ async function outboxRows(f: AuthFixture, userId: string) {
   return data ?? [];
 }
 
-test("通知の登録ですぐ送るメールが積まれ、送信処理で届く。達成の通知・配信停止の人には送らない", async ({}, testInfo) => {
+test("通知の登録ですぐ送るメールが積まれ、送信処理で届く。達成の通知・配信停止の人・ライセンスの無い人には送らない", async ({}, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "メール送信は desktop のみ");
   test.skip(!resendReadApiKey() || !cronSecret(), "RESEND_TEST_READ_API_KEY または CRON_SECRET が未設定");
 
@@ -59,6 +60,10 @@ test("通知の登録ですぐ送るメールが積まれ、送信処理で届�
   const emailA = resendTestAddress(`${fixture.tag}-notify`);
   const studentA = await createDisposableStudent(fixture, { email: emailA, password, userName: "E2E通知" });
   const studentB = await createDisposableStudent(fixture, { email: resendTestAddress(`${fixture.tag}-optout`), password });
+  await grantAppLicense(fixture, studentA);
+  await grantAppLicense(fixture, studentB);
+  // C はライセンスが無い（契約の終了等）
+  const studentC = await createDisposableStudent(fixture, { email: resendTestAddress(`${fixture.tag}-unlicensed`), password });
   const { error: settingErr } = await fixture.admin
     .from("com_t_user_mail_setting")
     .insert({ user_id: studentB, category: "NOTIFICATION", enabled: false });
@@ -72,6 +77,7 @@ test("通知の登録ですぐ送るメールが積まれ、送信処理で届�
   // 達成の通知はメールにしない
   await insertNotification(fixture, studentA, { notification_type: "TRAINING_FIRST" });
   await insertNotification(fixture, studentB, { notification_type: "SESSION_BOOKING_APPROVED", payload: { coach_name: "E2Eコーチ" } });
+  await insertNotification(fixture, studentC, { notification_type: "SESSION_BOOKING_APPROVED", payload: { coach_name: "E2Eコーチ" } });
 
   expect((await outboxRows(fixture, studentA)).map((r) => [r.mail_type, r.dedup_key, r.status])).toEqual([
     ["NOTIFICATION", approvedId, "PENDING"],
@@ -81,6 +87,7 @@ test("通知の登録ですぐ送るメールが積まれ、送信処理で届�
   expect((await invokeMailDispatch()).status()).toBe(200);
   expect((await outboxRows(fixture, studentA)).map((r) => r.status)).toEqual(["SENT"]);
   expect((await outboxRows(fixture, studentB)).map((r) => [r.status, r.last_error])).toEqual([["SKIPPED", "opted_out"]]);
+  expect((await outboxRows(fixture, studentC)).map((r) => [r.status, r.last_error])).toEqual([["SKIPPED", "recipient_unlicensed"]]);
 
   const mail = await waitForEmail({ to: emailA, since });
   expect(mail.subject).toBe("【Gabby Blueprint】予約が承認されました");

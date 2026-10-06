@@ -43,8 +43,9 @@
 - `@gabby-qa-test.example` 等の実在しない宛先へは送信しない（バウンスで送信元ドメインの評価が下がる）。実際に送信するテストは desktop だけで行う。
 - 通知・リマインダーのメール（送信待ち `com_t_mail_outbox` を通るもの）は、pg_cron の代わりに送信処理（admin の `/api/cron/mail-dispatch`）を
   `support/mailDispatch.ts` の `invokeMailDispatch` で呼んで送る（秘密のキーは `CRON_SECRET`、dev は `apps/admin/.env.local` から読む）。
-  送信処理は送信待ち全体を処理するため、dev の admin は `MAIL_DISPATCH_RECIPIENT_ALLOWLIST="resend.dev,gabbyacademy.com,gvtech.co.jp"` で送信先を Resend のテスト用アドレスと開発・運営のドメインに限定する
-  （固定アカウント等の `.example` 宛ては送らずに SKIPPED になる）。例: `tests/mail/event-reminder.spec.ts`。
+  送信処理は送信待ち全体を処理するため、dev の admin は `MAIL_DISPATCH_MODE="allowlist"` と `MAIL_DISPATCH_RECIPIENT_ALLOWLIST="resend.dev,gabbyacademy.com,gvtech.co.jp"` で送信先を Resend のテスト用アドレスと開発・運営のドメインに限定する
+  （固定アカウント等の `.example` 宛ては送らずに SKIPPED になる。`MAIL_DISPATCH_MODE` が未設定だと何も送らない）。
+  送信処理はライセンスの無い生徒に送らないため、メールを受け取る使い捨ての生徒には `grantAppLicense` でライセンスを付ける。例: `tests/mail/event-reminder.spec.ts`。
 
 ## 3. 固定アカウントの並列実行時の扱い
 

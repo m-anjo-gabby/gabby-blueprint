@@ -11,6 +11,8 @@ export interface MailOutboxRow {
   dedup_key: string;
   payload: Record<string, unknown>;
   attempts: number;
+  /** 送信待ちに積んだ日時（期限切れの判定に使う） */
+  insert_date: string;
 }
 
 /** 宛先（com_m_user と auth.users から組み立てる） */
@@ -20,6 +22,8 @@ export interface MailRecipient {
   userType: string;
   userName: string | null;
   timezone: string;
+  /** ライセンスの有無（auth.users の app_metadata.is_licensed。生徒だけが持つ） */
+  isLicensed: boolean;
 }
 
 /** 種別ごとの組み立て結果。送る必要が無くなった場合は skip に理由を入れる */

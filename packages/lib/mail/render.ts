@@ -30,6 +30,11 @@ import {
   type NotificationEmailTemplateProps,
 } from './templates/NotificationEmailTemplate';
 import {
+  buildMailDailyReport,
+  getMailDailyReportSubject,
+  type MailDailyReportProps,
+} from './templates/MailDailyReportTemplate';
+import {
   buildLiveSessionReminderMail,
   getLiveSessionReminderSubject,
   type LiveSessionReminderEmailTemplateProps,
@@ -158,4 +163,9 @@ export function renderLiveSessionReminderEmail(props: LiveSessionReminderEmailTe
     getLiveSessionReminderSubject(props.language, props.lead, props.scheduleLabel),
     buildLiveSessionReminderMail(props)
   );
+}
+
+/** 運営向けのメール配信の日次の要約（日英併記）の件名・本文を組み立てる */
+export function renderMailDailyReportEmail(props: MailDailyReportProps): RenderedEmail {
+  return renderMailDocument(getMailDailyReportSubject(props), buildMailDailyReport(props));
 }

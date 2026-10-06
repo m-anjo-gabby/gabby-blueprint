@@ -3,6 +3,7 @@ import {
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableStudent,
+  grantAppLicense,
   grantLiveLicense,
   type AuthFixture,
 } from "../../support/authFixtures.ts";
@@ -23,7 +24,7 @@ test.describe.configure({ mode: "serial" });
 let fixture: AuthFixture | undefined;
 const eventIds: string[] = [];
 let liveFixture: AuthFixture | undefined;
-let liveSessionIds: string[] = [];
+const liveSessionIds: string[] = [];
 
 test.afterAll(async () => {
   if (fixture && eventIds.length > 0) {
@@ -81,7 +82,7 @@ test("秘密のキーが無い呼び出しは拒否する", async () => {
   expect(response.status()).toBe(401);
 });
 
-test("1時間前・24時間前のリマインダーを送り、配信停止の人と期限外の予定には送らない", async ({}, testInfo) => {
+test("1時間前・24時間前のリマインダーを送り、配信停止の人・ライセンスの無い人と期限外の予定には送らない", async ({}, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "メール送信は desktop のみ");
   test.skip(!resendReadApiKey() || !cronSecret(), "RESEND_TEST_READ_API_KEY または CRON_SECRET が未設定");
 
@@ -91,6 +92,10 @@ test("1時間前・24時間前のリマインダーを送り、配信停止の�
   const emailB = resendTestAddress(`${fixture.tag}-optout`);
   const studentA = await createDisposableStudent(fixture, { email: emailA, password, userName: "E2Eリマインド" });
   const studentB = await createDisposableStudent(fixture, { email: emailB, password });
+  await grantAppLicense(fixture, studentA);
+  await grantAppLicense(fixture, studentB);
+  // C はライセンスが無い（契約の終了等）
+  const studentC = await createDisposableStudent(fixture, { email: resendTestAddress(`${fixture.tag}-unlicensed`), password });
   // B はリマインダーのメールを停止している
   const { error: settingErr } = await fixture.admin
     .from("com_t_user_mail_setting")
@@ -98,7 +103,7 @@ test("1時間前・24時間前のリマインダーを送り、配信停止の�
   if (settingErr) throw new Error(settingErr.message);
 
   const soonTitle = `【E2E】リマインダー 1時間前 ${fixture.tag}`;
-  const soonId = await createEvent(fixture, soonTitle, 50, [studentA, studentB]); // 1時間前の期限内
+  const soonId = await createEvent(fixture, soonTitle, 50, [studentA, studentB, studentC]); // 1時間前の期限内
   const tomorrowId = await createEvent(fixture, `【E2E】リマインダー 24時間前 ${fixture.tag}`, 20 * 60, [studentB]); // 24時間前の期限内
   await createEvent(fixture, `【E2E】リマインダー 期限外 ${fixture.tag}`, 5 * 60, [studentA]); // 24時間前の期限（開始の12時間前まで）を過ぎ、1時間前はまだ
 
@@ -118,6 +123,10 @@ test("1時間前・24時間前のリマインダーを送り、配信停止の�
       [`${tomorrowId}:24h`, "SKIPPED", "opted_out"],
     ].sort((a, b) => a[0].localeCompare(b[0]))
   );
+  // C: ライセンスが無いため送らない
+  expect((await outboxRows(fixture, studentC)).map((r) => [r.dedup_key, r.status, r.last_error])).toEqual([
+    [`${soonId}:1h`, "SKIPPED", "recipient_unlicensed"],
+  ]);
 
   const mail = await waitForEmail({ to: emailA, since });
   expect(mail.subject).toMatch(/^【Gabby Blueprint】まもなくグループセッションが始まります/);

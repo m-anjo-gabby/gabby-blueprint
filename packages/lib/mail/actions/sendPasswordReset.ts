@@ -22,7 +22,7 @@ export async function sendPasswordResetEmail({
   language,
 }: SendPasswordResetParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const data = await sendCore({ to, ...renderPasswordResetEmail({ resetUrl, language }) });
+    const data = await sendCore({ to, kind: 'password_reset', ...renderPasswordResetEmail({ resetUrl, language }) });
 
     logger.info('mail:send_password_reset_success', `パスワードリセットメールを送信しました: ${to}`, { messageId: data?.id, language });
     return { success: true };

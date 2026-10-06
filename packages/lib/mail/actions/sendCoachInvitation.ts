@@ -23,7 +23,7 @@ export async function sendCoachInvitationEmail({
   expiresDays = 3
 }: SendCoachInvitationParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const data = await sendCore({ to, ...renderCoachInvitationEmail({ userName, inviteUrl, expiresDays }) });
+    const data = await sendCore({ to, kind: 'account_invite_coach', ...renderCoachInvitationEmail({ userName, inviteUrl, expiresDays }) });
 
     logger.info('mail:send_coach_invitation_success', `コーチ招待メールを送信しました: ${to}`, { messageId: data?.id });
     return { success: true };
