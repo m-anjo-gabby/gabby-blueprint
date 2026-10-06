@@ -3,8 +3,10 @@ import type { NotificationType } from '@gabby/types/notification';
 import { getNotificationText } from '@gabby/types/notificationText';
 import { renderMail } from '../../render';
 import { buildChatUnreadMail, buildNotificationMail } from '../../templates/NotificationEmailTemplate';
+import { buildNotificationDetails } from '../../templates/notificationDetails';
 import { NOTIFICATION_MAIL_TYPES } from '../registry';
 import type { MailHandler } from '../types';
+import { loadNotificationFacts } from './notificationFacts';
 import { readText } from './payload';
 
 function isMailTarget(type: string): type is NotificationType {
@@ -14,9 +16,10 @@ function isMailTarget(type: string): type is NotificationType {
 /**
  * 出来事の通知メール（NOTIFICATION・CHAT_UNREAD。登録: アプリ内通知のトリガー enqueue_notification_mail）。
  * 送る直前にアプリ内通知を読み直し、文面はアプリ内通知と同じタイトル・本文にする（生徒は日本語、コーチは英語）。
+ * 予約・キャンセル・マッチングは、対象の日時・振替候補・理由を業務データから読み、件名と本文に受信者のタイムゾーンで載せる。
  * チャットの新着（CHAT_UNREAD）は、送る時点で既読になっていれば送らない。
  */
-export const notificationHandler: MailHandler = async ({ admin, row, recipient, links }) => {
+export const notificationHandler: MailHandler = async ({ admin, row, recipient, nowMs, links }) => {
   const notificationId = readText(row.payload, 'notification_id');
   if (!notificationId) return { skip: 'invalid_payload' };
 
@@ -47,7 +50,9 @@ export const notificationHandler: MailHandler = async ({ admin, row, recipient, 
     );
   }
 
-  const text = getNotificationText(notification.notification_type, payload, language);
+  const type = notification.notification_type;
+  const text = getNotificationText(type, payload, language);
+  const facts = await loadNotificationFacts({ admin, type, payload, timeZone: recipient.timezone, nowMs });
   return renderMail(
     buildNotificationMail({
       language,
@@ -55,6 +60,7 @@ export const notificationHandler: MailHandler = async ({ admin, row, recipient, 
       title: text.title,
       body: text.body,
       actionUrl,
+      details: buildNotificationDetails({ type, facts, timeZone: recipient.timezone, language }),
       links,
     })
   );

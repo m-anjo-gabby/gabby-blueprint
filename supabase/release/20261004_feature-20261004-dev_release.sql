@@ -2163,3 +2163,154 @@ BEGIN;
 COMMENT ON COLUMN public.self_t_sprint.answered_history IS '実施問題の履歴情報(JSON配列。出題順): question_id, group_id, seq_no, is_skipped, assessment(発話評価。未評価はnull: total_score(0-100), analysis(結果画面のフィードバック用の詳細。古い記録には無い))。2026-06以前の記録には is_skipped・group_id・seq_no が無い要素がある';
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】通知メールに対象の日時を載せる（否認の通知に申請のIDを含める）
+-- 追加日: 2026-10-06
+--
+-- 【内容】
+--   予約・キャンセル・マッチングの通知メールに、対象の日時・振替候補・否認理由を載せる（文面はアプリ側で組み立てる）。
+--   送信処理が送る直前に申請の行を読めるよう、否認の通知の payload に申請のIDを足す。シグネチャは変更しない。
+--   1. reject_matching_request: MATCHING_REJECTED の payload に request_id を追加（申請した曜日・時間と否認理由を読む）
+--   2. reject_slot_proposal: SESSION_BOOKING_REJECTED の payload に proposal_id を追加（申請した日時の終了時刻を読む）
+--   - 適用前に登録された通知は ID が無いため、メールは payload の情報だけで送る（日時の無い文面になる場合がある）。
+--
+-- 対応ファイル: DDL/function/reject_matching_request.sql, DDL/function/reject_slot_proposal.sql
+-- 【注意】アプリのデプロイとの前後は問わない（ID が無い通知はアプリ側で従来どおりに送る）。
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- マッチングリクエスト否認RPC (2026-08-15 追加)
+-- 前提: table/com_t_matching_request.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- コーチがマッチングリクエストを否認する唯一の入口。否認理由の入力を必須とする。
+-- com_t_matching_request への直接UPDATEはRLSで許可していないため、必ず本関数を通す。
+--
+-- 【通知 (2026-09-09追加)】
+-- 否認完了時、生徒へ通知する(MATCHING_REJECTED)。否認理由(p_reason)はコーチが
+-- 生徒への配慮なく入力する場合もあるため、通知本文にはそのまま転記せず、
+-- 柔らかい定型文のみとする（理由の詳細は生徒がアプリ側の変更履歴等で別途確認する想定）。
+--
+-- 【通知メールに申請の内容を載せる (2026-10-06追加)】
+-- 通知メールには、申請した曜日・時間と否認理由を載せる（理由は生徒のマッチング画面でも「前回否認理由」として表示済み）。
+-- 送信処理が送る直前に申請の行を読めるよう、payload に request_id を含める（アプリ内の通知の文面は定型文のまま）。
+--
+-- 【権限チェック・通知の共通化 (2026-09-15追加)】
+-- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
+-- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.reject_matching_request(p_request_id uuid, p_reason text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_request RECORD;
+    v_coach_name text;
+BEGIN
+    IF p_reason IS NULL OR length(trim(p_reason)) = 0 THEN
+        RAISE EXCEPTION 'reject_reason is required';
+    END IF;
+
+    SELECT * INTO v_request FROM public.com_t_matching_request WHERE request_id = p_request_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'matching request % not found', p_request_id;
+    END IF;
+
+    PERFORM public.fn_assert_actor_or_admin(v_request.coach_id, 'not authorized to reject this request');
+
+    IF v_request.status <> 1 THEN
+        RAISE EXCEPTION 'matching request % is not pending (status=%)', p_request_id, v_request.status;
+    END IF;
+
+    UPDATE public.com_t_matching_request
+    SET status = 3, reject_reason = p_reason, responded_by = auth.uid(), responded_at = NOW(), update_date = NOW()
+    WHERE request_id = p_request_id;
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
+    PERFORM public.fn_notify(
+        v_request.student_id,
+        'MATCHING_REJECTED',
+        jsonb_build_object('coach_name', v_coach_name, 'request_id', p_request_id),
+        '/coach-matching'
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.reject_matching_request(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.reject_matching_request(uuid, text) TO authenticated;
+
+---------------------------------------------
+-- 候補提案の却下/取り下げ応答RPC (2026-09-15 追加、reject_session_booking_request/
+-- decline_session_reschedule_proposalsを統合)
+-- 前提: table/com_t_session_slot_proposal.sql, function/fn_assert_actor_or_admin.sql の
+--       作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- 「応答する側が候補を却下する」処理を、approve_slot_proposal()と対になる形で統合する。
+-- ただし却下の粒度は振替候補と自由予約リクエストで異なる（旧仕様をそのまま踏襲する）。
+--   - 振替候補(source_session_id IS NOT NULL): 同一キャンセルに紐づくpendingな候補は
+--     「いずれか1つを選ぶ」ための選択肢であり、個別に却下する意味が薄いため、
+--     旧decline_session_reschedule_proposalsと同様にまとめて却下する。通知は行わない
+--     （旧仕様のまま）。
+--   - 自由予約リクエスト(source_session_id IS NULL): 旧reject_session_booking_requestと
+--     同様、この1件のみを却下する。理由(p_reason)を記録し、生徒へSESSION_BOOKING_REJECTED
+--     通知を送る。
+-- 呼び出し元は対象となる候補のうちどれか1件のproposal_idを渡せばよく（振替候補の場合、
+-- UIは特定の候補を選ばせず「まとめて却下」ボタンのみを提示するため、グループの先頭要素の
+-- proposal_idを渡す想定）、本関数側でsource_session_id単位のグルーピングを解決する。
+--
+-- 【通知メールに申請の日時を載せる (2026-10-06追加)】
+-- 通知メールに申請した日時（開始〜終了）と理由を載せるため、payload に proposal_id を含める。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.reject_slot_proposal(p_proposal_id uuid, p_reason text DEFAULT NULL)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_proposal RECORD;
+    v_responder_id uuid;
+    v_coach_name text;
+BEGIN
+    SELECT * INTO v_proposal FROM public.com_t_session_slot_proposal WHERE proposal_id = p_proposal_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'proposal % not found', p_proposal_id;
+    END IF;
+
+    v_responder_id := CASE WHEN v_proposal.proposed_by_role = 2 THEN v_proposal.student_id ELSE v_proposal.coach_id END;
+    PERFORM public.fn_assert_actor_or_admin(v_responder_id, 'not authorized to respond to this proposal');
+
+    IF v_proposal.status <> 1 THEN
+        RAISE EXCEPTION 'this proposal is no longer pending (status=%)', v_proposal.status;
+    END IF;
+
+    IF v_proposal.source_session_id IS NOT NULL THEN
+        UPDATE public.com_t_session_slot_proposal
+        SET status = 3, responded_at = NOW(), update_date = NOW()
+        WHERE source_session_id = v_proposal.source_session_id AND status = 1;
+    ELSE
+        UPDATE public.com_t_session_slot_proposal
+        SET status = 3, reject_reason = p_reason, responded_at = NOW(), update_date = NOW()
+        WHERE proposal_id = p_proposal_id;
+
+        SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_proposal.coach_id;
+        PERFORM public.fn_notify(
+            v_proposal.student_id,
+            'SESSION_BOOKING_REJECTED',
+            jsonb_build_object('proposal_id', p_proposal_id, 'coach_name', v_coach_name, 'reject_reason', p_reason, 'requested_start_datetime', v_proposal.proposed_start_datetime),
+            '/live-room'
+        );
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.reject_slot_proposal(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.reject_slot_proposal(uuid, text) TO authenticated;
+
+COMMIT;

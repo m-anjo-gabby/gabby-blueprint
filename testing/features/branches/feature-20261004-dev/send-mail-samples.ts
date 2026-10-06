@@ -19,6 +19,7 @@ import { buildEventReminderMail } from "@gabby/lib/mail/templates/EventReminderE
 import { buildStudentInviteMail } from "@gabby/lib/mail/templates/InviteEmailTemplate";
 import { buildLiveSessionReminderMail } from "@gabby/lib/mail/templates/LiveSessionReminderEmailTemplate";
 import { buildChatUnreadMail, buildNotificationMail } from "@gabby/lib/mail/templates/NotificationEmailTemplate";
+import { buildNotificationDetails, type NotificationMailFacts } from "@gabby/lib/mail/templates/notificationDetails";
 import { buildPasswordResetMail } from "@gabby/lib/mail/templates/PasswordResetEmailTemplate";
 import { formatReminderSchedule } from "@gabby/lib/mail/templates/reminder";
 import { getMailLogoUrl } from "@gabby/lib/mail/assets/logo";
@@ -58,27 +59,33 @@ samples.push({ label: "auth-student-RESET", ...renderMail(buildPasswordResetMail
 samples.push({ label: "auth-coach-RESET", ...renderMail(buildPasswordResetMail({ resetUrl: INVITE_URL.replace("invite", "recovery"), language: "en" })) });
 samples.push({ label: "auth-admin-RESET", ...renderMail(buildPasswordResetMail({ resetUrl: INVITE_URL.replace("invite", "recovery"), language: "bilingual" })) });
 
-// ---- 出来事の通知（アプリ内通知と同じ文言。生徒は日本語、コーチは英語） ----
-const STUDENT_TYPES: [NotificationType, Record<string, unknown>, string][] = [
-  ["SESSION_CANCELLED_BY_COACH", { coach_name: "Suzanne" }, "/live-room"],
-  ["SESSION_RESCHEDULE_PROPOSED", { coach_name: "Suzanne", proposal_count: 3 }, "/live-room"],
-  ["SESSION_BOOKING_APPROVED", { coach_name: "Suzanne" }, "/live-room"],
-  ["SESSION_BOOKING_REJECTED", { coach_name: "Suzanne" }, "/live-room"],
-  ["MATCHING_APPROVED", { coach_name: "Suzanne" }, "/live-room"],
-  ["MATCHING_REJECTED", { coach_name: "Suzanne" }, "/coach-matching"],
-  ["HOMEWORK_POSTED", { coach_name: "Suzanne", preview: "Please practice the final /n/ sound with the sentences we used today." }, "/live-room/sessions/sample/result"],
+// ---- 出来事の通知（アプリ内通知と同じ文言に、対象の日時・振替候補・理由。生徒は日本語、コーチは英語） ----
+// 対象の日時（送信処理は業務データから読む。サンプルは 10/8(木) 19:00 JST の回）
+const slot = (iso: string) => ({ startIso: iso, endIso: new Date(Date.parse(iso) + 25 * 60 * 1000).toISOString() });
+const SESSION = slot("2026-10-08T10:00:00Z");
+const PROPOSALS = [slot("2026-10-09T10:00:00Z"), slot("2026-10-10T01:00:00Z"), slot("2026-10-11T11:30:00Z")];
+const RESCHEDULE: NotificationMailFacts = { session: SESSION, proposals: PROPOSALS, proposalExpiresIso: "2026-10-07T10:00:00Z" };
+
+const STUDENT_TYPES: [NotificationType, Record<string, unknown>, string, NotificationMailFacts][] = [
+  ["SESSION_CANCELLED_BY_COACH", { coach_name: "Suzanne" }, "/live-room", { session: SESSION }],
+  ["SESSION_RESCHEDULE_PROPOSED", { coach_name: "Suzanne", proposal_count: 3 }, "/live-room", RESCHEDULE],
+  ["SESSION_BOOKING_APPROVED", { coach_name: "Suzanne" }, "/live-room", { session: SESSION }],
+  ["SESSION_BOOKING_REJECTED", { coach_name: "Suzanne" }, "/live-room", { session: SESSION, reason: "その時間は別の予定が入っています。" }],
+  ["MATCHING_APPROVED", { coach_name: "Suzanne" }, "/live-room", { weekly: SESSION }],
+  ["MATCHING_REJECTED", { coach_name: "Suzanne" }, "/coach-matching", { weekly: SESSION, reason: "申し訳ありません、その枠は他の生徒の担当が決まりました。" }],
+  ["HOMEWORK_POSTED", { coach_name: "Suzanne", preview: "Please practice the final /n/ sound with the sentences we used today." }, "/live-room/sessions/sample/result", {}],
 ];
-const COACH_TYPES: [NotificationType, Record<string, unknown>, string][] = [
-  ["SESSION_CANCELLED_BY_STUDENT", { student_name: "Taro Yamada" }, "/students/sample"],
-  ["SESSION_RESCHEDULE_PROPOSED_BY_STUDENT", { student_name: "Taro Yamada", proposal_count: 2 }, "/calendar"],
-  ["SESSION_BOOKED_BY_STUDENT", { student_name: "Taro Yamada" }, "/students/sample"],
-  ["SESSION_BOOKING_REQUESTED", { student_name: "Taro Yamada" }, "/calendar"],
-  ["MATCHING_ASSIGNED_TO_COACH", { student_name: "Taro Yamada" }, "/students/sample"],
-  ["COACH_REPORT_APPROVED", { report_month: "2026-09-01" }, "/monthly-reports?month=2026-09"],
-  ["COACH_REPORT_APPROVAL_REVOKED", { report_month: "2026-09-01" }, "/monthly-reports?month=2026-09"],
+const COACH_TYPES: [NotificationType, Record<string, unknown>, string, NotificationMailFacts][] = [
+  ["SESSION_CANCELLED_BY_STUDENT", { student_name: "Taro Yamada" }, "/students/sample", { session: SESSION }],
+  ["SESSION_RESCHEDULE_PROPOSED_BY_STUDENT", { student_name: "Taro Yamada", proposal_count: 2 }, "/calendar", { ...RESCHEDULE, proposals: PROPOSALS.slice(0, 2) }],
+  ["SESSION_BOOKED_BY_STUDENT", { student_name: "Taro Yamada" }, "/students/sample", { session: SESSION }],
+  ["SESSION_BOOKING_REQUESTED", { student_name: "Taro Yamada" }, "/calendar", { session: SESSION, message: "I'd like to practice for my presentation." }],
+  ["MATCHING_ASSIGNED_TO_COACH", { student_name: "Taro Yamada" }, "/students/sample", {}],
+  ["COACH_REPORT_APPROVED", { report_month: "2026-09-01" }, "/monthly-reports?month=2026-09", {}],
+  ["COACH_REPORT_APPROVAL_REVOKED", { report_month: "2026-09-01" }, "/monthly-reports?month=2026-09", {}],
 ];
 
-for (const [type, payload, linkPath] of STUDENT_TYPES) {
+for (const [type, payload, linkPath, facts] of STUDENT_TYPES) {
   const text = NOTIFICATION_MESSAGE_BUILDERS[type](payload);
   samples.push({
     label: `student-${type}`,
@@ -88,12 +95,13 @@ for (const [type, payload, linkPath] of STUDENT_TYPES) {
       title: text.title,
       body: text.body,
       actionUrl: `${STUDENT_URL}${linkPath}`,
+      details: buildNotificationDetails({ type, facts, timeZone: "Asia/Tokyo", language: "ja" }),
       links: { settingsUrl: `${STUDENT_URL}/profile`, unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION },
     })),
     unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION,
   });
 }
-for (const [type, payload, linkPath] of COACH_TYPES) {
+for (const [type, payload, linkPath, facts] of COACH_TYPES) {
   const text = NOTIFICATION_MESSAGE_BUILDERS_EN[type](payload);
   samples.push({
     label: `coach-${type}`,
@@ -103,6 +111,7 @@ for (const [type, payload, linkPath] of COACH_TYPES) {
       title: text.title,
       body: text.body,
       actionUrl: `${COACH_URL}${linkPath}`,
+      details: buildNotificationDetails({ type, facts, timeZone: "America/Vancouver", language: "en" }),
       links: { settingsUrl: `${COACH_URL}/profile`, unsubscribeUrl: COACH_UNSUB.NOTIFICATION },
     })),
     unsubscribeUrl: COACH_UNSUB.NOTIFICATION,

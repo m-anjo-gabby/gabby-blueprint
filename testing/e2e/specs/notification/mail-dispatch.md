@@ -95,6 +95,22 @@
      コーチ宛て: 予約申請・生徒からの振替候補は承認・却下できる `/calendar`、キャンセル・振替の確定・担当決定は `/students/<student_id>`、
      月次レポートの承認・承認取消は対象の月 `/monthly-reports?month=YYYY-MM`。チャットは両方 `/chat/<room_id>`。
      件名「【Gabby Blueprint】<タイトル>」／「[Gabby Blueprint] <タイトル>」。
+   - 通知の対象の情報（予約・キャンセル・マッチング。メールだけに載せ、アプリ内の通知の文面は変えない）: 送る直前に、通知の payload の ID から業務データを読み、
+     本文（タイトルの下の項目一覧）と件名の末尾（「（10月8日(木) 19:00）」／「(Thu, Oct 8, 3:00 AM)」）に載せる。日時はすべて実際の日時（UTC）を受信者のタイムゾーンで表す。
+     組み立て `packages/lib/mail/templates/notificationDetails.ts`、読み込み `dispatch/handlers/notificationFacts.ts`。
+
+     | 通知 | 本文に載せる項目 | 件名の日時 |
+     |---|---|---|
+     | キャンセル（`SESSION_CANCELLED_BY_*`） | キャンセルされたセッション | その回 |
+     | キャンセル＋振替候補（`SESSION_RESCHEDULE_PROPOSED*`） | キャンセルされたセッション・振替候補1〜n（未回答、早い順）・回答期限。見出しを「セッションがキャンセルされました（振替候補あり）」、件名を「セッションのキャンセルと振替候補」にする（キャンセルと候補は1通） | キャンセルされた回 |
+     | 予約の確定（`SESSION_BOOKED_BY_STUDENT`・`SESSION_BOOKING_APPROVED`） | 予約されたセッション | その回 |
+     | 予約申請（`SESSION_BOOKING_REQUESTED`、コーチ宛て） | 申請の日時・生徒のメッセージ（あれば） | 申請の日時 |
+     | 予約申請の否認（`SESSION_BOOKING_REJECTED`） | 申請した日時・否認の理由（あれば） | 申請の日時 |
+     | マッチング成立（`MATCHING_APPROVED`） | 毎週の曜日・時間と初回のセッション（作られた初回の回の日時から求める。枠はコーチの現地時刻で持つため、そのまま出すと時差で曜日がずれる） | 「初回: <日時>」 |
+     | マッチングの否認（`MATCHING_REJECTED`） | 申請した曜日・時間（申請の枠の次の回の日時から求める。生徒の申請画面と同じ求め方）・否認の理由 | 「毎週<曜日> <時刻>」 |
+
+     ID が無い・行が読めない場合（対応前に登録された通知）は、payload の開始日時だけを載せ、それも無ければ従来の文面（日時なし）で送る。
+     否認の通知の payload には申請の ID を含める（`reject_matching_request` の `request_id`、`reject_slot_proposal` の `proposal_id`。2026-10-06）。
    - チャット: 「<送信者>さんから新しいメッセージが届いています」／「New message from <sender>」と、メッセージの冒頭（引用）。
    - ライブセッション: 相手（生徒宛てはコーチ名、コーチ宛ては生徒名）と日時（受信者のタイムゾーン）。主ボタンは、
      生徒: 24時間前・1時間前とも `/live-room`「ライブセッションを確認する」（通話画面は開始5分前まで入れないため。入室ボタンが入室できる時刻を案内する）、
@@ -148,10 +164,10 @@
   `private.request_mail_dispatch`・`private.invoke_mail_dispatch_if_due`・`private.invoke_mail_dispatch`（pg_net で送信処理を呼ぶ）
 - pg_cron のジョブ: `mail-dispatch-every-5min`・`mail-daily-report`（`supabase/DDL/function/invoke_mail_dispatch.sql`）、`mail-history-purge-daily`（`supabase/DDL/function/purge_mail_history.sql`）
 - テーブル: `com_t_mail_outbox`・`com_t_mail_event`（RLS のポリシーなし＝service_role のみ）、`com_t_user_mail_setting`（本人の行のみ参照・登録・更新）、
-  参照: `com_t_notification`・`com_t_session`・`com_m_calendar_event`・`com_t_calendar_event_participant`・`com_t_calendar_event_coach`・`com_m_user`
-- 実装参照: `packages/lib/mail/dispatch/`（`registry.ts`・`dispatchMail.ts`・判定 `policy.ts`・`handlers/notification.ts`・`handlers/groupSessionReminder.ts`・`handlers/liveSessionReminder.ts`）、
+  参照: `com_t_notification`・`com_t_session`・`com_t_session_slot_proposal`・`com_t_matching_request`・`com_m_calendar_event`・`com_t_calendar_event_participant`・`com_t_calendar_event_coach`・`com_m_user`
+- 実装参照: `packages/lib/mail/dispatch/`（`registry.ts`・`dispatchMail.ts`・判定 `policy.ts`・`handlers/notification.ts`・`handlers/notificationFacts.ts`・`handlers/groupSessionReminder.ts`・`handlers/liveSessionReminder.ts`）、
   `packages/lib/mail/settingsActions.ts`、`packages/lib/mail/layout/`（外枠 `MailLayout.tsx`・中身の定義とテキスト版 `document.ts`・フッター `footers.ts`）、
-  `packages/lib/mail/templates/`（`NotificationEmailTemplate.ts`・`EventReminderEmailTemplate.ts`・`LiveSessionReminderEmailTemplate.ts`）・
+  `packages/lib/mail/templates/`（`NotificationEmailTemplate.ts`・`notificationDetails.ts`・`scheduleFormat.ts`・`EventReminderEmailTemplate.ts`・`LiveSessionReminderEmailTemplate.ts`）・
   `render.ts`、`packages/lib/mail/unsubscribe/`（署名 `token.ts`・受け口 `routeHandler.ts`）、`apps/{student,coach}/app/mail/unsubscribe/route.ts`、
   ロゴ `packages/lib/mail/assets/logo.ts`（URL・表示サイズ）と `apps/student/public/mail-logo.png`（`node scripts/mail-logo/build.mjs` で `logo-01.png` から作る）、`packages/types/notification.ts`・`notificationEn.ts`（通知の文言）、`apps/admin/app/api/cron/mail-dispatch/route.ts`、
   到達状況 `packages/lib/mail/webhook/`（変換 `mailEvent.ts`・受け口 `handleResendWebhook.ts`）と `apps/admin/app/api/webhooks/resend/route.ts`
@@ -171,6 +187,7 @@
 | ライブセッションの1時間前のリマインダーを生徒・コーチに積み、生徒に届く。キャンセル済みの回には送らない | `event-reminder.spec.ts` | 高 | 正常系2・4・7（ライブセッション）、異常系17。使い捨ての生徒にライブ付き契約・担当枠・セッションを直接作る（コーチは固定アカウントのため送らずに `undeliverable_address`）。セッションはチケットを直接参照するため、後始末で先に消す |
 | 通知の登録ですぐ送るメールが積まれ、送信処理で届く。達成の通知・配信停止の人・ライセンスの無い人には送らない。届いたメールのリンクから配信停止できる | `notification-mail.spec.ts` | 高 | 正常系1・4・7・8（ログイン不要の停止）、異常系1・13・18・19。通知は直接登録して確かめる。ロゴの画像 URL・テキスト版も確かめる |
 | チャットの新着は未読が10分続いたら1通。未読のままの続きはまとめ、既読後の新着は新しい1通 | `notification-mail.spec.ts` | 中 | 正常系1（チャット） |
+| キャンセル（振替候補あり）・予約申請の否認・マッチングの成立と否認のメールに、対象の日時と理由が載る | `notification-mail-details.spec.ts` | 高 | 正常系7（通知の対象の情報）。コーチ（固定アカウント `qa-coach-us-01`）の JWT で `cancel_session`・`reject_slot_proposal`・`reject_matching_request` を呼び、payload の ID と届いたメールの本文を確かめる。マッチング成立は通知を直接登録する。使い捨ての生徒の担当枠・セッションを作り、後始末でセッションを先に消す |
 | 送信失敗があった日は、運営のアドレスへ要確認の要約が届く（設定の状況も載る） | `daily-report.spec.ts` | 中 | 正常系6。`MAIL_OPS_ALERT_TO` 未設定ならスキップ。「異常なし」の件名・本文は単体テスト |
 | プロフィールに「通知」「リマインダー」の切り替えが出る | `notification-mail.spec.ts` | 低 | 閲覧のみ（固定アカウント） |
 
@@ -180,6 +197,6 @@ Webhook の受け口は Resend から dev のローカルへ届かないため E
 
 管理者の操作で通知が登録されないこと（異常系14）は、dev の DB で `fn_notify` を管理者・コーチの JWT で呼び、取り消し（ROLLBACK）付きで確かめた（E2E は無し）。
 メールの文面（日時の表記・言語・参加URLの有無・設定へのリンク・通知の言語）は、送信せずに
-`testing/unit/event-reminder-mail-content.test.ts`・`notification-mail-content.test.ts`、全メール共通の外枠（ロゴ・プレビュー文・テキスト版）と
+`testing/unit/event-reminder-mail-content.test.ts`・`notification-mail-content.test.ts`・`notification-mail-details.test.ts`（通知の対象の情報・件名の日時・英語・古い通知）、全メール共通の外枠（ロゴ・プレビュー文・テキスト版）と
 配信停止の署名は `mail-layout.test.ts` で確かめる。全パターンの見た目は `testing/features/branches/feature-20261004-dev/send-mail-samples.ts`
 （Resend のテスト用アドレスへ送信。`--out=<フォルダ>` で送らずに HTML・テキストを書き出す）で確かめる。

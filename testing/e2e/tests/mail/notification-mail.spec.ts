@@ -69,9 +69,10 @@ test("通知の登録ですぐ送るメールが積まれ、送信処理で届�
     .insert({ user_id: studentB, category: "NOTIFICATION", enabled: false });
   if (settingErr) throw new Error(settingErr.message);
 
+  // 実際の通知と同じく対象の日時を入れる（セッションの行は作らないため、payload の開始日時だけが載る。2026-10-08(木) 19:00 JST）
   const approvedId = await insertNotification(fixture, studentA, {
     notification_type: "SESSION_BOOKING_APPROVED",
-    payload: { coach_name: "E2Eコーチ" },
+    payload: { coach_name: "E2Eコーチ", session_start_datetime: "2026-10-08T10:00:00Z" },
     link_path: "/live-room",
   });
   // 達成の通知はメールにしない
@@ -90,8 +91,9 @@ test("通知の登録ですぐ送るメールが積まれ、送信処理で届�
   expect((await outboxRows(fixture, studentC)).map((r) => [r.status, r.last_error])).toEqual([["SKIPPED", "recipient_unlicensed"]]);
 
   const mail = await waitForEmail({ to: emailA, since });
-  expect(mail.subject).toBe("【Gabby Blueprint】予約が承認されました");
+  expect(mail.subject).toBe("【Gabby Blueprint】予約が承認されました（10月8日(木) 19:00）");
   expect(mail.html).toContain("E2Eコーチがセッションの予約を承認しました。");
+  expect(mail.text).toContain("【予約されたセッション】\n10月8日(木) 19:00〜（日本時間）");
   expect(mail.html).toContain("/live-room");
   // ロゴは公開 URL の画像、テキスト版も同じ内容で送る
   expect(mail.html).toMatch(/<img src="https:\/\/[^"]+\/mail-logo\.png"/);
