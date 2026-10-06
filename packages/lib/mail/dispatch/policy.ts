@@ -79,3 +79,53 @@ export function isExpired(insertedAtIso: string, expiresAfterHours: number | und
   if (!expiresAfterHours) return false;
   return nowMs - new Date(insertedAtIso).getTime() > expiresAfterHours * 60 * 60 * 1000;
 }
+
+/** 宛先の言語（通知・リマインダーのメールの文面） */
+export type MailRecipientLanguage = 'ja' | 'en';
+
+/**
+ * 宛先のユーザー種別から言語を決める（生徒: 日本語 / コーチ: 英語）。
+ * 管理者には通知・リマインダーのメールを送らない（null。送信処理が SKIPPED にする）。
+ * 値は @gabby/types/user の USER_TYPES（生徒 '1' / コーチ '2'）。
+ */
+export function resolveRecipientLanguage(userType: string): MailRecipientLanguage | null {
+  if (userType === '1') return 'ja';
+  if (userType === '2') return 'en';
+  return null;
+}
+
+/** 運営への日次の要約に載せる、送信処理の設定の状況（1項目） */
+export interface MailConfigCheck {
+  label: string;
+  value: string;
+  /** false の項目は要確認として要約に載せる */
+  ok: boolean;
+}
+
+/**
+ * 送信処理（admin）の環境変数の設定状況。設定漏れを、日次の要約で初日に気づけるようにする。
+ * 配信停止の鍵（MAIL_UNSUBSCRIBE_SECRET）は student・coach にも同じ値が要るが、admin からは確かめられない。
+ */
+export function checkMailConfig(env: Record<string, string | undefined>): MailConfigCheck[] {
+  const mode = resolveDispatchMode(env.MAIL_DISPATCH_MODE);
+  const allowlist = parseAllowlist(env.MAIL_DISPATCH_RECIPIENT_ALLOWLIST);
+  const isSet = (value: string | undefined) => !!value?.trim();
+  const setLabel = (value: string | undefined) => (isSet(value) ? '設定済み / set' : '未設定 / not set');
+  return [
+    {
+      label: '送信の範囲 / Dispatch mode (MAIL_DISPATCH_MODE)',
+      value: mode === 'allowlist' ? `allowlist（${allowlist.join(', ') || '許可リストが空 / empty'}）` : mode,
+      ok: mode === 'all' || (mode === 'allowlist' && allowlist.length > 0),
+    },
+    {
+      label: '到達状況の Webhook / Delivery webhook (RESEND_WEBHOOK_SECRET)',
+      value: setLabel(env.RESEND_WEBHOOK_SECRET),
+      ok: isSet(env.RESEND_WEBHOOK_SECRET),
+    },
+    {
+      label: '配信停止のリンク / Unsubscribe link (MAIL_UNSUBSCRIBE_SECRET)',
+      value: setLabel(env.MAIL_UNSUBSCRIBE_SECRET),
+      ok: isSet(env.MAIL_UNSUBSCRIBE_SECRET),
+    },
+  ];
+}

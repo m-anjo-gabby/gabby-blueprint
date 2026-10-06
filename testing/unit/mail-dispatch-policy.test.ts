@@ -5,13 +5,16 @@ import {
   isAllowedRecipient,
   isExpired,
   isUndeliverableAddress,
+  checkMailConfig,
   parseAllowlist,
   resolveDispatchMode,
+  resolveRecipientLanguage,
 } from "@gabby/lib/mail/dispatch/policy";
 import { mailEnvironmentTag, toMailEventRecord } from "@gabby/lib/mail/webhook/mailEvent";
 
 /**
- * メールの送信処理の判定（送信の範囲・失敗の扱い・期限切れ）と、到達状況の Webhook の変換
+ * メールの送信処理の判定（送信の範囲・失敗の扱い・期限切れ・宛先の言語・設定の状況）、到達状況の Webhook の変換、
+ * 運営への日次の要約、通知メールの対象の一覧（registry.ts と DB のトリガー）の一致
  * 本体: packages/lib/mail/dispatch/policy.ts、packages/lib/mail/webhook/mailEvent.ts
  * 実行: pnpm --filter @gabby/testing unit
  */
@@ -119,20 +122,89 @@ test("到達状況: 招待メール（送信待ちを通らない）は mail_id 
   assert.equal(toMailEventRecord("msg_4", { type: "domain.updated", created_at: "2026-10-06T03:00:00Z", data: {} }, ENV), null);
 });
 
-test("日次の要約: 問題が無い日は送らない。件名は件数の合計、明細は上限を超えた分を件数で示す", async () => {
-  const { hasMailDailyReportIssues, getMailDailyReportSubject, MAIL_DAILY_REPORT_ITEM_LIMIT } = await import(
+test("宛先の言語: 生徒は日本語、コーチは英語、管理者には送らない", () => {
+  assert.equal(resolveRecipientLanguage("1"), "ja");
+  assert.equal(resolveRecipientLanguage("2"), "en");
+  assert.equal(resolveRecipientLanguage("9"), null);
+});
+
+const OK_CONFIG = {
+  MAIL_DISPATCH_MODE: "all",
+  RESEND_WEBHOOK_SECRET: "whsec_x",
+  MAIL_UNSUBSCRIBE_SECRET: "secret",
+};
+
+test("設定の状況: 送信の範囲が off・許可リストが空・鍵の未設定は要確認", () => {
+  assert.ok(checkMailConfig(OK_CONFIG).every((check) => check.ok));
+  assert.deepEqual(
+    checkMailConfig({}).map((check) => check.ok),
+    [false, false, false]
+  );
+  const allowlist = checkMailConfig({ ...OK_CONFIG, MAIL_DISPATCH_MODE: "allowlist", MAIL_DISPATCH_RECIPIENT_ALLOWLIST: "resend.dev" })[0];
+  assert.equal(allowlist.ok, true);
+  assert.ok(allowlist.value.includes("resend.dev"));
+  assert.equal(checkMailConfig({ ...OK_CONFIG, MAIL_DISPATCH_MODE: "allowlist" })[0].ok, false);
+});
+
+test("日次の要約: 問題が無い日も「異常なし」で送る（届くこと自体が送信処理の生存確認）", async () => {
+  const { countMailDailyReportIssues, getMailDailyReportSubject } = await import("@gabby/lib/mail/templates/MailDailyReportTemplate");
+  const { renderMailDailyReportEmail } = await import("@gabby/lib/mail/render");
+  const props = {
+    periodLabel: "10/05 09:00 〜 10/06 09:00（日本時間 / JST）",
+    sentCount: 12,
+    skippedCount: 3,
+    failed: [],
+    deliveryProblems: [],
+    overdueCount: 0,
+    config: checkMailConfig(OK_CONFIG),
+  };
+  assert.equal(countMailDailyReportIssues(props), 0);
+  assert.equal(getMailDailyReportSubject(props), "【Gabby Blueprint】メール配信の日次報告 異常なし / Daily email report: no issues");
+  const { text } = renderMailDailyReportEmail(props);
+  assert.ok(text.includes("メール配信に問題はありませんでした。"));
+  assert.ok(text.includes("12"));
+  assert.ok(!text.includes("要確認 / Check"));
+});
+
+test("日次の要約: 件名は要確認の件数の合計（設定の不備を含む）、明細は上限を超えた分を件数で示す", async () => {
+  const { countMailDailyReportIssues, getMailDailyReportSubject, MAIL_DAILY_REPORT_ITEM_LIMIT } = await import(
     "@gabby/lib/mail/templates/MailDailyReportTemplate"
   );
   const { renderMailDailyReportEmail } = await import("@gabby/lib/mail/render");
-  const empty = { periodLabel: "10/05 09:00 〜 10/06 09:00（日本時間 / JST）", failed: [], deliveryProblems: [], overdueCount: 0 };
-  assert.equal(hasMailDailyReportIssues(empty), false);
-
   const item = { at: "10/06 08:00", label: "不達 / Bounced  password_reset", recipient: "taro@gabbyacademy.com", detail: "Permanent" };
-  const props = { ...empty, deliveryProblems: Array.from({ length: MAIL_DAILY_REPORT_ITEM_LIMIT + 3 }, () => item), overdueCount: 2 };
-  assert.equal(hasMailDailyReportIssues(props), true);
-  assert.equal(getMailDailyReportSubject(props), `【Gabby Blueprint】メール配信の要確認 ${MAIL_DAILY_REPORT_ITEM_LIMIT + 5}件 / Email delivery issues: ${MAIL_DAILY_REPORT_ITEM_LIMIT + 5}`);
+  const props = {
+    periodLabel: "10/05 09:00 〜 10/06 09:00（日本時間 / JST）",
+    sentCount: 0,
+    skippedCount: 0,
+    failed: [],
+    deliveryProblems: Array.from({ length: MAIL_DAILY_REPORT_ITEM_LIMIT + 3 }, () => item),
+    overdueCount: 2,
+    // MAIL_UNSUBSCRIBE_SECRET だけ未設定（要確認 1件）
+    config: checkMailConfig({ ...OK_CONFIG, MAIL_UNSUBSCRIBE_SECRET: "" }),
+  };
+  const total = MAIL_DAILY_REPORT_ITEM_LIMIT + 3 + 2 + 1;
+  assert.equal(countMailDailyReportIssues(props), total);
+  assert.equal(getMailDailyReportSubject(props), `【Gabby Blueprint】メール配信の要確認 ${total}件 / Email delivery issues: ${total}`);
   const { html, text } = renderMailDailyReportEmail(props);
   assert.ok(html.includes("taro@gabbyacademy.com"));
   assert.ok(text.includes("ほか 3件 / and 3 more"));
-  assert.ok(text.includes("MAIL_DISPATCH_MODE"));
+  assert.ok(text.includes("送る時刻を30分以上過ぎた送信待ちが 2件"));
+  assert.ok(text.includes("要確認 / Check: 未設定 / not set"));
+});
+
+test("通知メールの対象の一覧: registry.ts と DB のトリガー（enqueue_notification_mail.sql）が一致する", async () => {
+  const { readFileSync } = await import("node:fs");
+  const path = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const { NOTIFICATION_MAIL_TYPES } = await import("@gabby/lib/mail/dispatch/registry");
+  const sqlPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../supabase/DDL/function/enqueue_notification_mail.sql");
+  // コメント行を除いてから、トリガーの対象の配列（ARRAY[...]）の中の文字列を取り出す
+  const sql = readFileSync(sqlPath, "utf8")
+    .split(/\r?\n/)
+    .filter((line) => !line.trim().startsWith("--"))
+    .join("\n");
+  const array = sql.match(/notification_type\s*=\s*ANY\s*\(\s*ARRAY\[([\s\S]*?)\]/);
+  assert.ok(array, "enqueue_notification_mail.sql に ARRAY[...] が見つかりません");
+  const sqlTypes = [...array[1].matchAll(/'([A-Z_]+)'/g)].map((match) => match[1]);
+  assert.deepEqual([...sqlTypes].sort(), [...NOTIFICATION_MAIL_TYPES].sort());
 });

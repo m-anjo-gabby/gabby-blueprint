@@ -1,25 +1,9 @@
 import 'server-only';
-import { USER_TYPES } from '@gabby/types/user';
 import { NOTIFICATION_MESSAGE_BUILDERS, type NotificationType } from '@gabby/types/notification';
 import { NOTIFICATION_MESSAGE_BUILDERS_EN } from '@gabby/types/notificationEn';
-import { getPortalBaseUrl } from '../../../navigation/portalUrl';
 import { renderNotificationEmail } from '../../render';
-import type { NotificationMailLanguage } from '../../templates/NotificationEmailTemplate';
 import { NOTIFICATION_MAIL_TYPES } from '../registry';
-import type { MailHandler, MailRecipient } from '../types';
-
-function toPortalUrl(recipient: MailRecipient, path: string | null): string | null {
-  const base = getPortalBaseUrl(recipient.userType);
-  if (!base || !path) return null;
-  return `${base.replace(/\/+$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
-}
-
-/** 宛先の言語（生徒: 日本語 / コーチ: 英語）。それ以外（管理者）は送らない */
-function resolveLanguage(recipient: MailRecipient): NotificationMailLanguage | null {
-  if (recipient.userType === USER_TYPES.STUDENT) return 'ja';
-  if (recipient.userType === USER_TYPES.COACH) return 'en';
-  return null;
-}
+import type { MailHandler } from '../types';
 
 function isMailTarget(type: string): type is NotificationType {
   return (NOTIFICATION_MAIL_TYPES as readonly string[]).includes(type);
@@ -30,7 +14,7 @@ function isMailTarget(type: string): type is NotificationType {
  * 送る直前にアプリ内通知を読み直し、文面はアプリ内通知と同じタイトル・本文にする（生徒は日本語、コーチは英語）。
  * チャットの新着（CHAT_UNREAD）は、送る時点で既読になっていれば送らない。
  */
-export const notificationHandler: MailHandler = async ({ admin, row, recipient, unsubscribeUrl }) => {
+export const notificationHandler: MailHandler = async ({ admin, row, recipient, links }) => {
   const notificationId = typeof row.payload.notification_id === 'string' ? row.payload.notification_id : null;
   if (!notificationId) return { skip: 'invalid_payload' };
 
@@ -43,12 +27,10 @@ export const notificationHandler: MailHandler = async ({ admin, row, recipient, 
   if (!notification) return { skip: 'notification_unavailable' };
   if (!isMailTarget(notification.notification_type)) return { skip: 'not_mail_target' };
 
-  const language = resolveLanguage(recipient);
-  if (!language) return { skip: 'unsupported_recipient' };
-
+  const { language } = recipient;
   const payload = (notification.payload ?? {}) as Record<string, unknown>;
-  const actionUrl = toPortalUrl(recipient, notification.link_path);
-  const settingsUrl = toPortalUrl(recipient, '/profile');
+  const actionUrl = notification.link_path ? links.portal(notification.link_path) : null;
+  const { settingsUrl, unsubscribeUrl } = links;
 
   if (row.mail_type === 'CHAT_UNREAD') {
     if (notification.is_read) return { skip: 'already_read' };

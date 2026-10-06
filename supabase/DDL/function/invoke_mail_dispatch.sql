@@ -10,7 +10,7 @@
 --      リマインダー）の後、送る時刻が来た送信待ち
 --      （チャットの10分後・失敗の再試行・取りこぼし）がある時だけ呼ぶ（invoke_mail_dispatch_if_due）
 -- 別に、pg_cron の毎日のジョブ 'mail-daily-report'（09:00 JST）が、運営向けのメール配信の日次の要約を
--- task=daily_report で呼ぶ（2026-10-06 追加。送る相手は admin の環境変数 MAIL_OPS_ALERT_TO。問題が無い日は送らない）。
+-- task=daily_report で呼ぶ（2026-10-06 追加。送る相手は admin の環境変数 MAIL_OPS_ALERT_TO。問題が無い日も「異常なし」で毎日送り、届くこと自体を送信処理の生存確認にする）。
 --
 -- 【接続先の設定（環境ごとに1回、手作業）】
 -- 送信処理のURLと秘密のキーは Supabase Vault に保存する（リポジトリには置かない）。
@@ -123,7 +123,7 @@ SELECT cron.schedule(
     $$ SELECT public.enqueue_scheduled_mails(); SELECT private.invoke_mail_dispatch_if_due(); $$
 );
 
--- 運営向けのメール配信の日次の要約（毎日 09:00 JST。問題が無い日・宛先が未設定の環境では送信処理が送らない）
+-- 運営向けのメール配信の日次の要約（毎日 09:00 JST。問題が無い日も送る。宛先が未設定の環境では送信処理が送らない）
 SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'mail-daily-report';
 
 SELECT cron.schedule(

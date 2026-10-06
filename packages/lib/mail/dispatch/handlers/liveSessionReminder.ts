@@ -1,14 +1,9 @@
 import 'server-only';
 import { USER_TYPES } from '@gabby/types/user';
 import { SESSION_STATUS } from '@gabby/types/session';
-import { getPortalBaseUrl } from '../../../navigation/portalUrl';
 import { formatReminderSchedule, renderLiveSessionReminderEmail } from '../../render';
 import type { ReminderLead } from '../../templates/EventReminderEmailTemplate';
 import type { MailHandler } from '../types';
-
-function toPortalUrl(base: string, path: string): string | null {
-  return base ? `${base.replace(/\/+$/, '')}${path}` : null;
-}
 
 /**
  * ライブセッションのリマインダー（LIVE_SESSION_REMINDER、登録: enqueue_live_session_reminders）。
@@ -17,7 +12,7 @@ function toPortalUrl(base: string, path: string): string | null {
  * 主ボタンは、生徒はライブセッション画面（1時間前も。通話画面は開始5分前まで入れず、メールからすぐ開くとエラーになるため。
  * ライブセッション画面の入室ボタンは、早い場合に入室できる時刻を案内する）、コーチはセッションハブ。
  */
-export const liveSessionReminderHandler: MailHandler = async ({ admin, row, recipient, nowMs, unsubscribeUrl }) => {
+export const liveSessionReminderHandler: MailHandler = async ({ admin, row, recipient, nowMs, links }) => {
   const sessionId = typeof row.payload.session_id === 'string' ? row.payload.session_id : null;
   const lead: ReminderLead = row.payload.lead === '1h' ? '1h' : '24h';
   if (!sessionId) return { skip: 'invalid_payload' };
@@ -38,8 +33,7 @@ export const liveSessionReminderHandler: MailHandler = async ({ admin, row, reci
   const counterpartId = isStudent ? session.coach_id : session.student_id;
   const { data: counterpart } = await admin.from('com_m_user').select('user_name').eq('id', counterpartId).maybeSingle();
 
-  const language = isStudent ? 'ja' : 'en';
-  const portal = getPortalBaseUrl(recipient.userType);
+  const { language } = recipient;
   const coachHubPath = `/students/${session.student_id}/sessions/${sessionId}`;
   const actionPath = isStudent ? '/live-room' : coachHubPath;
 
@@ -54,8 +48,8 @@ export const liveSessionReminderHandler: MailHandler = async ({ admin, row, reci
       timeZone: recipient.timezone,
       language,
     }),
-    actionUrl: toPortalUrl(portal, actionPath),
-    settingsUrl: toPortalUrl(portal, '/profile'),
-    unsubscribeUrl,
+    actionUrl: links.portal(actionPath),
+    settingsUrl: links.settingsUrl,
+    unsubscribeUrl: links.unsubscribeUrl,
   });
 };

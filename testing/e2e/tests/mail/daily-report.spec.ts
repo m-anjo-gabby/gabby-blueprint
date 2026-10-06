@@ -16,7 +16,7 @@ test.afterAll(async () => {
   await cleanupAuthFixture(fixture);
 });
 
-test("送信失敗があった日は、運営のアドレスへ要約が届く", async ({}, testInfo) => {
+test("送信失敗があった日は、運営のアドレスへ要確認の要約が届く", async ({}, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "メール送信は desktop のみ");
   const opsAddress = opsAlertAddress();
   test.skip(!resendReadApiKey() || !cronSecret() || !opsAddress, "RESEND_TEST_READ_API_KEY・CRON_SECRET・MAIL_OPS_ALERT_TO のいずれかが未設定");
@@ -42,11 +42,14 @@ test("送信失敗があった日は、運営のアドレスへ要約が届く",
 
   const since = new Date();
   const result = await invokeMailDailyReport();
-  expect(result).toEqual({ status: 200, body: { sent: opsAddress!.split(",").length } });
+  expect(result.status).toBe(200);
+  expect(result.body).toMatchObject({ sent: opsAddress!.split(",").length, issues: expect.any(Number) });
+  expect((result.body as { issues: number }).issues).toBeGreaterThanOrEqual(1);
 
   const mail = await waitForEmail({ to: opsAddress!.split(",")[0].trim(), since });
   expect(mail.subject).toMatch(/^【Gabby Blueprint】メール配信の要確認 \d+件 \/ Email delivery issues: \d+$/);
   expect(mail.html).toContain(userName);
   expect(mail.html).toContain(`E2E ${fixture.tag}`);
   expect(mail.text).toContain("送信失敗 / Failed to send");
+  expect(mail.text).toContain("設定の状況 / Configuration");
 });

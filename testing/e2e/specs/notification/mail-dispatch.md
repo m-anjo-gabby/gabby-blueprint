@@ -61,9 +61,10 @@
    - ライブセッション（`enqueue_live_session_reminders`）: 予定（`status=1`）の回の生徒とコーチ（`dedup_key` = `<session_id>:24h` / `:1h`）
 3. **送信処理を呼ぶ**: 送る時刻が来ている行が積まれたら、処理の確定後に送信処理を呼ぶ（トリガー `trg_mail_outbox_dispatch`。1つのトランザクションで1回だけ）。
    pg_cron の5分ごとのジョブは、送る時刻が来た行（チャットの10分後・失敗の再試行・取りこぼし）がある時だけ呼ぶ（`invoke_mail_dispatch_if_due`）。
-4. **送信**（`dispatchMail`）: 送る時刻が来た行を古い順に最大30件確保し（`claim_mail_outbox`、`FOR UPDATE SKIP LOCKED`）、1件ずつ
-   期限切れの確認（`MAIL_TYPES` の `expiresAfterHours`。通知・チャットは積んでから24時間）→ 宛先の取得（ライセンスの無い生徒には送らない）→ 配信設定の確認 →
-   最新の業務データで文面を組み立て → Resend で送信（送信元 `MAIL_FROM_NOTIFY`、未設定なら `MAIL_FROM_AUTH`。送信の間隔は0.5秒以上）→ `SENT` と送信サービスのメッセージIDを記録。
+4. **送信**（`dispatchMail`）: 送る時刻が来た行を古い順に10件ずつ確保し（`claim_mail_outbox`、`FOR UPDATE SKIP LOCKED`）、確保した分を送り切ったら
+   開始から40秒までは次を確保して続ける（1回の実行で約80件。送る時刻が来た行が無くなれば終わる）。1件ずつ
+   期限切れの確認（`MAIL_TYPES` の `expiresAfterHours`。通知・チャットは積んでから24時間）→ 宛先の取得（ライセンスの無い生徒・管理者には送らない）→ 配信設定の確認 →
+   最新の業務データで文面を組み立て（言語・ポータルへのリンク・配信停止の URL は送信処理が決めて種別ごとの組み立て処理に渡す）→ Resend で送信（送信元 `MAIL_FROM_NOTIFY`、未設定なら `MAIL_FROM_AUTH`。送信の間隔は0.5秒以上）→ `SENT` と送信サービスのメッセージIDを記録。
    送信には重複防止キー（`mail-outbox/<mail_id>`）と、タグ `kind`（メール種別）・`mail_id` を付ける。重複防止キーにより、送信の成功後に結果を記録できず
    `SENDING` のまま残った行を再確保しても、Resend 側で24時間は二重に送らない。
    送信時に、ログイン不要の配信停止の URL（宛先のポータルの `/mail/unsubscribe?u=<ユーザーID>&c=<区分>&t=<署名>`）を組み立て、
@@ -78,9 +79,11 @@
    Resend の Webhook はアカウント単位で届くため、送信時にタグ `env`（Supabase のプロジェクトID）を付け、自分の環境のメールの出来事だけを記録する
    （他の環境・タグの無いメールの出来事は 200 を返して捨てる）。Webhook の登録手順はリリーススクリプト（`supabase/release/20261004_*`）の冒頭。
 6. **運営への日次の要約**（pg_cron の毎日のジョブ `mail-daily-report`、09:00 JST。送信処理を `task=daily_report` で呼ぶ。`packages/lib/mail/dispatch/dailyReport.ts`）:
-   直近24時間の送信失敗（送信待ちの `FAILED`）・到達状況の問題（不達・送信失敗・送信停止中の宛先・迷惑メールの報告。招待・パスワード再設定を含む）と、
-   送る時刻を30分以上過ぎた送信待ち（送信処理の停止・`MAIL_DISPATCH_MODE` の設定漏れ）の件数を集計し、1件以上ある場合だけ
-   運営のアドレス（admin の `MAIL_OPS_ALERT_TO`、カンマ区切り）へ日英併記の要約を送る（明細は20件まで）。宛先が未設定なら送らない。
+   直近24時間の送信・送らなかった件数、送信失敗（送信待ちの `FAILED`）・到達状況の問題（不達・送信失敗・送信停止中の宛先・迷惑メールの報告。招待・パスワード再設定を含む）、
+   送る時刻を30分以上過ぎた送信待ち（送信処理の停止・`MAIL_DISPATCH_MODE` の設定漏れ）の件数、送信処理（admin）の設定の状況
+   （`MAIL_DISPATCH_MODE` が off・許可リストが空、`RESEND_WEBHOOK_SECRET`・`MAIL_UNSUBSCRIBE_SECRET` の未設定は要確認）を集計し、
+   問題が無い日も毎日、運営のアドレス（admin の `MAIL_OPS_ALERT_TO`、カンマ区切り）へ日英併記の要約を送る（明細は20件まで）。宛先が未設定なら送らない。
+   件名は要確認の件数（無ければ「異常なし」）。要約が届くこと自体が送信処理の生存確認になる（届かない日は、pg_net の呼び出し先・`CRON_SECRET`・admin・`RESEND_API_KEY` を確認する）。
    社内向けのため `MAIL_DISPATCH_MODE` の対象外。dev は `delivered+ops-report@resend.dev`（Resend のテスト用アドレス）。
 6a. **保管期限**: pg_cron の毎日のジョブ `mail-history-purge-daily`（03:30 JST、`private.purge_mail_history`）が、送り終えた送信待ち（`SENT`・`SKIPPED`・`FAILED`）と
    到達状況の出来事を、登録から180日で消す。
@@ -168,10 +171,11 @@
 | ライブセッションの1時間前のリマインダーを生徒・コーチに積み、生徒に届く。キャンセル済みの回には送らない | `event-reminder.spec.ts` | 高 | 正常系2・4・7（ライブセッション）、異常系17。使い捨ての生徒にライブ付き契約・担当枠・セッションを直接作る（コーチは固定アカウントのため送らずに `undeliverable_address`）。セッションはチケットを直接参照するため、後始末で先に消す |
 | 通知の登録ですぐ送るメールが積まれ、送信処理で届く。達成の通知・配信停止の人・ライセンスの無い人には送らない。届いたメールのリンクから配信停止できる | `notification-mail.spec.ts` | 高 | 正常系1・4・7・8（ログイン不要の停止）、異常系1・13・18・19。通知は直接登録して確かめる。ロゴの画像 URL・テキスト版も確かめる |
 | チャットの新着は未読が10分続いたら1通。未読のままの続きはまとめ、既読後の新着は新しい1通 | `notification-mail.spec.ts` | 中 | 正常系1（チャット） |
-| 送信失敗があった日は、運営のアドレスへ要約が届く | `daily-report.spec.ts` | 中 | 正常系6。`MAIL_OPS_ALERT_TO` 未設定ならスキップ |
+| 送信失敗があった日は、運営のアドレスへ要確認の要約が届く（設定の状況も載る） | `daily-report.spec.ts` | 中 | 正常系6。`MAIL_OPS_ALERT_TO` 未設定ならスキップ。「異常なし」の件名・本文は単体テスト |
 | プロフィールに「通知」「リマインダー」の切り替えが出る | `notification-mail.spec.ts` | 低 | 閲覧のみ（固定アカウント） |
 
-送信の範囲・失敗の扱い・期限切れの判定と、Webhook の出来事の変換は単体テスト（`testing/unit/mail-dispatch-policy.test.ts`）で確かめる。
+送信の範囲・失敗の扱い・期限切れ・宛先の言語・設定の状況の判定、日次の要約の文面、Webhook の出来事の変換、
+通知メールの対象の一覧（`registry.ts` と `enqueue_notification_mail.sql`）の一致は単体テスト（`testing/unit/mail-dispatch-policy.test.ts`）で確かめる。
 Webhook の受け口は Resend から dev のローカルへ届かないため E2E の対象外（staging で Resend の Webhook の画面から送信テストを行い、`com_t_mail_event` に記録されることを確かめる）。
 
 管理者の操作で通知が登録されないこと（異常系14）は、dev の DB で `fn_notify` を管理者・コーチの JWT で呼び、取り消し（ROLLBACK）付きで確かめた（E2E は無し）。

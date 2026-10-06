@@ -7,7 +7,7 @@ import { MailSendError, sendCore } from '../core';
 import { getPortalBaseUrl } from '../../navigation/portalUrl';
 import { buildUnsubscribeUrl, getUnsubscribeSecret, unsubscribeHeaders } from '../unsubscribe/token';
 import { MAIL_TYPES, type MailType } from './registry';
-import type { MailHandlerRegistry, MailOutboxRow, MailRecipient } from './types';
+import type { MailHandlerRegistry, MailLinks, MailOutboxRow, MailRecipient } from './types';
 import {
   classifySendError,
   isAllowedRecipient,
@@ -15,6 +15,7 @@ import {
   isUndeliverableAddress,
   parseAllowlist,
   resolveDispatchMode,
+  resolveRecipientLanguage,
   type MailDispatchMode,
 } from './policy';
 import { groupSessionReminderHandler } from './handlers/groupSessionReminder';
@@ -23,8 +24,14 @@ import { liveSessionReminderHandler } from './handlers/liveSessionReminder';
 
 const logger = createLogger('mail');
 
-/** 1回の実行で送る上限（送信の間隔と組み立ての時間を含めて、関数の実行時間 60秒に収める） */
-const BATCH_SIZE = 30;
+/** 1回に確保する件数（確保した分は送り切ってから次を確保する。小さくして、時間切れで確保したまま残る行を作らない） */
+const CLAIM_SIZE = 10;
+/**
+ * 確保を続ける時間（1回の実行の中で、この時間までは確保と送信を繰り返す）。
+ * 最後に確保した分の送信（最大 CLAIM_SIZE 件 × 約1秒）を含めて、関数の実行時間 60秒（route.ts の maxDuration）に収める。
+ * 送信の間隔 0.5秒で、1回の実行で約80件送れる（リマインダーが一度に多く積まれても、5分ごとのジョブを待つ回数を減らす）。
+ */
+const CLAIM_TIME_BUDGET_MS = 40_000;
 /** 送信の試行回数の上限（超えたら FAILED） */
 const MAX_ATTEMPTS = 5;
 /** 失敗した場合の再試行までの間隔（試行回数 × この分数） */
@@ -67,7 +74,7 @@ async function updateRow(admin: SupabaseClient, mailId: string, values: Record<s
   if (error) logger.error('mail:dispatch_update_failed', error.message, { payload: { mailId } });
 }
 
-async function loadRecipient(admin: SupabaseClient, userId: string): Promise<MailRecipient | null> {
+async function loadRecipient(admin: SupabaseClient, userId: string): Promise<Omit<MailRecipient, 'language'> | null> {
   const { data: user, error } = await admin
     .from('com_m_user')
     .select('user_type, user_name, timezone, delete_flg')
@@ -103,6 +110,17 @@ async function isCategoryEnabled(admin: SupabaseClient, userId: string, category
   return data?.enabled ?? true;
 }
 
+/** 宛先のポータルへのリンク（組み立て処理に渡す。ポータルの URL が未設定の環境では null） */
+function buildLinks(recipient: MailRecipient, category: string): MailLinks {
+  const base = getPortalBaseUrl(recipient.userType).replace(/\/+$/, '');
+  const portal = (path: string) => (base ? `${base}${path.startsWith('/') ? path : `/${path}`}` : null);
+  return {
+    portal,
+    settingsUrl: portal('/profile'),
+    unsubscribeUrl: buildUnsubscribeUrl({ portalBaseUrl: base, userId: recipient.userId, category, secret: getUnsubscribeSecret() }),
+  };
+}
+
 async function processRow(
   admin: SupabaseClient,
   row: MailOutboxRow,
@@ -121,19 +139,18 @@ async function processRow(
     const typeConfig: { category: string; expiresAfterHours?: number } = MAIL_TYPES[mailType];
     if (isExpired(row.insert_date, typeConfig.expiresAfterHours, nowMs)) return await skip('expired');
 
-    const recipient = await loadRecipient(admin, row.user_id);
-    if (!recipient) return await skip('recipient_unavailable');
+    const loaded = await loadRecipient(admin, row.user_id);
+    if (!loaded) return await skip('recipient_unavailable');
     // ライセンスの無い生徒（契約の終了等）はログインできず、リンクを開いても使えないため送らない
-    if (recipient.userType === USER_TYPES.STUDENT && !recipient.isLicensed) return await skip('recipient_unlicensed');
+    if (loaded.userType === USER_TYPES.STUDENT && !loaded.isLicensed) return await skip('recipient_unlicensed');
+    // 管理者には通知・リマインダーのメールを送らない（文面は生徒: 日本語 / コーチ: 英語）
+    const language = resolveRecipientLanguage(loaded.userType);
+    if (!language) return await skip('unsupported_recipient');
     if (!(await isCategoryEnabled(admin, row.user_id, row.category))) return await skip('opted_out');
 
-    const unsubscribeUrl = buildUnsubscribeUrl({
-      portalBaseUrl: getPortalBaseUrl(recipient.userType),
-      userId: recipient.userId,
-      category: row.category,
-      secret: getUnsubscribeSecret(),
-    });
-    const built = await HANDLERS[mailType]({ admin, row, recipient, nowMs, unsubscribeUrl });
+    const recipient: MailRecipient = { ...loaded, language };
+    const links = buildLinks(recipient, row.category);
+    const built = await HANDLERS[mailType]({ admin, row, recipient, nowMs, links });
     if ('skip' in built) return await skip(built.skip);
     if (isUndeliverableAddress(recipient.email)) return await skip('undeliverable_address');
     if (!isAllowedRecipient(recipient.email, target.mode, target.allowlist)) return await skip('recipient_not_allowlisted');
@@ -143,7 +160,7 @@ async function processRow(
       to: recipient.email,
       ...built,
       sender: 'notify',
-      headers: unsubscribeHeaders(unsubscribeUrl),
+      headers: unsubscribeHeaders(links.unsubscribeUrl),
       kind: row.mail_type,
       mailId: row.mail_id,
       // 送信の成功後に結果を記録できず、確保したまま残った行を再確保しても、同じメールを二重に送らない
@@ -202,7 +219,8 @@ function createSendThrottle(): () => Promise<void> {
  * 通知・リマインダーのメールを送る（admin の /api/cron/mail-dispatch から呼ぶ）。
  * 呼び出し元は、すぐ送るメールが積まれた直後（DB のトリガーから pg_net）と、pg_cron の5分ごとのジョブ（送る時刻が来た行がある時だけ）。
  * 1. 時刻で送るメール（グループセッション・ライブセッションのリマインダー）を送信待ちに登録する（enqueue_scheduled_mails。pg_cron でも登録しているが、手元から呼んだ場合も同じ結果になるよう、ここでも行う。重複は一意制約で防ぐ）
- * 2. 送信待ちを確保し（claim_mail_outbox）、1件ずつ配信停止の設定・最新の業務データを確かめて送る
+ * 2. 送信待ちを確保し（claim_mail_outbox）、1件ずつ配信停止の設定・最新の業務データを確かめて送る。
+ *    確保した分を送り切ったら、CLAIM_TIME_BUDGET_MS までは次を確保して続ける（送る時刻が来た行が無くなれば終わる）
  * 送信の範囲が off（MAIL_DISPATCH_MODE が未設定・off）の場合は 2 を行わない（送信待ちは PENDING のまま残る）。
  */
 export async function dispatchMail(): Promise<DispatchSummary> {
@@ -222,20 +240,25 @@ export async function dispatchMail(): Promise<DispatchSummary> {
     return summary;
   }
 
-  const { data: rows, error: claimError } = await admin.rpc('claim_mail_outbox', { p_limit: BATCH_SIZE });
-  if (claimError) {
-    logger.error('mail:dispatch_claim_failed', claimError.message);
-    throw new Error(claimError.message);
-  }
-
-  const claimed = (rows ?? []) as MailOutboxRow[];
-  summary.claimed = claimed.length;
-  const nowMs = Date.now();
+  const startedAt = Date.now();
   // Resend の送信レートに収めるため1件ずつ、間隔を空けて送る
   const waitForSendSlot = createSendThrottle();
-  for (const row of claimed) {
-    const outcome = await processRow(admin, row, nowMs, target, waitForSendSlot);
-    summary[outcome] += 1;
+  while (Date.now() - startedAt < CLAIM_TIME_BUDGET_MS) {
+    const { data: rows, error: claimError } = await admin.rpc('claim_mail_outbox', { p_limit: CLAIM_SIZE });
+    if (claimError) {
+      logger.error('mail:dispatch_claim_failed', claimError.message);
+      throw new Error(claimError.message);
+    }
+
+    const claimed = (rows ?? []) as MailOutboxRow[];
+    summary.claimed += claimed.length;
+    const nowMs = Date.now();
+    for (const row of claimed) {
+      const outcome = await processRow(admin, row, nowMs, target, waitForSendSlot);
+      summary[outcome] += 1;
+    }
+    // 確保できた数が上限未満なら、送る時刻が来た行は残っていない
+    if (claimed.length < CLAIM_SIZE) break;
   }
 
   if (summary.claimed > 0 || summary.enqueued > 0) {

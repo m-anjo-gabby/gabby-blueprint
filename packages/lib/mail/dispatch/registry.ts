@@ -47,7 +47,8 @@ export const MAIL_TYPES = {
 
 /**
  * 通知メールを送るアプリ内通知の種別（宛先は生徒・コーチのみ）。
- * DB 側のトリガー（supabase/DDL/function/enqueue_notification_mail.sql）の一覧と同じにする（変更する場合は両方を直す）。
+ * DB 側のトリガー（supabase/DDL/function/enqueue_notification_mail.sql）の一覧と同じにする（変更する場合は両方を直す。
+ * 一致は単体テスト testing/unit/mail-dispatch-policy.test.ts で確かめる）。
  * 達成の通知（TRAINING_*）と、管理者の操作による通知（*_BY_ADMIN。fn_notify で登録しない）は含めない。
  */
 export const NOTIFICATION_MAIL_TYPES = [
