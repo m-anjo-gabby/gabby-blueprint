@@ -3,6 +3,7 @@
 import { createServerClient } from "@gabby/lib/supabase/server";
 import { SprintQuestion, SprintQuestionResponse, SprintQuestionType, type SprintAvailableLevels } from "@gabby/types/sprint";
 import { fetchSprintAvailableLevels } from "@gabby/lib/sprint/availableLevels";
+import { readSprintHistory, selfSprintHistorySchema } from "@gabby/lib/sprint/answeredHistory";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { resolveSprintHasLevel, isSprintLevelSelectable } from "@gabby/lib";
@@ -241,6 +242,16 @@ export async function createSprintScoreAction(
     const user = await getAuthUser();
     if (!user) throw new Error("Unauthorized");
 
+    // 履歴の形を保存前に検証する（壊れた・巨大な配列を保存させない）
+    const parsedHistory = selfSprintHistorySchema.safeParse(input.history);
+    if (!parsedHistory.success) {
+      logger.error("sprint:create_score_invalid_history", "Invalid answered_history payload", {
+        ...ctx,
+        payload: { issues: parsedHistory.error.issues.slice(0, 5) }
+      });
+      return { success: false, data: null, error: "Invalid sprint history" };
+    }
+
     // self_t_sprint へのインサート (JSONBなので拡張されたオブジェクト配列をそのまま渡せる)
     const { data, error } = await supabase
       .from("self_t_sprint")
@@ -312,19 +323,7 @@ export async function getSprintResultAction(
     const contentMetadata = Array.isArray(joinedContent) ? joinedContent[0]?.metadata : joinedContent?.metadata;
     const hasLevel = resolveSprintHasLevel(contentMetadata?.sprint);
 
-    let history: SprintHistoryItem[] = [];
-    if (scoreRecord.answered_history) {
-      if (typeof scoreRecord.answered_history === 'string') {
-        try {
-          history = JSON.parse(scoreRecord.answered_history);
-        } catch (e) {
-          logger.error("sprint:parse_history_error", "Failed to parse answered_history string", { ...ctx, error: e });
-          history = [];
-        }
-      } else {
-        history = scoreRecord.answered_history as SprintHistoryItem[];
-      }
-    }
+    const history = readSprintHistory<SprintHistoryItem>(scoreRecord.answered_history);
 
     // 🆕 【追加ロジック】ここで発話数と平均スコアを事前に集計・計算する
     let totalAssessmentCount = 0;

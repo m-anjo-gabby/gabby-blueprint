@@ -6,6 +6,7 @@ import { getLogContext } from '../../logger/context';
 import { LIVE_SESSION_END_AFTER_MS } from '../../liveSessionRoom/constants';
 import { getStudentAvailableContentIds, hasCoachStudentRelationship } from './coachStudentActions';
 import { fetchSprintAvailableLevels } from '../../sprint/availableLevels';
+import { lessonSprintHistorySchema, readSprintHistory } from '../../sprint/answeredHistory';
 import {
   CreateLessonSprintResultInput,
   CreateLessonSprintResultResponse,
@@ -216,6 +217,13 @@ export async function createLessonSprintResultCore(
       return { success: false, errorCode: 'forbidden' };
     }
 
+    // 履歴の形を保存前に検証する（壊れた・巨大な配列を保存させない）
+    const parsedHistory = lessonSprintHistorySchema.safeParse(input.history);
+    if (!parsedHistory.success) {
+      logger.error('lessonSprint:create_result_invalid_history', 'Invalid answered_history payload', { ...ctx, userId: user.id, payload: { issues: parsedHistory.error.issues.slice(0, 5) } });
+      return { success: false, errorCode: 'invalid_input' };
+    }
+
     // 対象生徒のテナントで公開されていない教材での結果登録を拒否する
     const availableIds = await getStudentAvailableContentIds(supabase, input.student_id, SPRINT_CONTENT_TYPE);
     if (!availableIds) {
@@ -288,7 +296,7 @@ const LESSON_SPRINT_HISTORY_SELECT =
   'lesson_sprint_id, session_id, content_id, question_type, difficulty_level, time_limit_sec, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name, content_name_en)';
 
 function mapLessonSprintHistoryRow(row: any): LessonSprintHistoryListItem {
-  const history = (row.answered_history as LessonSprintHistoryItem[]) ?? [];
+  const history = readSprintHistory<LessonSprintHistoryItem>(row.answered_history);
   const scored = history.filter((h) => typeof h.score === 'number');
   const averageScore = scored.length > 0
     ? Math.round((scored.reduce((sum, h) => sum + (h.score ?? 0), 0) / scored.length) * 10) / 10
@@ -413,7 +421,7 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
       return { success: false, errorCode: 'forbidden' };
     }
 
-    const history = (record.answered_history as LessonSprintHistoryItem[]) ?? [];
+    const history = readSprintHistory<LessonSprintHistoryItem>(record.answered_history);
     if (history.length === 0) {
       return { success: true, record: record as LessonSprintRecord, questions: [] };
     }

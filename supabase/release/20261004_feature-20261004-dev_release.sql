@@ -2115,3 +2115,51 @@ SELECT cron.schedule(
 );
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】スプリントの実施履歴（answered_history）が配列であることを保証する
+-- 追加日: 2026-10-06
+--
+-- 【内容】
+--   1. self_t_sprint / lesson_t_sprint の answered_history に、JSON 文字列として保存された行があれば配列に直す
+--      （アプリは配列で保存しており dev には該当行なし。古いデータの保険）
+--   2. 両テーブルの answered_history に CHECK 制約（配列であること）を追加する
+--   - 要素の形（question_id・seq_no 等）はアプリの保存処理で検証する（packages/lib/sprint/answeredHistory.ts）。
+--   - 適用はアプリのデプロイより先に行う（アプリは文字列の answered_history を読まなくなるため）。
+--   - 既存のアプリは配列で保存しているため、デプロイ前に適用しても保存には影響しない。
+-- =========================================================================
+
+BEGIN;
+
+UPDATE public.self_t_sprint
+SET answered_history = (answered_history #>> '{}')::jsonb
+WHERE jsonb_typeof(answered_history) = 'string';
+
+UPDATE public.lesson_t_sprint
+SET answered_history = (answered_history #>> '{}')::jsonb
+WHERE jsonb_typeof(answered_history) = 'string';
+
+ALTER TABLE public.self_t_sprint DROP CONSTRAINT IF EXISTS self_t_sprint_answered_history_is_array;
+ALTER TABLE public.self_t_sprint
+  ADD CONSTRAINT self_t_sprint_answered_history_is_array CHECK (jsonb_typeof(answered_history) = 'array');
+
+ALTER TABLE public.lesson_t_sprint DROP CONSTRAINT IF EXISTS lesson_t_sprint_answered_history_is_array;
+ALTER TABLE public.lesson_t_sprint
+  ADD CONSTRAINT lesson_t_sprint_answered_history_is_array CHECK (jsonb_typeof(answered_history) = 'array');
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】スプリントの実施履歴（self_t_sprint.answered_history）の列コメントに要素の項目を記載する
+-- 追加日: 2026-10-06
+--
+-- 【内容】
+--   1. self_t_sprint.answered_history の列コメントを、lesson_t_sprint と同じく要素の項目まで書く形にそろえる
+--   - コメントの変更のみ。アプリのデプロイとの前後は問わない。
+-- =========================================================================
+
+BEGIN;
+
+COMMENT ON COLUMN public.self_t_sprint.answered_history IS '実施問題の履歴情報(JSON配列。出題順): question_id, group_id, seq_no, is_skipped, assessment(発話評価。未評価はnull: total_score(0-100), analysis(結果画面のフィードバック用の詳細。古い記録には無い))。2026-06以前の記録には is_skipped・group_id・seq_no が無い要素がある';
+
+COMMIT;

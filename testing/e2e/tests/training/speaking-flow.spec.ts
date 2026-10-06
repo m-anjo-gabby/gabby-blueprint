@@ -317,6 +317,37 @@ test.describe("スプリントの発話", () => {
     await page.getByRole("button", { name: "スプリントを開始" }).click();
     await page.waitForURL(/\/training\/sprint\/result\/[0-9a-f-]{36}/, { timeout: 150_000 });
 
+    await test.step("実施の記録が保存され、履歴は出題順に問題ごとの回答（スキップの有無・発話評価）を持つ", async () => {
+      const selfSprintId = page.url().match(/\/result\/([0-9a-f-]{36})/)![1];
+      const { data: record, error } = await f.admin
+        .from("self_t_sprint")
+        .select("content_id, question_type, total_answered, total_assessments, answered_history")
+        .eq("self_sprint_id", selfSprintId)
+        .single();
+      expect(error).toBeNull();
+      expect(record!.content_id).toBe(sprint.contentId);
+      expect(record!.question_type).toBe("6");
+
+      const history = record!.answered_history as {
+        question_id: unknown;
+        seq_no: unknown;
+        is_skipped: unknown;
+        assessment?: { total_score?: unknown } | null;
+      }[];
+      expect(Array.isArray(history)).toBe(true);
+      expect(history.length).toBeGreaterThan(0);
+      expect(history.map((h) => h.seq_no)).toEqual(history.map((_, i) => i + 1));
+      for (const h of history) {
+        expect(typeof h.question_id).toBe("string");
+        expect(typeof h.is_skipped).toBe("boolean");
+      }
+      // 全問に発話で答えているため、発話評価のスコアが記録され、件数がヘッダーの集計と一致する
+      const assessed = history.filter((h) => !h.is_skipped && h.assessment);
+      expect(assessed.length).toBeGreaterThan(0);
+      for (const h of assessed) expect(typeof h.assessment!.total_score).toBe("number");
+      expect(record!.total_assessments).toBe(assessed.length);
+    });
+
     await test.step("「全て再生」が自動で始まり、自動再生の指定はURLから外れる", async () => {
       await expect(page.getByRole("button", { name: "停止", exact: true })).toBeVisible({ timeout: 20_000 });
       await expect(page).toHaveURL(/\/training\/sprint\/result\/[0-9a-f-]{36}$/);

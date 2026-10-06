@@ -55,7 +55,7 @@
 ## 関連RPC・テーブル
 
 - RPC: なし（評価はブラウザ内。記録は各画面の進捗・結果の保存で行う）
-- テーブル: `com_m_sprint_questions`（`statement_*`・`question_*`・`answer_sentence_yes/no_*`）
+- テーブル: `com_m_sprint_questions`（`statement_*`・`question_*`・`answer_sentence_yes/no_*`）、`self_t_sprint`（実施の記録。`answered_history` は問題ごとの回答の配列で、保存前に `packages/lib/sprint/answeredHistory.ts` で形を検証する）
 - 実装参照: `packages/lib/audio/core/audioRuntime.ts`（中断・復旧の検知、再生位置による判定、打ち切りタイマー、発生状況の記録 `audio:*`）、
   `apps/student/components/common/AudioResumeBanner.tsx`（再開・失敗の案内）、`AudioDiagnosticsReporter.tsx`（記録の送信）、
   `packages/lib/audio/react/useSpeakingPlayer.ts`（再生→発話の共通プレイヤー）、`packages/lib/audio/core/speechAssessment.ts`（発話評価）、
@@ -72,7 +72,7 @@
 | 高 | スプリントの再生順（4種別） | Speed は質問文だけ、Builders・Structure は基本文 → 指示文、Mastery は基本文 → 質問文を再生した後に、同じ問題の解答文で発話評価される（フロー2。実装済み: 同上） |
 | 高 | スプリントの発話評価OFF | 問題を再生した後は発話せず、「次の問題へ」で進める（フロー2a。実装済み: 同上） |
 | 高 | ドリルの発話 | 問題の自動再生の後は発話せず、発話ボタンで解答文の発話評価が始まる（フロー3。実装済み: 同上） |
-| 高 | 結果画面の再生 | スプリントの終了後、結果画面で「全て再生」が自動で始まる。文の個別再生では問題ごとの再生ボタンが「再生中」にならない（実装済み: 同上。画面仕様: [sprint-result.md](../../../../docs/screens/student/training/sprint-result.md)） |
+| 高 | 結果の保存と結果画面の再生 | スプリントの終了後、実施の記録が保存される（履歴は出題順に問題ごとのスキップの有無・発話評価のスコアを持ち、発話評価の件数が集計と一致する）。結果画面で「全て再生」が自動で始まる。文の個別再生では問題ごとの再生ボタンが「再生中」にならない（実装済み: 同上。画面仕様: [sprint-result.md](../../../../docs/screens/student/training/sprint-result.md)） |
 | 高 | 中断と復旧 | 発話中に画面が隠れて戻ると、同じ問題を頭からやり直す（フロー4・#6。表示・非表示は擬似的に切り替える。実装済み: 同上） |
 | 中 | 発話中の切り替え | 発話中にカードを切り替えると評価が出ない（#2） |
 | 中 | Speed の NO 回答 | NO で開始すると NO の解答文で発話評価される |

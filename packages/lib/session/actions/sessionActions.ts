@@ -4,6 +4,7 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { groupRescheduleProposals } from '../rescheduleProposalUtils';
+import { readSprintHistory } from '../../sprint/answeredHistory';
 import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
 import {
   AcceptRescheduleProposalResult,
@@ -1059,7 +1060,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
     }));
 
     const sprintLog: SessionSprintSummaryEntry[] = (sprintRows ?? []).map((r) => {
-      const history = (r.answered_history as { score: number | null }[] | null) ?? [];
+      const history = readSprintHistory<{ score: number | null }>(r.answered_history);
       const scored = history.filter((h) => typeof h.score === 'number');
       const averageScore = scored.length > 0
         ? Math.round((scored.reduce((sum, h) => sum + (h.score ?? 0), 0) / scored.length) * 10) / 10
