@@ -67,15 +67,19 @@
    - 外枠はアカウント関連のメールと共通（`packages/lib/mail/layout/`）: ヘッダーはロゴ（本番の生徒ポータルの `https://blueprint.gabbyacademy.com/mail-logo.png` を参照。環境変数 `MAIL_LOGO_URL` で差し替え可。画像を表示しない設定では alt「Gabby Blueprint English」）、
      受信一覧の要約（プレビュー文）、フッターに会社名・URL。HTML 版とテキスト版を同じ元データから作り、両方を送る。
    - 通知: アプリ内通知と同じタイトル・本文（日本語 `NOTIFICATION_MESSAGE_BUILDERS`、英語 `NOTIFICATION_MESSAGE_BUILDERS_EN`）に「アプリで確認する」（通知の `link_path`）。
+     リンク先は、生徒宛て: キャンセル・振替候補・予約の承認/却下・マッチング成立は `/live-room`、マッチング不成立は `/coach-matching`、宿題は `/live-room/sessions/<session_id>/result`。
+     コーチ宛て: 予約申請・生徒からの振替候補は承認・却下できる `/calendar`、キャンセル・振替の確定・担当決定は `/students/<student_id>`、
+     月次レポートの承認・承認取消は対象の月 `/monthly-reports?month=YYYY-MM`。チャットは両方 `/chat/<room_id>`。
      件名「【Gabby Blueprint】<タイトル>」／「[Gabby Blueprint] <タイトル>」。
    - チャット: 「<送信者>さんから新しいメッセージが届いています」／「New message from <sender>」と、メッセージの冒頭（引用）。
-   - ライブセッション: 相手（生徒宛てはコーチ名、コーチ宛ては生徒名）と日時（受信者のタイムゾーン）。主ボタンは、1時間前は入室先
-     （生徒: 通話画面 `/live-room/<session_id>`「入室する」と「開始5分前から入室できます。」／コーチ: セッションハブ `/students/<student_id>/sessions/<session_id>`「Open session」）、
-     24時間前は確認先（生徒: `/live-room`「ライブセッションを確認する」とキャンセル・振替の案内／コーチ: セッションハブ「View session」）。
+   - ライブセッション: 相手（生徒宛てはコーチ名、コーチ宛ては生徒名）と日時（受信者のタイムゾーン）。主ボタンは、
+     生徒: 24時間前・1時間前とも `/live-room`「ライブセッションを確認する」（通話画面は開始5分前まで入れないため。入室ボタンが入室できる時刻を案内する）、
+     1時間前は「開始5分前から入室できます。」、24時間前はキャンセル・振替の案内を添える。
+     コーチ: セッションハブ `/students/<student_id>/sessions/<session_id>`（1時間前「Open session」、24時間前「View session」）。
      件名: 24時間前「【Gabby Blueprint】ライブセッションのご案内（<日時>）」／「[Gabby Blueprint] Upcoming live session: <日時>」、
      1時間前「【Gabby Blueprint】まもなくライブセッションが始まります（<日時>）」／「[Gabby Blueprint] Your live session starts soon (<日時>)」。
    - グループセッション: シリーズに属する回はセッション名の上にシリーズ名を載せる。日時は受信者のタイムゾーン。参加URL（未設定なら案内文）・アプリの詳細
-     （生徒 `/dashboard`、コーチ `/calendar`）。件名: 24時間前「【Gabby Blueprint】グループセッションのご案内（<日時>）」、1時間前「【Gabby Blueprint】まもなくグループセッションが始まります（<日時>）」。
+     （生徒 `/group-sessions`、コーチ `/calendar`）。件名: 24時間前「【Gabby Blueprint】グループセッションのご案内（<日時>）」、1時間前「【Gabby Blueprint】まもなくグループセッションが始まります（<日時>）」。
 6. **配信停止**: プロフィールのスイッチ（「通知」「リマインダー」）を切り替えると、その場で配信設定を保存する（失敗したら元に戻す）。停止してもアプリ内の通知は届く。
    ログインせずに停止する場合は、メールのフッターのリンク（`/mail/unsubscribe`）を開くと確認画面が出て（GET では停止しない。リンクを自動で開くセキュリティ製品で停止されないため）、
    「配信を停止する」（POST）でそのメールの区分をオフにする。メールソフトのワンクリック停止（`List-Unsubscribe-Post`）も同じ URL への POST。

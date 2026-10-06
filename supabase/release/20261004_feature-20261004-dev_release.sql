@@ -1068,3 +1068,576 @@ SELECT cron.schedule(
 );
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】通知のリンク先の見直し（承認できる画面・対象の月を開く）
+-- 追加日: 2026-10-06
+--
+-- 【内容】
+--   アプリ内通知と通知メールで共通のリンク先（com_t_notification.link_path）を見直す。シグネチャは変更しない。
+--   1. create_session_booking_request: コーチ宛ての予約申請（SESSION_BOOKING_REQUESTED）を
+--      生徒詳細（/students/<id>）から、承認・却下できるカレンダー（/calendar の Pending Requests）へ
+--   2. cancel_session: 生徒からの振替候補の提案（SESSION_RESCHEDULE_PROPOSED_BY_STUDENT）を /calendar へ
+--      （候補なしのキャンセル SESSION_CANCELLED_BY_STUDENT は生徒詳細のまま）
+--   3. approve_coach_monthly_report / revoke_coach_monthly_report_approval: 月次レポートの承認・承認取消
+--      （COACH_REPORT_APPROVED / COACH_REPORT_APPROVAL_REVOKED）を、対象の月（/monthly-reports?month=YYYY-MM）へ
+--   4. 登録済みの通知（上記の種別）のリンク先を同じ形に更新する（通知一覧から開いた時も同じ画面へ）
+--
+-- 対応ファイル: DDL/function/create_session_booking_request.sql, DDL/function/cancel_session.sql,
+--   DDL/function/approve_coach_monthly_report.sql, DDL/function/revoke_coach_monthly_report_approval.sql
+-- 【注意】アプリのデプロイとの前後は問わない（リンク先の画面はどちらも既存）。
+-- =========================================================================
+
+BEGIN;
+
+
+---------------------------------------------
+-- 未消化チケットによる新規予約リクエストRPC (2026-09-11 追加、book_makeup_sessionを置き換え)
+-- 前提: table/com_m_lesson_schedule.sql, table/com_t_session.sql,
+--       table/com_t_session_slot_proposal.sql, function/fn_schedule_shortfall.sql,
+--       function/check_session_conflict.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- キャンセルによりticket_refunded=trueとなり未割当に戻ったチケット（週n回契約の
+-- うち一部コマ）や、元々未割当のチケットを、そのコマの担当コーチ限定で予約する。
+-- 旧book_makeup_session()はコーチのAvailability範囲内であれば即時確定していたが、
+-- Availability制約を撤廃し自由に日時を選べるようにする代わりに、必ずコーチの承認を
+-- 要するようにする（ダブルブッキング以外の「コーチの実際の都合」は承認ステップで
+-- 担保する）。そのため本関数はcom_t_sessionへ直接INSERTせず、
+-- com_t_session_slot_proposalへpending行を作成するのみで、確定は
+-- approve_slot_proposal()が行う。
+--
+-- 対象コーチは com_m_lesson_schedule.coach_id で既に確定しているため、本関数は
+-- コーチ選択を受け付けず、スケジュール(コマ)IDのみを受け取る。
+-- shortfall(未割当チケット数)のチェックでは、既にpending中の他リクエストも
+-- 暫定的に消費済みとみなし、同一コマへの過剰リクエストを防止する。
+--
+-- 【24時間ルール (2026-09-15追加)】
+-- 生徒による個別予約は、開始24時間以内は不可（翌日以降のみ予約可能）。アドミンの
+-- 代理予約(admin_book_session_direct)はこのルールの対象外（未来であればいつでも可能）。
+--
+-- 【権限チェック・通知の共通化について (2026-09-15追加)】
+-- 通知INSERTはfn_notify()を使う（前提: function/fn_notify.sql）。権限チェックは
+-- 意図的にfn_assert_actor_or_admin()を使わず素のIF文のままとする。本関数にはアドミンの
+-- 代理実行を許可しない（アドミンはadmin_book_session_direct()という別の専用RPCを使う）ため。
+--
+-- 【通知のリンク先 (2026-10-06変更)】
+-- コーチへの通知（アプリ内・メール）のリンク先は、リクエストを承認・却下できる
+-- カレンダー（/calendar の Pending Requests）とする（従来の生徒詳細では承認できなかったため）。
+--
+-- 【スロット提案の統合 (2026-09-15追加)】
+-- 書き込み先をcom_t_session_booking_requestからcom_t_session_slot_proposalへ変更する
+-- （キャンセル時の振替候補(cancel_session参照)と統合した単一テーブル。詳細は
+-- table/com_t_session_slot_proposal.sqlのコメント参照）。本関数が作成する行は
+-- 「自由予約リクエスト」を表すため、schedule_id必須・source_session_id=NULL・
+-- proposed_by_role=1(生徒)固定・expires_at=NULL(無期限)で挿入する。pending件数の
+-- カウントは、同じテーブルを共有する振替候補（他のschedule_id/source_session_idを
+-- 持つ行）を誤って含めないよう、source_session_id IS NULLの行のみに絞り込む
+-- （振替候補はそもそも本関数のshortfallチェックの対象外という既存仕様を維持するため）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.create_session_booking_request(
+    p_schedule_id uuid,
+    p_start_datetime timestamptz,
+    p_end_datetime timestamptz,
+    p_reason text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_schedule RECORD;
+    v_shortfall integer;
+    v_pending_count integer;
+    v_coach_conflict boolean;
+    v_student_conflict boolean;
+    v_request_id uuid;
+    v_student_name text;
+BEGIN
+    SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = p_schedule_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'lesson schedule % not found', p_schedule_id;
+    END IF;
+
+    IF v_schedule.student_id <> auth.uid() THEN
+        RAISE EXCEPTION 'not authorized to request a booking for this schedule';
+    END IF;
+
+    IF v_schedule.status <> 1 THEN
+        RAISE EXCEPTION 'lesson schedule % is not active (status=%)', p_schedule_id, v_schedule.status;
+    END IF;
+
+    IF p_end_datetime <= p_start_datetime THEN
+        RAISE EXCEPTION 'invalid proposed time range';
+    END IF;
+    IF p_start_datetime < NOW() + interval '24 hours' THEN
+        RAISE EXCEPTION 'requested start datetime must be at least 24 hours from now';
+    END IF;
+
+    SELECT shortfall INTO v_shortfall FROM public.fn_schedule_shortfall(p_schedule_id);
+
+    SELECT COUNT(*) INTO v_pending_count
+    FROM public.com_t_session_slot_proposal r
+    WHERE r.schedule_id = p_schedule_id AND r.status = 1 AND r.source_session_id IS NULL;
+
+    IF v_shortfall - v_pending_count <= 0 THEN
+        RAISE EXCEPTION 'no unassigned ticket available for this schedule';
+    END IF;
+
+    SELECT coach_conflict, student_conflict INTO v_coach_conflict, v_student_conflict
+    FROM public.check_session_conflict(v_schedule.coach_id, v_schedule.student_id, p_start_datetime, p_end_datetime);
+    IF v_coach_conflict THEN RAISE EXCEPTION 'coach already has a session at this time'; END IF;
+    IF v_student_conflict THEN RAISE EXCEPTION 'student already has a session at this time'; END IF;
+
+    INSERT INTO public.com_t_session_slot_proposal (
+        schedule_id, source_session_id, student_id, coach_id, proposed_start_datetime, proposed_end_datetime,
+        proposed_by_role, status, expires_at, reason
+    ) VALUES (
+        p_schedule_id, NULL, v_schedule.student_id, v_schedule.coach_id, p_start_datetime, p_end_datetime,
+        1, 1, NULL, NULLIF(BTRIM(p_reason), '')
+    )
+    RETURNING proposal_id INTO v_request_id;
+
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_schedule.student_id;
+    PERFORM public.fn_notify(
+        v_schedule.coach_id,
+        'SESSION_BOOKING_REQUESTED',
+        jsonb_build_object(
+            'request_id', v_request_id,
+            'student_name', v_student_name,
+            'requested_start_datetime', p_start_datetime
+        ),
+        '/calendar'
+    );
+
+    RETURN v_request_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.create_session_booking_request(uuid, timestamptz, timestamptz, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_session_booking_request(uuid, timestamptz, timestamptz, text) TO authenticated;
+
+
+---------------------------------------------
+-- 個別セッションのキャンセルRPC (2026-08-15 追加, Phase3)
+-- 前提: table/com_t_session.sql, table/com_t_session_slot_proposal.sql,
+--       function/check_session_conflict.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- com_t_session への直接UPDATEはRLSで許可していない（SELECTのみ許可）ため、
+-- 生徒・コーチいずれかによるセッションのキャンセルは必ず本関数を通す。
+-- 定期スケジュール(com_m_lesson_schedule)には触れず、対象の個別回のみを
+-- キャンセル済みにする（＝「定期スケジュールは基本的に維持」）。
+-- チケットの消化(used_sessions)は実施完了時にのみ加算される想定のため、
+-- 事前キャンセルではチケットを一切消費しない。
+--
+-- 【チケット返還ルール (2026-09-05追加)】
+-- 生徒キャンセル: 開始12時間以上前ならticket_refunded=true（未割当扱いに戻り、
+--   担当コーチ限定で再予約可能）、12時間未満ならfalse（返還なし、消化済み扱い）。
+-- コーチキャンセル: 時間帯を問わず常にticket_refunded=true。
+--
+-- 【振替候補の提案 (2026-09-07追加、2026-09-11双方向化)】
+-- 「振替」という独立概念を廃止し、個別セッションは「キャンセル」「予約」の2パターンに
+-- 単純化する方針のため、キャンセル時の候補提案はコーチ→生徒・生徒→コーチの双方向で
+-- 使えるようにする。p_proposed_slots は [{"start_datetime":"...","end_datetime":"..."}] 形式の
+-- JSONB配列で、最大3件まで（アドミン代理キャンセル時は指定不可）。
+-- Availability(com_m_coach_availability)のチェックは行わない
+-- （一回限りの特別な時間として明示的に提案するものであるため）。提案時点で
+-- ダブルブッキングになっていないかはcheck_session_conflict()で事前チェックする
+-- （承諾時の再チェックと合わせた二段構え）。提案者はcom_t_session_slot_proposal.
+-- proposed_by_roleに記録し、approve_slot_proposal/reject_slot_proposalが
+-- 「提案者と逆側のみ応答可」の判定に使う。
+-- 回答期限(24時間、2026-09-11に48時間から短縮)は v_proposal_validity_hours で一元管理する。
+-- 今後時間数を変更したい場合はこの1箇所を書き換えるだけでよい（発行済みの提案には
+-- 遡って影響しない）。
+--
+-- 【スロット提案の統合 (2026-09-15追加)】
+-- 書き込み先をcom_t_session_reschedule_proposalからcom_t_session_slot_proposalへ変更する
+-- （生徒の自由予約リクエストと統合した単一テーブル。詳細はtable/com_t_session_slot_proposal.sqlの
+-- コメント参照）。本関数が作成する行は「キャンセル起因の振替候補」を表すため、
+-- schedule_id=v_session.schedule_id・source_session_id=p_session_idを設定する。
+--
+-- 【24時間ルール (2026-09-15追加)】
+-- 提案する候補の開始時刻も、生徒の個別予約と同じ「開始24時間以上先」ルールの対象とする
+-- （アドミン代理キャンセルではそもそも候補提案不可のため、本ルールは常に生徒・コーチ
+-- 本人の提案にのみ適用される）。検証するのは提案時点のみで、承諾側
+-- (approve_slot_proposal)では再検証しない。提案の有効期限(最大24時間)の
+-- 間に猶予が24時間を切ることはあり得るが、承諾側で再検証すると相手が即応答しない限り
+-- 成立しない不合理なルールになるため、意図的に行わない。
+--
+-- 【通知 (2026-09-07追加、2026-09-11双方向化)】
+-- コーチキャンセル時は生徒へ、生徒キャンセル時はコーチへ、それぞれcom_t_notificationに
+-- 通知を作成する。既存の通知(TRAINING_*/CHAT_NEW_MESSAGE)と異なりトリガーではなく、
+-- 本関数(SECURITY DEFINER)内で直接INSERTする（本関数自身が状態変更の唯一の発生源のため）。
+-- 通知INSERTはfn_notify()を使う（前提: function/fn_notify.sql）。
+--
+-- 【権限チェックの共通化 (2026-09-15追加)】
+-- 権限チェック自体（実際に当事者本人か／実際にアドミンか）はfn_assert_actor_or_admin()に
+-- 委ねる（前提: function/fn_assert_actor_or_admin.sql）。ただし「これはアドミン代理操作か」
+-- という判定は、後述の【admin-proxy判定の明示化】の通りp_as_adminで明示する。
+--
+-- 【admin-proxy判定の明示化 (2026-09-15追加)】
+-- 従来はv_is_admin_proxyを「auth.uid()が生徒ともコーチとも一致しない」という消去法で
+-- 推測していた。通常はこれで問題ないが、将来的にアドミンアカウントが同一セッションの
+-- 生徒/コーチ本人を兼ねるような想定外のデータ状態が生じた場合、消去法だと誤って
+-- 自己申告フロー（12時間ルール等）に流れてしまう。呼び出し元（アドミン代理操作専用の
+-- cancelSessionAsAdmin）は元々「今からアドミン代理として呼ぶ」ことを認識しているため、
+-- その意図をp_as_adminという明示パラメータで渡してもらい、本関数側はその申告が
+-- 実際にアドミンロールを持つ呼び出し者によるものかをfn_assert_actor_or_admin(NULL, ...)で
+-- 検証する、という構成に変更する。p_as_admin=falseの場合は、消去法によるアドミン救済を
+-- 一切行わず、当事者本人（生徒またはコーチ）であることを厳密に要求する
+-- （他の管理者専用RPC群(admin_book_session_direct等)と同じ「呼び出し方自体で意図を示す」
+-- 設計思想に揃える）。
+---------------------------------------------
+-- 旧シグネチャからの変更のため、先に古い関数を明示的に削除する
+-- （デフォルト引数を持つ新シグネチャと共存させるとPostgres側でオーバーロードの曖昧性が生じるため）。
+DROP FUNCTION IF EXISTS public.cancel_session(uuid, text);
+DROP FUNCTION IF EXISTS public.cancel_session(uuid, text, jsonb);
+DROP FUNCTION IF EXISTS public.cancel_session(uuid, text, jsonb, boolean);
+
+-- 【アドミン代理キャンセル対応 (2026-09-09追加、2026-09-15にp_as_admin明示化)】
+-- 生徒キャンセル(1)・コーチキャンセル(2)はいずれもauth.uid()が本人と一致することを
+-- 前提に返還ルール・通知内容を決めているため、管理者自身のauth.uid()（どちらとも
+-- 一致しない）で呼び出すと誤判定してしまう。p_as_admin=trueを明示した場合のみ、
+-- アドミン代理操作とみなし、返還可否を管理者が明示的に指定した値(p_admin_refund_ticket)で
+-- そのまま確定させる（12時間ルール等は適用しない）。起因はcancel_category=3(admin)を用い、
+-- 通知は生徒・コーチ双方へ、どちらが原因かを特定しない中立的な文言で送る。
+--
+-- 【ステータス簡素化 (2026-09-14変更)】
+-- statusは常に3(cancelled)を確定し、起因（生徒/コーチ/アドミン代理）はcancel_category
+-- (1/2/3)に分離する（table/com_t_session.sqlのステータス簡素化パッチ参照）。
+-- 返還有無(ticket_refunded)の算出ロジック自体は変更しない。
+CREATE OR REPLACE FUNCTION public.cancel_session(
+    p_session_id uuid,
+    p_reason text DEFAULT NULL,
+    p_proposed_slots jsonb DEFAULT NULL,
+    p_admin_refund_ticket boolean DEFAULT NULL,
+    p_as_admin boolean DEFAULT false
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_cancel_category smallint;
+    v_refunded boolean;
+    v_is_coach boolean;
+    v_is_admin_proxy boolean;
+    v_coach_name text;
+    v_student_name text;
+    v_slot jsonb;
+    v_slot_start timestamptz;
+    v_slot_end timestamptz;
+    v_proposed_by_role smallint;
+    v_coach_conflict boolean;
+    v_student_conflict boolean;
+    v_proposal_count integer := 0;
+    v_proposal_validity_hours CONSTANT integer := 24; -- 変更する場合はここを直接編集すること
+BEGIN
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    v_is_admin_proxy := p_as_admin;
+
+    IF v_is_admin_proxy THEN
+        -- p_as_admin=trueを名乗った場合、実際にアドミンロールであることを検証する
+        -- （当事者本人と一致するかどうかは問わない）
+        PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to cancel this session');
+    ELSE
+        -- p_as_admin=falseの場合は、消去法によるアドミン救済を行わず、当事者本人
+        -- （生徒またはコーチ）であることを厳密に要求する
+        IF auth.uid() IS DISTINCT FROM v_session.student_id AND auth.uid() IS DISTINCT FROM v_session.coach_id THEN
+            RAISE EXCEPTION 'not authorized to cancel this session';
+        END IF;
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF v_session.start_datetime <= NOW() THEN
+        RAISE EXCEPTION 'cannot cancel a session that has already started';
+    END IF;
+
+    v_is_coach := (v_session.coach_id = auth.uid());
+
+    IF v_is_admin_proxy THEN
+        IF p_admin_refund_ticket IS NULL THEN
+            RAISE EXCEPTION 'p_admin_refund_ticket is required for an admin-initiated cancellation';
+        END IF;
+        v_cancel_category := 3; -- admin
+        v_refunded := p_admin_refund_ticket;
+    ELSIF v_session.student_id = auth.uid() THEN
+        v_cancel_category := 1; -- student
+        v_refunded := (v_session.start_datetime - NOW()) >= interval '12 hours';
+    ELSE
+        v_cancel_category := 2; -- coach
+        v_refunded := true;
+    END IF;
+
+    UPDATE public.com_t_session
+    SET status = 3, cancel_category = v_cancel_category, cancel_reason = p_reason, cancelled_by = auth.uid(),
+        ticket_refunded = v_refunded, update_date = NOW()
+    WHERE session_id = p_session_id;
+
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_session.coach_id;
+    SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_session.student_id;
+
+    -- 候補提案（コーチ・生徒いずれのキャンセルでも共通。アドミン代理操作では提案不可）
+    IF NOT v_is_admin_proxy AND p_proposed_slots IS NOT NULL THEN
+        v_proposed_by_role := CASE WHEN v_is_coach THEN 2 ELSE 1 END;
+        v_proposal_count := jsonb_array_length(p_proposed_slots);
+        IF v_proposal_count > 3 THEN
+            RAISE EXCEPTION 'cannot propose more than 3 alternative times';
+        END IF;
+
+        FOR v_slot IN SELECT * FROM jsonb_array_elements(p_proposed_slots) LOOP
+            v_slot_start := (v_slot->>'start_datetime')::timestamptz;
+            v_slot_end := (v_slot->>'end_datetime')::timestamptz;
+
+            IF v_slot_start < NOW() + interval '24 hours' THEN
+                RAISE EXCEPTION 'proposed time must be at least 24 hours from now';
+            END IF;
+            IF v_slot_end <= v_slot_start THEN
+                RAISE EXCEPTION 'invalid proposed time range';
+            END IF;
+
+            SELECT coach_conflict, student_conflict INTO v_coach_conflict, v_student_conflict
+            FROM public.check_session_conflict(v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end, p_session_id);
+            IF v_coach_conflict THEN RAISE EXCEPTION 'coach already has a session at this time'; END IF;
+            IF v_student_conflict THEN RAISE EXCEPTION 'student already has a session at this time'; END IF;
+
+            INSERT INTO public.com_t_session_slot_proposal (
+                schedule_id, source_session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime,
+                proposed_by_role, status, expires_at
+            ) VALUES (
+                v_session.schedule_id, p_session_id, v_session.coach_id, v_session.student_id, v_slot_start, v_slot_end,
+                v_proposed_by_role, 1, NOW() + (v_proposal_validity_hours || ' hours')::interval
+            );
+        END LOOP;
+    END IF;
+
+    IF v_is_admin_proxy THEN
+        PERFORM public.fn_notify(v_session.student_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/live-room');
+        PERFORM public.fn_notify(v_session.coach_id, 'SESSION_CANCELLED_BY_ADMIN', jsonb_build_object('session_id', p_session_id, 'session_start_datetime', v_session.start_datetime), '/students/' || v_session.student_id);
+    ELSIF v_is_coach THEN
+        PERFORM public.fn_notify(
+            v_session.student_id,
+            CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED' ELSE 'SESSION_CANCELLED_BY_COACH' END,
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'coach_name', v_coach_name,
+                'session_start_datetime', v_session.start_datetime,
+                'proposal_count', v_proposal_count
+            ),
+            '/live-room'
+        );
+    ELSE
+        PERFORM public.fn_notify(
+            v_session.coach_id,
+            CASE WHEN v_proposal_count > 0 THEN 'SESSION_RESCHEDULE_PROPOSED_BY_STUDENT' ELSE 'SESSION_CANCELLED_BY_STUDENT' END,
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'student_name', v_student_name,
+                'session_start_datetime', v_session.start_datetime,
+                'proposal_count', v_proposal_count
+            ),
+            -- 振替候補の提案はコーチが承認・却下するため、承認できるカレンダー（Pending Requests）へ (2026-10-06変更)
+            CASE WHEN v_proposal_count > 0 THEN '/calendar' ELSE '/students/' || v_session.student_id END
+        );
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cancel_session(uuid, text, jsonb, boolean, boolean) TO authenticated;
+
+
+---------------------------------------------
+-- 月次コーチングレポート承認RPC (2026-09-13 追加)
+-- 前提: table/com_t_coach_monthly_report_approval.sql, function/get_coach_monthly_sessions.sql,
+--       table/com_m_session_pay_rate.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- アドミンが対象コーチ・対象月の稼働を確認した上で承認する。コーチからの申請フローは無く、
+-- アドミンの一方的な操作のみで確定する。承認時点のセッション集計（get_coach_monthly_sessionsの
+-- counts_toward_totalを生徒別に集計したもの）をJSONBスナップショットとして固定保存し、
+-- 事後のデータ変動（終了処理漏れの遅延解決等）から承認済み表示を保護する。
+--
+-- 【呼び出し元】
+-- apps/adminはcreateAdminClient()(service_role)経由で呼ぶため、本関数内でauth.uid()は
+-- 取得できない（NULLになる）。そのため承認者IDはp_approved_byとして明示的に受け取る
+-- （adminContractAction.tsのperformed_by: resolvePerformedBy(ctx.userId)と同じ理由）。
+--
+-- 【終了処理未実施セッションの承認ブロック (2026-09-13 追加)】
+-- 終了処理未実施(is_unresolved=true)のセッションが1件でも残っている月は、実績が確定して
+-- いない（completed/no_show等に確定していない）とみなし、承認自体を拒否する。
+-- 画面側（apps/admin ApprovalControlBar）でも同条件で承認ボタンを無効化しているが、
+-- 画面表示後にコーチ側の操作で状態が変わる競合を防ぐため、本RPC側でも同じ判定を行う
+-- （フロント側のチェックはUXのため、こちらが正の防御線）。
+--
+-- 【支払通知書PDF向け単価スナップショット (2026-09-13 追加)】
+-- コーチ向け月次支払通知書(PDF)の支払額(単価×総セッション数)を、承認後の単価マスタ改定
+-- から保護するため、承認時点のcom_m_session_pay_rateの値をrate_amount/rate_currencyへ
+-- 固定保存する。単価マスタは管理者のみ参照可能（RLS）だが、本関数はSECURITY DEFINERの
+-- ためRLSを経由せず直接参照できる。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.approve_coach_monthly_report(
+    p_coach_id uuid,
+    p_report_month date,
+    p_approved_by uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month date := date_trunc('month', p_report_month)::date;
+    v_snapshot jsonb;
+    v_unresolved_count integer;
+    v_rate_amount numeric(10, 2);
+    v_rate_currency text;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to approve this monthly report';
+    END IF;
+
+    SELECT COUNT(*) INTO v_unresolved_count
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month) s
+    WHERE s.is_unresolved;
+
+    IF v_unresolved_count > 0 THEN
+        RAISE EXCEPTION 'cannot approve while % unresolved session(s) remain for this month', v_unresolved_count;
+    END IF;
+
+    SELECT jsonb_build_object(
+        'total', COALESCE(SUM((counts_toward_total)::int), 0),
+        'by_student', COALESCE(
+            (SELECT jsonb_agg(jsonb_build_object('student_id', student_id, 'count', cnt))
+             FROM (
+                 SELECT student_id, SUM((counts_toward_total)::int) AS cnt
+                 FROM public.get_coach_monthly_sessions(p_coach_id, v_month)
+                 GROUP BY student_id
+             ) per_student),
+            '[]'::jsonb
+        )
+    )
+    INTO v_snapshot
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month);
+
+    SELECT rate_amount, currency_code INTO v_rate_amount, v_rate_currency
+    FROM public.com_m_session_pay_rate
+    ORDER BY update_date DESC
+    LIMIT 1;
+
+    INSERT INTO public.com_t_coach_monthly_report_approval (
+        coach_id, report_month, status, session_count_snapshot, rate_amount, rate_currency, approved_by, approved_at, update_date
+    ) VALUES (
+        p_coach_id, v_month, 2, v_snapshot, v_rate_amount, v_rate_currency, p_approved_by, NOW(), NOW()
+    )
+    ON CONFLICT (coach_id, report_month) DO UPDATE
+    SET status = 2,
+        session_count_snapshot = v_snapshot,
+        rate_amount = v_rate_amount,
+        rate_currency = v_rate_currency,
+        approved_by = p_approved_by,
+        approved_at = NOW(),
+        update_date = NOW();
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        p_coach_id,
+        'COACH_REPORT_APPROVED',
+        jsonb_build_object('report_month', v_month),
+        -- 対象の月を開く（月の指定が無いと今月が開くため。2026-10-06変更）
+        '/monthly-reports?month=' || to_char(v_month, 'YYYY-MM')
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) TO authenticated;
+
+
+---------------------------------------------
+-- 月次コーチングレポート承認取消しRPC (2026-09-13 追加)
+-- 前提: table/com_t_coach_monthly_report_approval.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- アドミンが承認後に誤りへ気付いた場合に、承認を取り消して未承認状態へ戻す。
+-- コーチへの差し戻し（再申請を促す）フローではなく、単純な承認取消しのみ。
+-- 取消し後は再度approve_coach_monthly_reportで承認し直すことを想定するため、
+-- 承認時点のスナップショット（セッション集計・単価とも）はNULLへ戻す
+-- （再承認時に最新値で作り直される）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.revoke_coach_monthly_report_approval(
+    p_coach_id uuid,
+    p_report_month date
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month date := date_trunc('month', p_report_month)::date;
+    v_approval RECORD;
+BEGIN
+    IF public.get_jwt_user_type() <> '0' THEN
+        RAISE EXCEPTION 'not authorized to revoke this monthly report approval';
+    END IF;
+
+    SELECT * INTO v_approval
+    FROM public.com_t_coach_monthly_report_approval
+    WHERE coach_id = p_coach_id AND report_month = v_month
+    FOR UPDATE;
+
+    IF NOT FOUND OR v_approval.status <> 2 THEN
+        RAISE EXCEPTION 'this monthly report is not approved';
+    END IF;
+
+    UPDATE public.com_t_coach_monthly_report_approval
+    SET status = 1,
+        session_count_snapshot = NULL,
+        rate_amount = NULL,
+        rate_currency = NULL,
+        approved_by = NULL,
+        approved_at = NULL,
+        update_date = NOW()
+    WHERE coach_id = p_coach_id AND report_month = v_month;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        p_coach_id,
+        'COACH_REPORT_APPROVAL_REVOKED',
+        jsonb_build_object('report_month', v_month),
+        -- 対象の月を開く（月の指定が無いと今月が開くため。2026-10-06変更）
+        '/monthly-reports?month=' || to_char(v_month, 'YYYY-MM')
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.revoke_coach_monthly_report_approval(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.revoke_coach_monthly_report_approval(uuid, date) TO authenticated;
+
+-- 登録済みの通知のリンク先を、上記の関数と同じ形に更新する（何度再実行しても同じ結果）
+UPDATE public.com_t_notification
+SET link_path = '/calendar',
+    update_date = NOW()
+WHERE notification_type IN ('SESSION_BOOKING_REQUESTED', 'SESSION_RESCHEDULE_PROPOSED_BY_STUDENT')
+  AND link_path IS DISTINCT FROM '/calendar';
+
+UPDATE public.com_t_notification
+SET link_path = '/monthly-reports?month=' || LEFT(payload->>'report_month', 7),
+    update_date = NOW()
+WHERE notification_type IN ('COACH_REPORT_APPROVED', 'COACH_REPORT_APPROVAL_REVOKED')
+  AND payload->>'report_month' IS NOT NULL
+  AND link_path = '/monthly-reports';
+
+COMMIT;

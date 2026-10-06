@@ -68,8 +68,8 @@ export const groupSessionReminderHandler: MailHandler = async ({ admin, row, rec
     description: event.description,
     scheduleLabel,
     joinUrl: event.location_url,
-    // 生徒はホームのグループセッション、コーチはカレンダーで詳細を確認する
-    detailUrl: joinUrl(portal, isCoach ? '/calendar' : '/dashboard'),
+    // 生徒はグループセッションの一覧、コーチはカレンダーで詳細を確認する
+    detailUrl: joinUrl(portal, isCoach ? '/calendar' : '/group-sessions'),
     settingsUrl: joinUrl(portal, '/profile'),
     unsubscribeUrl,
   });

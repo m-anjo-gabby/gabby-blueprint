@@ -30,7 +30,7 @@ const BASE = {
   description: "テーマ: 旅行",
   scheduleLabel: "10月12日(月) 20:00〜21:00（日本時間）",
   joinUrl: "https://zoom.example/j/123?pwd=abc",
-  detailUrl: "https://localhost:3000/dashboard",
+  detailUrl: "https://localhost:3000/group-sessions",
   settingsUrl: "https://localhost:3000/profile",
 } as const;
 
@@ -75,21 +75,22 @@ test("シリーズに属する回は、セッション名の上にシリーズ�
   assert.ok(text.includes(["【セッション】", "10月の発音グループセッション", "英語でおしゃべり会"].join("\n")));
 });
 
-test("ライブセッション（生徒・日本語）: 1時間前は入室ボタンと入室できる時刻の案内、相手はコーチ", () => {
+test("ライブセッション（生徒・日本語）: 1時間前も確認ボタン（ライブセッション画面）と入室できる時刻の案内、相手はコーチ", () => {
   const { subject, html } = renderLiveSessionReminderEmail({
     language: "ja",
     lead: "1h",
     recipientName: "山田",
     counterpartName: "Suzanne",
     scheduleLabel: "10月12日(月) 20:00〜20:25（日本時間）",
-    actionUrl: "https://localhost:3000/live-room/s1",
+    actionUrl: "https://localhost:3000/live-room",
     settingsUrl: "https://localhost:3000/profile",
   });
   assert.equal(subject, "【Gabby Blueprint】まもなくライブセッションが始まります（10月12日(月) 20:00〜20:25（日本時間））");
   assert.ok(html.includes("コーチ"));
   assert.ok(html.includes("Suzanne"));
-  assert.ok(html.includes("入室する"));
-  assert.ok(html.includes('href="https://localhost:3000/live-room/s1"'));
+  assert.ok(html.includes("ライブセッションを確認する"));
+  assert.ok(!html.includes("入室する"));
+  assert.ok(html.includes('href="https://localhost:3000/live-room"'));
   assert.ok(html.includes("開始5分前から入室できます。"));
 });
 

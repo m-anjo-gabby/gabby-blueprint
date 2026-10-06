@@ -15,7 +15,7 @@ export interface LiveSessionReminderEmailTemplateProps {
   counterpartName: string | null;
   /** 受信者のタイムゾーンで表した日時（formatReminderSchedule） */
   scheduleLabel: string;
-  /** 主ボタンの遷移先（1時間前は入室先、24時間前はセッションの確認先。宛先のポータル） */
+  /** 主ボタンの遷移先（生徒: ライブセッション画面 / コーチ: セッションハブ。宛先のポータル） */
   actionUrl: string | null;
   /** メール通知の設定画面のURL（宛先のポータル） */
   settingsUrl: string | null;
@@ -32,7 +32,7 @@ const COPY = {
     },
     counterpartLabel: 'コーチ',
     scheduleLabel: '日時',
-    action: { '24h': 'ライブセッションを確認する', '1h': '入室する' },
+    action: { '24h': 'ライブセッションを確認する', '1h': 'ライブセッションを確認する' },
     joinNote: `開始${EARLY_JOIN_MINUTES}分前から入室できます。`,
     cancelNote: 'ご都合が悪くなった場合は、アプリのライブセッション画面からキャンセル・振替の手続きができます。',
     footer: 'このメールは、ライブセッションの予定がある方にお送りしています。',

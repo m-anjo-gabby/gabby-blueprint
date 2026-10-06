@@ -68,16 +68,16 @@ const STUDENT_TYPES: [NotificationType, Record<string, unknown>, string][] = [
   ["SESSION_BOOKING_REJECTED", { coach_name: "Suzanne" }, "/live-room"],
   ["MATCHING_APPROVED", { coach_name: "Suzanne" }, "/live-room"],
   ["MATCHING_REJECTED", { coach_name: "Suzanne" }, "/coach-matching"],
-  ["HOMEWORK_POSTED", { coach_name: "Suzanne", preview: "Please practice the final /n/ sound with the sentences we used today." }, "/live-room"],
+  ["HOMEWORK_POSTED", { coach_name: "Suzanne", preview: "Please practice the final /n/ sound with the sentences we used today." }, "/live-room/sessions/sample/result"],
 ];
 const COACH_TYPES: [NotificationType, Record<string, unknown>, string][] = [
   ["SESSION_CANCELLED_BY_STUDENT", { student_name: "Taro Yamada" }, "/students/sample"],
-  ["SESSION_RESCHEDULE_PROPOSED_BY_STUDENT", { student_name: "Taro Yamada", proposal_count: 2 }, "/requests"],
+  ["SESSION_RESCHEDULE_PROPOSED_BY_STUDENT", { student_name: "Taro Yamada", proposal_count: 2 }, "/calendar"],
   ["SESSION_BOOKED_BY_STUDENT", { student_name: "Taro Yamada" }, "/students/sample"],
-  ["SESSION_BOOKING_REQUESTED", { student_name: "Taro Yamada" }, "/requests"],
+  ["SESSION_BOOKING_REQUESTED", { student_name: "Taro Yamada" }, "/calendar"],
   ["MATCHING_ASSIGNED_TO_COACH", { student_name: "Taro Yamada" }, "/students/sample"],
-  ["COACH_REPORT_APPROVED", { report_month: "2026-09-01" }, "/monthly-reports"],
-  ["COACH_REPORT_APPROVAL_REVOKED", { report_month: "2026-09-01" }, "/monthly-reports"],
+  ["COACH_REPORT_APPROVED", { report_month: "2026-09-01" }, "/monthly-reports?month=2026-09"],
+  ["COACH_REPORT_APPROVAL_REVOKED", { report_month: "2026-09-01" }, "/monthly-reports?month=2026-09"],
 ];
 
 for (const [type, payload, linkPath] of STUDENT_TYPES) {
@@ -168,7 +168,7 @@ const reminder = (
       description: "つながる話し方の中での語尾 /n/：次の単語へなめらかにつなぐリンキング（英語での講義です）",
       scheduleLabel: formatReminderSchedule({ startIso: start.toISOString(), endIso: end.toISOString(), timeZone: options.timeZone, language }),
       joinUrl: options.joinUrl === undefined ? "https://zoom.us/j/0000000000" : options.joinUrl,
-      detailUrl: `${portal}${language === "ja" ? "/dashboard" : "/calendar"}`,
+      detailUrl: `${portal}${language === "ja" ? "/group-sessions" : "/calendar"}`,
       settingsUrl: `${portal}/profile`,
       unsubscribeUrl,
     }),
@@ -183,7 +183,7 @@ reminder("coach-REMINDER-1h", "en", "1h", { timeZone: "America/Vancouver" });
 const liveEnd = new Date(start.getTime() + 25 * 60 * 1000);
 const liveReminder = (label: string, language: "ja" | "en", lead: "24h" | "1h", timeZone: string) => {
   const isStudent = language === "ja";
-  const actionPath = isStudent ? (lead === "1h" ? "/live-room/sample" : "/live-room") : "/students/sample/sessions/sample";
+  const actionPath = isStudent ? "/live-room" : "/students/sample/sessions/sample";
   const unsubscribeUrl = (isStudent ? STUDENT_UNSUB : COACH_UNSUB).REMINDER;
   samples.push({
     label,

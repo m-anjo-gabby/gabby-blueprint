@@ -207,6 +207,8 @@ test("ライブセッションの1時間前のリマインダーを生徒・コ�
   const mail = await waitForEmail({ to: email, since });
   expect(mail.subject).toMatch(/^【Gabby Blueprint】まもなくライブセッションが始まります/);
   expect(mail.html).toContain(coach!.user_name as string);
-  expect(mail.html).toContain(`/live-room/${sessionId}`);
-  expect(mail.html).toContain("入室する");
+  // 通話画面は開始5分前まで入れないため、1時間前もライブセッション画面へ
+  expect(mail.html).toContain("/live-room");
+  expect(mail.html).not.toContain(`/live-room/${sessionId}`);
+  expect(mail.html).toContain("ライブセッションを確認する");
 });

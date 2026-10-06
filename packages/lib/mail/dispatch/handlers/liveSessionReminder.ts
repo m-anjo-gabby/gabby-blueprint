@@ -14,7 +14,8 @@ function toPortalUrl(base: string, path: string): string | null {
  * ライブセッションのリマインダー（LIVE_SESSION_REMINDER、登録: enqueue_live_session_reminders）。
  * 送る直前にセッションを読み直し、予定（status=1）でない（キャンセル・振替・実施済み）・開始済み・宛先がそのセッションの生徒/コーチでない場合は送らない。
  * 生徒には日本語（相手はコーチ）、コーチには英語（相手は生徒）。
- * 主ボタンは、1時間前は入室先（生徒: 通話画面 / コーチ: セッションハブ）、24時間前はセッションの確認先（生徒: ライブセッション画面 / コーチ: セッションハブ）。
+ * 主ボタンは、生徒はライブセッション画面（1時間前も。通話画面は開始5分前まで入れず、メールからすぐ開くとエラーになるため。
+ * ライブセッション画面の入室ボタンは、早い場合に入室できる時刻を案内する）、コーチはセッションハブ。
  */
 export const liveSessionReminderHandler: MailHandler = async ({ admin, row, recipient, nowMs, unsubscribeUrl }) => {
   const sessionId = typeof row.payload.session_id === 'string' ? row.payload.session_id : null;
@@ -40,7 +41,7 @@ export const liveSessionReminderHandler: MailHandler = async ({ admin, row, reci
   const language = isStudent ? 'ja' : 'en';
   const portal = getPortalBaseUrl(recipient.userType);
   const coachHubPath = `/students/${session.student_id}/sessions/${sessionId}`;
-  const actionPath = isStudent ? (lead === '1h' ? `/live-room/${sessionId}` : '/live-room') : coachHubPath;
+  const actionPath = isStudent ? '/live-room' : coachHubPath;
 
   return renderLiveSessionReminderEmail({
     language,
