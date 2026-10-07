@@ -1,7 +1,7 @@
 'use client';
 
 import type { CalendarEventItem } from '@gabby/types/calendarEvent';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { Drawer, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { CalendarEventCard } from './CalendarEventCard';
 import { formatEventSlot } from './EventMeta';
 
@@ -23,8 +23,9 @@ export function EventDetailDrawer({ event, timezone, onClose, onParticipationCha
   return (
     <Drawer open={event !== null} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="mx-auto max-h-[85vh] max-w-2xl">
-        <DrawerHeader className="text-left">
+        <DrawerHeader className="flex flex-row items-center justify-between gap-2 text-left">
           <DrawerTitle className="text-base font-bold text-ink">{event ? formatEventSlot(event, timezone).date : ''}</DrawerTitle>
+          <DrawerCloseButton />
         </DrawerHeader>
         <div className="overflow-y-auto px-4 pb-6">
           {event && (

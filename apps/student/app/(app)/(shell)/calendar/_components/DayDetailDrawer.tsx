@@ -3,7 +3,7 @@
 import { CalendarClock, Ticket, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { Drawer, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { formatZonedDateJapanese } from '@gabby/lib/date/date';
 import { SESSION_STATUS } from '@gabby/types/session';
 import { getSessionStatusBadge } from '@/constants/session';
@@ -44,10 +44,11 @@ export function DayDetailDrawer({
   return (
     <Drawer open={!!date} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="max-w-2xl mx-auto max-h-[85vh]">
-        <DrawerHeader className="text-left">
+        <DrawerHeader className="flex flex-row items-center justify-between gap-2 text-left">
           <DrawerTitle className="text-base font-bold text-ink">
             {date ? `${formatZonedDateJapanese(date, timezone)}（${weekdayLabel(date)}）` : ''}
           </DrawerTitle>
+          <DrawerCloseButton />
         </DrawerHeader>
 
         <div className="px-4 pb-6 overflow-y-auto space-y-3">
