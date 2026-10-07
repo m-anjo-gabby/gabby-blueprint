@@ -115,7 +115,7 @@ export interface LiveSessionDay {
  * - 前回（7日前）のセッション: 実施済み（正常終了）で、宿題が投稿済み
  * - 今回のセッション: 開始から21分経過・残り4分。コーチは開始時から通話に入っている（入退室ログ。退室は未記録）。
  *   生徒も開始時から入っている（既定。End Session で重なりが20分以上となり「実施完了」）。`studentMinutesInCall` を20未満にすると
- *   生徒はその分だけ前に入ったことになり、End Session で理由の入力が必要な「早期終了」になる
+ *   生徒はその分だけ前に入ったことになり、End Session で理由の入力が必要な「早期終了」になる。0 は生徒が入室していない（「無断欠席」）
  * - 生徒の自主トレーニング: 今日と昨日の実績（スプリントの日次集計）
  * - 生徒からコーチへの未読のチャット1件（成立時のルーム）
  */
@@ -129,27 +129,7 @@ export async function prepareLiveSessionDay(
   const now = Date.now();
   const base = { schedule_id: scheduleId, ticket_id: pair.ticketId, student_id: pair.studentId, coach_id: pair.coachId };
 
-  const previousStart = now - 7 * DAY_MS;
-  const { data: previous, error: previousError } = await admin
-    .from("com_t_session")
-    .insert({
-      ...base,
-      start_datetime: new Date(previousStart).toISOString(),
-      end_datetime: new Date(previousStart + LESSON_MS).toISOString(),
-      status: 2,
-      completion_result: 1,
-    })
-    .select("session_id")
-    .single();
-  if (previousError || !previous) throw new Error(`前回のセッションの作成に失敗しました: ${previousError?.message}`);
-  const previousHomework = `Review the meeting phrases from last week (${f.tag}).`;
-  const { error: homeworkError } = await admin.from("com_t_session_homework").insert({
-    session_id: previous.session_id,
-    coach_id: pair.coachId,
-    student_id: pair.studentId,
-    homework_text: previousHomework,
-  });
-  if (homeworkError) throw new Error(`前回の宿題の作成に失敗しました: ${homeworkError.message}`);
+  const previous = await createCompletedSessionWithHomework(f, pair, scheduleId, { daysAgo: 7 });
 
   const start = now - 21 * MINUTE_MS;
   const { data: current, error: currentError } = await admin
@@ -158,10 +138,13 @@ export async function prepareLiveSessionDay(
     .select("session_id")
     .single();
   if (currentError || !current) throw new Error(`今回のセッションの作成に失敗しました: ${currentError?.message}`);
-  const studentJoinedAt = Math.max(start, now - (options.studentMinutesInCall ?? 21) * MINUTE_MS);
+  const studentMinutesInCall = options.studentMinutesInCall ?? 21;
+  const studentJoinedAt = Math.max(start, now - studentMinutesInCall * MINUTE_MS);
   const { error: callLogError } = await admin.from("com_t_session_call_log").insert([
     { session_id: current.session_id, user_id: pair.coachId, role: "coach", joined_at: new Date(start).toISOString() },
-    { session_id: current.session_id, user_id: pair.studentId, role: "student", joined_at: new Date(studentJoinedAt).toISOString() },
+    ...(studentMinutesInCall > 0
+      ? [{ session_id: current.session_id, user_id: pair.studentId, role: "student", joined_at: new Date(studentJoinedAt).toISOString() }]
+      : []),
   ]);
   if (callLogError) throw new Error(`入退室ログの作成に失敗しました: ${callLogError.message}`);
 
@@ -183,7 +166,73 @@ export async function prepareLiveSessionDay(
     .insert({ room_id: room.room_id, sender_user_id: pair.studentId, message: studentMessage, message_type: "TEXT" });
   if (chatError) throw new Error(`生徒のチャット送信に失敗しました: ${chatError.message}`);
 
-  return { sessionId: current.session_id, previousSessionId: previous.session_id, previousHomework, studentMessage };
+  return { sessionId: current.session_id, previousSessionId: previous.sessionId, previousHomework: previous.homeworkText, studentMessage };
+}
+
+/**
+ * 実施済み（正常終了）のセッションと、その宿題を作る（宿題の登録で生徒へ HOMEWORK_POSTED が通知される）。
+ * `checklist` を渡すとチェックリストの項目も作る（コーチの投稿と同じく、本体と同時に作る）。
+ */
+export async function createCompletedSessionWithHomework(
+  f: AuthFixture,
+  pair: LivePair,
+  scheduleId: string,
+  options: { daysAgo: number; checklist?: string[] }
+): Promise<{ sessionId: string; homeworkText: string }> {
+  const { admin } = f;
+  const start = Date.now() - options.daysAgo * DAY_MS;
+  const { data: session, error: sessionError } = await admin
+    .from("com_t_session")
+    .insert({
+      schedule_id: scheduleId,
+      ticket_id: pair.ticketId,
+      student_id: pair.studentId,
+      coach_id: pair.coachId,
+      start_datetime: new Date(start).toISOString(),
+      end_datetime: new Date(start + LESSON_MS).toISOString(),
+      status: 2,
+      completion_result: 1,
+    })
+    .select("session_id")
+    .single();
+  if (sessionError || !session) throw new Error(`実施済みのセッションの作成に失敗しました: ${sessionError?.message}`);
+  const homeworkText = `Review the meeting phrases from the session ${options.daysAgo} days ago (${f.tag}).`;
+  const { data: homework, error: homeworkError } = await admin
+    .from("com_t_session_homework")
+    .insert({ session_id: session.session_id, coach_id: pair.coachId, student_id: pair.studentId, homework_text: homeworkText })
+    .select("homework_id")
+    .single();
+  if (homeworkError || !homework) throw new Error(`宿題の作成に失敗しました: ${homeworkError?.message}`);
+  if (options.checklist && options.checklist.length > 0) {
+    const { error: checklistError } = await admin.from("com_t_session_homework_checklist_item").insert(
+      options.checklist.map((itemText, index) => ({ homework_id: homework.homework_id, item_no: index + 1, item_text: itemText }))
+    );
+    if (checklistError) throw new Error(`チェックリストの作成に失敗しました: ${checklistError.message}`);
+  }
+  return { sessionId: session.session_id, homeworkText };
+}
+
+/**
+ * 終了予定を過ぎても実施予定のまま残ったセッション（通話の記録なし）を作る。Resolve Manually の対象になる。
+ * 複数作る場合は2時間ずつずらす（1件目は45分前に終了予定）。
+ */
+export async function createStaleSessions(f: AuthFixture, pair: LivePair, scheduleId: string, count: number): Promise<string[]> {
+  const now = Date.now();
+  const rows = Array.from({ length: count }, (_, i) => {
+    const start = now - 70 * MINUTE_MS - i * 120 * MINUTE_MS;
+    return {
+      schedule_id: scheduleId,
+      ticket_id: pair.ticketId,
+      student_id: pair.studentId,
+      coach_id: pair.coachId,
+      start_datetime: new Date(start).toISOString(),
+      end_datetime: new Date(start + LESSON_MS).toISOString(),
+      status: 1,
+    };
+  });
+  const { data, error } = await f.admin.from("com_t_session").insert(rows).select("session_id");
+  if (error || !data) throw new Error(`終了予定を過ぎたセッションの作成に失敗しました: ${error?.message}`);
+  return data.map((r) => r.session_id);
 }
 
 /** ログインしたクライアントを閉じる（afterEach で cleanupAuthFixture の前に呼ぶ） */

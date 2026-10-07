@@ -11,7 +11,6 @@ import {
   ExternalLink,
   History,
   Info,
-  Loader2,
   PhoneOff,
   TrendingUp,
   TriangleAlert,
@@ -19,6 +18,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Section } from '@/components/common/Section';
 import { ImmersiveShell } from '@/components/common/ImmersiveShell';
 import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
@@ -241,15 +241,18 @@ export function SessionHub({
                         <ExternalLink size={12} className="opacity-70" />
                       </Link>
                     )}
-                    <button
+                    <Button
+                      type="button"
+                      variant="outline"
                       onClick={() => endLesson(session.session_id, studentId)}
-                      disabled={!hasCoachJoined || endingSessionId === session.session_id}
+                      disabled={!hasCoachJoined}
+                      pending={endingSessionId === session.session_id}
+                      icon={<CheckCircle2 />}
                       title={hasCoachJoined ? 'Record this session’s outcome' : 'Join the call at least once before ending the session'}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition-colors px-4 py-2.5 rounded-full shadow-sm"
+                      className="h-auto gap-1.5 text-xs font-bold text-slate-600 bg-white border-slate-200 hover:bg-slate-50 disabled:opacity-40 px-4 py-2.5 rounded-full [&_svg]:size-3.5"
                     >
-                      {endingSessionId === session.session_id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                       End Session
-                    </button>
+                    </Button>
                     {!hasCoachJoined && isPastScheduledEnd && (
                       <button
                         onClick={() =>

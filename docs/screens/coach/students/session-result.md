@@ -106,8 +106,8 @@ Dialogue Practiceカード側の進捗（`com_t_dialogue_session_progress`）が
   `resolve_stale_session`
 - サーバーアクション: `getSessionResultSummary`（`apps/coach/actions/sessionAction.ts`）,
   `getSessionHomework`, `getSessionHomeworkChecklist`, `createSessionHomework`,
-  `addHomeworkComment`（`apps/coach/actions/sessionHomeworkAction.ts`）,
-  `uploadSessionHomeworkAttachment`, `getSessionHomeworkAttachmentUrl`
+  `addHomeworkComment`, `uploadSessionHomeworkAttachment`（`apps/coach/actions/sessionHomeworkAction.ts`。
+  添付の失敗は理由のコードを受け取り英語の文言で表示）, `getSessionHomeworkAttachmentUrl`
   （`packages/lib/sessionHomework/actions/homeworkAttachmentActions.ts`）
 - DB: `com_t_session_dialogue_log`（Dialog Practice Historyの記録元。追記専用、
   `session_id`・`assignment_id`・`dialogue_session_id`を保持。登録元は

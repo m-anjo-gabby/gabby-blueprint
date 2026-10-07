@@ -8,7 +8,7 @@
 
 | ロール | 画面 | パス | 主なコンポーネント/アクション |
 |---|---|---|---|
-| コーチ | セッション結果（宿題の投稿・コメント） | `coach` `/students/[id]/sessions/[sessionId]/result` | `HomeworkComposer.tsx`, `createSessionHomework`, `addHomeworkComment`, `uploadSessionHomeworkAttachment`。画面仕様: [docs/screens/coach/students/session-result.md](../../../../docs/screens/coach/students/session-result.md) |
+| コーチ | セッション結果（宿題の投稿・コメント） | `coach` `/students/[id]/sessions/[sessionId]/result` | `HomeworkComposer.tsx`, `createSessionHomework`, `addHomeworkComment`, `uploadSessionHomeworkAttachment`（`apps/coach/actions/sessionHomeworkAction.ts`。失敗理由のコードを英語の文言にする）。画面仕様: [docs/screens/coach/students/session-result.md](../../../../docs/screens/coach/students/session-result.md) |
 | コーチ | セッションハブ（前回の宿題） | `coach` `/students/[id]/sessions/[sessionId]` | `LastHomeworkList.tsx`, `getRecentSessionHomework`。画面仕様: [docs/screens/coach/students/session-detail.md](../../../../docs/screens/coach/students/session-detail.md) |
 | コーチ | ダッシュボード（Homework not posted） | `coach` `/dashboard` | `getMySessionTasks`。画面仕様: [docs/screens/coach/dashboard.md](../../../../docs/screens/coach/dashboard.md) |
 | 生徒 | セッション結果（宿題の確認・チェック） | `student` `/live-room/sessions/[sessionId]/result` | `updateHomeworkChecklistItemStatus`。画面仕様: [docs/screens/student/live-room/session-result.md](../../../../docs/screens/student/live-room/session-result.md) |
@@ -45,7 +45,7 @@
 | 4 | 担当コーチ以外が投稿・コメント・添付のアップロード | `forbidden`（RLS の登録条件でも拒否） | RPC（UI導線なし） |
 | 5 | 本体が無いセッションにコメント | `not_found` | RPC（UI導線なし） |
 | 6 | 本文も添付も無いコメント | 送信ボタンを押せない（サーバー: `invalid_input`） | 両方 |
-| 7 | 10MBを超える、または許可されていない形式の添付 | アップロードを拒否する（メッセージは日本語のまま。coach の画面は英語表記が原則） | 両方 |
+| 7 | 10MBを超える、または許可されていない形式の添付 | アップロードを拒否し、ファイル名と理由（英語）をトーストで出す（サーバーは理由のコード `file_too_large` / `unsupported_type` を返す） | 両方 |
 | 8 | 生徒が他の生徒の宿題のチェックリスト項目を更新 | `forbidden`（RLS の対象生徒本人の条件と、完了状態の列だけの更新権限） | RPC（UI導線なし） |
 | 9 | 生徒がチェックリストの更新に失敗 | エラーのトーストを出し、チェックを操作前に戻す | UI |
 
@@ -54,7 +54,7 @@
 - RPC: なし（サーバーアクションから RLS の範囲でテーブルを直接更新）
 - トリガー: `notify_session_homework_posted` / `notify_session_homework_comment_posted`（どちらも `HOMEWORK_POSTED`、重複キーは `session_id`）
 - テーブル: `com_t_session_homework`, `com_t_session_homework_checklist_item`, `com_t_session_homework_comment`, `com_t_session_homework_attachment`, `com_t_notification`
-- 実装参照: `packages/lib/sessionHomework/actions/sessionHomeworkActions.ts`, `packages/lib/sessionHomework/actions/homeworkAttachmentActions.ts`, `packages/types/sessionHomework.ts`, `apps/coach/actions/sessionHomeworkAction.ts`
+- 実装参照: `packages/lib/sessionHomework/actions/sessionHomeworkActions.ts`, `packages/lib/sessionHomework/actions/homeworkAttachmentActions.ts`（`uploadSessionHomeworkAttachmentCore`）, `packages/types/sessionHomework.ts`（`HomeworkAttachmentErrorCode`）, `apps/coach/actions/sessionHomeworkAction.ts`
 - 用語（status値等）: [_GLOSSARY.md](../_GLOSSARY.md)
 
 ## E2Eテストケース候補
@@ -62,7 +62,7 @@
 | 優先度 | シナリオ | 概要 |
 |---|---|---|
 | 高 | 指示文とチェックリストを付けて投稿する | 実装済み: `e2e/tests/journeys/coach-live-session.spec.ts`（ジャーニーの手順10） |
-| 高 | 生徒が通知から宿題を開き、チェックリストを完了する | 2〜3。生徒の画面で全項目を完了し、コーチの画面の進捗に反映される |
+| 高 | 生徒が通知から宿題を開き、チェックリストを完了する | 実装済み: `e2e/tests/homework/homework-checklist.spec.ts`（2〜3。全項目を完了し、コーチの画面の進捗に反映される） |
 | 中 | 追記のコメントで通知が未読に戻る | 4 |
 | 中 | 前回の宿題が次回のハブに出る | 5（ジャーニーでは前回の宿題を直接作って表示だけ確かめている） |
 | 低 | 添付の形式・サイズの制限 | #7 |

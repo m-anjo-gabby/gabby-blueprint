@@ -182,6 +182,7 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
                           <button
                             type="button"
                             onClick={() => handleToggleChecklistItem(item.checklist_item_id, !item.is_done)}
+                            aria-pressed={item.is_done}
                             className={`w-full flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors active:scale-[0.99] ${
                               item.is_done
                                 ? 'bg-emerald-50/60 border-emerald-100'

@@ -8,6 +8,7 @@ import {
   HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES,
   HOMEWORK_ATTACHMENT_MAX_SIZE,
   PendingHomeworkAttachment,
+  UploadHomeworkAttachmentResult,
 } from '@gabby/types/sessionHomework';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
@@ -18,30 +19,31 @@ const logger = createLogger('common');
  * 保存先: homework/{sessionId}/{uuid}_{ファイル名}
  * アップロード権限は「対象session_idの担当コーチ本人であること」で判定する
  * （packages/lib/chat/actions/attachmentActions.tsのuploadChatAttachmentと同型）。
+ * 失敗時は理由のコードだけを返し、表示文言は呼び出し側のアプリで付ける（coach は英語）。
  */
-export async function uploadSessionHomeworkAttachment(
+export async function uploadSessionHomeworkAttachmentCore(
   sessionId: string,
   formData: FormData
-): Promise<{ success: boolean; attachment?: PendingHomeworkAttachment; message?: string }> {
+): Promise<UploadHomeworkAttachmentResult> {
   const ctx = await getLogContext();
   try {
     const file = formData.get('file') as File | null;
     if (!file) {
-      return { success: false, message: 'ファイルが選択されていません' };
+      return { success: false, errorCode: 'no_file' };
     }
 
     if (file.size > HOMEWORK_ATTACHMENT_MAX_SIZE) {
-      return { success: false, message: 'ファイルサイズは10MBまでです' };
+      return { success: false, errorCode: 'file_too_large' };
     }
 
     const mimeType = file.type || 'application/octet-stream';
     if (!HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES.includes(mimeType as (typeof HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES)[number])) {
-      return { success: false, message: 'サポートされていないファイル形式です' };
+      return { success: false, errorCode: 'unsupported_type' };
     }
 
     const serverSupabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, message: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: session, error: sessionError } = await serverSupabase
       .from('com_t_session')
@@ -50,7 +52,7 @@ export async function uploadSessionHomeworkAttachment(
       .maybeSingle();
 
     if (sessionError || !session || session.coach_id !== user.id) {
-      return { success: false, message: 'このセッションへの宿題投稿権限がありません' };
+      return { success: false, errorCode: 'forbidden' };
     }
 
     const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -67,7 +69,7 @@ export async function uploadSessionHomeworkAttachment(
         ...ctx,
         payload: { sessionId, fileName: file.name },
       });
-      return { success: false, message: `アップロードに失敗しました: ${uploadError.message}` };
+      return { success: false, errorCode: 'upload_failed' };
     }
 
     const attachment: PendingHomeworkAttachment = {
@@ -88,7 +90,7 @@ export async function uploadSessionHomeworkAttachment(
       ...ctx,
       payload: { sessionId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 

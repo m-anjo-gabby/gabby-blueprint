@@ -24,6 +24,7 @@ import {
  * いま実施中のセッション）を作ってから、コーチの画面で1回分のライブセッションを通して操作する（support/liveSessionFixtures.ts）。
  * ビデオ通話（Zoom Video SDK）はE2Eでは扱わず、通話ルームが記録する入退室ログを直接入れて「通話した」状態にする。
  * ダイアログ教材のスライド（Google Slides）は開かずに、同じ内容の空ページを返す。
+ * 実施結果の分岐（早期終了・無断欠席・Resolve Manually）は tests/session/session-completion.spec.ts で確かめる。
  * coach は PC 表示の別コンテキストで開くため desktop だけで実行する。
  * ダイアログ・確認画面を開く操作は、ステージング（本番ビルド）のハイドレーション前の押下に備えて clickUntilVisible で押す。
  */
@@ -46,13 +47,13 @@ test.afterEach(async () => {
 });
 
 /** 担当成立済みの生徒・コーチと、実施当日の状態を作る */
-async function setUpLiveSessionDay(prefix: string, options?: { studentMinutesInCall?: number }): Promise<{ f: AuthFixture; p: LivePair; day: LiveSessionDay }> {
+async function setUpLiveSessionDay(prefix: string): Promise<{ f: AuthFixture; p: LivePair; day: LiveSessionDay }> {
   const f = await createAuthFixture(prefix);
   fixture = f;
   const p = await createPendingMatchingRequest(f, PASSWORD);
   pair = p;
   const scheduleId = await approveMatchingRequest(f, p);
-  const day = await prepareLiveSessionDay(f, p, scheduleId, options);
+  const day = await prepareLiveSessionDay(f, p, scheduleId);
   return { f, p, day };
 }
 
@@ -209,36 +210,6 @@ test("ダッシュボードで今日のセッションと未読を確認し、�
       await expect(page.getByText("Next 24 Hours", { exact: true })).toBeVisible();
       await expect(page.getByText(p.studentName)).toHaveCount(0);
     });
-  } finally {
-    await context.close();
-  }
-});
-
-test("通話の重なりが20分未満なら、理由を入力して早期終了として記録される", async ({ browser }) => {
-  const { f, p, day } = await setUpLiveSessionDay("coachearly", { studentMinutesInCall: 10 });
-  const reason = `Student had connectivity issues (${f.tag}).`;
-
-  const { context, page } = await openCoachContext(browser, { email: p.coachEmail, password: PASSWORD });
-  try {
-    await page.goto(hubPath(p, day));
-    const modal = confirmModal(page);
-    await clickUntilVisible(section(page, "Session Info").getByRole("button", { name: "End Session" }), modal);
-    await modal.getByRole("button", { name: "End Session", exact: true }).click();
-
-    const reasonDialog = page.getByRole("dialog", { name: "Session ended early" });
-    await expect(reasonDialog.getByRole("button", { name: "Submit" })).toBeDisabled();
-    await reasonDialog.getByRole("textbox").fill(reason);
-    await reasonDialog.getByRole("button", { name: "Submit" }).click();
-
-    await expect(page).toHaveURL(new RegExp(`${hubPath(p, day)}/result$`));
-    await expect(page.getByText("Ended early", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText(reason)).toBeVisible();
-
-    const { data: session } = await f.admin.from("com_t_session").select("status, completion_result, status_note").eq("session_id", day.sessionId).single();
-    expect(session).toMatchObject({ status: 2, completion_result: 2, status_note: reason });
-    // 早期終了はチケットを消化しない
-    const { data: ticket } = await f.admin.from("com_t_user_session_ticket").select("used_sessions").eq("ticket_id", p.ticketId).single();
-    expect(ticket?.used_sessions).toBe(0);
   } finally {
     await context.close();
   }

@@ -77,4 +77,5 @@ status 値の意味: [_GLOSSARY.md](../_GLOSSARY.md#com_t_matching_requeststatus
 | 中 | 否認 → 前回否認理由の表示 → 同じ枠へ再申請 | #4b・#7 の解除 |
 | 中 | 承認待ちの取消 | #4c |
 | 中 | 重なる枠の申請・承認が拒否される | #6（データを直接作って申請・承認を呼ぶ） |
+| 中 | コーチの空き時間の保存・確認・削除 | 実装済み: `e2e/tests/coach/availability.spec.ts`（手順1・5。現地時刻で選んだ枠が UTC で保存され、保存・「No changes needed」で確認日時が更新される） |
 | 低 | コーチの空き時間の見直し通知 | 対象・14日の間隔・保存で既読（pg_cron の処理は RPC・データで確認し、保存・「No changes needed」はコーチの画面で確認） |

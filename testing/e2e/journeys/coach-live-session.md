@@ -5,7 +5,7 @@
 - 対象ロール: コーチ（生徒は通話の相手として関与し、終了後に宿題を受け取る）
 - なぜ重要か: ライブ付き契約の価値そのものにあたる、コーチの毎回の基本動作。終了処理（End Session）が実施結果とチケットの消化を決め、宿題が生徒の次の自主トレにつながるため、ここが止まると契約の回数・月次の稼働実績・生徒の学習が連動して崩れる。
 - 前後のジャーニー: [生徒の初日](./student-first-day.md) の手順8（担当の申請・承認）の後、契約期間中の毎回のセッションで繰り返す。
-- E2E: [tests/journeys/coach-live-session.spec.ts](../tests/journeys/coach-live-session.spec.ts)（手順1〜4・6〜11。手順5のビデオ通話は対象外で、通話ルームが記録する入退室ログを直接入れて「通話した」状態にする。早期終了の分岐も同じファイル）
+- E2E: [tests/journeys/coach-live-session.spec.ts](../tests/journeys/coach-live-session.spec.ts)（手順1〜4・6〜11。手順5のビデオ通話は対象外で、通話ルームが記録する入退室ログを直接入れて「通話した」状態にする。手順8の早期終了・無断欠席・Resolve Manually は [tests/session/session-completion.spec.ts](../tests/session/session-completion.spec.ts)、生徒側の宿題は [tests/homework/homework-checklist.spec.ts](../tests/homework/homework-checklist.spec.ts)）
 
 ## 前提データ
 

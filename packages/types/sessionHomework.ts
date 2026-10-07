@@ -36,6 +36,20 @@ export interface PendingHomeworkAttachment {
   file_size: number;
 }
 
+/** 宿題の添付ファイルのアップロードの失敗理由（表示文言は各アプリで付ける） */
+export type HomeworkAttachmentErrorCode =
+  | 'no_file'
+  | 'file_too_large'
+  | 'unsupported_type'
+  | 'unauthorized'
+  | 'forbidden'
+  | 'upload_failed'
+  | 'unexpected_error';
+
+export type UploadHomeworkAttachmentResult =
+  | { success: true; attachment: PendingHomeworkAttachment }
+  | { success: false; errorCode: HomeworkAttachmentErrorCode };
+
 export interface SessionHomeworkComment {
   comment_id: string;
   homework_id: string;
