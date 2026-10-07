@@ -1,9 +1,11 @@
 word_en,word_ja,rank,phrase_en,phrase_ja,phrase_type
-apple,りんご,1,This is a red apple.,これは赤いリンゴです。,1
-apple,りんご,1,I want to eat an apple.,リンゴを食べたいです。,1
-apple,りんご,1,An apple a day keeps the doctor away.,一日一個のリンゴは医者を遠ざける。,1
-apple,りんご,1,She sliced the apple into eight pieces.,彼女はリンゴを8つに切った。,1
-banana,バナナ,2,Bananas are rich in potassium.,バナナはカリウムが豊富です。,1
-banana,バナナ,2,I had a banana for breakfast.,朝食にバナナを食べた。,1
-banana,バナナ,2,Don't slip on the banana peel!,バナナの皮で滑らないで！,1
-banana,バナナ,2,This smoothie is made from frozen bananas.,このスムージーは冷凍バナナで作られています。,1
+market,市場,1,market,市場,1
+market,市場,1,target market,ターゲット市場,2
+market,市場,1,We dominate the target market.,当社はターゲット市場を独占しています。,3
+market,市場,1,"With thousands of busy shops, the brand easily dominates the target market.",何千もの活気のある店舗があるこのブランドはターゲット市場を容易に独占しています。,4
+market,市場,1,Our extensive store network helps us dominate the target market in key metropolitan areas.,当社の広範な店舗ネットワークは、主要都市圏のターゲット市場を独占するのに役立ちます。,5
+omnichannel,オムニチャネル,2,omnichannel,オムニチャネル,1
+omnichannel,オムニチャネル,2,omnichannel experience,オムニチャネル体験,2
+omnichannel,オムニチャネル,2,We offer an omnichannel experience.,当社はオムニチャネル体験を提供します。,3
+omnichannel,オムニチャネル,2,A great mobile app and physical stores offer an omnichannel experience for shoppers.,優れたモバイルアプリと実店舗は、お客様にオムニチャネル体験を提供します。,4
+omnichannel,オムニチャネル,2,We offer a seamless omnichannel experience linking our physical stores and mobile app.,当社は実店舗とモバイルアプリを連動させたシームレスなオムニチャネル体験を提供します。,5
