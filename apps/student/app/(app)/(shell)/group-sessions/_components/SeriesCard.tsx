@@ -6,7 +6,7 @@ import type { CalendarEventItem } from '@gabby/types/calendarEvent';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { Button } from '@/components/ui/button';
 import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
-import { EventCoachLine, EventTiming, JoinedBadge, formatEventSlot } from '@/components/calendarEvent/EventMeta';
+import { EventCoachLine, EventDetailLink, EventTiming, JoinedBadge, formatEventSlot } from '@/components/calendarEvent/EventMeta';
 import { joinCalendarEventSeries } from '@/actions/calendarEventAction';
 import { cn } from '@/lib/utils';
 import { getJoinableSessions } from '../_lib/groupBySeries';
@@ -22,7 +22,10 @@ interface SessionRowProps {
   onOpenDetail: (calendarEventId: string) => void;
 }
 
-/** 1回分の行（日時・内容・担当コーチと、参加する／入室する） */
+/**
+ * 1回分の行（日時・参加予定ラベル・内容・担当コーチと、参加する／入室する・詳細）。
+ * 操作の列は右寄せにし、「詳細 ›」を常に行の右端に揃える（操作の幅が回ごとに違っても位置がずれないように）
+ */
 export function SessionRow({ session, nowMs, timezone, onParticipationChanged, onOpenDetail }: SessionRowProps) {
   const { join, isSubmitting } = useEventParticipation(onParticipationChanged);
   const slot = formatEventSlot(session, timezone);
@@ -31,18 +34,19 @@ export function SessionRow({ session, nowMs, timezone, onParticipationChanged, o
 
   return (
     <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-4" data-testid="group-session-row">
+      {/* 日時・内容を押しても詳細を開く（「詳細」と同じ） */}
       <button type="button" onClick={() => onOpenDetail(session.calendar_event_id)} className="group min-w-0 flex-1 text-left">
-        <p className="flex flex-wrap items-center gap-x-2 text-xs text-ink-muted tabular-nums">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted tabular-nums">
           <span>
             {slot.date} {slot.time}
           </span>
           <EventTiming event={session} nowMs={nowMs} timezone={timezone} />
+          {isJoined && <JoinedBadge />}
         </p>
         <p className="mt-0.5 text-sm font-semibold text-ink group-hover:text-brand-strong">{session.title}</p>
         <EventCoachLine event={session} className="mt-0.5" />
       </button>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
-        {isJoined && <JoinedBadge />}
+      <div className="flex shrink-0 items-center gap-3">
         {showJoinUrl && (
           <Button type="button" size="sm" asChild>
             <a href={session.location_url!} target="_blank" rel="noopener noreferrer">
@@ -56,6 +60,7 @@ export function SessionRow({ session, nowMs, timezone, onParticipationChanged, o
             参加する
           </Button>
         )}
+        <EventDetailLink onClick={() => onOpenDetail(session.calendar_event_id)} className="ml-auto" />
       </div>
     </li>
   );

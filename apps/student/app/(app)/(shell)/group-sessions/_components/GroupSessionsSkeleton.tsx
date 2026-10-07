@@ -41,12 +41,15 @@ export function SeriesCardSkeleton({ rows = 3 }: { rows?: number }) {
       <Skeleton className="mt-1.5 h-3.5 w-2/3" />
       <ul className="mt-4 divide-y divide-line">
         {Array.from({ length: rows }, (_, i) => (
-          <li key={i} className="flex items-center gap-3 py-3">
+          <li key={i} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-4">
             <div className="min-w-0 flex-1 space-y-1.5">
               <Skeleton className="h-3 w-32" />
               <Skeleton className="h-4 w-48 max-w-full" />
             </div>
-            <Skeleton className="h-8 w-24 rounded-control" />
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-24 rounded-control" />
+              <Skeleton className="ml-auto h-4 w-10" />
+            </div>
           </li>
         ))}
       </ul>

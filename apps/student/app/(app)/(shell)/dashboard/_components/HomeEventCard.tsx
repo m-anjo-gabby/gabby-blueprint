@@ -13,6 +13,7 @@ import { EventDetailDrawer } from '@/components/calendarEvent/EventDetailDrawer'
 import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
 import {
   EventCoachLine,
+  EventDetailLink,
   EventSeriesLabel,
   EventTiming,
   JoinedBadge,
@@ -95,14 +96,7 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
             参加する
           </Button>
         )}
-        <button
-          type="button"
-          onClick={onOpenDetail}
-          className="ml-auto inline-flex items-center gap-0.5 text-xs font-semibold text-brand-strong transition-colors hover:text-brand-900"
-        >
-          詳細
-          <ChevronRight size={14} />
-        </button>
+        <EventDetailLink onClick={onOpenDetail} className="ml-auto" />
       </div>
       {event.rsvp_enabled && !isJoined && (
         <p className="mt-2 text-[11px] text-ink-muted">参加すると、入室用のリンクが表示されます。</p>

@@ -1,4 +1,4 @@
-import { CheckCircle2, UserRound } from 'lucide-react';
+import { CheckCircle2, ChevronRight, UserRound } from 'lucide-react';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { getCalendarEventPhase, type CalendarEventItem } from '@gabby/types/calendarEvent';
 import { formatTimeUntil } from '@/lib/sessionFormat';
@@ -57,6 +57,20 @@ export function JoinedBadge() {
       <CheckCircle2 size={11} />
       参加予定
     </span>
+  );
+}
+
+/** 「詳細 ›」（イベントの詳細を開く文字のリンク。ホームのカード・グループセッションの一覧の行の右端に置く） */
+export function EventDetailLink({ onClick, className }: { onClick: () => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn('inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-brand-strong transition-colors hover:text-brand-900', className)}
+    >
+      詳細
+      <ChevronRight size={14} />
+    </button>
   );
 }
 

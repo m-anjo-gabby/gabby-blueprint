@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { CalendarDays, History } from 'lucide-react';
+import { CalendarDays, ChevronRight, History } from 'lucide-react';
 import { getCalendarEventPhase, type CalendarEventItem } from '@gabby/types/calendarEvent';
 import { useNow } from '@gabby/lib/hooks/useNow';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
@@ -36,7 +36,7 @@ function EmptyState({ icon: Icon, title, description }: { icon: typeof CalendarD
   );
 }
 
-/** 参加登録した過去の回（日時・シリーズ名・内容・担当コーチ。押すと詳細） */
+/** 参加登録した過去の回（日時・シリーズ名・内容・担当コーチ。押すと詳細。右端のシェブロンで押せることを示す） */
 function PastSessions({ sessions, timezone, onOpenDetail }: { sessions: CalendarEventItem[]; timezone: string; onOpenDetail: (id: string) => void }) {
   if (sessions.length === 0) {
     return <EmptyState icon={History} title="参加登録した過去のセッションはありません" description="直近半年に参加登録したセッションが、ここに表示されます。" />;
@@ -48,13 +48,20 @@ function PastSessions({ sessions, timezone, onOpenDetail }: { sessions: Calendar
           const slot = formatEventSlot(session, timezone);
           return (
             <li key={session.calendar_event_id}>
-              <button type="button" onClick={() => onOpenDetail(session.calendar_event_id)} className="group w-full py-3 text-left">
-                <p className="text-xs text-ink-muted tabular-nums">
-                  {slot.date} {slot.time}
-                </p>
-                <EventSeriesLabel event={session} className="mt-0.5" />
-                <p className="text-sm font-semibold text-ink group-hover:text-brand-strong">{session.title}</p>
-                <EventCoachLine event={session} className="mt-0.5" />
+              <button
+                type="button"
+                onClick={() => onOpenDetail(session.calendar_event_id)}
+                className="group flex w-full items-center gap-2 py-3 text-left"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-ink-muted tabular-nums">
+                    {slot.date} {slot.time}
+                  </p>
+                  <EventSeriesLabel event={session} className="mt-0.5" />
+                  <p className="text-sm font-semibold text-ink group-hover:text-brand-strong">{session.title}</p>
+                  <EventCoachLine event={session} className="mt-0.5" />
+                </div>
+                <ChevronRight size={16} aria-hidden className="shrink-0 text-ink-subtle transition-colors group-hover:text-brand-strong" />
               </button>
             </li>
           );
