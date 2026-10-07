@@ -42,7 +42,7 @@ test("生徒向け（日本語）24時間前: 件名・参加ボタン・詳細�
   assert.equal(subject, "【Gabby Blueprint】グループセッションのご案内（10月12日(月) 20:00〜21:00（日本時間））");
   assert.ok(html.includes("山田 さん"));
   assert.ok(html.includes("英語でおしゃべり会"));
-  assert.ok(html.includes("セッションに参加する"));
+  assert.ok(html.includes("セッションに入室する"));
   assert.ok(html.includes(`href="${BASE.joinUrl.replace(/&/g, "&amp;")}"`));
   assert.ok(html.includes(`href="${BASE.links.settingsUrl}"`));
   assert.ok(html.includes("「メール通知」で停止できます"));
@@ -51,8 +51,8 @@ test("生徒向け（日本語）24時間前: 件名・参加ボタン・詳細�
 test("1時間前は「まもなく」の件名、参加URLが無い場合は案内文", () => {
   const { subject, html } = renderMail(buildEventReminderMail({ ...BASE, language: "ja", lead: "1h", joinUrl: null }));
   assert.ok(subject.startsWith("【Gabby Blueprint】まもなくグループセッションが始まります"));
-  assert.ok(!html.includes("セッションに参加する"));
-  assert.ok(html.includes("参加用のリンクは、決まり次第アプリでお知らせします。"));
+  assert.ok(!html.includes("セッションに入室する"));
+  assert.ok(html.includes("入室用のリンクは、決まり次第アプリでお知らせします。"));
 });
 
 test("コーチ向け（英語）: 日本語を含まない", () => {

@@ -22,7 +22,7 @@ interface SessionRowProps {
   onOpenDetail: (calendarEventId: string) => void;
 }
 
-/** 1回分の行（日時・内容・担当コーチと、参加予定にする／参加する） */
+/** 1回分の行（日時・内容・担当コーチと、参加する／入室する） */
 export function SessionRow({ session, nowMs, timezone, onParticipationChanged, onOpenDetail }: SessionRowProps) {
   const { join, isSubmitting } = useEventParticipation(onParticipationChanged);
   const slot = formatEventSlot(session, timezone);
@@ -47,13 +47,13 @@ export function SessionRow({ session, nowMs, timezone, onParticipationChanged, o
           <Button type="button" size="sm" asChild>
             <a href={session.location_url!} target="_blank" rel="noopener noreferrer">
               <ExternalLink />
-              参加する
+              入室する
             </a>
           </Button>
         )}
         {session.rsvp_enabled && !isJoined && (
           <Button type="button" size="sm" variant="outline" pending={isSubmitting} onClick={() => join(session.calendar_event_id)}>
-            参加予定にする
+            参加する
           </Button>
         )}
       </div>
@@ -65,7 +65,7 @@ interface SeriesCardProps {
   /** シリーズ名（単発のイベントのまとまりは「その他のイベント」） */
   title: string;
   description: string | null;
-  /** シリーズID（単発のイベントのまとまりは null。「すべて参加予定にする」を出さない） */
+  /** シリーズID（単発のイベントのまとまりは null。「すべての回に参加する」を出さない） */
   seriesId: string | null;
   sessions: CalendarEventItem[];
   nowMs: number | null;
@@ -81,7 +81,7 @@ interface SeriesCardProps {
 const DESCRIPTION_CLAMP = 'line-clamp-3';
 
 /**
- * シリーズのカード（シリーズ名・説明・回の一覧）。まだ終わっていない未登録の回があれば「すべて参加予定にする」を出す。
+ * シリーズのカード（シリーズ名・説明・回の一覧）。まだ終わっていない未登録の回があれば「すべての回に参加する」を出す。
  * まとめての取り消しは置かない（取り消しは回ごとに詳細から行う）。
  */
 export function SeriesCard({
@@ -112,7 +112,7 @@ export function SeriesCard({
         return;
       }
       onSeriesJoined(result.joinedIds);
-      showToast(`${result.joinedIds.length}回を参加予定にしました`, 'success');
+      showToast(`${result.joinedIds.length}回の参加を登録しました`, 'success');
     } finally {
       setIsJoiningAll(false);
     }
@@ -144,7 +144,7 @@ export function SeriesCard({
         <div className="mt-3">
           {joinable.length > 0 ? (
             <Button type="button" size="sm" pending={isJoiningAll} icon={<ListChecks />} onClick={handleJoinAll}>
-              すべて参加予定にする（{joinable.length}回）
+              すべての回に参加する（{joinable.length}回）
             </Button>
           ) : (
             <p className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">

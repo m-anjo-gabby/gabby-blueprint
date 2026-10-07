@@ -166,16 +166,16 @@ export function CalendarEventCard({ event, timezone, onParticipationChanged, sho
           className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-strong"
         >
           <ExternalLink size={13} />
-          参加リンクを開く
+          入室する
         </a>
       )}
 
       {event.rsvp_enabled && !event.is_joined && isOpen && (
         <div className="space-y-1 pt-1">
           <Button pending={isSubmitting} type="button" size="sm" onClick={() => join(event.calendar_event_id)}>
-            参加予定にする
+            参加する
           </Button>
-          <p className="text-[11px] text-ink-muted">参加予定にすると、参加用のリンクが表示されます。</p>
+          <p className="text-[11px] text-ink-muted">参加すると、入室用のリンクが表示されます。</p>
         </div>
       )}
 
@@ -186,7 +186,7 @@ export function CalendarEventCard({ event, timezone, onParticipationChanged, sho
               <Button type="button" size="sm" asChild>
                 <a href={event.location_url} target="_blank" rel="noopener noreferrer">
                   <ExternalLink size={13} />
-                  参加する
+                  入室する
                 </a>
               </Button>
             )}
@@ -230,7 +230,7 @@ export function CalendarEventCard({ event, timezone, onParticipationChanged, sho
               )}
             </div>
           ) : (
-            <p className="text-[11px] text-ink-muted">参加用のリンクは決まり次第ここに表示されます。</p>
+            <p className="text-[11px] text-ink-muted">入室用のリンクは決まり次第ここに表示されます。</p>
           )}
         </div>
       )}

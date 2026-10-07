@@ -44,7 +44,7 @@ interface FeaturedEventProps {
   onOpenDetail: () => void;
 }
 
-/** 直近のイベント。参加登録前は「参加予定にする」、登録後は「参加する」（参加URL）を主役のボタンにする */
+/** 直近のイベント。参加登録前は「参加する」、登録後は「入室する」（参加URL）を主役のボタンにする */
 function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenDetail }: FeaturedEventProps) {
   const { join, isSubmitting } = useEventParticipation(onParticipationChanged);
   const slot = formatEventSlot(event, timezone);
@@ -74,7 +74,7 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
             <Button type="button" asChild>
               <a href={event.location_url} target="_blank" rel="noopener noreferrer">
                 <ExternalLink />
-                参加する
+                入室する
               </a>
             </Button>
           )
@@ -84,7 +84,7 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
               <Button type="button" asChild>
                 <a href={event.location_url} target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
-                  参加する
+                  入室する
                 </a>
               </Button>
             )}
@@ -92,7 +92,7 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
           </>
         ) : (
           <Button type="button" pending={isSubmitting} icon={<UsersRound />} onClick={() => join(event.calendar_event_id)}>
-            参加予定にする
+            参加する
           </Button>
         )}
         <button
@@ -105,10 +105,10 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
         </button>
       </div>
       {event.rsvp_enabled && !isJoined && (
-        <p className="mt-2 text-[11px] text-ink-muted">参加予定にすると、参加用のリンクが表示されます。</p>
+        <p className="mt-2 text-[11px] text-ink-muted">参加すると、入室用のリンクが表示されます。</p>
       )}
       {isJoined && !event.location_url && (
-        <p className="mt-2 text-[11px] text-ink-muted">参加用のリンクは決まり次第ここに表示されます。</p>
+        <p className="mt-2 text-[11px] text-ink-muted">入室用のリンクは決まり次第ここに表示されます。</p>
       )}
     </section>
   );

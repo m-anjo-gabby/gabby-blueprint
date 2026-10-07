@@ -29,7 +29,7 @@ test.describe("アプリのみ契約の生徒", () => {
     fixture = null;
   });
 
-  test("参加予定にすると参加URLとカレンダー追加が表示され、詳細から取り消せる", async ({ page }, testInfo) => {
+  test("参加すると参加URLとカレンダー追加が表示され、詳細から取り消せる", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "参加登録の状態を変えるため desktop のみ");
     // 所属テナントの既存の予定より先に表示されるよう、すぐ後に始まる予定にする
     fixture = await createGroupSession(PERSONAS.monitorStudent.email, {
@@ -47,11 +47,11 @@ test.describe("アプリのみ契約の生徒", () => {
     await expect(card.getByText(seriesTitle!)).toBeVisible();
     if (coachName) await expect(card.getByText(`コーチ：${coachName}`)).toBeVisible();
     // 参加登録の前は参加URLを出さない
-    await expect(card.getByRole("link", { name: "参加する" })).toHaveCount(0);
-    await expect(card.getByText("参加予定にすると、参加用のリンクが表示されます。")).toBeVisible();
+    await expect(card.getByRole("link", { name: "入室する" })).toHaveCount(0);
+    await expect(card.getByText("参加すると、入室用のリンクが表示されます。")).toBeVisible();
 
-    await card.getByRole("button", { name: "参加予定にする" }).click();
-    await expect(card.getByRole("link", { name: "参加する" })).toHaveAttribute("href", locationUrl);
+    await card.getByRole("button", { name: "参加する" }).click();
+    await expect(card.getByRole("link", { name: "入室する" })).toHaveAttribute("href", locationUrl);
     await expect(card.getByRole("button", { name: "お使いのカレンダーに追加" })).toBeVisible();
     await expect(card.getByText("参加予定", { exact: true })).toBeVisible();
 
@@ -68,7 +68,7 @@ test.describe("アプリのみ契約の生徒", () => {
     await expect(drawer.getByText("E2E で作成したシリーズの説明です。")).toBeVisible();
     await drawer.getByRole("button", { name: "キャンセル" }).click();
     await page.getByRole("button", { name: "OK" }).click();
-    await expect(drawer.getByRole("button", { name: "参加予定にする" })).toBeVisible();
+    await expect(drawer.getByRole("button", { name: "参加する" })).toBeVisible();
 
     const { count: afterCancel } = await admin
       .from("com_t_calendar_event_participant")

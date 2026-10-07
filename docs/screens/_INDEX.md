@@ -28,7 +28,7 @@
 | [favorites.md](student/favorites.md) | `/favorites` | お気に入り教材・フレーズ | ✅ |
 | [library.md](student/library.md) | `/library` | 教材一覧（検索・絞り込み） | ✅ |
 | [notice.md](student/notice.md) | `/notice` | お知らせ一覧 | ✅ |
-| [group-sessions.md](student/group-sessions.md) | `/group-sessions` | グループセッション一覧（シリーズごとの回・すべて参加予定にする・参加登録した過去のセッション） | ✅ |
+| [group-sessions.md](student/group-sessions.md) | `/group-sessions` | グループセッション一覧（シリーズごとの回・すべての回に参加する・参加登録した過去のセッション） | ✅ |
 | [notification.md](student/notification.md) | `/notification` | 通知一覧 | ✅ |
 | [profile.md](student/profile.md) | `/profile` | アイコン・タイムゾーン設定 | ✅ |
 | [profile-password.md](student/profile-password.md) | `/profile/password` | パスワード変更 | ✅ |

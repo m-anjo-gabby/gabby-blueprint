@@ -39,7 +39,7 @@ function EmptyState({ icon: Icon, title, description }: { icon: typeof CalendarD
 /** 参加登録した過去の回（日時・シリーズ名・内容・担当コーチ。押すと詳細） */
 function PastSessions({ sessions, timezone, onOpenDetail }: { sessions: CalendarEventItem[]; timezone: string; onOpenDetail: (id: string) => void }) {
   if (sessions.length === 0) {
-    return <EmptyState icon={History} title="参加登録した過去のセッションはありません" description="直近半年に参加予定にしたセッションが、ここに表示されます。" />;
+    return <EmptyState icon={History} title="参加登録した過去のセッションはありません" description="直近半年に参加登録したセッションが、ここに表示されます。" />;
   }
   return (
     <section aria-label="過去のセッション" className={SERIES_CARD_CLASS}>
@@ -60,13 +60,13 @@ function PastSessions({ sessions, timezone, onOpenDetail }: { sessions: Calendar
           );
         })}
       </ul>
-      <p className="mt-2 text-[11px] text-ink-subtle">参加予定にしていた回を表示しています（直近半年）。</p>
+      <p className="mt-2 text-[11px] text-ink-subtle">参加登録していた回を表示しています（直近半年）。</p>
     </section>
   );
 }
 
 /**
- * グループセッションの一覧。「これから」はシリーズごとのカード（説明・回の一覧・すべて参加予定にする）と、
+ * グループセッションの一覧。「これから」はシリーズごとのカード（説明・回の一覧・すべての回に参加する）と、
  * 単発のイベントの「その他のイベント」。「過去のセッション」は参加登録した終了済みの回。
  * タブは URL の ?tab=、イベントの詳細から開いた場合は ?series= のシリーズまで移動して強調する。
  */

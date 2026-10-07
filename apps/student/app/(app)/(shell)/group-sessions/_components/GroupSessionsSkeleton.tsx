@@ -23,7 +23,7 @@ export function GroupSessionsHeader({ tab, onTabChange }: { tab: GroupSessionsTa
     <ShellPageHeader
       title="グループセッション"
       back={{ history: '/dashboard' }}
-      description="Gabbyのプロコーチから直接学べる、ご契約中の方限定の無料セッションです。参加したい回を「参加予定」にすると、参加用のリンクが表示されます。"
+      description="Gabbyのプロコーチから直接学べる、ご契約中の方限定の無料セッションです。参加したい回で「参加する」を押すと、入室用のリンクが表示されます。"
     >
       <PillTabs items={TABS} value={tab} onValueChange={onTabChange} aria-label="表示する期間" />
     </ShellPageHeader>
