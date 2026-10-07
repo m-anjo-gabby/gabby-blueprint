@@ -18,7 +18,7 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
   const phrase = currentWord?.phrases[phraseIdx];
 
   // データ不在時のフォールバック
-  if (!phrase) return <div className="flex-1 w-full animate-pulse bg-slate-50/50 rounded-[40px]" />;
+  if (!phrase) return <div className="flex-1 w-full animate-pulse bg-canvas/50 rounded-panel" />;
 
   const totalSteps = currentWord.phrases.length;
 
@@ -36,7 +36,7 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
             "transition-all active:scale-75 p-2.5 rounded-full flex items-center justify-center",
             phrase.is_favorite 
               ? "text-amber-500 bg-amber-50" // ContentCardのON状態と完全同期
-              : "text-slate-300 hover:bg-slate-100/50" // OFF状態
+              : "text-ink-subtle hover:bg-canvas/50" // OFF状態
           )}
         >
           <motion.div
@@ -58,13 +58,13 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
       <div className="w-full shrink-0 flex flex-col items-start mt-4 mb-2 pt-1 px-6"> 
         <div className="flex items-center h-5 overflow-hidden rounded-md border border-brand-100 shadow-sm mb-3">
           <div className="bg-brand px-2 h-full flex items-center border-r border-white/20">
-            <span className="text-[9px] font-black text-white uppercase tracking-wider">
-              Step {phrase.seq_no}
+            <span className="text-[11px] font-bold text-white">
+              ステップ {phrase.seq_no}
             </span>
           </div>
           
           <div className="bg-brand-50/50 px-2 h-full flex items-center">
-            <span className="text-[9px] font-black text-brand/80 uppercase tracking-tight">
+            <span className="text-[11px] font-bold text-brand/80 tracking-tight">
               {PHRASE_TYPES[phrase.phrase_type as PhraseType]?.label}
             </span>
           </div>
@@ -76,7 +76,7 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
           style={{ gridTemplateColumns: `repeat(${totalSteps}, 1fr)` }}
         >
           {Array.from({ length: totalSteps }).map((_, i) => (
-            <div key={i} className="h-[3px] bg-slate-100 rounded-full overflow-hidden relative">
+            <div key={i} className="h-[3px] bg-canvas rounded-full overflow-hidden relative">
               <motion.div
                 initial={false}
                 animate={{ x: i <= phraseIdx ? "0%" : "-100%" }}
@@ -103,19 +103,19 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
             className="w-full h-full"
           >
             <div className={cn(
-              "w-full h-full transition-all duration-700 preserve-3d cursor-pointer rounded-[40px]",
+              "w-full h-full transition-all duration-700 preserve-3d cursor-pointer rounded-panel",
               isFlipped ? "rotate-y-180" : ""
             )}>
               {/* Front: English (高い視認性を確保) */}
               <div className="absolute inset-0 backface-hidden flex items-center justify-center text-center p-6">
-                <p className="text-3xl sm:text-4xl font-black text-slate-800 leading-[1.15] tracking-tighter antialiased">
+                <p className="text-3xl sm:text-4xl font-bold text-ink leading-[1.15] tracking-tighter antialiased">
                   {phrase.phrase_en}
                 </p>
               </div>
 
               {/* Back: Japanese (英語とのコントラストをつけるためIndigo色を採用) */}
               <div className="absolute inset-0 backface-hidden rotate-y-180 flex items-center justify-center text-center p-6">
-                <p className="text-2xl sm:text-3xl font-black text-brand leading-[1.15] tracking-tighter antialiased">
+                <p className="text-2xl sm:text-3xl font-bold text-brand leading-[1.15] tracking-tighter antialiased">
                   {phrase.phrase_ja}
                 </p>
               </div>

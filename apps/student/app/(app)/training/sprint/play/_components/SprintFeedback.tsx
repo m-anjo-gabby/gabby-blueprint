@@ -14,8 +14,8 @@ export const SprintFeedback: React.FC<SprintFeedbackProps> = (props) => (
   <SpeechFeedbackModal
     {...props}
     variant="sprint"
-    title="Sprint Analysis"
-    adviceTitle="Analysis Result"
+    title="発話の分析"
+    adviceTitle="改善のヒント"
     interactive={false}
   />
 );

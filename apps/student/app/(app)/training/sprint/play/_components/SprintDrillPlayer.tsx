@@ -24,6 +24,7 @@ import { useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackF
 import { useSprintProgressSync } from '../_hooks/useSprintProgressSync';
 import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
 import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
+import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
 
 interface SprintDrillPlayerProps {
   questions: SprintQuestion[];
@@ -539,18 +540,18 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
     <ImmersivePanel as="main" className="select-none">
 
         {/* ヘッダー */}
-        <div className="shrink-0 pt-4 w-full px-4 border-b border-slate-50 pb-2">
+        <div className="shrink-0 pt-4 w-full px-4 border-b border-line/40 pb-2">
           <div className="grid grid-cols-5 items-center min-h-[3rem] px-2">
             <div className="col-span-1 flex justify-start">
-              <button onClick={handleExitWithSync} disabled={isAutoPlaying} className="h-9 w-9 flex items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-100 shadow-sm hover:bg-slate-50 hover:text-brand active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none">
+              <button onClick={handleExitWithSync} disabled={isAutoPlaying} className="h-9 w-9 flex items-center justify-center rounded-xl bg-white text-ink-subtle border border-line/60 shadow-sm hover:bg-canvas hover:text-brand active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none">
                 <ChevronLeft size={20} strokeWidth={2.5} />
               </button>
             </div>
             <div className="col-span-3 flex flex-col items-center min-w-0">
               <div className="flex flex-col items-center">
-                <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mb-0.5">{contentName || 'Drill Mode'}</span>
+                <span className="text-[11px] font-bold text-brand mb-0.5">{contentName || SPRINT_MODE_LABEL.drill}</span>
               </div>
-              <h1 className="text-lg font-black text-slate-800 tracking-tight leading-none truncate w-full text-center">{courseTitle}</h1>
+              <h1 className="text-lg font-bold text-ink tracking-tight leading-none truncate w-full text-center">{courseTitle}</h1>
             </div>
             <div className="col-span-1" />
           </div>
@@ -592,7 +593,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
             <div className="absolute inset-x-0 bottom-0 top-0 bg-white/10 backdrop-blur-[1px] flex flex-col items-center justify-center z-50">
               <button
                 onClick={handleToggleAutoPlay}
-                className="flex items-center gap-2 px-6 h-14 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl active:scale-95 transition-all border border-slate-800"
+                className="flex items-center gap-2 px-6 h-14 bg-ink text-white rounded-control font-bold text-[11px] shadow-xl active:scale-95 transition-all border border-ink"
               >
                 <Square size={12} fill="currentColor" />
                 自動再生を停止

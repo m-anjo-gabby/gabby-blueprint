@@ -11,11 +11,11 @@ const TONE_STYLES: Record<
   { label: string; idle: string; hover: string; langActive: string; langIdle: string }
 > = {
   slate: {
-    label: 'text-slate-400',
-    idle: 'text-slate-400',
-    hover: 'hover:text-brand-500 hover:bg-slate-100',
-    langActive: 'bg-slate-100 text-brand',
-    langIdle: 'text-slate-300 hover:text-slate-400 hover:bg-slate-50',
+    label: 'text-ink-subtle',
+    idle: 'text-ink-subtle',
+    hover: 'hover:text-brand-500 hover:bg-canvas',
+    langActive: 'bg-canvas text-brand',
+    langIdle: 'text-ink-subtle hover:text-ink-subtle hover:bg-canvas',
   },
   indigo: {
     label: 'text-brand-500',
@@ -76,7 +76,7 @@ export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
   return (
     <div className={cn('flex items-center w-full mb-1', className)}>
       <div className={cn('flex items-center gap-x-1', styles.label)}>
-        <span className="text-xs font-bold tracking-wider whitespace-nowrap leading-none">
+        <span className="text-xs font-bold whitespace-nowrap leading-none">
           {label}
         </span>
         <button

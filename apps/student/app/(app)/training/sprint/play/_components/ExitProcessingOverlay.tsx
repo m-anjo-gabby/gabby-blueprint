@@ -19,8 +19,8 @@ export const ExitProcessingOverlay: React.FC<ExitProcessingOverlayProps> = ({ vi
       <div className="text-center space-y-4 animate-in zoom-in-95 duration-200">
         <Loader2 className="w-8 h-8 animate-spin text-brand mx-auto" strokeWidth={2.5} />
         <div className="space-y-1">
-          <h3 className="text-sm font-black text-slate-800 tracking-tight">終了処理を行っています</h3>
-          <p className="text-[11px] text-slate-400 font-medium">マイクの接続を解除しています。少しお待ちください...</p>
+          <h3 className="text-sm font-bold text-ink tracking-tight">終了処理を行っています</h3>
+          <p className="text-[11px] text-ink-subtle font-medium">マイクの接続を解除しています。少しお待ちください...</p>
         </div>
       </div>
     </div>

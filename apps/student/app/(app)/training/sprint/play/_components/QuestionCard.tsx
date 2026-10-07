@@ -116,7 +116,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
   const statusMessage = useMemo(() => {
     if (isRecording) return { text: `発話中...`, color: "text-rose-500 font-extrabold" };
-    if (isRevealed) return { text: "解答をCheck", color: "text-slate-400" };
+    if (isRevealed) return { text: "解答を確認", color: "text-ink-subtle" };
     switch (audioPhase) {
       case 'statement': return { text: "基本文を再生中...", color: "text-brand" };
       case 'question': return { text: `${config.phaseLabel}を再生中...`, color: "text-brand" };
@@ -124,7 +124,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       case 'answer': 
         // 🚀 改修：ご指定に基づき、評価モードの状態に関わらずメインメッセージは「回答しましょう」で完全統一
         return { text: "回答しましょう", color: "text-amber-500" };
-      default: return { text: "待機中", color: "text-slate-400" };
+      default: return { text: "待機中", color: "text-ink-subtle" };
     }
   }, [audioPhase, isRevealed, isRecording, config.phaseLabel]);
 
@@ -151,10 +151,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   // 🚧 4. すべてのフック定義が完了した「一番最後」で、データ不在時の早期リターンを行う
   if (!question) {
     return (
-      <div className="flex-1 w-full min-h-[300px] flex items-center justify-center bg-slate-50/50 rounded-[40px] border border-dashed border-slate-200">
+      <div className="flex-1 w-full min-h-[300px] flex items-center justify-center bg-canvas/50 rounded-panel border border-dashed border-line">
         <div className="text-center space-y-2">
           <div className="w-8 h-8 rounded-full border-2 border-brand border-t-transparent animate-spin mx-auto" />
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Card...</p>
+          <p className="text-xs font-bold text-ink-subtle">読み込み中...</p>
         </div>
       </div>
     );
@@ -180,16 +180,16 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
           {questionType === '0' && (
             <div className="flex items-center gap-1.5 bg-brand-50/50 border border-brand-100/30 rounded-full p-0.5 shadow-2xs select-none">
-              <span className="text-[9px] font-black text-brand-500 uppercase tracking-widest pl-2 pr-1 flex items-center gap-1">
+              <span className="text-[11px] font-bold text-brand-500 pl-2 pr-1 flex items-center gap-1">
                 <Mic size={10} className="text-rose-500" />
                 発話評価
               </span>
-              <div className="flex bg-slate-200/50 p-0.5 rounded-full relative">
+              <div className="flex bg-line/50 p-0.5 rounded-full relative">
                 <button 
                   onClick={(e) => { e.stopPropagation(); setDrillEvalType('yes'); }}
                   className={cn(
-                    "relative z-10 px-3 py-1 text-[10px] font-black rounded-full transition-colors duration-200 cursor-pointer flex items-center justify-center",
-                    drillEvalType === 'yes' ? "text-emerald-600 font-extrabold" : "text-slate-400 hover:text-slate-600"
+                    "relative z-10 px-3 py-1 text-[11px] font-bold rounded-full transition-colors duration-200 cursor-pointer flex items-center justify-center",
+                    drillEvalType === 'yes' ? "text-emerald-600 font-extrabold" : "text-ink-subtle hover:text-ink-soft"
                   )}
                 >
                   {drillEvalType === 'yes' && (
@@ -204,8 +204,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <button 
                   onClick={(e) => { e.stopPropagation(); setDrillEvalType('no'); }}
                   className={cn(
-                    "relative z-10 px-3 py-1 text-[10px] font-black rounded-full transition-colors duration-200 cursor-pointer flex items-center justify-center",
-                    drillEvalType === 'no' ? "text-amber-600 font-extrabold" : "text-slate-400 hover:text-slate-600"
+                    "relative z-10 px-3 py-1 text-[11px] font-bold rounded-full transition-colors duration-200 cursor-pointer flex items-center justify-center",
+                    drillEvalType === 'no' ? "text-amber-600 font-extrabold" : "text-ink-subtle hover:text-ink-soft"
                   )}
                 >
                   {drillEvalType === 'no' && (
@@ -224,7 +224,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       </div>
 
       {/* 【メインエリア】 */}
-      <div className="w-full flex flex-col items-stretch bg-white rounded-[24px] border border-slate-100 p-3.5 sm:p-5 shadow-xs">
+      <div className="w-full flex flex-col items-stretch bg-white rounded-card border border-line/60 p-3.5 sm:p-5 shadow-xs">
         <AnimatePresence initial={false}>
           <motion.div 
             initial={{ opacity: 0, height: 0, marginBottom: 0 }}
@@ -239,7 +239,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 const isCompleted = index < currentActionIndex;
                 return (
                   <div key={stepName} className="flex-1 flex flex-col gap-1 text-center relative">
-                    <div className="h-[3px] w-full rounded-full bg-slate-200 overflow-hidden relative">
+                    <div className="h-[3px] w-full rounded-full bg-line overflow-hidden relative">
                       <motion.div
                         initial={false}
                         animate={{ x: isCompleted || isCurrent ? "0%" : "-100%" }}
@@ -251,10 +251,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                       />
                     </div>
                     <span className={cn(
-                      "text-[10px] font-black tracking-tight transition-colors duration-200 whitespace-nowrap",
+                      "text-[11px] font-bold tracking-tight transition-colors duration-200 whitespace-nowrap",
                       isRecording && isCurrent ? "text-rose-500 font-extrabold" :
                       isCurrent ? "text-brand font-extrabold" :
-                      isCompleted ? "text-emerald-600" : "text-slate-400"
+                      isCompleted ? "text-emerald-600" : "text-ink-subtle"
                     )}>
                       {stepName}
                     </span>
@@ -270,29 +270,29 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <div className={cn(
               "w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-xs border shrink-0 transition-all duration-300",
               isRecording ? "bg-rose-50 border-rose-200 text-rose-500" :
-              isRevealed ? "bg-slate-100 border-slate-200 text-slate-400" :
+              isRevealed ? "bg-canvas border-line text-ink-subtle" :
               audioPhase === 'statement' || audioPhase === 'question' ? "bg-brand-50 border-brand-200 text-brand" :
-              audioPhase === 'answer' || audioPhase === 'thinking' ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
+              audioPhase === 'answer' || audioPhase === 'thinking' ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-canvas border-line text-ink-subtle"
             )}>
               {isRecording ? <Mic size={18} /> : (audioPhase === 'answer' || audioPhase === 'thinking') && !isRevealed ? <CircleDot size={18} /> : <Headphones size={18} className={cn(audioPhase !== 'idle' && !isRevealed && "animate-pulse")} />}
             </div>
             
             <div className="flex flex-col text-left min-w-0">
-              <h3 className={cn("text-xs font-black uppercase tracking-wider leading-none whitespace-nowrap", statusMessage.color)}>
+              <h3 className={cn("text-xs font-bold leading-none whitespace-nowrap", statusMessage.color)}>
                 {statusMessage.text}
               </h3>
               {/* 🚀 改修：回答・シンキング状態で未オープン・未録音状態の場合のサブテキストを、発話評価ON/OFFの状態に応じて動的に分岐 */}
               {(audioPhase === 'answer' || audioPhase === 'thinking') && !isRevealed && !isRecording && (
-                <div className="flex items-center gap-1 mt-1 text-slate-400">
+                <div className="flex items-center gap-1 mt-1 text-ink-subtle">
                   {isAssessmentMode ? (
                     <>
                       <Mic size={10} className="text-rose-400 shrink-0" fill="currentColor" />
-                      <span className="text-[10px] font-bold leading-none whitespace-nowrap">マイクボタンから発話できます</span>
+                      <span className="text-[11px] font-bold leading-none whitespace-nowrap">マイクボタンから発話できます</span>
                     </>
                   ) : (
                     <>
-                      <MicOff size={10} className="text-slate-400 shrink-0" />
-                      <span className="text-[10px] font-bold leading-none text-slate-400 whitespace-nowrap">発話評価がOFFになっています</span>
+                      <MicOff size={10} className="text-ink-subtle shrink-0" />
+                      <span className="text-[11px] font-bold leading-none text-ink-subtle whitespace-nowrap">発話評価がOFFになっています</span>
                     </>
                   )}
                 </div>
@@ -303,7 +303,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           {isDrillMode && isRevealed && !isProblemVisible && (
             <button
               onClick={(e) => { e.stopPropagation(); setIsProblemVisible(true); }}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-brand border border-brand-100 shadow-sm transition-all text-[10px] font-black uppercase tracking-tight cursor-pointer active:scale-95 ml-auto"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-brand border border-brand-100 shadow-sm transition-all text-[11px] font-bold tracking-tight cursor-pointer active:scale-95 ml-auto"
             >
               <Eye size={13} strokeWidth={2.5} />
               <span>問題を表示</span>
@@ -321,7 +321,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              className="w-full text-left border-l-4 border-slate-200 pl-3 sm:pl-4 py-0.5 flex flex-col gap-1"
+              className="w-full text-left border-l-4 border-line pl-3 sm:pl-4 py-0.5 flex flex-col gap-1"
             >
               <PhraseAudioHeader
                 label="基本文"
@@ -332,7 +332,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 isJaVisible={showJaStatement}
                 onToggleJa={(e) => { e.stopPropagation(); setShowJaStatement(!showJaStatement); }}
               />
-              <p className="text-sm sm:text-base font-bold text-slate-600 leading-relaxed tracking-tight">
+              <p className="text-sm sm:text-base font-bold text-ink-soft leading-relaxed tracking-tight">
                 {showJaStatement ? question.statement_ja : question.statement_en}
               </p>
             </motion.div>
@@ -357,7 +357,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 isJaVisible={showJaQuestion}
                 onToggleJa={(e) => { e.stopPropagation(); setShowJaQuestion(!showJaQuestion); }}
               />
-              <p className="text-xl sm:text-[32px] font-black text-slate-800 leading-[1.25] tracking-tighter antialiased">
+              <p className="text-xl sm:text-[32px] font-bold text-ink leading-[1.25] tracking-tighter antialiased">
                 {showJaQuestion ? question.question_ja : question.question_en}
               </p>
             </motion.div>
@@ -376,11 +376,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 transition={{ duration: 0.2 }}
                 className="absolute inset-0 w-full h-full flex flex-col items-center justify-center group"
               >
-                <div className="absolute inset-0 rounded-[24px] sm:rounded-[32px] border-2 border-dashed border-slate-200 bg-gradient-to-b cursor-pointer from-slate-50/50 to-white/30 group-hover:border-brand-100 group-hover:from-brand-50/10 transition-colors duration-300" />
+                <div className="absolute inset-0 rounded-card sm:rounded-panel border-2 border-dashed border-line bg-gradient-to-b cursor-pointer from-canvas/50 to-white/30 group-hover:border-brand-100 group-hover:from-brand-50/10 transition-colors duration-300" />
                 <div className="relative z-10 flex flex-col items-center text-center space-y-3 sm:space-y-4">
                   <div className="space-y-0.5 sm:space-y-1">
-                    <p className="text-[12px] sm:text-[11px] font-black tracking-[0.15em] sm:tracking-[0.2em] text-slate-400 uppercase group-hover:text-brand-500 transition-colors">タップで解答文を表示します</p>
-                    <p className="text-[10px] sm:text-[10px] font-bold text-slate-300 group-hover:text-slate-400 transition-colors">Listen & Answer</p>
+                    <p className="text-[12px] sm:text-[11px] font-bold text-ink-subtle group-hover:text-brand-500 transition-colors">タップで解答文を表示します</p>
+                    <p className="text-[11px] font-bold text-ink-subtle">聞いて答えましょう</p>
                   </div>
                 </div>
               </motion.div>
@@ -395,7 +395,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 transition={{ duration: 0.2 }}
                 className="absolute inset-0 w-full h-full flex flex-col items-center justify-center p-4"
               >
-                <div className="absolute inset-0 rounded-[24px] sm:rounded-[32px] bg-rose-50/30 border border-rose-100/70" />
+                <div className="absolute inset-0 rounded-card sm:rounded-panel bg-rose-50/30 border border-rose-100/70" />
                 <div className="relative z-10 flex flex-col items-center text-center space-y-4">
                   
                   {/* ⏱️ 滑らかな円形プログレスHUD */}
@@ -408,16 +408,16 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     strokeClassName="stroke-rose-500"
                     transitionDuration={timeLeft === maxTime ? 0 : 1}
                   >
-                    <span className="text-sm font-black font-mono text-rose-600 leading-none">{timeLeft}</span>
-                    <span className="text-[6px] font-black uppercase text-rose-400 tracking-wider leading-none mt-0.5">sec</span>
+                    <span className="text-sm font-bold font-mono text-rose-600 leading-none">{timeLeft}</span>
+                    <span className="text-[11px] font-bold text-rose-400 leading-none mt-0.5">秒</span>
                   </CircularProgressRing>
 
                   <div className="space-y-1">
                     <div className="flex items-center justify-center gap-1.5 text-rose-600">
                       <Mic size={13} fill="currentColor" className="text-rose-500" />
-                      <p className="text-xs font-black tracking-wider uppercase">Recording...</p>
+                      <p className="text-xs font-bold">録音中...</p>
                     </div>
-                    <p className="text-[10px] text-slate-400 font-medium">はっきりと発話してください</p>
+                    <p className="text-[11px] text-ink-subtle font-medium">はっきりと発話してください</p>
                   </div>
                 </div>
               </motion.div>
@@ -445,7 +445,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         onToggleJa={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
                         className="mb-0.5"
                       />
-                      <p className="text-lg sm:text-xl font-black text-emerald-700 leading-snug tracking-tight">{showJaAnswer ? question.answer_sentence_yes_ja : question.answer_sentence_yes_en}</p>
+                      <p className="text-lg sm:text-xl font-bold text-emerald-700 leading-snug tracking-tight">{showJaAnswer ? question.answer_sentence_yes_ja : question.answer_sentence_yes_en}</p>
                     </div>
 
                     <div className="text-left border-l-4 border-amber-500 bg-amber-50/20 pl-4 pr-2 py-2 rounded-r-xl flex flex-col gap-1">
@@ -459,7 +459,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         onToggleJa={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
                         className="mb-0.5"
                       />
-                      <p className="text-lg sm:text-xl font-black text-amber-700 leading-snug tracking-tight">{showJaAnswer ? question.answer_sentence_no_ja : question.answer_sentence_no_en}</p>
+                      <p className="text-lg sm:text-xl font-bold text-amber-700 leading-snug tracking-tight">{showJaAnswer ? question.answer_sentence_no_ja : question.answer_sentence_no_en}</p>
                     </div>
                   </div>
                 ) : (
@@ -474,7 +474,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                       onToggleJa={(e) => { e.stopPropagation(); setShowJaAnswer(!showJaAnswer); }}
                       className="mb-0.5"
                     />
-                    <p className="text-xl sm:text-2xl font-black text-emerald-600 leading-snug tracking-tight">{showJaAnswer ? question.answer_sentence_yes_ja : question.answer_sentence_yes_en}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-emerald-600 leading-snug tracking-tight">{showJaAnswer ? question.answer_sentence_yes_ja : question.answer_sentence_yes_en}</p>
                   </div>
                 )}
               </motion.div>

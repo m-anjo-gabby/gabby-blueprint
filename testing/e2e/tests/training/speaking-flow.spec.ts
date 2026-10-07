@@ -121,7 +121,7 @@ test.describe("単語帳の発話", () => {
     await page.getByRole("button", { name: "発話練習" }).click();
 
     // 参照文どおりの発話（fake の既定）なので最高評価になる
-    await expect(page.getByText("SCORE", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("スコア", { exact: true })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText("Excellent", { exact: true })).toBeVisible();
 
     // 発話評価は1回だけ、表示中のフレーズ（画面に出ている英文）を参照文にして行われる
@@ -143,7 +143,7 @@ test.describe("単語帳の発話", () => {
     await stop.click();
 
     // 何も聞き取れていない時点で確定するため、評価は表示されるが最高評価にはならない
-    await expect(page.getByText("SCORE", { exact: true })).toBeVisible();
+    await expect(page.getByText("スコア", { exact: true })).toBeVisible();
     await expect(page.getByText("Excellent", { exact: true })).toHaveCount(0);
   });
 });
@@ -387,7 +387,7 @@ test.describe("スプリントの発話", () => {
     expect(question, "最初に再生された基本文の問題が見つからない").toBeTruthy();
     expect(listen.text).toBe(question!.answer_sentence_yes_en);
 
-    await expect(page.getByText("SCORE", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("スコア", { exact: true })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText("Excellent", { exact: true })).toBeVisible();
   });
 });

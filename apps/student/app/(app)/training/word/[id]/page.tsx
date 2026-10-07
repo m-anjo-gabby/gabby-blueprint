@@ -394,7 +394,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   if (loading) {
     return (
       <ContentLoading 
-        title="Preparing your session" 
+        title="トレーニングを準備しています" 
         subtitle="教材データを読み込んでいます..." 
       />
     );

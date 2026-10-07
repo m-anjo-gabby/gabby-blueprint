@@ -22,15 +22,15 @@ export const QuestionStepBadge: React.FC<QuestionStepBadgeProps> = ({
 }) => (
   <div
     className={cn(
-      'flex items-center bg-brand rounded-[14px] shadow-sm overflow-hidden border border-brand',
+      'flex items-center bg-brand rounded-control shadow-sm overflow-hidden border border-brand',
       className,
     )}
   >
     <div className="flex items-center gap-2.5 px-3 py-1.5">
-      <span className="text-[10px] font-black text-brand-200 uppercase tracking-[0.2em] leading-none whitespace-nowrap">
-        Question
+      <span className="text-[11px] font-bold text-brand-200 leading-none whitespace-nowrap">
+        問題
       </span>
-      <span className="text-sm font-black text-white font-mono leading-none whitespace-nowrap">
+      <span className="text-sm font-bold text-white font-mono leading-none whitespace-nowrap">
         {questionNumber}
       </span>
     </div>
@@ -48,14 +48,14 @@ interface StepIndicatorProps {
   total: number;
 }
 
-/** QuestionStepBadge の rightSlot に渡す「Step X / Y」表示 */
+/** QuestionStepBadge の rightSlot に渡す「ステップ X / Y」表示 */
 export const StepIndicator: React.FC<StepIndicatorProps> = ({ current, total }) => (
   <>
-    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none whitespace-nowrap">
-      Step
+    <span className="text-[11px] font-bold text-ink-subtle leading-none whitespace-nowrap">
+      ステップ
     </span>
     <span className="text-xs font-bold text-brand font-mono leading-none whitespace-nowrap">
-      {current} <span className="text-slate-300 mx-0.5">/</span> {total}
+      {current} <span className="text-ink-subtle mx-0.5">/</span> {total}
     </span>
   </>
 );

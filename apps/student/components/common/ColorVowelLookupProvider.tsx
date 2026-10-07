@@ -111,7 +111,7 @@ function renderWordWithStress(
               <span key={index}>
                 {before}
                 <span className="relative inline-block">
-                  <span className="underline decoration-3 decoration-primary underline-offset-4 font-black">
+                  <span className="underline decoration-3 decoration-primary underline-offset-4 font-bold">
                     {target}
                   </span>
                   <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[42px] h-[42px] flex items-center justify-center pointer-events-none overflow-hidden">
@@ -133,7 +133,7 @@ function renderWordWithStress(
         if (isStressed) {
           return (
             <span key={index} className="relative inline-block">
-              <span className="underline decoration-3 decoration-primary underline-offset-4 font-black">
+              <span className="underline decoration-3 decoration-primary underline-offset-4 font-bold">
                 {part}
               </span>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[42px] h-[42px] flex items-center justify-center pointer-events-none overflow-hidden">
@@ -316,10 +316,10 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                     onClick={handleLookup}
                     className={cn(
                       'group flex items-center gap-2 whitespace-nowrap',
-                      'rounded-full bg-slate-900 px-4 py-2.5',
+                      'rounded-full bg-ink px-4 py-2.5',
                       'text-xs font-semibold text-white shadow-2xl',
                       'ring-1 ring-black/10',
-                      'hover:bg-slate-700 active:scale-[0.95]',
+                      'hover:bg-ink-soft active:scale-[0.95]',
                       'transition-all duration-150 select-none'
                     )}
                   >
@@ -385,15 +385,15 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
           className={cn(
-            "sm:max-w-[420px] flex flex-col overflow-hidden rounded-2xl border border-brand/20 dark:border-brand-deep/50 shadow-2xl bg-gradient-to-r from-brand to-brand-strong p-0 gap-0 [&>button]:text-brand-100 hover:[&>button]:text-white [&>button]:focus:ring-brand-500 [&>button]:focus:ring-offset-brand",
+            "sm:max-w-[420px] flex flex-col overflow-hidden rounded-control border border-brand/20 dark:border-brand-deep/50 shadow-2xl bg-gradient-to-r from-brand to-brand-strong p-0 gap-0 [&>button]:text-brand-100 hover:[&>button]:text-white [&>button]:focus:ring-brand-500 [&>button]:focus:ring-offset-brand",
             activeResult ? "h-[520px] sm:h-[70vh] max-h-[90vh]" : "h-auto"
           )}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <DialogHeader className="bg-transparent px-6 pt-5 pb-4 text-white border-none shrink-0 space-y-0">
-            <DialogTitle className="flex items-center gap-2 text-sm font-bold tracking-wider text-brand-50/90 uppercase">
+            <DialogTitle className="flex items-center gap-2 text-sm font-bold text-brand-50/90">
               <BookA className="h-5 w-5 text-brand-100 opacity-95 shrink-0" />
-              <span className="tracking-widest font-black text-white">Color Vowel Dictionary</span>
+              <span className="tracking-widest font-bold text-white">Color Vowel Dictionary</span>
             </DialogTitle>
           </DialogHeader>
 
@@ -438,7 +438,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                 "text-center w-full h-32 pb-14 flex flex-col items-center justify-center shrink-0 bg-background px-6",
                 results.length > 1 ? "pt-2" : "pt-6"
               )}>
-                <h2 className="text-4xl font-black tracking-tight text-foreground select-none">
+                <h2 className="text-4xl font-bold tracking-tight text-foreground select-none">
                   {renderWordWithStress(
                     activeResult.syllables,
                     activeResult.primaryStressSyllable,
@@ -507,7 +507,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                     <div className="space-y-4">
                       <div className="flex flex-col bg-secondary/30 rounded-xl p-4 border border-border/60 text-left">
                         <div className="flex items-center gap-3 select-none border-b border-border/30 pb-2.5">
-                          <span className="text-[11px] font-black tracking-wider text-primary bg-background dark:bg-muted border border-primary/20 rounded px-2.5 py-0.5 shadow-sm uppercase shrink-0">
+                          <span className="text-[11px] font-bold text-primary bg-background dark:bg-muted border border-primary/20 rounded px-2.5 py-0.5 shadow-sm shrink-0">
                             {getPartOfSpeechLabel(activeResult.partOfSpeech)}
                           </span>
                           {activeResult.phoneticSpelling && (
@@ -543,11 +543,11 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                           </div>
                           <span
                             className={cn(
-                              "text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-sm border shrink-0 select-none pt-0.5",
+                              "text-[11px] font-bold px-2 py-0.5 rounded shadow-sm border shrink-0 select-none pt-0.5",
                               activeResult.vowel.cvId === 'white_tie' || activeResult.vowel.cvId === 'silver_pin'
-                                ? "bg-slate-900 border-slate-900"
+                                ? "bg-ink border-ink"
                                 : activeResult.vowel.cvId === 'black_cat'
-                                  ? "bg-slate-100 border-slate-200"
+                                  ? "bg-canvas border-line"
                                   : "bg-muted dark:bg-muted/60 border-border"
                             )}
                             style={{
