@@ -18,22 +18,23 @@ const logger = createLogger('admin');
 const SERIES_PATH = '/calendar-events/series';
 
 export interface CalendarEventSeriesFormData {
-  series_id?: string;
   title: string;
   description?: string | null;
 }
 
-/** 「回をまとめて追加」の1行（日時は JST の入力値） */
+/** シリーズの作成・「回をまとめて追加」の1行（日時は JST の入力値） */
 export interface SeriesSessionRow {
   date: string; // JST "YYYY-MM-DD"
   start_time: string; // JST "HH:MM"
   end_time?: string | null; // JST "HH:MM"（任意。開始より前なら翌日とみなす）
   title: string;
   description?: string | null;
+  /** この回の参加URL。指定しない（undefined）場合は共通の location_url を使う */
+  location_url?: string | null;
   coach_ids: string[];
 }
 
-/** 「回をまとめて追加」で全回に共通する設定 */
+/** シリーズの作成・「回をまとめて追加」ですべての回に共通する設定 */
 export interface SeriesSessionCommon {
   location_url?: string | null;
   target_type: CalendarEventTargetType;
@@ -100,32 +101,32 @@ export async function getCalendarEventSeries(
   return { series: data, sessions };
 }
 
-/** シリーズの新規作成・更新 */
-export async function upsertCalendarEventSeries(
+/** シリーズ名・説明の更新（作成は createCalendarEventSeries で回とあわせて行う） */
+export async function updateCalendarEventSeries(
+  seriesId: string,
   formData: CalendarEventSeriesFormData
-): Promise<{ success: true; seriesId: string } | { success: false; message: string }> {
+): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
-    const row = {
-      title: formData.title.trim(),
-      description: formData.description?.trim() || null,
-      update_date: new Date().toISOString(),
-    };
-    const query = formData.series_id
-      ? supabase.from('com_m_calendar_event_series').update(row).eq('series_id', formData.series_id)
-      : supabase.from('com_m_calendar_event_series').insert({ ...row, event_type: 'GROUP_SESSION' });
-    const { data, error } = await query.select('series_id').single();
+    const { error } = await supabase
+      .from('com_m_calendar_event_series')
+      .update({
+        title: formData.title.trim(),
+        description: formData.description?.trim() || null,
+        update_date: new Date().toISOString(),
+      })
+      .eq('series_id', seriesId);
     if (error) {
-      logger.error('calendarEventSeries:upsert_failed', error.message, { ...ctx, payload: formData });
+      logger.error('calendarEventSeries:update_failed', error.message, { ...ctx, payload: { seriesId, ...formData } });
       return { success: false, message: error.message };
     }
-    logger.info('calendarEventSeries:upsert_success', `Calendar event series upserted: ${data.series_id}`, ctx);
+    logger.info('calendarEventSeries:update_success', `Calendar event series updated: ${seriesId}`, ctx);
     revalidatePath(SERIES_PATH, 'layout');
     revalidatePath('/calendar-events');
-    return { success: true, seriesId: data.series_id };
+    return { success: true };
   } catch (error) {
-    logger.error('calendarEventSeries:upsert_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('calendarEventSeries:update_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -152,9 +153,74 @@ export async function deleteCalendarEventSeries(seriesId: string): Promise<{ suc
   }
 }
 
+type SessionPayload = Record<string, unknown>;
+
+/**
+ * 入力（日本時間）の回を RPC に渡す形にする。日時・内容が不正な行があれば null。
+ * 参加確認はグループセッションの rsvpRequired に従う。終了時刻が開始時刻以前の場合は翌日の時刻とみなす。
+ */
+function buildSessionPayloads(common: SeriesSessionCommon, rows: SeriesSessionRow[]): SessionPayload[] | null {
+  if (rows.length === 0) return null;
+  const sessions: SessionPayload[] = [];
+  for (const row of rows) {
+    const start = jstDateTimeToUtcIso(row.date, row.start_time);
+    if (!start || !row.title.trim()) return null;
+    let end = row.end_time ? jstDateTimeToUtcIso(row.date, row.end_time) : null;
+    if (end && end <= start) end = new Date(new Date(end).getTime() + 24 * 60 * 60 * 1000).toISOString();
+    sessions.push({
+      title: row.title.trim(),
+      description: row.description?.trim() || null,
+      start_datetime: start,
+      end_datetime: end,
+      location_url: (row.location_url !== undefined ? row.location_url : common.location_url) || null,
+      target_type: common.target_type,
+      client_id: common.target_type === 'CLIENT' ? common.client_id || null : null,
+      rsvp_enabled: CALENDAR_EVENT_TYPES.GROUP_SESSION.rsvpRequired,
+      is_published: common.is_published,
+      coach_ids: row.coach_ids,
+    });
+  }
+  return sessions;
+}
+
+/**
+ * シリーズを作成し、回をまとめて登録する（admin_create_calendar_event_series。1件でも失敗したらシリーズも作らない）。
+ */
+export async function createCalendarEventSeries(
+  series: CalendarEventSeriesFormData,
+  common: SeriesSessionCommon,
+  rows: SeriesSessionRow[]
+): Promise<{ success: true; seriesId: string } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  try {
+    const sessions = buildSessionPayloads(common, rows);
+    if (!series.title.trim() || !sessions) return { success: false, message: 'invalid_input' };
+
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.rpc('admin_create_calendar_event_series', {
+      p_title: series.title.trim(),
+      p_description: series.description?.trim() || '',
+      p_sessions: sessions,
+    });
+    if (error || typeof data !== 'string') {
+      logger.error('calendarEventSeries:create_failed', error?.message ?? 'No series id returned', {
+        ...ctx,
+        payload: { title: series.title, count: rows.length },
+      });
+      return { success: false, message: error?.message ?? 'create_failed' };
+    }
+    logger.info('calendarEventSeries:create_success', `Calendar event series created with ${rows.length} sessions: ${data}`, ctx);
+    revalidatePath(SERIES_PATH, 'layout');
+    revalidatePath('/calendar-events');
+    return { success: true, seriesId: data };
+  } catch (error) {
+    logger.error('calendarEventSeries:create_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    return { success: false, message: '予期せぬエラーが発生しました' };
+  }
+}
+
 /**
  * シリーズに複数の回をまとめて登録する（admin_add_calendar_event_series_sessions。1件でも失敗したら登録しない）。
- * 参加確認はグループセッションの rsvpRequired に従う。終了時刻が開始時刻以前の場合は翌日の時刻とみなす。
  */
 export async function addCalendarEventSeriesSessions(
   seriesId: string,
@@ -163,26 +229,8 @@ export async function addCalendarEventSeriesSessions(
 ): Promise<{ success: true; count: number } | { success: false; message: string }> {
   const ctx = await getLogContext();
   try {
-    if (rows.length === 0) return { success: false, message: 'sessions_required' };
-    const sessions = [];
-    for (const row of rows) {
-      const start = jstDateTimeToUtcIso(row.date, row.start_time);
-      if (!start || !row.title.trim()) return { success: false, message: 'invalid_session' };
-      let end = row.end_time ? jstDateTimeToUtcIso(row.date, row.end_time) : null;
-      if (end && end <= start) end = new Date(new Date(end).getTime() + 24 * 60 * 60 * 1000).toISOString();
-      sessions.push({
-        title: row.title.trim(),
-        description: row.description?.trim() || null,
-        start_datetime: start,
-        end_datetime: end,
-        location_url: common.location_url || null,
-        target_type: common.target_type,
-        client_id: common.target_type === 'CLIENT' ? common.client_id || null : null,
-        rsvp_enabled: CALENDAR_EVENT_TYPES.GROUP_SESSION.rsvpRequired,
-        is_published: common.is_published,
-        coach_ids: row.coach_ids,
-      });
-    }
+    const sessions = buildSessionPayloads(common, rows);
+    if (!sessions) return { success: false, message: 'invalid_session' };
 
     const supabase = createAdminClient();
     const { data, error } = await supabase.rpc('admin_add_calendar_event_series_sessions', {

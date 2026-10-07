@@ -269,7 +269,7 @@ export async function getCalendarEventParticipants(
 
     const { data: event, error: eventError } = await supabase
       .from('com_m_calendar_event')
-      .select('*')
+      .select('*, series:com_m_calendar_event_series(series_id, title, description)')
       .eq('calendar_event_id', calendarEventId)
       .single();
 

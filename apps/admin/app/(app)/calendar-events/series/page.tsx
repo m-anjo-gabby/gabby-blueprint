@@ -1,12 +1,11 @@
 import Link from 'next/link';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
 import { getTranslations } from 'next-intl/server';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { getCalendarEventSeriesList } from '@/actions/adminCalendarEventSeriesAction';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { SeriesFormDialog } from './_components/SeriesFormDialog';
 
 /**
  * グループセッションのシリーズ（企画。例: 「10月の発音グループセッション」）の一覧。
@@ -30,7 +29,13 @@ export default async function CalendarEventSeriesPage() {
             <h1 className="text-2xl font-bold tracking-tight">{t('listTitle')}</h1>
             <p className="text-xs text-slate-500 mt-1">{t('listSubtitle')}</p>
           </div>
-          <SeriesFormDialog mode="create" />
+          <Link
+            href="/calendar-events/series/new"
+            className={cn(buttonVariants(), 'gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none')}
+          >
+            <PlusCircle size={16} />
+            {t('createButton')}
+          </Link>
         </div>
       </div>
 

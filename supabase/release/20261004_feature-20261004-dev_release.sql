@@ -3330,3 +3330,58 @@ SELECT cron.schedule(
 );
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】グループセッションのシリーズをまとめて作成する（シリーズと回を1回で登録）
+-- 追加日: 2026-10-07
+--
+-- 【内容】
+--   1. admin_create_calendar_event_series(text, text, jsonb)（シリーズを作成し、回をまとめて登録）を新規作成
+--      - 回の登録は admin_add_calendar_event_series_sessions に任せ、1件でも失敗したらシリーズも作らない
+--
+-- 対応ファイル: DDL/function/admin_create_calendar_event_series.sql
+-- 【注意】アプリ（アドミンのシリーズの作成画面）が使うため、アプリのデプロイより先に適用すること。
+--   「シリーズ」のセクション（admin_add_calendar_event_series_sessions）の適用後に適用すること。
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- admin_create_calendar_event_series: シリーズを作成し、回をまとめて登録する (2026-10-07 追加)
+---------------------------------------------
+-- アドミンの「シリーズの作成」（新規・このシリーズを元に作成）から呼ぶ（admin アプリのサーバーアクション、service_role）。
+-- シリーズ（com_m_calendar_event_series）と各回・担当コーチを1つのトランザクションで登録し、
+-- 途中で失敗した場合はシリーズも作らない（回の無いシリーズを残さない）。
+-- 回の登録は admin_add_calendar_event_series_sessions に任せる（p_sessions の形式も同じ）。
+--
+-- 戻り値: 作成したシリーズのID
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.admin_create_calendar_event_series(text, text, jsonb);
+
+CREATE OR REPLACE FUNCTION public.admin_create_calendar_event_series(p_title text, p_description text, p_sessions jsonb)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_series_id uuid;
+BEGIN
+    IF NULLIF(btrim(p_title), '') IS NULL THEN
+        RAISE EXCEPTION 'title_required';
+    END IF;
+
+    INSERT INTO public.com_m_calendar_event_series (event_type, title, description)
+    VALUES ('GROUP_SESSION', btrim(p_title), NULLIF(btrim(p_description), ''))
+    RETURNING series_id INTO v_series_id;
+
+    PERFORM public.admin_add_calendar_event_series_sessions(v_series_id, p_sessions);
+
+    RETURN v_series_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_create_calendar_event_series(text, text, jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_create_calendar_event_series(text, text, jsonb) TO service_role;
+
+COMMIT;

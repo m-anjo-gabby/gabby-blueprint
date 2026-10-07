@@ -108,30 +108,34 @@ test.describe("アドミンのイベント登録", () => {
     }
   });
 
-  test("シリーズを作り、回をまとめて追加すると、シリーズに属する参加確認ありの回が登録される", async ({ browser }, testInfo) => {
+  test("シリーズの作成画面でシリーズと回をまとめて登録すると、シリーズに属する参加確認ありの回が登録される", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "アドミンの画面は desktop のみ");
     const admin = await createAdminClient();
     const seriesTitle = `${E2E_EVENT_TITLE_PREFIX}シリーズ アドミン登録 ${Date.now()}`;
     const { context, page } = await openAdminContext(browser);
     try {
       await page.goto("/calendar-events/series");
-      await page.getByRole("button", { name: "新規シリーズ" }).click();
-      const seriesDialog = page.getByRole("dialog");
-      await seriesDialog.getByLabel("シリーズ名").fill(seriesTitle);
-      await seriesDialog.getByLabel("説明").fill("E2E のシリーズ説明");
-      await seriesDialog.getByRole("button", { name: "作成する" }).click();
+      await page.getByRole("link", { name: "新規シリーズ" }).click();
+      // dev は初回の表示で画面のコンパイルを待つため長めに待つ
+      await page.waitForURL(/\/calendar-events\/series\/new$/, { timeout: 60_000 });
+      await page.getByLabel("シリーズ名").fill(seriesTitle);
+      await page.getByLabel("説明", { exact: true }).fill("E2E のシリーズ説明");
+      const rows = page.getByTestId("series-session-row");
+      await rows.nth(0).getByLabel("内容（タイトル）").fill("E2E Week 1");
+      await page.getByRole("button", { name: "回を追加（1週間後）" }).click();
+      await rows.nth(1).getByLabel("内容（タイトル）").fill("E2E Week 2");
+      // 参加URLを回ごとに設定する（オンにすると共通の欄が消え、各回に欄が出る）
+      await expect(page.getByLabel("参加URL（任意）")).toHaveCount(1);
+      await page.getByRole("switch", { name: "回ごとに参加URLを設定する" }).click();
+      await expect(rows.nth(0).getByLabel("参加URL（任意）")).toBeVisible();
+      await expect(page.getByLabel("参加URL（任意）")).toHaveCount(2);
+      await rows.nth(0).getByLabel("参加URL（任意）").fill("https://example.com/e2e-week-1");
+      await rows.nth(1).getByLabel("参加URL（任意）").fill("https://example.com/e2e-week-2");
+      await page.getByRole("button", { name: "シリーズを作成する（2回）" }).click();
 
-      // 作成後はシリーズの詳細へ移る（dev は初回の表示で画面のコンパイルを待つため長めに待つ）
+      // 作成後はシリーズの詳細へ移る
       await page.waitForURL(/\/calendar-events\/series\/[0-9a-f-]+$/, { timeout: 60_000 });
       await expect(page.getByRole("heading", { level: 1, name: seriesTitle })).toBeVisible();
-      await page.getByRole("button", { name: "回をまとめて追加" }).click();
-      const addDialog = page.getByRole("dialog");
-      const rows = addDialog.getByTestId("series-session-row");
-      await rows.nth(0).getByLabel("内容（タイトル）").fill("E2E Week 1");
-      await addDialog.getByRole("button", { name: "回を追加（1週間後）" }).click();
-      await rows.nth(1).getByLabel("内容（タイトル）").fill("E2E Week 2");
-      await addDialog.getByRole("button", { name: "2件を登録する" }).click();
-
       await expect(page.getByRole("cell", { name: "E2E Week 1" })).toBeVisible();
       await expect(page.getByRole("cell", { name: "E2E Week 2" })).toBeVisible();
 
@@ -144,19 +148,45 @@ test.describe("アドミンのイベント登録", () => {
       expect(await editDialog.locator("form").evaluate((form) => form.scrollTop)).toBe(0);
       await page.keyboard.press("Escape");
 
+      // シリーズの詳細から開いた参加者・アナウンス管理は、シリーズの詳細へ戻る
+      const seriesUrl = page.url();
+      await page.getByRole("row", { name: /E2E Week 1/ }).getByRole("link", { name: "参加者" }).click();
+      await page.waitForURL(/\/participants\?from=series$/, { timeout: 60_000 });
+      await page.getByRole("link", { name: `シリーズ「${seriesTitle}」に戻る` }).click();
+      await page.waitForURL(seriesUrl, { timeout: 60_000 });
+
+      // 「このシリーズを元に作成」は、各回の時刻を引き継ぎ、元の最後の回の1週間後から同じ間隔で日付を並べる（ここでは作成しない）
+      await page.getByRole("link", { name: "このシリーズを元に作成" }).click();
+      await page.waitForURL(/\/calendar-events\/series\/new\?from=/, { timeout: 60_000 });
+      await expect(page.getByLabel("シリーズ名")).toHaveValue(`${seriesTitle}（コピー）`);
+      const copiedRows = page.getByTestId("series-session-row");
+      await expect(copiedRows).toHaveCount(2);
+      const copiedDates = [
+        await copiedRows.nth(0).getByLabel("日付（日本時間）").inputValue(),
+        await copiedRows.nth(1).getByLabel("日付（日本時間）").inputValue(),
+      ];
+      await expect(copiedRows.nth(0).getByLabel("内容（タイトル）")).toHaveValue("");
+      // 元の回の参加URLが回ごとに違うため「回ごとに設定」で開き、各回のURLは引き継がない（空欄）
+      await expect(page.getByRole("switch", { name: "回ごとに参加URLを設定する" })).toBeChecked();
+      await expect(copiedRows.nth(0).getByLabel("参加URL（任意）")).toHaveValue("");
+
       const { data: series } = await admin.from("com_m_calendar_event_series").select("series_id").eq("title", seriesTitle).single();
       const { data: sessions } = await admin
         .from("com_m_calendar_event")
-        .select("title, rsvp_enabled, is_published, start_datetime")
+        .select("title, rsvp_enabled, is_published, start_datetime, location_url")
         .eq("series_id", series!.series_id)
         .order("start_datetime");
-      expect(sessions?.map((s) => [s.title, s.rsvp_enabled, s.is_published])).toEqual([
-        ["E2E Week 1", true, false],
-        ["E2E Week 2", true, false],
+      expect(sessions?.map((s) => [s.title, s.rsvp_enabled, s.is_published, s.location_url])).toEqual([
+        ["E2E Week 1", true, false, "https://example.com/e2e-week-1"],
+        ["E2E Week 2", true, false, "https://example.com/e2e-week-2"],
       ]);
       // 2回目は1回目の1週間後
       const [first, second] = sessions!;
       expect(new Date(second.start_datetime).getTime() - new Date(first.start_datetime).getTime()).toBe(7 * 24 * 60 * 60 * 1000);
+      // 元の1回目〜2回目の日付（日本時間）から、コピーは2週間後・3週間後
+      const jstDate = (iso: string, addDays: number) =>
+        new Date(new Date(iso).getTime() + 9 * 60 * 60 * 1000 + addDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      expect(copiedDates).toEqual([jstDate(first.start_datetime, 14), jstDate(first.start_datetime, 21)]);
     } finally {
       await context.close();
       // 登録した回（下書きのため生徒には表示されない）とシリーズを削除する
