@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
 import { loadTestEnv } from "./helpers/env.ts";
-import { ADMIN_BASE_URL, E2E_ENV, STUDENT_BASE_URL, USES_LOCAL_SERVER } from "./e2e/support/targets.ts";
+import { ADMIN_BASE_URL, COACH_BASE_URL, E2E_ENV, STUDENT_BASE_URL, USES_LOCAL_SERVER } from "./e2e/support/targets.ts";
 
 /**
  * E2E（Playwright）設定。規約は testing/e2e/CONVENTIONS.md を参照。
@@ -13,6 +13,8 @@ import { ADMIN_BASE_URL, E2E_ENV, STUDENT_BASE_URL, USES_LOCAL_SERVER } from "./
  *   起動していなければ Playwright が起動し、テスト終了時に停止する。
  * - admin の dev サーバー（`dev:ssl`、https://localhost:3001）も同じ扱い。アドミンの画面操作を含むテスト
  *   （ジャーニー）だけが使う（e2e/support/adminApp.ts）。
+ * - coach の dev サーバー（`dev:ssl`、https://localhost:3002）も同じ扱い。コーチの画面操作を含むテスト（e2e/tests/coach/ 等）
+ *   だけが使う（e2e/support/coachApp.ts）。
  *   ※ Next.js 16 は同一アプリの dev サーバーを二重起動できない（.next/dev/lock）ため、別ポートでの
  *     E2E専用サーバーは立てない。
  * - 出力はトークン・ノイズを抑えるため最小限（line reporter、dev サーバーの標準出力は捨てる）。
@@ -54,6 +56,7 @@ export default defineConfig({
   webServer: !USES_LOCAL_SERVER ? undefined : [
     { app: "student", url: BASE_URL },
     { app: "admin", url: ADMIN_BASE_URL },
+    { app: "coach", url: COACH_BASE_URL },
   ].map(({ app, url }) => ({
     command: `pnpm --filter gabby-blueprint-${app} run dev:ssl`,
     cwd: REPO_ROOT,

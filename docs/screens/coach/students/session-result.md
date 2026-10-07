@@ -25,8 +25,8 @@
 2. **Summaryセクション** — Session Info（ステータス・日時・相手名・ステータス注記）、
    Join / Leave Timeline（入退室ログ）
 3. **Homeworkセクション** — 宿題の投稿・チェックリスト・フォローアップコメント
-4. **Trainingセクション** — このセッション中に実施したLive Sprintの一覧（Dialog Practiceは
-   準備中）
+4. **Trainingセクション** — このセッション中に実施したLive Sprintの一覧と、セッションハブで開いた
+   ダイアログ教材の履歴（Dialog Practice History）
 5. **Otherセクション** — In-call Chat History（通話中のチャット履歴）
 
 ## Summary：表示要素・操作
@@ -89,6 +89,13 @@ Dialogue Practiceカード側の進捗（`com_t_dialogue_session_progress`）が
   ではなくコーチ起因のキャンセル扱いになり、生徒のチケットが返還される）の3つ
 
 詳細な操作画面（ボタン・ダイアログ）は[セッションハブ](session-detail.md)を参照。
+
+## 関連する業務フロー仕様書
+
+- [ライブセッションの宿題](../../../../testing/e2e/specs/homework/session-homework.md)
+  — 宿題の投稿・チェックリスト・追記のコメント・生徒への通知・異常系の一覧
+- [ライブセッションの実施・終了処理](../../../../testing/e2e/specs/session-lifecycle/session-completion.md)
+  — 結果（Summary）の元になる確定処理
 
 ## 実装参照（エンジニア向け）
 

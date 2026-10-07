@@ -8,6 +8,8 @@
     "e2e:android": "cross-env E2E_ANDROID=1 playwright test",
     "e2e:staging": "cross-env E2E_ENV=staging playwright test",
     "e2e:report": "playwright show-report e2e/.artifacts/report",
+    "e2e:preflight:coach": "tsx e2e/support/coachE2e.preflight.ts",
+    "e2e:preflight:coach:staging": "tsx e2e/support/coachE2e.preflight.ts --env=staging",
     "unit": "tsx --test unit/*.test.ts"
   },
   "dependencies": {

@@ -24,7 +24,7 @@ export interface AuthFixture {
 }
 
 export function newTag(prefix: string): string {
-  // `qa` で始まらないこと（固定アカウントと区別するため）
+  // `qa` で始まらないこと（固定アカウントと区別するため）。接頭辞は英小文字だけにする（残骸の確認 authFixtures.leftovers.ts が `e2e<英小文字><数字>-` で探す）
   return `e2e${prefix}${Date.now()}`;
 }
 
@@ -160,26 +160,80 @@ export async function grantLiveLicense(
 }
 
 /**
- * 使い捨ての顧客の生徒が使える単語帳を1つ用意する。共通公開を優先し、無ければ限定公開の教材（顧客専用の「[…]」で始まる名前を除く）を
- * 使い捨ての顧客に公開する（環境によって同じ教材の公開範囲が違うため。公開先は cleanupAuthFixture で消える）。
+ * 使い捨てのコーチを作る（コーチのプロフィールはユーザー作成時のトリガーで作られる）。
+ * 空き時間（`com_m_coach_availability`）は UTC の曜日（0=日〜6=土）・時刻で渡す。生徒の「専属コーチを探す」に表示され、申請を受けられる。
  */
-export async function prepareWordContent(fixture: AuthFixture): Promise<{ content_id: string; content_name: string }> {
-  const { data, error } = await fixture.admin
+export async function createDisposableCoach(
+  fixture: AuthFixture,
+  params: {
+    email: string;
+    password: string;
+    userName: string;
+    timezone: string;
+    availability: { dayOfWeek: number; startTime: string; endTime: string }[];
+  }
+): Promise<string> {
+  const { admin } = fixture;
+  const { data, error } = await admin.auth.admin.createUser({
+    email: params.email,
+    password: params.password,
+    email_confirm: true,
+    user_metadata: { user_name: params.userName, user_type: "2" },
+  });
+  if (error || !data.user) throw new Error(`コーチの作成に失敗しました: ${error?.message}`);
+  const coachId = data.user.id;
+  fixture.userIds.push(coachId);
+  await admin.from("com_m_user").update({ timezone: params.timezone }).eq("id", coachId);
+  if (params.availability.length > 0) {
+    const { error: availabilityError } = await admin.from("com_m_coach_availability").insert(
+      params.availability.map((a) => ({ coach_id: coachId, day_of_week: a.dayOfWeek, start_time: a.startTime, end_time: a.endTime }))
+    );
+    if (availabilityError) throw new Error(`空き時間の登録に失敗しました: ${availabilityError.message}`);
+  }
+  return coachId;
+}
+
+/**
+ * 使い捨てのユーザーが参加するチャットルームを消す（マッチングの成立時に生徒×コーチの1対1のルームが作られ、
+ * ユーザーの削除ではルーム自体は消えない）。cleanupAuthFixture の前に呼ぶ。
+ */
+export async function deleteFixtureChatRooms(fixture: AuthFixture | undefined): Promise<void> {
+  if (!fixture || fixture.userIds.length === 0) return;
+  const { data: rooms } = await fixture.admin.from("com_t_chat_room_user").select("room_id").in("user_id", fixture.userIds);
+  const roomIds = Array.from(new Set((rooms ?? []).map((r) => r.room_id)));
+  if (roomIds.length > 0) await fixture.admin.from("com_t_chat_room").delete().in("room_id", roomIds);
+}
+
+/**
+ * 使い捨ての顧客の生徒が使える教材（種別: 0=単語帳 / 2=スプリント / 3=ダイアログ）を1つ用意する。共通公開を優先し、無ければ限定公開の教材
+ * （顧客専用の「[…]」で始まる名前を除く）を使い捨ての顧客に公開する（環境によって同じ教材の公開範囲が違うため。公開先は cleanupAuthFixture で消える）。
+ * `contentIds` を渡すと、その中から選ぶ（例: コーチ用スライドのあるダイアログ教材だけ）。
+ */
+export async function prepareContent(
+  fixture: AuthFixture,
+  contentType: 0 | 2 | 3,
+  contentIds?: string[]
+): Promise<{ content_id: string; content_name: string }> {
+  let query = fixture.admin
     .from("com_m_contents")
     .select("content_id, content_name, content_scope")
-    .eq("content_type", 0)
+    .eq("content_type", contentType)
     .in("content_scope", [0, 1])
     .eq("delete_flg", "0")
-    .not("content_name", "like", "[%")
-    .order("content_scope")
-    .limit(1)
-    .single();
-  if (error || !data) throw new Error(`単語帳が見つかりません: ${error?.message}`);
+    .not("content_name", "like", "[%");
+  if (contentIds) query = query.in("content_id", contentIds);
+  const { data, error } = await query.order("content_scope").order("content_name").limit(1).single();
+  if (error || !data) throw new Error(`教材（種別 ${contentType}）が見つかりません: ${error?.message}`);
   if (data.content_scope === 1) {
     const { error: accessError } = await fixture.admin.from("com_m_contents_access").insert({ client_id: fixture.clientId, content_id: data.content_id });
-    if (accessError) throw new Error(`単語帳の公開先の追加に失敗しました: ${accessError.message}`);
+    if (accessError) throw new Error(`教材の公開先の追加に失敗しました: ${accessError.message}`);
   }
   return { content_id: data.content_id, content_name: data.content_name };
+}
+
+/** 使い捨ての顧客の生徒が使える単語帳を1つ用意する（prepareContent） */
+export async function prepareWordContent(fixture: AuthFixture): Promise<{ content_id: string; content_name: string }> {
+  return prepareContent(fixture, 0);
 }
 
 /** 招待（com_t_invitation）を直接作る。contractId を渡すと、本登録時にその契約の初期ライセンスが付く。戻り値は招待トークン */
@@ -255,6 +309,8 @@ export async function cleanupAuthFixture(fixture: AuthFixture | undefined): Prom
 async function deleteUsers(fixture: AuthFixture): Promise<void> {
   const { admin } = fixture;
   for (const id of fixture.userIds) {
+    // コーチが割り当てたダイアログ教材（進捗・セッションでの教材オープンの記録も連動して消える）
+    await admin.from("com_t_dialogue_assignment").delete().eq("student_id", id);
     // 担当枠を作ったテストでは、トリガーで担当関係が作られる（固定コーチとの関係も残さない）
     await admin.from("com_m_coach_student_relationship").delete().eq("student_id", id);
     await admin.from("com_t_user_role").delete().eq("user_id", id);

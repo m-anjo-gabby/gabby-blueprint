@@ -4,7 +4,9 @@ import {
   DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
+  createDisposableCoach,
   createDisposableStudent,
+  deleteFixtureChatRooms,
   grantLiveLicense,
   type AuthFixture,
 } from "../../support/authFixtures.ts";
@@ -29,20 +31,15 @@ let coachClient: SupabaseClient | undefined;
 test.afterEach(async () => {
   if (coachClient) await signOutRole(coachClient);
   coachClient = undefined;
-  if (fixture) {
-    // 成立時にコーチと生徒の1対1のチャットルームが作られる（ユーザーの削除ではルーム自体は消えない）
-    const { data: rooms } = await fixture.admin
-      .from("com_t_chat_room_user").select("room_id").in("user_id", fixture.userIds);
-    const roomIds = Array.from(new Set((rooms ?? []).map((r) => r.room_id)));
-    if (roomIds.length > 0) await fixture.admin.from("com_t_chat_room").delete().in("room_id", roomIds);
-  }
+  // 成立時にコーチと生徒の1対1のチャットルームが作られる（ユーザーの削除ではルーム自体は消えない）
+  await deleteFixtureChatRooms(fixture);
   await cleanupAuthFixture(fixture);
   fixture = undefined;
 });
 
 test("申請した生徒の時刻で全回が予約される（コーチの空き時間は UTC、コーチは夏時間のある地域）", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "使い捨てデータを作るため desktop だけで実行する");
-  fixture = await createAuthFixture("e2e-match-tz");
+  fixture = await createAuthFixture("matchtz");
   const f = fixture;
 
   // 生徒（日本時間）: 週1回のライブ付き契約（90日。北米の夏時間の切り替えをまたぎ得る）
@@ -59,20 +56,13 @@ test("申請した生徒の時刻で全回が予約される（コーチの空�
   // コーチ（ニューヨーク）: 空き時間は UTC の金曜 10:00〜13:00（日本時間 金曜 19:00〜22:00）
   const coachEmail = `${f.tag}-coach@${DISPOSABLE_EMAIL_DOMAIN}`;
   const coachName = `E2Eコーチ ${f.tag}`;
-  const { data: coachUser, error: coachError } = await f.admin.auth.admin.createUser({
+  await createDisposableCoach(f, {
     email: coachEmail,
     password: PASSWORD,
-    email_confirm: true,
-    user_metadata: { user_name: coachName, user_type: "2" },
+    userName: coachName,
+    timezone: "America/New_York",
+    availability: [{ dayOfWeek: 5, startTime: "10:00:00", endTime: "13:00:00" }],
   });
-  if (coachError || !coachUser.user) throw new Error(`コーチの作成に失敗しました: ${coachError?.message}`);
-  const coachId = coachUser.user.id;
-  f.userIds.push(coachId);
-  await f.admin.from("com_m_user").update({ timezone: "America/New_York" }).eq("id", coachId);
-  const { error: availabilityError } = await f.admin.from("com_m_coach_availability").insert({
-    coach_id: coachId, day_of_week: 5, start_time: "10:00:00", end_time: "13:00:00",
-  });
-  if (availabilityError) throw new Error(availabilityError.message);
 
   // 生徒: 画面から 金曜 20:00（日本時間）を申請する
   await page.goto("/login");

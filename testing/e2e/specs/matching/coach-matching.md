@@ -73,7 +73,8 @@ status 値の意味: [_GLOSSARY.md](../_GLOSSARY.md#com_t_matching_requeststatus
 |---|---|---|
 | 高 | 申請した生徒の時刻で全回が予約される | 実装済み: `e2e/tests/matching/matching-request-timezone.spec.ts`（#11 の生徒側。コーチの承認は本人のログインで RPC） |
 | 高 | 現在の契約・次の契約の切替 | 実装済み: `e2e/tests/matching/coach-matching-contracts.spec.ts` |
+| 高 | コーチの画面での承認・否認 | 実装済み: `e2e/tests/coach/matching-requests.spec.ts`（4a・4b・#10。承認でスケジュールとセッションが作られ、否認は理由つきで履歴に出る。生徒の申請は本人のログインで直接登録） |
 | 中 | 否認 → 前回否認理由の表示 → 同じ枠へ再申請 | #4b・#7 の解除 |
 | 中 | 承認待ちの取消 | #4c |
 | 中 | 重なる枠の申請・承認が拒否される | #6（データを直接作って申請・承認を呼ぶ） |
-| 低 | コーチの空き時間の見直し通知 | 対象・14日の間隔・保存で既読（コーチアプリは E2E 未導入のため RPC・データで確認） |
+| 低 | コーチの空き時間の見直し通知 | 対象・14日の間隔・保存で既読（pg_cron の処理は RPC・データで確認し、保存・「No changes needed」はコーチの画面で確認） |
