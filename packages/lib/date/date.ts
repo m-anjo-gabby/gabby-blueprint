@@ -45,9 +45,8 @@ export const formatDateByZone = (
       day: '2-digit',
       timeZone: zoneForDate(dateString, timeZone),
     }).format(date).replace(/\//g, '-');
-  } catch (e) {
+  } catch {
     // 不正なタイムゾーンが渡された場合のフォールバック
-    console.error("Invalid timezone:", timeZone);
     return formatDateByZone(dateString, 'Asia/Tokyo');
   }
 };

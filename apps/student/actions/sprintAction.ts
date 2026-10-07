@@ -118,10 +118,6 @@ export async function getSprintQuestionsAction(
 ): Promise<SprintQuestionResponse> {
   const ctx = await getLogContext();
   
-  logger.info("sprint:fetch_start", "getSprintQuestionsAction start", {
-    ...ctx,
-    payload: { content_id, question_type, difficulty_level, mode }
-  });
 
   try {
     const supabase = await createServerClient();
@@ -202,7 +198,7 @@ export async function getSprintQuestionsAction(
       finalData = targetGroupIds.flatMap(groupId => groupMap.get(groupId) || []);
     }
 
-    logger.info("sprint:fetch_success", "getSprintQuestionsAction success", {
+    logger.debug("sprint:fetch_success", "getSprintQuestionsAction success", {
       ...ctx,
       payload: { mode, count: finalData.length }
     });
@@ -210,9 +206,9 @@ export async function getSprintQuestionsAction(
     return { success: true, data: finalData };
 
   } catch (error: any) {
-    logger.error("sprint:fetch_error", "getSprintQuestionsAction error", {
+    logger.error("sprint:fetch_failed", "getSprintQuestionsAction error", {
       ...ctx,
-      payload: { error: error.message }
+      err: error,
     });
 
     return {
@@ -230,10 +226,6 @@ export async function createSprintScoreAction(
   input: CreateSprintScoreInput
 ): Promise<{ success: boolean; data: { self_sprint_id: string } | null; error?: string }> {
   const ctx = await getLogContext();
-  logger.info("sprint:create_score_start", "createSprintScoreAction start", { 
-    ...ctx, 
-    payload: { ...input, history: `[Array(${input.history.length})]` } 
-  });
 
   try {
     const supabase = await createServerClient();
@@ -276,15 +268,15 @@ export async function createSprintScoreAction(
 
     logger.info("sprint:create_score_success", "Successfully saved sprint result", {
       ...ctx,
-      self_sprint_id: data.self_sprint_id
+      payload: { self_sprint_id: data.self_sprint_id },
     });
 
     return { success: true, data: { self_sprint_id: data.self_sprint_id } };
 
   } catch (error: any) {
-    logger.error("sprint:create_score_error", "Failed to create sprint score", {
+    logger.error("sprint:create_score_failed", "Failed to create sprint score", {
       ...ctx,
-      payload: { error: error.message }
+      err: error,
     });
     return { success: false, data: null, error: error.message || "Failed to save sprint results" };
   }
@@ -297,7 +289,6 @@ export async function getSprintResultAction(
   self_sprint_id: string
 ): Promise<SprintResultResponse> {
   const ctx = await getLogContext();
-  logger.info("sprint:get_result_start", "getSprintResultAction start", { ...ctx, self_sprint_id });
 
   try {
     const supabase = await createServerClient();
@@ -380,9 +371,9 @@ export async function getSprintResultAction(
       .map(hist => rawQuestions.find(q => q.question_id === hist.question_id))
       .filter((q): q is any => !!q);
 
-    logger.info("sprint:get_result_success", "Successfully recovered sprint session playlist order", {
+    logger.debug("sprint:get_result_success", "Successfully recovered sprint session playlist order", {
       ...ctx,
-      total_recovered: sortedQuestions.length
+      payload: { total_recovered: sortedQuestions.length },
     });
 
     // 🆕 戻り値の data オブジェクトに計算済みの値を載せる
@@ -398,9 +389,9 @@ export async function getSprintResultAction(
     };
 
   } catch (error: any) {
-    logger.error("sprint:get_result_error", "Failed to recover sprint result", {
+    logger.error("sprint:get_result_failed", "Failed to recover sprint result", {
       ...ctx,
-      payload: { error: error.message }
+      err: error,
     });
     return { success: false, data: null, error: error.message || "Failed to load session results" };
   }
@@ -412,7 +403,6 @@ export async function getSprintResultAction(
  */
 export async function getUserSprintHistoryAction(yearMonth: string) {
   const ctx = await getLogContext();
-  logger.info("sprint:get_history_start", "getUserSprintHistoryAction start", { ...ctx, yearMonth });
 
   try {
     const supabase = await createServerClient();
@@ -481,10 +471,9 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
 
     if (drillsError) throw drillsError;
 
-    logger.info("sprint:get_history_success", "Successfully fetched sprint and drill history", {
+    logger.debug("sprint:get_history_success", "Successfully fetched sprint and drill history", {
       ...ctx,
-      sessionsCount: sessionsInMonth.length,
-      drillsCount: drillsData?.length || 0
+      payload: { sessionsCount: sessionsInMonth.length, drillsCount: drillsData?.length || 0 },
     });
 
     return { 
@@ -496,9 +485,9 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
     };
 
   } catch (error: any) {
-    logger.error("sprint:get_history_error", "Failed to fetch sprint history", {
+    logger.error("sprint:get_history_failed", "Failed to fetch sprint history", {
       ...ctx,
-      payload: { error: error.message }
+      err: error,
     });
     return { 
       success: false, 
@@ -540,9 +529,9 @@ export async function getLastSprintSessionAction(contentId?: string) {
     return { success: true, data };
 
   } catch (error: any) {
-    logger.error("sprint:get_last_session_error", "Failed to fetch last session info", {
+    logger.error("sprint:get_last_session_failed", "Failed to fetch last session info", {
       ...ctx,
-      payload: { error: error.message }
+      err: error,
     });
     return { success: false, data: null, error: error.message };
   }
@@ -571,9 +560,9 @@ export async function getSprintProgressAction() {
     return { success: true, data };
 
   } catch (error: any) {
-    logger.error("sprint:get_progress_error", "Failed to fetch sprint progress", {
+    logger.error("sprint:get_progress_failed", "Failed to fetch sprint progress", {
       ...ctx,
-      payload: { error: error.message }
+      err: error,
     });
     return { success: false, data: null, error: error.message };
   }
@@ -624,7 +613,7 @@ export async function reportSprintProgress(
     logger.error(
       "sprint:report_progress_failed",
       err instanceof Error ? err.message : "Unknown error",
-      { ...ctx, payload: { contentId, questionCount, assessmentCount, questionType } }
+      { ...ctx, err, payload: { contentId, questionCount, assessmentCount, questionType } }
     );
   }
 }
@@ -654,7 +643,7 @@ export async function getContentAction(contentId: string) {
     const availableLevels: SprintAvailableLevels | null = levelsByContent ? (levelsByContent.get(contentId) ?? {}) : null;
     return { success: true, data, availableLevels };
   } catch (error: any) {
-    logger.error("sprint:get_content_failed", error.message, ctx);
+    logger.error("sprint:get_content_failed", error.message, { ...ctx, err: error });
     return { success: false, error: error.message };
   }
 }

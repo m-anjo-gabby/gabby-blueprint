@@ -67,13 +67,13 @@ export async function getKnowledgeEntries(
     const { data, count, error } = await query;
 
     if (error) {
-      logger.error('ai_kb:list_failed', error.message, { ...ctx, payload: { page, limit, sourceType, searchQuery } });
+      logger.error('aiKb:list_failed', error.message, { ...ctx, err: error, payload: { page, limit, sourceType, searchQuery } });
       return { entries: [], totalCount: 0 };
     }
 
     return { entries: data as KnowledgeEntry[], totalCount: count || 0 };
   } catch (err) {
-    logger.error('ai_kb:list_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, payload: { page, limit, sourceType, searchQuery } });
+    logger.error('aiKb:list_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { page, limit, sourceType, searchQuery } });
     return { entries: [], totalCount: 0 };
   }
 }
@@ -102,7 +102,7 @@ export async function saveKnowledgeEntryAction(payload: {
       createdBy: ctx.userId && ctx.userId !== 'system' ? ctx.userId : undefined,
     });
 
-    logger.info('ai_kb:save_success', `Knowledge entry saved: ${entry.title}`, {
+    logger.info('aiKb:save_success', `Knowledge entry saved: ${entry.title}`, {
       ...ctx,
       payload: { knowledgeId: entry.knowledgeId, sourceType: entry.sourceType },
     });
@@ -110,7 +110,7 @@ export async function saveKnowledgeEntryAction(payload: {
     revalidatePath(TOOL_PATH);
     return { success: true, message: '保存しました', data: entry };
   } catch (err) {
-    logger.error('ai_kb:save_failed', err instanceof Error ? err.message : 'Unknown', { ...ctx, payload });
+    logger.error('aiKb:save_failed', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload });
     return { success: false, message: '保存に失敗しました' };
   }
 }
@@ -123,12 +123,12 @@ export async function deleteKnowledgeEntryAction(knowledgeId: string) {
   try {
     await deleteKnowledgeEntry(knowledgeId);
 
-    logger.info('ai_kb:delete_success', `Knowledge entry deleted: ${knowledgeId}`, { ...ctx, payload: { knowledgeId } });
+    logger.info('aiKb:delete_success', `Knowledge entry deleted: ${knowledgeId}`, { ...ctx, payload: { knowledgeId } });
 
     revalidatePath(TOOL_PATH);
     return { success: true, message: '削除しました' };
   } catch (err) {
-    logger.error('ai_kb:delete_failed', err instanceof Error ? err.message : 'Unknown', { ...ctx, payload: { knowledgeId } });
+    logger.error('aiKb:delete_failed', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { knowledgeId } });
     return { success: false, message: '削除に失敗しました' };
   }
 }

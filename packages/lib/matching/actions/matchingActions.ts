@@ -55,7 +55,7 @@ export async function getMyLiveSessionTicketsCore(): Promise<
       .eq('user_id', user.id);
 
     if (ticketError) {
-      logger.error('matching:get_my_tickets_failed', ticketError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_my_tickets_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!tickets || tickets.length === 0) {
@@ -69,7 +69,7 @@ export async function getMyLiveSessionTicketsCore(): Promise<
       .in('license_id', licenseIds);
 
     if (licenseError) {
-      logger.error('matching:get_my_tickets_license_failed', licenseError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_my_tickets_license_failed', licenseError.message, { ...ctx, err: licenseError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -91,7 +91,7 @@ export async function getMyLiveSessionTicketsCore(): Promise<
 
     return { success: true, tickets: activeTickets };
   } catch (err) {
-    logger.error('matching:get_my_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_my_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -115,7 +115,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
       .eq('user_id', user.id);
 
     if (ticketError) {
-      logger.error('matching:get_my_contracts_ticket_failed', ticketError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_my_contracts_ticket_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!tickets || tickets.length === 0) {
@@ -128,7 +128,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
       .in('license_id', tickets.map((t) => t.license_id));
 
     if (licenseError) {
-      logger.error('matching:get_my_contracts_license_failed', licenseError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_my_contracts_license_failed', licenseError.message, { ...ctx, err: licenseError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -157,7 +157,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
 
     return { success: true, contracts };
   } catch (err) {
-    logger.error('matching:get_my_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_my_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -183,7 +183,7 @@ export async function getMySlotStatusCore(
       .maybeSingle();
 
     if (ticketError) {
-      logger.error('matching:get_slot_status_ticket_failed', ticketError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_slot_status_ticket_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!ticket) {
@@ -197,7 +197,7 @@ export async function getMySlotStatusCore(
       .eq('status', 1);
 
     if (scheduleError) {
-      logger.error('matching:get_slot_status_schedule_failed', scheduleError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_slot_status_schedule_failed', scheduleError.message, { ...ctx, err: scheduleError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -208,7 +208,7 @@ export async function getMySlotStatusCore(
       .order('insert_date', { ascending: false });
 
     if (requestError) {
-      logger.error('matching:get_slot_status_request_failed', requestError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_slot_status_request_failed', requestError.message, { ...ctx, err: requestError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -291,7 +291,7 @@ export async function getMySlotStatusCore(
 
     return { success: true, slots };
   } catch (err) {
-    logger.error('matching:get_slot_status_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_slot_status_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -318,7 +318,7 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
       .maybeSingle();
 
     if (ticketError) {
-      logger.error('matching:get_overview_ticket_failed', ticketError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_overview_ticket_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!ticket) return { success: false, errorCode: 'not_eligible' };
@@ -331,7 +331,7 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
 
     if (!slotResult.success) return slotResult;
     if (sessionError || scheduleError) {
-      logger.error('matching:get_overview_failed', sessionError?.message ?? scheduleError?.message ?? 'unknown', { ...ctx, userId: user.id });
+      logger.error('matching:get_overview_failed', sessionError?.message ?? scheduleError?.message ?? 'unknown', { ...ctx, err: sessionError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -368,7 +368,7 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
       },
     };
   } catch (err) {
-    logger.error('matching:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -395,7 +395,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
       .eq('status', 1);
 
     if (scheduleError) {
-      logger.error('matching:get_my_bookable_tickets_schedule_failed', scheduleError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_my_bookable_tickets_schedule_failed', scheduleError.message, { ...ctx, err: scheduleError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!schedules || schedules.length === 0) {
@@ -412,7 +412,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
       const { error } = shortfallResults[index];
       const data = shortfallResults[index].data as ScheduleShortfallRow | null;
       if (error || !data) {
-        logger.error('matching:get_my_bookable_tickets_rpc_failed', error?.message ?? 'No row returned', { ...ctx, userId: user.id, payload: { scheduleId: schedules[index].schedule_id } });
+        logger.error('matching:get_my_bookable_tickets_rpc_failed', error?.message ?? 'No row returned', { ...ctx, err: error, userId: user.id, payload: { scheduleId: schedules[index].schedule_id } });
         return false;
       }
       return data.shortfall > 0;
@@ -434,7 +434,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
       .in('id', coachIds);
 
     if (coachError) {
-      logger.error('matching:get_my_bookable_tickets_join_failed', coachError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_my_bookable_tickets_join_failed', coachError.message, { ...ctx, err: coachError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -455,7 +455,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
 
     return { success: true, slots };
   } catch (err) {
-    logger.error('matching:get_my_bookable_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_my_bookable_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -478,7 +478,7 @@ export async function getCoachBrowseListCore(): Promise<
     const { data: matchableCoaches, error: matchableError } = await supabase.rpc('get_matchable_coach_ids');
 
     if (matchableError) {
-      logger.error('matching:get_coach_list_matchable_failed', matchableError.message, ctx);
+      logger.error('matching:get_coach_list_matchable_failed', matchableError.message, { ...ctx, err: matchableError });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!matchableCoaches || matchableCoaches.length === 0) {
@@ -492,7 +492,7 @@ export async function getCoachBrowseListCore(): Promise<
       .eq('delete_flg', '0');
 
     if (profileError) {
-      logger.error('matching:get_coach_list_profile_failed', profileError.message, ctx);
+      logger.error('matching:get_coach_list_profile_failed', profileError.message, { ...ctx, err: profileError });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!profiles || profiles.length === 0) {
@@ -521,7 +521,7 @@ export async function getCoachBrowseListCore(): Promise<
       logger.error(
         'matching:get_coach_list_join_failed',
         userError?.message ?? availabilityError?.message ?? unavailableError?.message ?? 'unknown',
-        ctx
+        { ...ctx, err: userError }
       );
       return { success: false, errorCode: 'unexpected_error' };
     }
@@ -574,7 +574,7 @@ export async function getCoachBrowseListCore(): Promise<
 
     return { success: true, coaches };
   } catch (err) {
-    logger.error('matching:get_coach_list_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_coach_list_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -606,7 +606,7 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
       .maybeSingle();
 
     if (ticketError) {
-      logger.error('matching:create_request_ticket_check_failed', ticketError.message, { ...ctx, userId: user.id });
+      logger.error('matching:create_request_ticket_check_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!ticket || input.slot_no > ticket.weekly_frequency) {
@@ -620,7 +620,7 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
       .maybeSingle();
 
     if (matchableError) {
-      logger.error('matching:create_request_matchable_check_failed', matchableError.message, { ...ctx, userId: user.id });
+      logger.error('matching:create_request_matchable_check_failed', matchableError.message, { ...ctx, err: matchableError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!matchableCoach) {
@@ -635,7 +635,7 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
     ]);
 
     if (studentError || licenseError || !license) {
-      logger.error('matching:create_request_profile_check_failed', studentError?.message ?? licenseError?.message ?? 'license not found', { ...ctx, userId: user.id });
+      logger.error('matching:create_request_profile_check_failed', studentError?.message ?? licenseError?.message ?? 'license not found', { ...ctx, err: studentError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     const studentTimezone = student?.timezone ?? 'Asia/Tokyo';
@@ -682,7 +682,7 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
     });
 
     if (conflictError) {
-      logger.error('matching:create_request_conflict_check_failed', conflictError.message, { ...ctx, userId: user.id });
+      logger.error('matching:create_request_conflict_check_failed', conflictError.message, { ...ctx, err: conflictError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (hasConflict) {
@@ -709,14 +709,14 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
       if (error?.code === '23505') {
         return { success: false, errorCode: 'slot_already_requested' };
       }
-      logger.error('matching:create_request_insert_failed', error?.message ?? 'No row inserted', { ...ctx, userId: user.id });
+      logger.error('matching:create_request_insert_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'db_insert_failed' };
     }
 
     logger.info('matching:create_request_success', 'Matching request created', { ...ctx, userId: user.id });
     return { success: true, request: data };
   } catch (err) {
-    logger.error('matching:create_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:create_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -742,7 +742,7 @@ export async function cancelMatchingRequestCore(requestId: string): Promise<Canc
       .maybeSingle();
 
     if (error) {
-      logger.error('matching:cancel_request_failed', error.message, { ...ctx, userId: user.id, payload: { requestId } });
+      logger.error('matching:cancel_request_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { requestId } });
       return { success: false, errorCode: 'db_update_failed' };
     }
     if (!data) {
@@ -752,7 +752,7 @@ export async function cancelMatchingRequestCore(requestId: string): Promise<Canc
     logger.info('matching:cancel_request_success', 'Matching request cancelled', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('matching:cancel_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:cancel_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -815,13 +815,13 @@ export async function getPendingIncomingRequestsAsCoachCore(): Promise<
       .order('insert_date', { ascending: false });
 
     if (error) {
-      logger.error('matching:get_pending_incoming_requests_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_pending_incoming_requests_failed', error.message, { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, requests: await attachRequestDetails(supabase, requests ?? []) };
   } catch (err) {
-    logger.error('matching:get_pending_incoming_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_pending_incoming_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -856,7 +856,7 @@ export async function getMatchingRequestHistoryPageAsCoachCore(
 
     const { data: rows, error } = await query;
     if (error) {
-      logger.error('matching:get_request_history_page_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_request_history_page_failed', error.message, { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -866,7 +866,7 @@ export async function getMatchingRequestHistoryPageAsCoachCore(
 
     return { success: true, items: await attachRequestDetails(supabase, page), nextCursor };
   } catch (err) {
-    logger.error('matching:get_request_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_request_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -887,7 +887,7 @@ export async function approveMatchingRequestCore(requestId: string): Promise<App
     const { data, error } = await supabase.rpc('approve_matching_request', { p_request_id: requestId });
 
     if (error || !data) {
-      logger.error('matching:approve_request_failed', error?.message ?? 'No schedule_id returned', { ...ctx, userId: user.id, payload: { requestId } });
+      logger.error('matching:approve_request_failed', error?.message ?? 'No schedule_id returned', { ...ctx, err: error, userId: user.id, payload: { requestId } });
       // コーチの既存スケジュールとの重複はcheck_coach_schedule_conflict()経由でapprove_matching_request()内から
       // RAISE EXCEPTIONされる（詳細はfunction/approve_matching_request.sqlを参照）。個別調整が必要な旨を
       // 区別して伝えるため、専用のerrorCodeにマッピングする。
@@ -900,7 +900,7 @@ export async function approveMatchingRequestCore(requestId: string): Promise<App
     logger.info('matching:approve_request_success', 'Matching request approved', { ...ctx, userId: user.id });
     return { success: true, scheduleId: data as string };
   } catch (err) {
-    logger.error('matching:approve_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:approve_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -924,14 +924,14 @@ export async function rejectMatchingRequestCore(requestId: string, reason: strin
     const { error } = await supabase.rpc('reject_matching_request', { p_request_id: requestId, p_reason: reason.trim() });
 
     if (error) {
-      logger.error('matching:reject_request_failed', error.message, { ...ctx, userId: user.id, payload: { requestId } });
+      logger.error('matching:reject_request_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { requestId } });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
     logger.info('matching:reject_request_success', 'Matching request rejected', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('matching:reject_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:reject_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

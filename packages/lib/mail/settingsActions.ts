@@ -23,7 +23,7 @@ export async function getMyMailSettingsCore(): Promise<MailSettings | null> {
     const supabase = await createServerClient();
     const { data, error } = await supabase.from('com_t_user_mail_setting').select('category, enabled').eq('user_id', user.id);
     if (error) {
-      logger.error('mail:get_settings_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('mail:get_settings_failed', error.message, { ...ctx, err: error, userId: user.id });
       return null;
     }
     const settings: MailSettings = {};
@@ -32,7 +32,7 @@ export async function getMyMailSettingsCore(): Promise<MailSettings | null> {
     }
     return settings;
   } catch (err) {
-    logger.error('mail:get_settings_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('mail:get_settings_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return null;
   }
 }
@@ -56,13 +56,13 @@ export async function updateMyMailSettingCore(
         { onConflict: 'user_id,category' }
       );
     if (error) {
-      logger.error('mail:update_setting_failed', error.message, { ...ctx, userId: user.id, payload: { category, enabled } });
+      logger.error('mail:update_setting_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { category, enabled } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     logger.info('mail:update_setting_success', 'Updated mail setting', { ...ctx, userId: user.id, payload: { category, enabled } });
     return { success: true };
   } catch (err) {
-    logger.error('mail:update_setting_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('mail:update_setting_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

@@ -22,13 +22,13 @@ export async function getCountryListCore(): Promise<GetCountryListResult> {
       .order('sort_no', { ascending: true });
 
     if (error) {
-      logger.error('country:get_country_list_failed', error.message, ctx);
+      logger.error('country:get_country_list_failed', error.message, { ...ctx, err: error });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, countries: data ?? [] };
   } catch (err) {
-    logger.error('country:get_country_list_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('country:get_country_list_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

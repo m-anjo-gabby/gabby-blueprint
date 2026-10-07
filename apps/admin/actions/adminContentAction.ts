@@ -59,7 +59,7 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
     const { data, count, error } = await query;
 
     if (error) {
-      logger.error('content:get_contents_failed', error.message, { ...ctx, payload: { page, limit, searchQuery, contentType } });
+      logger.error('content:get_contents_failed', error.message, { ...ctx, err: error, payload: { page, limit, searchQuery, contentType } });
       throw new Error(error.message);
     }
 
@@ -74,7 +74,7 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('content:get_contents_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, limit, searchQuery, contentType } });
+    logger.error('content:get_contents_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { page, limit, searchQuery, contentType } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -95,13 +95,13 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
       .single();
 
     if (error) {
-      logger.error('content:get_content_by_id_failed', error.message, { ...ctx, payload: { contentId } });
+      logger.error('content:get_content_by_id_failed', error.message, { ...ctx, err: error, payload: { contentId } });
       return null;
     }
 
     return data as ContentRecord;
   } catch (err) {
-    logger.error('content:get_content_by_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    logger.error('content:get_content_by_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId } });
     return null;
   }
 }
@@ -166,7 +166,7 @@ export async function upsertContent(payload: Partial<Content>) {
     const { data, error } = await query;
 
     if (error) {
-      logger.error('content:upsert_content_failed', error.message, { ...ctx, payload });
+      logger.error('content:upsert_content_failed', error.message, { ...ctx, err: error, payload });
       return { success: false, message: error.message };
     }
 
@@ -179,7 +179,7 @@ export async function upsertContent(payload: Partial<Content>) {
     revalidatePath('/contents');
     return { success: true, data: savedContent };
   } catch (error) {
-    logger.error('content:upsert_content_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload });
+    logger.error('content:upsert_content_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -201,7 +201,7 @@ export async function deleteContent(contentId: string) {
       .eq('content_id', contentId);
 
     if (error) {
-      logger.error('content:delete_content_failed', error.message, { ...ctx, payload: { contentId } });
+      logger.error('content:delete_content_failed', error.message, { ...ctx, err: error, payload: { contentId } });
       return { success: false, message: error.message };
     }
 
@@ -213,7 +213,7 @@ export async function deleteContent(contentId: string) {
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:delete_content_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    logger.error('content:delete_content_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -233,7 +233,7 @@ export async function getTagAssignmentData(contentId: string) {
       .order('seq_no', { ascending: true });
 
     if (tagError) {
-      logger.error('content:get_tag_assignment_all_tags_failed', tagError.message, { ...ctx, payload: { contentId } });
+      logger.error('content:get_tag_assignment_all_tags_failed', tagError.message, { ...ctx, err: tagError, payload: { contentId } });
       throw new Error(tagError.message);
     }
 
@@ -243,7 +243,7 @@ export async function getTagAssignmentData(contentId: string) {
       .eq('content_id', contentId);
 
     if (relError) {
-      logger.error('content:get_tag_assignment_rel_data_failed', relError.message, { ...ctx, payload: { contentId } });
+      logger.error('content:get_tag_assignment_rel_data_failed', relError.message, { ...ctx, err: relError, payload: { contentId } });
       throw new Error(relError.message);
     }
 
@@ -261,7 +261,7 @@ export async function getTagAssignmentData(contentId: string) {
 
     return { assignedTags, unassignedTags };
   } catch (error) {
-    logger.error('content:get_tag_assignment_data_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    logger.error('content:get_tag_assignment_data_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -282,7 +282,7 @@ export async function assignTag(contentId: string, tagId: string) {
       });
 
     if (error) {
-      logger.error('content:assign_tag_failed', error.message, { ...ctx, payload: { contentId, tagId } });
+      logger.error('content:assign_tag_failed', error.message, { ...ctx, err: error, payload: { contentId, tagId } });
       return { success: false, message: error.message };
     }
 
@@ -293,7 +293,7 @@ export async function assignTag(contentId: string, tagId: string) {
 
     return { success: true };
   } catch (error) {
-    logger.error('content:assign_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId, tagId } });
+    logger.error('content:assign_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId, tagId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -313,7 +313,7 @@ export async function removeTag(contentId: string, tagId: string) {
       .eq('tag_id', tagId);
 
     if (error) {
-      logger.error('content:remove_tag_failed', error.message, { ...ctx, payload: { contentId, tagId } });
+      logger.error('content:remove_tag_failed', error.message, { ...ctx, err: error, payload: { contentId, tagId } });
       return { success: false, message: error.message };
     }
 
@@ -324,7 +324,7 @@ export async function removeTag(contentId: string, tagId: string) {
 
     return { success: true };
   } catch (error) {
-    logger.error('content:remove_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId, tagId } });
+    logger.error('content:remove_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId, tagId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -344,7 +344,7 @@ export async function getContentAccessData(contentId: string) {
       .order('client_name', { ascending: true });
 
     if (clientError) {
-      logger.error('content:get_content_access_all_clients_failed', clientError.message, { ...ctx, payload: { contentId } });
+      logger.error('content:get_content_access_all_clients_failed', clientError.message, { ...ctx, err: clientError, payload: { contentId } });
       throw new Error(clientError.message);
     }
 
@@ -355,7 +355,7 @@ export async function getContentAccessData(contentId: string) {
       .eq('delete_flg', '0');
 
     if (accessError) {
-      logger.error('content:get_content_access_data_failed', accessError.message, { ...ctx, payload: { contentId } });
+      logger.error('content:get_content_access_data_failed', accessError.message, { ...ctx, err: accessError, payload: { contentId } });
       throw new Error(accessError.message);
     }
 
@@ -373,7 +373,7 @@ export async function getContentAccessData(contentId: string) {
 
     return { assignedClients, unassignedClients };
   } catch (error) {
-    logger.error('content:get_content_access_data_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    logger.error('content:get_content_access_data_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -390,7 +390,7 @@ export async function assignAccess(contentId: string, clientId: string) {
       .insert({ content_id: contentId, client_id: clientId });
 
     if (error) {
-      logger.error('content:assign_access_failed', error.message, { ...ctx, payload: { contentId, clientId } });
+      logger.error('content:assign_access_failed', error.message, { ...ctx, err: error, payload: { contentId, clientId } });
       return { success: false, message: error.message };
     }
 
@@ -402,7 +402,7 @@ export async function assignAccess(contentId: string, clientId: string) {
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:assign_access_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId, clientId } });
+    logger.error('content:assign_access_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId, clientId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -421,7 +421,7 @@ export async function removeAccess(contentId: string, clientId: string) {
       .eq('client_id', clientId);
 
     if (error) {
-      logger.error('content:remove_access_failed', error.message, { ...ctx, payload: { contentId, clientId } });
+      logger.error('content:remove_access_failed', error.message, { ...ctx, err: error, payload: { contentId, clientId } });
       return { success: false, message: error.message };
     }
 
@@ -433,7 +433,7 @@ export async function removeAccess(contentId: string, clientId: string) {
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:remove_access_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId, clientId } });
+    logger.error('content:remove_access_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId, clientId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

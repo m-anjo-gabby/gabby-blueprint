@@ -5,6 +5,7 @@ import { unlockAudio } from '../audio/core/audioRuntime';
 import { requestPlaybackSession, requestPlayAndRecordSession } from '../audio/core/audioSession';
 import { getSpeechRecognizer, type RecognitionHandle } from '../audio/core/recognizer';
 import { primeSpeechSynthesis } from '../speech/synthesis';
+import { clientLogger } from '../logger/client';
 
 export type MicStatus = 'checking' | 'granted' | 'denied' | 'prompt';
 
@@ -96,7 +97,7 @@ export function useMicPermission(): UseMicPermissionReturn {
         if (text.trim().length > 0) stopMicTest(true, false);
       },
       onError: (code) => {
-        console.warn('Mic test error:', code);
+        clientLogger.debug('speech:mic_test_failed', 'Mic test error', { payload: { code } });
         if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'start-failed') {
           setMicStatus('denied');
         }

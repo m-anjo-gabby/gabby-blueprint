@@ -45,7 +45,7 @@ export async function getPublishedCalendarEventsCore(
       .order('start_datetime', { ascending: true });
 
     if (error) {
-      logger.error('calendarEvent:get_published_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('calendarEvent:get_published_failed', error.message, { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -60,7 +60,7 @@ export async function getPublishedCalendarEventsCore(
 
     return { success: true, events };
   } catch (err) {
-    logger.error('calendarEvent:get_published_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('calendarEvent:get_published_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -79,7 +79,7 @@ async function getAssignedCoachesByEventId(calendarEventIds: string[]): Promise<
     .select('calendar_event_id, coach_id, com_m_user(user_name)')
     .in('calendar_event_id', calendarEventIds);
   if (error) {
-    logger.error('calendarEvent:get_assigned_coaches_failed', error.message);
+    logger.error('calendarEvent:get_assigned_coaches_failed', error.message, { err: error });
     return map;
   }
   for (const row of (data ?? []) as unknown as { calendar_event_id: string; coach_id: string; com_m_user: { user_name: string | null } | null }[]) {
@@ -108,14 +108,14 @@ export async function joinCalendarEventCore(
       .upsert({ user_id: user.id, calendar_event_id: calendarEventId }, { onConflict: 'user_id,calendar_event_id' });
 
     if (error) {
-      logger.error('calendarEvent:join_failed', error.message, { ...ctx, userId: user.id, payload: { calendarEventId } });
+      logger.error('calendarEvent:join_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { calendarEventId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     logger.info('calendarEvent:join_success', 'Joined calendar event', { ...ctx, userId: user.id, payload: { calendarEventId } });
     return { success: true };
   } catch (err) {
-    logger.error('calendarEvent:join_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('calendarEvent:join_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -143,7 +143,7 @@ export async function joinCalendarEventSeriesCore(
       .eq('rsvp_enabled', true)
       .gte('start_datetime', new Date(nowMs - 24 * 60 * 60 * 1000).toISOString());
     if (error) {
-      logger.error('calendarEvent:join_series_fetch_failed', error.message, { ...ctx, userId: user.id, payload: { seriesId } });
+      logger.error('calendarEvent:join_series_fetch_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { seriesId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -160,7 +160,7 @@ export async function joinCalendarEventSeriesCore(
         { onConflict: 'user_id,calendar_event_id' }
       );
     if (insertError) {
-      logger.error('calendarEvent:join_series_failed', insertError.message, { ...ctx, userId: user.id, payload: { seriesId } });
+      logger.error('calendarEvent:join_series_failed', insertError.message, { ...ctx, err: insertError, userId: user.id, payload: { seriesId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -171,7 +171,7 @@ export async function joinCalendarEventSeriesCore(
     });
     return { success: true, joinedIds: targetIds };
   } catch (err) {
-    logger.error('calendarEvent:join_series_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('calendarEvent:join_series_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -196,7 +196,7 @@ export async function cancelCalendarEventParticipationCore(
       .eq('calendar_event_id', calendarEventId);
 
     if (error) {
-      logger.error('calendarEvent:cancel_participation_failed', error.message, { ...ctx, userId: user.id, payload: { calendarEventId } });
+      logger.error('calendarEvent:cancel_participation_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { calendarEventId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -207,7 +207,7 @@ export async function cancelCalendarEventParticipationCore(
     });
     return { success: true };
   } catch (err) {
-    logger.error('calendarEvent:cancel_participation_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('calendarEvent:cancel_participation_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -234,7 +234,7 @@ export async function getCalendarEventMessagesCore(
       .order('insert_date', { ascending: false });
 
     if (error) {
-      logger.error('calendarEvent:get_messages_failed', error.message, { ...ctx, userId: user.id, payload: { calendarEventId } });
+      logger.error('calendarEvent:get_messages_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { calendarEventId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -245,7 +245,7 @@ export async function getCalendarEventMessagesCore(
 
     return { success: true, messages };
   } catch (err) {
-    logger.error('calendarEvent:get_messages_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('calendarEvent:get_messages_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

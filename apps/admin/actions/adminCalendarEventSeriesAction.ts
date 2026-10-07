@@ -61,7 +61,7 @@ export async function getCalendarEventSeriesList(): Promise<CalendarEventSeriesI
     .order('insert_date', { ascending: false });
 
   if (error) {
-    logger.error('calendarEventSeries:get_list_failed', error.message, ctx);
+    logger.error('calendarEventSeries:get_list_failed', error.message, { ...ctx, err: error });
     throw new Error(error.message);
   }
 
@@ -92,7 +92,7 @@ export async function getCalendarEventSeries(
     .eq('delete_flg', '0')
     .maybeSingle();
   if (error) {
-    logger.error('calendarEventSeries:get_failed', error.message, { ...ctx, payload: { seriesId } });
+    logger.error('calendarEventSeries:get_failed', error.message, { ...ctx, err: error, payload: { seriesId } });
     throw new Error(error.message);
   }
   if (!data) return { series: null, sessions: [] };
@@ -118,7 +118,7 @@ export async function updateCalendarEventSeries(
       })
       .eq('series_id', seriesId);
     if (error) {
-      logger.error('calendarEventSeries:update_failed', error.message, { ...ctx, payload: { seriesId, ...formData } });
+      logger.error('calendarEventSeries:update_failed', error.message, { ...ctx, err: error, payload: { seriesId, ...formData } });
       return { success: false, message: error.message };
     }
     logger.info('calendarEventSeries:update_success', `Calendar event series updated: ${seriesId}`, ctx);
@@ -126,7 +126,7 @@ export async function updateCalendarEventSeries(
     revalidatePath('/calendar-events');
     return { success: true };
   } catch (error) {
-    logger.error('calendarEventSeries:update_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('calendarEventSeries:update_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -140,7 +140,7 @@ export async function deleteCalendarEventSeries(seriesId: string): Promise<{ suc
     const supabase = createAdminClient();
     const { error } = await supabase.from('com_m_calendar_event_series').delete().eq('series_id', seriesId);
     if (error) {
-      logger.error('calendarEventSeries:delete_failed', error.message, { ...ctx, payload: { seriesId } });
+      logger.error('calendarEventSeries:delete_failed', error.message, { ...ctx, err: error, payload: { seriesId } });
       return { success: false, message: error.message };
     }
     logger.info('calendarEventSeries:delete_success', 'Calendar event series deleted', { ...ctx, payload: { seriesId } });
@@ -148,7 +148,7 @@ export async function deleteCalendarEventSeries(seriesId: string): Promise<{ suc
     revalidatePath('/calendar-events');
     return { success: true };
   } catch (error) {
-    logger.error('calendarEventSeries:delete_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('calendarEventSeries:delete_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -205,6 +205,7 @@ export async function createCalendarEventSeries(
     if (error || typeof data !== 'string') {
       logger.error('calendarEventSeries:create_failed', error?.message ?? 'No series id returned', {
         ...ctx,
+        err: error,
         payload: { title: series.title, count: rows.length },
       });
       return { success: false, message: error?.message ?? 'create_failed' };
@@ -214,7 +215,7 @@ export async function createCalendarEventSeries(
     revalidatePath('/calendar-events');
     return { success: true, seriesId: data };
   } catch (error) {
-    logger.error('calendarEventSeries:create_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('calendarEventSeries:create_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -238,7 +239,7 @@ export async function addCalendarEventSeriesSessions(
       p_sessions: sessions,
     });
     if (error) {
-      logger.error('calendarEventSeries:add_sessions_failed', error.message, { ...ctx, payload: { seriesId, count: rows.length } });
+      logger.error('calendarEventSeries:add_sessions_failed', error.message, { ...ctx, err: error, payload: { seriesId, count: rows.length } });
       return { success: false, message: error.message };
     }
     const count = Array.isArray(data) ? data.length : 0;
@@ -247,7 +248,7 @@ export async function addCalendarEventSeriesSessions(
     revalidatePath('/calendar-events');
     return { success: true, count };
   } catch (error) {
-    logger.error('calendarEventSeries:add_sessions_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('calendarEventSeries:add_sessions_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

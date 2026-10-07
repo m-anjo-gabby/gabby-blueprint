@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
 import { getFeedbackConfig, getScoreTier, getSprintTitle, resolveSprintHasLevel, extractContentWords } from '@gabby/lib';
-import { logClientEvent } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 import { SprintQuestion, SPRINT_FLOW_TIMING } from "@gabby/types/sprint";
 import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
 import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
@@ -227,7 +227,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     // 4つの必須パラメータが揃っているかチェック（型ガード）
     if (!sprintType || !contentId || !questionType || !answerType) {
-      console.error("Missing required sprint parameters:", { sprintType, contentId, questionType, answerType });
+      clientLogger.error('sprint:missing_params', 'Missing required sprint parameters', { payload: { sprintType, contentId, questionType, answerType } });
       showToast("パラメータが不足しているため、実績を保存できませんでした。", "error");
       setIsSaving(false);
       onExit?.();
@@ -310,7 +310,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         throw new Error(res.error || "Failed to persist score history");
       }
     } catch (err) {
-      console.error("Sprint score save transaction failed:", err);
+      clientLogger.error('sprint:save_score_failed', 'Sprint score save failed', { err });
       showToast("実績の保存に失敗しました。一覧に戻ります。", "error");
       resetStore();
       onExit?.();
@@ -433,19 +433,16 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   ) => {
     audioFailedQuestionIdsRef.current.add(question.question_id);
     showToast('この問題は音声を再生できないため、スキップしました。', 'error');
-    logClientEvent({
-      service: 'student',
-      event: 'sprint:audio_playback_failed',
-      message: `Sprint audio unavailable: ${question.question_id}`,
+    clientLogger.warn('sprint:audio_playback_failed', `Sprint audio unavailable: ${question.question_id}`, {
+      err: info.error,
       payload: {
         contentId: config.contentId,
         questionId: question.question_id,
         mode: 'sprint',
         text: info.text,
         audioPath: info.audioPath,
-        error: info.error instanceof Error ? info.error.message : String(info.error),
       },
-    }).catch(() => { /* ログ送信自体の失敗はユーザー体験に影響させない */ });
+    });
 
     await unlockAudioContext();
     stopAllAudio();
@@ -493,7 +490,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       }
       if (outcome.result) handleAssessmentResult(question.question_id, outcome.result);
     } catch (e) {
-      console.error("Sprint flow error:", e);
+      clientLogger.error('sprint:flow_failed', 'Sprint flow failed', { err: e });
       if (!signal.aborted) {
         setAudioPhase('answer');
       }

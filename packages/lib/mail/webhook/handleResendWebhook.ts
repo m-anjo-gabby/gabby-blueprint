@@ -29,7 +29,7 @@ export async function handleResendWebhook(req: Request): Promise<Response> {
   try {
     event = verifyResendWebhook({ payload, headers: { id, timestamp, signature }, webhookSecret: secret }) as MailWebhookEvent;
   } catch (err) {
-    logger.warn('mail:webhook_invalid_signature', err instanceof Error ? err.message : 'Invalid signature');
+    logger.warn('mail:webhook_invalid_signature', err instanceof Error ? err.message : 'Invalid signature', { err });
     return Response.json({ error: 'unauthorized' }, { status: 401 });
   }
 
@@ -39,7 +39,7 @@ export async function handleResendWebhook(req: Request): Promise<Response> {
   const admin = createAdminClient();
   const { data: recorded, error } = await admin.rpc('record_mail_event', record);
   if (error) {
-    logger.error('mail:webhook_record_failed', error.message, { payload: { webhookId: id, eventType: record.p_event_type } });
+    logger.error('mail:webhook_record_failed', error.message, { err: error, payload: { webhookId: id, eventType: record.p_event_type } });
     return Response.json({ error: 'record_failed' }, { status: 500 });
   }
 

@@ -84,13 +84,13 @@ export async function getLatestTerms(): Promise<TermDocument[]> {
       .order("published_date", { ascending: false });
 
     if (error) {
-      logger.error('term:get_latest_failed', error.message, ctx);
+      logger.error('term:get_latest_failed', error.message, { ...ctx, err: error });
       return [];
     }
 
     return await attachLatestRevision(supabase, pickLatestByType(terms ?? []));
   } catch (err) {
-    logger.error('term:get_latest_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('term:get_latest_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return [];
   }
 }
@@ -121,7 +121,7 @@ export async function checkPendingAgreements(userId: string): Promise<TermDocume
       .order("published_date", { ascending: false });
 
     if (error) {
-      logger.error('term:check_pending_failed', error.message, { ...ctx, payload: { userId } });
+      logger.error('term:check_pending_failed', error.message, { ...ctx, err: error, payload: { userId } });
       return [];
     }
 
@@ -140,7 +140,7 @@ export async function checkPendingAgreements(userId: string): Promise<TermDocume
 
     return await attachLatestRevision(supabase, pendingTerms);
   } catch (err) {
-    logger.error('term:check_pending_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { userId } });
+    logger.error('term:check_pending_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { userId } });
     return [];
   }
 }
@@ -193,7 +193,7 @@ export async function agreeToTerms(userId: string, targets: TermAgreementTarget[
       .insert(inserts);
 
     if (error) {
-      logger.error('term:agree_failed', error.message, { ...ctx, payload: { userId, targets } });
+      logger.error('term:agree_failed', error.message, { ...ctx, err: error, payload: { userId, targets } });
       throw new Error(error.message);
     }
 
@@ -210,7 +210,7 @@ export async function agreeToTerms(userId: string, targets: TermAgreementTarget[
     revalidatePath("/", "layout"); // レイアウトを再検証してモーダルを消す
     return { success: true };
   } catch (err) {
-    logger.error('term:agree_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { userId, targets } });
+    logger.error('term:agree_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { userId, targets } });
     throw err;
   }
 }

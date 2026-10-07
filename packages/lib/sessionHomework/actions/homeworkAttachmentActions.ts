@@ -67,6 +67,7 @@ export async function uploadSessionHomeworkAttachmentCore(
     if (uploadError) {
       logger.error('sessionHomework:upload_attachment_failed', uploadError.message, {
         ...ctx,
+        err: uploadError,
         payload: { sessionId, fileName: file.name },
       });
       return { success: false, errorCode: 'upload_failed' };
@@ -88,6 +89,7 @@ export async function uploadSessionHomeworkAttachmentCore(
   } catch (err) {
     logger.error('sessionHomework:upload_attachment_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: { sessionId },
     });
     return { success: false, errorCode: 'unexpected_error' };
@@ -106,6 +108,7 @@ export async function getSessionHomeworkAttachmentUrl(path: string): Promise<{ u
     if (error || !data?.signedUrl) {
       logger.error('sessionHomework:get_attachment_url_failed', error?.message || 'Failed to generate signed URL', {
         ...ctx,
+        err: error,
         payload: { path },
       });
       return { url: null, error: error?.message || 'Failed to generate signed URL' };
@@ -115,6 +118,7 @@ export async function getSessionHomeworkAttachmentUrl(path: string): Promise<{ u
   } catch (err) {
     logger.error('sessionHomework:get_attachment_url_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: { path },
     });
     return { url: null, error: 'Unexpected error' };

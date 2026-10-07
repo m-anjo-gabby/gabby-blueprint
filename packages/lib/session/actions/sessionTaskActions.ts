@@ -66,7 +66,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
       logger.error(
         'session:get_coach_tasks_failed',
         unfinalizedError?.message ?? candidateError?.message ?? scheduleError?.message ?? 'unknown error',
-        { ...ctx, userId: user.id }
+        { ...ctx, err: unfinalizedError, userId: user.id }
       );
       return { success: false, errorCode: 'unexpected_error' };
     }
@@ -89,6 +89,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
         if (error || !data) {
           logger.error('session:get_coach_tasks_shortfall_failed', error?.message ?? 'no row returned', {
             ...ctx,
+            err: error,
             userId: user.id,
             payload: { scheduleId: schedule.schedule_id },
           });
@@ -110,7 +111,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
       : { data: [] as { id: string; user_name: string | null }[], error: null };
 
     if (studentsError) {
-      logger.error('session:get_coach_tasks_students_failed', studentsError.message, { ...ctx, userId: user.id });
+      logger.error('session:get_coach_tasks_students_failed', studentsError.message, { ...ctx, err: studentsError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -147,7 +148,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
     const tasks: CoachSessionTasksSummary = { unfinalizedSessions, missingHomeworkSessions, shortfalls };
     return { success: true, tasks };
   } catch (err) {
-    logger.error('session:get_coach_tasks_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('session:get_coach_tasks_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

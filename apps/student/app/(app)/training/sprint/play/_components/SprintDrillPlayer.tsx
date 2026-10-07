@@ -19,7 +19,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
 import { getFeedbackConfig, getSprintTitle, resolveSprintHasLevel, extractContentWords } from '@gabby/lib';
-import { logClientEvent } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 import { useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackFlow';
 import { useSprintProgressSync } from '../_hooks/useSprintProgressSync';
 import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
@@ -153,19 +153,16 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
    */
   const handleAudioUnavailable = useCallback((text: string, audioPath: string | null, error: unknown) => {
     showToast('音声を再生できません', 'error');
-    logClientEvent({
-      service: 'student',
-      event: 'sprint:audio_playback_failed',
-      message: `Drill audio unavailable: ${currentQuestion?.question_id ?? 'unknown'}`,
+    clientLogger.warn('sprint:audio_playback_failed', `Drill audio unavailable: ${currentQuestion?.question_id ?? 'unknown'}`, {
+      err: error,
       payload: {
         contentId,
         questionId: currentQuestion?.question_id,
         mode: 'drill',
         text,
         audioPath,
-        error: error instanceof Error ? error.message : String(error),
       },
-    }).catch(() => { /* ログ送信自体の失敗はユーザー体験に影響させない */ });
+    });
   }, [contentId, currentQuestion, showToast]);
 
   // 再生速度は useSpeakingPlayer の changePlaybackRate の値が使われる
@@ -192,7 +189,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
 
       setAudioPhase('answer');
     } catch (e) {
-      console.error("Question sequence error:", e);
+      clientLogger.error('sprint:drill_question_sequence_failed', 'Drill question sequence failed', { err: e });
     } finally {
       if (!signal.aborted) {
         setPlayingQuestionSequence(false);
@@ -240,7 +237,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
         }, SPRINT_FLOW_TIMING.drill.nextCardDelayMs);
       }
     } catch (e) {
-      console.error("Answer sequence error:", e);
+      clientLogger.error('sprint:drill_answer_sequence_failed', 'Drill answer sequence failed', { err: e });
     } finally {
       if (!signal.aborted) {
         setPlayingAnswerSequence(false);
@@ -269,7 +266,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       try {
         await syncProgressNow();
       } catch (e) {
-        console.error(e);
+        clientLogger.error('sprint:sync_progress_failed', 'Failed to sync drill progress', { err: e });
       }
       onExit?.();
     }

@@ -107,7 +107,7 @@ export function createUnsubscribeRoute(language: PageLanguage) {
         { onConflict: 'user_id,category' }
       );
     if (error) {
-      logger.error('mail:unsubscribe_failed', error.message, { userId: target.userId, payload: { category: target.category } });
+      logger.error('mail:unsubscribe_failed', error.message, { err: error, userId: target.userId, payload: { category: target.category } });
       return page(language, paragraph(copy.failed), 500);
     }
 

@@ -72,7 +72,7 @@ async function getClientsSummary(supabase: ReturnType<typeof createAdminClient>,
       alertCount,
     };
   } catch (error) {
-    logger.error('dashboard:get_clients_summary_failed', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('dashboard:get_clients_summary_failed', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return { key: 'clients', count: 0, alertCount: 0 };
   }
 }
@@ -101,7 +101,7 @@ async function getContractsSummary(supabase: ReturnType<typeof createAdminClient
       alertCount: alertIds.size,
     };
   } catch (error) {
-    logger.error('dashboard:get_contracts_summary_failed', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('dashboard:get_contracts_summary_failed', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return { key: 'contracts', count: 0, alertCount: 0 };
   }
 }
@@ -130,7 +130,7 @@ async function getUsersSummary(supabase: ReturnType<typeof createAdminClient>): 
       alertCount: pendingCount || 0,
     };
   } catch (error) {
-    logger.error('dashboard:get_users_summary_failed', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('dashboard:get_users_summary_failed', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return { key: 'users', count: 0, alertCount: 0 };
   }
 }
@@ -159,7 +159,7 @@ async function getContentsSummary(supabase: ReturnType<typeof createAdminClient>
       alertCount: privateCount || 0,
     };
   } catch (error) {
-    logger.error('dashboard:get_contents_summary_failed', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('dashboard:get_contents_summary_failed', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return { key: 'contents', count: 0, alertCount: 0 };
   }
 }
@@ -198,7 +198,7 @@ async function getNoticeSummary(supabase: ReturnType<typeof createAdminClient>, 
       alertCount: (draftCount || 0) + (expiredButPublishedCount || 0),
     };
   } catch (error) {
-    logger.error('dashboard:get_notice_summary_failed', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('dashboard:get_notice_summary_failed', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return { key: 'notice', count: 0, alertCount: 0 };
   }
 }

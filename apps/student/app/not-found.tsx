@@ -4,23 +4,13 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { Home, Compass, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { logClientError } from '@gabby/lib/logger/actions'; // 共通パッケージからインポート
+import { clientLogger } from '@gabby/lib/logger/client';
 
 export default function NotFound() {
   useEffect(() => {
-    // 404が発生した際のコンテキスト（アクセスURLと流入元）を収集
-    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'Unknown URL';
-    const referrer = typeof document !== 'undefined' ? document.referrer : 'No referrer';
-
-    // サーバー側の共通アクション（Pino）を呼び出し、Vercelログへ構造化データとして記録
-    logClientError({
-      service: 'student',
-      message: `404 Not Found: User tried to access an invalid page`,
-      // system:runtime_error と区別しやすくするために digest の領域等にコンテキストを詰める
-      digest: '404_NOT_FOUND',
-      stack: `Requested URL: ${currentUrl}\nReferrer: ${referrer}`
-    }).catch((err) => {
-      console.error('Failed to send 404 log to Vercel:', err);
+    // 存在しない画面へのアクセスを記録する（表示中のパスは clientLogger が付ける。流入元はクエリを除く）
+    clientLogger.warn('system:not_found', 'Page not found', {
+      payload: { referrer: document.referrer.split('?')[0] || undefined },
     });
   }, []);
 

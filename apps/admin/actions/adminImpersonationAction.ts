@@ -44,7 +44,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
       .maybeSingle();
 
     if (targetUserError || !targetUser) {
-      logger.error('impersonation:target_lookup_failed', targetUserError?.message || 'User not found', { ...ctx, payload: { targetUserId } });
+      logger.error('impersonation:target_lookup_failed', targetUserError?.message || 'User not found', { ...ctx, err: targetUserError, payload: { targetUserId } });
       return { success: false, message: '対象ユーザーが見つかりませんでした' };
     }
 
@@ -56,7 +56,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
     // Authユーザー情報（メールアドレス）はcom_m_userに持たないため、Admin APIで別途取得
     const { data: authUserData, error: authUserError } = await supabase.auth.admin.getUserById(targetUserId);
     if (authUserError || !authUserData?.user?.email) {
-      logger.error('impersonation:auth_user_lookup_failed', authUserError?.message || 'Auth user or email not found', { ...ctx, payload: { targetUserId } });
+      logger.error('impersonation:auth_user_lookup_failed', authUserError?.message || 'Auth user or email not found', { ...ctx, err: authUserError, payload: { targetUserId } });
       return { success: false, message: '対象ユーザーの認証情報が見つかりませんでした' };
     }
 
@@ -72,7 +72,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
       .single();
 
     if (logError || !logRow) {
-      logger.error('impersonation:audit_log_insert_failed', logError?.message || 'Insert failed', { ...ctx, payload: { targetUserId } });
+      logger.error('impersonation:audit_log_insert_failed', logError?.message || 'Insert failed', { ...ctx, err: logError, payload: { targetUserId } });
       return { success: false, message: '監査ログの記録に失敗しました' };
     }
 
@@ -83,7 +83,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
 
     const tokenHash = linkData?.properties?.hashed_token;
     if (linkError || !tokenHash) {
-      logger.error('impersonation:generate_link_failed', linkError?.message || 'hashed_token missing in response', { ...ctx, payload: { targetUserId, impersonationId: logRow.impersonation_id } });
+      logger.error('impersonation:generate_link_failed', linkError?.message || 'hashed_token missing in response', { ...ctx, err: linkError, payload: { targetUserId, impersonationId: logRow.impersonation_id } });
       return { success: false, message: 'ログインリンクの発行に失敗しました' };
     }
 
@@ -105,7 +105,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
 
     return { success: true, url: impersonateUrl.toString() };
   } catch (error) {
-    logger.error('impersonation:start_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { targetUserId } });
+    logger.error('impersonation:start_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { targetUserId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

@@ -22,12 +22,12 @@ export async function getTags() {
       .order('seq_no', { ascending: true });
 
     if (error) {
-      logger.error('tag:get_tags_failed', error.message, ctx);
+      logger.error('tag:get_tags_failed', error.message, { ...ctx, err: error });
       throw new Error(error.message);
     }
     return data as ContentTag[];
   } catch (error) {
-    logger.error('tag:get_tags_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('tag:get_tags_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -50,7 +50,7 @@ export async function upsertTag(payload: Partial<ContentTag>) {
       .single();
 
     if (error) {
-      logger.error('tag:upsert_tag_failed', error.message, { ...ctx, payload });
+      logger.error('tag:upsert_tag_failed', error.message, { ...ctx, err: error, payload });
       return { success: false, message: error.message };
     }
 
@@ -63,7 +63,7 @@ export async function upsertTag(payload: Partial<ContentTag>) {
     revalidatePath('/contents/tags');
     return { success: true, data: savedTag };
   } catch (error) {
-    logger.error('tag:upsert_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload });
+    logger.error('tag:upsert_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -80,7 +80,7 @@ export async function deleteTag(tagId: string) {
       .eq('tag_id', tagId);
 
     if (error) {
-      logger.error('tag:delete_tag_failed', error.message, { ...ctx, payload: { tagId } });
+      logger.error('tag:delete_tag_failed', error.message, { ...ctx, err: error, payload: { tagId } });
       return { success: false, message: error.message };
     }
 
@@ -92,7 +92,7 @@ export async function deleteTag(tagId: string) {
     revalidatePath('/contents/tags');
     return { success: true };
   } catch (error) {
-    logger.error('tag:delete_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { tagId } });
+    logger.error('tag:delete_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { tagId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

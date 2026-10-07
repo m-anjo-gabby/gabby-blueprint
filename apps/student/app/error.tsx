@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { Home, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { logClientError } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -12,15 +12,10 @@ interface ErrorProps {
 
 export default function Error({ error }: ErrorProps) {
   useEffect(() => {
-    // 1. サーバー側の共通アクション（Pino）を呼び出し、Vercelの構造化ログへ確実に流す
-    logClientError({
-      service: 'student',
-      digest: error.digest,
-      message: error.message || 'Student app client-side error',
-      stack: error.stack,
-    }).catch((err) => {
-      // 万が一ネットワーク障害等で Action 自体が失敗した場合の最低限のフォールバック
-      console.error('Failed to send error log to Vercel:', err);
+    // 画面の描画中の例外をサーバーのログへ送る（digest はサーバー側のログと突き合わせるための識別子）
+    clientLogger.error('system:runtime_error', error.message || 'Client-side error', {
+      err: error,
+      payload: { digest: error.digest },
     });
   }, [error]);
 

@@ -96,6 +96,7 @@ export async function updateStudentSprintLevel(
     if (error || !data) {
       logger.error('admin:update_student_level_failed', error?.message ?? 'No row updated', {
         ...ctx,
+        err: error,
         payload: { userId, questionType, newLevel },
       });
       return { success: false, message: 'レベルの更新に失敗しました。' };
@@ -108,7 +109,7 @@ export async function updateStudentSprintLevel(
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
-    logger.error('admin:update_student_level_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('admin:update_student_level_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, message: 'システムエラーが発生しました。' };
   }
 }
@@ -153,6 +154,7 @@ export async function setStudentSprintStage(
     if (error || !data) {
       logger.error('admin:set_student_stage_failed', error?.message ?? 'No row updated', {
         ...ctx,
+        err: error,
         payload: { userId, targetStage },
       });
       return { success: false, message: 'ステージの更新に失敗しました。' };
@@ -165,7 +167,7 @@ export async function setStudentSprintStage(
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
-    logger.error('admin:set_student_stage_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('admin:set_student_stage_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, message: 'システムエラーが発生しました。' };
   }
 }
@@ -192,6 +194,7 @@ export async function setStudentSprintLevelManaged(
     if (error || !data) {
       logger.error('admin:set_student_level_managed_failed', error?.message ?? 'No row updated', {
         ...ctx,
+        err: error,
         payload: { userId, levelManaged },
       });
       return { success: false, message: 'レベル管理の設定に失敗しました。' };
@@ -204,7 +207,7 @@ export async function setStudentSprintLevelManaged(
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
-    logger.error('admin:set_student_level_managed_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('admin:set_student_level_managed_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, message: 'システムエラーが発生しました。' };
   }
 }

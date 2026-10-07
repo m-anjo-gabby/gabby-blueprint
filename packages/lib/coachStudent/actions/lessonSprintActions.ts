@@ -116,7 +116,7 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
     ]);
 
     if (error) {
-      logger.error('lessonSprint:get_contents_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('lessonSprint:get_contents_failed', error.message, { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!levelsByContent) {
@@ -131,7 +131,7 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
       })),
     };
   } catch (err) {
-    logger.error('lessonSprint:get_contents_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('lessonSprint:get_contents_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -161,7 +161,7 @@ export async function getLessonSprintQuestionsCore(
       .eq('delete_flg', '0');
 
     if (error) {
-      logger.error('lessonSprint:get_questions_failed', error.message, { ...ctx, userId: user.id, payload: { contentId, questionType, difficultyLevel } });
+      logger.error('lessonSprint:get_questions_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { contentId, questionType, difficultyLevel } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -195,7 +195,7 @@ export async function getLessonSprintQuestionsCore(
 
     return { success: true, questions: finalData };
   } catch (err) {
-    logger.error('lessonSprint:get_questions_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('lessonSprint:get_questions_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -246,7 +246,7 @@ export async function createLessonSprintResultCore(
         .maybeSingle();
 
       if (sessionError) {
-        logger.error('lessonSprint:create_result_session_lookup_failed', sessionError.message, { ...ctx, userId: user.id, payload: { sessionId: resolvedSessionId } });
+        logger.error('lessonSprint:create_result_session_lookup_failed', sessionError.message, { ...ctx, err: sessionError, userId: user.id, payload: { sessionId: resolvedSessionId } });
         return { success: false, errorCode: 'unexpected_error' };
       }
       if (!session) {
@@ -280,14 +280,14 @@ export async function createLessonSprintResultCore(
       .single();
 
     if (error || !data) {
-      logger.error('lessonSprint:create_result_failed', error?.message ?? 'No row inserted', { ...ctx, userId: user.id, payload: { studentId: input.student_id } });
+      logger.error('lessonSprint:create_result_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id, payload: { studentId: input.student_id } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     logger.info('lessonSprint:create_result_success', 'Lesson sprint result saved', { ...ctx, userId: user.id, payload: { lessonSprintId: data.lesson_sprint_id } });
     return { success: true, lesson_sprint_id: data.lesson_sprint_id };
   } catch (err) {
-    logger.error('lessonSprint:create_result_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('lessonSprint:create_result_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -340,13 +340,13 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
       .limit(10);
 
     if (error) {
-      logger.error('lessonSprint:get_history_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('lessonSprint:get_history_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, records: (data ?? []).map(mapLessonSprintHistoryRow) };
   } catch (err) {
-    logger.error('lessonSprint:get_history_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('lessonSprint:get_history_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -380,7 +380,7 @@ export async function getLessonSprintHistoryPageCore(
 
     const { data: rows, error } = await query;
     if (error) {
-      logger.error('lessonSprint:get_history_page_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('lessonSprint:get_history_page_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -390,7 +390,7 @@ export async function getLessonSprintHistoryPageCore(
 
     return { success: true, items: page.map(mapLessonSprintHistoryRow), nextCursor };
   } catch (err) {
-    logger.error('lessonSprint:get_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('lessonSprint:get_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -414,7 +414,7 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
       .maybeSingle();
 
     if (recordError) {
-      logger.error('lessonSprint:get_result_failed', recordError.message, { ...ctx, userId: user.id, payload: { lessonSprintId } });
+      logger.error('lessonSprint:get_result_failed', recordError.message, { ...ctx, err: recordError, userId: user.id, payload: { lessonSprintId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!record) {
@@ -433,7 +433,7 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
       .in('question_id', targetIds);
 
     if (qError) {
-      logger.error('lessonSprint:get_result_questions_failed', qError.message, { ...ctx, userId: user.id, payload: { lessonSprintId } });
+      logger.error('lessonSprint:get_result_questions_failed', qError.message, { ...ctx, err: qError, userId: user.id, payload: { lessonSprintId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -444,7 +444,7 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
 
     return { success: true, record: record as LessonSprintRecord, questions: sortedQuestions };
   } catch (err) {
-    logger.error('lessonSprint:get_result_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('lessonSprint:get_result_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -472,7 +472,7 @@ export async function updateLessonSprintSessionNoteCore(
       .maybeSingle();
 
     if (error) {
-      logger.error('lessonSprint:update_session_note_failed', error.message, { ...ctx, userId: user.id, payload: { lessonSprintId } });
+      logger.error('lessonSprint:update_session_note_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { lessonSprintId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!data) {
@@ -481,7 +481,7 @@ export async function updateLessonSprintSessionNoteCore(
 
     return { success: true };
   } catch (err) {
-    logger.error('lessonSprint:update_session_note_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('lessonSprint:update_session_note_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

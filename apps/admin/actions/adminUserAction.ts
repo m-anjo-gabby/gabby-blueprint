@@ -86,7 +86,7 @@ export async function getUsers(
       .range(from, to);
 
     if (error) {
-      logger.error('user:get_users_failed', error.message, { ...ctx, payload: { page, pageSize, searchQuery, clientId, userType } });
+      logger.error('user:get_users_failed', error.message, { ...ctx, err: error, payload: { page, pageSize, searchQuery, clientId, userType } });
       throw error;
     }
 
@@ -101,7 +101,7 @@ export async function getUsers(
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('user:get_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, pageSize, searchQuery, clientId, userType } });
+    logger.error('user:get_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { page, pageSize, searchQuery, clientId, userType } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -157,7 +157,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       if (error.code === '23505') { // Postgresの一意制約違反（既に同じメールアドレスが招待中）
         return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
       }
-      logger.error('user:create_user_invite_failed', error.message, { ...ctx, payload });
+      logger.error('user:create_user_invite_failed', error.message, { ...ctx, err: error, payload });
       return { success: false, user_id: null, errorType: 'unexpected_error', message: error.message };
     }
 
@@ -175,7 +175,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
         .insert(roles.map(roleId => ({ user_id: userId, role_id: roleId })));
       
       if (roleError) {
-        logger.error('user:create_user_role_insert_failed', roleError.message, { ...ctx, payload: { userId, roles } });
+        logger.error('user:create_user_role_insert_failed', roleError.message, { ...ctx, err: roleError, payload: { userId, roles } });
       }
     }
     */
@@ -201,7 +201,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       .eq('id', userId);
 
     if (!mailResult.success) {
-      logger.error('user:create_user_mail_dispatch_failed', mailResult.error || 'Unknown error', { ...ctx, email });
+      logger.error('user:create_user_mail_dispatch_failed', mailResult.error || 'Unknown error', { ...ctx, payload: { email } });
       // メール送信に失敗しても、レコードは作成されているため管理画面一覧からいつでも「再送」が可能です。
     }
 
@@ -214,7 +214,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     return { success: true, user_id: userId, errorType: null, message: mailResult.success ? null : (mailResult.error || "招待メールの送信に失敗しました") };
 
   } catch (err) {
-    logger.error("user:create_user_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload });
+    logger.error("user:create_user_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload });
     return { success: false, user_id: null, errorType: 'unexpected_error', message: "予期せぬエラーが発生しました" };
   }
 }
@@ -267,7 +267,7 @@ export async function createUserDirect(
       if (authError?.code === 'email_exists') {
         return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
       }
-      logger.error('user:create_user_direct_auth_failed', authError?.message || 'User object null', { ...ctx, payload: { email } });
+      logger.error('user:create_user_direct_auth_failed', authError?.message || 'User object null', { ...ctx, err: authError, payload: { email } });
       return { success: false, user_id: null, errorType: 'unexpected_error', message: authError?.message || "アカウントの作成に失敗しました。" };
     }
 
@@ -289,7 +289,7 @@ export async function createUserDirect(
 
     if (dbUserError) {
       partialFailures.push('com_m_user_sync');
-      logger.error('user:create_user_direct_sync_failed', dbUserError.message, { ...ctx, payload: { userId } });
+      logger.error('user:create_user_direct_sync_failed', dbUserError.message, { ...ctx, err: dbUserError, payload: { userId } });
     }
 
     // ロールの紐付け
@@ -300,7 +300,7 @@ export async function createUserDirect(
 
       if (roleError) {
         partialFailures.push('role_insert');
-        logger.error('user:create_user_direct_role_insert_failed', roleError.message, { ...ctx, payload: { userId, roles } });
+        logger.error('user:create_user_direct_role_insert_failed', roleError.message, { ...ctx, err: roleError, payload: { userId, roles } });
       }
     }
 
@@ -338,6 +338,7 @@ export async function createUserDirect(
     // 💡 セキュリティ: payloadには平文パスワードが含まれるため、ログにはそのまま渡さない
     logger.error("user:create_user_direct_unexpected", err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: { ...payload, password: undefined }
     });
     return { success: false, user_id: null, errorType: 'unexpected_error', message: "予期せぬエラーが発生しました" };
@@ -382,7 +383,7 @@ export async function resendInvite(email: string, userType?: string) {
       .eq('id', currentInvite.id);
 
     if (updateError) {
-      logger.error('user:resend_invite_failed', updateError.message, { ...ctx, payload: { email } });
+      logger.error('user:resend_invite_failed', updateError.message, { ...ctx, err: updateError, payload: { email } });
       throw updateError;
     }
 
@@ -419,7 +420,7 @@ export async function resendInvite(email: string, userType?: string) {
     revalidatePath('/users');
     return { success: true };
   } catch (error) {
-    logger.error('user:resend_invite_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { email } });
+    logger.error('user:resend_invite_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { email } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -444,7 +445,7 @@ export async function updateUser(
       .eq('user_id', id);
 
     if (roleDeleteError) {
-      logger.error('user:update_user_role_delete_failed', roleDeleteError.message, { ...ctx, payload: { id } });
+      logger.error('user:update_user_role_delete_failed', roleDeleteError.message, { ...ctx, err: roleDeleteError, payload: { id } });
       throw roleDeleteError;
     }
 
@@ -454,7 +455,7 @@ export async function updateUser(
         .insert(roles.map(roleId => ({ user_id: id, role_id: roleId })));
       
       if (roleInsertError) {
-        logger.error('user:update_user_role_insert_failed', roleInsertError.message, { ...ctx, payload: { id, roles } });
+        logger.error('user:update_user_role_insert_failed', roleInsertError.message, { ...ctx, err: roleInsertError, payload: { id, roles } });
         throw roleInsertError;
       }
     }
@@ -471,7 +472,7 @@ export async function updateUser(
     });
 
     if (authError) {
-      logger.error('user:update_user_auth_failed', authError.message, { ...ctx, payload: { id, payload } });
+      logger.error('user:update_user_auth_failed', authError.message, { ...ctx, err: authError, payload: { id, payload } });
       return { success: false, errorType: 'update_error', message: `Auth更新失敗: ${authError.message}` };
     }
 
@@ -487,7 +488,7 @@ export async function updateUser(
       .eq('id', id);
 
     if (dbError) {
-      logger.error("user:update_user_db_failed", dbError.message, { ...ctx, payload: { id, payload } });
+      logger.error("user:update_user_db_failed", dbError.message, { ...ctx, err: dbError, payload: { id, payload } });
       return { success: false, errorType: 'update_error', message: `マスタ更新に失敗しました: ${dbError.message}` };
     }
 
@@ -500,7 +501,7 @@ export async function updateUser(
     return { success: true };
 
   } catch (err) {
-    logger.error("user:update_user_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { id, payload } });
+    logger.error("user:update_user_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { id, payload } });
     return { success: false, errorType: 'unexpected_error', message: "予期せぬエラーが発生しました" };
   }
 }
@@ -537,7 +538,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
         results.push({ email: user.email, status: 'error', message: result.message || "招待データの作成に失敗しました" });
       }
     } catch (err) {
-      logger.error("user:bulk_create_users_loop_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { email: user.email } });
+      logger.error("user:bulk_create_users_loop_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { email: user.email } });
       errorCount++;
       results.push({ email: user.email, status: 'error', message: "予期せぬエラーが発生しました" });
     }
@@ -567,13 +568,13 @@ export async function getRoles(): Promise<RoleDefinition[]> {
       .order('seq_no', { ascending: true });
 
     if (error) {
-      logger.error("user:get_roles_failed", error.message, ctx);
+      logger.error("user:get_roles_failed", error.message, { ...ctx, err: error });
       return [];
     }
 
     return data as RoleDefinition[];
   } catch (error) {
-    logger.error("user:get_roles_unexpected", error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error("user:get_roles_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return [];
   }
 }

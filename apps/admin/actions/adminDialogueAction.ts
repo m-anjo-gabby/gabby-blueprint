@@ -24,13 +24,13 @@ export async function getDialogueSessions(contentId: string): Promise<DialogueSe
       .order('session_no', { ascending: true });
 
     if (error) {
-      logger.error('dialogue:get_sessions_failed', error.message, { ...ctx, payload: { contentId } });
+      logger.error('dialogue:get_sessions_failed', error.message, { ...ctx, err: error, payload: { contentId } });
       return [];
     }
 
     return (data || []) as DialogueSession[];
   } catch (error) {
-    logger.error('dialogue:get_sessions_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    logger.error('dialogue:get_sessions_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId } });
     return [];
   }
 }
@@ -85,7 +85,7 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
     const { data, error } = await query;
 
     if (error) {
-      logger.error('dialogue:upsert_session_failed', error.message, { ...ctx, payload });
+      logger.error('dialogue:upsert_session_failed', error.message, { ...ctx, err: error, payload });
       // UNIQUE(content_id, session_no) 制約違反を分かりやすいメッセージに変換
       if (error.code === '23505') {
         return { success: false, message: 'このセッション番号は既に使用されています' };
@@ -101,7 +101,7 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
     revalidatePath(`/contents/${payload.content_id}`);
     return { success: true, data: data as DialogueSession };
   } catch (error) {
-    logger.error('dialogue:upsert_session_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload });
+    logger.error('dialogue:upsert_session_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -123,7 +123,7 @@ export async function deleteDialogueSession(dialogueSessionId: string, contentId
       .eq('dialogue_session_id', dialogueSessionId);
 
     if (error) {
-      logger.error('dialogue:delete_session_failed', error.message, { ...ctx, payload: { dialogueSessionId } });
+      logger.error('dialogue:delete_session_failed', error.message, { ...ctx, err: error, payload: { dialogueSessionId } });
       return { success: false, message: error.message };
     }
 
@@ -132,7 +132,7 @@ export async function deleteDialogueSession(dialogueSessionId: string, contentId
     revalidatePath(`/contents/${contentId}`);
     return { success: true };
   } catch (error) {
-    logger.error('dialogue:delete_session_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { dialogueSessionId } });
+    logger.error('dialogue:delete_session_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { dialogueSessionId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

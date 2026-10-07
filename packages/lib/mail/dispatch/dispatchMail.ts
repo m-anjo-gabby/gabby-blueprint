@@ -71,7 +71,7 @@ async function updateRow(admin: SupabaseClient, mailId: string, values: Record<s
     .from('com_t_mail_outbox')
     .update({ ...values, locked_at: null, update_date: new Date().toISOString() })
     .eq('mail_id', mailId);
-  if (error) logger.error('mail:dispatch_update_failed', error.message, { payload: { mailId } });
+  if (error) logger.error('mail:dispatch_update_failed', error.message, { err: error, payload: { mailId } });
 }
 
 async function loadRecipient(admin: SupabaseClient, userId: string): Promise<Omit<MailRecipient, 'language'> | null> {
@@ -233,7 +233,7 @@ export async function dispatchMail(): Promise<DispatchSummary> {
   const summary: DispatchSummary = { mode: target.mode, enqueued: 0, claimed: 0, sent: 0, skipped: 0, retried: 0, deferred: 0, failed: 0 };
 
   const { data: enqueued, error: enqueueError } = await admin.rpc('enqueue_scheduled_mails');
-  if (enqueueError) logger.error('mail:dispatch_enqueue_failed', enqueueError.message);
+  if (enqueueError) logger.error('mail:dispatch_enqueue_failed', enqueueError.message, { err: enqueueError });
   else summary.enqueued = typeof enqueued === 'number' ? enqueued : 0;
 
   if (target.mode === 'off') {
@@ -247,7 +247,7 @@ export async function dispatchMail(): Promise<DispatchSummary> {
   while (Date.now() - startedAt < CLAIM_TIME_BUDGET_MS) {
     const { data: rows, error: claimError } = await admin.rpc('claim_mail_outbox', { p_limit: CLAIM_SIZE });
     if (claimError) {
-      logger.error('mail:dispatch_claim_failed', claimError.message);
+      logger.error('mail:dispatch_claim_failed', claimError.message, { err: claimError });
       throw new Error(claimError.message);
     }
 

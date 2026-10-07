@@ -31,13 +31,13 @@ export async function getClientsFilter(): Promise<ClientOption[]> {
       .order('client_name');
 
     if (error) {
-      logger.error('client:get_filter_failed', error.message, ctx);
+      logger.error('client:get_filter_failed', error.message, { ...ctx, err: error });
       return [];
     }
 
     return (data || []) as ClientOption[];
   } catch (error) {
-    logger.error('client:get_filter_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('client:get_filter_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return [];
   }
 }
@@ -67,7 +67,7 @@ export async function getClients(page: number = 1, limit: number = 10, searchQue
     const { data, count, error } = await query;
 
     if (error) {
-      logger.error('client:get_clients_failed', error.message, { ...ctx, payload: { page, limit, searchQuery } });
+      logger.error('client:get_clients_failed', error.message, { ...ctx, err: error, payload: { page, limit, searchQuery } });
       throw new Error(error.message);
     }
 
@@ -76,7 +76,7 @@ export async function getClients(page: number = 1, limit: number = 10, searchQue
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('client:get_clients_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, limit, searchQuery } });
+    logger.error('client:get_clients_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { page, limit, searchQuery } });
     throw error;
   }
 }
@@ -95,7 +95,7 @@ export async function createClient(payload: ClientPayload): Promise<ClientRespon
       .select();
 
     if (error) {
-      logger.error('client:create_client_failed', error.message, { ...ctx, payload });
+      logger.error('client:create_client_failed', error.message, { ...ctx, err: error, payload });
       return { success: false, message: error.message };
     }
 
@@ -108,7 +108,7 @@ export async function createClient(payload: ClientPayload): Promise<ClientRespon
     revalidatePath('/clients');
     return { success: true, client: newClient };
   } catch (error) {
-    logger.error('client:create_client_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload });
+    logger.error('client:create_client_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -134,7 +134,7 @@ export async function updateClient(
       .select();
 
     if (error) {
-      logger.error('client:update_client_failed', error.message, { ...ctx, payload: { clientId, ...payload } });
+      logger.error('client:update_client_failed', error.message, { ...ctx, err: error, payload: { clientId, ...payload } });
       return { success: false, message: error.message };
     }
 
@@ -147,7 +147,7 @@ export async function updateClient(
     revalidatePath('/clients');
     return { success: true, client: updatedClient };
   } catch (error) {
-    logger.error('client:update_client_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { clientId, ...payload } });
+    logger.error('client:update_client_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId, ...payload } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -169,7 +169,7 @@ export async function deleteClient(clientId: string): Promise<ClientResponse> {
       .eq('client_id', clientId);
 
     if (error) {
-      logger.error('client:delete_client_failed', error.message, { ...ctx, payload: { clientId } });
+      logger.error('client:delete_client_failed', error.message, { ...ctx, err: error, payload: { clientId } });
       return { success: false, message: error.message };
     }
 
@@ -181,7 +181,7 @@ export async function deleteClient(clientId: string): Promise<ClientResponse> {
     revalidatePath('/clients');
     return { success: true };
   } catch (error) {
-    logger.error('client:delete_client_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { clientId } });
+    logger.error('client:delete_client_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

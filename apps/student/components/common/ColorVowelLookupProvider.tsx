@@ -12,6 +12,7 @@ import { lookupColorVowelDictionary } from '@/actions/colorVowelAction';
 import { type ColorVowelDicResult, getPartOfSpeechLabel, COLOR_VOWEL_COLORS } from '@gabby/types/colorVowel';
 import { cn } from '@/lib/utils';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 // -----------------------------------------------------------------------
 // Context & 型定義
@@ -244,7 +245,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
       }
       setIsOpen(true);
     } catch (error) {
-      console.error('Color Vowel dictionary lookup unexpected:', error);
+      clientLogger.error('cvDict:lookup_unexpected', 'Color Vowel dictionary lookup failed', { err: error });
     } finally {
       setIsLoading(false);
     }
@@ -253,7 +254,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
   const handlePlayAudio = React.useCallback((url: string | null, type: 'word' | 'vowel') => {
     if (!url) return;
     const id = activeResult ? `${activeResult.wordEn}-${activeResult.partOfSpeech}-${type}` : type;
-    playAudio(url, id).catch((err) => console.error('Failed to play audio:', err));
+    playAudio(url, id).catch((err) => clientLogger.warn('cvDict:play_audio_failed', 'Failed to play audio', { err }));
   }, [playAudio, activeResult]);
 
   const handleOpenChange = (open: boolean) => {

@@ -40,10 +40,10 @@ async function sendAccountMail({
 }): Promise<AccountMailResult> {
   try {
     const data = await sendCore({ to, kind, ...renderMail(mail) });
-    logger.info(`mail:${logName}_success`, `${label}を送信しました: ${to}`, { messageId: data?.id });
+    logger.info(`mail:${logName}_success`, `${label}を送信しました: ${to}`, { payload: { messageId: data?.id } });
     return { success: true };
   } catch (err) {
-    logger.error(`mail:${logName}_failed`, err instanceof Error ? err.message : 'Unknown error', { payload: { to } });
+    logger.error(`mail:${logName}_failed`, err instanceof Error ? err.message : 'Unknown error', { err, payload: { to } });
     return { success: false, error: err instanceof Error ? err.message : 'メール送信中に予期せぬエラーが発生しました。' };
   }
 }

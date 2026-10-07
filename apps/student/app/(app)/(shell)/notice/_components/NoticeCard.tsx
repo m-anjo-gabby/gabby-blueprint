@@ -12,6 +12,7 @@ import { formatZonedDateJapanese } from '@gabby/lib/date/date';
 import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
 import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
 import { isPreviewableFile, forceDownloadFile } from '@gabby/lib/notice/download';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 // ─── ファイルサイズ表示ユーティリティ ──────────────────────
 function formatFileSize(bytes: number): string {
@@ -79,7 +80,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         await forceDownloadFile(url, name);
       }
     } catch (err) {
-      console.error(err);
+      clientLogger.error('notice:download_attachment_failed', 'Attachment download failed', { err });
     } finally {
       setLoadingActionId(null);
     }

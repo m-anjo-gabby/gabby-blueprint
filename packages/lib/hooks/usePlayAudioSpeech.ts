@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { createBrowserClient } from '../supabase/client';
 import { useAudioEngine, type AudioPlayOutcome } from './useAudioEngine';
+import { clientLogger } from '../logger/client';
 
 /**
  * 音声再生およびダウンロードを管理するカスタムフック。
@@ -76,7 +77,7 @@ export function usePlayAudioSpeech() {
       link.remove();
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
-      console.error('Download processing failed:', error);
+      clientLogger.error('audio:download_failed', 'Audio download failed', { err: error });
       throw error;
     } finally {
       setIsDownloading(null);

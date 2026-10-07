@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import type { MonitorSprintHistoryResponse, MonitorUser } from '@/actions/monitorAction';
-import { logClientEvent } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { cn } from '@/lib/utils';
 import { HistoryEmpty, HistoryMetric } from '../../training/_components/HistoryParts';
@@ -120,13 +120,9 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
       ])
     );
 
-    logClientEvent({
-      service: 'student',
-      event: 'monitor:sprint_history_csv_exported',
-      level: 'info',
-      message: `Sprint history CSV exported: ${startDate}~${endDate}`,
+    clientLogger.info('monitor:sprint_history_csv_exported', `Sprint history CSV exported: ${startDate}~${endDate}`, {
       payload: { startDate, endDate, targetUserIds: userIds, rowCount: rows.length },
-    }).catch(() => {});
+    });
 
     downloadCsv(
       `blueprint_sprint_drill_history_${startDate}_to_${endDate}${includeMonitor ? '_with_monitor' : ''}.csv`,

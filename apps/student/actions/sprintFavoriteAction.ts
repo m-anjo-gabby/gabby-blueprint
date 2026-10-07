@@ -43,7 +43,7 @@ export async function getFavoriteSprintQuestions(): Promise<FavoriteSprintQuesti
       .limit(FAVORITE_LIMIT);
 
     if (error) {
-      logger.error("sprint:get_favorite_questions_failed", error.message, ctx);
+      logger.error("sprint:get_favorite_questions_failed", error.message, { ...ctx, err: error });
       return [];
     }
 
@@ -60,7 +60,7 @@ export async function getFavoriteSprintQuestions(): Promise<FavoriteSprintQuesti
       .neq('content_scope', 9);
 
     if (contentError) {
-      logger.error("sprint:get_favorite_question_contents_failed", contentError.message, ctx);
+      logger.error("sprint:get_favorite_question_contents_failed", contentError.message, { ...ctx, err: contentError });
       return [];
     }
 
@@ -82,7 +82,7 @@ export async function getFavoriteSprintQuestions(): Promise<FavoriteSprintQuesti
       }];
     });
   } catch (err) {
-    logger.error("sprint:get_favorite_questions_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("sprint:get_favorite_questions_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return [];
   }
 }
@@ -105,12 +105,12 @@ export async function getFavoriteSprintQuestionIds(questionIds: string[]): Promi
       .in('question_id', questionIds);
 
     if (error) {
-      logger.error("sprint:get_favorite_question_ids_failed", error.message, ctx);
+      logger.error("sprint:get_favorite_question_ids_failed", error.message, { ...ctx, err: error });
       return [];
     }
     return (data ?? []).map((r) => r.question_id as string);
   } catch (err) {
-    logger.error("sprint:get_favorite_question_ids_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("sprint:get_favorite_question_ids_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return [];
   }
 }

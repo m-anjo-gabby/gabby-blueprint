@@ -67,6 +67,7 @@ export async function uploadChatAttachment(
     if (uploadError) {
       logger.error('chat:upload_attachment_failed', uploadError.message, {
         ...ctx,
+        err: uploadError,
         payload: { roomId, fileName: file.name },
       });
       return { success: false, message: `アップロードに失敗しました: ${uploadError.message}` };
@@ -88,6 +89,7 @@ export async function uploadChatAttachment(
   } catch (err) {
     logger.error('chat:upload_attachment_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: { roomId },
     });
     return { success: false, message: '予期せぬエラーが発生しました' };
@@ -109,6 +111,7 @@ export async function getChatAttachmentUrl(
     if (error || !data?.signedUrl) {
       logger.error('chat:get_attachment_url_failed', error?.message || 'Failed to generate signed URL', {
         ...ctx,
+        err: error,
         payload: { path },
       });
       return { url: null, error: error?.message || 'Failed to generate signed URL' };
@@ -118,6 +121,7 @@ export async function getChatAttachmentUrl(
   } catch (err) {
     logger.error('chat:get_attachment_url_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: { path },
     });
     return { url: null, error: 'Unexpected error' };

@@ -23,13 +23,13 @@ export async function getTimezoneListCore(): Promise<GetTimezoneListResult> {
       .order('sort_no', { ascending: true });
 
     if (error) {
-      logger.error('profile:get_timezone_list_failed', error.message, ctx);
+      logger.error('profile:get_timezone_list_failed', error.message, { ...ctx, err: error });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, timezones: data ?? [] };
   } catch (err) {
-    logger.error('profile:get_timezone_list_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('profile:get_timezone_list_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -64,14 +64,14 @@ export async function updateMyTimezoneCore(timezone: string): Promise<UpdateTime
       .eq('id', user.id);
 
     if (updateError) {
-      logger.error('profile:update_timezone_failed', updateError.message, { ...ctx, userId: user.id });
+      logger.error('profile:update_timezone_failed', updateError.message, { ...ctx, err: updateError, userId: user.id });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
     logger.info('profile:update_timezone_success', `Timezone updated: ${timezone}`, { ...ctx, userId: user.id });
     return { success: true, timezone };
   } catch (err) {
-    logger.error('profile:update_timezone_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('profile:update_timezone_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

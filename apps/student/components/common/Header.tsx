@@ -31,6 +31,7 @@ import { getLatestTerms } from '@/actions/termAction';
 import { TermsAgreementModal } from './TermsAgreementModal';
 import type { TermDocument } from '@gabby/types/term';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 
 export default function Header() {
@@ -57,7 +58,7 @@ export default function Header() {
       // これによりページが完全にリロードされ、Zustandの全メモリキャッシュ(UserAのデータ)が破棄されます。
       window.location.href = '/login';
     } catch (error) {
-      console.error('Logout failed:', error);
+      clientLogger.error('auth:sign_out_failed', 'Logout failed', { err: error });
       setIsSigningOut(false);
       // 必要に応じてエラー通知など
     }

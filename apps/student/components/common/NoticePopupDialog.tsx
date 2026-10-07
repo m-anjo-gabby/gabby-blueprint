@@ -11,6 +11,7 @@ import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeItem, NoticeType } from '@gabby/types/notice';
 import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
 import { isPreviewableFile, forceDownloadFile } from '@gabby/lib/notice/download';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 interface NoticePopupDialogProps {
   /** ポップアップ対象のお知らせ一覧 (show_dialog=TRUE かつ未読) */
@@ -52,7 +53,7 @@ export function NoticePopupDialog({ notices, onClose }: NoticePopupDialogProps) 
         await forceDownloadFile(url, name);
       }
     } catch (err) {
-      console.error(err);
+      clientLogger.error('notice:download_attachment_failed', 'Attachment download failed', { err });
     } finally {
       setLoadingActionId(null);
     }

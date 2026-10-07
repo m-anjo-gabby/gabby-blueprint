@@ -48,7 +48,7 @@ async function handle(req: NextRequest) {
     const summary = await dispatchMail();
     return NextResponse.json(summary);
   } catch (err) {
-    logger.error('mail:dispatch_route_failed', err instanceof Error ? err.message : 'Unknown error');
+    logger.error('mail:dispatch_route_failed', err instanceof Error ? err.message : 'Unknown error', { err });
     return NextResponse.json({ error: 'dispatch_failed' }, { status: 500 });
   }
 }

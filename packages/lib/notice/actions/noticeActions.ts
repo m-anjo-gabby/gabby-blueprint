@@ -35,7 +35,7 @@ export async function getNoticesAction(): Promise<{
       .order('published_at', { ascending: false });
 
     if (error) {
-      logger.error("notice:get_all_failed", error.message, ctx);
+      logger.error("notice:get_all_failed", error.message, { ...ctx, err: error });
       return { success: false, data: [], error: error.message };
     }
 
@@ -48,7 +48,7 @@ export async function getNoticesAction(): Promise<{
 
     return { success: true, data: notices };
   } catch (err) {
-    logger.error("notice:get_all_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("notice:get_all_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, data: [], error: 'Unexpected error' };
   }
 }
@@ -85,7 +85,7 @@ export async function getUnreadNoticeCountAction(): Promise<number> {
     const readIds = new Set((readData || []).map((r: any) => r.notice_id));
     return noticeIds.filter((id: string) => !readIds.has(id)).length;
   } catch (err) {
-    logger.error("notice:unread_count_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("notice:unread_count_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return 0;
   }
 }
@@ -117,13 +117,13 @@ export async function markNoticeAsReadAction(noticeId: string): Promise<{
       );
 
     if (error) {
-      logger.error("notice:mark_read_failed", error.message, ctx);
+      logger.error("notice:mark_read_failed", error.message, { ...ctx, err: error });
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error("notice:mark_read_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("notice:mark_read_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -157,13 +157,13 @@ export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise
       .upsert(rows, { onConflict: 'notice_id,user_id', ignoreDuplicates: true });
 
     if (error) {
-      logger.error("notice:mark_read_batch_failed", error.message, ctx);
+      logger.error("notice:mark_read_batch_failed", error.message, { ...ctx, err: error });
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error("notice:mark_read_batch_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("notice:mark_read_batch_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -196,6 +196,7 @@ export async function getNoticeAttachmentUrlAction(
   } catch (err) {
     logger.error("notice:get_attachment_url_unexpected", err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: { path }
     });
     return { url: null, error: 'Unexpected error' };

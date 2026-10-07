@@ -21,6 +21,7 @@
 | [notification/mail-dispatch.md](notification/mail-dispatch.md) | 通知・リマインダーのメール配信（送信待ち・送信処理・区分ごとの配信停止〔ログイン不要の停止リンク・List-Unsubscribe〕・出来事の通知メール〔チャットは未読10分〕・管理者の操作は通知しない・グループセッション/ライブセッションの24時間前/1時間前のリマインダー） | 生徒, コーチ, （システム） | `enqueue_scheduled_mails`, `claim_mail_outbox`, `fn_notify`（トリガー `enqueue_notification_mail`・pg_cron `mail-dispatch-every-5min`） |
 | [session-lifecycle/session-completion.md](session-lifecycle/session-completion.md) | ライブセッションの実施・終了処理（入退室の記録・End Session〔重なり20分以上で実施完了・未満は理由つき早期終了・入室なしは無断欠席〕・チケットの消化・Resolve Manually・Session Tasks・月次の件数） | コーチ, 生徒, （アドミン） | `finalize_session`, `resolve_stale_session`, `record_session_call_join`, `record_session_call_leave`（内部 `fn_consume_session_ticket`） |
 | [homework/session-homework.md](homework/session-homework.md) | ライブセッションの宿題（1セッション1件の本体・最大5項目のチェックリスト・添付・追記のコメント・生徒への通知・生徒のチェック・前回の宿題の表示） | コーチ, 生徒 | なし（トリガー `notify_session_homework_posted` / `notify_session_homework_comment_posted`） |
+| [logging/client-log.md](logging/client-log.md) | ブラウザのログの受け口（`/api/client-log`。ログインなしで受け付け・本文の検証〔形・大きさ・回数〕・`source: client`。ログの規約は docs/LOGGING.md） | 全ロール（未ログインを含む） | なし |
 
 ## 未着手ドメイン（ファイルが無い＝仕様書はまだ存在しない）
 

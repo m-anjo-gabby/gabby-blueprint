@@ -6,6 +6,9 @@ import {
   type ChatMessage,
   type KnowledgeSourceType,
 } from '@gabby/lib/ai';
+import { createLogger } from '@gabby/lib/logger';
+
+const logger = createLogger('admin');
 
 export const runtime = 'nodejs';
 
@@ -48,7 +51,7 @@ export async function POST(request: NextRequest) {
       } catch (ragError) {
         // RAG検索の失敗はチャット自体を止めず、コンテキストなしで継続する
         const message = ragError instanceof Error ? ragError.message : 'Unknown error';
-        console.error('AI Chat RAG Search Error:', message);
+        logger.warn('aiChat:rag_search_failed', message, { err: ragError });
       }
     }
 
@@ -65,7 +68,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('AI Chat API Error:', message);
+    logger.error('aiChat:request_failed', message, { err: error });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

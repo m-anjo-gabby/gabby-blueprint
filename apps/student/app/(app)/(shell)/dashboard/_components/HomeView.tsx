@@ -27,6 +27,7 @@ import { WeeklyActivityCard } from './WeeklyActivityCard';
 import { LifetimeStatsCard } from './LifetimeStatsCard';
 import { CoachAssignmentsCard } from './CoachAssignmentsCard';
 import { PlanCard } from './PlanCard';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 interface HomeViewProps {
   assignments: DialogueAssignmentSummary[];
@@ -99,7 +100,7 @@ export function HomeView({
       showToast('再開情報を削除しました', 'success');
     } catch (error) {
       showToast('削除に失敗しました', 'error');
-      console.error(error);
+      clientLogger.error('dashboard:delete_resume_failed', 'Failed to delete resume info', { err: error });
     }
   };
 

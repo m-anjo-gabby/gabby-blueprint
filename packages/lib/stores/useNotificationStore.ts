@@ -5,6 +5,7 @@ import {
   markAllNotificationsAsReadAction,
 } from '@gabby/lib/notification/actions/notificationActions';
 import { NotificationItem } from '@gabby/types/notification';
+import { clientLogger } from '../logger/client';
 
 interface NotificationState {
   notifications: NotificationItem[];
@@ -42,7 +43,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       if (!res.success) return;
       get().applyNotifications(res.data);
     } catch (err) {
-      console.error('Notification fetch error:', err);
+      clientLogger.error('notification:fetch_notifications_failed', 'Notification fetch failed', { err });
     } finally {
       set({ isLoading: false });
     }
