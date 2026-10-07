@@ -19,6 +19,7 @@ import csv
 import json
 import os
 import re
+import sys
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -304,6 +305,8 @@ def build_cv(ws):
 
 
 def main():
+    # Windows のコンソール（cp932）では IPA 記号を出力できないため UTF-8 に固定する
+    sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--dict", required=True)
     ap.add_argument("--out")

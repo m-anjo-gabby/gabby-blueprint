@@ -26,7 +26,8 @@ npx tsx .claude/skills/cv-dictionary-tsv/scripts/extract.ts --out "<作業ディ
 ```
 
 - `worklist.tsv`: 辞書化対象の単語（`word` / `count` / `note` / `contexts`（例文を最大3文、`||` 区切り））
-- `excluded.tsv`: 機械的に除外した語（`proper_noun` / `digits` / `already_in_exclude_file`）
+- `excluded.tsv`: 機械的に除外した語（`digits` / `already_in_exclude_file` / `known_proper_noun`（固有名詞リスト [proper-nouns.tsv](../../../docs/cv-dictionary/proper-nouns.tsv) に載っている語））
+- 文中でも常に大文字で始まる語は除外せず、`note` = `capitalized_mid_sentence` として worklist に残る（固有名詞か一般語かは手順2で判定する）
 - 略語（`CEO`, `KPIs` など大文字を2文字以上含む語）は除外せず、`note` = `abbreviation` として worklist に残る
 
 抽出結果の語数と除外語をユーザーに報告してから次へ進む。
@@ -40,7 +41,9 @@ npx tsx .claude/skills/cv-dictionary-tsv/scripts/extract.ts --out "<作業ディ
 - 台帳で `confirmed` の語（英単語＋品詞）は、台帳の `syllables` 〜 `phonetic_spelling` をそのまま使う。
   `pending` の語は台帳の値を参考にしてよい（判断が変わった場合は `review_note` に理由を書く）。
 - 文脈で品詞が分かれる語は品詞ごとに行を分ける。
-- 固有名詞などで行を作らない語は `<作業ディレクトリ>/skipped.tsv`（ヘッダー `word	reason`）に記録する。
+- 固有名詞などで行を作らない語は `<作業ディレクトリ>/skipped.tsv`（ヘッダー `word	reason	note`）に記録する。
+  固有名詞は `reason` = `proper_noun`、`note` に種類（社名・人名・地名・製品名・名称の一部 等）を書く。
+  手順3.5で固有名詞リストに蓄積され、次回から抽出の段階で除外される。
 - 途中で中断した場合も、既存の parts はそのまま残し、未生成の語から再開する
   （`validate.ts` の「未生成の単語」に一覧が出る）。
 
@@ -64,6 +67,7 @@ npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts sync --work "<作業�
 ```
 
 `review.tsv` のうち台帳に未登録の行を `pending` で追記する（登録済みの語は重複して追記しない）。
+あわせて `skipped.tsv` の `proper_noun` の語を固有名詞リスト（`docs/cv-dictionary/proper-nouns.tsv`）に追記する。
 複数の語に効く新しい論点が出た場合は、JUDGEMENT-GUIDE.md の「未決の論点」と `docs/cv-dictionary/open-policies.json` にも追記する。
 
 ### 4. 報告する
@@ -71,7 +75,7 @@ npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts sync --work "<作業�
 次をユーザーに報告する。
 
 - 出力TSVのパスと件数（語数・行数）
-- 除外語（`excluded.tsv` / `skipped.tsv`）
+- 除外語（`excluded.tsv` / `skipped.tsv`）。`capitalized_mid_sentence` の語は、一般語として登録したか固有名詞として除外したかを一覧で示す
 - 要確認として残った行（`review.tsv` の内容を分類ごとに表で）と、台帳への追記件数
 
 取込は admin の「Tools > CV Dictionary > 一括登録」から手動で行う。

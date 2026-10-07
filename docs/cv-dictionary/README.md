@@ -10,6 +10,7 @@
 |---|---|---|
 | [review-ledger.tsv](./review-ledger.tsv) | **要確認台帳**。語（英単語＋品詞）ごとの確認事項・現在の値・確定結果。Excelで開ける | コンテンツチーム、開発者 |
 | [JUDGEMENT-GUIDE.md](./JUDGEMENT-GUIDE.md) | **判断基準ガイド**。複数の語に効く方針（例: R音化母音の扱い）の決定事項と、作業中の気づき | 開発者、Claude |
+| [proper-nouns.tsv](./proper-nouns.tsv) | **固有名詞リスト**。過去の作成で固有名詞と判定した語（社名・人名・製品名等）。次回から抽出時に機械的に除外される。誤って載った一般語は行を消す | 開発者、Claude |
 | [open-policies.json](./open-policies.json) | **未決の論点**（方針の確認待ち）。確認依頼Excelの「①確認事項（方針）」の元データ | 開発者、Claude |
 | [sample/](./sample/) | 確認依頼Excelの見本（サンプルデータ `cv_dictionary_sample.tsv` から出力したもの） | 開発者、Claude |
 
