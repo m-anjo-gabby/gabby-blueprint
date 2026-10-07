@@ -113,7 +113,7 @@ export function CalendarEventCard({ event, timezone, onParticipationChanged, sho
   };
 
   return (
-    <article className="bg-surface rounded-2xl border border-line/70 shadow-sm p-4 space-y-2">
+    <article className="bg-surface rounded-control border border-line/70 shadow-sm p-4 space-y-2">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-1.5 mb-1">

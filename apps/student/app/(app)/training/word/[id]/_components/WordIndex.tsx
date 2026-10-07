@@ -108,7 +108,7 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
               <DrawerTitle className="text-xl font-bold tracking-tight text-ink leading-none">単語一覧</DrawerTitle>
             </div>
             <DrawerClose asChild>
-              <button className="h-10 w-10 flex items-center justify-center rounded-full bg-canvas text-ink-subtle hover:bg-canvas hover:text-ink-soft transition-colors">
+              <button className="h-10 w-10 flex items-center justify-center rounded-full bg-canvas text-ink-subtle hover:bg-line/60 hover:text-ink-soft transition-colors">
                 <X size={20} strokeWidth={2.5} />
               </button>
             </DrawerClose>

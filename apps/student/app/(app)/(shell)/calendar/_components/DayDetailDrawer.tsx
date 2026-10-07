@@ -77,7 +77,7 @@ export function DayDetailDrawer({
                 const isFuture = new Date(session.start_datetime) > new Date();
                 const canAct = session.status === SESSION_STATUS.SCHEDULED && isFuture;
                 return (
-                  <article key={getCalendarItemKey(item)} className="bg-white rounded-2xl border border-line/70 shadow-sm p-4 space-y-2">
+                  <article key={getCalendarItemKey(item)} className="bg-white rounded-control border border-line/70 shadow-sm p-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-bold text-ink">
@@ -85,13 +85,13 @@ export function DayDetailDrawer({
                         </p>
                         <p className="text-xs text-ink-muted mt-0.5">{session.counterpart_name}コーチ</p>
                       </div>
-                      <span className={cn('text-[11px] font-bold uppercase px-2 py-1 rounded-md border shrink-0', badge.className)}>
+                      <span className={cn('text-[11px] font-bold px-2 py-1 rounded-md border shrink-0', badge.className)}>
                         {badge.label}
                       </span>
                     </div>
 
                     {session.cancel_reason && (
-                      <p className="text-xs text-ink-muted bg-slate-50 border border-line/70 rounded-lg px-3 py-2">{session.cancel_reason}</p>
+                      <p className="text-xs text-ink-muted bg-canvas border border-line/70 rounded-lg px-3 py-2">{session.cancel_reason}</p>
                     )}
 
                     {canAct && (

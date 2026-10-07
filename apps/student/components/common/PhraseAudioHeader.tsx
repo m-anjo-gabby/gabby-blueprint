@@ -15,7 +15,7 @@ const TONE_STYLES: Record<
     idle: 'text-ink-subtle',
     hover: 'hover:text-brand-500 hover:bg-canvas',
     langActive: 'bg-canvas text-brand',
-    langIdle: 'text-ink-subtle hover:text-ink-subtle hover:bg-canvas',
+    langIdle: 'text-ink-subtle hover:text-ink-muted hover:bg-canvas',
   },
   indigo: {
     label: 'text-brand-500',

@@ -30,14 +30,14 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
     >
       <button
         onClick={() => onOpen(notification)}
-        className="w-full text-left flex items-start gap-3 p-5 hover:bg-slate-50/60 transition-colors"
+        className="w-full text-left flex items-start gap-3 p-5 hover:bg-canvas/60 transition-colors"
       >
         {/* 未読インジケーター */}
         <div className="mt-1 shrink-0">
           {!notification.is_read ? (
             <span className="inline-block w-2 h-2 rounded-full bg-brand-500" />
           ) : (
-            <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />
+            <span className="inline-block w-2 h-2 rounded-full bg-line" />
           )}
         </div>
 
@@ -45,7 +45,7 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
         <div
           className={cn(
             'flex items-center justify-center w-9 h-9 rounded-xl border shrink-0',
-            display.badgeClass ?? 'bg-slate-50 text-ink-muted border-line/70'
+            display.badgeClass ?? 'bg-canvas text-ink-muted border-line/70'
           )}
         >
           <Icon size={16} />

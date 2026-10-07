@@ -238,7 +238,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                 if (window.history.length > 1) router.back();
                 else router.push('/library');
               }}
-              className="h-9 w-9 flex items-center justify-center rounded-xl bg-canvas text-ink-subtle border border-line/60 shadow-3xs hover:bg-canvas hover:text-ink-soft active:scale-95 transition-all cursor-pointer"
+              className="h-9 w-9 flex items-center justify-center rounded-xl bg-canvas text-ink-subtle border border-line/60 shadow-3xs hover:bg-line/60 hover:text-ink-soft active:scale-95 transition-all cursor-pointer"
             >
               <ChevronLeft size={20} strokeWidth={2.5} />
             </button>
@@ -247,7 +247,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                 e.stopPropagation();
                 router.push('/dashboard');
               }}
-              className="h-9 w-9 flex items-center justify-center rounded-xl bg-canvas text-ink-subtle border border-line/60 shadow-3xs hover:bg-canvas hover:text-brand active:scale-95 transition-all cursor-pointer"
+              className="h-9 w-9 flex items-center justify-center rounded-xl bg-canvas text-ink-subtle border border-line/60 shadow-3xs hover:bg-line/60 hover:text-brand active:scale-95 transition-all cursor-pointer"
               title="ダッシュボードに戻る"
             >
               <Home size={18} strokeWidth={2.5} />
@@ -265,7 +265,7 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
               e.stopPropagation();
               setIsSettingsOpen(true);
             }}
-            className="h-9 w-9 flex items-center justify-center rounded-xl bg-canvas text-ink-subtle border border-line/60 shadow-3xs hover:bg-canvas hover:text-brand active:scale-95 transition-all cursor-pointer z-30"
+            className="h-9 w-9 flex items-center justify-center rounded-xl bg-canvas text-ink-subtle border border-line/60 shadow-3xs hover:bg-line/60 hover:text-brand active:scale-95 transition-all cursor-pointer z-30"
           >
             <Settings2 size={18} strokeWidth={2.5} />
           </button>
