@@ -237,7 +237,7 @@ test.describe("スプリントの発話", () => {
 
       await openSprintSelect(page, { mode: "sprint", type, contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
       // Speed は回答の種類（YES/NO）を選んで開始する。YES で開始し、YES の解答文で評価されることを確かめる
-      const start = page.getByRole("button", { name: type === "0" ? "YESで回答開始" : "スプリントを開始" });
+      const start = page.getByRole("button", { name: type === "0" ? "YESで回答開始" : "タイムアタックを開始" });
       await expect(start).toBeEnabled();
       await start.click();
 
@@ -267,7 +267,7 @@ test.describe("スプリントの発話", () => {
     const sprint = await prepareSprintContent(f);
 
     await openSprintSelect(page, { mode: "sprint", type: "6", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: false });
-    await page.getByRole("button", { name: "スプリントを開始" }).click();
+    await page.getByRole("button", { name: "タイムアタックを開始" }).click();
 
     await expect(page.getByText("発話なし", { exact: true })).toBeVisible({ timeout: 30_000 });
     // 回答の段階（基本文・質問文の再生後）になると「次の問題へ」が押せるようになる
@@ -286,7 +286,7 @@ test.describe("スプリントの発話", () => {
     const sprint = await prepareSprintContent(f);
 
     await openSprintSelect(page, { mode: "sprint", type: "6", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
-    await page.getByRole("button", { name: "スプリントを開始" }).click();
+    await page.getByRole("button", { name: "タイムアタックを開始" }).click();
     const first = await waitForFirstListen(page);
     const listenText = first[first.length - 1].text;
 
@@ -314,7 +314,7 @@ test.describe("スプリントの発話", () => {
 
     // 全問に発話で答え終えると、スプリントが終わって結果画面へ移る
     await openSprintSelect(page, { mode: "sprint", type: "6", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
-    await page.getByRole("button", { name: "スプリントを開始" }).click();
+    await page.getByRole("button", { name: "タイムアタックを開始" }).click();
     await page.waitForURL(/\/training\/sprint\/result\/[0-9a-f-]{36}/, { timeout: 150_000 });
 
     await test.step("実施の記録が保存され、履歴は出題順に問題ごとの回答（スキップの有無・発話評価）を持つ", async () => {

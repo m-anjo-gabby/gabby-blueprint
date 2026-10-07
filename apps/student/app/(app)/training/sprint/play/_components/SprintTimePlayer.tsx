@@ -400,7 +400,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       incrementAssessmentCount();
       const { isLast } = commitAssessmentResult(questionId, getFeedbackConfig(result.score), result);
       if (isLast || timeUpTriggeredRef.current) {
-        if (isLast) showToast("すべての問題を消化しました！スプリント完了です。", "success");
+        if (isLast) showToast("すべての問題を消化しました！タイムアタック完了です。", "success");
         // 🆕 タイムアップ経由の確定時は、seconds=0・現在問題を含める指定で保存へ進む
         handlePersistAndRedirect(timeUpTriggeredRef.current ? 0 : secondsLeftRef.current, timeUpTriggeredRef.current);
       }
@@ -517,7 +517,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     const { isLast } = commitSkipResult(currentQuestion.question_id);
     if (isLast) {
-      showToast("スプリントを終了します。", "success");
+      showToast("タイムアタックを終了します。", "success");
       handlePersistAndRedirect(secondsLeftRef.current);
     }
   }, [commitSkipResult, showToast, handlePersistAndRedirect, currentQuestion, stopAllAudio, unlockAudioContext]);
@@ -558,8 +558,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 🚀 終了確認→ローディング表示→強制クリーンアップ→iOSのマイク解放待ちバッファ→
   // 実際の離脱、という一連の流れは Word/Sprint 共通のためフック化（進捗同期は不要なため sync 未指定）
   const handleExit = useExitConfirmFlow({
-    confirmTitle: "Quit Sprint?",
-    confirmMessage: "進行中のスプリントを終了して戻りますか？（スコアは記録されません）",
+    confirmTitle: "タイムアタックを終了しますか？",
+    confirmMessage: "進行中のタイムアタックを終了して戻りますか？（スコアは記録されません）",
     confirmVariant: 'warning',
     setLoading: setExitLoading,
     cleanup: stopAllAudio,
@@ -983,8 +983,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <h3 className="text-lg font-black text-slate-800 tracking-tight">
-                {isSaving ? "スプリントの記録を保存中" : "スプリント完了"}
+              <h3 className="text-lg font-bold text-ink tracking-tight">
+                {isSaving ? "タイムアタックの記録を保存中" : "タイムアタック完了"}
               </h3>
               <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[220px] mx-auto">
                 {isSaving ? "今回の成果を集計しています..." : "今回の成果はこちらです"}
