@@ -1,0 +1,635 @@
+<title>{柱1}＆{柱2}</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+  /* 変更概要シリーズ共通の紙面（.claude/skills/release-summary/reference/template.html）。罫線入りの用紙に、区分ごとの色タグで新機能・改善・修正を示す */
+  :root {
+    --paper: #f5f1e6;
+    --paper-raised: #fffdf6;
+    --ink: #262420;
+    --ink-soft: #5b564a;
+    --ink-faint: #8d8676;
+    --line: #ddd4bd;
+    --line-strong: #c2b696;
+
+    --accent: #35548f;        /* インディゴ: 改善 */
+    --accent-ink: #1f3760;
+    --accent-soft: #e1e8f3;
+
+    --good: #3f7d4a;          /* グリーン: 新機能 */
+    --good-ink: #2c5c35;
+    --good-soft: #e3efe1;
+
+    --warn: #b23a2e;          /* 赤ペン: 不具合修正 */
+    --warn-ink: #8a2c22;
+    --warn-soft: #f6e2dc;
+
+    --caution: #a8791f;       /* 金/褐色: 運用上の注意 */
+    --caution-ink: #7a5710;
+    --caution-soft: #f3e6c8;
+
+    --brand: #0e3196;         /* 生徒アプリのブランド色（メール見本のボタン） */
+    --brand-ink: #ffffff;
+    --mail-bg: #ffffff;
+
+    --print-paper: #ffffff;   /* 印刷時の用紙（PDF は常にライトで出力する） */
+    --rule-line: color-mix(in srgb, var(--line) 55%, var(--paper) 45%);
+    --shadow: 0 1px 2px rgba(38,36,32,0.06), 0 10px 26px -14px rgba(38,36,32,0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #15161a;
+      --paper-raised: #1d1f26;
+      --ink: #ece7d9;
+      --ink-soft: #b7b0a0;
+      --ink-faint: #7d7768;
+      --line: #35363f;
+      --line-strong: #454652;
+      --accent: #7fa0e0;
+      --accent-ink: #cddaf3;
+      --accent-soft: #22314f;
+      --good: #7fc98c;
+      --good-ink: #cdeed2;
+      --good-soft: #1c3324;
+      --warn: #e08877;
+      --warn-ink: #f6d3c9;
+      --warn-soft: #3c211c;
+      --caution: #e0b25c;
+      --caution-ink: #f6dba0;
+      --caution-soft: #3a2f14;
+      --brand: #8fa9f0;
+      --brand-ink: #10183a;
+      --mail-bg: #23252d;
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 16px 36px -18px rgba(0,0,0,0.6);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #15161a;
+    --paper-raised: #1d1f26;
+    --ink: #ece7d9;
+    --ink-soft: #b7b0a0;
+    --ink-faint: #7d7768;
+    --line: #35363f;
+    --line-strong: #454652;
+    --accent: #7fa0e0;
+    --accent-ink: #cddaf3;
+    --accent-soft: #22314f;
+    --good: #7fc98c;
+    --good-ink: #cdeed2;
+    --good-soft: #1c3324;
+    --warn: #e08877;
+    --warn-ink: #f6d3c9;
+    --warn-soft: #3c211c;
+    --caution: #e0b25c;
+    --caution-ink: #f6dba0;
+    --caution-soft: #3a2f14;
+    --brand: #8fa9f0;
+    --brand-ink: #10183a;
+    --mail-bg: #23252d;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 16px 36px -18px rgba(0,0,0,0.6);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background-color: var(--paper);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 31px,
+      var(--rule-line) 31px,
+      var(--rule-line) 32px
+    );
+    color: var(--ink);
+    font-family: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", sans-serif;
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+    padding: 64px 20px 90px;
+  }
+
+  .mono { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace; }
+
+  .sheet { max-width: 800px; margin: 0 auto; }
+
+  /* ---------- Masthead ---------- */
+  .masthead {
+    border-top: 3px double var(--line-strong);
+    border-bottom: 1px solid var(--line-strong);
+    padding: 22px 0 26px;
+    margin-bottom: 30px;
+  }
+  .masthead .eyebrow {
+    margin: 0 0 14px;
+    font-size: 11.5px;
+    letter-spacing: 0.18em;
+    color: var(--ink-faint);
+  }
+  .masthead h1 {
+    font-family: "Shippori Mincho", "Hiragino Mincho ProN", serif;
+    font-weight: 700;
+    font-size: 28px;
+    line-height: 1.5;
+    margin: 0 0 14px;
+    text-wrap: balance;
+    letter-spacing: 0.01em;
+  }
+  .masthead .sub { margin: 0 0 20px; color: var(--ink-soft); font-size: 15px; max-width: 64ch; }
+
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 4px 10px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Lede ---------- */
+  .lede { margin: 0 0 20px; }
+  .lede .label {
+    display: block;
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    color: var(--accent-ink);
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  .lede p { margin: 0; font-size: 15.5px; color: var(--ink); max-width: 64ch; }
+
+  /* ---------- Risk banner ---------- */
+  .risk-banner {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--caution-soft);
+    border: 1px solid color-mix(in srgb, var(--caution) 40%, transparent);
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 30px;
+  }
+  .risk-banner .icon { font-size: 20px; line-height: 1.3; flex: none; }
+  .risk-banner > div { min-width: 0; }
+  .risk-banner .k { font-size: 13px; font-weight: 700; color: var(--caution-ink); margin-bottom: 4px; }
+  .risk-banner p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+  .risk-banner ul { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--ink-soft); }
+  .risk-banner li + li { margin-top: 4px; }
+
+  /* ---------- Stat strip ---------- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 26px; }
+  .stat {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 16px 14px;
+    text-align: center;
+  }
+  .stat .num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 25px;
+    font-weight: 700;
+    color: var(--accent-ink);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .stat .lbl { margin-top: 6px; font-size: 11.5px; color: var(--ink-faint); letter-spacing: 0.03em; }
+
+  /* ---------- Index ---------- */
+  .index {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 46px;
+    padding: 16px 18px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  .index .index-label { width: 100%; font-size: 11px; letter-spacing: 0.1em; color: var(--ink-faint); margin-bottom: 2px; }
+  .index a {
+    font-size: 12.5px;
+    color: var(--accent-ink);
+    text-decoration: none;
+    background: var(--accent-soft);
+    border-radius: 999px;
+    padding: 5px 13px;
+    white-space: nowrap;
+  }
+  .index a:hover, .index a:focus-visible { text-decoration: underline; }
+  .index a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .index a.main { background: var(--good-soft); color: var(--good-ink); font-weight: 700; }
+  .index a.quality { font-weight: 700; }
+
+  /* ---------- Section header ---------- */
+  .section-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 4px; scroll-margin-top: 20px; }
+  .section-head .mark {
+    width: 11px; height: 11px; flex: none; border-radius: 2px; position: relative; top: 1px;
+    background: var(--accent);
+  }
+  .section-head .mark.main { background: var(--good); }
+  .section-head .mark.misc { background: var(--ink-faint); }
+  .section-head .eyebrow {
+    font-size: 11px; letter-spacing: 0.14em; font-weight: 700; color: var(--accent-ink);
+  }
+  .section-head .eyebrow.main { color: var(--good-ink); }
+  .section-head .eyebrow.misc { color: var(--ink-soft); }
+  .badge {
+    font-size: 10.5px; font-weight: 700; padding: 1px 8px; border-radius: 3px; letter-spacing: 0.04em;
+  }
+  .badge.main { color: var(--good-ink); background: var(--good-soft); }
+  .badge.quality { color: var(--accent-ink); background: var(--accent-soft); }
+
+  .section-title { font-family: "Shippori Mincho", serif; font-size: 22px; font-weight: 700; margin: 6px 0 4px; text-wrap: balance; }
+  .section-rule { height: 1px; background: var(--line-strong); margin: 14px 0 22px; }
+  .section-intro { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 22px; max-width: 64ch; }
+
+  /* ---------- Feature panel ---------- */
+  .feature {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    padding: 26px 30px 28px;
+    margin-bottom: 44px;
+  }
+  .feature h3 {
+    font-size: 12px; letter-spacing: 0.08em; color: var(--ink-faint); font-weight: 700;
+    margin: 22px 0 2px; padding-bottom: 4px; border-bottom: 1px solid var(--line);
+  }
+  .feature h3:first-child { margin-top: 0; }
+  .feature ul { margin: 0; padding: 0; list-style: none; }
+  .feature li {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    font-size: 14px;
+    color: var(--ink);
+    padding: 11px 0;
+  }
+  .feature li > span:last-child { min-width: 0; }
+  .feature li + li { border-top: 1px dashed var(--line); }
+
+  .tag {
+    flex: none;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    position: relative;
+    top: -1px;
+  }
+  .tag.new { background: var(--good-soft); color: var(--good-ink); }
+  .tag.improve { background: var(--accent-soft); color: var(--accent-ink); }
+  .tag.fix { background: var(--warn-soft); color: var(--warn-ink); }
+
+  .callout {
+    margin-top: 18px;
+    background: var(--caution-soft);
+    border: 1px solid color-mix(in srgb, var(--caution) 45%, transparent);
+    border-radius: 3px;
+    padding: 14px 18px;
+  }
+  .callout .k {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12.5px; font-weight: 700; color: var(--caution-ink); margin-bottom: 6px;
+  }
+  .callout p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+  .callout p + p { margin-top: 6px; }
+  .callout.quality { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+  .callout.quality .k { color: var(--accent-ink); }
+
+  /* ---------- Flow ---------- */
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 0 0 24px;
+  }
+  .flow .step {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 12px 14px;
+  }
+  .flow .who {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent-ink);
+    display: block; margin-bottom: 2px;
+  }
+  .flow .what { font-size: 13px; color: var(--ink); line-height: 1.7; }
+
+  /* ---------- Mail matrix ---------- */
+  .matrix-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--paper-raised);
+    box-shadow: var(--shadow);
+    margin: 0 0 24px;
+  }
+  .matrix-wrap .cap {
+    font-size: 11px; letter-spacing: 0.08em; color: var(--ink-faint); font-weight: 700;
+    padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--paper);
+  }
+  table.matrix { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 600px; }
+  table.matrix th, table.matrix td { padding: 10px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  table.matrix thead th { font-size: 11px; color: var(--ink-faint); letter-spacing: 0.06em; background: var(--paper); font-weight: 700; }
+  table.matrix tbody th { font-weight: 700; color: var(--ink); white-space: nowrap; }
+  table.matrix tbody tr:last-child th, table.matrix tbody tr:last-child td { border-bottom: none; }
+  table.matrix td { color: var(--ink-soft); }
+  table.matrix td.when { white-space: nowrap; color: var(--ink); font-variant-numeric: tabular-nums; }
+  table.matrix tr.group th { background: color-mix(in srgb, var(--paper) 60%, var(--paper-raised)); font-size: 11.5px; color: var(--accent-ink); letter-spacing: 0.06em; }
+
+  /* ---------- Mail mock ---------- */
+  .mail-figure {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+    margin: 0 0 24px;
+  }
+  .mailmock {
+    background: var(--mail-bg);
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    font-size: 12.5px;
+    min-width: 0;
+  }
+  .mailmock .envelope { padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--paper); line-height: 1.6; }
+  .mailmock .envelope .row { display: flex; gap: 8px; color: var(--ink-soft); min-width: 0; }
+  .mailmock .envelope .row b { flex: none; width: 3.2em; color: var(--ink-faint); font-weight: 500; }
+  .mailmock .envelope .row span { min-width: 0; overflow-wrap: anywhere; }
+  .mailmock .envelope .subj { color: var(--ink); font-weight: 700; }
+  .mailmock .logo {
+    padding: 14px 18px 10px; border-bottom: 1px solid var(--line);
+    font-family: "Shippori Mincho", serif; font-weight: 700; font-size: 15px; color: var(--brand); letter-spacing: 0.02em;
+  }
+  .mailmock .body { padding: 14px 18px 16px; color: var(--ink); line-height: 1.75; }
+  .mailmock .body p { margin: 0 0 8px; }
+  .mailmock .when-box {
+    border: 1px solid var(--line); border-radius: 4px; padding: 8px 12px; margin: 4px 0 12px;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  .mailmock .when-box small { display: block; color: var(--ink-faint); font-size: 11px; }
+  .mailmock .btn {
+    display: inline-block; background: var(--brand); color: var(--brand-ink); border-radius: 4px;
+    padding: 7px 16px; font-weight: 700; font-size: 12.5px;
+  }
+  .mailmock .foot { padding: 10px 18px 12px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 11px; line-height: 1.6; }
+  .mailmock .foot u { color: var(--ink-soft); }
+  .mail-notes { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; min-width: 0; }
+  .mail-notes li { font-size: 13px; color: var(--ink-soft); line-height: 1.7; padding-left: 26px; position: relative; }
+  .mail-notes li .n {
+    position: absolute; left: 0; top: 2px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent-ink); font-size: 11px; font-weight: 700;
+    display: grid; place-items: center; font-family: "JetBrains Mono", monospace;
+  }
+  .mail-notes li b { color: var(--ink); }
+  .pin {
+    display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent-ink); font-size: 10px; font-weight: 700;
+    font-family: "JetBrains Mono", monospace; vertical-align: 1px; margin-left: 4px;
+  }
+
+  /* ---------- Quality figures ---------- */
+  .q-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 24px; }
+  .q-card {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    border-radius: 3px;
+    padding: 14px 16px;
+  }
+  .q-num { font-size: 26px; font-weight: 700; color: var(--accent-ink); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .q-num span { font-size: 12px; font-weight: 500; margin-left: 3px; font-family: "Zen Kaku Gothic New", sans-serif; }
+  .q-lbl { font-size: 13px; font-weight: 700; margin-top: 6px; }
+  .q-sub { font-size: 11.5px; color: var(--ink-faint); line-height: 1.6; }
+
+  /* ---------- Misc table ---------- */
+  .misc-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    margin-bottom: 44px;
+    background: var(--paper-raised);
+  }
+  table.misc { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 560px; }
+  table.misc thead th {
+    text-align: left; font-size: 11px; letter-spacing: 0.06em;
+    color: var(--ink-faint); background: var(--paper); padding: 11px 16px;
+    border-bottom: 1px solid var(--line-strong); font-weight: 700;
+  }
+  table.misc td { padding: 13px 16px; border-bottom: 1px solid var(--line); color: var(--ink); vertical-align: top; }
+  table.misc tbody tr:last-child td { border-bottom: none; }
+  table.misc tbody tr:nth-child(even) { background: color-mix(in srgb, var(--paper) 55%, var(--paper-raised)); }
+  table.misc td.item { font-weight: 700; white-space: nowrap; }
+  table.misc td.target { white-space: nowrap; font-size: 12px; color: var(--ink-faint); }
+
+  /* ---------- Ops checklist ---------- */
+  .ops {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    padding: 26px 30px 28px;
+    margin-bottom: 20px;
+    scroll-margin-top: 20px;
+  }
+  .ops h2 { font-family: "Shippori Mincho", serif; font-size: 19px; margin: 0 0 4px; }
+  .ops .sub { font-size: 13px; color: var(--ink-faint); margin: 0 0 18px; }
+  .ops h3 { font-size: 12.5px; color: var(--ink-faint); letter-spacing: 0.06em; margin: 22px 0 10px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+  .ops h3:first-of-type { margin-top: 0; }
+  .ops ol { margin: 0; padding-left: 20px; }
+  .ops li { font-size: 14px; color: var(--ink); margin-bottom: 14px; }
+  .ops li:last-child { margin-bottom: 0; }
+  .ops li .note { display: block; color: var(--ink-soft); font-size: 13px; margin-top: 3px; overflow-wrap: anywhere; }
+  .ops li strong { color: var(--warn-ink); }
+  .ops code { font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    margin-top: 46px; padding-top: 16px; border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    font-size: 11.5px; color: var(--ink-faint);
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 44px 16px 70px; }
+    .masthead h1 { font-size: 22px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .flow, .q-grid, .mail-figure { grid-template-columns: 1fr; }
+    .feature { padding: 20px 18px 22px; }
+    .feature li { flex-direction: column; gap: 4px; }
+    .ops { padding: 20px 18px 22px; }
+    table.misc { min-width: 500px; }
+  }
+  /* ---------- Print（配布用PDF。scripts/to-pdf.mjs で A4 に出力する） ---------- */
+  @page { size: A4; margin: 14mm 12mm 16mm; }
+  @media print {
+    :root { --shadow: none; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: var(--print-paper); background-image: none; padding: 0; font-size: 13px; line-height: 1.75; }
+    .sheet { max-width: none; }
+    .masthead { padding-top: 0; }
+    .index { display: none; }
+    /* 見出しを次の内容と同じページに置く */
+    .section-head, .section-title, .section-rule, .section-intro, .feature h3, .ops h2, .ops h3, .lede .label, .matrix-wrap .cap { break-after: avoid; page-break-after: avoid; }
+    /* 1つの単位の途中で改ページしない（長い .feature / .ops は項目の間で改ページする） */
+    .stats, .stat, .flow, .q-grid, .callout, .feature li, .ops li, .risk-banner li, .mail-figure, .mailmock, .matrix-wrap, tr { break-inside: avoid; page-break-inside: avoid; }
+    /* 短い段落は分割せず、長い段落も1〜2行だけをページの端に残さない */
+    .section-intro, .callout p { break-inside: avoid; page-break-inside: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    /* チェックリストは新しいページから始め、その部分だけでも配れるようにする */
+    .ops { break-before: page; page-break-before: always; }
+    .feature, .ops { padding: 18px 20px; margin-bottom: 26px; }
+    .feature h3 { margin-top: 14px; }
+    /* 横スクロールの表を紙の幅に収める */
+    .matrix-wrap, .misc-wrap { overflow: visible; }
+    table.matrix, table.misc { min-width: 0; }
+    table.matrix tbody th, table.matrix td.when, table.misc td.item, table.misc td.target { white-space: normal; }
+    .section-head { margin-top: 6px; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+
+<!--
+  変更概要シリーズ共通の紙面。CSS は変えずに使う（改善する場合はこのテンプレートを直し、SKILL.md の改善の手順に従う）。
+  使える部品（必要なものだけ使う）:
+    .masthead / .lede / .risk-banner / .stats / .index / .section-head(.mark.main|.misc, .eyebrow.main|.misc, .badge.main|.quality)
+    .feature(h3 + ul > li > .tag.new|.improve|.fix + span) / .callout(.quality) / .flow(3ステップ)
+    .matrix-wrap > table.matrix（誰に・何が・いつ の一覧表。tr.group で区切り）
+    .mail-figure > .mailmock + ul.mail-notes（画面・メール等の見本と番号付きの説明。.pin で番号）
+    .q-grid > .q-card（品質の数字3つ） / .misc-wrap > table.misc（その他） / .ops（リリース時の確認事項）
+  見本の図（mailmock 等）は、実際の文言をソースで確かめて写す。名前・日時は例であることを図の上に書く。
+-->
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow mono">開発ブランチ変更概要 &nbsp;/&nbsp; Gabby Blueprint English</p>
+    <h1>{今回の柱を2つまで並べた1行の題}</h1>
+    <p class="sub">{2〜3文の概要。メイン → 品質の順}</p>
+    <div class="meta-row">
+      <span class="chip mono">branch: {feature/YYYYMMDD-dev}</span>
+      <span class="chip mono">{開始日} 〜 {終了日}</span>
+      <span class="chip mono">対象: {生徒 / コーチ / 管理者アプリ}</span>
+    </div>
+  </header>
+
+  <div class="lede">
+    <span class="label">この更新について</span>
+    <p>{背景（なぜ）→ 何をしたか。柱ごとに <strong>太字</strong>}</p>
+  </div>
+
+  <div class="risk-banner">
+    <span class="icon" aria-hidden="true">🟡</span>
+    <div>
+      <div class="k">今回の影響範囲について</div>
+      <p>{誰に関わるか。影響が小さい回は「見た目は変わりません」と明言}</p>
+      <ul>
+        <li><strong>{項目}</strong>：{何が変わるか・利用者がすること}</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="num mono">{n}</div><div class="lbl">対象コミット</div></div>
+    <div class="stat"><div class="num mono">{n}</div><div class="lbl">{今回を象徴する数}</div></div>
+    <div class="stat"><div class="num mono">{n}</div><div class="lbl">ブラウザ自動テスト（+{増分}）</div></div>
+    <div class="stat"><div class="num mono">{n}</div><div class="lbl">DB変更の項目</div></div>
+  </div>
+
+  <nav class="index" aria-label="目次">
+    <span class="index-label">この更新の内容 — タップして各項目へ</span>
+    <a class="main" href="#{id}">① {メイン}</a>
+    <a class="quality" href="#quality">{n} 品質向上（{内容}）</a>
+    <a href="#misc">{n} その他の改善</a>
+    <a href="#ops">リリース時の確認事項</a>
+  </nav>
+
+  <!-- ============ メインのセクション（柱ごとに繰り返す） ============ -->
+  <div class="section-head" id="{id}">
+    <span class="mark main"></span>
+    <span class="eyebrow main">① {名前}</span>
+    <span class="badge main">メイン</span>
+  </div>
+  <h2 class="section-title">{利用者から見た効果を1行で}</h2>
+  <div class="section-rule"></div>
+  <p class="section-intro">{対象アプリ・誰に関係するか・背景}</p>
+
+  <div class="feature">
+    <h3>{アプリ名 or 利用場面}</h3>
+    <ul>
+      <li><span class="tag new">新機能</span><span>{内容}</span></li>
+      <li><span class="tag improve">改善</span><span>{内容}</span></li>
+      <li><span class="tag fix">修正</span><span>{何が起きていたか → どうなったか}</span></li>
+    </ul>
+    <div class="callout">
+      <div class="k">🧾 運用上のポイント</div>
+      <p>{運用側が知っておくこと・問い合わせへの答え方}</p>
+    </div>
+  </div>
+
+  <!-- ============ 品質向上 ============ -->
+  <div class="section-head" id="quality">
+    <span class="mark"></span>
+    <span class="eyebrow">{n} 品質向上（{内容}）</span>
+    <span class="badge quality">品質向上施策</span>
+  </div>
+  <h2 class="section-title">{1行}</h2>
+  <div class="section-rule"></div>
+  <p class="section-intro">{前回からの続き・何を確かめられるようになったか。見た目・動作に変化が無ければ明記}</p>
+  <div class="q-grid">
+    <div class="q-card"><div class="q-num mono">{n}<span>{単位}</span></div><div class="q-lbl">{名前}</div><div class="q-sub">{補足}</div></div>
+  </div>
+  <div class="feature">
+    <h3>{分類}</h3>
+    <ul><li><span class="tag new">新規</span><span>{内容}</span></li></ul>
+    <div class="callout quality"><div class="k">🧭 今後の進め方</div><p>{次の予定}</p></div>
+  </div>
+
+  <!-- ============ その他 ============ -->
+  <div class="section-head" id="misc">
+    <span class="mark misc"></span>
+    <span class="eyebrow misc">{n} その他の改善</span>
+  </div>
+  <h2 class="section-title">細かな使い勝手の改善</h2>
+  <div class="section-rule"></div>
+  <div class="misc-wrap">
+    <table class="misc">
+      <thead><tr><th scope="col">項目</th><th scope="col">内容</th><th scope="col">対象</th></tr></thead>
+      <tbody>
+        <tr><td class="item">{項目}</td><td>{内容}</td><td class="target">{生徒 / コーチ / 管理者 / 全アプリ / 開発・反映作業}</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============ リリース時の確認事項 ============ -->
+  <div class="ops" id="ops">
+    <h2>リリース時の確認事項</h2>
+    <p class="sub">運用担当・反映作業者向けのチェックリストです。</p>
+    <h3>反映作業</h3>
+    <ol>
+      <li>{作業}<span class="note">{詳細。順番の制約は <strong>強調</strong>。コマンドは <code>…</code>}</span></li>
+    </ol>
+    <h3>関係者への周知</h3>
+    <ol>
+      <li>{相手}：{内容}<span class="note">{伝えること}</span></li>
+    </ol>
+  </div>
+
+  <footer>
+    <span>prepared by Blueprint開発サポート</span>
+    <span class="mono">gabby.developer@gabbyacademy.com</span>
+  </footer>
+
+</div>
