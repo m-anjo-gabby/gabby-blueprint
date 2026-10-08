@@ -261,6 +261,9 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
   const coachId = target ? (isCoachViewer ? currentUserId : target.session.counterpart_id) : undefined;
   const studentId = target ? (isCoachViewer ? target.session.counterpart_id : currentUserId) : undefined;
   const cancelCategory = isCoachViewer ? CANCEL_CATEGORY.COACH : CANCEL_CATEGORY.STUDENT;
+  // 返還なしのキャンセル（生徒による開始12時間未満）は消化済み扱いのため、振替の候補を出せない（cancel_session と同じ判定。
+  // コーチのキャンセルは常に返還される）
+  const canPropose = target?.mode === 'cancel' && (isCoachViewer || !isWithin12Hours(target.session.start_datetime));
 
   const addProposedSlot = () => {
     setProposedSlots((prev) =>
@@ -318,7 +321,7 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     if (!target || hasBlockingConflict) return;
     setIsSubmitting(true);
     try {
-      const validSlots = proposedSlots.filter((s) => s.date && s.time && !s.conflictMessage);
+      const validSlots = canPropose ? proposedSlots.filter((s) => s.date && s.time && !s.conflictMessage) : [];
       const duration = new Date(target.session.end_datetime).getTime() - new Date(target.session.start_datetime).getTime();
       const proposedSlotInputs: ProposedSlotInput[] = validSlots.map((s) => {
         const start = new Date(`${s.date}T${s.time}:00`);
@@ -390,72 +393,74 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
               <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={labels.cancel.reasonPlaceholder} />
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>{labels.cancel.proposedSlotsLabel}</Label>
-                {proposedSlots.length < MAX_PROPOSED_SLOTS && (
-                  <Button type="button" size="sm" variant="outline" onClick={addProposedSlot}>
-                    <Plus size={13} />
-                    {labels.cancel.addSlotButton}
-                  </Button>
+            {canPropose && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>{labels.cancel.proposedSlotsLabel}</Label>
+                  {proposedSlots.length < MAX_PROPOSED_SLOTS && (
+                    <Button type="button" size="sm" variant="outline" onClick={addProposedSlot}>
+                      <Plus size={13} />
+                      {labels.cancel.addSlotButton}
+                    </Button>
+                  )}
+                </div>
+                {proposedSlots.length === 0 ? (
+                  <p className="text-[11px] text-slate-400">{labels.cancel.noSlotsHint}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {proposedSlots.map((slot, index) => {
+                      const proposedStart = slot.date && slot.time ? `${slot.date}T${slot.time}:00` : null;
+                      return (
+                        <div key={index} className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="date"
+                              min={tomorrowIsoDate()}
+                              value={slot.date}
+                              onChange={(e) => updateProposedSlot(index, { date: e.target.value })}
+                              className={cn(INPUT_CLASS, 'flex-1')}
+                            />
+                            <select
+                              value={slot.time}
+                              onChange={(e) => updateProposedSlot(index, { time: e.target.value })}
+                              className={cn(INPUT_CLASS, 'w-28 px-2 py-1')}
+                            >
+                              <option value="" disabled>
+                                {labels.cancel.timePlaceholder}
+                              </option>
+                              {PROPOSED_TIME_OPTIONS.map((t) => (
+                                <option key={t} value={t}>
+                                  {t}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => removeProposedSlot(index)}
+                              className="shrink-0 text-slate-400 hover:text-rose-500 transition-colors p-1"
+                              title={labels.cancel.removeSlotLabel}
+                            >
+                              <XIcon size={14} />
+                            </button>
+                          </div>
+                          {slot.isChecking && <p className="text-[11px] text-slate-400">{labels.cancel.checkingText}</p>}
+                          {slot.conflictMessage && <p className="text-[11px] text-rose-600">{slot.conflictMessage}</p>}
+                          {!slot.conflictMessage && proposedStart && (
+                            <CounterpartLocalTime
+                              datetime={proposedStart}
+                              timezone={target.session.counterpart_timezone}
+                              label={labels.cancel.counterpartTimeLabel}
+                              cautionText={labels.cancel.counterpartTimeCaution}
+                              format={formatCounterpartTime}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
-              {proposedSlots.length === 0 ? (
-                <p className="text-[11px] text-slate-400">{labels.cancel.noSlotsHint}</p>
-              ) : (
-                <div className="space-y-2">
-                  {proposedSlots.map((slot, index) => {
-                    const proposedStart = slot.date && slot.time ? `${slot.date}T${slot.time}:00` : null;
-                    return (
-                      <div key={index} className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="date"
-                            min={tomorrowIsoDate()}
-                            value={slot.date}
-                            onChange={(e) => updateProposedSlot(index, { date: e.target.value })}
-                            className={cn(INPUT_CLASS, 'flex-1')}
-                          />
-                          <select
-                            value={slot.time}
-                            onChange={(e) => updateProposedSlot(index, { time: e.target.value })}
-                            className={cn(INPUT_CLASS, 'w-28 px-2 py-1')}
-                          >
-                            <option value="" disabled>
-                              {labels.cancel.timePlaceholder}
-                            </option>
-                            {PROPOSED_TIME_OPTIONS.map((t) => (
-                              <option key={t} value={t}>
-                                {t}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => removeProposedSlot(index)}
-                            className="shrink-0 text-slate-400 hover:text-rose-500 transition-colors p-1"
-                            title={labels.cancel.removeSlotLabel}
-                          >
-                            <XIcon size={14} />
-                          </button>
-                        </div>
-                        {slot.isChecking && <p className="text-[11px] text-slate-400">{labels.cancel.checkingText}</p>}
-                        {slot.conflictMessage && <p className="text-[11px] text-rose-600">{slot.conflictMessage}</p>}
-                        {!slot.conflictMessage && proposedStart && (
-                          <CounterpartLocalTime
-                            datetime={proposedStart}
-                            timezone={target.session.counterpart_timezone}
-                            label={labels.cancel.counterpartTimeLabel}
-                            cautionText={labels.cancel.counterpartTimeCaution}
-                            format={formatCounterpartTime}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>

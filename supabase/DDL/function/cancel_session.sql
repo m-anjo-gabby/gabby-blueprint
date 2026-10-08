@@ -87,6 +87,11 @@ DROP FUNCTION IF EXISTS public.cancel_session(uuid, text, jsonb, boolean);
 -- statusは常に3(cancelled)を確定し、起因（生徒/コーチ/アドミン代理）はcancel_category
 -- (1/2/3)に分離する（table/com_t_session.sqlのステータス簡素化パッチ参照）。
 -- 返還有無(ticket_refunded)の算出ロジック自体は変更しない。
+--
+-- 【返還なしのキャンセルでは振替候補を出せない (2026-10-08追加)】
+-- 生徒による開始12時間未満のキャンセルは返還なし（消化済み扱い・再予約不可）のため、振替候補を
+-- 添えられない（添えると承諾で回が増え、契約の回数を超えていた）。生徒の画面も12時間未満では
+-- 候補の欄を出さない。
 CREATE OR REPLACE FUNCTION public.cancel_session(
     p_session_id uuid,
     p_reason text DEFAULT NULL,
@@ -173,6 +178,10 @@ BEGIN
         v_proposal_count := jsonb_array_length(p_proposed_slots);
         IF v_proposal_count > 3 THEN
             RAISE EXCEPTION 'cannot propose more than 3 alternative times';
+        END IF;
+        -- 返還なしのキャンセル（生徒による開始12時間未満）は消化済み扱いのため、振替の候補を出せない
+        IF v_proposal_count > 0 AND NOT v_refunded THEN
+            RAISE EXCEPTION 'cannot propose alternative times for a non-refunded cancellation';
         END IF;
 
         FOR v_slot IN SELECT * FROM jsonb_array_elements(p_proposed_slots) LOOP

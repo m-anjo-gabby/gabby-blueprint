@@ -2,7 +2,7 @@
 -- 未消化チケットによる新規予約リクエストRPC (2026-09-11 追加、book_makeup_sessionを置き換え)
 -- 前提: table/com_m_lesson_schedule.sql, table/com_t_session.sql,
 --       table/com_t_session_slot_proposal.sql, function/fn_schedule_shortfall.sql,
---       function/check_session_conflict.sql の作成が完了していること。
+--       function/check_session_conflict.sql, function/fn_schedule_bookable_count.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】
 -- キャンセルによりticket_refunded=trueとなり未割当に戻ったチケット（週n回契約の
@@ -41,6 +41,11 @@
 -- カウントは、同じテーブルを共有する振替候補（他のschedule_id/source_session_idを
 -- 持つ行）を誤って含めないよう、source_session_id IS NULLの行のみに絞り込む
 -- （振替候補はそもそも本関数のshortfallチェックの対象外という既存仕様を維持するため）。
+--
+-- 【振替候補の回答待ちも差し引く (2026-10-08変更)】
+-- 予約できる回数は fn_schedule_bookable_count()（未予約の回から、自由予約リクエストと振替候補の
+-- 回答待ちを差し引いた数）で判定する。振替候補を差し引かないと、回答待ちの間に同じ回で予約リクエストができ、
+-- 両方が承認されると契約の回数を超えていた。上記の「振替候補は対象外」はこれにより廃止。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.create_session_booking_request(
     p_schedule_id uuid,
@@ -55,8 +60,6 @@ SET search_path = public
 AS $$
 DECLARE
     v_schedule RECORD;
-    v_shortfall integer;
-    v_pending_count integer;
     v_coach_conflict boolean;
     v_student_conflict boolean;
     v_request_id uuid;
@@ -82,13 +85,7 @@ BEGIN
         RAISE EXCEPTION 'requested start datetime must be at least 24 hours from now';
     END IF;
 
-    SELECT shortfall INTO v_shortfall FROM public.fn_schedule_shortfall(p_schedule_id);
-
-    SELECT COUNT(*) INTO v_pending_count
-    FROM public.com_t_session_slot_proposal r
-    WHERE r.schedule_id = p_schedule_id AND r.status = 1 AND r.source_session_id IS NULL;
-
-    IF v_shortfall - v_pending_count <= 0 THEN
+    IF public.fn_schedule_bookable_count(p_schedule_id) <= 0 THEN
         RAISE EXCEPTION 'no unassigned ticket available for this schedule';
     END IF;
 

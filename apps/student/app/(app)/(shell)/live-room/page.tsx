@@ -1,4 +1,10 @@
-import { getMyUpcomingSessions, getMyPastSessions, getMyRescheduleProposalGroups, getMyBookingRequests } from '@/actions/sessionAction';
+import {
+  getMyUpcomingSessions,
+  getMyPastSessions,
+  getMyRescheduleProposalGroups,
+  getMyProposedRescheduleGroups,
+  getMyBookingRequests,
+} from '@/actions/sessionAction';
 import { getMyBookableTickets, getMyLiveSessionOverview } from '@/actions/matchingAction';
 import { getMyLiveSessionContractsCached, getNextContractMatching, pickLiveSessionContract } from '@/lib/liveSessionContracts';
 import { getSessionHomework, getSessionHomeworkChecklist } from '@/actions/sessionHomeworkAction';
@@ -60,13 +66,23 @@ export default async function LiveSessionHubPage({ searchParams }: { searchParam
     pickLiveSessionContract(contracts, requestedTicketId)?.is_current ? getNextContractMatching(contracts) : null
   );
 
-  const [contracts, [pastSessions, overview, previousSession], nextContractMatching, upcomingSessions, bookableSlots, proposalGroups, bookingRequests] = await Promise.all([
+  const [
+    contracts,
+    [pastSessions, overview, previousSession],
+    nextContractMatching,
+    upcomingSessions,
+    bookableSlots,
+    proposalGroups,
+    proposedGroups,
+    bookingRequests,
+  ] = await Promise.all([
     contractsPromise,
     contractDataPromise,
     nextMatchingPromise,
     getMyUpcomingSessions(),
     getMyBookableTickets(),
     getMyRescheduleProposalGroups(),
+    getMyProposedRescheduleGroups(),
     getMyBookingRequests(),
   ]);
 
@@ -88,6 +104,7 @@ export default async function LiveSessionHubPage({ searchParams }: { searchParam
       pastSessions={pastSessions}
       bookableSlots={bookableSlots}
       proposalGroups={proposalGroups}
+      proposedGroups={proposedGroups}
       bookingRequests={bookingRequests}
     />
   );

@@ -378,7 +378,8 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
  * 再予約可能な定期スケジュール(コマ)の一覧を取得する（生徒向け。ポータル共通）。
  * 週n回契約でコマごとに担当コーチが異なりうるため、コーチ選択はさせず対象コマ(schedule_id)を
  * 選ばせる（担当コーチはcom_m_lesson_schedule.coach_idで既に確定している）。
- * shortfall算出はDB側のfn_schedule_shortfall()（create_session_booking_request RPCの予約可否判定と同一）。
+ * 予約できる回数はDB側のfn_schedule_bookable_count()（未予約の回から予約リクエスト・振替候補の回答待ちを
+ * 差し引いた数。create_session_booking_request RPCの予約可否判定と同一）。
  */
 export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsResult> {
   const ctx = await getLogContext();
@@ -402,29 +403,24 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
       return { success: true, slots: [] };
     }
 
-    const shortfallResults = await Promise.all(
-      schedules.map((schedule) =>
-        supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single()
-      )
+    const bookableResults = await Promise.all(
+      schedules.map((schedule) => supabase.rpc('fn_schedule_bookable_count', { p_schedule_id: schedule.schedule_id }))
     );
 
-    const bookableSchedules = schedules.filter((_, index) => {
-      const { error } = shortfallResults[index];
-      const data = shortfallResults[index].data as ScheduleShortfallRow | null;
-      if (error || !data) {
-        logger.error('matching:get_my_bookable_tickets_rpc_failed', error?.message ?? 'No row returned', { ...ctx, err: error, userId: user.id, payload: { scheduleId: schedules[index].schedule_id } });
-        return false;
+    const bookableCountByScheduleId = new Map<string, number>();
+    schedules.forEach((schedule, index) => {
+      const { data, error } = bookableResults[index];
+      if (error || typeof data !== 'number') {
+        logger.error('matching:get_my_bookable_tickets_rpc_failed', error?.message ?? 'No value returned', { ...ctx, err: error, userId: user.id, payload: { scheduleId: schedule.schedule_id } });
+        return;
       }
-      return data.shortfall > 0;
+      bookableCountByScheduleId.set(schedule.schedule_id, data);
     });
+    const bookableSchedules = schedules.filter((schedule) => (bookableCountByScheduleId.get(schedule.schedule_id) ?? 0) > 0);
 
     if (bookableSchedules.length === 0) {
       return { success: true, slots: [] };
     }
-
-    const shortfallByScheduleId = new Map(
-      schedules.map((schedule, index) => [schedule.schedule_id, (shortfallResults[index].data as ScheduleShortfallRow | null)?.shortfall ?? 0])
-    );
 
     const coachIds = Array.from(new Set(bookableSchedules.map((s) => s.coach_id)));
 
@@ -450,7 +446,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
       day_of_week: schedule.day_of_week as DayOfWeek,
       start_time: schedule.start_time,
       end_time: schedule.end_time,
-      shortfall: shortfallByScheduleId.get(schedule.schedule_id) ?? 0,
+      shortfall: bookableCountByScheduleId.get(schedule.schedule_id) ?? 0,
     }));
 
     return { success: true, slots };

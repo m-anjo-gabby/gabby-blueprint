@@ -19,10 +19,16 @@
 
 ## 前提条件
 
-- 生徒は有効な契約・コマ（`com_m_lesson_schedule`）を持ち、当該コマに未消化枠がある
-  （`fn_schedule_shortfall`の`shortfall` > 未回答の自由予約リクエスト件数）
+- 生徒は有効な契約・コマ（`com_m_lesson_schedule`）を持ち、当該コマに予約できる回が残っている
+  （`fn_schedule_bookable_count` > 0。未予約の回〔`fn_schedule_shortfall`の`shortfall`〕から、回答待ちの
+  自由予約リクエストと振替候補〔キャンセル1件につき1回。期限内のもの〕を差し引いた数）
 - 振替候補提案（フローB）は、対象セッションを直前にキャンセル（`cancel_session`）した
   タイミングでのみ提案できる（キャンセル後に別途候補だけを追加することはできない）
+- 振替候補を出せるのは返還ありのキャンセルだけ（生徒は開始12時間以上前、コーチは常に）。生徒による
+  開始12時間未満のキャンセルは返還なし（消化済み扱い）のため、候補の欄を出さない
+- 承諾・承認（`approve_slot_proposal`）は、作るセッションが契約の回数に収まること（未予約の回が残っている
+  こと）を確かめる。回答待ちの予約リクエスト・振替候補は作成時に回数を差し引いて受け付けているため、
+  同じ回で両方が承認されて契約の回数を超えることは無い
 
 ## フローA: 個別予約リクエスト（自由予約）
 
@@ -42,7 +48,8 @@
 1. 生徒またはコーチが既存セッションをキャンセルする際、代替候補を最大3件、
    開始24時間以上先の日時で同時に提案できる（`cancelSession`の候補提案オプション）。
    生徒がキャンセルする場合の操作画面はカレンダー（`/calendar`）
-2. 提案者と逆側の当事者に候補が表示される。回答期限は提案から24時間
+2. 提案者と逆側の当事者に候補が表示される。回答期限は提案から24時間。生徒が提案した候補は、生徒の
+   ライブセッションホームの今後の予定にも「振替の候補・回答待ち」として表示され、その回は「調整中」になる
 3. 相手が応答する
    - 3a. いずれか1件を承諾（アクション: `acceptRescheduleProposal`）→ 新規セッション作成、
      同一キャンセルに紐づく他の未回答候補は自動的に不採用（status=declined）になる
@@ -61,7 +68,9 @@
 | 1 | 開始24時間未満の日時で予約リクエスト/振替候補を作成しようとする | エラーで作成不可 | 両方（UI: 参考表示のメッセージのみで送信は止めない／RPC: 最終検証） |
 | 2 | 提案先の日時にコーチまたは生徒の既存`scheduled`セッションと重複する | エラーで作成不可（重複相手を明示） | 両方（UI: インライン事前チェック／RPC: 最終検証） |
 | 3 | 振替候補を4件以上指定する | エラー（最大3件） | 両方（UI: 4件目の追加ボタンが出ない／RPC: 最終検証） |
-| 4 | 対象コマの未消化枠が0（他のpending分で使い切り済み） | 個別予約リクエストの作成不可 | RPC |
+| 4 | 対象コマの予約できる回が0（回答待ちの予約リクエスト・振替候補で使い切り済み） | 個別予約リクエストの作成不可（生徒の画面では予約できるコマに出ない） | 両方（UI: 予約リクエストの導線を出さない／RPC: 最終検証） |
+| 4a | 承諾・承認の時点で未予約の回が残っていない | エラーでセッションを作らない（契約の回数を超えない） | RPC |
+| 4b | 生徒が開始12時間未満のキャンセルに振替候補を添える | エラー（返還なしのキャンセルでは候補を出せない） | 両方（UI: 候補の欄を出さない／RPC: 最終検証） |
 | 5 | 期限切れ(expired)の振替候補を承諾/却下しようとする | エラー。裏でstatusがexpiredへ更新される | RPC |
 | 6 | 既にaccepted/declined/withdrawnの提案に再度応答しようとする | エラー（pendingのみ操作可） | RPC |
 | 7 | 提案の当事者ではない生徒/コーチが承認・却下・取り下げを行おうとする | 権限エラー（本人またはアドミンのみ可） | RPC |
@@ -71,13 +80,18 @@
 ## 関連RPC・テーブル
 
 - RPC: `create_session_booking_request`, `approve_slot_proposal`, `reject_slot_proposal`,
-  `withdraw_session_booking_request`, `cancel_session`, `check_session_conflict`
+  `withdraw_session_booking_request`, `cancel_session`, `check_session_conflict`,
+  `fn_schedule_bookable_count`（予約できる回数。生徒の画面の予約できるコマ `getMyBookableTicketsCore` と共通）
 - テーブル: `com_t_session_slot_proposal`, `com_t_session`, `com_m_lesson_schedule`
 - 実装参照: `packages/lib/session/actions/sessionActions.ts`,
   `apps/student/actions/sessionAction.ts`, `apps/coach/actions/sessionAction.ts`
 - 用語（status値・24時間ルール等）: [_GLOSSARY.md](../_GLOSSARY.md)
 
 ## E2Eテストケース候補
+
+正常系の一連（生徒のキャンセルと振替候補→コーチが候補で確定、コーチのキャンセルと候補→生徒が見送って予約リクエスト→
+コーチの承認、各時点の回数の内訳）は、ジャーニー [live-session-reschedule](../../journeys/live-session-reschedule.md) の
+E2E（`tests/journeys/live-session-reschedule.spec.ts`）で確認済み。下表の個別のシナリオは未作成。
 
 | 優先度 | シナリオ | 概要 |
 |---|---|---|

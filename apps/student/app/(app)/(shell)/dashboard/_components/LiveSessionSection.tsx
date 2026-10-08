@@ -1,4 +1,4 @@
-import { getMyBookingRequests, getMyRescheduleProposalGroups, getMyUpcomingSessions } from '@/actions/sessionAction';
+import { getMyBookingRequests, getMyProposedRescheduleGroups, getMyRescheduleProposalGroups, getMyUpcomingSessions } from '@/actions/sessionAction';
 import { getMyBookableTickets, getMyLiveSessionOverview } from '@/actions/matchingAction';
 import type { LiveSessionContractSummary } from '@gabby/types/matching';
 import { getNextContractMatching } from '@/lib/liveSessionContracts';
@@ -11,16 +11,17 @@ import { LiveSessionCard, type LiveSessionAction } from './LiveSessionCard';
  */
 export async function LiveSessionSection({ contract, contracts }: { contract: LiveSessionContractSummary; contracts: LiveSessionContractSummary[] }) {
   const isCurrent = contract.is_current;
-  const [upcomingSessions, overview, bookableSlots, proposalGroups, bookingRequests, nextMatching] = await Promise.all([
+  const [upcomingSessions, overview, bookableSlots, proposalGroups, proposedGroups, bookingRequests, nextMatching] = await Promise.all([
     getMyUpcomingSessions(1),
     getMyLiveSessionOverview(contract.ticket_id),
     getMyBookableTickets(),
     getMyRescheduleProposalGroups(),
+    getMyProposedRescheduleGroups(),
     getMyBookingRequests(),
     isCurrent ? getNextContractMatching(contracts) : Promise.resolve(null),
   ]);
 
-  const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length : 0;
+  const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length + proposedGroups.length : 0;
   const actions: LiveSessionAction[] = [];
   // 専属コーチの未選択は、表示中の契約（現在の契約、または開始前の契約だけを持つ場合はその契約）を案内する
   const unmatchedSlotCount = overview?.slots.filter((s) => s.status === 'unmatched').length ?? 0;

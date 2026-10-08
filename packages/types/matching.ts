@@ -199,7 +199,7 @@ export interface BookableTicketSlot {
   day_of_week: DayOfWeek;
   start_time: string; // "HH:MM:SS"（schedule_timezoneの現地時刻、コマ本来の曜日・時刻）
   end_time: string;
-  /** 現在予約可能な未割当チケット数 */
+  /** 新たに予約リクエストできる回数（未予約の回から、予約リクエスト・振替候補の回答待ちを差し引いた数。fn_schedule_bookable_count） */
   shortfall: number;
 }
 

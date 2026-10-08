@@ -19,6 +19,7 @@ import {
   IncomingRescheduleProposalGroup,
   MyRescheduleProposalGroup,
   PROPOSED_BY_ROLE,
+  ProposedByRole,
   ProposedSlotInput,
   RESCHEDULE_PROPOSAL_STATUS,
   RespondSessionBookingRequestResult,
@@ -72,6 +73,7 @@ function classifyRpcError(message: string | undefined): SessionActionErrorCode {
   if (message.includes('no unassigned ticket available')) return 'no_ticket_available';
   if (
     message.includes('cannot propose more than 3')
+    || message.includes('non-refunded cancellation')
     || message.includes('invalid proposed time range')
     || message.includes('must be at least 24 hours from now')
   ) {
@@ -309,12 +311,14 @@ export async function cancelSessionCore(
 const RESCHEDULE_PROPOSAL_ROW_COLUMNS = 'proposal_id, session_id:source_session_id, coach_id, student_id, proposed_start_datetime, proposed_end_datetime, status, proposed_by_role, expires_at, insert_date';
 
 /**
- * ログイン中の生徒宛の、未回答(pending)かつ未失効の振替候補一覧を取得する
- * （ライブセッションハブで、応答が必要な候補提案として表示する）。
- * コーチが提案したもの(proposed_by_role=COACH)のみが対象。生徒自身が提案したもの
- * (proposed_by_role=STUDENT)はコーチ側が応答するため、ここには含めない。
+ * ログイン中の生徒の、未回答(pending)かつ未失効の振替候補一覧を取得する。
+ * 既定はコーチが提案したもの（生徒が応答する候補。ライブセッションハブの「対応が必要です」）。
+ * proposedBy=STUDENT は生徒自身が提案し、コーチの回答待ちのもの（今後の予定に「回答待ち」として出し、
+ * 未予約の回のうち調整中として数える）。
  */
-export async function getMyRescheduleProposalsCore(): Promise<GetMyRescheduleProposalsResult> {
+export async function getMyRescheduleProposalsCore(
+  proposedBy: ProposedByRole = PROPOSED_BY_ROLE.COACH
+): Promise<GetMyRescheduleProposalsResult> {
   const ctx = await getLogContext();
 
   try {
@@ -327,7 +331,7 @@ export async function getMyRescheduleProposalsCore(): Promise<GetMyReschedulePro
       .select(RESCHEDULE_PROPOSAL_ROW_COLUMNS)
       .not('source_session_id', 'is', null)
       .eq('student_id', user.id)
-      .eq('proposed_by_role', PROPOSED_BY_ROLE.COACH)
+      .eq('proposed_by_role', proposedBy)
       .eq('status', RESCHEDULE_PROPOSAL_STATUS.PENDING)
       .gt('expires_at', new Date().toISOString())
       .order('proposed_start_datetime', { ascending: true });
@@ -345,13 +349,15 @@ export async function getMyRescheduleProposalsCore(): Promise<GetMyReschedulePro
 }
 
 /**
- * ログイン中生徒宛の、未回答(pending)かつ未失効の振替候補を、キャンセル(セッション)単位で
- * グルーピングし、コーチ名を結合して取得する（ライブセッションハブでの表示用）。
+ * ログイン中の生徒の、未回答(pending)かつ未失効の振替候補を、キャンセル(セッション)単位で
+ * グルーピングし、コーチ名を結合して取得する（ライブセッションハブでの表示用。proposedBy は getMyRescheduleProposalsCore と同じ）。
  */
-export async function getMyRescheduleProposalGroupsCore(): Promise<
+export async function getMyRescheduleProposalGroupsCore(
+  proposedBy: ProposedByRole = PROPOSED_BY_ROLE.COACH
+): Promise<
   { success: true; groups: MyRescheduleProposalGroup[] } | { success: false; errorCode: SessionActionErrorCode }
 > {
-  const result = await getMyRescheduleProposalsCore();
+  const result = await getMyRescheduleProposalsCore(proposedBy);
   if (!result.success) return result;
 
   const groups = groupRescheduleProposals(result.proposals);

@@ -42,7 +42,7 @@
 | 新規予約リクエストの「Approve」ボタン | statusがpendingの場合のみ | 確認ダイアログの上で承認。承認すると`com_t_session`に新規セッションが1件作成される |
 | 新規予約リクエストの「Reject」ボタン | statusがpendingの場合のみ | 却下理由の入力ダイアログを開く（理由は任意） |
 | 振替候補提案カードの表示内容 | 生徒名、元セッションの開催予定日時、pending中の候補日時一覧 | — |
-| 振替候補提案の「Book this time」ボタン | 候補ごとに表示（pendingの候補のみ） | その候補で新規セッションが作成され、同じキャンセルに紐づく他の未回答候補は自動的に「Declined」表示に変わる |
+| 振替候補提案の候補の選択と「Book selected time」ボタン | pendingの候補をラジオで1件選ぶ（選ぶまでボタンは押せない） | 選んだ候補で新規セッションが作成され、同じキャンセルに紐づく他の未回答候補は自動的に「Declined」表示に変わる。未予約の回が残っていない場合（契約の回数を超える場合）はエラーで作成しない |
 | 振替候補提案の「Decline all」ボタン | pendingの候補が1件以上ある場合 | 残っている候補をまとめて却下する。生徒への通知は送られない仕様 |
 | Historyタブ切り替え（Matching Requests / Bookings / Reschedule Proposals） | 常時表示 | 該当する種類の履歴一覧に切り替える。カード自体はPendingと同じ見た目だが、statusがpendingでないためApprove/Rejectボタンは表示されない |
 | Historyの各カード | 承認済み・却下済み・取り下げ済み等、確定した過去のリクエスト | ステータスバッジと（却下時は）却下理由が表示される。それ以上の操作はできない |
@@ -54,7 +54,7 @@
 | 読み込み中（画面遷移直後） | 見出し（戻るリンク・タイトル・説明文）とタブ・区分の見出しは本物、本文を同じ幅・並びの骨組みで表示 | `matching-requests/loading.tsx` |
 | Pendingが空 | 「No pending requests.」 | 保留中のリクエストが1件も無い場合 |
 | Historyの各タブが空 | 「No matching request history yet.」/「No booking request history yet.」/「No reschedule proposal history yet.」 | そのタブの履歴が1件も無い場合 |
-| Pendingでの承認・却下 | 対象カードの表示がその場で更新され、一覧から消える（Pendingから外れる） | Approve/Reject/Book this time/Decline allのいずれかを実行した場合。サイドバーのリクエスト件数バッジも合わせて再取得される |
+| Pendingでの承認・却下 | 対象カードの表示がその場で更新され、一覧から消える（Pendingから外れる） | Approve/Reject/Book selected time/Decline allのいずれかを実行した場合。サイドバーのリクエスト件数バッジも合わせて再取得される |
 
 ## 関連する業務フロー仕様書
 
