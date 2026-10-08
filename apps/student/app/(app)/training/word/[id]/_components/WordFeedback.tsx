@@ -14,8 +14,8 @@ export const WordFeedback: React.FC<WordFeedbackProps> = (props) => (
   <SpeechFeedbackModal
     {...props}
     variant="word"
-    title="Analysis Result"
-    adviceTitle="Tips for Improvement"
+    title="発話の分析"
+    adviceTitle="改善のヒント"
     interactive
   />
 );

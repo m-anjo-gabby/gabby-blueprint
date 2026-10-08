@@ -19,22 +19,22 @@ interface PlaybackRateControlProps {
 
 const TRIGGER_STYLES = {
   word: {
-    base: "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-2xl",
+    base: "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-control",
     selected: "bg-brand text-white border-brand-500 hover:bg-brand-strong active:bg-brand-800",
-    unselected: "text-slate-400 border-slate-200 hover:bg-slate-100 active:bg-slate-200",
-    value: "text-[10px] font-black leading-none",
-    label: "text-[10px] font-bold uppercase tracking-tighter",
+    unselected: "text-ink-subtle border-line hover:bg-canvas active:bg-line",
+    value: "text-[11px] font-bold leading-none",
+    label: "text-[11px] font-bold tracking-tighter",
     labelSelected: "opacity-90",
     labelUnselected: "opacity-70",
   },
   sprint: {
-    base: "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-2xl border-slate-200 hover:bg-slate-100 active:bg-slate-200 cursor-pointer z-10",
+    base: "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-control border-line hover:bg-canvas active:bg-line cursor-pointer z-10",
     selected: "bg-brand text-white border-brand-500 hover:bg-brand-strong active:bg-brand-800",
-    unselected: "text-slate-600",
-    value: "text-[11px] font-black leading-none",
-    label: "text-[9px] font-black uppercase tracking-tight mt-0.5",
+    unselected: "text-ink-soft",
+    value: "text-[11px] font-bold leading-none",
+    label: "text-[11px] font-bold tracking-tight mt-0.5",
     labelSelected: "text-brand-100",
-    labelUnselected: "text-slate-400",
+    labelUnselected: "text-ink-subtle",
   },
 } as const;
 
@@ -70,7 +70,7 @@ export const PlaybackRateControl: React.FC<PlaybackRateControlProps> = ({
         className={cn(s.base, isRateActive ? s.selected : s.unselected)}
       >
         <span className={s.value}>{playbackRate.toFixed(1)}</span>
-        <span className={cn(s.label, isRateActive ? s.labelSelected : s.labelUnselected)}>Rate</span>
+        <span className={cn(s.label, isRateActive ? s.labelSelected : s.labelUnselected)}>速度</span>
       </button>
 
       <AnimatePresence>
@@ -80,9 +80,9 @@ export const PlaybackRateControl: React.FC<PlaybackRateControlProps> = ({
             animate={{ opacity: 1, y: -10, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.95 }}
             transition={{ duration: 0.12, ease: "easeOut" }}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 bg-white border border-slate-200/90 shadow-2xl rounded-2xl p-1.5 min-w-[80px] flex flex-col gap-1 z-50 mb-1"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 bg-white border border-line/90 shadow-2xl rounded-control p-1.5 min-w-[80px] flex flex-col gap-1 z-50 mb-1"
           >
-            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2.5 h-2.5 bg-white border-b border-r border-slate-200 rotate-45" />
+            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2.5 h-2.5 bg-white border-b border-r border-line rotate-45" />
 
             {PLAYBACK_RATES.map((rate) => {
               const isSelected = playbackRate === rate;
@@ -94,10 +94,10 @@ export const PlaybackRateControl: React.FC<PlaybackRateControlProps> = ({
                     onOpenChange(false);
                   }}
                   className={cn(
-                    "w-full px-2.5 py-1.5 text-xs font-black font-mono rounded-xl transition-all flex items-center justify-between gap-2 cursor-pointer",
+                    "w-full px-2.5 py-1.5 text-xs font-bold font-mono rounded-xl transition-all flex items-center justify-between gap-2 cursor-pointer",
                     isSelected
                       ? "bg-brand-50 text-brand"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-brand-500"
+                      : "text-ink-soft hover:bg-canvas hover:text-brand-500"
                   )}
                 >
                   <span>{rate.toFixed(1)}x</span>

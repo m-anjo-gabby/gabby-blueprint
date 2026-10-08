@@ -9,8 +9,10 @@ import { uploadProfileIcon, removeProfileIcon, updateMyTimezone } from '@/action
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { TimezoneMaster } from '@gabby/types/timezone';
+import type { MailSettings } from '@gabby/lib/mail/settingsActions';
 import { ProfileSection } from './ProfileSection';
 import { AccountInfoRow, SecuritySection } from './ProfileParts';
+import { MailSettingsSection } from './MailSettingsSection';
 
 interface ProfileViewProps {
   userName: string;
@@ -18,6 +20,8 @@ interface ProfileViewProps {
   initialIconPath: string | null;
   initialTimezone: string;
   timezones: TimezoneMaster[];
+  /** メール通知の設定（取得できない場合は null） */
+  mailSettings: MailSettings | null;
 }
 
 /**
@@ -25,7 +29,7 @@ interface ProfileViewProps {
  * アイコン画像・アカウント情報・セキュリティをセクションカードで表示する構成とし、
  * 今後の設定項目追加（通知設定・言語設定 等）はセクションを追加するだけで拡張できるようにしている。
  */
-export function ProfileView({ userName, clientName, initialIconPath, initialTimezone, timezones }: ProfileViewProps) {
+export function ProfileView({ userName, clientName, initialIconPath, initialTimezone, timezones, mailSettings }: ProfileViewProps) {
   const [iconPath, setIconPath] = useState(initialIconPath);
   const [timezone, setTimezone] = useState(initialTimezone);
   const user = useUserStore((state) => state.user);
@@ -107,6 +111,9 @@ export function ProfileView({ userName, clientName, initialIconPath, initialTime
           />
         </div>
       </ProfileSection>
+
+      {/* メール通知セクション */}
+      <MailSettingsSection initialSettings={mailSettings} />
 
       {/* セキュリティセクション */}
       <SecuritySection />

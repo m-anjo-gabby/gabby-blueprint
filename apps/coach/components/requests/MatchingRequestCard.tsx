@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { getFirstLiveSessionOccurrence, toIsoDateInZone } from '@gabby/lib/date/date';
+import { convertWeeklyTimeZone, getFirstLiveSessionOccurrence, getLessonEndTime, getWeeklyTimeChanges, toIsoDateInZone } from '@gabby/lib/date/date';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
@@ -53,6 +53,20 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
   const badge = STATUS_BADGE[request.status];
   const isPending = request.status === MATCHING_REQUEST_STATUS.PENDING;
 
+  // The requested day/time is the student's local time (requested_timezone) and stays fixed for the whole
+  // contract. Shown here in the coach's timezone, using the offset of the next occurrence.
+  const coachSlot = useMemo(
+    () =>
+      convertWeeklyTimeZone(
+        { day_of_week: request.requested_day_of_week, start_time: request.requested_start_time, end_time: request.requested_end_time },
+        request.requested_timezone,
+        timezone
+      ),
+    [request.requested_day_of_week, request.requested_start_time, request.requested_end_time, request.requested_timezone, timezone]
+  );
+  const studentSlotLabel = `${DAY_OF_WEEK_LABEL_EN[request.requested_day_of_week as DayOfWeek]} ${formatTimeRange(request.requested_start_time, request.requested_end_time)}`;
+  const coachSlotLabel = `${DAY_OF_WEEK_LABEL_EN[coachSlot.day_of_week as DayOfWeek]} ${formatTimeRange(coachSlot.start_time, coachSlot.end_time)}`;
+
   // First live session date: nearest occurrence of the requested day/time that is at least
   // 24 real hours from now (not just "tomorrow" by calendar date, to stay correct across timezones)
   // and within the student's contract period (a renewal contract may start in the future).
@@ -60,15 +74,28 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
   const firstSession = useMemo(() => {
     if (!isPending) return null;
     const notBefore = request.license_start_date ? new Date(request.license_start_date) : undefined;
-    const first = getFirstLiveSessionOccurrence(request.requested_day_of_week, request.requested_start_time, timezone, timezone, undefined, notBefore);
+    const first = getFirstLiveSessionOccurrence(
+      request.requested_day_of_week, request.requested_start_time, request.requested_timezone, timezone, undefined, notBefore
+    );
     if (request.license_end_date && first.instant > new Date(request.license_end_date)) return null;
     return first;
-  }, [isPending, request.requested_day_of_week, request.requested_start_time, request.license_start_date, request.license_end_date, timezone]);
+  }, [isPending, request.requested_day_of_week, request.requested_start_time, request.requested_timezone, request.license_start_date, request.license_end_date, timezone]);
+
+  // Daylight saving time (the coach's or the student's) can move the lesson in the coach's local time during
+  // the contract. List each change after the first session so the coach can check it still works for them.
+  const laterTimeChanges = useMemo(() => {
+    if (!firstSession || !request.license_end_date) return [];
+    return getWeeklyTimeChanges(
+      request.requested_day_of_week, request.requested_start_time, request.requested_timezone, timezone,
+      firstSession.instant, new Date(request.license_end_date)
+    ).slice(1);
+  }, [firstSession, request.requested_day_of_week, request.requested_start_time, request.requested_timezone, request.license_end_date, timezone]);
 
   const handleApprove = async () => {
     const ok = await showConfirm(
       'Approve this request?',
-      `This will book every lesson for ${request.student_name} on ${DAY_OF_WEEK_LABEL_EN[request.requested_day_of_week as DayOfWeek]} ${formatTimeRange(request.requested_start_time, request.requested_end_time)} for the remaining license period.`,
+      `This will book every lesson for ${request.student_name} on ${coachSlotLabel} (your time) for the remaining license period.` +
+        (laterTimeChanges.length > 0 ? ' The time in your timezone changes during the contract because of daylight saving time.' : ''),
       { variant: 'info', confirmText: 'Approve', cancelText: 'Cancel' }
     );
     if (!ok) return;
@@ -119,9 +146,13 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
           <RequestKindTag kind="matching" />
           <p className="text-sm font-black text-slate-800 mt-1.5">{request.student_name}</p>
           <p className="text-xs text-slate-500 mt-0.5">
-            Slot {request.slot_no} &middot; {DAY_OF_WEEK_LABEL_EN[request.requested_day_of_week as DayOfWeek]}{' '}
-            {formatTimeRange(request.requested_start_time, request.requested_end_time)}
+            Slot {request.slot_no} &middot; {coachSlotLabel}
           </p>
+          {request.requested_timezone !== timezone && (
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              Student&apos;s time: {studentSlotLabel} ({request.requested_timezone})
+            </p>
+          )}
           <p className="text-[10px] text-slate-400 mt-1">Requested {formatDateEn(request.insert_date, timezone)}</p>
           {firstSession && (
             <p className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 mt-1">
@@ -130,6 +161,13 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
               {DAY_OF_WEEK_LABEL_EN[firstSession.day_of_week as DayOfWeek]}) {firstSession.start_time}
             </p>
           )}
+          {laterTimeChanges.map((change) => (
+            <p key={change.from.toISOString()} className="flex items-center gap-1 text-[11px] font-bold text-amber-700 mt-1">
+              <CalendarClock size={12} />
+              From {formatDateEn(change.from, timezone)}: {DAY_OF_WEEK_LABEL_EN[change.day_of_week as DayOfWeek]}{' '}
+              {formatTimeRange(change.start_time, getLessonEndTime(change.start_time))} (your time, daylight saving time)
+            </p>
+          ))}
         </div>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
           {badge.label}

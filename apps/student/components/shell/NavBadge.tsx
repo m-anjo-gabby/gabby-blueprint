@@ -12,7 +12,7 @@ export function NavBadge({ badge, className }: NavBadgeProps) {
     return (
       <span
         className={cn(
-          'absolute -top-1.5 -right-2 min-w-4.5 h-4.5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold leading-4.5 text-center ring-2 ring-white',
+          'absolute -top-1.5 -right-2 min-w-4.5 h-4.5 px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold leading-4.5 text-center ring-2 ring-white',
           className
         )}
       >

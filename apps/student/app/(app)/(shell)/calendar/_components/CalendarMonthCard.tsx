@@ -68,7 +68,7 @@ export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onS
           type="button"
           onClick={onPrev}
           disabled={isPending}
-          className="p-1.5 rounded-lg hover:bg-slate-100 text-ink-muted disabled:pointer-events-none disabled:opacity-40"
+          className="p-1.5 rounded-lg hover:bg-canvas text-ink-muted disabled:pointer-events-none disabled:opacity-40"
           aria-label="前の月"
         >
           <ChevronLeft size={18} />
@@ -78,7 +78,7 @@ export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onS
           type="button"
           onClick={onNext}
           disabled={isPending}
-          className="p-1.5 rounded-lg hover:bg-slate-100 text-ink-muted disabled:pointer-events-none disabled:opacity-40"
+          className="p-1.5 rounded-lg hover:bg-canvas text-ink-muted disabled:pointer-events-none disabled:opacity-40"
           aria-label="次の月"
         >
           <ChevronRight size={18} />
@@ -105,7 +105,7 @@ export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onS
               className={cn(
                 'min-h-16 sm:min-h-19 rounded-lg flex flex-col items-stretch p-1 gap-0.5 text-left transition-colors relative',
                 !isSameMonth(day, currentMonth) && 'opacity-40',
-                isSelected ? 'bg-brand-soft ring-2 ring-brand-500' : 'hover:bg-slate-100'
+                isSelected ? 'bg-brand-soft ring-2 ring-brand-500' : 'hover:bg-canvas'
               )}
             >
               <div className="flex justify-center px-0.5">

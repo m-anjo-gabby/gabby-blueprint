@@ -28,6 +28,7 @@
 | [favorites.md](student/favorites.md) | `/favorites` | お気に入り教材・フレーズ | ✅ |
 | [library.md](student/library.md) | `/library` | 教材一覧（検索・絞り込み） | ✅ |
 | [notice.md](student/notice.md) | `/notice` | お知らせ一覧 | ✅ |
+| [group-sessions.md](student/group-sessions.md) | `/group-sessions` | グループセッション一覧（シリーズごとの回・すべての回に参加する・参加登録した過去のセッション） | ✅ |
 | [notification.md](student/notification.md) | `/notification` | 通知一覧 | ✅ |
 | [profile.md](student/profile.md) | `/profile` | アイコン・タイムゾーン設定 | ✅ |
 | [profile-password.md](student/profile-password.md) | `/profile/password` | パスワード変更 | ✅ |
@@ -90,6 +91,7 @@
 | [users.md](admin/users.md) | `/users` | ユーザーCRUD・ライセンス・代理ログイン | ✅ |
 | [calendar-events/list.md](admin/calendar-events/list.md) | `/calendar-events` | 共有カレンダーイベントの登録・編集・削除 | ✅ |
 | [calendar-events/participants.md](admin/calendar-events/participants.md) | `/calendar-events/[id]/participants` | イベント参加者(RSVP)確認・アナウンス配信 | ✅ |
+| [calendar-events/series.md](admin/calendar-events/series.md) | `/calendar-events/series`、`/calendar-events/series/new`、`/calendar-events/series/[seriesId]` | グループセッションのシリーズ（企画×月）の作成（シリーズと回をまとめて登録）・管理・回をまとめて追加 | ✅ |
 | [chat/list.md](admin/chat/list.md) | `/chat` | 管理者用チャットルーム一覧（査閲モード有） | ✅ |
 | [chat/room.md](admin/chat/room.md) | `/chat/[roomId]` | チャット詳細（査閲・グループ参加者管理） | ✅ |
 | [contents/list.md](admin/contents/list.md) | `/contents` | 学習教材の基本情報・公開範囲・タグ管理（要確認事項あり） | ✅ |

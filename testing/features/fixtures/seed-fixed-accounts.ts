@@ -152,15 +152,16 @@ async function ensureLiveMatch(studentId: string, coachId: string, clientId: str
   const { data: schedule } = await admin.from("com_m_lesson_schedule").select("schedule_id").eq("ticket_id", ticketId).limit(1);
   if (schedule && schedule.length > 0) return;
 
-  // コーチのAvailability（月・水・金 18:00〜22:00 バンクーバー）に沿う月曜18:00枠でマッチング成立させる
+  // コーチのAvailability（バンクーバーの月曜18:00〜）に沿う、日本時間の火曜10:00枠でマッチング成立させる
+  // （直接マッチングの曜日・時刻は生徒のタイムゾーン。投入済みの環境の枠は、当時の仕様の「バンクーバーの月曜18:00」基準のまま）
   const adminClient = await signInAsRole(ADMIN_EMAIL, PASSWORD);
   const { data: scheduleId, error } = await adminClient.rpc("admin_match_student_with_coach", {
     p_ticket_id: ticketId,
     p_coach_id: coachId,
     p_slot_no: 1,
-    p_day_of_week: 1,
-    p_start_time: "18:00:00",
-    p_end_time: "18:30:00",
+    p_day_of_week: 2,
+    p_start_time: "10:00:00",
+    p_end_time: "10:30:00",
   });
   if (error) throw error;
   console.log(`  ライブ契約のマッチングを確立: ${term.label} schedule=${scheduleId}`);
@@ -181,14 +182,14 @@ await ensureRole(adminUserId, "admin");
 const coachCa = await ensureUser({ email: "qa-coach-ca-01@gabby-qa-test.example", userType: "2", userName: "QAコーチCA01", clientId, timezone: "America/Vancouver" });
 const coachUs = await ensureUser({ email: "qa-coach-us-01@gabby-qa-test.example", userType: "2", userName: "QAコーチUS01", clientId, timezone: "America/New_York" });
 await ensureCoachProfile(coachCa);
-await ensureCoachAvailability(coachCa, [1, 3, 5], "18:00:00", "22:00:00");
+await ensureCoachAvailability(coachCa, "America/Vancouver", [1, 3, 5], "18:00:00", "22:00:00");
 await ensureCoachProfile(coachUs);
-await ensureCoachAvailability(coachUs, [2, 4], "10:00:00", "16:00:00");
+await ensureCoachAvailability(coachUs, "America/New_York", [2, 4], "10:00:00", "16:00:00");
 // デモコーチ（通常の生徒の「専属コーチを探す」には出ず、デモの生徒にだけ出る）
 const coachDemo = await ensureUser({ email: "qa-coach-demo-01@gabby-qa-test.example", userType: "2", userName: "QAコーチDEMO01（デモ）", clientId, timezone: "Asia/Tokyo" });
 await ensureRole(coachDemo, "demo_user");
 await ensureCoachProfile(coachDemo);
-await ensureCoachAvailability(coachDemo, [6], "10:00:00", "12:00:00");
+await ensureCoachAvailability(coachDemo, "Asia/Tokyo", [6], "10:00:00", "12:00:00");
 
 const appContract = async (term: Term) => ensureContract(clientId, "BLUEPRINT_ONLY", term, 10);
 

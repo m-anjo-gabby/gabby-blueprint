@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { LayoutDashboard, ServerCrash, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { logClientError } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -12,14 +12,10 @@ interface ErrorProps {
 
 export default function Error({ error }: ErrorProps) {
   useEffect(() => {
-    // 管理画面用のサービス識別子 'admin' を指定して致命的エラーをログ出力
-    logClientError({
-      service: 'admin',
-      digest: error.digest,
-      message: error.message || 'Admin Console client-side runtime crash',
-      stack: error.stack,
-    }).catch((err) => {
-      console.error('Failed to send admin crash log to Vercel:', err);
+    // 画面の描画中の例外をサーバーのログへ送る（digest はサーバー側のログと突き合わせるための識別子）
+    clientLogger.error('system:runtime_error', error.message || 'Client-side error', {
+      err: error,
+      payload: { digest: error.digest },
     });
   }, [error]);
 

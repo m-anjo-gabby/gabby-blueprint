@@ -1,6 +1,7 @@
 'use client';
 
 import { useConfirm } from './useConfirm';
+import { clientLogger } from '../logger/client';
 
 export interface UseExitConfirmFlowOptions {
   /** true を返した場合、確認ダイアログを出さずに離脱処理全体を中断する（例: 自動再生中は離脱不可 等） */
@@ -44,7 +45,7 @@ export function useExitConfirmFlow(options: UseExitConfirmFlowOptions) {
       try {
         await options.sync();
       } catch (e) {
-        console.error(e);
+        clientLogger.error('training:exit_sync_failed', 'Failed to sync before exit', { err: e });
       }
     }
 

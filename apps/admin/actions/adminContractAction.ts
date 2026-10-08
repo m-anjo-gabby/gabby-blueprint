@@ -93,13 +93,13 @@ export async function getContractPlans() {
       .order('sort_no', { ascending: true });
 
     if (error) {
-      logger.error('contract:get_contract_plans_failed', error.message, ctx);
+      logger.error('contract:get_contract_plans_failed', error.message, { ...ctx, err: error });
       return [];
     }
 
     return data || [];
   } catch (error) {
-    logger.error('contract:get_contract_plans_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('contract:get_contract_plans_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return [];
   }
 }
@@ -139,7 +139,7 @@ export async function upsertContractPlan(payload: {
       .single();
 
     if (error) {
-      logger.error('contract:upsert_contract_plan_failed', error.message, { ...ctx, payload });
+      logger.error('contract:upsert_contract_plan_failed', error.message, { ...ctx, err: error, payload });
       return { success: false, message: error.message };
     }
 
@@ -152,7 +152,7 @@ export async function upsertContractPlan(payload: {
     revalidatePath('/contracts');
     return { success: true, data };
   } catch (error) {
-    logger.error('contract:upsert_contract_plan_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload });
+    logger.error('contract:upsert_contract_plan_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -172,7 +172,7 @@ export async function deleteContractPlan(planId: string) {
       .eq('plan_id', planId);
 
     if (error) {
-      logger.error('contract:delete_contract_plan_failed', error.message, { ...ctx, payload: { planId } });
+      logger.error('contract:delete_contract_plan_failed', error.message, { ...ctx, err: error, payload: { planId } });
       return { success: false, message: error.message };
     }
 
@@ -182,7 +182,7 @@ export async function deleteContractPlan(planId: string) {
     revalidatePath('/contracts');
     return { success: true };
   } catch (error) {
-    logger.error('contract:delete_contract_plan_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { planId } });
+    logger.error('contract:delete_contract_plan_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { planId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -218,7 +218,7 @@ export async function getContracts(page: number = 1, limit: number = 10, searchQ
       .range(from, to);
 
     if (error) {
-      logger.error('contract:get_contracts_failed', error.message, { ...ctx, payload: { page, limit, searchQuery, clientId } });
+      logger.error('contract:get_contracts_failed', error.message, { ...ctx, err: error, payload: { page, limit, searchQuery, clientId } });
       throw new Error(error.message);
     }
 
@@ -233,7 +233,7 @@ export async function getContracts(page: number = 1, limit: number = 10, searchQ
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('contract:get_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, limit, searchQuery, clientId } });
+    logger.error('contract:get_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { page, limit, searchQuery, clientId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -256,7 +256,7 @@ export async function getActiveContractsByClient(clientId: string, userId?: stri
       .order('contract_name', { ascending: true });
 
     if (error || !contracts) {
-      logger.error('contract:get_active_contracts_failed', error?.message || 'No contracts found', { ...ctx, payload: { clientId, userId } });
+      logger.error('contract:get_active_contracts_failed', error?.message || 'No contracts found', { ...ctx, err: error, payload: { clientId, userId } });
       return [];
     }
 
@@ -278,7 +278,7 @@ export async function getActiveContractsByClient(clientId: string, userId?: stri
 
     return formatContracts(contracts);
   } catch (error) {
-    logger.error('contract:get_active_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { clientId, userId } });
+    logger.error('contract:get_active_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId, userId } });
     return [];
   }
 }
@@ -326,7 +326,7 @@ export async function createContract(params: {
       .single();
 
     if (planError || !plan) {
-      logger.error('contract:create_contract_plan_lookup_failed', planError?.message || 'Plan not found', { ...ctx, payload: params });
+      logger.error('contract:create_contract_plan_lookup_failed', planError?.message || 'Plan not found', { ...ctx, err: planError, payload: params });
       return { success: false, message: '選択されたプランが見つかりませんでした' };
     }
 
@@ -355,7 +355,7 @@ export async function createContract(params: {
       .select();
 
     if (error) {
-      logger.error('contract:create_contract_failed', error.message, { ...ctx, payload: params });
+      logger.error('contract:create_contract_failed', error.message, { ...ctx, err: error, payload: params });
       if (error.code === UNIQUE_VIOLATION) return { success: false, message: DUPLICATE_CONTRACT_NAME_MESSAGE };
       return { success: false, message: error.message };
     }
@@ -369,7 +369,7 @@ export async function createContract(params: {
     revalidatePath('/contracts');
     return { success: true, contract: newContract };
   } catch (error) {
-    logger.error('contract:create_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: params });
+    logger.error('contract:create_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: params });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -407,7 +407,7 @@ export async function updateContract(
       .single();
 
     if (planError || !plan) {
-      logger.error('contract:update_contract_plan_lookup_failed', planError?.message || 'Plan not found', { ...ctx, payload: { contractId, ...params } });
+      logger.error('contract:update_contract_plan_lookup_failed', planError?.message || 'Plan not found', { ...ctx, err: planError, payload: { contractId, ...params } });
       return { success: false, message: '選択されたプランが見つかりませんでした' };
     }
 
@@ -421,7 +421,7 @@ export async function updateContract(
       .eq('contract_id', contractId);
 
     if (licensesError) {
-      logger.error('contract:update_contract_licenses_lookup_failed', licensesError.message, { ...ctx, payload: { contractId } });
+      logger.error('contract:update_contract_licenses_lookup_failed', licensesError.message, { ...ctx, err: licensesError, payload: { contractId } });
       return { success: false, message: '既存ライセンスの確認に失敗しました' };
     }
 
@@ -461,7 +461,7 @@ export async function updateContract(
       .select();
 
     if (error) {
-      logger.error('contract:update_contract_failed', error.message, { ...ctx, payload: { contractId, ...params } });
+      logger.error('contract:update_contract_failed', error.message, { ...ctx, err: error, payload: { contractId, ...params } });
       if (error.code === UNIQUE_VIOLATION) return { success: false, message: DUPLICATE_CONTRACT_NAME_MESSAGE };
       return { success: false, message: error.message };
     }
@@ -474,7 +474,7 @@ export async function updateContract(
     revalidatePath('/contracts');
     return { success: true, contract: data[0] };
   } catch (error) {
-    logger.error('contract:update_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId, ...params } });
+    logger.error('contract:update_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId, ...params } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -496,7 +496,7 @@ export async function deleteContract(contractId: string) {
       .eq('contract_id', contractId);
 
     if (countError) {
-      logger.error('contract:delete_contract_count_failed', countError.message, { ...ctx, payload: { contractId } });
+      logger.error('contract:delete_contract_count_failed', countError.message, { ...ctx, err: countError, payload: { contractId } });
       return { success: false, message: '契約情報の確認に失敗しました' };
     }
 
@@ -517,7 +517,7 @@ export async function deleteContract(contractId: string) {
           reason: 'has_history' as const,
         };
       }
-      logger.error('contract:delete_contract_failed', error.message, { ...ctx, payload: { contractId } });
+      logger.error('contract:delete_contract_failed', error.message, { ...ctx, err: error, payload: { contractId } });
       return { success: false, message: error.message };
     }
 
@@ -526,7 +526,7 @@ export async function deleteContract(contractId: string) {
     revalidatePath('/contracts');
     return { success: true };
   } catch (error) {
-    logger.error('contract:delete_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId } });
+    logger.error('contract:delete_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -550,7 +550,7 @@ export async function purgeContractWithHistory(contractId: string) {
       supabase.from('com_t_user_session_ticket_history').select('history_id', { count: 'exact', head: true }).eq('contract_id', contractId),
     ]);
 
-    logger.warn('contract:purge_contract_with_history_start', 'Purging contract including assignment/license history (irreversible)', {
+    logger.warn('contract:purge_contract_with_history_started', 'Purging contract including assignment/license history (irreversible)', {
       ...ctx,
       payload: {
         contractId,
@@ -563,7 +563,7 @@ export async function purgeContractWithHistory(contractId: string) {
     const { error } = await supabase.rpc('purge_contract_with_history', { p_contract_id: contractId });
 
     if (error) {
-      logger.error('contract:purge_contract_with_history_failed', error.message, { ...ctx, payload: { contractId } });
+      logger.error('contract:purge_contract_with_history_failed', error.message, { ...ctx, err: error, payload: { contractId } });
       return { success: false, message: error.message };
     }
 
@@ -573,7 +573,7 @@ export async function purgeContractWithHistory(contractId: string) {
     revalidatePath('/users');
     return { success: true };
   } catch (error) {
-    logger.error('contract:purge_contract_with_history_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId } });
+    logger.error('contract:purge_contract_with_history_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -594,7 +594,7 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
       .eq('user_type', 1);
 
     if (userError) {
-      logger.error('contract:get_license_assignment_users_view_failed', userError.message, { ...ctx, payload: { contractId, clientId } });
+      logger.error('contract:get_license_assignment_users_view_failed', userError.message, { ...ctx, err: userError, payload: { contractId, clientId } });
       throw new Error("ユーザーデータの取得に失敗しました");
     }
 
@@ -604,7 +604,7 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
       .eq('contract_id', contractId);
 
     if (assignError) {
-      logger.error('contract:get_license_assignment_users_assignments_failed', assignError.message, { ...ctx, payload: { contractId, clientId } });
+      logger.error('contract:get_license_assignment_users_assignments_failed', assignError.message, { ...ctx, err: assignError, payload: { contractId, clientId } });
       throw new Error("割当情報の取得に失敗しました");
     }
 
@@ -638,7 +638,7 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
       unassignedUsers: (allUsers || []).filter(u => !assignmentByUserId.has(u.id)),
     };
   } catch (error) {
-    logger.error('contract:get_license_assignment_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId, clientId } });
+    logger.error('contract:get_license_assignment_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId, clientId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -665,7 +665,7 @@ export async function assignLicenseToUser(
       .single();
 
     if (contractError || !contract) {
-      logger.error('contract:assign_license_contract_lookup_failed', contractError?.message || 'Contract not found', { ...ctx, payload: { contractId } });
+      logger.error('contract:assign_license_contract_lookup_failed', contractError?.message || 'Contract not found', { ...ctx, err: contractError, payload: { contractId } });
       return { success: false, message: '対象の契約情報が見つかりませんでした' };
     }
 
@@ -686,7 +686,7 @@ export async function assignLicenseToUser(
       .eq('contract_id', contractId);
 
     if (countError) {
-      logger.error('contract:assign_license_count_failed', countError.message, { ...ctx, payload: { contractId } });
+      logger.error('contract:assign_license_count_failed', countError.message, { ...ctx, err: countError, payload: { contractId } });
       return { success: false, message: '割当状況の確認に失敗しました' };
     }
 
@@ -712,7 +712,7 @@ export async function assignLicenseToUser(
       if (error.code === '23P01') {
         return { success: false, message: '同時に別の操作でライセンスが登録されたため、この期間には割当できません。最新の状態を確認してやり直してください。' };
       }
-      logger.error('contract:assign_license_failed', error.message, { ...ctx, payload: { contractId, userId, startDateJst, endDateJst } });
+      logger.error('contract:assign_license_failed', error.message, { ...ctx, err: error, payload: { contractId, userId, startDateJst, endDateJst } });
       return { success: false, message: error.message };
     }
 
@@ -732,7 +732,7 @@ export async function assignLicenseToUser(
     revalidatePath('/users');
     return { success: true };
   } catch (error) {
-    logger.error('contract:assign_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId, userId } });
+    logger.error('contract:assign_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId, userId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -757,7 +757,7 @@ export async function invalidateUserLicense(licenseId: string) {
     const { error } = await supabase.rpc('invalidate_user_license', { p_license_id: licenseId });
 
     if (error) {
-      logger.error('contract:invalidate_license_failed', error.message, { ...ctx, payload: { licenseId } });
+      logger.error('contract:invalidate_license_failed', error.message, { ...ctx, err: error, payload: { licenseId } });
       return { success: false, message: error.message };
     }
 
@@ -770,7 +770,7 @@ export async function invalidateUserLicense(licenseId: string) {
     revalidatePath('/users');
     return { success: true };
   } catch (error) {
-    logger.error('contract:invalidate_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { licenseId } });
+    logger.error('contract:invalidate_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { licenseId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -804,7 +804,7 @@ export async function updateUserLicense(
       .single();
 
     if (existingError || !existing) {
-      logger.error('contract:update_user_license_lookup_failed', existingError?.message || 'License not found', { ...ctx, payload: { licenseId } });
+      logger.error('contract:update_user_license_lookup_failed', existingError?.message || 'License not found', { ...ctx, err: existingError, payload: { licenseId } });
       return { success: false, message: '対象のライセンスが見つかりませんでした' };
     }
 
@@ -847,7 +847,7 @@ export async function updateUserLicense(
       if (error.code === '23P01') {
         return { success: false, message: '同時に別の操作でライセンスが登録・変更されたため、この期間には設定できません。最新の状態を確認してやり直してください。' };
       }
-      logger.error('contract:update_user_license_failed', error.message, { ...ctx, payload: { licenseId, updates } });
+      logger.error('contract:update_user_license_failed', error.message, { ...ctx, err: error, payload: { licenseId, updates } });
       return { success: false, message: error.message };
     }
 
@@ -874,7 +874,7 @@ export async function updateUserLicense(
     revalidatePath('/users');
     return { success: true };
   } catch (error) {
-    logger.error('contract:update_user_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { licenseId, updates } });
+    logger.error('contract:update_user_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { licenseId, updates } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -901,7 +901,7 @@ export async function bulkAssignLicenses(
       .single();
 
     if (contractError || !contract) {
-      logger.error('contract:bulk_assign_licenses_contract_lookup_failed', contractError?.message || 'Contract not found', { ...ctx, payload: { contractId } });
+      logger.error('contract:bulk_assign_licenses_contract_lookup_failed', contractError?.message || 'Contract not found', { ...ctx, err: contractError, payload: { contractId } });
       return { success: false, message: '対象の契約情報が見つかりませんでした', errorCount: userIds.length };
     }
 
@@ -932,7 +932,7 @@ export async function bulkAssignLicenses(
       .eq('contract_id', contractId);
 
     if (countError) {
-      logger.error('contract:bulk_assign_licenses_count_failed', countError.message, { ...ctx, payload: { contractId } });
+      logger.error('contract:bulk_assign_licenses_count_failed', countError.message, { ...ctx, err: countError, payload: { contractId } });
       return { success: false, message: '割当状況の確認に失敗しました', errorCount: userIds.length };
     }
 
@@ -970,7 +970,7 @@ export async function bulkAssignLicenses(
       if (error.code === '23P01') {
         return { success: false, message: '同時に別の操作でライセンスが登録されたため、一括割当に失敗しました。対象ユーザーを見直し再実行してください。', errorCount: userIds.length };
       }
-      logger.error('contract:bulk_assign_licenses_failed', error.message, { ...ctx, payload: { contractId, userIds, startDateJst, endDateJst } });
+      logger.error('contract:bulk_assign_licenses_failed', error.message, { ...ctx, err: error, payload: { contractId, userIds, startDateJst, endDateJst } });
       return { success: false, message: error.message, errorCount: userIds.length };
     }
 
@@ -997,7 +997,7 @@ export async function bulkAssignLicenses(
       skippedForCapacity,
     };
   } catch (error) {
-    logger.error('contract:bulk_assign_licenses_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { contractId, userIds } });
+    logger.error('contract:bulk_assign_licenses_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId, userIds } });
     return { success: false, message: '予期せぬエラーが発生しました', errorCount: userIds.length };
   }
 }
@@ -1019,7 +1019,7 @@ export async function getLicenseTimeline(userId: string) {
       .order('start_date', { ascending: false });
 
     if (error) {
-      logger.error('contract:get_license_timeline_failed', error.message, { ...ctx, payload: { userId } });
+      logger.error('contract:get_license_timeline_failed', error.message, { ...ctx, err: error, payload: { userId } });
       throw error;
     }
 
@@ -1042,7 +1042,7 @@ export async function getLicenseTimeline(userId: string) {
       .order('performed_at', { ascending: false });
 
     if (historyError) {
-      logger.error('contract:get_license_removed_history_failed', historyError.message, { ...ctx, payload: { userId } });
+      logger.error('contract:get_license_removed_history_failed', historyError.message, { ...ctx, err: historyError, payload: { userId } });
     }
 
     const liveLicenses = (data || []).map(l => ({
@@ -1069,7 +1069,7 @@ export async function getLicenseTimeline(userId: string) {
 
     return [...liveLicenses, ...removedLicenses];
   } catch (error) {
-    logger.error('contract:get_license_timeline_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { userId } });
+    logger.error('contract:get_license_timeline_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { userId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }

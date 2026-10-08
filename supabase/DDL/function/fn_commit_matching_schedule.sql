@@ -26,7 +26,18 @@
 -- 【チャットルーム開設・挨拶メッセージ (2026-09-28追加)】
 -- 成立のたびにfn_send_matching_greeting()で生徒×コーチの1対1チャットルームを用意し（開設済みなら
 -- それを使う）、コーチから生徒へ挨拶メッセージを送る。成立処理と同じトランザクションで行う。
+--
+-- 【基準のタイムゾーン (2026-10-06変更)】
+-- p_day_of_week/p_start_time/p_end_time は p_timezone（申請の requested_timezone = 生徒の申請時のタイムゾーン）の
+-- 現地時刻として受け取り、com_m_lesson_schedule.schedule_timezone にそのまま保存する（従来は承認時のコーチの
+-- タイムゾーンを保存していたため、コーチ側の夏時間の切り替えで生徒側の時刻がずれていた）。
+-- start_date/end_date もこのタイムゾーンの日付にする。重複チェックは実際の日時で比べる
+-- check_coach_schedule_conflict() を使い、基準のタイムゾーンが申請ごとに異なっても曜日をまたいで
+-- 重なり得るため、同時承認を防ぐロックは「コーチ単位」にする（旧: コーチ×曜日）。
+-- シグネチャが変わるため、旧シグネチャを削除してから作り直す。
 ---------------------------------------------
+DROP FUNCTION IF EXISTS public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, timestamptz);
+
 CREATE OR REPLACE FUNCTION public.fn_commit_matching_schedule(
     p_request_id uuid,
     p_ticket_id uuid,
@@ -36,6 +47,7 @@ CREATE OR REPLACE FUNCTION public.fn_commit_matching_schedule(
     p_day_of_week smallint,
     p_start_time time,
     p_end_time time,
+    p_timezone text,
     p_min_start_datetime timestamptz DEFAULT NULL
 )
 RETURNS uuid
@@ -44,10 +56,10 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_license_start date;
-    v_license_end date;
+    v_license_start timestamptz;
+    v_license_end timestamptz;
     v_start_date date;
-    v_coach_timezone text;
+    v_end_date date;
     v_schedule_id uuid;
     v_ticket_total_sessions smallint;
     v_ticket_weekly_frequency smallint;
@@ -55,7 +67,7 @@ DECLARE
 BEGIN
     -- 対象チケットに紐づくライセンス期間(Session生成範囲の基準)と、target_sessions算出用の
     -- total_sessions/weekly_frequencyを取得
-    SELECT l.start_date::date, l.end_date::date, t.total_sessions, t.weekly_frequency
+    SELECT l.start_date, l.end_date, t.total_sessions, t.weekly_frequency
     INTO v_license_start, v_license_end, v_ticket_total_sessions, v_ticket_weekly_frequency
     FROM public.com_t_user_session_ticket t
     JOIN public.com_t_user_license l ON l.license_id = t.license_id
@@ -65,36 +77,35 @@ BEGIN
         RAISE EXCEPTION 'license not found for ticket %', p_ticket_id;
     END IF;
 
-    v_start_date := GREATEST(v_license_start, CURRENT_DATE);
+    -- 生成範囲は基準のタイムゾーンの日付（各回の日時はfn_generate_sessions_for_schedule()でライセンスの
+    -- 開始・終了日時と直接比べるため、日付は範囲の目安）
+    v_start_date := GREATEST((v_license_start AT TIME ZONE p_timezone)::date, (NOW() AT TIME ZONE p_timezone)::date);
+    v_end_date := (v_license_end AT TIME ZONE p_timezone)::date;
 
     -- このコマ(slot_no)が契約上持つべき目標セッション数。商をbaseとし、余りはslot_no昇順に
     -- 1つずつ多く配分する（table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）
     v_target_sessions := (v_ticket_total_sessions / v_ticket_weekly_frequency)
         + CASE WHEN p_slot_no <= (v_ticket_total_sessions % v_ticket_weekly_frequency) THEN 1 ELSE 0 END;
 
-    -- 同一コーチ×同一曜日への成立処理を直列化し、重複チェックのレース条件を防ぐ
+    -- 同一コーチへの成立処理を直列化し、重複チェックのレース条件を防ぐ
     -- （この後にfn_send_matching_greeting()内で生徒×コーチのロックを取るが、そちらの後に
     -- 別のロックを取る処理は無いため、デッドロックは起こらない）
-    PERFORM pg_advisory_xact_lock(hashtextextended(p_coach_id::text || ':' || p_day_of_week::text, 0));
+    PERFORM pg_advisory_xact_lock(hashtextextended('matching:' || p_coach_id::text, 0));
 
     IF public.check_coach_schedule_conflict(
-        p_coach_id, p_day_of_week, p_start_time, p_end_time, v_start_date, v_license_end
+        p_coach_id, p_timezone, p_day_of_week, p_start_time, p_end_time,
+        GREATEST(v_license_start, NOW()), v_license_end
     ) THEN
         RAISE EXCEPTION 'SCHEDULE_CONFLICT: coach % already has an overlapping active schedule', p_coach_id;
     END IF;
 
-    -- day_of_week/start_time/end_timeの解釈基準として、成立時点のコーチtimezoneを固定保持する
-    -- （以後コーチがプロフィールのtimezoneを変更しても、この契約の意味は変わらない）
-    SELECT timezone INTO v_coach_timezone FROM public.com_m_user WHERE id = p_coach_id;
-    v_coach_timezone := COALESCE(v_coach_timezone, 'Asia/Tokyo');
-
     INSERT INTO public.com_m_lesson_schedule (
         ticket_id, student_id, coach_id, slot_no, day_of_week, start_time, end_time,
-        coach_timezone, status, start_date, end_date, source_request_id, target_sessions
+        schedule_timezone, status, start_date, end_date, source_request_id, target_sessions
     ) VALUES (
         p_ticket_id, p_student_id, p_coach_id, p_slot_no,
         p_day_of_week, p_start_time, p_end_time,
-        v_coach_timezone, 1, v_start_date, v_license_end, p_request_id, v_target_sessions
+        p_timezone, 1, v_start_date, v_end_date, p_request_id, v_target_sessions
     )
     RETURNING schedule_id INTO v_schedule_id;
 
@@ -108,4 +119,4 @@ $$;
 
 -- 内部処理専用（approve_matching_request/admin_match_student_with_coach経由以外での
 -- 直接実行は想定しない）
-REVOKE EXECUTE ON FUNCTION public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, text, timestamptz) FROM PUBLIC, anon, authenticated;

@@ -140,6 +140,7 @@ export function MatchCoachDialog({ open, initialSlotNo, ticketId, coaches, onClo
           </div>
           <p className="text-[10px] text-slate-400 leading-relaxed">
             {t('hint1')}<br />
+            {t('timezoneNote')}<br />
             {t('hint2')}
           </p>
         </div>

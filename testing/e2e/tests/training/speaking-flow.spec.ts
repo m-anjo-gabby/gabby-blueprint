@@ -121,7 +121,7 @@ test.describe("単語帳の発話", () => {
     await page.getByRole("button", { name: "発話練習" }).click();
 
     // 参照文どおりの発話（fake の既定）なので最高評価になる
-    await expect(page.getByText("SCORE", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("スコア", { exact: true })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText("Excellent", { exact: true })).toBeVisible();
 
     // 発話評価は1回だけ、表示中のフレーズ（画面に出ている英文）を参照文にして行われる
@@ -143,7 +143,7 @@ test.describe("単語帳の発話", () => {
     await stop.click();
 
     // 何も聞き取れていない時点で確定するため、評価は表示されるが最高評価にはならない
-    await expect(page.getByText("SCORE", { exact: true })).toBeVisible();
+    await expect(page.getByText("スコア", { exact: true })).toBeVisible();
     await expect(page.getByText("Excellent", { exact: true })).toHaveCount(0);
   });
 });
@@ -237,7 +237,7 @@ test.describe("スプリントの発話", () => {
 
       await openSprintSelect(page, { mode: "sprint", type, contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
       // Speed は回答の種類（YES/NO）を選んで開始する。YES で開始し、YES の解答文で評価されることを確かめる
-      const start = page.getByRole("button", { name: type === "0" ? "YESで回答開始" : "スプリントを開始" });
+      const start = page.getByRole("button", { name: type === "0" ? "YESで回答開始" : "タイムアタックを開始" });
       await expect(start).toBeEnabled();
       await start.click();
 
@@ -267,7 +267,7 @@ test.describe("スプリントの発話", () => {
     const sprint = await prepareSprintContent(f);
 
     await openSprintSelect(page, { mode: "sprint", type: "6", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: false });
-    await page.getByRole("button", { name: "スプリントを開始" }).click();
+    await page.getByRole("button", { name: "タイムアタックを開始" }).click();
 
     await expect(page.getByText("発話なし", { exact: true })).toBeVisible({ timeout: 30_000 });
     // 回答の段階（基本文・質問文の再生後）になると「次の問題へ」が押せるようになる
@@ -286,7 +286,7 @@ test.describe("スプリントの発話", () => {
     const sprint = await prepareSprintContent(f);
 
     await openSprintSelect(page, { mode: "sprint", type: "6", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
-    await page.getByRole("button", { name: "スプリントを開始" }).click();
+    await page.getByRole("button", { name: "タイムアタックを開始" }).click();
     const first = await waitForFirstListen(page);
     const listenText = first[first.length - 1].text;
 
@@ -314,8 +314,39 @@ test.describe("スプリントの発話", () => {
 
     // 全問に発話で答え終えると、スプリントが終わって結果画面へ移る
     await openSprintSelect(page, { mode: "sprint", type: "6", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
-    await page.getByRole("button", { name: "スプリントを開始" }).click();
+    await page.getByRole("button", { name: "タイムアタックを開始" }).click();
     await page.waitForURL(/\/training\/sprint\/result\/[0-9a-f-]{36}/, { timeout: 150_000 });
+
+    await test.step("実施の記録が保存され、履歴は出題順に問題ごとの回答（スキップの有無・発話評価）を持つ", async () => {
+      const selfSprintId = page.url().match(/\/result\/([0-9a-f-]{36})/)![1];
+      const { data: record, error } = await f.admin
+        .from("self_t_sprint")
+        .select("content_id, question_type, total_answered, total_assessments, answered_history")
+        .eq("self_sprint_id", selfSprintId)
+        .single();
+      expect(error).toBeNull();
+      expect(record!.content_id).toBe(sprint.contentId);
+      expect(record!.question_type).toBe("6");
+
+      const history = record!.answered_history as {
+        question_id: unknown;
+        seq_no: unknown;
+        is_skipped: unknown;
+        assessment?: { total_score?: unknown } | null;
+      }[];
+      expect(Array.isArray(history)).toBe(true);
+      expect(history.length).toBeGreaterThan(0);
+      expect(history.map((h) => h.seq_no)).toEqual(history.map((_, i) => i + 1));
+      for (const h of history) {
+        expect(typeof h.question_id).toBe("string");
+        expect(typeof h.is_skipped).toBe("boolean");
+      }
+      // 全問に発話で答えているため、発話評価のスコアが記録され、件数がヘッダーの集計と一致する
+      const assessed = history.filter((h) => !h.is_skipped && h.assessment);
+      expect(assessed.length).toBeGreaterThan(0);
+      for (const h of assessed) expect(typeof h.assessment!.total_score).toBe("number");
+      expect(record!.total_assessments).toBe(assessed.length);
+    });
 
     await test.step("「全て再生」が自動で始まり、自動再生の指定はURLから外れる", async () => {
       await expect(page.getByRole("button", { name: "停止", exact: true })).toBeVisible({ timeout: 20_000 });
@@ -356,7 +387,7 @@ test.describe("スプリントの発話", () => {
     expect(question, "最初に再生された基本文の問題が見つからない").toBeTruthy();
     expect(listen.text).toBe(question!.answer_sentence_yes_en);
 
-    await expect(page.getByText("SCORE", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("スコア", { exact: true })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText("Excellent", { exact: true })).toBeVisible();
   });
 });

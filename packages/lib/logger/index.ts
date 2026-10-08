@@ -1,193 +1,127 @@
 import pino from 'pino';
+import { maskEmails, sanitizeForLog, serializeError } from './sanitize';
 
 /**
- * ログレベルの定義
+ * サーバー側の構造化ログ（標準出力へ1行1JSON → Vercel のログドレイン → Axiom）。
+ * 書き方のルール（イベント名・レベル・出してはいけない値）は docs/LOGGING.md を参照。
  */
+
 export type LogService = 'admin' | 'student' | 'coach' | 'api' | 'worker' | 'common' | 'mail' | 'monitor';
-export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-/**
- * Axiom等のログ解析ツールで扱いやすい構造化ログのインターフェース
- */
-export interface LogEvent {
-  service: LogService;
-  level: LogLevel;
-  event: string;      // 例: 'auth:login', 'client:update_success'
-  message: string;
+/** `<domain>:<action>_<outcome>`（例: 'chat:create_room_failed'）。docs/LOGGING.md「イベント名」 */
+export type LogEventName = `${string}:${string}`;
+
+/** ログ1件に付ける文脈。ここに無い値は payload に入れる（payload はマスク・切り詰めの対象） */
+export interface LogContext {
   userId?: string;
-  ip?: string;        // アクセス元IPアドレス
-  requestId?: string; // Middleware (proxy) が発行するリクエスト単位のトレースID
+  /** proxy が発行するリクエスト単位のID（proxy のログと Server Action のログを突き合わせる） */
+  requestId?: string;
+  ip?: string;
+  path?: string;
   functionName?: string;
-  timestamp?: string;
-  payload?: any;      // 追加のコンテキスト情報
-  impersonation?: { id: string; adminId: string }; // 代理ログイン中の操作である場合のみ付与される相関情報
-  [key: string]: any;
+  /** 代理ログイン中の操作である場合のみ付く */
+  impersonation?: { id: string; adminId: string };
+  /** ブラウザから送られたログ（/api/client-log）である場合のみ付く。サーバーのログと区別する */
+  source?: 'client';
+  /** 発生したエラー（Error・Supabase のエラー・throw された任意の値）。type / message / code / details / stack に整形して出す */
+  err?: unknown;
+  /** 調査に要る追加の値（ID・件数・条件等）。氏名・本文等の個人情報は入れない */
+  payload?: unknown;
+}
+
+export interface Logger {
+  debug: (event: LogEventName, message: string, context?: LogContext) => void;
+  info: (event: LogEventName, message: string, context?: LogContext) => void;
+  warn: (event: LogEventName, message: string, context?: LogContext) => void;
+  error: (event: LogEventName, message: string, context?: LogContext) => void;
 }
 
 /**
- * Pino インスタンスの設定
- * 高速なシリアライズと、環境に応じた出力形式の切り替えを行います。
+ * 出力形式: {"level":"info","time":"...","service":"student","event":"x:y","message":"...", ...}
+ * - level は文字列1つ（pino 既定の数値の level と重複させない）
+ * - 本文は message（pino 既定の msg は使わない）
+ * - pid / hostname は Vercel では意味が無いため出さない
+ * - err は serializeError、payload は sanitizeForLog で整形してから渡す
  */
 const p = pino({
   level: process.env.LOG_LEVEL || 'info',
-  // タイムスタンプを標準的な ISO 8601 形式に設定
+  base: undefined,
+  messageKey: 'message',
   timestamp: pino.stdTimeFunctions.isoTime,
-  // 開発環境 (ローカル) では pino-pretty を使用して可読性を高める
+  formatters: { level: (label) => ({ level: label }) },
+  // err は serializeError で整形済み。pino 既定の err の整形を重ねない
+  serializers: { err: (value: unknown) => value },
+  // ローカル開発では pino-pretty で読みやすく表示する
   transport: process.env.NODE_ENV !== 'production'
-    ? {
-        target: 'pino-pretty',
-        options: { 
-          colorize: true, 
-          translateTime: 'SYS:standard',
-          ignore: 'pid,hostname' // 不要なメタデータを非表示
-        }
-      }
+    ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:standard', messageKey: 'message' } }
     : undefined,
 });
 
-// ログに出力してはいけない機微情報のキー名パターン（キー名ベースで再帰的に検出しマスクする）
-const SENSITIVE_KEY_PATTERN = /password|token|secret|authorization|api[-_]?key/i;
-const MAX_ARRAY_LENGTH = 20;
-const MAX_STRING_LENGTH = 1000;
-const MAX_SANITIZE_DEPTH = 5;
-
 /**
- * ログのpayloadを再帰的に走査し、以下を行う。
- * - 機微情報らしきキー(password/token等)の値をマスク
- * - 大きすぎる配列/文字列を切り詰め、ログサイズの肥大化を防止
+ * 指定したサービス名に紐付いたロガーを作る。
+ * @param service 'admin' | 'student' 等のサービス識別子
  */
-function sanitizeForLog(value: unknown, depth = 0): unknown {
-  if (depth > MAX_SANITIZE_DEPTH) return '[Truncated: max depth exceeded]';
-
-  if (Array.isArray(value)) {
-    if (value.length > MAX_ARRAY_LENGTH) {
-      return {
-        truncated: true,
-        length: value.length,
-        sample: value.slice(0, 3).map((v) => sanitizeForLog(v, depth + 1)),
-      };
-    }
-    return value.map((v) => sanitizeForLog(v, depth + 1));
-  }
-
-  if (typeof value === 'string') {
-    return value.length > MAX_STRING_LENGTH
-      ? `${value.slice(0, MAX_STRING_LENGTH)}...(truncated, ${value.length} chars)`
-      : value;
-  }
-
-  if (value && typeof value === 'object') {
-    const result: Record<string, unknown> = {};
-    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
-      result[key] = SENSITIVE_KEY_PATTERN.test(key) ? '[REDACTED]' : sanitizeForLog(v, depth + 1);
-    }
-    return result;
-  }
-
-  return value;
-}
-
-/**
- * スタックトレースから呼び出し元の関数名を取得する。
- * getLogContext 等を経由するため、スタックの階層位置を調整。
- */
-function getCallerName(): string | undefined {
-  const error = new Error();
-  const stack = error.stack?.split('\n');
-  
-  // [0]: Error
-  // [1]: getCallerName
-  // [2]: log (internal)
-  // [3]: info/error/warn
-  // [4]: 実際の呼び出し元 (Action関数など)
-  const caller = stack?.[4];
-  if (!caller) return undefined;
-
-  const match = caller.match(/at\s+(.*)\s+\(/) || caller.match(/at\s+(.*)$/);
-  return match ? match[1] : undefined;
-}
-
-/**
- * 指定されたサービス名に紐付いたロガーを作成する。
- * * @param service 'admin' | 'student' 等のサービス識別子
- */
-export const createLogger = (service: LogService) => {
-  const log = (level: LogLevel, event: string, message: string, context?: Partial<LogEvent>) => {
-    // context の値を優先しつつ、不足分を自動補完する
-    const data: LogEvent = {
-      service,
-      level,
-      event,
-      message,
-      functionName: context?.functionName || getCallerName(),
-      ...context,
-    };
-
-    // payload は呼び出し元が自由に詰められるフィールドのため、機微情報マスキングとサイズ抑制を一律で適用
-    if (data.payload !== undefined) {
-      data.payload = sanitizeForLog(data.payload);
-    }
-
-    // Pino を使用して出力。第一引数にオブジェクトを渡すと JSON フィールドとして展開される。
-    p[level](data, message);
+export const createLogger = (service: LogService): Logger => {
+  const log = (level: LogLevel, event: LogEventName, message: string, context?: LogContext) => {
+    if (!p.isLevelEnabled(level)) return;
+    const { err, payload, ...rest } = context ?? {};
+    p[level](
+      {
+        service,
+        event,
+        ...rest,
+        ...(err != null ? { err: serializeError(err) } : {}),
+        ...(payload !== undefined ? { payload: sanitizeForLog(payload) } : {}),
+      },
+      maskEmails(message),
+    );
   };
 
   return {
-    info: (event: string, message: string, context?: Partial<LogEvent>) => 
-      log('info', event, message, context),
-    warn: (event: string, message: string, context?: Partial<LogEvent>) => 
-      log('warn', event, message, context),
-    error: (event: string, message: string, context?: Partial<LogEvent>) => 
-      log('error', event, message, context),
-    debug: (event: string, message: string, context?: Partial<LogEvent>) => 
-      log('debug', event, message, context),
+    debug: (event, message, context) => log('debug', event, message, context),
+    info: (event, message, context) => log('info', event, message, context),
+    warn: (event, message, context) => log('warn', event, message, context),
+    error: (event, message, context) => log('error', event, message, context),
   };
 };
 
 /**
- * リクエストオブジェクトからクライアントIPアドレスを抽出する。
- * Vercel/プロキシ環境では x-real-ip または x-forwarded-for を優先し、
- * フォールバックとして req.ip (型定義になくても実行時には存在する場合がある) を使用する。
+ * リクエストからクライアントIPアドレスを抽出する（Vercel/プロキシ環境では x-real-ip / x-forwarded-for）。
  */
 export function extractIpFromRequest(req: { headers: { get: (name: string) => string | null } }): string | undefined {
   const realIp = req.headers.get('x-real-ip');
   if (realIp) return realIp;
   const forwardedFor = req.headers.get('x-forwarded-for');
   if (forwardedFor) return forwardedFor.split(',')[0].trim();
-  return (req as any).ip || undefined;
+  return undefined;
 }
 
 /**
- * Middleware (proxy) 用ロガーファクトリ。
- * NextRequest を受け取り、IPアドレスをすべてのログ呼び出しに自動付与したロガーを返す。
- * proxy ファイル側での clientIp 抽出は不要。
+ * proxy 用ロガー。IPアドレスとリクエストIDをすべてのログに自動で付ける。
  *
  * @example
  * const logger = createRequestLogger('student', req, requestId);
- * logger.info('page_view', `Access: ${pathname}`, { userId, path });
+ * logger.info('proxy:page_view', `Access: ${pathname}`, { userId, path });
  */
 export const createRequestLogger = (
   service: LogService,
   req: { headers: { get: (name: string) => string | null } },
   requestId?: string
-) => {
+): Logger => {
   const ip = extractIpFromRequest(req);
   const base = createLogger(service);
 
-  const withRequestContext = (context?: Partial<LogEvent>): Partial<LogEvent> => ({
+  const withRequestContext = (context?: LogContext): LogContext => ({
     ...(ip ? { ip } : {}),
     ...(requestId ? { requestId } : {}),
     ...context,
   });
 
   return {
-    info: (event: string, message: string, context?: Partial<LogEvent>) =>
-      base.info(event, message, withRequestContext(context)),
-    warn: (event: string, message: string, context?: Partial<LogEvent>) =>
-      base.warn(event, message, withRequestContext(context)),
-    error: (event: string, message: string, context?: Partial<LogEvent>) =>
-      base.error(event, message, withRequestContext(context)),
-    debug: (event: string, message: string, context?: Partial<LogEvent>) =>
-      base.debug(event, message, withRequestContext(context)),
+    debug: (event, message, context) => base.debug(event, message, withRequestContext(context)),
+    info: (event, message, context) => base.info(event, message, withRequestContext(context)),
+    warn: (event, message, context) => base.warn(event, message, withRequestContext(context)),
+    error: (event, message, context) => base.error(event, message, withRequestContext(context)),
   };
 };

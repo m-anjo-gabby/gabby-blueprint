@@ -27,7 +27,7 @@ export function CoachAssignmentsCard({ assignments }: CoachAssignmentsCardProps)
             <li key={assignment.assignment_id}>
               <Link
                 href={`/training/dialogue/${assignment.assignment_id}`}
-                className="group flex items-center gap-3 rounded-control p-2 hover:bg-slate-50 transition-colors"
+                className="group flex items-center gap-3 rounded-control p-2 hover:bg-canvas transition-colors"
               >
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control ${DIALOGUE.theme.iconTile}`}>
                   <DIALOGUE.icon size={18} />

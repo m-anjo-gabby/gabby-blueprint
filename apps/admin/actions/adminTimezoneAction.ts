@@ -22,12 +22,12 @@ export async function getTimezones() {
       .order('sort_no', { ascending: true });
 
     if (error) {
-      logger.error('timezone:get_timezones_failed', error.message, ctx);
+      logger.error('timezone:get_timezones_failed', error.message, { ...ctx, err: error });
       throw new Error(error.message);
     }
     return data as TimezoneMaster[];
   } catch (error) {
-    logger.error('timezone:get_timezones_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('timezone:get_timezones_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -55,7 +55,7 @@ export async function upsertTimezone(payload: Partial<TimezoneMaster>) {
       .single();
 
     if (error) {
-      logger.error('timezone:upsert_timezone_failed', error.message, { ...ctx, payload });
+      logger.error('timezone:upsert_timezone_failed', error.message, { ...ctx, err: error, payload });
       return { success: false, message: error.message };
     }
 
@@ -68,7 +68,7 @@ export async function upsertTimezone(payload: Partial<TimezoneMaster>) {
     revalidatePath('/timezones');
     return { success: true, data: savedTimezone };
   } catch (error) {
-    logger.error('timezone:upsert_timezone_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload });
+    logger.error('timezone:upsert_timezone_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -86,7 +86,7 @@ export async function deleteTimezone(timezone: string) {
       .eq('timezone', timezone);
 
     if (error) {
-      logger.error('timezone:delete_timezone_failed', error.message, { ...ctx, payload: { timezone } });
+      logger.error('timezone:delete_timezone_failed', error.message, { ...ctx, err: error, payload: { timezone } });
       return { success: false, message: error.message };
     }
 
@@ -95,7 +95,7 @@ export async function deleteTimezone(timezone: string) {
     revalidatePath('/timezones');
     return { success: true };
   } catch (error) {
-    logger.error('timezone:delete_timezone_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { timezone } });
+    logger.error('timezone:delete_timezone_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { timezone } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

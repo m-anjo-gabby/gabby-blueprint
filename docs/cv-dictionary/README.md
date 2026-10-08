@@ -10,6 +10,9 @@
 |---|---|---|
 | [review-ledger.tsv](./review-ledger.tsv) | **要確認台帳**。語（英単語＋品詞）ごとの確認事項・現在の値・確定結果。Excelで開ける | コンテンツチーム、開発者 |
 | [JUDGEMENT-GUIDE.md](./JUDGEMENT-GUIDE.md) | **判断基準ガイド**。複数の語に効く方針（例: R音化母音の扱い）の決定事項と、作業中の気づき | 開発者、Claude |
+| [proper-nouns.tsv](./proper-nouns.tsv) | **固有名詞リスト**。過去の作成で固有名詞と判定した語（社名・人名・製品名等）。次回から抽出時に機械的に除外される。誤って載った一般語は行を消す | 開発者、Claude |
+| [open-policies.json](./open-policies.json) | **未決の論点**（方針の確認待ち）。確認依頼Excelの「①確認事項（方針）」の元データ | 開発者、Claude |
+| [sample/](./sample/) | 確認依頼Excelの見本（サンプルデータ `cv_dictionary_sample.tsv` から出力したもの） | 開発者、Claude |
 
 辞書データ作成のルール本体は Claude Code のスキル
 [`.claude/skills/cv-dictionary-tsv/reference.md`](../../.claude/skills/cv-dictionary-tsv/reference.md) にあります。
@@ -29,9 +32,18 @@
 
 ### ② コンテンツチームへの確認依頼
 
-- `review-ledger.tsv` をExcelで開き、`status` が `pending` の行を `category` で絞り込んで共有する。
-- `category` 単位でまとめて判断すると効率がよい（例:「R音化母音」の語はすべて同じ方針で決まることが多い）。
-- 各行の `question` 列に、何を確認したいか（どの候補で迷っているか）が書いてある。
+確認依頼Excel（登録データ一覧・語別の要確認・未決の方針・Color Vowel 一覧の4枚＋はじめに）を出力して共有する。
+Claude Code に「CV辞書の確認依頼Excelを作って（辞書TSV: …）」と依頼すれば作成される。
+
+```bash
+python .claude/skills/cv-dictionary-tsv/scripts/review_xlsx.py --dict "<生成済みの辞書TSV>" [--out "<出力xlsx>"] [--title "<表題>"]
+```
+
+- 語別の要確認は、台帳の `pending` 行のうち辞書TSVに含まれる語（`--all-pending` で全件）。
+- 方針は `open-policies.json` のうち、対象の語が辞書TSVにあるものだけを載せる。方針に当てはまる語は
+  「方針の回答に従う」を既定値にするため、先方は例外の語だけ記入すればよい。
+- 記入欄は黄色のセル。見本は [sample/](./sample/) を参照。
+- 必要: Python 3 と openpyxl（`pip install openpyxl`）。
 
 ### ③ 回答の記録
 

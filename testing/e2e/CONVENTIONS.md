@@ -24,7 +24,7 @@
 
 | 機能 | E2Eで検証する範囲 | 対象外・モック化する部分 |
 |---|---|---|
-| Zoom Video SDK（ライブセッション通話） | ルーム入室ボタンの表示・入室操作・退室後の画面遷移等 | 実際の映像/音声の疎通、通話品質 |
+| Zoom Video SDK（ライブセッション通話） | 通話の前後の業務フロー（セッションハブ・End Session による実施結果の判定・結果画面・宿題）。通話ルームは開かず、ルームが記録する入退室ログ（`com_t_session_call_log`）を直接入れて「通話した」状態にする（`support/liveSessionFixtures.ts`） | 通話ルーム（`/students/[id]/room/[sessionId]`）の入室・退室の操作、実際の映像/音声の疎通、通話品質 |
 | Resend（メール送信） | メール送信トリガーとなる操作が成功すること（画面上の成功表示・送信履歴の記録）。文面（件名・言語・期限・リンク）は送信せずにテンプレートの描画結果で検証する（`testing/unit/`）。受信は Resend のテスト用アドレス宛に送り、送信済みメールを API で読んでリンクを開くまで検証できる（下記） | 実在の宛先への配信、メールソフトでの見た目 |
 | Azure Speech SDK（音声認識・TTS） | 音声入力UIの表示・録音開始/停止操作 | 認識精度・実際の音声合成品質 |
 | 音声認識（Web Speech API。単語帳・スプリントの発話） | 発話の流れ（問題の再生 → チャイム → 認識 → 評価の表示・停止での確定）。テスト用の認識方式（`packages/lib/audio/core/recognizer/fake.ts`）に切り替えて検証する（dev のみ。`KJ-2026-1003-04`） | 実際のマイク入力・認識精度・iOS の音声の聞こえ方（実機で確認する） |
@@ -35,12 +35,17 @@
 
 メール（Resend）の検証方法:
 
-- **文面**: 送信処理と同じ組み立て関数（`@gabby/lib/mail/render`。例: `renderPasswordResetEmail`）の結果を `testing/unit/*.test.ts` で検証する
+- **文面**: 送信処理と同じ組み立て関数（`@gabby/lib/mail/templates/` の `build〜Mail` を `@gabby/lib/mail/render` の `renderMail` で HTML・テキストにする。例: `renderMail(buildPasswordResetMail(...))`）の結果を `testing/unit/*.test.ts` で検証する
   （`pnpm --filter @gabby/testing unit`。Playwright のテスト実行環境は JSX を独自形式に変換するため、React のメールテンプレートを描画できない）。
 - **受信**: 宛先を Resend のテスト用アドレス `delivered+<ラベル>@resend.dev`（`support/resendInbox.ts` の `resendTestAddress`）にして
   画面から送信し、`waitForEmail` で送信済みメールを取得してリンクを開く。読み取りには Full access の API キーが必要で、
   `testing/.env.local` の `RESEND_TEST_READ_API_KEY` に置く（アプリの `RESEND_API_KEY` は送信専用）。未設定ならテストをスキップする。
 - `@gabby-qa-test.example` 等の実在しない宛先へは送信しない（バウンスで送信元ドメインの評価が下がる）。実際に送信するテストは desktop だけで行う。
+- 通知・リマインダーのメール（送信待ち `com_t_mail_outbox` を通るもの）は、pg_cron の代わりに送信処理（admin の `/api/cron/mail-dispatch`）を
+  `support/mailDispatch.ts` の `invokeMailDispatch` で呼んで送る（秘密のキーは `CRON_SECRET`、dev は `apps/admin/.env.local` から読む）。
+  送信処理は送信待ち全体を処理するため、dev の admin は `MAIL_DISPATCH_MODE="allowlist"` と `MAIL_DISPATCH_RECIPIENT_ALLOWLIST="resend.dev,gabbyacademy.com,gvtech.co.jp"` で送信先を Resend のテスト用アドレスと開発・運営のドメインに限定する
+  （固定アカウント等の `.example` 宛ては送らずに SKIPPED になる。`MAIL_DISPATCH_MODE` が未設定だと何も送らない）。
+  送信処理はライセンスの無い生徒に送らないため、メールを受け取る使い捨ての生徒には `grantAppLicense` でライセンスを付ける。例: `tests/mail/event-reminder.spec.ts`。
 
 ## 3. 固定アカウントの並列実行時の扱い
 
@@ -94,13 +99,22 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
   （Next.js 16 は同一アプリの dev サーバーを二重起動できないため。`KJ-2026-0926-02`）。
   admin の `dev:ssl`（https://localhost:3001）も同じ扱いで、アドミンの画面操作を含むジャーニー（`tests/journeys/`）だけが使う。
   admin は別のブラウザコンテキストで開き、`support/adminApp.ts` の `openAdminContext`（`qa-admin` でログイン・表示言語を日本語に固定）を使う。
+  coach の `dev:ssl`（https://localhost:3002）も同じ扱いで、コーチの画面操作を含むテスト（`tests/coach/` 等）だけが使う。
+  coach は別のブラウザコンテキスト（PC表示）で開き、`support/coachApp.ts` の `openCoachContext`（既定は固定アカウントの `qa-coach-ca-01`、
+  使い捨てのコーチはメール・パスワードを渡す）を使う。coach の画面は英語表記のため、ロケーターも英語の文言で書く。
+  別コンテキストで開くテストは `desktop` プロジェクトだけで実行する（`mobile` で同じ操作を繰り返さない）。
+  使い捨てのコーチは `support/authFixtures.ts` の `createDisposableCoach`（空き時間は UTC で渡す）で作る。
 - ステージングでの実行（リリース前の確認）: `pnpm --filter @gabby/testing e2e:staging`（`E2E_ENV=staging`）。Vercel のデプロイ済みサイトに接続し、
   ローカルの dev サーバーは起動しない。DB・固定アカウントは `apps/student/.env.staging`（ステージングの Supabase）を使う。
-  接続先の定義は `e2e/support/targets.ts`（URL は `E2E_BASE_URL` / `E2E_ADMIN_BASE_URL` で上書きできる）。
+  接続先の定義は `e2e/support/targets.ts`（URL は `E2E_BASE_URL` / `E2E_ADMIN_BASE_URL` / `E2E_COACH_BASE_URL` で上書きできる）。
   - 生徒: https://blueprint-student-stg.vercel.app/
   - アドミン: https://blueprint-admin-stg.vercel.app/
-  - コーチ: https://blueprint-coach-stg.vercel.app/（現在の E2E は使わない）
+  - コーチ: https://blueprint-coach-stg.vercel.app/
   - リリースSQLをステージングに適用してから実行する（アプリだけ先にデプロイされると、新しい列・RPCが無く失敗する）。
+  - コーチのテスト（`tests/coach/`・`tests/journeys/coach-live-session.spec.ts`）は、先に `pnpm --filter @gabby/testing e2e:preflight:coach:staging` で
+    テストが使う RPC・列、固定コーチ、プラン、教材、コーチのサイトの応答を確かめる（読み取りのみ。`support/coachE2e.preflight.ts`）。
+  - 本番ビルドは部品が動き出す前の押下が無視されるため、ダイアログ・確認画面を開く操作は `support/hydration.ts` の `clickUntilVisible`
+    （アドミンは `openDialogBy`）で、表示されたことを確かめて押し直す（`KJ-2026-1003-03`）。
   - 使い捨てデータはステージングのDBに作られ、各テストの後始末で消える。
 - ログインはペルソナごとに `auth.setup.ts` で1回だけ行い、ログイン状態を `testing/e2e/.auth/`（git管理外）に保存して各テストで使い回す。
   ペルソナは `testing/e2e/support/personas.ts` に定義する（`FIXTURES.md` の固定アカウント）。
@@ -110,7 +124,8 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
   `mobile-android`（Chromium、Pixel 7）は実行時間を抑えるため `e2e:android` 指定時のみ有効になる（構成の理由は `FIXTURES.md`）。
   同じテストがすべてのプロジェクトで動くよう、表示中のナビだけを取得する `mainNav` / `navTab` を使う。
 - 実行: `pnpm --filter @gabby/testing e2e`（全件）。対象を絞る場合は
-  `pnpm --filter @gabby/testing e2e -- <ファイル名の一部> --project=desktop`。
+  `pnpm --filter @gabby/testing exec playwright test <ファイル名の一部> --project=desktop`
+  （`pnpm ... e2e -- <ファイル名>` の形は `--` がそのまま Playwright に渡って絞り込みが効かず、全件が走る。`KJ-2026-1005-01`）。
   Android（Chromium）も含める場合は `pnpm --filter @gabby/testing e2e:android`（`--project=mobile-android` で単独実行も可）。
   初回・Playwright更新時はブラウザ取得が必要: `pnpm --filter @gabby/testing exec playwright install chromium webkit`。
   結果レポート（人が見る用）: `pnpm --filter @gabby/testing e2e:report`。成果物は `testing/e2e/.artifacts/`（git管理外）。

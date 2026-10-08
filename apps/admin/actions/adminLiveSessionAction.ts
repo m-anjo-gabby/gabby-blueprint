@@ -37,7 +37,7 @@ export async function getClientStudents(clientId: string): Promise<GetClientStud
       .order('user_name');
 
     if (error) {
-      logger.error('liveSession:get_client_students_failed', error.message, { ...ctx, payload: { clientId } });
+      logger.error('liveSession:get_client_students_failed', error.message, { ...ctx, err: error, payload: { clientId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -47,7 +47,7 @@ export async function getClientStudents(clientId: string): Promise<GetClientStud
 
     return { success: true, students };
   } catch (err) {
-    logger.error('liveSession:get_client_students_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { clientId } });
+    logger.error('liveSession:get_client_students_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { clientId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -70,7 +70,7 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
       .eq('user_id', studentId);
 
     if (ticketError) {
-      logger.error('liveSession:get_student_contracts_ticket_failed', ticketError.message, { ...ctx, payload: { studentId } });
+      logger.error('liveSession:get_student_contracts_ticket_failed', ticketError.message, { ...ctx, err: ticketError, payload: { studentId } });
       return [];
     }
     if (!tickets || tickets.length === 0) return [];
@@ -87,11 +87,11 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
     ]);
 
     if (licenseError) {
-      logger.error('liveSession:get_student_contracts_license_failed', licenseError.message, { ...ctx, payload: { studentId } });
+      logger.error('liveSession:get_student_contracts_license_failed', licenseError.message, { ...ctx, err: licenseError, payload: { studentId } });
       return [];
     }
     if (contractError) {
-      logger.error('liveSession:get_student_contracts_contract_failed', contractError.message, { ...ctx, payload: { studentId } });
+      logger.error('liveSession:get_student_contracts_contract_failed', contractError.message, { ...ctx, err: contractError, payload: { studentId } });
       return [];
     }
 
@@ -120,7 +120,7 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
       .filter((c): c is AdminContractSummary => c !== null)
       .sort((a, b) => b.start_date.localeCompare(a.start_date));
   } catch (err) {
-    logger.error('liveSession:get_student_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { studentId } });
+    logger.error('liveSession:get_student_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { studentId } });
     return [];
   }
 }
@@ -136,12 +136,12 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
 
     const { data: schedules, error } = await supabase
       .from('com_m_lesson_schedule')
-      .select('schedule_id, ticket_id, slot_no, day_of_week, start_time, end_time, coach_id, status, target_sessions')
+      .select('schedule_id, ticket_id, slot_no, day_of_week, start_time, end_time, schedule_timezone, coach_id, status, target_sessions')
       .eq('ticket_id', ticketId)
       .order('slot_no', { ascending: true });
 
     if (error) {
-      logger.error('liveSession:get_schedule_slots_failed', error.message, { ...ctx, payload: { ticketId } });
+      logger.error('liveSession:get_schedule_slots_failed', error.message, { ...ctx, err: error, payload: { ticketId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -170,7 +170,7 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
 
     return { success: true, slots };
   } catch (err) {
-    logger.error('liveSession:get_schedule_slots_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { ticketId } });
+    logger.error('liveSession:get_schedule_slots_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { ticketId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -190,7 +190,7 @@ export async function getSessionsForTicket(ticketId: string): Promise<CoachSessi
       .order('start_datetime', { ascending: false });
 
     if (error) {
-      logger.error('liveSession:get_sessions_for_ticket_failed', error.message, { ...ctx, payload: { ticketId } });
+      logger.error('liveSession:get_sessions_for_ticket_failed', error.message, { ...ctx, err: error, payload: { ticketId } });
       return [];
     }
 
@@ -204,7 +204,7 @@ export async function getSessionsForTicket(ticketId: string): Promise<CoachSessi
 
     return rows.map((s) => ({ ...s, coach_name: nameById.get(s.coach_id) ?? '(Unknown)' }));
   } catch (err) {
-    logger.error('liveSession:get_sessions_for_ticket_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { ticketId } });
+    logger.error('liveSession:get_sessions_for_ticket_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { ticketId } });
     return [];
   }
 }
@@ -222,7 +222,7 @@ export async function releaseLessonScheduleSlot(scheduleId: string): Promise<Rel
     const { error } = await supabase.rpc('release_lesson_schedule_slot', { p_schedule_id: scheduleId });
 
     if (error) {
-      logger.error('liveSession:release_schedule_slot_failed', error.message, { ...ctx, payload: { scheduleId } });
+      logger.error('liveSession:release_schedule_slot_failed', error.message, { ...ctx, err: error, payload: { scheduleId } });
       return { success: false, errorCode: 'unexpected_error', message: error.message };
     }
 
@@ -231,7 +231,7 @@ export async function releaseLessonScheduleSlot(scheduleId: string): Promise<Rel
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:release_schedule_slot_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { scheduleId } });
+    logger.error('liveSession:release_schedule_slot_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { scheduleId } });
     return { success: false, errorCode: 'unexpected_error', message: '予期せぬエラーが発生しました' };
   }
 }
@@ -250,13 +250,13 @@ export async function getCoachesForMatching(): Promise<AdminCoachSummary[]> {
       .order('user_name');
 
     if (error) {
-      logger.error('liveSession:get_coaches_failed', error.message, ctx);
+      logger.error('liveSession:get_coaches_failed', error.message, { ...ctx, err: error });
       return [];
     }
 
     return (data ?? []).map((c) => ({ id: c.id, user_name: c.user_name ?? '(Unknown)' }));
   } catch (err) {
-    logger.error('liveSession:get_coaches_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('liveSession:get_coaches_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return [];
   }
 }
@@ -287,14 +287,14 @@ export async function cancelSessionAsAdmin(sessionId: string, refundTicket: bool
     });
 
     if (error) {
-      logger.error('liveSession:cancel_as_admin_failed', error.message, { ...ctx, payload: { sessionId, refundTicket } });
+      logger.error('liveSession:cancel_as_admin_failed', error.message, { ...ctx, err: error, payload: { sessionId, refundTicket } });
       return { success: false, message: error.message };
     }
 
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:cancel_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { sessionId } });
+    logger.error('liveSession:cancel_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { sessionId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -323,14 +323,14 @@ export async function bookMakeupSessionAsAdmin(scheduleId: string, startIso: str
     });
 
     if (error) {
-      logger.error('liveSession:book_makeup_as_admin_failed', error.message, { ...ctx, payload: { scheduleId, startIso, endIso } });
+      logger.error('liveSession:book_makeup_as_admin_failed', error.message, { ...ctx, err: error, payload: { scheduleId, startIso, endIso } });
       return { success: false, message: error.message };
     }
 
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:book_makeup_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { scheduleId } });
+    logger.error('liveSession:book_makeup_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { scheduleId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -360,7 +360,7 @@ export async function matchStudentWithCoachAsAdmin(params: {
     });
 
     if (error) {
-      logger.error('liveSession:admin_match_failed', error.message, { ...ctx, payload: params });
+      logger.error('liveSession:admin_match_failed', error.message, { ...ctx, err: error, payload: params });
       if (error.code === '23505') {
         return { success: false, message: 'この枠には既にリクエストまたはマッチングが存在します' };
       }
@@ -373,7 +373,7 @@ export async function matchStudentWithCoachAsAdmin(params: {
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:admin_match_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: params });
+    logger.error('liveSession:admin_match_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: params });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -404,7 +404,7 @@ export async function adjustTargetSessionsAsAdmin(
     });
 
     if (error) {
-      logger.error('liveSession:adjust_target_sessions_failed', error.message, { ...ctx, payload: { scheduleId, newTargetSessions, reason } });
+      logger.error('liveSession:adjust_target_sessions_failed', error.message, { ...ctx, err: error, payload: { scheduleId, newTargetSessions, reason } });
       return { success: false, message: error.message };
     }
 
@@ -413,7 +413,7 @@ export async function adjustTargetSessionsAsAdmin(
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:adjust_target_sessions_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { scheduleId, newTargetSessions, reason } });
+    logger.error('liveSession:adjust_target_sessions_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { scheduleId, newTargetSessions, reason } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

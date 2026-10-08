@@ -25,6 +25,7 @@ import {
 } from '@gabby/types/matching';
 import { SESSION_STATUS } from '@gabby/types/session';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getFirstLiveSessionOccurrence, getLessonEndTime } from '../../date/date';
 
 const logger = createLogger('common');
 
@@ -54,7 +55,7 @@ export async function getMyLiveSessionTicketsCore(): Promise<
       .eq('user_id', user.id);
 
     if (ticketError) {
-      logger.error('matching:get_my_tickets_failed', ticketError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_my_tickets_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!tickets || tickets.length === 0) {
@@ -68,7 +69,7 @@ export async function getMyLiveSessionTicketsCore(): Promise<
       .in('license_id', licenseIds);
 
     if (licenseError) {
-      logger.error('matching:get_my_tickets_license_failed', licenseError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_my_tickets_license_failed', licenseError.message, { ...ctx, err: licenseError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -90,7 +91,7 @@ export async function getMyLiveSessionTicketsCore(): Promise<
 
     return { success: true, tickets: activeTickets };
   } catch (err) {
-    logger.error('matching:get_my_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_my_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -114,7 +115,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
       .eq('user_id', user.id);
 
     if (ticketError) {
-      logger.error('matching:get_my_contracts_ticket_failed', ticketError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_my_contracts_ticket_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!tickets || tickets.length === 0) {
@@ -127,7 +128,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
       .in('license_id', tickets.map((t) => t.license_id));
 
     if (licenseError) {
-      logger.error('matching:get_my_contracts_license_failed', licenseError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_my_contracts_license_failed', licenseError.message, { ...ctx, err: licenseError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -156,7 +157,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
 
     return { success: true, contracts };
   } catch (err) {
-    logger.error('matching:get_my_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_my_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -182,7 +183,7 @@ export async function getMySlotStatusCore(
       .maybeSingle();
 
     if (ticketError) {
-      logger.error('matching:get_slot_status_ticket_failed', ticketError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_slot_status_ticket_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!ticket) {
@@ -191,23 +192,23 @@ export async function getMySlotStatusCore(
 
     const { data: schedules, error: scheduleError } = await supabase
       .from('com_m_lesson_schedule')
-      .select('slot_no, coach_id, day_of_week, start_time, end_time, coach_timezone')
+      .select('slot_no, coach_id, day_of_week, start_time, end_time, schedule_timezone')
       .eq('ticket_id', ticketId)
       .eq('status', 1);
 
     if (scheduleError) {
-      logger.error('matching:get_slot_status_schedule_failed', scheduleError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_slot_status_schedule_failed', scheduleError.message, { ...ctx, err: scheduleError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     const { data: requests, error: requestError } = await supabase
       .from('com_t_matching_request')
-      .select('request_id, slot_no, coach_id, status, requested_day_of_week, requested_start_time, requested_end_time, reject_reason, insert_date')
+      .select('request_id, slot_no, coach_id, status, requested_day_of_week, requested_start_time, requested_end_time, requested_timezone, reject_reason, insert_date')
       .eq('ticket_id', ticketId)
       .order('insert_date', { ascending: false });
 
     if (requestError) {
-      logger.error('matching:get_slot_status_request_failed', requestError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_slot_status_request_failed', requestError.message, { ...ctx, err: requestError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -216,14 +217,12 @@ export async function getMySlotStatusCore(
     (requests ?? []).forEach((r) => coachIds.add(r.coach_id));
 
     let coachNameById = new Map<string, string>();
-    let coachTimezoneById = new Map<string, string>();
     if (coachIds.size > 0) {
       const { data: coaches } = await supabase
         .from('com_m_user')
-        .select('id, user_name, timezone')
+        .select('id, user_name')
         .in('id', Array.from(coachIds));
       coachNameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '']));
-      coachTimezoneById = new Map((coaches ?? []).map((c) => [c.id, c.timezone ?? 'Asia/Tokyo']));
     }
 
     const scheduleBySlot = new Map((schedules ?? []).map((s) => [s.slot_no, s]));
@@ -251,7 +250,7 @@ export async function getMySlotStatusCore(
           day_of_week: schedule.day_of_week as DayOfWeek,
           start_time: schedule.start_time,
           end_time: schedule.end_time,
-          coach_timezone: schedule.coach_timezone,
+          schedule_timezone: schedule.schedule_timezone,
           request_id: null,
           reject_reason: null,
         });
@@ -268,7 +267,7 @@ export async function getMySlotStatusCore(
           day_of_week: pending.requested_day_of_week as DayOfWeek,
           start_time: pending.requested_start_time,
           end_time: pending.requested_end_time,
-          coach_timezone: coachTimezoneById.get(pending.coach_id) ?? null,
+          schedule_timezone: pending.requested_timezone,
           request_id: pending.request_id,
           reject_reason: null,
         });
@@ -284,7 +283,7 @@ export async function getMySlotStatusCore(
         day_of_week: null,
         start_time: null,
         end_time: null,
-        coach_timezone: null,
+        schedule_timezone: null,
         request_id: null,
         reject_reason: rejected?.reject_reason ?? null,
       });
@@ -292,7 +291,7 @@ export async function getMySlotStatusCore(
 
     return { success: true, slots };
   } catch (err) {
-    logger.error('matching:get_slot_status_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_slot_status_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -319,7 +318,7 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
       .maybeSingle();
 
     if (ticketError) {
-      logger.error('matching:get_overview_ticket_failed', ticketError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_overview_ticket_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!ticket) return { success: false, errorCode: 'not_eligible' };
@@ -332,7 +331,7 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
 
     if (!slotResult.success) return slotResult;
     if (sessionError || scheduleError) {
-      logger.error('matching:get_overview_failed', sessionError?.message ?? scheduleError?.message ?? 'unknown', { ...ctx, userId: user.id });
+      logger.error('matching:get_overview_failed', sessionError?.message ?? scheduleError?.message ?? 'unknown', { ...ctx, err: sessionError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -369,7 +368,7 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
       },
     };
   } catch (err) {
-    logger.error('matching:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -391,12 +390,12 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
 
     const { data: schedules, error: scheduleError } = await supabase
       .from('com_m_lesson_schedule')
-      .select('schedule_id, slot_no, coach_id, day_of_week, start_time, end_time, coach_timezone')
+      .select('schedule_id, slot_no, coach_id, day_of_week, start_time, end_time, schedule_timezone')
       .eq('student_id', user.id)
       .eq('status', 1);
 
     if (scheduleError) {
-      logger.error('matching:get_my_bookable_tickets_schedule_failed', scheduleError.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_my_bookable_tickets_schedule_failed', scheduleError.message, { ...ctx, err: scheduleError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!schedules || schedules.length === 0) {
@@ -413,7 +412,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
       const { error } = shortfallResults[index];
       const data = shortfallResults[index].data as ScheduleShortfallRow | null;
       if (error || !data) {
-        logger.error('matching:get_my_bookable_tickets_rpc_failed', error?.message ?? 'No row returned', { ...ctx, userId: user.id, payload: { scheduleId: schedules[index].schedule_id } });
+        logger.error('matching:get_my_bookable_tickets_rpc_failed', error?.message ?? 'No row returned', { ...ctx, err: error, userId: user.id, payload: { scheduleId: schedules[index].schedule_id } });
         return false;
       }
       return data.shortfall > 0;
@@ -429,72 +428,34 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
 
     const coachIds = Array.from(new Set(bookableSchedules.map((s) => s.coach_id)));
 
-    const [
-      { data: coaches, error: coachError },
-      { data: availability, error: availabilityError },
-      { data: unavailableSlots, error: unavailableError },
-    ] = await Promise.all([
-      supabase.from('com_m_user').select('id, user_name').in('id', coachIds),
-      supabase
-        .from('com_m_coach_availability')
-        .select('availability_id, coach_id, day_of_week, start_time, end_time')
-        .in('coach_id', coachIds)
-        .eq('delete_flg', '0'),
-      supabase.rpc('get_coaches_unavailable_slots', { p_coach_ids: coachIds }),
-    ]);
+    const { data: coaches, error: coachError } = await supabase
+      .from('com_m_user')
+      .select('id, user_name, timezone')
+      .in('id', coachIds);
 
-    if (coachError || availabilityError || unavailableError) {
-      logger.error(
-        'matching:get_my_bookable_tickets_join_failed',
-        coachError?.message ?? availabilityError?.message ?? unavailableError?.message ?? 'unknown',
-        { ...ctx, userId: user.id }
-      );
+    if (coachError) {
+      logger.error('matching:get_my_bookable_tickets_join_failed', coachError.message, { ...ctx, err: coachError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    const coachNameById = new Map((coaches ?? []).map((c) => [c.id, c.user_name ?? '(Unknown)']));
-
-    const availabilityByCoachId = new Map<string, typeof availability>();
-    for (const a of availability ?? []) {
-      const list = availabilityByCoachId.get(a.coach_id) ?? [];
-      list.push(a);
-      availabilityByCoachId.set(a.coach_id, list);
-    }
-
-    type UnavailableSlotRow = { coach_id: string; day_of_week: number; start_time: string; end_time: string };
-    const unavailableByCoachId = new Map<string, UnavailableSlotRow[]>();
-    for (const s of (unavailableSlots ?? []) as UnavailableSlotRow[]) {
-      const list = unavailableByCoachId.get(s.coach_id) ?? [];
-      list.push(s);
-      unavailableByCoachId.set(s.coach_id, list);
-    }
+    const coachById = new Map((coaches ?? []).map((c) => [c.id, c]));
 
     const slots: BookableTicketSlot[] = bookableSchedules.map((schedule) => ({
       schedule_id: schedule.schedule_id,
       slot_no: schedule.slot_no,
       coach_id: schedule.coach_id,
-      coach_name: coachNameById.get(schedule.coach_id) ?? '(Unknown)',
-      coach_timezone: schedule.coach_timezone,
+      coach_name: coachById.get(schedule.coach_id)?.user_name ?? '(Unknown)',
+      coach_timezone: coachById.get(schedule.coach_id)?.timezone ?? 'Asia/Tokyo',
+      schedule_timezone: schedule.schedule_timezone,
       day_of_week: schedule.day_of_week as DayOfWeek,
       start_time: schedule.start_time,
       end_time: schedule.end_time,
       shortfall: shortfallByScheduleId.get(schedule.schedule_id) ?? 0,
-      availability: (availabilityByCoachId.get(schedule.coach_id) ?? []).map((a) => ({
-        availability_id: a.availability_id,
-        day_of_week: a.day_of_week as DayOfWeek,
-        start_time: a.start_time,
-        end_time: a.end_time,
-      })),
-      unavailable_slots: (unavailableByCoachId.get(schedule.coach_id) ?? []).map((s) => ({
-        day_of_week: s.day_of_week as DayOfWeek,
-        start_time: s.start_time,
-        end_time: s.end_time,
-      })),
     }));
 
     return { success: true, slots };
   } catch (err) {
-    logger.error('matching:get_my_bookable_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_my_bookable_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -517,7 +478,7 @@ export async function getCoachBrowseListCore(): Promise<
     const { data: matchableCoaches, error: matchableError } = await supabase.rpc('get_matchable_coach_ids');
 
     if (matchableError) {
-      logger.error('matching:get_coach_list_matchable_failed', matchableError.message, ctx);
+      logger.error('matching:get_coach_list_matchable_failed', matchableError.message, { ...ctx, err: matchableError });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!matchableCoaches || matchableCoaches.length === 0) {
@@ -531,7 +492,7 @@ export async function getCoachBrowseListCore(): Promise<
       .eq('delete_flg', '0');
 
     if (profileError) {
-      logger.error('matching:get_coach_list_profile_failed', profileError.message, ctx);
+      logger.error('matching:get_coach_list_profile_failed', profileError.message, { ...ctx, err: profileError });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!profiles || profiles.length === 0) {
@@ -560,7 +521,7 @@ export async function getCoachBrowseListCore(): Promise<
       logger.error(
         'matching:get_coach_list_join_failed',
         userError?.message ?? availabilityError?.message ?? unavailableError?.message ?? 'unknown',
-        ctx
+        { ...ctx, err: userError }
       );
       return { success: false, errorCode: 'unexpected_error' };
     }
@@ -573,7 +534,7 @@ export async function getCoachBrowseListCore(): Promise<
       availabilityByCoachId.set(slot.coach_id, list);
     }
 
-    type UnavailableSlotRow = { coach_id: string; day_of_week: number; start_time: string; end_time: string };
+    type UnavailableSlotRow = { coach_id: string; timezone: string; day_of_week: number; start_time: string; end_time: string };
     const unavailableByCoachId = new Map<string, UnavailableSlotRow[]>();
     for (const slot of (unavailableSlots ?? []) as UnavailableSlotRow[]) {
       const list = unavailableByCoachId.get(slot.coach_id) ?? [];
@@ -603,6 +564,7 @@ export async function getCoachBrowseListCore(): Promise<
           end_time: a.end_time,
         })),
         unavailable_slots: (unavailableByCoachId.get(p.user_id) ?? []).map((s) => ({
+          timezone: s.timezone,
           day_of_week: s.day_of_week as DayOfWeek,
           start_time: s.start_time,
           end_time: s.end_time,
@@ -612,7 +574,7 @@ export async function getCoachBrowseListCore(): Promise<
 
     return { success: true, coaches };
   } catch (err) {
-    logger.error('matching:get_coach_list_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_coach_list_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -644,7 +606,7 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
       .maybeSingle();
 
     if (ticketError) {
-      logger.error('matching:create_request_ticket_check_failed', ticketError.message, { ...ctx, userId: user.id });
+      logger.error('matching:create_request_ticket_check_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!ticket || input.slot_no > ticket.weekly_frequency) {
@@ -658,57 +620,69 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
       .maybeSingle();
 
     if (matchableError) {
-      logger.error('matching:create_request_matchable_check_failed', matchableError.message, { ...ctx, userId: user.id });
+      logger.error('matching:create_request_matchable_check_failed', matchableError.message, { ...ctx, err: matchableError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!matchableCoach) {
       return { success: false, errorCode: 'not_eligible' };
     }
 
-    // 希望時間帯がコーチの公開している空き時間内に収まっているか確認
+    // 申請した曜日・時刻は生徒の現地時刻。基準のタイムゾーンは申請時の生徒のプロフィールの値を保存する
+    // （クライアントの値は使わない。承認時に定期スケジュールへ引き継ぎ、セッションもこのタイムゾーンで作る）
+    const [{ data: student, error: studentError }, { data: license, error: licenseError }] = await Promise.all([
+      supabase.from('com_m_user').select('timezone').eq('id', user.id).maybeSingle(),
+      supabase.from('com_t_user_license').select('start_date, end_date').eq('license_id', ticket.license_id).maybeSingle(),
+    ]);
+
+    if (studentError || licenseError || !license) {
+      logger.error('matching:create_request_profile_check_failed', studentError?.message ?? licenseError?.message ?? 'license not found', { ...ctx, err: studentError, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    const studentTimezone = student?.timezone ?? 'Asia/Tokyo';
+
+    // 希望の枠がコーチの公開している空き時間（UTC）内に収まっているか、初回の回の実際の日時で確認する
+    // （画面の申請カレンダーと同じ換算。開始前の契約なら契約の開始以降の回）
+    const now = new Date();
+    const first = getFirstLiveSessionOccurrence(
+      input.day_of_week, input.start_time, studentTimezone, 'UTC', now, new Date(license.start_date)
+    );
+    if (first.instant > new Date(license.end_date)) {
+      return { success: false, errorCode: 'invalid_input' };
+    }
+    const utcStartTime = first.start_time;
+    const utcEndTime = getLessonEndTime(utcStartTime);
+
     const { data: availabilityMatch } = await supabase
       .from('com_m_coach_availability')
       .select('availability_id')
       .eq('coach_id', input.coach_id)
-      .eq('day_of_week', input.day_of_week)
+      .eq('day_of_week', first.day_of_week)
       .eq('delete_flg', '0')
-      .lte('start_time', `${input.start_time}:00`)
-      .gte('end_time', `${input.end_time}:00`)
+      .lte('start_time', `${utcStartTime}:00`)
+      .gte('end_time', `${utcEndTime}:00`)
       .limit(1);
 
     if (!availabilityMatch || availabilityMatch.length === 0) {
       return { success: false, errorCode: 'invalid_input' };
     }
 
-    // コーチの既存の稼働中スケジュールとの重複確認（ダブルブッキング防止）。
+    // コーチの既存の稼働中スケジュールとの重複確認（ダブルブッキング防止。契約期間内の各回の実際の日時で比べる）。
     // 承認時(approve_matching_request)にも同一関数で再チェックするため、ここでの判定は
     // 「無駄になりうるリクエストを早期に弾く」ためのもので、最終的な防御線ではない。
-    const { data: licenseForConflictCheck, error: licenseError } = await supabase
-      .from('com_t_user_license')
-      .select('start_date, end_date')
-      .eq('license_id', ticket.license_id)
-      .maybeSingle();
-
-    if (licenseError || !licenseForConflictCheck) {
-      logger.error('matching:create_request_license_check_failed', licenseError?.message ?? 'license not found', { ...ctx, userId: user.id });
-      return { success: false, errorCode: 'unexpected_error' };
-    }
-
-    const conflictStartDate = new Date(licenseForConflictCheck.start_date) > new Date()
-      ? licenseForConflictCheck.start_date
-      : new Date().toISOString();
+    const conflictFrom = new Date(Math.max(new Date(license.start_date).getTime(), now.getTime()));
 
     const { data: hasConflict, error: conflictError } = await supabase.rpc('check_coach_schedule_conflict', {
       p_coach_id: input.coach_id,
+      p_timezone: studentTimezone,
       p_day_of_week: input.day_of_week,
       p_start_time: `${input.start_time}:00`,
       p_end_time: `${input.end_time}:00`,
-      p_start_date: conflictStartDate.slice(0, 10),
-      p_end_date: licenseForConflictCheck.end_date.slice(0, 10),
+      p_from: conflictFrom.toISOString(),
+      p_to: new Date(license.end_date).toISOString(),
     });
 
     if (conflictError) {
-      logger.error('matching:create_request_conflict_check_failed', conflictError.message, { ...ctx, userId: user.id });
+      logger.error('matching:create_request_conflict_check_failed', conflictError.message, { ...ctx, err: conflictError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (hasConflict) {
@@ -725,6 +699,7 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
         requested_day_of_week: input.day_of_week,
         requested_start_time: `${input.start_time}:00`,
         requested_end_time: `${input.end_time}:00`,
+        requested_timezone: studentTimezone,
       })
       .select('*')
       .single();
@@ -734,14 +709,14 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
       if (error?.code === '23505') {
         return { success: false, errorCode: 'slot_already_requested' };
       }
-      logger.error('matching:create_request_insert_failed', error?.message ?? 'No row inserted', { ...ctx, userId: user.id });
+      logger.error('matching:create_request_insert_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'db_insert_failed' };
     }
 
     logger.info('matching:create_request_success', 'Matching request created', { ...ctx, userId: user.id });
     return { success: true, request: data };
   } catch (err) {
-    logger.error('matching:create_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:create_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -767,7 +742,7 @@ export async function cancelMatchingRequestCore(requestId: string): Promise<Canc
       .maybeSingle();
 
     if (error) {
-      logger.error('matching:cancel_request_failed', error.message, { ...ctx, userId: user.id, payload: { requestId } });
+      logger.error('matching:cancel_request_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { requestId } });
       return { success: false, errorCode: 'db_update_failed' };
     }
     if (!data) {
@@ -777,7 +752,7 @@ export async function cancelMatchingRequestCore(requestId: string): Promise<Canc
     logger.info('matching:cancel_request_success', 'Matching request cancelled', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('matching:cancel_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:cancel_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -840,13 +815,13 @@ export async function getPendingIncomingRequestsAsCoachCore(): Promise<
       .order('insert_date', { ascending: false });
 
     if (error) {
-      logger.error('matching:get_pending_incoming_requests_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_pending_incoming_requests_failed', error.message, { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, requests: await attachRequestDetails(supabase, requests ?? []) };
   } catch (err) {
-    logger.error('matching:get_pending_incoming_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_pending_incoming_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -881,7 +856,7 @@ export async function getMatchingRequestHistoryPageAsCoachCore(
 
     const { data: rows, error } = await query;
     if (error) {
-      logger.error('matching:get_request_history_page_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('matching:get_request_history_page_failed', error.message, { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -891,7 +866,7 @@ export async function getMatchingRequestHistoryPageAsCoachCore(
 
     return { success: true, items: await attachRequestDetails(supabase, page), nextCursor };
   } catch (err) {
-    logger.error('matching:get_request_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:get_request_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -912,7 +887,7 @@ export async function approveMatchingRequestCore(requestId: string): Promise<App
     const { data, error } = await supabase.rpc('approve_matching_request', { p_request_id: requestId });
 
     if (error || !data) {
-      logger.error('matching:approve_request_failed', error?.message ?? 'No schedule_id returned', { ...ctx, userId: user.id, payload: { requestId } });
+      logger.error('matching:approve_request_failed', error?.message ?? 'No schedule_id returned', { ...ctx, err: error, userId: user.id, payload: { requestId } });
       // コーチの既存スケジュールとの重複はcheck_coach_schedule_conflict()経由でapprove_matching_request()内から
       // RAISE EXCEPTIONされる（詳細はfunction/approve_matching_request.sqlを参照）。個別調整が必要な旨を
       // 区別して伝えるため、専用のerrorCodeにマッピングする。
@@ -925,7 +900,7 @@ export async function approveMatchingRequestCore(requestId: string): Promise<App
     logger.info('matching:approve_request_success', 'Matching request approved', { ...ctx, userId: user.id });
     return { success: true, scheduleId: data as string };
   } catch (err) {
-    logger.error('matching:approve_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:approve_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -949,14 +924,14 @@ export async function rejectMatchingRequestCore(requestId: string, reason: strin
     const { error } = await supabase.rpc('reject_matching_request', { p_request_id: requestId, p_reason: reason.trim() });
 
     if (error) {
-      logger.error('matching:reject_request_failed', error.message, { ...ctx, userId: user.id, payload: { requestId } });
+      logger.error('matching:reject_request_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { requestId } });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
     logger.info('matching:reject_request_success', 'Matching request rejected', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('matching:reject_request_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('matching:reject_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

@@ -15,6 +15,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { WordFormDialog } from './WordFormDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useWordStore } from '@/stores/useWordStore';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 interface WordListProps {
   contentId: string;
@@ -104,7 +105,7 @@ export function WordList({ contentId }: WordListProps) {
         showToast(result.message || t('deleteFailed'), "error");
       }
     } catch (error) {
-      console.error("Delete Error:", error);
+      clientLogger.error('word:delete_word_failed', 'Word delete failed', { err: error });
       showToast(t('systemError'), "error");
     }
   };

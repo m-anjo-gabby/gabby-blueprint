@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
+  CALENDAR_EVENT_TYPES,
   CalendarEventItem,
   CalendarEventType,
   CalendarEventTargetType,
@@ -50,20 +51,21 @@ function jstDateTimeToUtcIso(dateStr: string, timeStr: string): string | null {
 }
 
 /**
- * カレンダーイベント一覧取得
+ * カレンダーイベント一覧取得（seriesId を指定するとそのシリーズの回だけ）
  */
-export async function getCalendarEvents(): Promise<CalendarEventItem[]> {
+export async function getCalendarEvents(options: { seriesId?: string } = {}): Promise<CalendarEventItem[]> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from('com_m_calendar_event')
-      .select('*')
-      .eq('delete_flg', '0')
-      .order('start_datetime', { ascending: false });
+      .select('*, series:com_m_calendar_event_series(series_id, title, description)')
+      .eq('delete_flg', '0');
+    if (options.seriesId) query = query.eq('series_id', options.seriesId);
+    const { data, error } = await query.order('start_datetime', { ascending: false });
 
     if (error) {
-      logger.error('calendarEvent:get_calendar_events_failed', error.message, ctx);
+      logger.error('calendarEvent:get_calendar_events_failed', error.message, { ...ctx, err: error });
       throw new Error(error.message);
     }
 
@@ -77,7 +79,7 @@ export async function getCalendarEvents(): Promise<CalendarEventItem[]> {
       coaches: coachesByEventId.get(row.calendar_event_id) ?? [],
     })) as CalendarEventItem[];
   } catch (error) {
-    logger.error('calendarEvent:get_calendar_events_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('calendarEvent:get_calendar_events_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -97,13 +99,13 @@ export async function getCoachesFilter(): Promise<CalendarEventCoachOption[]> {
       .order('user_name');
 
     if (error) {
-      logger.error('calendarEvent:get_coaches_filter_failed', error.message, ctx);
+      logger.error('calendarEvent:get_coaches_filter_failed', error.message, { ...ctx, err: error });
       return [];
     }
 
     return (data ?? []).map((row) => ({ coach_id: row.id, user_name: row.user_name }));
   } catch (error) {
-    logger.error('calendarEvent:get_coaches_filter_unexpected', error instanceof Error ? error.message : 'Unknown error', ctx);
+    logger.error('calendarEvent:get_coaches_filter_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     return [];
   }
 }
@@ -123,7 +125,7 @@ async function getCoachesByEventId(calendarEventIds: string[]): Promise<Map<stri
     .in('calendar_event_id', calendarEventIds);
 
   if (error) {
-    logger.error('calendarEvent:get_coaches_by_event_failed', error.message, ctx);
+    logger.error('calendarEvent:get_coaches_by_event_failed', error.message, { ...ctx, err: error });
     return map;
   }
 
@@ -145,7 +147,7 @@ async function syncCalendarEventCoaches(calendarEventId: string, coachIds: strin
 
   const { error: deleteError } = await supabase.from('com_t_calendar_event_coach').delete().eq('calendar_event_id', calendarEventId);
   if (deleteError) {
-    logger.error('calendarEvent:sync_coaches_delete_failed', deleteError.message, { ...ctx, payload: { calendarEventId } });
+    logger.error('calendarEvent:sync_coaches_delete_failed', deleteError.message, { ...ctx, err: deleteError, payload: { calendarEventId } });
     throw new Error(deleteError.message);
   }
 
@@ -154,13 +156,14 @@ async function syncCalendarEventCoaches(calendarEventId: string, coachIds: strin
   const rows = coachIds.map((coachId) => ({ calendar_event_id: calendarEventId, coach_id: coachId }));
   const { error: insertError } = await supabase.from('com_t_calendar_event_coach').insert(rows);
   if (insertError) {
-    logger.error('calendarEvent:sync_coaches_insert_failed', insertError.message, { ...ctx, payload: { calendarEventId, coachIds } });
+    logger.error('calendarEvent:sync_coaches_insert_failed', insertError.message, { ...ctx, err: insertError, payload: { calendarEventId, coachIds } });
     throw new Error(insertError.message);
   }
 }
 
 /**
  * カレンダーイベントの新規作成/更新
+ * シリーズ（series_id）はここでは変更しない（シリーズの回はシリーズ管理の「回をまとめて追加」で作る。新規作成は単発のイベント）。
  * calendar_event_idの有無で insert / update を明示的に分岐する
  * （timezoneのような人間可読な自然キーを持たないため upsert() は使わない）
  */
@@ -186,7 +189,8 @@ export async function upsertCalendarEvent(
       location_url: formData.location_url || null,
       target_type: formData.target_type,
       client_id: formData.target_type === 'CLIENT' ? formData.client_id || null : null,
-      rsvp_enabled: formData.rsvp_enabled,
+      // 参加確認が必須の種別（グループセッション等）は、送信内容に関わらず有効にする
+      rsvp_enabled: CALENDAR_EVENT_TYPES[formData.event_type]?.rsvpRequired || formData.rsvp_enabled,
       is_published: formData.is_published,
       update_date: new Date().toISOString(),
     };
@@ -198,7 +202,7 @@ export async function upsertCalendarEvent(
     const { data, error } = await query.select().single();
 
     if (error) {
-      logger.error('calendarEvent:upsert_calendar_event_failed', error.message, { ...ctx, payload: formData });
+      logger.error('calendarEvent:upsert_calendar_event_failed', error.message, { ...ctx, err: error, payload: formData });
       return { success: false, message: error.message };
     }
 
@@ -215,6 +219,7 @@ export async function upsertCalendarEvent(
   } catch (error) {
     logger.error('calendarEvent:upsert_calendar_event_unexpected', error instanceof Error ? error.message : 'Unknown error', {
       ...ctx,
+      err: error,
       payload: formData,
     });
     return { success: false, message: '予期せぬエラーが発生しました' };
@@ -234,7 +239,7 @@ export async function deleteCalendarEvent(calendarEventId: string): Promise<{ su
       .eq('calendar_event_id', calendarEventId);
 
     if (error) {
-      logger.error('calendarEvent:delete_calendar_event_failed', error.message, { ...ctx, payload: { calendarEventId } });
+      logger.error('calendarEvent:delete_calendar_event_failed', error.message, { ...ctx, err: error, payload: { calendarEventId } });
       return { success: false, message: error.message };
     }
 
@@ -245,6 +250,7 @@ export async function deleteCalendarEvent(calendarEventId: string): Promise<{ su
   } catch (error) {
     logger.error('calendarEvent:delete_calendar_event_unexpected', error instanceof Error ? error.message : 'Unknown error', {
       ...ctx,
+      err: error,
       payload: { calendarEventId },
     });
     return { success: false, message: '予期せぬエラーが発生しました' };
@@ -265,13 +271,14 @@ export async function getCalendarEventParticipants(
 
     const { data: event, error: eventError } = await supabase
       .from('com_m_calendar_event')
-      .select('*')
+      .select('*, series:com_m_calendar_event_series(series_id, title, description)')
       .eq('calendar_event_id', calendarEventId)
       .single();
 
     if (eventError || !event) {
       logger.error('calendarEvent:get_participants_event_not_found', eventError?.message || 'event not found', {
         ...ctx,
+        err: eventError,
         payload: { calendarEventId },
       });
       return { event: null, participants: [], totalCount: 0 };
@@ -284,7 +291,7 @@ export async function getCalendarEventParticipants(
       .order('insert_date', { ascending: false });
 
     if (error) {
-      logger.error('calendarEvent:get_participants_failed', error.message, { ...ctx, payload: { calendarEventId } });
+      logger.error('calendarEvent:get_participants_failed', error.message, { ...ctx, err: error, payload: { calendarEventId } });
       return { event: { ...event, is_joined: false, is_assigned_coach: false } as CalendarEventItem, participants: [], totalCount: 0 };
     }
 
@@ -304,6 +311,7 @@ export async function getCalendarEventParticipants(
   } catch (error) {
     logger.error('calendarEvent:get_participants_unexpected', error instanceof Error ? error.message : 'Unknown error', {
       ...ctx,
+      err: error,
       payload: { calendarEventId },
     });
     return { event: null, participants: [], totalCount: 0 };
@@ -331,7 +339,7 @@ export async function getCalendarEventMessages(calendarEventId: string): Promise
       .order('insert_date', { ascending: false });
 
     if (error) {
-      logger.error('calendarEvent:get_messages_failed', error.message, { ...ctx, payload: { calendarEventId } });
+      logger.error('calendarEvent:get_messages_failed', error.message, { ...ctx, err: error, payload: { calendarEventId } });
       return [];
     }
 
@@ -339,6 +347,7 @@ export async function getCalendarEventMessages(calendarEventId: string): Promise
   } catch (error) {
     logger.error('calendarEvent:get_messages_unexpected', error instanceof Error ? error.message : 'Unknown error', {
       ...ctx,
+      err: error,
       payload: { calendarEventId },
     });
     return [];
@@ -368,7 +377,7 @@ export async function createCalendarEventMessage(
     });
 
     if (error) {
-      logger.error('calendarEvent:create_message_failed', error.message, { ...ctx, payload: { calendarEventId, ...formData } });
+      logger.error('calendarEvent:create_message_failed', error.message, { ...ctx, err: error, payload: { calendarEventId, ...formData } });
       return { success: false, message: error.message };
     }
 
@@ -379,6 +388,7 @@ export async function createCalendarEventMessage(
   } catch (error) {
     logger.error('calendarEvent:create_message_unexpected', error instanceof Error ? error.message : 'Unknown error', {
       ...ctx,
+      err: error,
       payload: { calendarEventId },
     });
     return { success: false, message: '予期せぬエラーが発生しました' };
@@ -411,7 +421,7 @@ export async function updateCalendarEventMessage(
       .eq('calendar_event_message_id', calendarEventMessageId);
 
     if (error) {
-      logger.error('calendarEvent:update_message_failed', error.message, { ...ctx, payload: { calendarEventMessageId, ...formData } });
+      logger.error('calendarEvent:update_message_failed', error.message, { ...ctx, err: error, payload: { calendarEventMessageId, ...formData } });
       return { success: false, message: error.message };
     }
 
@@ -422,6 +432,7 @@ export async function updateCalendarEventMessage(
   } catch (error) {
     logger.error('calendarEvent:update_message_unexpected', error instanceof Error ? error.message : 'Unknown error', {
       ...ctx,
+      err: error,
       payload: { calendarEventMessageId },
     });
     return { success: false, message: '予期せぬエラーが発生しました' };
@@ -446,7 +457,7 @@ export async function deleteCalendarEventMessage(
       .single();
 
     if (fetchError) {
-      logger.error('calendarEvent:delete_message_fetch_failed', fetchError.message, { ...ctx, payload: { calendarEventMessageId } });
+      logger.error('calendarEvent:delete_message_fetch_failed', fetchError.message, { ...ctx, err: fetchError, payload: { calendarEventMessageId } });
       return { success: false, message: fetchError.message };
     }
 
@@ -461,7 +472,7 @@ export async function deleteCalendarEventMessage(
       .eq('calendar_event_message_id', calendarEventMessageId);
 
     if (error) {
-      logger.error('calendarEvent:delete_message_failed', error.message, { ...ctx, payload: { calendarEventMessageId } });
+      logger.error('calendarEvent:delete_message_failed', error.message, { ...ctx, err: error, payload: { calendarEventMessageId } });
       return { success: false, message: error.message };
     }
 
@@ -472,6 +483,7 @@ export async function deleteCalendarEventMessage(
   } catch (error) {
     logger.error('calendarEvent:delete_message_unexpected', error instanceof Error ? error.message : 'Unknown error', {
       ...ctx,
+      err: error,
       payload: { calendarEventMessageId },
     });
     return { success: false, message: '予期せぬエラーが発生しました' };
@@ -509,6 +521,7 @@ export async function uploadCalendarEventMessageFile(
     if (uploadError) {
       logger.error('calendarEvent:upload_message_file_failed', uploadError.message, {
         ...ctx,
+        err: uploadError,
         payload: { calendarEventMessageId, fileName: file.name },
       });
       return { success: false, message: `アップロードに失敗しました: ${uploadError.message}` };
@@ -531,6 +544,7 @@ export async function uploadCalendarEventMessageFile(
   } catch (error) {
     logger.error('calendarEvent:upload_message_file_unexpected', error instanceof Error ? error.message : 'Unknown error', {
       ...ctx,
+      err: error,
       payload: { calendarEventMessageId },
     });
     return { success: false, message: '予期せぬエラーが発生しました' };
@@ -558,7 +572,7 @@ export async function deleteCalendarEventMessageFile(storagePath: string): Promi
     const { error } = await supabase.storage.from('calendar-event-message').remove([cleanPath]);
 
     if (error) {
-      logger.error('calendarEvent:delete_message_file_failed', error.message, { ...ctx, payload: { storagePath } });
+      logger.error('calendarEvent:delete_message_file_failed', error.message, { ...ctx, err: error, payload: { storagePath } });
       return { success: false, message: error.message };
     }
 
@@ -566,6 +580,7 @@ export async function deleteCalendarEventMessageFile(storagePath: string): Promi
   } catch (error) {
     logger.error('calendarEvent:delete_message_file_unexpected', error instanceof Error ? error.message : 'Unknown error', {
       ...ctx,
+      err: error,
       payload: { storagePath },
     });
     return { success: false, message: '予期せぬエラーが発生しました' };

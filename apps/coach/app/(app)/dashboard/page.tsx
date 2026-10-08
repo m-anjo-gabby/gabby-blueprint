@@ -40,7 +40,7 @@ export default async function Page() {
       }
       sessionTasks={
         <Suspense fallback={<SessionTasksPanelSkeleton />}>
-          <SessionTasksPanel />
+          <SessionTasksPanel timezone={timezone} />
         </Suspense>
       }
     />

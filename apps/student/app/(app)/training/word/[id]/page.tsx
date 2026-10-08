@@ -8,7 +8,7 @@ import { usePeriodicSync } from '@gabby/lib/hooks/usePeriodicSync';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
-import { logClientEvent } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordAction';
 import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
 import { saveResumeContent, takeResumeContent } from '@/actions/contentAction';
@@ -166,10 +166,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    */
   const handleAudioUnavailable = useCallback((phrase: PhraseItem, reason: string) => {
     showToast('音声を再生できません', 'error');
-    logClientEvent({
-      service: 'student',
-      event: 'word:audio_playback_failed',
-      message: `Phrase audio unavailable: ${phrase.phrase_id}`,
+    clientLogger.warn('word:audio_playback_failed', `Phrase audio unavailable: ${phrase.phrase_id}`, {
       payload: {
         sectionId,
         phraseId: phrase.phrase_id,
@@ -178,7 +175,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         ttsStatus: phrase.tts_status,
         reason,
       },
-    }).catch(() => { /* ログ送信自体の失敗はユーザー体験に影響させない */ });
+    });
   }, [sectionId, showToast]);
 
   /**
@@ -394,7 +391,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   if (loading) {
     return (
       <ContentLoading 
-        title="Preparing your session" 
+        title="トレーニングを準備しています" 
         subtitle="教材データを読み込んでいます..." 
       />
     );

@@ -27,7 +27,7 @@ export async function fetchTrainingReportTargets(
   const { from, to } = reportingMonthRange(yearMonth);
   const { data, error } = await createAdminClient().rpc('get_training_report_targets', { p_from: from, p_to: to });
   if (error) {
-    logger.error('admin:get_training_report_targets_failed', error.message, { payload: { yearMonth } });
+    logger.error('admin:get_training_report_targets_failed', error.message, { err: error, payload: { yearMonth } });
     return null;
   }
   return { targets: (data ?? []) as TrainingReportTarget[], fetchedAt: Date.now() };
@@ -38,7 +38,7 @@ export async function fetchTrainingReportData(licenseIds: string[]): Promise<Tra
   if (licenseIds.length === 0) return [];
   const { data, error } = await createAdminClient().rpc('get_training_report_data', { p_license_ids: licenseIds });
   if (error) {
-    logger.error('admin:get_training_report_data_failed', error.message, { payload: { count: licenseIds.length } });
+    logger.error('admin:get_training_report_data_failed', error.message, { err: error, payload: { count: licenseIds.length } });
     return null;
   }
   return (data ?? []) as TrainingReportData[];
@@ -53,6 +53,7 @@ export async function fetchContractLicenseIds(contractId: string): Promise<{ con
   ]);
   if (contractError || licenseError || !contract) {
     logger.error('admin:get_contract_licenses_failed', contractError?.message ?? licenseError?.message ?? 'contract not found', {
+      err: contractError,
       payload: { contractId },
     });
     return null;

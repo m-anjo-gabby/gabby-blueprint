@@ -32,6 +32,7 @@ const VALID_STUDENT_ROUTES = [
   '/calendar',
   '/chat',
   '/live-room',
+  '/group-sessions',
 ];
 
 export async function proxy(req: NextRequest) {
@@ -67,7 +68,8 @@ export async function proxy(req: NextRequest) {
 
   // 公開ルートの判定
   const isPublicRoute = isDefaultPublicRoute(pathname, {
-    extraExactPaths: ['/forgot-password', '/update-password'],
+    // /mail/unsubscribe: メールのログイン不要の配信停止（署名で照合する）
+    extraExactPaths: ['/forgot-password', '/update-password', '/mail/unsubscribe'],
     extraPrefixes: ['/auth'],
   });
 

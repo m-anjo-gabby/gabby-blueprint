@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { createBrowserClient } from '../supabase/client';
 import { UserAppMetadata, useUserStore } from '../stores/useUserStore';
+import { clientLogger } from '../logger/client';
 
 /**
  * UserStoreInitializer の Props
@@ -55,7 +56,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
         .single();
 
       if (error) {
-        console.error('[UserStore] Failed to fetch profile:', error.message);
+        clientLogger.error('auth:get_profile_failed', error.message, { err: error });
         // DB取得に失敗した場合は、仮値 '...' のまま残留しないようメールアドレスにフォールバック
         setUser({
           id: user.id,

@@ -55,7 +55,7 @@ test.describe("使い捨てのアプリのみ契約の生徒", () => {
   /** 単語帳を1つ進めてからブックマークして終える（ホームへ戻る） */
   async function bookmarkWord(page: Page, contentId: string): Promise<void> {
     await page.goto(`/training/word/${contentId}`);
-    const next = page.getByRole("button", { name: "Next" });
+    const next = page.getByRole("button", { name: "次へ" });
     await expect(next).toBeEnabled({ timeout: 30_000 });
     await next.click();
     const bookmark = page.getByRole("button", { name: "ブックマークして終了" });

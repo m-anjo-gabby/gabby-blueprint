@@ -11,6 +11,7 @@
 | 区分 | 内容 | 入手方法 |
 |---|---|---|
 | ツール | Git / Node.js / pnpm / mkcert / VSCode | 各自インストール（手順1） |
+| ツール（任意） | Python 3 / openpyxl（CV辞書の確認依頼Excelを出力する場合のみ） | 各自インストール（手順10） |
 | ソース | GitHub `m-anjo-gabby/gabby-blueprint` | clone（手順2） |
 | 環境ファイル | `apps/*/.env.local` など（Git管理外・シークレット） | 既存端末からコピー、または担当者から受領（手順4） |
 | 証明書 | `apps/*/certificates/*.pem`（Git管理外） | 端末ごとに mkcert で生成（手順5）。**コピーしない** |
@@ -19,7 +20,7 @@
 ## 自分の別端末に環境を移す場合（ツールで一括）
 
 既存の端末があり、同じアカウント（GitHub / Supabase / Claude）で作業する場合は、
-`scripts/dev-env/` のツールで手順1〜9をまとめて実行できます（手動手順は下の各章を参照）。
+`scripts/dev-env/` のツールで手順1〜10をまとめて実行できます（手動手順は下の各章を参照）。
 
 **既存の端末で:**
 
@@ -52,6 +53,7 @@ pnpm env:export -- -OutDir D:\transfer # 出力先を指定する場合
 | 7 | mkcert によるローカルHTTPS証明書の作成 | 手順5 |
 | 8 | VSCode の推奨拡張機能のインストール | 手順7 |
 | 9 | Playwright のブラウザ取得（任意） | 手順9 |
+| 10 | CV辞書ツール用の Python と openpyxl のインストール（任意） | 手順10 |
 
 完了後、手順6の動作確認と、VSCode の Claude Code へのサインインを行ってください。
 
@@ -127,10 +129,11 @@ pnpm install
 | `apps/coach/.env.local` | ○ | coach の dev 接続 |
 | `apps/student/.env.local` | ○ | student の dev 接続（E2E もここから Supabase 接続情報を読む） |
 | `testing/.env.local` | E2E を実行する場合 | QAアカウントのパスワード等（`testing/.env.example` 参照） |
-| `apps/*/.env.staging` | staging でテストする場合 | staging 接続 |
+| `apps/*/.env.staging` | staging でテストする場合 | staging 接続（`pnpm vercel-env --env=staging --write-app-env` で値ファイルから作る） |
+| `scripts/vercel-env/values/.env.staging`・`.env.prod` | Vercel の環境変数を変更する場合 | `scripts/vercel-env/README.md` 参照。staging・本番の秘密の値を含む |
 | `supabase/release/env/.env.dev` など | リリース作業をする場合 | `supabase/release/README.md` の「初回準備」参照。アクセストークンは端末ごとに発行し直してもよい |
 
-- キーの一覧と意味は各フォルダの `.env.example` を参照してください。
+- キーの一覧と意味は各フォルダの `.env.example` を参照してください（apps は `scripts/vercel-env/manifest.mjs` から自動生成。dev の設定は `pnpm vercel-env --env=dev --check` で確かめられます）。
 - 各アプリの URL はローカルの HTTPS に合わせて次の値にします（既存端末からコピーした場合はそのままで可）。
 
   | キー | 値 |
@@ -228,6 +231,20 @@ Playwright のブラウザを取得します（初回と Playwright の更新時
 ```powershell
 pnpm --filter @gabby/testing exec playwright install chromium webkit
 ```
+
+## 10. CV辞書ツール用の Python（任意）
+
+ColorVowel辞書のコンテンツチーム向け確認依頼Excel（`.claude/skills/cv-dictionary-tsv/scripts/review_xlsx.py`、
+`docs/cv-dictionary/README.md` 参照）を出力する場合だけ必要です。
+
+```powershell
+winget install --id Python.Python.3.14 -e
+# PowerShell を開き直してから
+python -m pip install --user openpyxl
+python -c "import openpyxl"   # エラーが出なければOK
+```
+
+`python` と打って Microsoft Store が開く場合は、Python がまだ入っていません（Windows の「アプリ実行エイリアス」による案内です）。
 
 ## トラブルシューティング
 

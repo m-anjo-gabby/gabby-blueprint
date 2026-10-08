@@ -5,6 +5,7 @@ import { User as UserIcon, IdCard } from 'lucide-react';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProfileSection } from './ProfileSection';
+import { MailSettingsSectionSkeleton } from './MailSettingsSection';
 import { AccountInfoRow, PasswordPageHeader, ProfilePageHeader, SecuritySection } from './ProfileParts';
 
 /** プロフィール設定の骨組み（見出し・ラベル・セキュリティは本物、アイコン画像と値・タイムゾーンだけ骨組み） */
@@ -34,6 +35,8 @@ function ProfileSkeleton() {
             <Skeleton className="h-3 w-40" />
           </div>
         </ProfileSection>
+
+        <MailSettingsSectionSkeleton />
 
         <SecuritySection />
       </div>

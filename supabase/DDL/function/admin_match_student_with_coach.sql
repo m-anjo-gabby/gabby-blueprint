@@ -45,6 +45,11 @@
 -- 調整済みの内容を即時反映するための専用ルートのため対象外とする。そのため
 -- fn_commit_matching_schedule()呼び出し時にp_min_start_datetimeを渡さない
 -- （デフォルトのNULL=下限なしのまま呼ぶ）。
+--
+-- 【曜日・時刻は生徒の時刻 (2026-10-06変更)】
+-- 生徒の申請と同じく、p_day_of_week/p_start_time/p_end_time を生徒の現在のタイムゾーン
+-- （com_m_user.timezone）の現地時刻として扱い、申請の requested_timezone と定期スケジュールの
+-- schedule_timezone に保存する（従来はコーチの現地時刻）。シグネチャは変更しない。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_match_student_with_coach(
     p_ticket_id uuid,
@@ -65,6 +70,7 @@ DECLARE
     v_request_id uuid;
     v_coach_name text;
     v_student_name text;
+    v_student_timezone text;
 BEGIN
     PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to perform admin matching');
 
@@ -73,19 +79,21 @@ BEGIN
         RAISE EXCEPTION 'ticket % not found', p_ticket_id;
     END IF;
 
+    SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_student_timezone FROM public.com_m_user WHERE id = v_student_id;
+
     -- 生徒の申請・コーチの承認を経ずに、承認済みのリクエストを直接作成する
     INSERT INTO public.com_t_matching_request (
         ticket_id, student_id, coach_id, slot_no, requested_day_of_week, requested_start_time, requested_end_time,
-        status, responded_by, responded_at
+        requested_timezone, status, responded_by, responded_at
     ) VALUES (
         p_ticket_id, v_student_id, p_coach_id, p_slot_no, p_day_of_week, p_start_time, p_end_time,
-        2, auth.uid(), NOW()
+        v_student_timezone, 2, auth.uid(), NOW()
     )
     RETURNING request_id INTO v_request_id;
 
     v_schedule_id := public.fn_commit_matching_schedule(
         v_request_id, p_ticket_id, v_student_id, p_coach_id,
-        p_slot_no, p_day_of_week, p_start_time, p_end_time
+        p_slot_no, p_day_of_week, p_start_time, p_end_time, v_student_timezone
     );
 
     SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = p_coach_id;

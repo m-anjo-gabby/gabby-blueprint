@@ -13,8 +13,8 @@ import { UserBase, USER_TYPES } from '@gabby/types/user';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
 import { issueInitialLicense, resolvePerformedBy } from '../license/issue';
-import { sendPasswordResetEmail } from '../mail/actions/sendPasswordReset';
-import type { PasswordResetMailLanguage } from '../mail/templates/PasswordResetEmailTemplate';
+import { sendPasswordResetEmail } from '../mail/actions/sendAccountMail';
+import type { MailLanguage } from '../mail/layout/document';
 import { getPasswordStrengthErrorCode } from './validation';
 import { AUTH_ERROR_MESSAGES_JA, formatAuthErrorMessage, type AuthErrorCode } from './errors';
 import { clearRecoveryMarker, hasValidRecoveryMarker, setRecoveryMarker } from './recovery';
@@ -123,7 +123,7 @@ export async function signInCore(
 
   if (masterError) {
     // 💡 console.error から共通ロガーへ統合
-    logger.error('auth:master_fetch_failed', masterError.message, { payload: { email } });
+    logger.error('auth:master_fetch_failed', masterError.message, { err: masterError, payload: { email } });
   }
 
   // ロック日時が設定されており、それが現在時刻より未来であればログインを水際で拒否
@@ -149,6 +149,7 @@ export async function signInCore(
   if (authError || !data.user) {
     // 💡 エラーログをロガー経由で出力。機密情報（パスワード）を避けてエラーメッセージのみ追跡
     logger.warn('auth:supabase_signin_failed', authError?.message || 'Invalid credentials', {
+      err: authError,
       payload: { email }
     });
 
@@ -166,6 +167,7 @@ export async function signInCore(
 
       if (updateError) {
         logger.error('auth:increment_counter_failed', updateError.message, {
+          err: updateError,
           userId: userMaster.id,
           payload: { email }
         });
@@ -204,8 +206,9 @@ export async function signInCore(
 
     if (resetError) {
       logger.error('auth:reset_counter_failed', resetError.message, {
+        err: resetError,
         userId: data.user.id,
-        email: data.user.email
+        payload: { email: data.user.email },
       });
     }
   }
@@ -218,7 +221,7 @@ export async function signInCore(
     if (!isLicensed) {
       logger.warn('auth:license_guard_triggered', `Licensed access denied for user: ${data.user.email}`, {
         userId: data.user.id,
-        email: data.user.email
+        payload: { email: data.user.email },
       });
       // ライセンスがない場合は即座にサインアウトさせる
       await supabase.auth.signOut();
@@ -237,7 +240,7 @@ export async function signOutCore(): Promise<AuthResponse> {
   const { error } = await supabase.auth.signOut();
 
   if (error) {
-    logger.error('auth:supabase_signout_failed', error.message);
+    logger.error('auth:supabase_signout_failed', error.message, { err: error });
     return authErrorResponse('signout_failed');
   }
 
@@ -250,7 +253,7 @@ export async function signOutCore(): Promise<AuthResponse> {
  */
 export async function forgotPasswordCore(
   formData: FormData,
-  options: { mailLanguage: PasswordResetMailLanguage }
+  options: { mailLanguage: MailLanguage }
 ): Promise<AuthResponse> {
   const email = formData.get('email') as string;
 
@@ -274,7 +277,7 @@ export async function forgotPasswordCore(
     // 💡 未登録のメールアドレスでも成功と同じ応答を返す（登録の有無を外部から判別させない）。
     // 失敗の内容はログにだけ残す。
     if (linkError) {
-      logger.warn('auth:reset_email_link_generation_failed', linkError.message, { payload: { email } });
+      logger.warn('auth:reset_email_link_generation_failed', linkError.message, { err: linkError, payload: { email } });
       return { success: true };
     }
 
@@ -304,7 +307,7 @@ export async function forgotPasswordCore(
     return { success: true };
 
   } catch (err) {
-    logger.error('auth:forgot_password_unexpected', err instanceof Error ? err.message : 'Unknown error', { payload: { email } });
+    logger.error('auth:forgot_password_unexpected', err instanceof Error ? err.message : 'Unknown error', { err, payload: { email } });
     return { success: true };
   }
 }
@@ -327,7 +330,7 @@ export async function verifyRecoveryCore(tokenHash: string): Promise<AuthRespons
   const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' });
 
   if (error || !data.session) {
-    logger.warn('auth:recovery_verify_failed', error?.message || 'No session');
+    logger.warn('auth:recovery_verify_failed', error?.message || 'No session', { err: error });
     return authErrorResponse('reset_link_required');
   }
 
@@ -372,7 +375,7 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
   const { data: updated, error } = await supabase.auth.updateUser({ password });
 
   if (error) {
-    logger.error('auth:reset_password_submission_failed', error.message);
+    logger.error('auth:reset_password_submission_failed', error.message, { err: error });
     // 💡 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
     return translateAuthError(error.message);
   }
@@ -383,7 +386,7 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
   await clearRecoveryMarker();
   const { error: signOutError } = await supabase.auth.signOut({ scope: 'others' });
   if (signOutError) {
-    logger.error('auth:reset_password_signout_others_failed', signOutError.message, { userId: updated.user?.id });
+    logger.error('auth:reset_password_signout_others_failed', signOutError.message, { err: signOutError, userId: updated.user?.id });
   }
 
   // 本人確認（再設定リンク）が済んだため、ログイン失敗の回数とロックを解除する
@@ -394,7 +397,7 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
       .update({ login_failed_count: 0, locked_until: null, update_date: new Date().toISOString() } as Partial<UserBase>)
       .eq('id', updated.user.id);
     if (unlockError) {
-      logger.error('auth:reset_password_unlock_failed', unlockError.message, { userId: updated.user.id });
+      logger.error('auth:reset_password_unlock_failed', unlockError.message, { err: unlockError, userId: updated.user.id });
     }
   }
 
@@ -431,8 +434,8 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
   if (signInError) {
     logger.warn('auth:update_password_reauth_failed', 'Re-authentication failed during password change', {
       userId: user.id,
-      email: user.email,
-      ...ctx
+      ...ctx,
+      payload: { email: user.email },
     });
     return authErrorResponse('current_password_incorrect');
   }
@@ -443,9 +446,10 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
 
   if (updateError) {
     logger.error('auth:update_password_execution_failed', updateError.message, {
+      err: updateError,
       userId: user.id,
-      email: user.email,
-      ...ctx
+      ...ctx,
+      payload: { email: user.email },
     });
     // 💡 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
     return translateAuthError(updateError.message);
@@ -471,7 +475,7 @@ export async function checkLicense(userId: string): Promise<boolean> {
     .maybeSingle();
 
   if (error) {
-    logger.error('auth:license_check_db_error', error.message, { userId });
+    logger.error('auth:license_check_db_failed', error.message, { err: error, userId });
   }
 
   return !!data && !error;
@@ -519,7 +523,7 @@ export async function verifyInvitationCore(token: string): Promise<VerifyInvitat
     if (!result.invite) return { valid: false, ...authErrorFields(result.errorCode) };
     return { valid: true, invitation: { email: result.invite.email, userName: result.invite.user_name } };
   } catch (err) {
-    logger.error('auth:verify_invitation_unexpected', err instanceof Error ? err.message : 'Unknown error');
+    logger.error('auth:verify_invitation_unexpected', err instanceof Error ? err.message : 'Unknown error', { err });
     return { valid: false, ...authErrorFields('unexpected') };
   }
 }
@@ -559,7 +563,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
     });
 
     if (authError || !authData.user) {
-      logger.error('auth:accept_invite_signup_failed', authError?.message || 'User object null', { ...ctx, email: inviteRecord.email });
+      logger.error('auth:accept_invite_signup_failed', authError?.message || 'User object null', { ...ctx, err: authError, payload: { email: inviteRecord.email } });
       return authErrorResponse('account_create_failed', authError?.message);
     }
 
@@ -577,7 +581,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
       .eq('id', newUserId);
 
     if (dbUserError) {
-      logger.error('auth:accept_invite_m_user_sync_failed', dbUserError.message, { ...ctx, userId: newUserId });
+      logger.error('auth:accept_invite_m_user_sync_failed', dbUserError.message, { ...ctx, err: dbUserError, userId: newUserId });
       throw dbUserError;
     }
 
@@ -592,7 +596,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
         })));
 
       if (roleError) {
-        logger.error('auth:accept_invite_roles_insert_failed', roleError.message, { ...ctx, userId: newUserId, roles: targetRoles });
+        logger.error('auth:accept_invite_roles_insert_failed', roleError.message, { ...ctx, err: roleError, userId: newUserId, payload: { roles: targetRoles } });
       }
     }
 
@@ -619,7 +623,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
       .eq('id', inviteRecord.id);
 
     if (closeError) {
-      logger.error('auth:accept_invite_close_record_failed', closeError.message, { ...ctx, inviteId: inviteRecord.id });
+      logger.error('auth:accept_invite_close_record_failed', closeError.message, { ...ctx, err: closeError, payload: { inviteId: inviteRecord.id } });
     }
 
     logger.info('auth:accept_invite_all_success', `User registration fully completed: ${inviteRecord.email}`, {
@@ -630,7 +634,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
     return { success: true };
 
   } catch (err) {
-    logger.error('auth:accept_invite_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('auth:accept_invite_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return authErrorResponse('unexpected');
   }
 }

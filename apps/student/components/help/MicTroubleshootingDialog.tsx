@@ -40,17 +40,17 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         onOpenAutoFocus={(e) => e.preventDefault()}
-        className="max-w-md rounded-[32px] p-6 bg-white border border-slate-100 shadow-2xl text-slate-900"
+        className="max-w-md rounded-panel p-6 bg-white border border-line/60 shadow-2xl text-ink"
       >
         <DialogHeader>
-          <DialogTitle className="text-lg font-black text-slate-800 flex items-center gap-2 select-none">
+          <DialogTitle className="text-lg font-bold text-ink flex items-center gap-2 select-none">
             <HelpCircle className="w-5 h-5 text-brand-500" />
             マイク権限のリセット手順
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
-          <div className="bg-amber-50/80 border border-amber-100 p-3 rounded-2xl flex gap-2 items-start">
+          <div className="bg-amber-50/80 border border-amber-100 p-3 rounded-control flex gap-2 items-start">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-[11px] text-amber-700 font-bold leading-relaxed">
               マイクがブロックされている（権限拒否）場合、以下の手順でブラウザの権限を「許可」に戻してから、ページを再読み込みしてください。
@@ -58,7 +58,7 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
           </div>
 
           {/* 🌟 滑らかにスライド移動（バウンドなし）するタブエリア */}
-          <div className="bg-slate-100 p-1 rounded-xl grid grid-cols-3 gap-1 relative overflow-hidden isolate">
+          <div className="bg-canvas p-1 rounded-xl grid grid-cols-3 gap-1 relative overflow-hidden isolate">
             {(['ios', 'android', 'pc'] as DeviceTab[]).map((tab) => {
               const isActive = activeTab === tab;
               return (
@@ -67,15 +67,15 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
                   type="button"
                   onClick={() => setActiveTab(tab)}
                   className={cn(
-                    "relative py-2 text-xs font-black rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 z-10 outline-none select-none",
-                    isActive ? "text-brand" : "text-slate-400 hover:text-slate-600"
+                    "relative py-2 text-xs font-bold rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 z-10 outline-none select-none",
+                    isActive ? "text-brand" : "text-ink-subtle hover:text-ink-soft"
                   )}
                 >
                   {/* layoutId を復活させ、transitionをイージングに変更 */}
                   {isActive && (
                     <motion.div 
                       layoutId="activeDeviceTab" 
-                      className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-slate-200/40 -z-10" 
+                      className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-line/40 -z-10" 
                       transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} 
                     />
                   )}
@@ -87,7 +87,7 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
           </div>
 
           {/* 🌟 高さを完全固定し、絶対配置でフェードさせることで全体の揺れを完全に排除したコンテンツエリア */}
-          <div className="bg-slate-50/60 border border-slate-100/80 rounded-2xl p-4 h-[220px] relative overflow-hidden">
+          <div className="bg-canvas/60 border border-line/50 rounded-control p-4 h-[220px] relative overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -99,10 +99,10 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
               >
                 {steps[activeTab].map((step, index) => (
                   <div key={index} className="flex gap-2.5 items-start">
-                    <div className="h-5 w-5 rounded-full bg-brand-50 border border-brand-100 text-brand text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5 font-mono">
+                    <div className="h-5 w-5 rounded-full bg-brand-50 border border-brand-100 text-brand text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5 font-mono">
                       {index + 1}
                     </div>
-                    <p className="text-xs font-bold text-slate-600 leading-relaxed pt-0.5">
+                    <p className="text-xs font-bold text-ink-soft leading-relaxed pt-0.5">
                       {step.text}
                     </p>
                   </div>
@@ -111,9 +111,9 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
             </AnimatePresence>
           </div>
 
-          <div className="flex items-center justify-center gap-1.5 pt-1 text-slate-400 select-none">
+          <div className="flex items-center justify-center gap-1.5 pt-1 text-ink-subtle select-none">
             <CheckCircle2 size={12} className="text-emerald-500" />
-            <span className="text-[10px] font-bold">設定完了後、ページをリロードしてください。</span>
+            <span className="text-[11px] font-bold">設定完了後、ページをリロードしてください。</span>
           </div>
         </div>
       </DialogContent>

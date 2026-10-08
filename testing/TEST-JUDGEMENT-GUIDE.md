@@ -876,8 +876,9 @@
 - **判断基準への反映**:
   - テストから `@gabby/lib` のサーバー専用モジュールを import しない。service_role のクライアントは `testing/helpers/auth.ts` の
     `createAdminClient`（テスト側で自前生成）を使う。
-  - メールの文面は `@gabby/lib/mail/render`（組み立てのみ・秘密情報なし）を import して検証する。新しいメールの文面を検証する場合も、
-    組み立て関数を `mail/render.ts` に置き、送信処理（`mail/actions/*`）はそれを呼ぶ形にする。
+  - メールの文面は `@gabby/lib/mail/templates/`（件名と中身を返す `build〜Mail`）と `@gabby/lib/mail/render` の `renderMail`
+    （組み立てのみ・秘密情報なし）を import して検証する。新しいメールも文面はテンプレートに置き、送信処理（`mail/actions/*`・
+    `mail/dispatch/handlers/*`）はそれを呼ぶ形にする。
   - `packages/lib` に秘密情報・`next/headers` を使うモジュールを追加するときは `import 'server-only'` を付ける（`'use server'` のファイルは不要）。
 
 ### KJ-2026-0930-02 スクリプトの後始末の signOut（既定: global）で、同じユーザーのブラウザ・E2Eのログイン状態が切れる
@@ -990,3 +991,77 @@
 - **判断基準への反映**:
   - 発話の流れを変えたら `speaking-flow.spec.ts` を流してから実機確認に回す（認識精度・実際の音声の聞こえ方は実機で確認する）。
   - 単語帳の「Practice」ボタンは表示文字が画面幅で隠れるため、`aria-label`（「発話練習」「発話を止める」）で取得する。
+
+### KJ-2026-1005-01 `pnpm --filter @gabby/testing e2e -- <ファイル名>` では絞り込みが効かず、全件（全プロジェクト）が走る
+
+- **該当シナリオ**: E2E `e2e/tests/home/group-session.spec.ts`（dev, 2026-10-05）
+- **事象**: 追加したテストだけを desktop で流すつもりで `pnpm --filter @gabby/testing e2e -- group-session --project=desktop` を実行したところ、
+  20分以上経っても終わらず、mobile を含む全テスト（メール送信を伴う認証のテスト等）が走っていた。
+- **原因**: pnpm がスクリプトの引数の `--` をそのまま渡すため、Playwright が `--` 以降を位置引数として扱い、ファイル名の絞り込み・`--project` が効かなかった。
+- **対処**: `pnpm --filter @gabby/testing exec playwright test <ファイル名の一部> --project=desktop` で実行する（`e2e/CONVENTIONS.md` 7章を修正）。
+  途中で止めた場合は、Playwright の本体（`cli.js test`）とワーカーの node プロセスが残るため止め、使い捨てデータの残骸（`authFixtures.leftovers.ts`）を確認する。
+- **判断基準への反映**: 絞り込んで実行したつもりのテストは、最初の要約行の件数（「N passed」）が想定どおりかを確かめる。想定より長く終わらない場合は、全件が走っていないかを疑う。
+
+### KJ-2026-1005-02 新しい画面の初回の遷移が dev のコンパイル待ちで10秒を超える／生徒アプリの proxy の許可リストに無い画面はホームへ戻される
+
+- **該当シナリオ**: E2E `e2e/tests/home/group-session-list.spec.ts`・`group-session.spec.ts`（アドミンのシリーズ）（dev, 2026-10-05）
+- **事象**:
+  1. 追加したばかりの画面（アドミンのシリーズ詳細、生徒のグループセッション一覧）へ画面操作で移るテストが、初回の実行だけ見出しの待ち（10秒）で失敗し、
+     画面はリンクを押す前のまま残っていた。同じテストを再実行すると成功した。
+  2. 生徒の `/group-sessions` を開くと、エラーにならずにホーム（`/dashboard`）が表示された。
+- **原因**:
+  1. dev サーバーは画面を初めて開くときにコンパイルするため、新しい画面への最初の遷移が10秒を超えた（不具合ではない）。
+  2. 生徒アプリの `proxy.ts` は、許可リスト `VALID_STUDENT_ROUTES` に無いパスをホームへ転送する（ログ `proxy:invalid_route_redirect`）。新しい画面のパスを加えていなかった。
+- **対処**:
+  1. 新しい画面へ移る操作の後は `page.waitForURL(…, { timeout: 60_000 })` で遷移を待ってから中身を確かめる。
+  2. `VALID_STUDENT_ROUTES` に `/group-sessions` を追加した。
+- **判断基準への反映**:
+  - 新しい画面のテストが初回だけ落ち、再実行で通る場合は、まず dev の初回コンパイルを疑う（推測で待ち時間を延ばし続けず、遷移の待ちだけを長くする）。
+  - 生徒アプリに画面を追加したら `proxy.ts` の `VALID_STUDENT_ROUTES` にも加える。開いた画面が黙ってホームになる場合はこれを疑う。
+
+### KJ-2026-1006-01 使い捨てのセッションを作ったテストは、契約の後始末の前にセッションを消さないと、生徒・顧客が残る
+
+- **該当シナリオ**: E2E `e2e/tests/mail/event-reminder.spec.ts`（ライブセッションのリマインダー）（dev, 2026-10-06）
+- **事象**: テストは成功したが、後始末の後に使い捨ての生徒・顧客（`【QAテスト】認証E2E（e2email…）`）が1件ずつ残った（`authFixtures.leftovers.ts` で検出）。
+- **原因**: `com_t_session.ticket_id` はチケットを直接参照し、削除時の連鎖が無い。`cleanupAuthFixture` がチケットを消せず、その後の契約・ユーザー・顧客の削除も進まなかった
+  （後始末の失敗は警告だけでテストは成功するため、気づきにくい）。
+- **対処**: テストの後始末で、セッション（と固定アカウント宛ての送信待ち）を `cleanupAuthFixture` より先に削除する。残骸は `authFixtures.leftovers.ts --delete` の前にセッションを消してから片付けた。
+- **判断基準への反映**: 使い捨てのデータにセッション・担当枠などを直接作ったテストは、追加・変更した後に `authFixtures.leftovers.ts` で残骸が0件かを確かめる。
+- **追記（2026-10-06）**: マッチングの承認（`approve_matching_request`）でセッションを作る E2E（`matching/matching-request-timezone.spec.ts`）でも同じ残骸が出た。
+  テストごとの対処に頼らず、`cleanupAuthFixture` がチケットより先に担当枠（`com_m_lesson_schedule`。セッションは担当枠と一緒に消える）を消すようにした。
+  成立時に作られる1対1のチャットルームはユーザーの削除では消えないため、成立まで通すテストは後始末でルームも消す。
+
+### KJ-2026-1006-02 メール基盤のリファクタは、送信の組み立て処理（handlers）を偽のクライアントで全パターン実行し、前後の出力を比べる
+
+- **該当シナリオ**: 通知・メールの共通化（テンプレートが件名と中身を返す形への変更・招待メールの送信の統合・通知の表示の共通化）（dev, 2026-10-06）
+- **事象**: 文面の単体テスト（`testing/unit/*-mail-content.test.ts`）はテンプレートを直接呼ぶため、送信処理の組み立て（`mail/dispatch/handlers/*`。
+  送らない判定・リンク・チャットの文言等）の変化は検出できない。handlers は `import 'server-only'` のため、そのままでは Node から読み込めない（KJ-2026-0930-01）。
+- **対処**: 一時的なスクリプトで、`node:module` の `register` の resolve フックで `server-only` だけを空のモジュールに差し替えて
+  （`--conditions=react-server` と違い `react-dom/server.edge` は通常の実装のまま）、`from().select().eq().maybeSingle()` に答える偽の Supabase クライアントで
+  各 handler を種別・言語・リンクの有無・送らない条件の組み合わせ（308通り）で実行し、件名・HTML・テキスト・skip 理由を JSON に書き出して変更の前後で完全一致を確かめた。DB には接続しない。
+- **判断基準への反映**: 文面・送信の判定を変えない整理（リファクタ）では、この前後比較で「出力が1文字も変わらない」ことを完了条件にする。
+  比較用のスクリプトは使い捨て（リポジトリに残さない）。文面を意図して変える変更では使わず、単体テストの期待値を更新する。
+
+### KJ-2026-1007-01 残骸の確認（authFixtures.leftovers.ts）が一部の接頭辞の使い捨てユーザーを見ていなかった
+
+- **該当シナリオ**: E2E コーチアプリのテスト追加時（`tests/coach/`・`tests/journeys/coach-live-session.spec.ts`）の後始末の確認（dev, 2026-10-07）
+- **事象**: 残骸の確認は使い捨てユーザーのメールを `e2e(reset|invite|mail|onb|match)<数字>-` で探していたため、それ以外の接頭辞（`speak`・`trdate`・`monper`・`selftr` 等）や、
+  接頭辞に `-` を含むもの（`createAuthFixture("e2e-match-tz")` → `e2ee2e-match-tz…`）は、残っていても検出されなかった（顧客名での検出は接頭辞に関係なく効いていた）。
+- **対処**: 検出を `e2e<英小文字><数字>-` に広げ、接頭辞は英小文字だけにする規則を `newTag` に書いた。既存の `e2e-match-tz` は `matchtz` に改めた。
+- **判断基準への反映**: `createAuthFixture` の接頭辞は英小文字だけにする（`-` や `e2e` を含めない。タグの先頭に `e2e` が自動で付く）。
+
+### KJ-2026-1007-02 ライブセッションの終了処理は、通話ルームを開かずに入退室ログを入れて検証する
+
+- **該当シナリオ**: E2E `tests/journeys/coach-live-session.spec.ts`（ジャーニー: `e2e/journeys/coach-live-session.md`）（dev, 2026-10-07）
+- **事象**: セッションハブの End Session は「コーチが一度でも通話に入った記録」があるまで押せず、実施結果は入退室の重なりで決まる。通話は Zoom Video SDK のため E2E では入れない。
+- **対処**: 通話ルームが記録する入退室ログ（`com_t_session_call_log`）を、実施中のセッション（開始から21分）に対して直接入れる（`support/liveSessionFixtures.ts` の `prepareLiveSessionDay`）。
+  生徒の入室時刻を変えると、実施完了（重なり20分以上）と早期終了（理由が必要）を作り分けられる。終了処理（`finalize_session`）は画面から通常どおり呼ぶ。
+- **判断基準への反映**: 通話そのもの（入室・退室の操作、映像・音声）は E2E の対象外とし、通話の前後の業務フローは入退室ログで状態を作って画面から検証する（CONVENTIONS.md 2章）。
+
+### KJ-2026-1007-03 楽観的更新の操作は、画面の切り替わりで保存の完了を判定できない
+
+- **該当シナリオ**: E2E `tests/homework/homework-checklist.spec.ts`（生徒の宿題チェックリスト）（dev, 2026-10-07）
+- **事象**: チェックリストの最後の項目を押して画面が完了表示になった直後に DB を確かめると、その項目がまだ未完了だった。
+- **原因**: 生徒のチェックリストは保存の完了を待たずに画面を切り替える（楽観的更新。失敗したら元に戻す）。画面の表示は保存の完了を意味しない。
+- **対処**: DB の確認を `expect.poll` で保存が終わるまで待つ形にした。
+- **判断基準への反映**: 楽観的更新の操作（チェックリスト・お気に入り等）の後に DB を確かめるときは、画面の表示を待つだけでなく `expect.poll` で DB の値を待つ。

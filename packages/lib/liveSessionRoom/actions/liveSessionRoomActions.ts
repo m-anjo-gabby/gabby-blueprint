@@ -70,7 +70,7 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
       .maybeSingle();
 
     if (sessionError) {
-      logger.error('liveSessionRoom:coach_access_session_lookup_failed', sessionError.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:coach_access_session_lookup_failed', sessionError.message, { ...ctx, err: sessionError, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!session || session.coach_id !== user.id) {
@@ -86,7 +86,7 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
     ]);
 
     if (coachError || studentError || !coach || !student) {
-      logger.error('liveSessionRoom:coach_access_user_lookup_failed', coachError?.message ?? studentError?.message ?? 'user not found', { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:coach_access_user_lookup_failed', coachError?.message ?? studentError?.message ?? 'user not found', { ...ctx, err: coachError, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -112,7 +112,7 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
       },
     };
   } catch (err) {
-    logger.error('liveSessionRoom:coach_access_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('liveSessionRoom:coach_access_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -143,7 +143,7 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
       .maybeSingle();
 
     if (sessionError) {
-      logger.error('liveSessionRoom:student_access_session_lookup_failed', sessionError.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:student_access_session_lookup_failed', sessionError.message, { ...ctx, err: sessionError, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!session || session.student_id !== user.id) {
@@ -159,7 +159,7 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
     ]);
 
     if (studentError || coachError || !student || !coach) {
-      logger.error('liveSessionRoom:student_access_user_lookup_failed', studentError?.message ?? coachError?.message ?? 'user not found', { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:student_access_user_lookup_failed', studentError?.message ?? coachError?.message ?? 'user not found', { ...ctx, err: studentError, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -185,7 +185,7 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
       },
     };
   } catch (err) {
-    logger.error('liveSessionRoom:student_access_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('liveSessionRoom:student_access_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -210,7 +210,7 @@ export async function checkStudentLiveSessionJoinableCore(sessionId: string): Pr
       .maybeSingle();
 
     if (error) {
-      logger.error('liveSessionRoom:student_joinable_lookup_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:student_joinable_lookup_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!session || session.student_id !== user.id) {
@@ -222,7 +222,7 @@ export async function checkStudentLiveSessionJoinableCore(sessionId: string): Pr
     }
     return { success: true, joinable: true };
   } catch (err) {
-    logger.error('liveSessionRoom:student_joinable_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('liveSessionRoom:student_joinable_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -251,7 +251,7 @@ export async function getSessionCallLogPresenceCore(sessionIds: string[]): Promi
       .eq('role', 'coach');
 
     if (error) {
-      logger.error('liveSessionRoom:call_log_presence_failed', error.message, { ...ctx, userId: user.id, payload: { sessionIds } });
+      logger.error('liveSessionRoom:call_log_presence_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionIds } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -261,7 +261,7 @@ export async function getSessionCallLogPresenceCore(sessionIds: string[]): Promi
 
     return { success: true, joinedBySessionId };
   } catch (err) {
-    logger.error('liveSessionRoom:call_log_presence_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('liveSessionRoom:call_log_presence_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -284,13 +284,13 @@ export async function recordSessionCallJoinCore(sessionId: string, zoomSessionId
     });
 
     if (error || !data) {
-      logger.error('liveSessionRoom:record_call_join_failed', error?.message ?? 'No call_log_id returned', { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:record_call_join_failed', error?.message ?? 'No call_log_id returned', { ...ctx, err: error, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'forbidden' };
     }
 
     return { success: true, callLogId: data as string };
   } catch (err) {
-    logger.error('liveSessionRoom:record_call_join_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('liveSessionRoom:record_call_join_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -310,13 +310,13 @@ export async function recordSessionCallLeaveCore(callLogId: string): Promise<{ s
 
     const { error } = await supabase.rpc('record_session_call_leave', { p_call_log_id: callLogId });
     if (error) {
-      logger.error('liveSessionRoom:record_call_leave_failed', error.message, { ...ctx, userId: user.id, payload: { callLogId } });
+      logger.error('liveSessionRoom:record_call_leave_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { callLogId } });
       return { success: false };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('liveSessionRoom:record_call_leave_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('liveSessionRoom:record_call_leave_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false };
   }
 }
@@ -348,7 +348,7 @@ export async function recordSessionChatMessageCore(sessionId: string, message: s
       .maybeSingle();
 
     if (sessionError || !session) {
-      logger.error('liveSessionRoom:record_chat_session_lookup_failed', sessionError?.message ?? 'session not found', { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:record_chat_session_lookup_failed', sessionError?.message ?? 'session not found', { ...ctx, err: sessionError, userId: user.id, payload: { sessionId } });
       return { success: false };
     }
 
@@ -365,13 +365,13 @@ export async function recordSessionChatMessageCore(sessionId: string, message: s
     });
 
     if (error) {
-      logger.error('liveSessionRoom:record_chat_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:record_chat_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionId } });
       return { success: false };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('liveSessionRoom:record_chat_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('liveSessionRoom:record_chat_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false };
   }
 }

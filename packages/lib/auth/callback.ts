@@ -39,7 +39,7 @@ export function createAuthCallbackHandler(appName: 'admin' | 'coach' | 'student'
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
-          logger.warn('auth:callback_pkce_failed', error.message);
+          logger.warn('auth:callback_pkce_failed', error.message, { err: error });
           return NextResponse.redirect(`${origin}/login?error=auth`);
         }
         return NextResponse.redirect(`${origin}${next}`);
@@ -48,7 +48,7 @@ export function createAuthCallbackHandler(appName: 'admin' | 'coach' | 'student'
       if (tokenHash && type === 'invite') {
         const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'invite' });
         if (error) {
-          logger.warn('auth:callback_invite_failed', error.message);
+          logger.warn('auth:callback_invite_failed', error.message, { err: error });
           return NextResponse.redirect(`${origin}/login?error=invite`);
         }
         return NextResponse.redirect(`${origin}${next}`);
@@ -56,7 +56,7 @@ export function createAuthCallbackHandler(appName: 'admin' | 'coach' | 'student'
 
       return NextResponse.redirect(`${origin}/login`);
     } catch (err) {
-      logger.error('auth:callback_unexpected', err instanceof Error ? err.message : 'Unknown error');
+      logger.error('auth:callback_unexpected', err instanceof Error ? err.message : 'Unknown error', { err });
       return NextResponse.redirect(`${origin}/login?error=callback`);
     }
   };

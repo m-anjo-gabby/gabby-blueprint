@@ -291,7 +291,8 @@ if (remaining.length < 3) throw new Error(`cancel_session 3-way検証用の予�
   check("cancel_session: アドミン代理キャンセルはcancel_category=3(admin)、返還可否は明示指定どおり", row?.cancel_category === 3 && row?.ticket_refunded === true, JSON.stringify(row));
   const notifiedStudent = await hasNotification(t1Id, "SESSION_CANCELLED_BY_ADMIN", beforeIso);
   const notifiedCoach = await hasNotification(coach1Id, "SESSION_CANCELLED_BY_ADMIN", beforeIso);
-  check("cancel_session: アドミン代理キャンセルは生徒・コーチ双方へSESSION_CANCELLED_BY_ADMIN通知が作成される(fn_notify 2回)", notifiedStudent && notifiedCoach);
+  // 2026-10-05 以降、管理者のライブセッション操作は通知しない（fn_notify が管理者の JWT では登録しない。testing/e2e/specs/notification/mail-dispatch.md）
+  check("cancel_session: アドミン代理キャンセルは生徒・コーチへ通知を作成しない", !notifiedStudent && !notifiedCoach);
 }
 
 // ===========================================================================
@@ -476,7 +477,8 @@ const t4Schedule = await getSchedule(coach1Id, t4Id);
   check("admin_book_session_direct: アドミンは成功する", !error, error?.message);
   const notifiedStudent = await hasNotification(t4Id, "SESSION_UPDATED_BY_ADMIN", beforeIso);
   const notifiedCoach = await hasNotification(coach1Id, "SESSION_UPDATED_BY_ADMIN", beforeIso);
-  check("admin_book_session_direct: 生徒・コーチ双方へSESSION_UPDATED_BY_ADMIN通知が作成される(fn_notify 2回)", notifiedStudent && notifiedCoach);
+  // 2026-10-05 以降、管理者のライブセッション操作は通知しない（fn_notify が管理者の JWT では登録しない）
+  check("admin_book_session_direct: 生徒・コーチへ通知を作成しない", !notifiedStudent && !notifiedCoach);
 }
 {
   const { error: wrongRoleErr } = await coach1Client.rpc("release_lesson_schedule_slot", { p_schedule_id: t4Schedule.schedule_id });

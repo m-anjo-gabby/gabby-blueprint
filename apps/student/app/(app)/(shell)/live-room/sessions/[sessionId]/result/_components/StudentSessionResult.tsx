@@ -182,6 +182,7 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
                           <button
                             type="button"
                             onClick={() => handleToggleChecklistItem(item.checklist_item_id, !item.is_done)}
+                            aria-pressed={item.is_done}
                             className={`w-full flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors active:scale-[0.99] ${
                               item.is_done
                                 ? 'bg-emerald-50/60 border-emerald-100'
@@ -286,7 +287,7 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
             <div className="space-y-2 pt-1 border-t border-line border-dashed">
               <div className="flex items-center gap-1.5 pt-2">
                 <p className="text-xs font-bold text-ink-subtle">ダイアログ練習</p>
-                <span className="text-[9px] font-bold uppercase tracking-wide text-ink-subtle bg-slate-100 border border-line rounded-full px-1.5 py-0.5">
+                <span className="text-[11px] font-bold text-ink-subtle bg-canvas border border-line rounded-full px-1.5 py-0.5">
                   近日公開
                 </span>
               </div>

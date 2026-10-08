@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { RefObject } from 'react';
+import { clientLogger } from '../logger/client';
 
 /** 指定した要素をブラウザの全画面表示に出し入れする（Fullscreen API） */
 export function useFullscreen<T extends HTMLElement>(targetRef: RefObject<T | null>) {
@@ -21,7 +22,7 @@ export function useFullscreen<T extends HTMLElement>(targetRef: RefObject<T | nu
         await targetRef.current?.requestFullscreen();
       }
     } catch (err) {
-      console.error('Failed to toggle fullscreen', err);
+      clientLogger.debug('ui:toggle_fullscreen_failed', 'Failed to toggle fullscreen', { err });
     }
   }, [targetRef]);
 

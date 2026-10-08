@@ -12,6 +12,7 @@ import { formatZonedDateJapanese } from '@gabby/lib/date/date';
 import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
 import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
 import { isPreviewableFile, forceDownloadFile } from '@gabby/lib/notice/download';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 // ─── ファイルサイズ表示ユーティリティ ──────────────────────
 function formatFileSize(bytes: number): string {
@@ -79,7 +80,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         await forceDownloadFile(url, name);
       }
     } catch (err) {
-      console.error(err);
+      clientLogger.error('notice:download_attachment_failed', 'Attachment download failed', { err });
     } finally {
       setLoadingActionId(null);
     }
@@ -98,7 +99,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
       {/* ─── カードヘッダー（クリックでアコーディオン） ──── */}
       <button
         onClick={handleToggle}
-        className="w-full text-left flex items-start gap-3 p-5 hover:bg-slate-50/60 transition-colors"
+        className="w-full text-left flex items-start gap-3 p-5 hover:bg-canvas/60 transition-colors"
         aria-expanded={isOpen}
       >
         {/* 未読インジケーター */}
@@ -106,7 +107,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
           {!notice.is_read ? (
             <span className="inline-block w-2 h-2 rounded-full bg-brand-500" />
           ) : (
-            <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />
+            <span className="inline-block w-2 h-2 rounded-full bg-line" />
           )}
         </div>
 
@@ -115,7 +116,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
           <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
             <span
               className={cn(
-                'text-[11px] font-bold uppercase px-1.5 py-0.5 rounded-md border',
+                'text-[11px] font-bold px-1.5 py-0.5 rounded-md border',
                 NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
               )}
             >
@@ -124,7 +125,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             {notice.is_important && (
               <span
                 className={cn(
-                  'text-[11px] font-bold uppercase px-1.5 py-0.5 rounded-md border',
+                  'text-[11px] font-bold px-1.5 py-0.5 rounded-md border',
                   NOTICE_IMPORTANT_BADGE.badgeClass
                 )}
               >
@@ -187,7 +188,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
               {/* 添付ファイル */}
               {notice.attachments.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-[11px] font-bold text-ink-subtle uppercase flex items-center gap-1.5">
+                  <p className="text-[11px] font-bold text-ink-subtle flex items-center gap-1.5">
                     <Paperclip size={12} /> 添付ファイル
                   </p>
                   <div className="space-y-2">
@@ -199,7 +200,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
                       return (
                         <div
                           key={att.id}
-                          className="w-full flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-2xl border border-line/70/80 hover:border-line transition-colors"
+                          className="w-full flex items-center justify-between gap-3 p-3 bg-canvas rounded-control border border-line/70/80 hover:border-line transition-colors"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
@@ -239,7 +240,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
                               type="button"
                               disabled={!!loadingActionId}
                               onClick={() => handleDownload(att.id, att.path, att.name)}
-                              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-ink hover:bg-ink/90 text-white rounded-xl text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
                               title="ダウンロード保存"
                             >
                               {isDlLoading ? (

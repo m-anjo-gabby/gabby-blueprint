@@ -9,6 +9,7 @@ import { WEEKDAY_LABELS } from '../_lib/weeklyActivity';
 import { HOME_LAYOUT, HeroBackdrop, HomeCard } from './HomeCard';
 import { LIFETIME_ITEMS, LIFETIME_LAYOUT, LifetimeBlock } from './LifetimeStatsCard';
 import { LiveSessionCardSkeleton } from './LiveSessionCard';
+import { HomeEventCardSkeleton } from './HomeEventCard';
 import { PlanCardSkeleton } from './PlanCard';
 
 /*
@@ -119,7 +120,7 @@ export function LifetimeStatsCardSkeleton({ className }: { className?: string })
 
 /**
  * ホーム画面の読み込み中表示（loading.tsx 用）。
- * 1行目: 今日やること＋今週 / 2行目: ライブセッション（ライブセッション付きの契約がある場合だけ） / 3行目: 歩み2列分＋ご契約プラン。
+ * 1行目: 今日やること＋今週 / 2行目: ライブセッション2列分（ライブセッション付きの契約がある場合だけ）＋グループセッション / 3行目: 歩み2列分＋ご契約プラン。
  * ライブセッションの有無はシェルのナビと同じ判定（ShellNavProvider）で、外側の読み込み中から本番と同じ並びにする。
  */
 export function HomeSkeleton() {
@@ -133,10 +134,13 @@ export function HomeSkeleton() {
         </div>
         <WeeklyActivityCardSkeleton />
         {hasLiveSession && (
-          <div className={HOME_LAYOUT.fullRow}>
+          <div className={HOME_LAYOUT.wide}>
             <LiveSessionCardSkeleton />
           </div>
         )}
+        <div className={hasLiveSession ? undefined : HOME_LAYOUT.fullRow}>
+          <HomeEventCardSkeleton />
+        </div>
         <LifetimeStatsCardSkeleton className={HOME_LAYOUT.wide} />
         <PlanCardSkeleton />
       </div>

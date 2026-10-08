@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { Home, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { logClientError } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -12,15 +12,10 @@ interface ErrorProps {
 
 export default function Error({ error }: ErrorProps) {
   useEffect(() => {
-    // 1. サーバー側の共通アクション（Pino）を呼び出し、Vercelの構造化ログへ確実に流す
-    logClientError({
-      service: 'student',
-      digest: error.digest,
-      message: error.message || 'Student app client-side error',
-      stack: error.stack,
-    }).catch((err) => {
-      // 万が一ネットワーク障害等で Action 自体が失敗した場合の最低限のフォールバック
-      console.error('Failed to send error log to Vercel:', err);
+    // 画面の描画中の例外をサーバーのログへ送る（digest はサーバー側のログと突き合わせるための識別子）
+    clientLogger.error('system:runtime_error', error.message || 'Client-side error', {
+      err: error,
+      payload: { digest: error.digest },
     });
   }, [error]);
 
@@ -30,9 +25,9 @@ export default function Error({ error }: ErrorProps) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 px-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-canvas px-4">
       {/* 404（NotFound）画面と完全に同一の外枠コンテナ（ガタつき防止） */}
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 min-h-[380px] flex flex-col justify-center items-center text-center">
+      <div className="w-full max-w-md bg-white p-8 rounded-control shadow-xl shadow-line/50 border border-line/60 min-h-[380px] flex flex-col justify-center items-center text-center">
         
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -47,21 +42,21 @@ export default function Error({ error }: ErrorProps) {
 
           {/* 見出しセクション */}
           <div className="mb-6">
-            <span className="text-xs font-bold text-brand uppercase tracking-widest bg-brand-50 px-2.5 py-1 rounded-full">
-              System Error
+            <span className="text-xs font-bold text-brand bg-brand-50 px-2.5 py-1 rounded-full">
+              システムエラー
             </span>
-            <h1 className="text-xl font-bold text-slate-800 mt-3">
+            <h1 className="text-xl font-bold text-ink mt-3">
               問題が発生しました
             </h1>
-            <p className="text-sm text-slate-500 mt-2 leading-relaxed max-w-sm">
+            <p className="text-sm text-ink-muted mt-2 leading-relaxed max-w-sm">
               アプリケーションの処理中に予期せぬエラーが発生しました。
             </p>
           </div>
 
           {/* 本番環境の Vercel ログと一発で突合するための識別キー (digest) を表示 */}
           {error.digest && (
-            <div className="w-full mb-6 rounded-lg bg-slate-50 border border-slate-100 p-2 font-mono text-[10px] text-slate-400">
-              Error ID: <span className="select-all font-semibold text-slate-500">{error.digest}</span>
+            <div className="w-full mb-6 rounded-lg bg-canvas border border-line/60 p-2 font-mono text-[11px] text-ink-subtle">
+              Error ID: <span className="select-all font-semibold text-ink-muted">{error.digest}</span>
             </div>
           )}
 
@@ -76,7 +71,7 @@ export default function Error({ error }: ErrorProps) {
             </button>
 
             {/* 補助用テキスト */}
-            <p className="text-xs text-slate-400 mt-4 leading-normal">
+            <p className="text-xs text-ink-subtle mt-4 leading-normal">
               上のボタンからダッシュボードへ戻ってください。
             </p>
           </div>

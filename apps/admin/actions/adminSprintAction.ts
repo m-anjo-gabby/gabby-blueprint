@@ -30,7 +30,7 @@ export async function getSprintQuestionsByFilter(contentId: string, type: Sprint
     if (error) throw error;
     return data as SprintQuestion[];
   } catch (err: any) {
-    logger.error('sprint:get_questions_failed', err.message, { ...ctx, payload: { contentId, type, level } });
+    logger.error('sprint:get_questions_failed', err.message, { ...ctx, err, payload: { contentId, type, level } });
     return [];
   }
 }
@@ -69,7 +69,7 @@ export async function upsertSprintQuestion(payload: Partial<SprintQuestion>) {
     logger.info('sprint:upsert_success', `Question ${isEdit ? 'updated' : 'created'}`, { ...ctx });
     return { success: true };
   } catch (err: any) {
-    logger.error('sprint:upsert_failed', err.message, { ...ctx, payload });
+    logger.error('sprint:upsert_failed', err.message, { ...ctx, err, payload });
     return { success: false, message: err.message };
   }
 }
@@ -106,7 +106,7 @@ export async function bulkUpsertSprintQuestions(questions: Partial<SprintQuestio
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
   } catch (err: any) {
-    logger.error('sprint:bulk_upsert_failed', err.message, { ...ctx, payload: questions });
+    logger.error('sprint:bulk_upsert_failed', err.message, { ...ctx, err, payload: questions });
     return { success: false, message: err.message };
   }
 }
@@ -126,7 +126,7 @@ export async function deleteSprintQuestion(questionId: string) {
     if (error) throw error;
     return { success: true };
   } catch (err: any) {
-    logger.error('sprint:delete_failed', err.message, { ...ctx, questionId });
+    logger.error('sprint:delete_failed', err.message, { ...ctx, err, payload: { questionId } });
     return { success: false, message: err.message };
   }
 }
@@ -219,7 +219,7 @@ export async function saveSprintAudio(
 
     return { success: true, path: filePath };
   } catch (err: any) {
-    logger.error('sprint:save_audio_failed', err.message, { ...ctx, questionId, section });
+    logger.error('sprint:save_audio_failed', err.message, { ...ctx, err, payload: { questionId, section } });
     return { success: false, message: err.message };
   }
 }
@@ -370,7 +370,7 @@ export async function bulkImportSprintQuestions(
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
   } catch (err: any) {
-    logger.error('sprint:bulk_import_failed', err.message, { ...ctx, payload: { contentId, type, level, count: questions.length } });
+    logger.error('sprint:bulk_import_failed', err.message, { ...ctx, err, payload: { contentId, type, level, count: questions.length } });
     return { success: false, message: err.message };
   }
 }

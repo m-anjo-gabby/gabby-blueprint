@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
-import { logClientEvent } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 import { cn } from '@/lib/utils';
 import { HistoryEmpty, HistoryMetric } from '../../training/_components/HistoryParts';
 import { MonitorFilterBar } from './MonitorFilterBar';
@@ -44,13 +44,9 @@ export function MonitorWordHistoryView({ initialData, users, query }: MonitorWor
   };
 
   const handleExportCSV = () => {
-    logClientEvent({
-      service: 'student',
-      event: 'monitor:word_history_csv_exported',
-      level: 'info',
-      message: `Word history CSV exported: ${startDate}~${endDate}`,
+    clientLogger.info('monitor:word_history_csv_exported', `Word history CSV exported: ${startDate}~${endDate}`, {
       payload: { startDate, endDate, targetUserIds: userIds, rowCount: initialData.length },
-    }).catch(() => {});
+    });
 
     const rows = sortedDates.flatMap((date) =>
       (groups.get(date) ?? []).map((s) => [

@@ -5,6 +5,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Term } from "./fixture-terms.ts";
+import { toUtcAvailabilityRows } from "./coach-availability.ts";
 
 export type PlanCode = "BLUEPRINT_ONLY" | "LIVE_WEEKLY1_3M" | "LIVE_WEEKLY2_3M";
 
@@ -75,10 +76,11 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
     if (error) throw error;
   }
 
-  async function ensureCoachAvailability(coachId: string, days: number[], start: string, end: string): Promise<void> {
+  /** 週次の対応可能時間帯（未登録のときだけ作る）。days/start/end はコーチの現地時刻で書き、UTC に換算して保存する */
+  async function ensureCoachAvailability(coachId: string, timeZone: string, days: number[], start: string, end: string): Promise<void> {
     const { data: existing } = await admin.from("com_m_coach_availability").select("availability_id").eq("coach_id", coachId).limit(1);
     if (existing && existing.length > 0) return;
-    const { error } = await admin.from("com_m_coach_availability").insert(days.map((dow) => ({ coach_id: coachId, day_of_week: dow, start_time: start, end_time: end })));
+    const { error } = await admin.from("com_m_coach_availability").insert(toUtcAvailabilityRows(coachId, [{ days, start, end }], timeZone));
     if (error) throw error;
   }
 

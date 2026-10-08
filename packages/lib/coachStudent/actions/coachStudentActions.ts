@@ -190,7 +190,7 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
       .eq('coach_id', user.id);
 
     if (error) {
-      logger.error('coachStudent:get_assigned_students_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('coachStudent:get_assigned_students_failed', error.message, { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!relationships || relationships.length === 0) {
@@ -228,7 +228,7 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
       logger.error(
         'coachStudent:get_assigned_students_join_failed',
         userError?.message ?? progressError?.message ?? scheduleError?.message ?? contractError ?? nextSessionError ?? 'unknown',
-        { ...ctx, userId: user.id }
+        { ...ctx, err: userError, userId: user.id }
       );
       return { success: false, errorCode: 'unexpected_error' };
     }
@@ -269,7 +269,7 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
 
     return { success: true, students };
   } catch (err) {
-    logger.error('coachStudent:get_assigned_students_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:get_assigned_students_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -320,7 +320,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
       logger.error(
         'coachStudent:get_overview_failed',
         userError?.message ?? progressError?.message ?? licenseError?.message ?? 'unknown',
-        { ...ctx, userId: user.id, payload: { studentId } }
+        { ...ctx, err: userError, userId: user.id, payload: { studentId } }
       );
       return { success: false, errorCode: 'unexpected_error' };
     }
@@ -367,7 +367,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
       },
     };
   } catch (err) {
-    logger.error('coachStudent:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -397,7 +397,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
       .eq('user_id', studentId);
 
     if (ticketError) {
-      logger.error('coachStudent:get_student_contracts_ticket_failed', ticketError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_student_contracts_ticket_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!tickets || tickets.length === 0) {
@@ -410,7 +410,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
       .in('license_id', tickets.map((t) => t.license_id));
 
     if (licenseError) {
-      logger.error('coachStudent:get_student_contracts_license_failed', licenseError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_student_contracts_license_failed', licenseError.message, { ...ctx, err: licenseError, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -420,7 +420,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
       .in('contract_id', tickets.map((t) => t.contract_id));
 
     if (contractError) {
-      logger.error('coachStudent:get_student_contracts_plan_failed', contractError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_student_contracts_plan_failed', contractError.message, { ...ctx, err: contractError, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -448,7 +448,7 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
 
     return { success: true, contracts };
   } catch (err) {
-    logger.error('coachStudent:get_student_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:get_student_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -481,7 +481,7 @@ export async function getStudentSessionsByTicketCore(studentId: string, ticketId
       .order('start_datetime', { ascending: false });
 
     if (error) {
-      logger.error('coachStudent:get_student_sessions_by_ticket_failed', error.message, { ...ctx, userId: user.id, payload: { studentId, ticketId } });
+      logger.error('coachStudent:get_student_sessions_by_ticket_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId, ticketId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -498,7 +498,7 @@ export async function getStudentSessionsByTicketCore(studentId: string, ticketId
       sessions: rows.map((s) => ({ ...s, coach_name: nameById.get(s.coach_id) ?? '(Unknown)' })),
     };
   } catch (err) {
-    logger.error('coachStudent:get_student_sessions_by_ticket_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:get_student_sessions_by_ticket_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -533,13 +533,13 @@ export async function getStudentUpcomingSessionCore(studentId: string): Promise<
       .maybeSingle();
 
     if (error) {
-      logger.error('coachStudent:get_upcoming_session_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_upcoming_session_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, session: session ?? null };
   } catch (err) {
-    logger.error('coachStudent:get_upcoming_session_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:get_upcoming_session_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -568,7 +568,7 @@ async function fetchOwnScheduleShortfalls(
 ): Promise<{ shortfalls: LiveSessionShortfallItem[] } | { errorMessage: string }> {
   const { data: schedules, error: scheduleError } = await supabase
     .from('com_m_lesson_schedule')
-    .select('schedule_id, day_of_week, start_time')
+    .select('schedule_id, day_of_week, start_time, schedule_timezone')
     .eq('coach_id', coachId)
     .eq('student_id', studentId)
     .eq('status', 1);
@@ -591,7 +591,7 @@ async function fetchOwnScheduleShortfalls(
     const { error } = results[index];
     const data = results[index].data as ScheduleShortfallRow | null;
     if (error || !data) {
-      logger.error('coachStudent:get_session_shortfalls_rpc_failed', error?.message ?? 'No row returned', { ...ctx, userId: coachId, payload: { studentId, scheduleId: schedule.schedule_id } });
+      logger.error('coachStudent:get_session_shortfalls_rpc_failed', error?.message ?? 'No row returned', { ...ctx, err: error, userId: coachId, payload: { studentId, scheduleId: schedule.schedule_id } });
       return;
     }
     if (data.shortfall > 0) {
@@ -599,6 +599,7 @@ async function fetchOwnScheduleShortfalls(
         schedule_id: schedule.schedule_id,
         day_of_week: schedule.day_of_week,
         start_time: schedule.start_time,
+        schedule_timezone: schedule.schedule_timezone,
         expected_sessions: data.expected_sessions,
         actual_sessions: data.actual_sessions,
         shortfall: data.shortfall,
@@ -625,7 +626,7 @@ export async function getStudentLiveSessionShortfallsCore(studentId: string): Pr
 
     return { success: true, shortfalls: result.shortfalls };
   } catch (err) {
-    logger.error('coachStudent:get_session_shortfalls_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:get_session_shortfalls_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -654,7 +655,7 @@ async function computeStudentContractSessionSummary(
 
   if (ticketError || !ticket) {
     if (ticketError) {
-      logger.error('coachStudent:get_overview_ticket_failed', ticketError.message, { ...ctx, userId: coachId, payload: { studentId, licenseId } });
+      logger.error('coachStudent:get_overview_ticket_failed', ticketError.message, { ...ctx, err: ticketError, userId: coachId, payload: { studentId, licenseId } });
     }
     return null;
   }
@@ -669,7 +670,7 @@ async function computeStudentContractSessionSummary(
   ]);
 
   if (sessionsError) {
-    logger.error('coachStudent:get_overview_sessions_failed', sessionsError.message, { ...ctx, userId: coachId, payload: { studentId, ticketId: ticket.ticket_id } });
+    logger.error('coachStudent:get_overview_sessions_failed', sessionsError.message, { ...ctx, err: sessionsError, userId: coachId, payload: { studentId, ticketId: ticket.ticket_id } });
     return null;
   }
   if ('errorMessage' in shortfallResult) {
@@ -724,13 +725,13 @@ export async function getStudentNotesCore(studentId: string): Promise<GetStudent
       .order('insert_date', { ascending: false });
 
     if (error) {
-      logger.error('coachStudent:get_notes_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_notes_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, notes: notes ?? [] };
   } catch (err) {
-    logger.error('coachStudent:get_notes_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:get_notes_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -762,7 +763,7 @@ export async function getSelfTrainingWeekSummaryCore(studentId: string, days = 7
       .gte('training_date', sinceDate);
 
     if (error) {
-      logger.error('coachStudent:get_self_training_summary_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_self_training_summary_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -776,7 +777,7 @@ export async function getSelfTrainingWeekSummaryCore(studentId: string, days = 7
       summary: { days, active_days: activeDays, total_questions: totalQuestions, total_assessments: totalAssessments },
     };
   } catch (err) {
-    logger.error('coachStudent:get_self_training_summary_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:get_self_training_summary_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -804,14 +805,14 @@ export async function addCoachStudentNoteCore(studentId: string, noteText: strin
       .single();
 
     if (error || !data) {
-      logger.error('coachStudent:add_note_failed', error?.message ?? 'No row inserted', { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:add_note_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     logger.info('coachStudent:add_note_success', 'Coach student note created', { ...ctx, userId: user.id });
     return { success: true, note: data as CoachStudentNote };
   } catch (err) {
-    logger.error('coachStudent:add_note_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:add_note_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -852,14 +853,14 @@ export async function getContractTrainingReportsCore(studentId: string): Promise
       .order('insert_date', { ascending: false });
 
     if (error) {
-      logger.error('coachStudent:get_training_reports_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_training_reports_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     const reports = await attachCoachNames(supabase, (data ?? []) as Omit<ContractTrainingReport, 'coach_name'>[]);
     return { success: true, reports };
   } catch (err) {
-    logger.error('coachStudent:get_training_reports_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:get_training_reports_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -924,7 +925,7 @@ export async function saveContractTrainingReportDraftCore(
           .single();
 
     if (error || !data) {
-      logger.error('coachStudent:save_training_report_draft_failed', error?.message ?? 'No row returned', { ...ctx, userId: user.id, payload: { ticketId, studentId } });
+      logger.error('coachStudent:save_training_report_draft_failed', error?.message ?? 'No row returned', { ...ctx, err: error, userId: user.id, payload: { ticketId, studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -932,7 +933,7 @@ export async function saveContractTrainingReportDraftCore(
     logger.info('coachStudent:save_training_report_draft_success', 'Training report draft saved', { ...ctx, userId: user.id });
     return { success: true, report };
   } catch (err) {
-    logger.error('coachStudent:save_training_report_draft_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:save_training_report_draft_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -958,7 +959,7 @@ export async function finalizeContractTrainingReportCore(reportId: string): Prom
       .maybeSingle();
 
     if (error) {
-      logger.error('coachStudent:finalize_training_report_failed', error.message, { ...ctx, userId: user.id, payload: { reportId } });
+      logger.error('coachStudent:finalize_training_report_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { reportId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!data) {
@@ -970,7 +971,7 @@ export async function finalizeContractTrainingReportCore(reportId: string): Prom
     logger.info('coachStudent:finalize_training_report_success', 'Training report finalized', { ...ctx, userId: user.id });
     return { success: true, report };
   } catch (err) {
-    logger.error('coachStudent:finalize_training_report_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:finalize_training_report_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -1003,7 +1004,7 @@ export async function updateStudentSprintLevelCore(
       .maybeSingle();
 
     if (fetchError) {
-      logger.error('coachStudent:update_level_fetch_failed', fetchError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:update_level_fetch_failed', fetchError.message, { ...ctx, err: fetchError, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -1036,14 +1037,14 @@ export async function updateStudentSprintLevelCore(
       .single();
 
     if (updateError || !updated) {
-      logger.error('coachStudent:update_level_failed', updateError?.message ?? 'No row updated', { ...ctx, userId: user.id, payload: { studentId, questionType, newLevel } });
+      logger.error('coachStudent:update_level_failed', updateError?.message ?? 'No row updated', { ...ctx, err: updateError, userId: user.id, payload: { studentId, questionType, newLevel } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     logger.info('coachStudent:update_level_success', 'Student sprint level updated', { ...ctx, userId: user.id, payload: { studentId, questionType, newLevel, newStage } });
     return { success: true, progress: updated as StudentSprintProgress };
   } catch (err) {
-    logger.error('coachStudent:update_level_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:update_level_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -1074,7 +1075,7 @@ export async function forceStageUpStudentCore(
       .maybeSingle();
 
     if (fetchError) {
-      logger.error('coachStudent:force_stage_up_fetch_failed', fetchError.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:force_stage_up_fetch_failed', fetchError.message, { ...ctx, err: fetchError, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -1110,14 +1111,14 @@ export async function forceStageUpStudentCore(
       .single();
 
     if (updateError || !updated) {
-      logger.error('coachStudent:force_stage_up_failed', updateError?.message ?? 'No row updated', { ...ctx, userId: user.id, payload: { studentId, targetStage } });
+      logger.error('coachStudent:force_stage_up_failed', updateError?.message ?? 'No row updated', { ...ctx, err: updateError, userId: user.id, payload: { studentId, targetStage } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     logger.info('coachStudent:force_stage_up_success', 'Student stage forced up', { ...ctx, userId: user.id, payload: { studentId, targetStage, newStage } });
     return { success: true, progress: updated as StudentSprintProgress };
   } catch (err) {
-    logger.error('coachStudent:force_stage_up_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachStudent:force_stage_up_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
