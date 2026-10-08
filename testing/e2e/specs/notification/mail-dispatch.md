@@ -198,5 +198,5 @@ Webhook の受け口は Resend から dev のローカルへ届かないため E
 管理者の操作で通知が登録されないこと（異常系14）は、dev の DB で `fn_notify` を管理者・コーチの JWT で呼び、取り消し（ROLLBACK）付きで確かめた（E2E は無し）。
 メールの文面（日時の表記・言語・参加URLの有無・設定へのリンク・通知の言語）は、送信せずに
 `testing/unit/event-reminder-mail-content.test.ts`・`notification-mail-content.test.ts`・`notification-mail-details.test.ts`（通知の対象の情報・件名の日時・英語・古い通知）、全メール共通の外枠（ロゴ・プレビュー文・テキスト版）と
-配信停止の署名は `mail-layout.test.ts` で確かめる。全パターンの見た目は `testing/features/branches/feature-20261004-dev/send-mail-samples.ts`
+配信停止の署名は `mail-layout.test.ts` で確かめる。全パターンの見た目は `testing/features/mail-samples/send-mail-samples.ts`
 （Resend のテスト用アドレスへ送信。`--out=<フォルダ>` で送らずに HTML・テキストを書き出す）で確かめる。

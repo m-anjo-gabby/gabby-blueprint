@@ -1,11 +1,13 @@
 /**
- * 通知・リマインダーのメールを全パターン送る（文面の目視確認用。Resend の管理画面の送信履歴で確認する）。
- * 実行: pnpm --filter @gabby/testing exec tsx features/branches/feature-20261004-dev/send-mail-samples.ts
+ * 招待・パスワード再設定・通知・リマインダー・運営向けの日次の要約のメールを全パターン送る（文面の目視確認用。Resend の管理画面の送信履歴で確認する）。
+ * 実行: pnpm --filter @gabby/testing exec tsx features/mail-samples/send-mail-samples.ts
  *
  * 送信処理（packages/lib/mail/dispatch/）と同じ文面の組み立て関数を使い、サンプルの値で組み立てる。
  * 宛先は Resend のテスト用アドレス（delivered+mr-<種類>@resend.dev。@ の前は64文字まで）で、実在の人には届かない。
  * 一部だけ送り直す場合は --only=<種類の一部>（例: --only=coach-SESSION_RESCHEDULE）。
  * 送らずに HTML・テキストをファイルに書き出す場合は --out=<フォルダ>（ロゴは手元の apps/student/public/mail-logo.png を参照する。ブラウザで見た目を確かめる用）。
+ * 書き出した結果から全パターンの一覧（メール文面カタログ）を作る手順は .claude/skills/mail-catalog/SKILL.md。
+ * メールの種類・パターンを追加したら、ここにサンプルを足し、カタログの区分（.claude/skills/mail-catalog/scripts/build.mjs の GROUPS）にも足す。
  * 送信元・API キーは apps/admin/.env.local（MAIL_FROM_NOTIFY、無ければ MAIL_FROM_AUTH）。
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -18,6 +20,8 @@ import { buildCoachInviteMail } from "@gabby/lib/mail/templates/CoachInviteEmail
 import { buildEventReminderMail } from "@gabby/lib/mail/templates/EventReminderEmailTemplate";
 import { buildStudentInviteMail } from "@gabby/lib/mail/templates/InviteEmailTemplate";
 import { buildLiveSessionReminderMail } from "@gabby/lib/mail/templates/LiveSessionReminderEmailTemplate";
+import { buildMailDailyReport } from "@gabby/lib/mail/templates/MailDailyReportTemplate";
+import { checkMailConfig } from "@gabby/lib/mail/dispatch/policy";
 import { buildChatUnreadMail, buildNotificationMail } from "@gabby/lib/mail/templates/NotificationEmailTemplate";
 import { buildNotificationDetails, type NotificationMailFacts } from "@gabby/lib/mail/templates/notificationDetails";
 import { buildPasswordResetMail } from "@gabby/lib/mail/templates/PasswordResetEmailTemplate";
@@ -27,7 +31,7 @@ import { buildUnsubscribeUrl, unsubscribeHeaders } from "@gabby/lib/mail/unsubsc
 import { NOTIFICATION_MESSAGE_BUILDERS, type NotificationType } from "@gabby/types/notification";
 import { NOTIFICATION_MESSAGE_BUILDERS_EN } from "@gabby/types/notificationEn";
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const adminEnv = dotenv.parse(readFileSync(path.join(REPO_ROOT, "apps/admin/.env.local")));
 const API_KEY = adminEnv.RESEND_API_KEY;
 const FROM = adminEnv.MAIL_FROM_NOTIFY || adminEnv.MAIL_FROM_AUTH || "Gabby Academy <noreply@mail.gabbyacademy.com>";
@@ -203,6 +207,38 @@ liveReminder("student-LIVE-24h", "ja", "24h", "Asia/Tokyo");
 liveReminder("student-LIVE-1h", "ja", "1h", "Asia/Tokyo");
 liveReminder("coach-LIVE-24h", "en", "24h", "America/Vancouver");
 liveReminder("coach-LIVE-1h", "en", "1h", "America/Vancouver");
+
+// ---- 運営向けの日次の要約（毎日 09:00 JST。異常なし・要確認あり） ----
+const OPS_CONFIG = {
+  MAIL_DISPATCH_MODE: "all",
+  RESEND_WEBHOOK_SECRET: "whsec_sample",
+  MAIL_UNSUBSCRIBE_SECRET: "sample",
+};
+const PERIOD = "10/07 09:00 〜 10/08 09:00（日本時間 / JST）";
+samples.push({
+  label: "ops-DAILY_REPORT-ok",
+  ...renderMail(buildMailDailyReport({
+    periodLabel: PERIOD,
+    sentCount: 42,
+    skippedCount: 5,
+    failed: [],
+    deliveryProblems: [],
+    overdueCount: 0,
+    config: checkMailConfig(OPS_CONFIG),
+  })),
+});
+samples.push({
+  label: "ops-DAILY_REPORT-issues",
+  ...renderMail(buildMailDailyReport({
+    periodLabel: PERIOD,
+    sentCount: 40,
+    skippedCount: 3,
+    failed: [{ at: "10/08 07:12", label: "FAILED  NOTIFICATION", recipient: "taro.sample@example.com", detail: "Invalid `to` field" }],
+    deliveryProblems: [{ at: "10/07 21:05", label: "不達 / Bounced  GROUP_SESSION_REMINDER", recipient: "hanako.sample@example.com", detail: "Permanent" }],
+    overdueCount: 0,
+    config: checkMailConfig({ ...OPS_CONFIG, MAIL_UNSUBSCRIBE_SECRET: "" }),
+  })),
+});
 
 // ---- 送信（Resend の送信レートに収めるため1件ずつ間隔を空ける） ----
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -1,0 +1,140 @@
+<title>メール文面カタログ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* 変更概要資料と同じ紙面。メールの実寸の画像を2列で並べ、受信一覧で見える件名・要約を画像の上に置く */
+  :root {
+    --paper: #f5f1e6;
+    --paper-raised: #fffdf6;
+    --ink: #262420;
+    --ink-soft: #5b564a;
+    --ink-faint: #8d8676;
+    --line: #ddd4bd;
+    --line-strong: #c2b696;
+    --accent: #35548f;
+    --accent-ink: #1f3760;
+    --accent-soft: #e1e8f3;
+    --caution-ink: #7a5710;
+    --caution-soft: #f3e6c8;
+    --inbox: #ffffff;
+    --print-paper: #ffffff;
+    --shadow: 0 1px 2px rgba(38,36,32,0.06), 0 10px 26px -14px rgba(38,36,32,0.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #15161a; --paper-raised: #1d1f26; --ink: #ece7d9; --ink-soft: #b7b0a0; --ink-faint: #7d7768;
+      --line: #35363f; --line-strong: #454652; --accent: #7fa0e0; --accent-ink: #cddaf3; --accent-soft: #22314f;
+      --caution-ink: #f6dba0; --caution-soft: #3a2f14; --inbox: #23252d;
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 16px 36px -18px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #15161a; --paper-raised: #1d1f26; --ink: #ece7d9; --ink-soft: #b7b0a0; --ink-faint: #7d7768;
+    --line: #35363f; --line-strong: #454652; --accent: #7fa0e0; --accent-ink: #cddaf3; --accent-soft: #22314f;
+    --caution-ink: #f6dba0; --caution-soft: #3a2f14; --inbox: #23252d;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 16px 36px -18px rgba(0,0,0,0.6);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", sans-serif;
+    line-height: 1.8; -webkit-font-smoothing: antialiased;
+    padding: 56px 20px 80px;
+  }
+  .mono { font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; }
+  .sheet { max-width: 1040px; margin: 0 auto; }
+
+  .masthead { border-top: 3px double var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 22px 0 24px; margin-bottom: 26px; }
+  .masthead .eyebrow { margin: 0 0 12px; font-size: 11.5px; letter-spacing: 0.18em; color: var(--ink-faint); }
+  .masthead h1 { font-family: "Shippori Mincho", "Hiragino Mincho ProN", serif; font-size: 28px; line-height: 1.5; margin: 0 0 12px; text-wrap: balance; }
+  .masthead .sub { margin: 0 0 16px; color: var(--ink-soft); font-size: 14.5px; max-width: 68ch; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font-size: 11.5px; color: var(--ink-soft); background: var(--paper-raised); border: 1px solid var(--line); border-radius: 3px; padding: 3px 10px; }
+
+  .notes { background: var(--caution-soft); border-radius: 4px; padding: 14px 18px; margin-bottom: 22px; font-size: 13.5px; color: var(--ink-soft); }
+  .notes b { color: var(--caution-ink); }
+  .notes ul { margin: 6px 0 0; padding-left: 18px; }
+
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 40px; }
+  .toc a { font-size: 12.5px; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 4px 12px; text-decoration: none; }
+  .toc a:hover, .toc a:focus-visible { text-decoration: underline; }
+
+  .group { margin-bottom: 44px; scroll-margin-top: 16px; }
+  .group h2 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; font-family: "Shippori Mincho", serif; font-size: 21px; margin: 0 0 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line-strong); }
+  .gno { font-size: 13px; color: var(--accent-ink); background: var(--accent-soft); border-radius: 3px; padding: 0 7px; }
+  .cnt { font-family: "Zen Kaku Gothic New", sans-serif; font-size: 12px; color: var(--ink-faint); font-weight: 500; }
+  .intro { color: var(--ink-soft); font-size: 13.5px; margin: 8px 0 18px; max-width: 72ch; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+  .mail { background: var(--paper-raised); border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow); overflow: hidden; min-width: 0; }
+  .mail-head { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px 10px; }
+  .no { flex: none; font-size: 12px; color: var(--ink-faint); padding-top: 3px; }
+  .mail-meta { min-width: 0; }
+  .mail-meta h3 { margin: 0 0 4px; font-size: 14.5px; line-height: 1.5; }
+  .mail-meta dl { margin: 0; display: flex; flex-wrap: wrap; gap: 2px 16px; font-size: 12px; }
+  .mail-meta dl div { display: flex; gap: 6px; }
+  .mail-meta dt { color: var(--ink-faint); }
+  .mail-meta dd { margin: 0; color: var(--ink-soft); }
+  .inbox { margin: 0 16px 12px; background: var(--inbox); border: 1px solid var(--line); border-radius: 3px; padding: 8px 12px; font-size: 12.5px; line-height: 1.6; }
+  .inbox .subj { font-weight: 700; color: var(--ink); overflow-wrap: anywhere; }
+  .inbox .pre { color: var(--ink-faint); overflow-wrap: anywhere; }
+  .shot { border-top: 1px solid var(--line); background: #ffffff; }
+  .shot img { display: block; width: 100%; height: auto; }
+
+  footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11.5px; color: var(--ink-faint); }
+
+  @media (max-width: 720px) {
+    body { padding: 40px 16px 64px; }
+    .masthead h1 { font-size: 22px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Print（配布用PDF） ---------- */
+  @page { size: A4; margin: 12mm 11mm 14mm; }
+  @media print {
+    :root { --shadow: none; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: var(--print-paper); padding: 0; font-size: 12px; }
+    .sheet { max-width: none; }
+    .toc { display: none; }
+    .group { break-before: page; page-break-before: always; margin-bottom: 0; }
+    .group h2, .intro { break-after: avoid; page-break-after: avoid; }
+    .grid { gap: 10px; }
+    .mail { break-inside: avoid; page-break-inside: avoid; }
+    .shot img { max-height: 196mm; width: auto; max-width: 100%; margin: 0 auto; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+
+<div class="sheet">
+  <header class="masthead">
+    <p class="eyebrow mono">メール文面カタログ &nbsp;/&nbsp; Gabby Blueprint English &nbsp;/&nbsp; {{BRANCH}}</p>
+    <h1>アプリから送るメールの全パターン</h1>
+    <p class="sub">アプリが送るメール{{COUNT}}通りの、実際の見た目と件名を並べた資料です。文面の確認・問い合わせ対応・操作マニュアルの作成にお使いください。</p>
+    <div class="chips">
+      <span class="chip">全 {{COUNT}} 通り</span>
+      <span class="chip">生徒は日本語 / コーチは英語 / 管理者・運営は日英併記</span>
+      <span class="chip mono">{{DATE}} 時点</span>
+    </div>
+  </header>
+
+  <div class="notes">
+    <b>この資料の見方</b>
+    <ul>
+      <li>画像は、送信処理と同じ組み立て方でサンプルの値から作った本文です（実際には送信していません）。名前・日時・メッセージは例です。</li>
+      <li>画像の上の枠は、メールソフトの受信一覧に表示される件名と要約（プレビュー文）です。</li>
+      <li>日時は受け取る人のタイムゾーンで表示します（例では生徒は日本時間、コーチはバンクーバー時間）。</li>
+      <li>画像を表示しないメール環境向けに、同じ内容の文字だけの版も同時に送っています。</li>
+    </ul>
+  </div>
+
+  <nav class="toc" aria-label="目次">{{TOC}}</nav>
+
+  {{SECTIONS}}
+
+  <footer>
+    <span>prepared by Blueprint開発サポート</span>
+    <span class="mono">gabby.developer@gabbyacademy.com</span>
+  </footer>
+</div>
