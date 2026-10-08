@@ -39,6 +39,10 @@ supabase/release/env/.env.*
 !supabase/release/env/.env.example
 supabase/release/logs/
 
+# アプリの環境変数の反映（scripts/vercel-env/run.mjs）: 値・反映の記録はコミット禁止
+scripts/vercel-env/values/
+scripts/vercel-env/logs/
+
 # Github
 .github
 

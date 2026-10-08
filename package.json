@@ -13,6 +13,8 @@
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "clean": "turbo clean && rimraf node_modules",
+    "vercel-env": "node scripts/vercel-env/run.mjs",
+    "test:vercel-env": "node --test scripts/vercel-env/lib.test.mjs",
     "env:export": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-env/export.ps1"
   },
   "devDependencies": {

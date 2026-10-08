@@ -129,10 +129,11 @@ pnpm install
 | `apps/coach/.env.local` | ○ | coach の dev 接続 |
 | `apps/student/.env.local` | ○ | student の dev 接続（E2E もここから Supabase 接続情報を読む） |
 | `testing/.env.local` | E2E を実行する場合 | QAアカウントのパスワード等（`testing/.env.example` 参照） |
-| `apps/*/.env.staging` | staging でテストする場合 | staging 接続 |
+| `apps/*/.env.staging` | staging でテストする場合 | staging 接続（`pnpm vercel-env --env=staging --write-app-env` で値ファイルから作る） |
+| `scripts/vercel-env/values/.env.staging`・`.env.prod` | Vercel の環境変数を変更する場合 | `scripts/vercel-env/README.md` 参照。staging・本番の秘密の値を含む |
 | `supabase/release/env/.env.dev` など | リリース作業をする場合 | `supabase/release/README.md` の「初回準備」参照。アクセストークンは端末ごとに発行し直してもよい |
 
-- キーの一覧と意味は各フォルダの `.env.example` を参照してください。
+- キーの一覧と意味は各フォルダの `.env.example` を参照してください（apps は `scripts/vercel-env/manifest.mjs` から自動生成。dev の設定は `pnpm vercel-env --env=dev --check` で確かめられます）。
 - 各アプリの URL はローカルの HTTPS に合わせて次の値にします（既存端末からコピーした場合はそのままで可）。
 
   | キー | 値 |
