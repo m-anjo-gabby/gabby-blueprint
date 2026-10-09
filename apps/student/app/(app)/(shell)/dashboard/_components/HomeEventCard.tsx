@@ -5,7 +5,7 @@ import { CalendarDays, ChevronRight, ExternalLink, UsersRound } from 'lucide-rea
 import { useNow } from '@gabby/lib/hooks/useNow';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
-import { getCalendarEventPhase, type CalendarEventItem } from '@gabby/types/calendarEvent';
+import { getCalendarEventPhase, withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddToCalendarMenu } from '@/components/calendarEvent/AddToCalendarMenu';
@@ -176,7 +176,7 @@ export function HomeEventCard({ events: serverEvents }: { events: CalendarEventI
   const detailEvent = events.find((e) => e.calendar_event_id === detailId) ?? null;
 
   const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) => {
-    setEvents((prev) => prev.map((e) => (e.calendar_event_id === calendarEventId ? { ...e, is_joined: isJoined } : e)));
+    setEvents((prev) => prev.map((e) => (e.calendar_event_id === calendarEventId ? withParticipation(e, isJoined) : e)));
   };
 
   return (

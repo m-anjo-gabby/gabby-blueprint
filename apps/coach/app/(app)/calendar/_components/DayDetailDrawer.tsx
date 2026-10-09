@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, Megaphone, Paperclip, Download, X } from 'lucide-react';
@@ -9,9 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useEventAnnouncements } from '@gabby/lib/calendarEvent/useEventAnnouncements';
 import { SESSION_STATUS } from '@gabby/types/session';
 import { getSessionStatusBadge } from '@/constants/session';
-import { CalendarEventItem, CalendarEventMessageItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
+import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CALENDAR_EVENT_TYPE_LABEL_EN } from '@/constants/calendarEvent';
 import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import {
@@ -57,12 +58,8 @@ function formatDayHeading(dateStr: string): string {
   return format(new Date(y, m - 1, d), 'EEEE, MMMM d, yyyy');
 }
 
-function CalendarEventAnnouncements({ calendarEventId, timezone }: { calendarEventId: string; timezone: string }) {
-  const [messages, setMessages] = useState<CalendarEventMessageItem[]>([]);
-
-  useEffect(() => {
-    getCalendarEventMessages(calendarEventId).then(setMessages);
-  }, [calendarEventId]);
+function CalendarEventAnnouncements({ event, timezone }: { event: CalendarEventItem; timezone: string }) {
+  const messages = useEventAnnouncements(event, getCalendarEventMessages);
 
   const handleDownload = async (path: string) => {
     const { url } = await getCalendarEventMessageAttachmentUrl(path);
@@ -274,7 +271,7 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
         </div>
       )}
 
-      <CalendarEventAnnouncements calendarEventId={event.calendar_event_id} timezone={timezone} />
+      <CalendarEventAnnouncements event={event} timezone={timezone} />
     </article>
   );
 }

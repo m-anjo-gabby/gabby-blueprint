@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, ChevronRight, History } from 'lucide-react';
-import { getCalendarEventPhase, type CalendarEventItem } from '@gabby/types/calendarEvent';
+import { getCalendarEventPhase, withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
 import { useNow } from '@gabby/lib/hooks/useNow';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
@@ -97,7 +97,7 @@ export function GroupSessionsView({ upcoming: serverUpcoming, past: serverPast, 
   const detailEvent = [...upcoming, ...past].find((e) => e.calendar_event_id === detailId) ?? null;
 
   const updateJoined = (ids: Set<string>, isJoined: boolean) => {
-    const apply = (list: CalendarEventItem[]) => list.map((e) => (ids.has(e.calendar_event_id) ? { ...e, is_joined: isJoined } : e));
+    const apply = (list: CalendarEventItem[]) => list.map((e) => (ids.has(e.calendar_event_id) ? withParticipation(e, isJoined) : e));
     setUpcoming(apply);
     setPast(apply);
   };

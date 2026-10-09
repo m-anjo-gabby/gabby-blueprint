@@ -8,11 +8,25 @@ import {
   CalendarEventItem,
   CalendarEventMessageItem,
   getCalendarEventPhase,
+  sortCalendarEventMessages,
 } from '@gabby/types/calendarEvent';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { createAdminClient } from '../../supabase/admin';
 
 const logger = createLogger('common');
+
+/** アナウンスの取得列（一覧への結合・単独の取得で共有する） */
+const MESSAGE_COLUMNS = 'calendar_event_message_id, calendar_event_id, title, content, attachments, insert_date, update_date';
+
+function toMessageItems(rows: unknown): CalendarEventMessageItem[] {
+  if (!Array.isArray(rows)) return [];
+  return sortCalendarEventMessages(
+    rows.map((row: CalendarEventMessageItem) => ({
+      ...row,
+      attachments: Array.isArray(row.attachments) ? row.attachments : [],
+    }))
+  );
+}
 
 /**
  * ログイン中ユーザー（生徒/コーチいずれか）向けに公開中のカレンダーイベント一覧を、
@@ -35,10 +49,12 @@ export async function getPublishedCalendarEventsCore(
     // 本人の行のみ結合される（com_t_notice_readの既読結合と同じ考え方）。
     // assigned_coach はコーチが担当コーチとして割り当てられている場合のみ行が返る
     // （生徒には該当行が無いため常に空配列になる）。
+    // messages（アナウンス）も RLS で参加者本人・担当コーチにだけ返る。詳細のボトムシートを開いた後に
+    // 取りに行くと、開いてから中身が伸びるため一覧と一緒に取得する。
     const { data, error } = await supabase
       .from('com_m_calendar_event')
       .select(
-        '*, participant:com_t_calendar_event_participant(calendar_event_id), assigned_coach:com_t_calendar_event_coach(calendar_event_id), series:com_m_calendar_event_series(series_id, title, description)'
+        `*, participant:com_t_calendar_event_participant(calendar_event_id), assigned_coach:com_t_calendar_event_coach(calendar_event_id), series:com_m_calendar_event_series(series_id, title, description), messages:com_t_calendar_event_message(${MESSAGE_COLUMNS})`
       )
       .gte('start_datetime', startIso)
       .lt('start_datetime', endIso)
@@ -56,6 +72,7 @@ export async function getPublishedCalendarEventsCore(
       is_assigned_coach: Array.isArray(row.assigned_coach) && row.assigned_coach.length > 0,
       coaches: coachesByEventId.get(row.calendar_event_id) ?? [],
       series: row.series ?? null,
+      messages: toMessageItems(row.messages),
     }));
 
     return { success: true, events };
@@ -229,21 +246,15 @@ export async function getCalendarEventMessagesCore(
 
     const { data, error } = await supabase
       .from('com_t_calendar_event_message')
-      .select('*')
-      .eq('calendar_event_id', calendarEventId)
-      .order('insert_date', { ascending: false });
+      .select(MESSAGE_COLUMNS)
+      .eq('calendar_event_id', calendarEventId);
 
     if (error) {
       logger.error('calendarEvent:get_messages_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { calendarEventId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    const messages: CalendarEventMessageItem[] = (data ?? []).map((row: any) => ({
-      ...row,
-      attachments: Array.isArray(row.attachments) ? row.attachments : [],
-    }));
-
-    return { success: true, messages };
+    return { success: true, messages: toMessageItems(data) };
   } catch (err) {
     logger.error('calendarEvent:get_messages_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
