@@ -2625,3 +2625,33 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, text, timestamptz, boolean) FROM PUBLIC, anon, authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】グループセッション: 配信対象外の回に参加登録できないようにする
+-- 追加日: 2026-10-10
+--
+-- 【内容】
+--   com_t_calendar_event_participant の RLS は本人の行かどうかだけを確かめていたため、直接登録すれば
+--   配信対象外（別の顧客向け）の回にも参加登録でき、アナウンス・リマインダーメールの参加URLに到達できた。
+--   登録・更新時に、イベント本体が本人から見えること（イベントの RLS）と参加確認ありであることを確かめる。
+--   アプリの変更は無く、適用の順番も問わない。
+-- 対応ファイル: DDL/table/com_t_calendar_event_participant.sql
+-- =========================================================================
+
+BEGIN;
+
+DROP POLICY IF EXISTS "Users can manage their own participation" ON public.com_t_calendar_event_participant;
+CREATE POLICY "Users can manage their own participation" ON public.com_t_calendar_event_participant
+FOR ALL TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (
+    user_id = auth.uid()
+    -- 参加登録できるのは、本人に見えている（公開済み・配信対象。イベント本体の RLS で判定）参加確認ありのイベントだけ
+    AND EXISTS (
+        SELECT 1 FROM public.com_m_calendar_event e
+        WHERE e.calendar_event_id = com_t_calendar_event_participant.calendar_event_id
+          AND e.rsvp_enabled = TRUE
+    )
+);
+
+COMMIT;
