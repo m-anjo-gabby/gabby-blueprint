@@ -84,7 +84,8 @@ export default function Header() {
         </Link>
         
         {/* ユーザー操作エリア */}
-        <div className="flex items-center gap-2">          
+        {/* 通知ベルとアカウントメニューは高さ40pxの同じ丸枠で揃える */}
+        <div className="flex items-center gap-2.5">
           {/* 通知センター（お知らせ + 通知を統合） */}
           <NotificationCenterDropdown />
           <DropdownMenu>
@@ -92,20 +93,21 @@ export default function Header() {
             <DropdownMenuTrigger asChild>
               <button
                 aria-label="アカウントメニュー"
-                className="flex items-center gap-2 px-3 py-1.5 bg-canvas rounded-full border border-line/70 hover:bg-line/60 transition-all outline-none active:scale-95"
+                className="flex items-center gap-2 h-10 pl-1 pr-3 bg-canvas rounded-full border border-line/70 hover:bg-line/60 transition-all outline-none active:scale-95"
               >
-                <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-brand-500 overflow-hidden shrink-0">
+                <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-sm text-brand-500 overflow-hidden shrink-0">
                   {profileIconUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <UserIcon size={14} />
+                    <UserIcon size={18} />
                   )}
                 </div>
-                <span className="text-xs font-bold text-ink-soft hidden sm:inline">
+                {/* 長い名前は末尾を省略する（正式な名前はメニュー内に表示） */}
+                <span className="text-xs font-bold text-ink-soft hidden sm:block max-w-40 truncate">
                   {user?.user_name || user?.email?.split('@')[0]}
                 </span>
-                <ChevronDown size={12} className="text-ink-subtle" />
+                <ChevronDown size={12} className="text-ink-subtle shrink-0" />
               </button>
             </DropdownMenuTrigger>
 

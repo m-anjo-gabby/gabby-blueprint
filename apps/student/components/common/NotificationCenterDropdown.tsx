@@ -101,9 +101,9 @@ export function NotificationCenterDropdown() {
         <button
           id="notification-center-bell-button"
           aria-label="通知センター"
-          className="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-canvas active:scale-90 transition-all outline-none"
+          className="relative flex items-center justify-center w-10 h-10 bg-canvas rounded-full border border-line/70 hover:bg-line/60 active:scale-90 transition-all outline-none"
         >
-          <Bell size={18} className="text-ink-muted" />
+          <Bell size={20} className="text-ink-muted" />
           <AnimatePresence>
             {totalUnreadCount > 0 && (
               <motion.span
