@@ -45,6 +45,12 @@
 -- （p_enforce_rate = false）。ただし予約できる回が1回も無い場合は、セッションの無い定期スケジュールになるため成立させない
 -- （NO_BOOKABLE_SESSION）。どちらも他の生徒の承認待ちの申請は数えない（fn_matching_occurrence_busy 参照）。
 -- シグネチャが変わるため、旧シグネチャを削除してから作り直す。
+--
+-- 【コーチ交代後の目標回数 (2026-10-09変更)】
+-- 従来はコーチ交代の後に別のコーチで成立させても、目標回数を契約上の回数のまま入れていたため、交代前に実施した分と
+-- 合わせて契約の回数を超えて作る・未予約を多く数える（生徒が個別予約で超過して予約できる）ことがあった。
+-- fn_matching_slot_target_sessions() が終了した同じコマの定期スケジュールで使った回を差し引くようにし、
+-- 残りが0回なら NO_REMAINING_SESSIONS で成立させない。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, timestamptz);
 DROP FUNCTION IF EXISTS public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, text, timestamptz);
@@ -92,8 +98,11 @@ BEGIN
     v_start_date := GREATEST((v_license_start AT TIME ZONE p_timezone)::date, (NOW() AT TIME ZONE p_timezone)::date);
     v_end_date := (v_license_end AT TIME ZONE p_timezone)::date;
 
-    -- このコマ(slot_no)が契約上持つべき目標セッション数
+    -- このコマ(slot_no)の目標セッション数（コーチ交代等で終了した同じコマの定期スケジュールで使った回を差し引いた残り）
     v_target_sessions := public.fn_matching_slot_target_sessions(p_ticket_id, p_slot_no);
+    IF v_target_sessions = 0 THEN
+        RAISE EXCEPTION 'NO_REMAINING_SESSIONS: slot % of ticket % has no remaining sessions', p_slot_no, p_ticket_id;
+    END IF;
 
     -- 同一コーチへの成立処理を直列化し、重複チェックのレース条件を防ぐ
     -- （この後にfn_send_matching_greeting()内で生徒×コーチのロックを取るが、そちらの後に

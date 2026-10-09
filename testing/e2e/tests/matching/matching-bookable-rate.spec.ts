@@ -23,6 +23,7 @@ import { getPersonaPassword } from "../../support/personas.ts";
  * - 申請後にコーチの予定が埋まって割合を下回ると承認できない。割合以上なら重なる回を飛ばして成立し、成立通知に回数が入る
  * - 同じコーチ宛ての他の生徒の承認待ちの申請と重なる枠は申請できない（承認時は数えない）
  * - アドミンの直接マッチングは割合の基準を適用しない（予約できる回が0回の場合だけ失敗する）
+ * - コーチ交代の後に別のコーチで成立させても、交代前に使った回と合わせて契約の回数を超えない
  * コーチの予定は休み（BLOCK）で作る（他の生徒の予定と同じく「予約できない回」として数えられる）。
  * 割合を 0.7〜0.8 のどちらに変えても成り立つ回数にしている（12回のコマで、△は2回・×は5回重ねる）。
  */
@@ -297,4 +298,75 @@ test("他の生徒の承認待ちと重なる枠は申請できず、アドミ�
   // 他の生徒の承認待ちは、アドミンの操作の後も承認待ちのまま
   const { data: other } = await f.admin.from("com_t_matching_request").select("status").eq("ticket_id", otherTicketId).single();
   expect(other!.status).toBe(1);
+});
+
+test("コーチ交代の後に別のコーチで成立させても、交代前に使った回と合わせて契約の回数を超えない", async ({}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "使い捨てデータを作るため desktop だけで実行する");
+  fixture = await createAuthFixture("matchrate3");
+  const f = fixture;
+  const now = Date.now();
+  const studentId = await createDisposableStudent(f, { email: `${f.tag}-student@${DISPOSABLE_EMAIL_DOMAIN}`, password: PASSWORD });
+  const { ticketId } = await grantLiveLicense(f, studentId, {
+    planCode: "LIVE_WEEKLY1_3M",
+    label: "change",
+    start: new Date(now - DAY_MS),
+    end: new Date(now + 90 * DAY_MS),
+  });
+  const coach = (suffix: string) =>
+    createDisposableCoach(f, {
+      email: `${f.tag}-coach${suffix}@${DISPOSABLE_EMAIL_DOMAIN}`,
+      password: PASSWORD,
+      userName: `E2Eコーチ${suffix} ${f.tag}`,
+      timezone: "Asia/Tokyo",
+      availability: [{ dayOfWeek: 5, startTime: "10:00:00", endTime: "13:00:00" }],
+    });
+  const coachA = await coach("a");
+  const coachB = await coach("b");
+
+  adminClient = await signInAsRole(QA_ADMIN_EMAIL, getPersonaPassword());
+  const match = (coachId: string, startTime: string, endTime: string) =>
+    adminClient!.rpc("admin_match_student_with_coach", {
+      p_ticket_id: ticketId, p_coach_id: coachId, p_slot_no: 1, p_day_of_week: 5, p_start_time: startTime, p_end_time: endTime,
+    });
+  const sessionsOf = async (scheduleId: string) => {
+    const { data } = await f.admin.from("com_t_session").select("session_id, status").eq("schedule_id", scheduleId).order("start_datetime");
+    return data!;
+  };
+
+  // 1. コーチAで成立し、最初の4回を実施済みにする（実施済みの回は交代後も契約の回数を使ったまま）
+  const { error: matchAError } = await match(coachA, "19:00:00", "19:25:00");
+  expect(matchAError).toBeNull();
+  const { data: scheduleA } = await f.admin.from("com_m_lesson_schedule").select("schedule_id, target_sessions").eq("ticket_id", ticketId).single();
+  expect(scheduleA!.target_sessions).toBe(12);
+  const sessionsA = await sessionsOf(scheduleA!.schedule_id);
+  const usedIds = sessionsA.slice(0, 4).map((s) => s.session_id);
+  const { error: completeError } = await f.admin
+    .from("com_t_session")
+    .update({ status: 2, completion_result: 1 })
+    .in("session_id", usedIds);
+  expect(completeError).toBeNull();
+
+  // 2. コーチ交代（残りの回はキャンセルされ、返還される）→ コーチBで成立
+  const { error: releaseError } = await adminClient.rpc("release_lesson_schedule_slot", { p_schedule_id: scheduleA!.schedule_id });
+  expect(releaseError).toBeNull();
+  const { error: matchBError } = await match(coachB, "20:00:00", "20:25:00");
+  expect(matchBError).toBeNull();
+
+  // 3. コーチBの目標回数は残りの8回。未予約を多く数えず、実施済みと合わせて契約の12回を超えない
+  const { data: scheduleB } = await f.admin
+    .from("com_m_lesson_schedule")
+    .select("schedule_id, target_sessions")
+    .eq("ticket_id", ticketId)
+    .eq("status", 1)
+    .single();
+  expect(scheduleB!.target_sessions).toBe(8);
+  const { data: shortfall } = await f.admin.rpc("fn_schedule_shortfall", { p_schedule_id: scheduleB!.schedule_id }).single();
+  const createdB = (await sessionsOf(scheduleB!.schedule_id)).length;
+  expect(createdB + (shortfall as { shortfall: number }).shortfall).toBe(8);
+  const { count: usedTotal } = await f.admin
+    .from("com_t_session")
+    .select("session_id", { count: "exact", head: true })
+    .eq("ticket_id", ticketId)
+    .in("status", [1, 2]);
+  expect(usedTotal).toBeLessThanOrEqual(12);
 });

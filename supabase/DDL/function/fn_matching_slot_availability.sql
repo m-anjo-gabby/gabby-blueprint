@@ -9,7 +9,8 @@
 -- 申請時（生徒）・承認時（コーチ・アドミン）・申請カレンダーの○△×の表示は、すべて本関数で数える。
 --
 -- 【返す値】
---   target_sessions   : このコマの契約上の回数（承認時に com_m_lesson_schedule.target_sessions に入る値と同じ）
+--   target_sessions   : このコマの残りの回数＝契約上の回数から、コーチ交代等で終了した同じコマの定期スケジュールで
+--                       既に使った回を引いた数（承認時に com_m_lesson_schedule.target_sessions に入る値と同じ）
 --   possible_sessions : p_min_start_datetime（無ければ現在）以降、契約終了までの毎週の回の数
 --   bookable_sessions : そのうち予約できる回の数（上限 target_sessions。承認時に実際に作られる回数）
 --   required_sessions : 申請・承認に必要な回数＝ min(target, possible) × 割合 の切り上げ
@@ -31,9 +32,24 @@ LANGUAGE sql
 STABLE
 SET search_path = public
 AS $$
-    -- 商をbaseとし、余りはslot_no昇順に1つずつ多く配分する（table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）
-    SELECT ((t.total_sessions / t.weekly_frequency)
-        + CASE WHEN p_slot_no <= (t.total_sessions % t.weekly_frequency) THEN 1 ELSE 0 END)::smallint
+    -- このコマの契約上の回数（商をbaseとし、余りはslot_no昇順に1つずつ多く配分する。table/com_m_lesson_schedule.sqlの
+    -- target_sessionsパッチ参照）から、同じコマの終了した定期スケジュール（コーチ交代等。status<>1）で既に使った回
+    -- （実施済み・予約済み・返還なしのキャンセル。fn_schedule_shortfall の実績と同じ数え方）を差し引く。
+    -- コーチ交代の後に別のコーチで成立させる時、契約の回数を超えて作らない・未予約を多く数えないため（2026-10-09）。
+    SELECT GREATEST(
+        (t.total_sessions / t.weekly_frequency)
+            + CASE WHEN p_slot_no <= (t.total_sessions % t.weekly_frequency) THEN 1 ELSE 0 END
+            - (
+                SELECT COUNT(*)
+                FROM public.com_t_session x
+                JOIN public.com_m_lesson_schedule ls ON ls.schedule_id = x.schedule_id
+                WHERE ls.ticket_id = p_ticket_id
+                  AND ls.slot_no = p_slot_no
+                  AND ls.status <> 1
+                  AND (x.status IN (1, 2) OR (x.status = 3 AND x.ticket_refunded = false))
+            ),
+        0
+    )::smallint
     FROM public.com_t_user_session_ticket t
     WHERE t.ticket_id = p_ticket_id;
 $$;

@@ -371,8 +371,9 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
 
     const [slotResult, { data: sessions, error: sessionError }, { data: schedules, error: scheduleError }] = await Promise.all([
       getMySlotStatusCore(ticketId),
-      supabase.from('com_t_session').select('status, ticket_refunded').eq('ticket_id', ticketId),
-      supabase.from('com_m_lesson_schedule').select('schedule_id').eq('ticket_id', ticketId).eq('status', 1),
+      supabase.from('com_t_session').select('schedule_id, status, ticket_refunded').eq('ticket_id', ticketId),
+      // 終了した定期スケジュール（コーチ交代等）も、コマごとに既に使った回を数えるために取得する
+      supabase.from('com_m_lesson_schedule').select('schedule_id, slot_no, status').eq('ticket_id', ticketId),
     ]);
 
     if (!slotResult.success) return slotResult;
@@ -381,8 +382,9 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
       return { success: false, errorCode: 'unexpected_error' };
     }
 
+    const activeSchedules = (schedules ?? []).filter((schedule) => schedule.status === 1);
     const shortfallResults = await Promise.all(
-      (schedules ?? []).map((schedule) =>
+      activeSchedules.map((schedule) =>
         supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single()
       )
     );
@@ -391,14 +393,34 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
       0
     );
 
-    // コーチ未選択のコマは承認時にtotal_sessions/weekly_frequencyを均等割りし、余りをslot_no昇順に配分する
+    const rows = sessions ?? [];
+
+    // コーチ未選択のコマの回数は、承認時の目標回数（DBの fn_matching_slot_target_sessions）と同じく、
+    // total_sessions/weekly_frequency を均等割りし（余りはslot_no昇順に配分）、コーチ交代等で終了した同じコマの
+    // 定期スケジュールで既に使った回（実施済み・予約済み・返還なしのキャンセル）を差し引く
     const baseTarget = Math.floor(ticket.total_sessions / ticket.weekly_frequency);
     const remainder = ticket.total_sessions % ticket.weekly_frequency;
+    const endedScheduleSlot = new Map(
+      (schedules ?? []).filter((schedule) => schedule.status !== 1).map((schedule) => [schedule.schedule_id, schedule.slot_no])
+    );
+    const usedBySlot = new Map<number, number>();
+    for (const row of rows) {
+      const slotNo = endedScheduleSlot.get(row.schedule_id);
+      if (slotNo === undefined) continue;
+      const used =
+        row.status === SESSION_STATUS.SCHEDULED ||
+        row.status === SESSION_STATUS.COMPLETED ||
+        (row.status === SESSION_STATUS.CANCELLED && row.ticket_refunded === false);
+      if (used) usedBySlot.set(slotNo, (usedBySlot.get(slotNo) ?? 0) + 1);
+    }
     const unassignedCount = slotResult.slots
       .filter((slot) => slot.status !== 'matched')
-      .reduce((sum, slot) => sum + baseTarget + (slot.slot_no <= remainder ? 1 : 0), 0);
+      .reduce(
+        (sum, slot) =>
+          sum + Math.max(baseTarget + (slot.slot_no <= remainder ? 1 : 0) - (usedBySlot.get(slot.slot_no) ?? 0), 0),
+        0
+      );
 
-    const rows = sessions ?? [];
     return {
       success: true,
       overview: {
@@ -955,6 +977,10 @@ export async function approveMatchingRequestCore(requestId: string): Promise<App
       // 否認して個別に調整する旨を伝えるため、専用のerrorCodeにマッピングする。
       if (error?.message?.includes('INSUFFICIENT_BOOKABLE')) {
         return { success: false, errorCode: 'insufficient_bookable' };
+      }
+      // コーチ交代等で、このコマの回数を既に使い切っている（申請は×で出せないため通常は起きない）
+      if (error?.message?.includes('NO_REMAINING_SESSIONS')) {
+        return { success: false, errorCode: 'not_eligible' };
       }
       if (error?.message?.includes('is not pending')) {
         return { success: false, errorCode: 'not_pending' };
