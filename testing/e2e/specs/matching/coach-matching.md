@@ -108,6 +108,7 @@ status 値の意味: [_GLOSSARY.md](../_GLOSSARY.md#com_t_matching_requeststatus
 | 高 | 現在の契約・次の契約の切替 | 実装済み: `e2e/tests/matching/coach-matching-contracts.spec.ts` |
 | 高 | コーチの画面での承認・否認 | 実装済み: `e2e/tests/coach/matching-requests.spec.ts`（4a・4b・#10。承認でスケジュールとセッションが作られ、否認は理由つきで履歴に出る。生徒の申請は本人のログインで直接登録） |
 | 中 | 否認 → 前回否認理由の表示 → 同じ枠へ再申請 | #4b・#7 の解除 |
+| 高 | 承認待ちの申請への導線 | 実装済み: `e2e/tests/matching/matching-pending-path.spec.ts`（週2回で1コマ成立済み・1コマ承認待ち。ホームの回答待ちの案内→ライブセッション管理の「確認・取り下げ」→マッチング画面で取り下げ。「対応が必要です」には出さない） |
 | 高 | コーチ交代後の再マッチングで契約の回数を超えない | 実装済み: `e2e/tests/matching/matching-bookable-rate.spec.ts`（実施済み4回の後にコーチ交代→別のコーチで成立すると目標回数は残りの8回） |
 | 高 | 申請の回答期限（24時間） | 実装済み: `e2e/tests/matching/matching-request-expiry.spec.ts`（コーチへの期限つきの通知・メールの積み込み、期限後の承認不可（#15）と生徒の画面の表示、期限切れの処理と生徒への通知、期限直後の申請し直し。期限は `expires_at` を書き換えて確かめる） |
 | 高 | 予約できる回数の割合での申請・承認、取り下げ | 実装済み: `e2e/tests/matching/matching-bookable-rate.spec.ts`（〇△×の表示、△の了承、送信直後の取り下げとコーチへの通知、申請後に予定が埋まると承認不可（#6）、重なる回を飛ばした成立と通知の回数、他の生徒の承認待ちと重なる枠は×（#14）、アドミンの直接マッチングは割合の基準なし・0回なら不可。コーチの予定は休みで作る） |

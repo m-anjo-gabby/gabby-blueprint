@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight, CircleAlert } from 'lucide-react';
+import { ChevronRight, CircleAlert, Hourglass } from 'lucide-react';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { SessionListItem } from '@gabby/types/session';
 import type { LiveSessionOverview } from '@gabby/types/matching';
@@ -11,12 +11,17 @@ import { JoinSessionButton } from '@/components/session/JoinSessionButton';
 import { formatSessionSlot } from '@/lib/sessionFormat';
 import { SessionBreakdown } from '@/app/(app)/(shell)/live-room/_components/SessionBreakdown';
 import { HomeCard } from './HomeCard';
+import { cn } from '@/lib/utils';
 
-/** ライブセッションで生徒の対応が必要なこと（ホームではライブセッション管理等への導線だけを出す） */
+/**
+ * ライブセッションで生徒の対応が必要なこと（ホームではライブセッション管理等への導線だけを出す）。
+ * tone が 'waiting' の項目は、生徒の対応ではなく相手の回答待ち（専属コーチの申請の承認待ち等）の案内で、注意の見た目にしない。
+ */
 export interface LiveSessionAction {
   key: string;
   label: string;
   href: string;
+  tone?: 'action' | 'waiting';
 }
 
 interface LiveSessionCardProps {
@@ -84,9 +89,14 @@ export function LiveSessionCard({ nextSession, overview, isCurrent, adjustingCou
             <li key={action.key}>
               <Link
                 href={action.href}
-                className="group flex items-center gap-3 rounded-control border border-brand-100 bg-brand-soft px-3 py-2.5 text-sm font-semibold text-brand-strong transition-colors hover:border-brand-200"
+                className={cn(
+                  'group flex items-center gap-3 rounded-control border px-3 py-2.5 text-sm font-semibold transition-colors',
+                  action.tone === 'waiting'
+                    ? 'border-line bg-canvas text-ink-soft hover:border-ink-subtle/40'
+                    : 'border-brand-100 bg-brand-soft text-brand-strong hover:border-brand-200'
+                )}
               >
-                <CircleAlert size={16} className="shrink-0" />
+                {action.tone === 'waiting' ? <Hourglass size={16} className="shrink-0" /> : <CircleAlert size={16} className="shrink-0" />}
                 <span className="flex-1">{action.label}</span>
                 <ChevronRight size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
               </Link>

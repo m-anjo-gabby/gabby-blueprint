@@ -134,6 +134,8 @@ export interface NextContractMatching {
   slotCount: number;
   /** 専属コーチが未選択（申請前・否認後）のコマ数。承認待ちは含まない */
   unmatchedCount: number;
+  /** コーチの回答待ち（承認待ち）のコマ数 */
+  pendingCount: number;
 }
 
 /**

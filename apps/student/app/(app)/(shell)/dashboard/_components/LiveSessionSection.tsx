@@ -48,6 +48,25 @@ export async function LiveSessionSection({ contract, contracts }: { contract: Li
       actions.push({ key: 'unbooked', label: `日時が決まっていないセッションが${unbookedCount}回あります`, href: '/live-room' });
     }
   }
+  // 専属コーチの申請の回答待ち（生徒の対応ではないため最後に、注意の見た目にせず出す）。
+  // ライブセッション管理の「契約の状況」のコマの一覧から、申請の確認・取り下げができる
+  const pendingSlotCount = overview?.slots.filter((s) => s.status === 'pending').length ?? 0;
+  if (pendingSlotCount > 0) {
+    actions.push({
+      key: 'pending',
+      label: `専属コーチの回答待ちのリクエストが${pendingSlotCount}件あります`,
+      href: `/live-room?contract=${contract.ticket_id}`,
+      tone: 'waiting',
+    });
+  }
+  if (nextMatching && nextMatching.pendingCount > 0) {
+    actions.push({
+      key: 'next-pending',
+      label: `次の契約で専属コーチの回答待ちのリクエストが${nextMatching.pendingCount}件あります`,
+      href: `/live-room?contract=${nextMatching.contract.ticket_id}`,
+      tone: 'waiting',
+    });
+  }
 
   return (
     <LiveSessionCard

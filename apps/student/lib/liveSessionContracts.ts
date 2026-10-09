@@ -36,5 +36,10 @@ export async function getNextContractMatching(contracts: LiveSessionContractSumm
   const next = pickNextLiveSessionContract(contracts);
   if (!next) return null;
   const slots = await getMySlotStatus(next.ticket_id);
-  return { contract: next, slotCount: slots.length, unmatchedCount: slots.filter((s) => s.status === 'unmatched').length };
+  return {
+    contract: next,
+    slotCount: slots.length,
+    unmatchedCount: slots.filter((s) => s.status === 'unmatched').length,
+    pendingCount: slots.filter((s) => s.status === 'pending').length,
+  };
 }
