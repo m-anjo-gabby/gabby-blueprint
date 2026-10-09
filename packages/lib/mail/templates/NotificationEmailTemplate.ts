@@ -22,13 +22,13 @@ export interface NotificationEmailTemplateProps {
 const COPY = {
   ja: {
     action: 'アプリで確認する',
-    reason: 'このメールは、Gabby Blueprint English のお知らせとしてお送りしています。',
+    reason: 'このメールは、Gabby Blueprint のお知らせとしてお送りしています。',
     chatTitle: (sender: string | null) => `${sender ? `${sender}さんから` : ''}新しいメッセージが届いています`,
     chatNoPreview: 'チャットを開いてご確認ください。',
   },
   en: {
     action: 'Open in the app',
-    reason: 'You are receiving this email as a notification from Gabby Blueprint English.',
+    reason: 'You are receiving this email as a notification from Gabby Blueprint.',
     chatTitle: (sender: string | null) => `New message${sender ? ` from ${sender}` : ''}`,
     chatNoPreview: 'Open the chat to read it.',
   },

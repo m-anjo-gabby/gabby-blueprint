@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Gabby Blueprint English",
-    default: "Gabby Blueprint English Coach Portal",
+    template: "%s | Gabby Blueprint",
+    default: "Gabby Blueprint Coach Portal",
   },
-  description: "Gabby Blueprint English Coach Portal",
+  description: "Gabby Blueprint Coach Portal",
 };
 
 export default function RootLayout({

@@ -23,7 +23,7 @@ function formatExpiry(lang: MailLocale, minutes: number): string {
 
 const COPY = {
   ja: {
-    thanks: 'いつも Gabby Blueprint English をご利用いただきありがとうございます。',
+    thanks: 'いつも Gabby Blueprint をご利用いただきありがとうございます。',
     request: 'パスワードの再設定リクエストを受け付けました。以下のボタンから新しいパスワードを設定してください。',
     button: 'パスワードを再設定する',
     fallback: '※ボタンがクリックできない場合は、以下のURLをブラウザのアドレスバーに貼り付けてください。',
@@ -33,7 +33,7 @@ const COPY = {
     ignore: '※本リクエストに心当たりがない場合は、このメールを破棄してください。パスワードが変更されることはありません。',
   },
   en: {
-    thanks: 'Thank you for using Gabby Blueprint English.',
+    thanks: 'Thank you for using Gabby Blueprint.',
     request: 'We received a request to reset your password. Please use the button below to set a new password.',
     button: 'Reset password',
     fallback: "If the button doesn't work, copy and paste the following URL into your browser's address bar.",

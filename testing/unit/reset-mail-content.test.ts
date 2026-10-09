@@ -39,5 +39,5 @@ test("admin 向け（日英併記）: 日本語→英語の順で両方を載せ
   assert.ok(html.includes("パスワードを再設定する / Reset password"));
   assert.ok(html.includes("メール送信から30分間です"));
   assert.ok(html.includes("expires 30 minutes after"));
-  assert.ok(html.indexOf("いつも Gabby Blueprint English") < html.indexOf("Thank you for using"));
+  assert.ok(html.indexOf("いつも Gabby Blueprint") < html.indexOf("Thank you for using"));
 });

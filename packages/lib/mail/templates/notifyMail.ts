@@ -15,7 +15,7 @@ export interface NotifyMailLinks {
 }
 
 const GREETING: Record<MailLocale, (name: string | null) => string> = {
-  ja: (name) => (name ? `${name} さん` : 'Gabby Blueprint English をご利用の皆さま'),
+  ja: (name) => (name ? `${name} さん` : 'Gabby Blueprint をご利用の皆さま'),
   en: (name) => (name ? `Hi ${name},` : 'Hello,'),
 };
 

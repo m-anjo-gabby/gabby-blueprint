@@ -16,10 +16,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Gabby Blueprint English",
-    default: "Gabby Blueprint English", 
+    template: "%s | Gabby Blueprint",
+    default: "Gabby Blueprint", 
   },
-  description: "Gabby Blueprint English アドミンポータルサイト",
+  description: "Gabby Blueprint アドミンポータルサイト",
 };
 
 export default async function RootLayout({

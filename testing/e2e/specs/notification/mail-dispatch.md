@@ -89,7 +89,7 @@
 6a. **保管期限**: pg_cron の毎日のジョブ `mail-history-purge-daily`（03:30 JST、`private.purge_mail_history`）が、送り終えた送信待ち（`SENT`・`SKIPPED`・`FAILED`）と
    到達状況の出来事を、登録から180日で消す。
 7. **文面**: 生徒は日本語、コーチは英語。アプリ・設定へのリンクは宛先のポータルのURLで組み立てる。
-   - 外枠はアカウント関連のメールと共通（`packages/lib/mail/layout/`）: ヘッダーはロゴ（本番の生徒ポータルの `https://blueprint.gabbyacademy.com/mail-logo.png` を参照。環境変数 `MAIL_LOGO_URL` で差し替え可。画像を表示しない設定では alt「Gabby Blueprint English」）、
+   - 外枠はアカウント関連のメールと共通（`packages/lib/mail/layout/`）: ヘッダーはロゴ（本番の生徒ポータルの `https://blueprint.gabbyacademy.com/mail-logo.png` を参照。環境変数 `MAIL_LOGO_URL` で差し替え可。画像を表示しない設定では alt「Gabby Blueprint」）、
      受信一覧の要約（プレビュー文）、フッターに会社名・URL。HTML 版とテキスト版を同じ元データから作り、両方を送る。
    - 通知: アプリ内通知と同じタイトル・本文（日本語 `NOTIFICATION_MESSAGE_BUILDERS`、英語 `NOTIFICATION_MESSAGE_BUILDERS_EN`）に「アプリで確認する」（通知の `link_path`）。
      リンク先は、生徒宛て: キャンセル・振替候補・予約の承認/却下・マッチング成立は `/live-room`、マッチング不成立・申請の期限切れは `/coach-matching`、宿題は `/live-room/sessions/<session_id>/result`。

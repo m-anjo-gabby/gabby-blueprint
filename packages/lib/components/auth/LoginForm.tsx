@@ -51,7 +51,7 @@ export function LoginForm({ action, labels, badge }: LoginFormProps) {
         <div className="flex justify-center">
           <Image
             src="/logo-01.png"
-            alt="Gabby Blueprint English"
+            alt="Gabby Blueprint"
             width={320}
             height={85}
             className="h-auto w-auto max-w-60 md:max-w-[320px]"

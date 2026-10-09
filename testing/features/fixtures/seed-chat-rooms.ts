@@ -118,7 +118,7 @@ console.log(`コーチとの1対1: ${coachRoom} ${coachChats ? `（${coachChats.
 // --- 生徒01 × 運営 ---------------------------------------------------------
 const adminRoom = await ensureOneOnOneRoom(studentId, adminId);
 const adminChats = await seedMessages(adminRoom, [
-  { from: adminId, daysAgo: 20, time: "10:00", text: "Gabby Blueprint English 運営事務局です。ご不明点があれば、こちらのチャットでお気軽にご相談ください。" },
+  { from: adminId, daysAgo: 20, time: "10:00", text: "Gabby Blueprint 運営事務局です。ご不明点があれば、こちらのチャットでお気軽にご相談ください。" },
   { from: studentId, daysAgo: 19, time: "18:30", text: "ライブセッションの日程変更はどこからできますか？" },
   { from: adminId, daysAgo: 19, time: "18:45", text: "「ライブセッション」タブの予定一覧から変更できます。前日までの変更をお願いしております。" },
   { from: studentId, daysAgo: 19, time: "19:00", text: "わかりました。ありがとうございます！" },
