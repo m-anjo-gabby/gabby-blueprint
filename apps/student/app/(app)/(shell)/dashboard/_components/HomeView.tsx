@@ -57,9 +57,9 @@ const getGreeting = (hour: number) => {
 
 /**
  * ホーム画面。
- * 1行目に自主トレーニングの「今日やること」（主役）と今週のトレーニング、2行目に「これからの予定」（ライブセッション（契約がある場合だけ）とグループセッション）、
- * 3行目にこれまでの歩みとご契約プラン、4行目に主役に出ていない「続きから」と課題を並べる（モバイル=1列、PC(lg以上)=3列グリッド）。
- * プランによる違いは2行目のライブセッションの有無だけにする。トレーニングの各画面への入口はシェルのトレーニングタブ（TrainingSectionNav）が受け持つ。
+ * 1行目に自主トレーニングの「今日やること」（主役）と今週のトレーニング、続けて「これからの予定」としてライブセッション（契約がある場合だけ）とグループセッションを1行ずつ、
+ * その下にこれまでの歩みとご契約プラン、最後に主役に出ていない「続きから」と課題を並べる（モバイル=1列、PC(lg以上)=3列グリッド）。
+ * プランによる違いはライブセッションの行の有無だけにする。トレーニングの各画面への入口はシェルのトレーニングタブ（TrainingSectionNav）が受け持つ。
  * 現在時刻の確定前（初回表示のハイドレーション時）は、時刻に依存する部分を loading.tsx と同じ骨組みで描く。
  */
 export function HomeView({
@@ -152,11 +152,11 @@ export function HomeView({
           <WeeklyActivityCardSkeleton />
         )}
 
-        {/* 2行目: これからの予定。ライブセッション（契約がある場合だけ、2列分）とグループセッション。ライブセッションが無ければグループセッションを1行に広げる */}
-        {liveSection && <div className={HOME_LAYOUT.wide}>{liveSection}</div>}
-        <div className={liveSection ? undefined : HOME_LAYOUT.fullRow}>{eventSection}</div>
+        {/* 2行目以降: これからの予定。ライブセッション（契約がある場合だけ）とグループセッションをそれぞれ1行で縦に並べる（全幅にするとカード内の区画が横に並び、各カードが低くなる） */}
+        {liveSection && <div className={HOME_LAYOUT.fullRow}>{liveSection}</div>}
+        <div className={HOME_LAYOUT.fullRow}>{eventSection}</div>
 
-        {/* 3行目: これまでの歩み（2列分）とご契約プラン。契約が取得できない場合は歩みを1行に広げる */}
+        {/* これまでの歩み（2列分）とご契約プラン。契約が取得できない場合は歩みを1行に広げる */}
         <LifetimeStatsCard
           stats={lifetimeStats}
           weekGains={week && { activeDays: week.activeCount, assessments: week.assessmentCount }}
@@ -164,7 +164,7 @@ export function HomeView({
         />
         {plans.length > 0 && <PlanCard plans={plans} nowMs={nowMs} timezone={timezone} />}
 
-        {/* 4行目: 途中の教材の再開（主役に出ていない場合）とコーチからの課題。両方あるときは半分ずつ、片方だけなら全幅 */}
+        {/* 途中の教材の再開（主役に出ていない場合）とコーチからの課題。両方あるときは半分ずつ、片方だけなら全幅 */}
         {(showContinue || showAssignments) && (
           <div className={cn('grid grid-cols-1 gap-4 lg:col-span-3', showContinue && showAssignments && 'lg:grid-cols-2')}>
             {showContinue && <ContinueCard resume={resume} onClear={handleClearResume} />}

@@ -6,9 +6,8 @@ import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { SessionListItem } from '@gabby/types/session';
 import type { LiveSessionOverview } from '@gabby/types/matching';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CoachAvatar } from '@/components/session/CoachAvatar';
+import { SessionCoachHeading, SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
 import { JoinSessionButton } from '@/components/session/JoinSessionButton';
-import { formatSessionSlot } from '@/lib/sessionFormat';
 import { SessionBreakdown } from '@/app/(app)/(shell)/live-room/_components/SessionBreakdown';
 import { HomeCard } from './HomeCard';
 import { cn } from '@/lib/utils';
@@ -57,19 +56,10 @@ function NextSessionBlock({ session }: { session: SessionListItem | null }) {
     );
   }
 
-  const slot = formatSessionSlot(session.start_datetime, session.end_datetime, timezone);
-
   return (
     <section className={LIVE_LAYOUT.block}>
       <h3 className={LIVE_LAYOUT.blockTitle}>次回のセッション</h3>
-      <p className="mt-2 flex flex-wrap items-baseline gap-x-2 font-bold text-ink tabular-nums">
-        <span className="text-lg">{slot.date}</span>
-        <span className="text-base">{slot.time}</span>
-      </p>
-      <div className="mt-2 flex items-center gap-2">
-        <CoachAvatar iconPath={session.counterpart_icon_path} size={28} />
-        <p className="truncate text-sm text-ink-muted">{session.counterpart_name} コーチ</p>
-      </div>
+      <SessionCoachHeading session={session} timezone={timezone} size="md" className="mt-3" />
       <JoinSessionButton sessionId={session.session_id} startDatetime={session.start_datetime} className="mt-4" />
     </section>
   );
@@ -136,11 +126,7 @@ export function LiveSessionCardSkeleton() {
         <div className={LIVE_LAYOUT.grid}>
           <section className={LIVE_LAYOUT.block}>
             <h3 className={LIVE_LAYOUT.blockTitle}>次回のセッション</h3>
-            <Skeleton className="mt-2.5 h-5 w-48" />
-            <div className="mt-2.5 flex items-center gap-2">
-              <Skeleton className="size-7 rounded-full" />
-              <Skeleton className="h-3.5 w-28" />
-            </div>
+            <SessionCoachHeadingSkeleton size="md" className="mt-3" />
           </section>
           <section className={LIVE_LAYOUT.block}>
             <h3 className={LIVE_LAYOUT.blockTitle}>契約の状況</h3>
