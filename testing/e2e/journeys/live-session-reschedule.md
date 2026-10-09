@@ -34,4 +34,4 @@
 
 ## 未整備の依存ドメイン
 
-- なし（分岐〔予約リクエストの却下・取り下げ、振替候補の承諾・まとめて見送り、開始12時間未満のキャンセル〕は [tests/booking/live-session-branches.spec.ts](../tests/booking/live-session-branches.spec.ts)。残りは振替候補の期限切れのみ）
+- なし（分岐〔予約リクエストの却下・取り下げ、振替候補の承諾・まとめて見送り・期限切れ、開始12時間未満のキャンセル〕は [tests/booking/live-session-branches.spec.ts](../tests/booking/live-session-branches.spec.ts)）

@@ -30,6 +30,7 @@ import { expect, loginAsNewStudent, test } from "../../support/studentApp.ts";
  * - 予約リクエスト: 送る前の知らせ（24時間以内・予定の重なり）、取り下げ、コーチの却下（理由は通知メールに載る）
  * - 振替候補: コーチの候補を生徒が承諾（残りは不採用）、生徒の候補をコーチがまとめて見送る（通知なし）
  * - 開始12時間を切った回の生徒のキャンセル（返還なし・候補は出せない）
+ * - 振替候補の回答期限（24時間）切れ（期限は expires_at を書き換えて確かめる）
  *
  * 各テストで使い捨ての生徒（週1回・12回のライブ付き契約）とコーチを担当成立させる（毎週金曜 20:00〜20:25、日本時間。
  * support/liveSessionFixtures.ts）。分岐の前段（キャンセル・候補の提案）は本人のログインで RPC を呼んで作る。
@@ -279,3 +280,35 @@ test("開始12時間を切った回を生徒がキャンセルすると返還さ
   expect(cancelled).toMatchObject({ status: 3, cancel_category: 1, ticket_refunded: false });
 });
 
+
+test("回答期限を過ぎた振替候補は生徒の画面から消えて未予約に戻り、承諾もできない", async ({ page }) => {
+  test.setTimeout(180_000);
+  const { f, p, total, sessions } = await setupBooked("proposalexpiry");
+  await cancelWithProposals(p.coachEmail, sessions[1].session_id, [jstSlot(3, "10:00"), jstSlot(4, "10:00")]);
+  // 提案から24時間が過ぎたことにする（回答期限は提案時に決まる固定値）
+  const { error } = await f.admin
+    .from("com_t_session_slot_proposal")
+    .update({ expires_at: new Date(Date.now() - 60_000).toISOString() })
+    .eq("source_session_id", sessions[1].session_id);
+  if (error) throw new Error(`回答期限の書き換えに失敗しました: ${error.message}`);
+
+  await loginAsNewStudent(page, p.studentEmail, PASSWORD);
+  await openLiveRoom(page);
+  await expect(page.locator("section").filter({ hasText: `${p.coachName}コーチの都合でキャンセルになりました` })).toHaveCount(0);
+  // 期限切れの候補は調整中に数えず、未予約として予約リクエストに使える
+  await expect(liveRoomBreakdown(page, { scheduled: total - 1, unbooked: 1 })).toBeVisible();
+  await expect(page.getByText("日時が決まっていないセッションが1回あります")).toBeVisible();
+
+  // 期限後の承諾は拒否される（画面には候補が出ないため、本人のログインで RPC を呼ぶ）
+  const { data: proposal } = await f.admin
+    .from("com_t_session_slot_proposal").select("proposal_id").eq("source_session_id", sessions[1].session_id).limit(1).single();
+  const student = await signInAsRole(p.studentEmail, PASSWORD);
+  try {
+    const { error: approveError } = await student.rpc("approve_slot_proposal", { p_proposal_id: proposal!.proposal_id });
+    expect(approveError?.message).toContain("this proposal has expired");
+  } finally {
+    await signOutRole(student);
+  }
+  // 拒否と同じ処理の中で期限切れ（5）へ更新しようとするが、エラーで取り消されるため回答待ち（1）のまま残る（判定は expires_at で行う）
+  expect(await proposalStatuses(f, sessions[1].session_id)).toEqual([1, 1]);
+});
