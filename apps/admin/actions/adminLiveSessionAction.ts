@@ -364,8 +364,9 @@ export async function matchStudentWithCoachAsAdmin(params: {
       if (error.code === '23505') {
         return { success: false, message: 'この枠には既にリクエストまたはマッチングが存在します' };
       }
-      if (error.message?.includes('SCHEDULE_CONFLICT')) {
-        return { success: false, message: 'このコーチは指定の時間帯に既に別の予定があります' };
+      // 直接マッチングは予約できる回数の割合の基準を適用しない（重なる回は飛ばして作る）。1回も予約できない場合だけ失敗する
+      if (error.message?.includes('NO_BOOKABLE_SESSION')) {
+        return { success: false, message: 'このコーチの指定の時間帯は、契約期間内に予約できる回がありません（全ての回が他の予定と重なっています）' };
       }
       return { success: false, message: error.message };
     }

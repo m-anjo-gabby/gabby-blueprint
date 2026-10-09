@@ -7,7 +7,7 @@ import { RotateCcw, Users, X } from 'lucide-react';
 import { CoachCard, CoachSlotRelation } from './CoachCard';
 import { CoachSearchFilters } from './CoachSearchFilters';
 import { RequestDialog } from './RequestDialog';
-import { cancelMatchingRequest } from '@/actions/matchingAction';
+import { withdrawMatchingRequest } from '@/actions/matchingAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { CoachBrowseItem, SlotStatusItem } from '@gabby/types/matching';
@@ -16,7 +16,7 @@ import { CountryMaster } from '@gabby/types/country';
 import { LiveSessionContractSummary, LiveSessionTicketSummary } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
+import { convertWeeklyTimeZone, formatDateTimeByZone } from '@gabby/lib/date/date';
 import { ShellSectionTitle } from '@/components/shell/ShellPage';
 import { CoachMatchingPageHeader } from './CoachMatchingSkeleton';
 import { Button } from '@/components/ui/button';
@@ -134,17 +134,19 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
     setSlots((prev) => prev.map((s) => (s.slot_no === slotNo ? { ...s, ...patch } : s)));
   };
 
-  const handleCancel = async (slot: SlotStatusItem) => {
+  const handleWithdraw = async (slot: SlotStatusItem) => {
     if (!slot.request_id) return;
-    const ok = await showConfirm('リクエストを取消しますか？', 'このリクエストを取消して、別のコーチに送り直すことができます。', {
-      variant: 'danger',
-    });
+    const ok = await showConfirm(
+      'リクエストを取り下げますか？',
+      `${slot.coach_name ?? 'コーチ'}へのリクエストを取り下げます。コーチに取り下げたことが通知されます。取り下げた後は、別のコーチや時間帯でリクエストし直せます。`,
+      { variant: 'danger', confirmText: '取り下げる', cancelText: 'やめる' }
+    );
     if (!ok) return;
 
     const requestId = slot.request_id;
     setCancellingSlotNo(slot.slot_no);
     startCancelTransition(async () => {
-      const result = await cancelMatchingRequest(requestId);
+      const result = await withdrawMatchingRequest(requestId);
       if (!result.success) {
         showToast(result.message, 'error');
         return;
@@ -157,9 +159,11 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
         start_time: null,
         end_time: null,
         request_id: null,
+        expires_at: null,
         reject_reason: null,
+        last_request_expired: false,
       });
-      showToast('リクエストを取消しました', 'success');
+      showToast('リクエストを取り下げました', 'success');
     });
   };
 
@@ -203,6 +207,19 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                     );
                   })()}
 
+                  {slot.status === 'pending' && slot.expires_at && (
+                    <p className="text-[11px] text-ink-muted">
+                      コーチの回答期限: {formatDateTimeByZone(slot.expires_at, studentTimezone, false)}
+                      （期限までに回答が無い場合、リクエストは無効になります）
+                    </p>
+                  )}
+
+                  {slot.status === 'unmatched' && slot.last_request_expired && (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-control px-2.5 py-1.5">
+                      前回のリクエストは、コーチの回答期限（24時間）を過ぎたため無効になりました。別のコーチや時間帯でもリクエストできます。
+                    </p>
+                  )}
+
                   {slot.status === 'unmatched' && slot.reject_reason && (
                     <p className="text-[11px] text-rose-600 bg-rose-50 border border-rose-100 rounded-control px-2.5 py-1.5">
                       前回否認理由: {slot.reject_reason}
@@ -214,13 +231,13 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleCancel(slot)}
+                      onClick={() => handleWithdraw(slot)}
                       pending={isCancelling && cancellingSlotNo === slot.slot_no}
                       disabled={isCancelling}
                       icon={<X />}
                       className="h-auto gap-1 px-0 py-0 text-[11px] font-bold text-ink-subtle hover:bg-transparent hover:text-rose-600 [&_svg]:size-3"
                     >
-                      リクエストを取消す
+                      リクエストを取り下げる
                     </Button>
                   )}
                 </div>

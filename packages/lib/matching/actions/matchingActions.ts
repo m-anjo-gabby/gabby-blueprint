@@ -10,8 +10,9 @@ import {
   CoachBrowseItem,
   CreateMatchingRequestInput,
   CreateMatchingRequestResult,
-  CancelMatchingRequestResult,
+  WithdrawMatchingRequestResult,
   ApproveMatchingRequestResult,
+  GetMatchingSlotOptionsResult,
   GetMyBookableTicketsResult,
   GetMyLiveSessionContractsResult,
   GetMyLiveSessionOverviewResult,
@@ -21,6 +22,8 @@ import {
   LiveSessionTicketSummary,
   MATCHING_REQUEST_STATUS,
   MatchingRequestErrorCode,
+  MatchingSlotAvailability,
+  MatchingSlotOption,
   SlotStatusItem,
 } from '@gabby/types/matching';
 import { SESSION_STATUS } from '@gabby/types/session';
@@ -34,6 +37,37 @@ function isValidTimeRange(startTime: string, endTime: string): boolean {
 }
 
 type ScheduleShortfallRow = { expected_sessions: number; actual_sessions: number; shortfall: number };
+
+type SlotOptionRow = MatchingSlotAvailability & { day_of_week: number; start_time: string };
+
+/** get_matching_slot_options（生徒の現地の曜日・時刻ごとの予約できる回数）を呼ぶ。開始時刻は "HH:MM" で返す */
+async function fetchMatchingSlotOptions(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  ticketId: string,
+  coachId: string,
+  slotNo: number,
+  candidates: { day_of_week: DayOfWeek; start_time: string }[]
+) {
+  const { data, error } = await supabase.rpc('get_matching_slot_options', {
+    p_ticket_id: ticketId,
+    p_coach_id: coachId,
+    p_slot_no: slotNo,
+    p_days: candidates.map((c) => c.day_of_week),
+    p_start_times: candidates.map((c) => `${c.start_time}:00`),
+    p_end_times: candidates.map((c) => `${getLessonEndTime(c.start_time)}:00`),
+  });
+  if (error) return { error };
+  const options: MatchingSlotOption[] = ((data ?? []) as SlotOptionRow[]).map((row) => ({
+    day_of_week: row.day_of_week as DayOfWeek,
+    start_time: row.start_time.slice(0, 5),
+    target_sessions: row.target_sessions,
+    possible_sessions: row.possible_sessions,
+    bookable_sessions: row.bookable_sessions,
+    required_sessions: row.required_sessions,
+    is_acceptable: row.is_acceptable,
+  }));
+  return { options };
+}
 
 /**
  * ログイン中の生徒が保有する、現在有効なライブセッションチケットの一覧を取得する（ポータル共通）
@@ -203,7 +237,7 @@ export async function getMySlotStatusCore(
 
     const { data: requests, error: requestError } = await supabase
       .from('com_t_matching_request')
-      .select('request_id, slot_no, coach_id, status, requested_day_of_week, requested_start_time, requested_end_time, requested_timezone, reject_reason, insert_date')
+      .select('request_id, slot_no, coach_id, status, requested_day_of_week, requested_start_time, requested_end_time, requested_timezone, reject_reason, expires_at, insert_date')
       .eq('ticket_id', ticketId)
       .order('insert_date', { ascending: false });
 
@@ -226,15 +260,21 @@ export async function getMySlotStatusCore(
     }
 
     const scheduleBySlot = new Map((schedules ?? []).map((s) => [s.slot_no, s]));
-    // requestsはinsert_date降順のため、最初に見つかったものが最新
+    // requestsはinsert_date降順のため、最初に見つかったものが最新。
+    // 回答期限を過ぎた承認待ちは、期限切れの処理（毎分）を待たずに期限切れとして扱う
+    const nowIso = new Date().toISOString();
+    const isExpired = (r: { status: number; expires_at: string | null }) =>
+      r.status === MATCHING_REQUEST_STATUS.EXPIRED ||
+      (r.status === MATCHING_REQUEST_STATUS.PENDING && r.expires_at !== null && r.expires_at <= nowIso);
     const pendingRequestBySlot = new Map<number, (typeof requests)[number]>();
-    const latestRejectedBySlot = new Map<number, (typeof requests)[number]>();
+    const latestClosedBySlot = new Map<number, (typeof requests)[number]>();
     for (const r of requests ?? []) {
-      if (r.status === MATCHING_REQUEST_STATUS.PENDING && !pendingRequestBySlot.has(r.slot_no)) {
+      if (r.status === MATCHING_REQUEST_STATUS.PENDING && !isExpired(r) && !pendingRequestBySlot.has(r.slot_no)) {
         pendingRequestBySlot.set(r.slot_no, r);
       }
-      if (r.status === MATCHING_REQUEST_STATUS.REJECTED && !latestRejectedBySlot.has(r.slot_no)) {
-        latestRejectedBySlot.set(r.slot_no, r);
+      // 否認・期限切れのうち最新のもの（再リクエストを促す表示用）
+      if ((r.status === MATCHING_REQUEST_STATUS.REJECTED || isExpired(r)) && !latestClosedBySlot.has(r.slot_no)) {
+        latestClosedBySlot.set(r.slot_no, r);
       }
     }
 
@@ -252,7 +292,9 @@ export async function getMySlotStatusCore(
           end_time: schedule.end_time,
           schedule_timezone: schedule.schedule_timezone,
           request_id: null,
+          expires_at: null,
           reject_reason: null,
+          last_request_expired: false,
         });
         continue;
       }
@@ -269,12 +311,14 @@ export async function getMySlotStatusCore(
           end_time: pending.requested_end_time,
           schedule_timezone: pending.requested_timezone,
           request_id: pending.request_id,
+          expires_at: pending.expires_at,
           reject_reason: null,
+          last_request_expired: false,
         });
         continue;
       }
 
-      const rejected = latestRejectedBySlot.get(slotNo);
+      const closed = latestClosedBySlot.get(slotNo);
       slots.push({
         slot_no: slotNo,
         status: 'unmatched',
@@ -285,7 +329,9 @@ export async function getMySlotStatusCore(
         end_time: null,
         schedule_timezone: null,
         request_id: null,
-        reject_reason: rejected?.reject_reason ?? null,
+        expires_at: null,
+        reject_reason: closed?.status === MATCHING_REQUEST_STATUS.REJECTED ? closed.reject_reason : null,
+        last_request_expired: !!closed && isExpired(closed),
       });
     }
 
@@ -497,28 +543,21 @@ export async function getCoachBrowseListCore(): Promise<
 
     const coachIds = profiles.map((p) => p.user_id);
 
-    const [
-      { data: users, error: userError },
-      { data: availability, error: availabilityError },
-      { data: unavailableSlots, error: unavailableError },
-    ] = await Promise.all([
+    // 予約済みの枠との重なりは、申請ダイアログで候補ごとに予約できる回数として取得する（getMatchingSlotOptionsCore）
+    const [{ data: users, error: userError }, { data: availability, error: availabilityError }] = await Promise.all([
       supabase.from('com_m_user').select('id, user_name, icon_path, timezone').in('id', coachIds),
       supabase
         .from('com_m_coach_availability')
         .select('availability_id, coach_id, day_of_week, start_time, end_time')
         .in('coach_id', coachIds)
         .eq('delete_flg', '0'),
-      // 予約済み（確定済み＋承認待ち）の曜日・時間帯。カレンダーで選択不可として表示するための
-      // ソフトチェック用途（最終的な整合性はcheck_coach_schedule_conflict()側で担保する）
-      supabase.rpc('get_coaches_unavailable_slots', { p_coach_ids: coachIds }),
     ]);
 
-    if (userError || availabilityError || unavailableError) {
-      logger.error(
-        'matching:get_coach_list_join_failed',
-        userError?.message ?? availabilityError?.message ?? unavailableError?.message ?? 'unknown',
-        { ...ctx, err: userError }
-      );
+    if (userError || availabilityError) {
+      logger.error('matching:get_coach_list_join_failed', userError?.message ?? availabilityError?.message ?? 'unknown', {
+        ...ctx,
+        err: userError ?? availabilityError,
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -528,14 +567,6 @@ export async function getCoachBrowseListCore(): Promise<
       const list = availabilityByCoachId.get(slot.coach_id) ?? [];
       list.push(slot);
       availabilityByCoachId.set(slot.coach_id, list);
-    }
-
-    type UnavailableSlotRow = { coach_id: string; timezone: string; day_of_week: number; start_time: string; end_time: string };
-    const unavailableByCoachId = new Map<string, UnavailableSlotRow[]>();
-    for (const slot of (unavailableSlots ?? []) as UnavailableSlotRow[]) {
-      const list = unavailableByCoachId.get(slot.coach_id) ?? [];
-      list.push(slot);
-      unavailableByCoachId.set(slot.coach_id, list);
     }
 
     const coaches: CoachBrowseItem[] = profiles.map((p) => {
@@ -558,12 +589,6 @@ export async function getCoachBrowseListCore(): Promise<
           day_of_week: a.day_of_week as DayOfWeek,
           start_time: a.start_time,
           end_time: a.end_time,
-        })),
-        unavailable_slots: (unavailableByCoachId.get(p.user_id) ?? []).map((s) => ({
-          timezone: s.timezone,
-          day_of_week: s.day_of_week as DayOfWeek,
-          start_time: s.start_time,
-          end_time: s.end_time,
         })),
       };
     });
@@ -662,27 +687,18 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
       return { success: false, errorCode: 'invalid_input' };
     }
 
-    // コーチの既存の稼働中スケジュールとの重複確認（ダブルブッキング防止。契約期間内の各回の実際の日時で比べる）。
-    // 承認時(approve_matching_request)にも同一関数で再チェックするため、ここでの判定は
-    // 「無駄になりうるリクエストを早期に弾く」ためのもので、最終的な防御線ではない。
-    const conflictFrom = new Date(Math.max(new Date(license.start_date).getTime(), now.getTime()));
-
-    const { data: hasConflict, error: conflictError } = await supabase.rpc('check_coach_schedule_conflict', {
-      p_coach_id: input.coach_id,
-      p_timezone: studentTimezone,
-      p_day_of_week: input.day_of_week,
-      p_start_time: `${input.start_time}:00`,
-      p_end_time: `${input.end_time}:00`,
-      p_from: conflictFrom.toISOString(),
-      p_to: new Date(license.end_date).toISOString(),
-    });
-
-    if (conflictError) {
-      logger.error('matching:create_request_conflict_check_failed', conflictError.message, { ...ctx, err: conflictError, userId: user.id });
+    // 契約期間内に予約できる回数を数え、割合に満たなければ申請させない（ダブルブッキング防止を含む）。
+    // 承認時(approve_matching_request)にも同じ関数で数え直すため、ここでの判定は「成立しない申請を早期に弾く」ためのもの。
+    const { options, error: optionsError } = await fetchMatchingSlotOptions(supabase, input.ticket_id, input.coach_id, input.slot_no, [
+      { day_of_week: input.day_of_week, start_time: input.start_time },
+    ]);
+    if (optionsError) {
+      logger.error('matching:create_request_availability_check_failed', optionsError.message, { ...ctx, err: optionsError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
-    if (hasConflict) {
-      return { success: false, errorCode: 'schedule_conflict' };
+    const availability = options?.[0];
+    if (!availability || !availability.is_acceptable) {
+      return { success: false, errorCode: 'insufficient_bookable' };
     }
 
     const { data, error } = await supabase
@@ -696,6 +712,7 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
         requested_start_time: `${input.start_time}:00`,
         requested_end_time: `${input.end_time}:00`,
         requested_timezone: studentTimezone,
+        requested_bookable_sessions: availability.bookable_sessions,
       })
       .select('*')
       .single();
@@ -718,9 +735,15 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
 }
 
 /**
- * 承認待ちの自分のマッチングリクエストを取消す（生徒向け。ポータル共通）
+ * 申請カレンダーの候補（生徒の現地の曜日・開始時刻）ごとに、契約期間内に予約できる回数を取得する（生徒向け。ポータル共通）。
+ * 申請ダイアログで○（全ての回）△（割合以上。残りは個別に調整）×（割合未満）を出すために使う。
  */
-export async function cancelMatchingRequestCore(requestId: string): Promise<CancelMatchingRequestResult> {
+export async function getMatchingSlotOptionsCore(
+  ticketId: string,
+  coachId: string,
+  slotNo: number,
+  candidates: { day_of_week: DayOfWeek; start_time: string }[]
+): Promise<GetMatchingSlotOptionsResult> {
   const ctx = await getLogContext();
 
   try {
@@ -728,27 +751,55 @@ export async function cancelMatchingRequestCore(requestId: string): Promise<Canc
     const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data, error } = await supabase
-      .from('com_t_matching_request')
-      .update({ status: MATCHING_REQUEST_STATUS.CANCELLED, update_date: new Date().toISOString() })
-      .eq('request_id', requestId)
-      .eq('student_id', user.id)
-      .eq('status', MATCHING_REQUEST_STATUS.PENDING)
-      .select('request_id')
-      .maybeSingle();
-
-    if (error) {
-      logger.error('matching:cancel_request_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { requestId } });
-      return { success: false, errorCode: 'db_update_failed' };
-    }
-    if (!data) {
+    if (
+      slotNo < 1 ||
+      candidates.some((c) => c.day_of_week < 0 || c.day_of_week > 6 || !/^\d{2}:\d{2}$/.test(c.start_time))
+    ) {
       return { success: false, errorCode: 'invalid_input' };
     }
+    if (candidates.length === 0) return { success: true, options: [] };
 
-    logger.info('matching:cancel_request_success', 'Matching request cancelled', { ...ctx, userId: user.id });
+    const { options, error } = await fetchMatchingSlotOptions(supabase, ticketId, coachId, slotNo, candidates);
+    if (error) {
+      logger.error('matching:get_slot_options_failed', error.message, { ...ctx, err: error, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    return { success: true, options: options ?? [] };
+  } catch (err) {
+    logger.error('matching:get_slot_options_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 承認待ちの自分のマッチングリクエストを取り下げる（生徒向け。ポータル共通）。
+ * DB側の withdraw_matching_request RPC が、取り下げと宛先コーチへの通知（アプリ内のみ）を行う。
+ */
+export async function withdrawMatchingRequestCore(requestId: string): Promise<WithdrawMatchingRequestResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { error } = await supabase.rpc('withdraw_matching_request', { p_request_id: requestId });
+
+    if (error) {
+      if (error.message?.includes('NOT_PENDING')) {
+        return { success: false, errorCode: 'not_pending' };
+      }
+      if (error.message?.includes('EXPIRED')) {
+        return { success: false, errorCode: 'expired' };
+      }
+      logger.error('matching:withdraw_request_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { requestId } });
+      return { success: false, errorCode: 'db_update_failed' };
+    }
+
+    logger.info('matching:withdraw_request_success', 'Matching request withdrawn', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('matching:cancel_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('matching:withdraw_request_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -757,21 +808,33 @@ export async function cancelMatchingRequestCore(requestId: string): Promise<Canc
  * insert_dateで取得した行に、生徒名と申請した契約の期間を結合する（コーチ宛マッチングリクエスト系クエリの共通処理）。
  * 契約の期間は、担当になる前のコーチはRLSで読めないため管理者権限で取得する。対象は、コーチがRLSで読めた
  * 自分宛のリクエストのチケットに限り、返すのは開始・終了日時だけ。
+ * 承認待ちの申請には、今承認した場合に予約できる回数（get_matching_request_availability）を付ける
+ * （申請後にコーチの予定が埋まると、申請時より回数が減る・承認できなくなることがある）。
  */
 async function attachRequestDetails(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
-  requests: Omit<IncomingMatchingRequestItem, 'student_name' | 'license_start_date' | 'license_end_date'>[]
+  requests: Omit<IncomingMatchingRequestItem, 'student_name' | 'license_start_date' | 'license_end_date' | 'availability'>[]
 ): Promise<IncomingMatchingRequestItem[]> {
   if (requests.length === 0) return [];
   const studentIds = Array.from(new Set(requests.map((r) => r.student_id)));
   const ticketIds = Array.from(new Set(requests.map((r) => r.ticket_id)));
-  const [{ data: students }, { data: tickets }] = await Promise.all([
+  const pendingIds = requests.filter((r) => r.status === MATCHING_REQUEST_STATUS.PENDING).map((r) => r.request_id);
+  const [{ data: students }, { data: tickets }, { data: availabilityRows }] = await Promise.all([
     supabase.from('com_m_user').select('id, user_name').in('id', studentIds),
     createAdminClient()
       .from('com_t_user_session_ticket')
       .select('ticket_id, com_t_user_license!inner(start_date, end_date)')
       .in('ticket_id', ticketIds),
+    pendingIds.length > 0
+      ? supabase.rpc('get_matching_request_availability', { p_request_ids: pendingIds })
+      : Promise.resolve({ data: [] }),
   ]);
+  const availabilityByRequestId = new Map(
+    ((availabilityRows ?? []) as (MatchingSlotAvailability & { request_id: string })[]).map(({ request_id, ...availability }) => [
+      request_id,
+      availability,
+    ])
+  );
   const studentNameById = new Map((students ?? []).map((s) => [s.id, s.user_name ?? '(Unknown)']));
   const periodByTicketId = new Map(
     (tickets ?? []).map((t) => {
@@ -784,6 +847,7 @@ async function attachRequestDetails(
     student_name: studentNameById.get(r.student_id) ?? '(Unknown)',
     license_start_date: periodByTicketId.get(r.ticket_id)?.start_date ?? null,
     license_end_date: periodByTicketId.get(r.ticket_id)?.end_date ?? null,
+    availability: availabilityByRequestId.get(r.request_id) ?? null,
   }));
 }
 
@@ -808,6 +872,8 @@ export async function getPendingIncomingRequestsAsCoachCore(): Promise<
       .select('*')
       .eq('coach_id', user.id)
       .eq('status', MATCHING_REQUEST_STATUS.PENDING)
+      // 回答期限を過ぎたものは、期限切れの処理（毎分）を待たずに除く
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .order('insert_date', { ascending: false });
 
     if (error) {
@@ -884,11 +950,17 @@ export async function approveMatchingRequestCore(requestId: string): Promise<App
 
     if (error || !data) {
       logger.error('matching:approve_request_failed', error?.message ?? 'No schedule_id returned', { ...ctx, err: error, userId: user.id, payload: { requestId } });
-      // コーチの既存スケジュールとの重複はcheck_coach_schedule_conflict()経由でapprove_matching_request()内から
-      // RAISE EXCEPTIONされる（詳細はfunction/approve_matching_request.sqlを参照）。個別調整が必要な旨を
-      // 区別して伝えるため、専用のerrorCodeにマッピングする。
-      if (error?.message?.includes('SCHEDULE_CONFLICT')) {
-        return { success: false, errorCode: 'schedule_conflict' };
+      // 予約できる回数が割合に満たない場合は、fn_commit_matching_schedule()からINSUFFICIENT_BOOKABLEで
+      // RAISE EXCEPTIONされる（申請後にコーチの予定が埋まった場合等。詳細はfunction/fn_matching_slot_availability.sql）。
+      // 否認して個別に調整する旨を伝えるため、専用のerrorCodeにマッピングする。
+      if (error?.message?.includes('INSUFFICIENT_BOOKABLE')) {
+        return { success: false, errorCode: 'insufficient_bookable' };
+      }
+      if (error?.message?.includes('is not pending')) {
+        return { success: false, errorCode: 'not_pending' };
+      }
+      if (error?.message?.includes('EXPIRED')) {
+        return { success: false, errorCode: 'expired' };
       }
       return { success: false, errorCode: 'db_update_failed' };
     }
@@ -920,6 +992,9 @@ export async function rejectMatchingRequestCore(requestId: string, reason: strin
     const { error } = await supabase.rpc('reject_matching_request', { p_request_id: requestId, p_reason: reason.trim() });
 
     if (error) {
+      if (error.message?.includes('EXPIRED')) {
+        return { success: false, errorCode: 'expired' };
+      }
       logger.error('matching:reject_request_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { requestId } });
       return { success: false, errorCode: 'db_update_failed' };
     }

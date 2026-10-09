@@ -86,6 +86,19 @@ export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
     title: "You've been matched with a new student",
     body: `Live sessions with ${String(payload.student_name ?? 'a student')} are now scheduled.`,
   }),
+  MATCHING_REQUESTED: (payload) => ({
+    title: 'New matching request',
+    body: `${String(payload.student_name ?? 'A student')} sent you a matching request. Please approve or reject it within 24 hours, or it will expire.`,
+  }),
+  MATCHING_EXPIRED: () => ({
+    // Sent only to the student; included here for Record<NotificationType, ...> type-safety.
+    title: 'Matching request expired',
+    body: 'This matching request expired because it was not answered within 24 hours.',
+  }),
+  MATCHING_WITHDRAWN: (payload) => ({
+    title: 'Matching request withdrawn',
+    body: `${String(payload.student_name ?? 'A student')} withdrew their matching request.`,
+  }),
   HOMEWORK_POSTED: () => ({
     // 実際にはstudent_id宛にのみ送られる通知のため、コーチが受け取ることは想定していない
     // （Record<NotificationType, ...>を満たすための型安全用エントリ）。

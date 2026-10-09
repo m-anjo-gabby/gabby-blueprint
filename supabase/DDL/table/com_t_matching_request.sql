@@ -98,6 +98,7 @@ FOR INSERT TO authenticated WITH CHECK (
 );
 
 -- [取消] 生徒本人がpending状態の自身のリクエストのみ取消（status=4）可能。承認/否認はRPC経由のみ。
+-- ※2026-10-09 に削除（取り下げは withdraw_matching_request() 経由。末尾の追加パッチ参照）
 CREATE POLICY "Students can cancel their own pending requests" ON public.com_t_matching_request
 FOR UPDATE TO authenticated
 USING (student_id = auth.uid() AND status = 1)
@@ -172,3 +173,63 @@ COMMENT ON COLUMN public.com_t_matching_request.requested_day_of_week IS '希望
 COMMENT ON COLUMN public.com_t_matching_request.requested_start_time IS '希望レッスン開始時刻（requested_timezoneの現地時刻）';
 COMMENT ON COLUMN public.com_t_matching_request.requested_end_time IS '希望レッスン終了時刻（requested_timezoneの現地時刻、通常25分）';
 COMMENT ON COLUMN public.com_t_matching_request.requested_timezone IS '希望曜日・時刻の解釈に使うIANAタイムゾーン（申請時の生徒のcom_m_user.timezone。2026-10-06より前の行はコーチのタイムゾーン）。承認時にcom_m_lesson_schedule.schedule_timezoneへ引き継ぐ';
+
+---------------------------------------------
+-- 追加パッチ: 申請時に予約できた回数・取り下げのRPC化 (2026-10-09)
+-- 既存環境に対しては、このブロックのみを実行してください（何度実行しても安全）。
+---------------------------------------------
+-- 【背景】
+-- 1. 契約期間内の全ての回を予約できなくても、予約できる回数が割合（matching_min_bookable_rate()）以上なら
+--    申請できるようにした。生徒が申請時に了承した回数を requested_bookable_sessions に残し、承認画面で
+--    現在の回数（get_matching_request_availability）と比べて、申請後にコーチの予定が埋まったことを示す。
+--    2026-10-09より前の行と、アドミンの直接マッチングの行は NULL。
+-- 2. 取り下げは withdraw_matching_request()（コーチへ通知する）に一本化したため、生徒の直接UPDATEのポリシーを削除する。
+---------------------------------------------
+ALTER TABLE public.com_t_matching_request
+  ADD COLUMN IF NOT EXISTS requested_bookable_sessions smallint;
+
+COMMENT ON COLUMN public.com_t_matching_request.requested_bookable_sessions IS '申請時に予約できた回数（生徒が了承した回数。fn_matching_slot_availability の bookable_sessions）。2026-10-09より前の行・アドミンの直接マッチングはNULL';
+
+DROP POLICY IF EXISTS "Students can cancel their own pending requests" ON public.com_t_matching_request;
+COMMENT ON COLUMN public.com_t_matching_request.status IS 'ステータス 1:pending(承認待ち) 2:approved(承認) 3:rejected(否認) 4:cancelled(生徒による取り下げ。withdraw_matching_request) 5:ended(コーチ交代等によりアドミンが終了)';
+
+---------------------------------------------
+-- 追加パッチ: 回答期限・期限切れのステータス (2026-10-09)
+-- 既存環境に対しては、このブロックのみを実行してください（何度実行しても安全）。
+-- 期限の設定・期限切れの処理・コーチへの通知は function/expire_matching_requests.sql（トリガー・pg_cron）。
+---------------------------------------------
+-- 【背景】
+-- 放置された承認待ちの申請で、コーチの枠が埋まり続けないよう、申請から24時間（matching_request_ttl()）で無効にする。
+-- expires_at は登録時にトリガーが入れる（承認待ち以外の行・2026-10-09より前の承認待ち以外はNULL）。
+-- 既存の承認待ちは、登録日時から24時間を期限にする。
+---------------------------------------------
+ALTER TABLE public.com_t_matching_request
+  ADD COLUMN IF NOT EXISTS expires_at timestamp with time zone;
+
+UPDATE public.com_t_matching_request
+SET expires_at = insert_date + interval '24 hours'
+WHERE status = 1 AND expires_at IS NULL;
+
+ALTER TABLE public.com_t_matching_request DROP CONSTRAINT IF EXISTS chk_matching_request_status;
+ALTER TABLE public.com_t_matching_request ADD CONSTRAINT chk_matching_request_status CHECK (status IN (1, 2, 3, 4, 5, 6));
+
+ALTER TABLE public.com_t_matching_request DROP CONSTRAINT IF EXISTS chk_matching_request_status_fields;
+ALTER TABLE public.com_t_matching_request ADD CONSTRAINT chk_matching_request_status_fields CHECK (
+    (status = 1 AND responded_by IS NULL AND responded_at IS NULL AND reject_reason IS NULL)
+    OR
+    (status = 2 AND responded_by IS NOT NULL AND responded_at IS NOT NULL)
+    OR
+    (status = 3 AND responded_by IS NOT NULL AND responded_at IS NOT NULL AND reject_reason IS NOT NULL)
+    OR
+    (status = 4)
+    OR
+    (status = 5 AND responded_by IS NOT NULL AND responded_at IS NOT NULL)
+    OR
+    (status = 6 AND responded_by IS NULL AND responded_at IS NULL)
+);
+
+-- 期限切れの処理（毎分）で承認待ちを期限順に探す
+CREATE INDEX IF NOT EXISTS idx_matching_request_pending_expires ON public.com_t_matching_request (expires_at) WHERE status = 1;
+
+COMMENT ON COLUMN public.com_t_matching_request.expires_at IS '回答期限（承認待ちの申請のみ。登録時にトリガーが NOW()+matching_request_ttl() を入れる）。過ぎると期限切れ(status=6)';
+COMMENT ON COLUMN public.com_t_matching_request.status IS 'ステータス 1:pending(承認待ち) 2:approved(承認) 3:rejected(否認) 4:cancelled(生徒による取り下げ。withdraw_matching_request) 5:ended(コーチ交代等によりアドミンが終了) 6:expired(回答期限切れ。fn_expire_matching_requests)';

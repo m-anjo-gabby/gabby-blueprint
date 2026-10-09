@@ -130,6 +130,23 @@ test("マッチングの否認: 申請した曜日・時間（コーチの現地
   assert.ok(text.includes("【理由】\nその枠は埋まりました"));
 });
 
+test("マッチングの申請（コーチ宛て）: 申請された曜日・時間をコーチのタイムゾーンで出し、回答期限を案内する", () => {
+  // 生徒は日本時間の金曜 20:00（= 金曜 11:00 UTC = バンクーバー 金曜 4:00 AM PDT）
+  const weekly = { startIso: "2026-10-16T11:00:00Z", endIso: "2026-10-16T11:25:00Z" };
+  const { subject, text } = coachMail("MATCHING_REQUESTED", { student_name: "Taro" }, { weekly, respondByIso: "2026-10-10T07:00:00Z" });
+  assert.equal(subject, "[Gabby Blueprint] New matching request (Every Fri, 4:00 AM)");
+  assert.ok(text.includes("Every Fri, 4:00 AM"));
+  assert.ok(text.includes("Please approve or reject this request by"));
+});
+
+test("マッチングの期限切れ（生徒宛て）: 申請した曜日・時間を出し、理由の欄は出さない", () => {
+  const weekly = { startIso: "2026-10-16T11:00:00Z", endIso: "2026-10-16T11:25:00Z" };
+  const { subject, text } = studentMail("MATCHING_EXPIRED", { coach_name: "Suzanne" }, { weekly, reason: null });
+  assert.equal(subject, "【Gabby Blueprint】マッチングのリクエストが無効になりました（毎週金曜 20:00）");
+  assert.ok(text.includes("【ご希望の曜日・時間】\n毎週金曜 20:00〜20:25（日本時間）"));
+  assert.ok(!text.includes("【理由】"));
+});
+
 test("毎週の枠の曜日は受信者のタイムゾーンで決まる（時差で日付をまたぐ）", () => {
   const start = "2026-10-09T23:30:00Z"; // 金 23:30 UTC = 土 8:30 JST = 金 4:30 PM PDT
   assert.equal(formatWeeklySlot({ startIso: start, endIso: null, timeZone: "Asia/Tokyo", language: "ja", withZone: false }), "毎週土曜 08:30");

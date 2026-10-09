@@ -1,16 +1,22 @@
 'use client';
 
-import { Circle, X } from 'lucide-react';
+import { Circle, Triangle, X } from 'lucide-react';
 import { DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import { cn } from '@/lib/utils';
 
 const SLOTS_PER_DAY = 48;
 
+/**
+ * 候補ごとの申請の可否（契約期間内に予約できる回数で決まる）。
+ * full: 全ての回を予約できる / partial: 割合以上は予約でき、残りはコーチと個別に調整 / unavailable: 申請できない
+ */
+export type AvailabilityCellState = 'full' | 'partial' | 'unavailable';
+
 /** カレンダー上でクリック可能な1つのセッション開始候補（25分セッション、30分刻み） */
 export interface AvailabilityCell {
   key: string;
-  // 空き時間の基準（UTC）の曜日・時刻。予約済みの枠との重なりの判定に使う
+  // 空き時間の基準（UTC）の曜日・時刻
   sourceDay: DayOfWeek;
   sourceStartTime: string; // "HH:MM"
   // 表示値・送信値：生徒のタイムゾーンに変換した曜日・時刻（申請は生徒の現地時刻で送る）
@@ -21,11 +27,17 @@ export interface AvailabilityCell {
 
 interface CoachAvailabilityCalendarProps {
   cells: AvailabilityCell[];
-  // 既に埋まっている（確定済み、または承認待ちの）セルのkey。選択不可として×表示する
-  unavailableKeys: Set<string>;
+  // セルのkeyごとの申請の可否。取得中はnull（全てのセルを選択不可で表示する）
+  cellStates: Map<string, AvailabilityCellState> | null;
   selectedKey: string | null;
   onSelect: (cell: AvailabilityCell) => void;
 }
+
+const STATE_LABEL: Record<AvailabilityCellState, string> = {
+  full: '申請可能',
+  partial: '申請可能（一部の回は個別に調整）',
+  unavailable: '受付終了',
+};
 
 function timeToSlotIndex(time: string): number {
   const [h, m] = time.split(':').map(Number);
@@ -43,7 +55,7 @@ function slotIndexToLabel(slotIndex: number): string {
  * セルをクリックするとそのままセッション開始時刻の選択として確定する
  * （曜日チップ＋プルダウンの2段階選択に代わる、直感的な1ステップ操作）。
  */
-export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey, onSelect }: CoachAvailabilityCalendarProps) {
+export function CoachAvailabilityCalendar({ cells, cellStates, selectedKey, onSelect }: CoachAvailabilityCalendarProps) {
   if (cells.length === 0) {
     return <p className="text-xs text-ink-subtle text-center py-10">現在、対応可能時間の登録がありません</p>;
   }
@@ -64,7 +76,7 @@ export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey,
   const slotRange = Array.from({ length: endSlot - startSlot + 1 }, (_, i) => startSlot + i);
 
   return (
-    <div className="max-h-[360px] overflow-y-auto rounded-control border border-line select-none">
+    <div className="max-h-[360px] overflow-y-auto rounded-control border border-line select-none" aria-busy={cellStates === null}>
       <div className="grid" style={{ gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))' }}>
         <div className="sticky top-0 z-20 bg-white border-b border-line" />
         {DAYS_OF_WEEK.map((day) => (
@@ -91,8 +103,11 @@ export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey,
               {DAYS_OF_WEEK.map((day) => {
                 const cell = cellByDaySlot.get(`${day}-${slotIndex}`);
                 const isSelected = !!cell && cell.key === selectedKey;
-                const isUnavailable = !!cell && unavailableKeys.has(cell.key);
-                const isSelectable = !!cell && !isUnavailable;
+                const isLoading = !!cell && cellStates === null;
+                const state = cell && cellStates ? (cellStates.get(cell.key) ?? 'unavailable') : null;
+                const isUnavailable = state === 'unavailable';
+                const isPartial = state === 'partial';
+                const isSelectable = !!cell && !!state && !isUnavailable;
                 return (
                   <button
                     key={day}
@@ -102,26 +117,29 @@ export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey,
                     onClick={() => isSelectable && onSelect(cell)}
                     aria-pressed={isSelected}
                     aria-label={
-                      cell
-                        ? isUnavailable
-                          ? `${DAY_OF_WEEK_LABEL_JA[day]} ${cell.displayStartTime} 受付終了`
-                          : `${DAY_OF_WEEK_LABEL_JA[day]} ${cell.displayStartTime} 申請可能`
+                      cell && state
+                        ? `${DAY_OF_WEEK_LABEL_JA[day]} ${cell.displayStartTime} ${STATE_LABEL[state]}`
                         : undefined
                     }
                     className={cn(
                       'h-[26px] border-l border-line/70 transition-colors disabled:cursor-default flex items-center justify-center',
                       isHour ? 'border-t border-t-line' : 'border-t border-t-line/60',
-                      isUnavailable
-                        ? 'bg-canvas text-ink-subtle'
-                        : cell
-                          ? isSelected
-                            ? 'bg-brand text-white'
-                            : 'bg-brand-soft text-brand-500 hover:bg-brand-500 hover:text-white'
-                          : 'bg-white'
+                      isLoading
+                        ? 'bg-skeleton animate-pulse'
+                        : isUnavailable
+                          ? 'bg-canvas text-ink-subtle'
+                          : cell
+                            ? isSelected
+                              ? 'bg-brand text-white'
+                              : isPartial
+                                ? 'bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white'
+                                : 'bg-brand-soft text-brand-500 hover:bg-brand-500 hover:text-white'
+                            : 'bg-white'
                     )}
                   >
                     {isUnavailable && <X size={15} strokeWidth={3} aria-hidden="true" />}
-                    {isSelectable && <Circle size={13} strokeWidth={3} aria-hidden="true" />}
+                    {isSelectable && !isPartial && <Circle size={13} strokeWidth={3} aria-hidden="true" />}
+                    {isSelectable && isPartial && <Triangle size={13} strokeWidth={3} aria-hidden="true" />}
                   </button>
                 );
               })}

@@ -6,7 +6,7 @@
 -- （com_m_lesson_schedule.schedule_timezone / com_t_matching_request.requested_timezone）の現地時刻で持つ。
 -- 基準が生徒ごとに異なり、夏時間のある地域ではUTCでの曜日・時刻が期間の途中で変わるため、
 -- 「同じ曜日・時刻か」の比較では重なりを判定できない。本関数で期間内の各回の実際の日時（UTC）に
--- 展開してから比べる（check_coach_schedule_conflict 参照）。
+-- 展開してから比べる（fn_matching_occurrence_busy 参照）。
 --
 -- 【仕様】
 -- p_timezone の現地の日付で p_from〜p_to の範囲の各日のうち曜日が一致する日について、

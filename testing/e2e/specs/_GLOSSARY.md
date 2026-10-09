@@ -78,8 +78,9 @@ false: 返還なし（消化済み扱い）。生徒都合キャンセルは開�
 | 1 | pending（承認待ち） |
 | 2 | approved（承認） |
 | 3 | rejected（否認） |
-| 4 | cancelled（生徒による取消） |
+| 4 | cancelled（生徒による取り下げ。`withdraw_matching_request`、コーチへアプリ内通知） |
 | 5 | ended（コーチ交代等によりアドミンが終了） |
+| 6 | expired（回答期限切れ。申請から24時間〔`matching_request_ttl()`〕で `fn_expire_matching_requests` が毎分処理。生徒へ `MATCHING_EXPIRED`） |
 
 ## 共通ビジネスルール
 

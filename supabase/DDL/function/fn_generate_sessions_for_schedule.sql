@@ -66,6 +66,14 @@
 -- タイムゾーン）の現地時刻で解釈する。コーチ側の夏時間の切り替えをまたいでも、生徒側の時刻は全回同じになる。
 -- BLOCK（休み）の例外はコーチの現地の日付・時刻で持つため、コーチの現在のタイムゾーンで実際の日時に
 -- 直してから、各回の日時と重なるかを比べる。
+--
+-- 【他の予定と重なる回のスキップ (2026-10-09追加)】
+-- マッチングを予約できる回数の割合で成立させるようにしたため（fn_matching_slot_availability）、コーチ・生徒の
+-- 他の予定（予約済みのセッション・他の定期スケジュール・休み）と重なる回は作らずに飛ばす（欠番として未予約に
+-- 数える）。判定は fn_matching_occurrence_busy() で、申請時・承認時に数えた回数と同じになる。従来は休みの例外
+-- だけを見ていたため、個別予約・振替で入ったコーチのセッションと重なる回が作られることがあった。
+-- あわせて、開始が現在より前の回は作らない（24時間ルールの無いアドミンの直接マッチングで、当日の既に始まった回が
+-- 作られ得た。予約できる回数の数え方 fn_matching_slot_availability と同じく現在以降の回だけを対象にする）。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.fn_generate_sessions_for_schedule(uuid);
 
@@ -81,7 +89,6 @@ AS $$
 DECLARE
     v_schedule RECORD;
     v_schedule_tz text;
-    v_coach_tz text;
     v_cursor_date date;
     v_start_ts timestamptz;
     v_end_ts timestamptz;
@@ -96,7 +103,6 @@ BEGIN
 
     -- com_m_user.timezoneはライブ参照しない（上記【タイムゾーン変換】コメント参照）
     v_schedule_tz := v_schedule.schedule_timezone;
-    SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_coach_tz FROM public.com_m_user WHERE id = v_schedule.coach_id;
 
     -- 予約できる範囲（ライセンスの開始・終了日時。上記【ライセンス期間の境目】参照）
     SELECT l.start_date, l.end_date INTO v_license_start, v_license_end
@@ -123,21 +129,16 @@ BEGIN
             CONTINUE;
         END IF;
 
-        -- 24時間ルールの下限を下回る回は欠番としてスキップする（上記コメント参照）
-        IF p_min_start_datetime IS NOT NULL AND v_start_ts < p_min_start_datetime THEN
+        -- 24時間ルールの下限（アドミンは現在）を下回る回は欠番としてスキップする（上記コメント参照）
+        IF v_start_ts < COALESCE(p_min_start_datetime, NOW()) THEN
             v_cursor_date := v_cursor_date + 7;
             CONTINUE;
         END IF;
 
-        -- この回と重なるBLOCK例外（コーチの現地の日付・時刻）が無いことを確認
-        -- （タイムゾーンの差で日付がずれるため、前後1日の例外を実際の日時に直して比べる）
-        IF NOT EXISTS (
-            SELECT 1 FROM public.com_t_coach_availability_exception e
-            WHERE e.coach_id = v_schedule.coach_id
-              AND e.exception_date BETWEEN v_cursor_date - 1 AND v_cursor_date + 1
-              AND e.exception_type = 'BLOCK'
-              AND (e.exception_date + e.start_time) AT TIME ZONE v_coach_tz < v_end_ts
-              AND (e.exception_date + e.end_time) AT TIME ZONE v_coach_tz > v_start_ts
+        -- この回がコーチ・生徒の他の予定（予約済みのセッション・他の定期スケジュール・休み）と重ならないことを確認
+        IF NOT public.fn_matching_occurrence_busy(
+            v_schedule.coach_id, v_schedule.student_id, v_start_ts, v_end_ts,
+            v_schedule.schedule_id, v_schedule.source_request_id
         ) THEN
             INSERT INTO public.com_t_session (
                 schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status

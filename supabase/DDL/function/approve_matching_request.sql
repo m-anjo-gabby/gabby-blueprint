@@ -3,7 +3,7 @@
 -- 前提: table/com_t_matching_request.sql, table/com_m_lesson_schedule.sql,
 --       table/com_t_user_session_ticket.sql, table/com_t_user_license.sql,
 --       function/fn_generate_sessions_for_schedule.sql,
---       function/check_coach_schedule_conflict.sql,
+--       function/fn_matching_slot_availability.sql,
 --       function/fn_assert_actor_or_admin.sql, function/fn_notify.sql,
 --       function/fn_commit_matching_schedule.sql の作成が完了していること。
 ---------------------------------------------
@@ -15,7 +15,7 @@
 -- 呼び出し元が宛先コーチ本人（またはadmin）であることは関数内で明示的に検証する。
 --
 -- 【二重予約防止 (2026-09-03 追加)】
--- 申請時(createMatchingRequestCore)にも同一のcheck_coach_schedule_conflict()で重複チェックを
+-- 申請時(createMatchingRequestCore)にも同一の判定（2026-10-09から fn_matching_slot_availability()）でチェックを
 -- 行うが、申請〜承認の間に別の申請が先に承認される競合（TOCTOU）は申請時チェックだけでは
 -- 防げない。そのため承認時にも必ず同じ関数で再チェックする。
 -- 加えて、ほぼ同時に別々の承認処理（異なるrequest_id、同一コーチ×同一曜日）が走った場合、
@@ -58,6 +58,14 @@
 -- 【基準のタイムゾーン (2026-10-06追加)】
 -- 申請の曜日・時刻は生徒の申請時のタイムゾーン（requested_timezone）の現地時刻のため、そのタイムゾーンを
 -- fn_commit_matching_schedule() に渡し、定期スケジュール・セッションを生徒側の時刻で作る。
+--
+-- 【予約できた回数の通知 (2026-10-09追加)】
+-- 予約できる回数が割合以上なら、他の予定と重なる回を飛ばして成立する（fn_commit_matching_schedule 参照）。
+-- 生徒への成立通知に、予約できた回数（booked_sessions）とコマの回数（target_sessions）を入れ、
+-- 未予約の回が残る場合は個別の調整を案内する。
+--
+-- 【回答期限 (2026-10-09追加)】
+-- 回答期限（expires_at。申請から24時間）を過ぎた申請は EXPIRED で拒否する（期限切れの処理は expire_matching_requests.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.approve_matching_request(p_request_id uuid)
 RETURNS uuid
@@ -70,6 +78,8 @@ DECLARE
     v_schedule_id uuid;
     v_coach_name text;
     v_min_start_datetime timestamptz;
+    v_target_sessions integer;
+    v_booked_sessions integer;
 BEGIN
     SELECT * INTO v_request FROM public.com_t_matching_request WHERE request_id = p_request_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -80,6 +90,11 @@ BEGIN
 
     IF v_request.status <> 1 THEN
         RAISE EXCEPTION 'matching request % is not pending (status=%)', p_request_id, v_request.status;
+    END IF;
+
+    -- 回答期限（expires_at）を過ぎた承認待ちは、期限切れの処理（毎分）を待たずに無効として扱う
+    IF v_request.expires_at IS NOT NULL AND v_request.expires_at <= NOW() THEN
+        RAISE EXCEPTION 'EXPIRED: matching request % has expired', p_request_id;
     END IF;
 
     UPDATE public.com_t_matching_request
@@ -99,12 +114,18 @@ BEGIN
         v_request.requested_timezone, v_min_start_datetime
     );
 
+    SELECT target_sessions INTO v_target_sessions FROM public.com_m_lesson_schedule WHERE schedule_id = v_schedule_id;
+    SELECT COUNT(*) INTO v_booked_sessions FROM public.com_t_session WHERE schedule_id = v_schedule_id AND status = 1;
+
     -- 生徒へ、マッチング成立を通知する（コーチは自ら承認操作を行ったため通知不要）
     SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
     PERFORM public.fn_notify(
         v_request.student_id,
         'MATCHING_APPROVED',
-        jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id),
+        jsonb_build_object(
+            'coach_name', v_coach_name, 'schedule_id', v_schedule_id,
+            'booked_sessions', v_booked_sessions, 'target_sessions', v_target_sessions
+        ),
         '/live-room'
     );
 

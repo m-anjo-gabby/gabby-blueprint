@@ -3,7 +3,7 @@
 -- 前提: table/com_t_matching_request.sql, table/com_m_lesson_schedule.sql,
 --       table/com_t_user_session_ticket.sql, table/com_t_user_license.sql,
 --       function/fn_generate_sessions_for_schedule.sql,
---       function/check_coach_schedule_conflict.sql の作成が完了していること。
+--       function/fn_matching_slot_availability.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】
 -- 通常のマッチングは「生徒がリクエスト→コーチが承認」の2段階を経るが、アドミンの
@@ -50,6 +50,11 @@
 -- 生徒の申請と同じく、p_day_of_week/p_start_time/p_end_time を生徒の現在のタイムゾーン
 -- （com_m_user.timezone）の現地時刻として扱い、申請の requested_timezone と定期スケジュールの
 -- schedule_timezone に保存する（従来はコーチの現地時刻）。シグネチャは変更しない。
+--
+-- 【予約できる回数の割合の基準は対象外 (2026-10-09追加)】
+-- 生徒の申請・コーチの承認は予約できる回数が割合（matching_min_bookable_rate()）以上でないと成立しないが、
+-- アドミンの直接マッチングはイレギュラーな対応のため基準を適用しない（fn_commit_matching_schedule の p_enforce_rate = false）。
+-- 他の予定と重なる回は飛ばして作り、予約できる回が1回も無い場合だけ成立させない（NO_BOOKABLE_SESSION）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_match_student_with_coach(
     p_ticket_id uuid,
@@ -93,13 +98,18 @@ BEGIN
 
     v_schedule_id := public.fn_commit_matching_schedule(
         v_request_id, p_ticket_id, v_student_id, p_coach_id,
-        p_slot_no, p_day_of_week, p_start_time, p_end_time, v_student_timezone
+        p_slot_no, p_day_of_week, p_start_time, p_end_time, v_student_timezone,
+        NULL, false  -- 24時間ルール・予約できる回数の割合の基準は適用しない（イレギュラーな対応のため）
     );
 
     SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = p_coach_id;
     SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_student_id;
 
-    PERFORM public.fn_notify(v_student_id, 'MATCHING_APPROVED', jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id), '/live-room');
+    PERFORM public.fn_notify(v_student_id, 'MATCHING_APPROVED', jsonb_build_object(
+        'coach_name', v_coach_name, 'schedule_id', v_schedule_id,
+        'booked_sessions', (SELECT COUNT(*) FROM public.com_t_session WHERE schedule_id = v_schedule_id AND status = 1),
+        'target_sessions', (SELECT target_sessions FROM public.com_m_lesson_schedule WHERE schedule_id = v_schedule_id)
+    ), '/live-room');
     PERFORM public.fn_notify(p_coach_id, 'MATCHING_ASSIGNED_TO_COACH', jsonb_build_object('student_name', v_student_name, 'schedule_id', v_schedule_id), '/students/' || v_student_id);
 
     RETURN v_schedule_id;

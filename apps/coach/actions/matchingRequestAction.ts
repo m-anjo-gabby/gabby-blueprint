@@ -19,6 +19,10 @@ const MATCHING_ERROR_MESSAGES_EN: Record<MatchingRequestErrorCode, string> = {
   not_eligible: 'This request is no longer valid.',
   slot_already_requested: 'This slot has already been matched or has a pending request.',
   schedule_conflict: 'This request overlaps with one of your existing schedules. Please reject it and coordinate an alternative time with the student individually.',
+  insufficient_bookable:
+    'Too many lessons in this slot now clash with your other bookings or days off, so it can no longer be approved. Please reject it with a reason so the student can choose another time.',
+  not_pending: 'This request is no longer pending. The student may have withdrawn it.',
+  expired: 'This request has expired because it was not answered within 24 hours. The student can send a new request.',
   db_insert_failed: 'Failed to save the request.',
   db_update_failed: 'Failed to update the request. It may have already been responded to.',
   unexpected_error: 'An unexpected error occurred.',

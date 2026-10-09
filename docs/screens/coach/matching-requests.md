@@ -36,7 +36,9 @@
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | 固定枠マッチング申請カードの表示内容 | 生徒名、コマ番号（Slot n）、希望曜日・時間帯（コーチの現地時刻に換算。申請の曜日・時刻は申請時の生徒のタイムゾーン `requested_timezone` で持ち、タイムゾーンが異なる場合は "Student's time: …" も表示）、申請日、直近24時間以上先、かつ申請した契約の期間内で最初に発生する開催日（"First session"、pending中のみ計算表示。継続用の次の契約なら契約開始日以降。期間内に回が無ければ表示しない。契約の期間は担当前のコーチがRLSで読めないため、一覧の取得時にサーバーで付け足す: `attachRequestDetails`）。契約期間中に夏時間の切り替えでコーチ側の時刻が変わる場合は、"From {日付}: {曜日} {時刻} (your time, daylight saving time)" を併記する（生徒側の時刻は全回同じ） | — |
-| 固定枠マッチング申請の「Approve」ボタン | statusがpendingの場合のみ | 確認ダイアログ（「毎週◯曜日◯時〜◯時（コーチの現地時刻）、残りのライセンス期間分すべてを予約する」旨の説明。夏時間で時刻が変わる場合はその旨も）の上で承認。承認すると定期コマが作成され、期間分のセッションが申請時の生徒のタイムゾーンで一括生成される（夏時間の切り替えをまたいでも生徒側の時刻は変わらない）。あわせて生徒とのチャットルームが用意され、コーチ名義の挨拶メッセージが自動送信される（[admin/chat/list.md](../admin/chat/list.md#マッチング成立時の自動開設)参照） |
+| 固定枠マッチング申請の回答期限 | statusがpendingの場合のみ | "Respond by <日時> (expires after 24 hours)"。申請から24時間で期限切れ（Expired）になり、承認・却下できなくなる。申請が届くと通知 "New matching request"（アプリ内＋メール）が届く |
+| 固定枠マッチング申請の予約できる回数 | statusがpendingの場合のみ。今承認した場合に予約できる回数をサーバーで数えて表示する（`get_matching_request_availability`） | "Bookable now: M of N lessons (K when requested)"。他の予約・休みと重なる回数、契約の残り期間に入りきらない回数を併記。全回予約できれば緑、未予約が残れば黄（承認後に生徒と個別に調整する旨）、申請時より減っていれば "Fewer lessons than when the student requested…"、基準の割合に満たなければ赤で "At least X lessons are needed to approve…"（否認して生徒に別の時間を選んでもらう案内）を表示する |
+| 固定枠マッチング申請の「Approve」ボタン | statusがpendingの場合のみ。予約できる回数が基準の割合に満たない場合は押せない | 確認ダイアログ（「毎週◯曜日◯時〜◯時（コーチの現地時刻）、残りのライセンス期間分すべてを予約する」旨の説明。未予約の回が残る場合は「N回のうちM回を予約し、残りは生徒と個別に調整する」旨。夏時間で時刻が変わる場合はその旨も）の上で承認。承認すると定期コマが作成され、期間分のセッションが申請時の生徒のタイムゾーンで一括生成される（夏時間の切り替えをまたいでも生徒側の時刻は変わらない）。あわせて生徒とのチャットルームが用意され、コーチ名義の挨拶メッセージが自動送信される（[admin/chat/list.md](../admin/chat/list.md#マッチング成立時の自動開設)参照） |
 | 固定枠マッチング申請の「Reject」ボタン | statusがpendingの場合のみ | 却下理由の入力ダイアログを開く。理由は必須で、生徒に表示される |
 | 新規予約リクエストカードの表示内容 | 生徒名、希望日時、申請日、生徒が入力した理由（あれば） | — |
 | 新規予約リクエストの「Approve」ボタン | statusがpendingの場合のみ | 確認ダイアログの上で承認。承認すると`com_t_session`に新規セッションが1件作成される |
@@ -45,7 +47,7 @@
 | 振替候補提案の候補の選択と「Book selected time」ボタン | pendingの候補をラジオで1件選ぶ（選ぶまでボタンは押せない） | 選んだ候補で新規セッションが作成され、同じキャンセルに紐づく他の未回答候補は自動的に「Declined」表示に変わる。未予約の回が残っていない場合（契約の回数を超える場合）はエラーで作成しない |
 | 振替候補提案の「Decline all」ボタン | pendingの候補が1件以上ある場合 | 残っている候補をまとめて却下する。生徒への通知は送られない仕様 |
 | Historyタブ切り替え（Matching Requests / Bookings / Reschedule Proposals） | 常時表示 | 該当する種類の履歴一覧に切り替える。カード自体はPendingと同じ見た目だが、statusがpendingでないためApprove/Rejectボタンは表示されない |
-| Historyの各カード | 承認済み・却下済み・取り下げ済み等、確定した過去のリクエスト | ステータスバッジと（却下時は）却下理由が表示される。それ以上の操作はできない |
+| Historyの各カード | 承認済み・却下済み・取り下げ済み等、確定した過去のリクエスト | ステータスバッジ（固定枠マッチング申請の生徒による取り下げは "Withdrawn"、回答期限切れは "Expired"）と（却下時は）却下理由が表示される。それ以上の操作はできない |
 
 ## 状態
 
@@ -55,6 +57,9 @@
 | Pendingが空 | 「No pending requests.」 | 保留中のリクエストが1件も無い場合 |
 | Historyの各タブが空 | 「No matching request history yet.」/「No booking request history yet.」/「No reschedule proposal history yet.」 | そのタブの履歴が1件も無い場合 |
 | Pendingでの承認・却下 | 対象カードの表示がその場で更新され、一覧から消える（Pendingから外れる） | Approve/Reject/Book selected time/Decline allのいずれかを実行した場合。サイドバーのリクエスト件数バッジも合わせて再取得される |
+| 承認時に予約できる回数が足りない | "Too many lessons in this slot now clash with your other bookings or days off…" | 画面を開いた後にコーチの予定が埋まり、基準の割合を下回った場合 |
+| 回答期限を過ぎた申請 | Pendingから外れ、Historyで "Expired"。画面を開いたまま期限を過ぎてから承認・却下すると "This request has expired because it was not answered within 24 hours…" | 申請から24時間以内に対応しなかった場合 |
+| 生徒が取り下げた申請 | 通知 "Matching request withdrawn"（アプリ内のみ）。承認しようとすると "This request is no longer pending…" | 生徒が承認待ちの固定枠マッチング申請を取り下げた場合 |
 
 ## 関連する業務フロー仕様書
 
@@ -62,7 +67,7 @@
   — 本画面の「New Booking」「Reschedule Proposal」の承認・却下・取り下げが生徒側の操作と
   どう連動するか、異常系の一覧
 - [専属コーチのマッチング](../../../testing/e2e/specs/matching/coach-matching.md)
-  — 固定枠マッチング申請（"Matching Request"）の申請・承認・否認・取消、時刻の基準、異常系の一覧
+  — 固定枠マッチング申請（"Matching Request"）の申請・承認・否認・取り下げ、時刻の基準、予約できる回数の判定、異常系の一覧
 
 ## 実装参照（エンジニア向け）
 

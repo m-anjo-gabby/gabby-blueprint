@@ -32,11 +32,22 @@
 -- 現地時刻として受け取り、com_m_lesson_schedule.schedule_timezone にそのまま保存する（従来は承認時のコーチの
 -- タイムゾーンを保存していたため、コーチ側の夏時間の切り替えで生徒側の時刻がずれていた）。
 -- start_date/end_date もこのタイムゾーンの日付にする。重複チェックは実際の日時で比べる
--- check_coach_schedule_conflict() を使い、基準のタイムゾーンが申請ごとに異なっても曜日をまたいで
+-- check_coach_schedule_conflict()（2026-10-09 削除。以後は fn_matching_slot_availability()）を使い、基準のタイムゾーンが申請ごとに異なっても曜日をまたいで
 -- 重なり得るため、同時承認を防ぐロックは「コーチ単位」にする（旧: コーチ×曜日）。
+-- シグネチャが変わるため、旧シグネチャを削除してから作り直す。
+--
+-- 【予約できる回数の割合で判定 (2026-10-09変更)】
+-- 従来は他の定期スケジュールと1回でも重なれば成立させなかった（SCHEDULE_CONFLICT）。以後は
+-- fn_matching_slot_availability() で予約できる回数を数え、割合（matching_min_bookable_rate()）に満たなければ
+-- INSUFFICIENT_BOOKABLE で中止する。満たせば成立させ、重なる回は fn_generate_sessions_for_schedule() が飛ばす
+-- （未予約として残り、生徒とコーチが個別に調整する）。目標回数の算出は fn_matching_slot_target_sessions() に移した。
+-- アドミンの直接マッチング（admin_match_student_with_coach）はイレギュラーな対応のため割合の基準を適用しない
+-- （p_enforce_rate = false）。ただし予約できる回が1回も無い場合は、セッションの無い定期スケジュールになるため成立させない
+-- （NO_BOOKABLE_SESSION）。どちらも他の生徒の承認待ちの申請は数えない（fn_matching_occurrence_busy 参照）。
 -- シグネチャが変わるため、旧シグネチャを削除してから作り直す。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, timestamptz);
+DROP FUNCTION IF EXISTS public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, text, timestamptz);
 
 CREATE OR REPLACE FUNCTION public.fn_commit_matching_schedule(
     p_request_id uuid,
@@ -48,7 +59,8 @@ CREATE OR REPLACE FUNCTION public.fn_commit_matching_schedule(
     p_start_time time,
     p_end_time time,
     p_timezone text,
-    p_min_start_datetime timestamptz DEFAULT NULL
+    p_min_start_datetime timestamptz DEFAULT NULL,
+    p_enforce_rate boolean DEFAULT true
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -61,14 +73,12 @@ DECLARE
     v_start_date date;
     v_end_date date;
     v_schedule_id uuid;
-    v_ticket_total_sessions smallint;
-    v_ticket_weekly_frequency smallint;
     v_target_sessions smallint;
+    v_availability RECORD;
 BEGIN
-    -- 対象チケットに紐づくライセンス期間(Session生成範囲の基準)と、target_sessions算出用の
-    -- total_sessions/weekly_frequencyを取得
-    SELECT l.start_date, l.end_date, t.total_sessions, t.weekly_frequency
-    INTO v_license_start, v_license_end, v_ticket_total_sessions, v_ticket_weekly_frequency
+    -- 対象チケットに紐づくライセンス期間(Session生成範囲の基準)を取得
+    SELECT l.start_date, l.end_date
+    INTO v_license_start, v_license_end
     FROM public.com_t_user_session_ticket t
     JOIN public.com_t_user_license l ON l.license_id = t.license_id
     WHERE t.ticket_id = p_ticket_id;
@@ -82,21 +92,26 @@ BEGIN
     v_start_date := GREATEST((v_license_start AT TIME ZONE p_timezone)::date, (NOW() AT TIME ZONE p_timezone)::date);
     v_end_date := (v_license_end AT TIME ZONE p_timezone)::date;
 
-    -- このコマ(slot_no)が契約上持つべき目標セッション数。商をbaseとし、余りはslot_no昇順に
-    -- 1つずつ多く配分する（table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）
-    v_target_sessions := (v_ticket_total_sessions / v_ticket_weekly_frequency)
-        + CASE WHEN p_slot_no <= (v_ticket_total_sessions % v_ticket_weekly_frequency) THEN 1 ELSE 0 END;
+    -- このコマ(slot_no)が契約上持つべき目標セッション数
+    v_target_sessions := public.fn_matching_slot_target_sessions(p_ticket_id, p_slot_no);
 
     -- 同一コーチへの成立処理を直列化し、重複チェックのレース条件を防ぐ
     -- （この後にfn_send_matching_greeting()内で生徒×コーチのロックを取るが、そちらの後に
     -- 別のロックを取る処理は無いため、デッドロックは起こらない）
     PERFORM pg_advisory_xact_lock(hashtextextended('matching:' || p_coach_id::text, 0));
 
-    IF public.check_coach_schedule_conflict(
-        p_coach_id, p_timezone, p_day_of_week, p_start_time, p_end_time,
-        GREATEST(v_license_start, NOW()), v_license_end
-    ) THEN
-        RAISE EXCEPTION 'SCHEDULE_CONFLICT: coach % already has an overlapping active schedule', p_coach_id;
+    -- 予約できる回数が割合に満たなければ成立させない（作られる回と同じ判定・同じ下限の日時で数える）
+    SELECT * INTO v_availability
+    FROM public.fn_matching_slot_availability(
+        p_ticket_id, p_coach_id, p_slot_no, p_timezone, p_day_of_week, p_start_time, p_end_time,
+        p_min_start_datetime, p_request_id, false
+    );
+    IF v_availability.bookable_sessions = 0 THEN
+        RAISE EXCEPTION 'NO_BOOKABLE_SESSION: no session in this slot can be booked within the license period';
+    END IF;
+    IF p_enforce_rate AND NOT v_availability.is_acceptable THEN
+        RAISE EXCEPTION 'INSUFFICIENT_BOOKABLE: only % of % sessions can be booked (% required)',
+            v_availability.bookable_sessions, v_availability.target_sessions, v_availability.required_sessions;
     END IF;
 
     INSERT INTO public.com_m_lesson_schedule (
@@ -119,4 +134,4 @@ $$;
 
 -- 内部処理専用（approve_matching_request/admin_match_student_with_coach経由以外での
 -- 直接実行は想定しない）
-REVOKE EXECUTE ON FUNCTION public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, text, timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, text, timestamptz, boolean) FROM PUBLIC, anon, authenticated;

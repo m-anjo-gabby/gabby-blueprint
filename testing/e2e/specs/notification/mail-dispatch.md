@@ -33,8 +33,9 @@
   - 区分: `NOTIFICATION`（出来事の通知・チャット）／`REMINDER`（セッションの24時間前・1時間前）。設定画面には、メール種別が1つ以上ある区分だけを出す。
   - 種別: `NOTIFICATION`・`CHAT_UNREAD`（区分 `NOTIFICATION`）、`GROUP_SESSION_REMINDER`・`LIVE_SESSION_REMINDER`（区分 `REMINDER`）
   - 通知メールを送るアプリ内通知の種別（`NOTIFICATION_MAIL_TYPES`。DB のトリガー `enqueue_notification_mail` の一覧と同じにする）:
-    - 生徒宛て: コーチによるキャンセル（`SESSION_CANCELLED_BY_COACH`）、振替候補の届け、予約の承認・不承認、マッチングの成立・不成立、宿題の届け
-    - コーチ宛て: 生徒によるキャンセル・予約・振替候補の提案、予約リクエスト、新しい生徒とのマッチング、月次レポートの承認・承認取消
+    - 生徒宛て: コーチによるキャンセル（`SESSION_CANCELLED_BY_COACH`）、振替候補の届け、予約の承認・不承認、マッチングの成立・不成立・申請の期限切れ（`MATCHING_EXPIRED`）、宿題の届け
+    - コーチ宛て: 生徒によるキャンセル・予約・振替候補の提案、予約リクエスト、マッチングの申請（`MATCHING_REQUESTED`。回答期限24時間）、新しい生徒とのマッチング、月次レポートの承認・承認取消
+    - 送らない: マッチング申請の生徒による取り下げ（`MATCHING_WITHDRAWN`。アプリ内のみ）
     - 両方: チャットの新着（`CHAT_NEW_MESSAGE` → メール種別 `CHAT_UNREAD`）
     - 送らない: 達成の通知（`TRAINING_*`）
 - **管理者が行ったライブセッションの操作**（代理キャンセル・直接予約・直接マッチング・代理承認等）は、アプリ内通知もメールも送らない（運営が個別に連絡する）。
@@ -91,8 +92,8 @@
    - 外枠はアカウント関連のメールと共通（`packages/lib/mail/layout/`）: ヘッダーはロゴ（本番の生徒ポータルの `https://blueprint.gabbyacademy.com/mail-logo.png` を参照。環境変数 `MAIL_LOGO_URL` で差し替え可。画像を表示しない設定では alt「Gabby Blueprint English」）、
      受信一覧の要約（プレビュー文）、フッターに会社名・URL。HTML 版とテキスト版を同じ元データから作り、両方を送る。
    - 通知: アプリ内通知と同じタイトル・本文（日本語 `NOTIFICATION_MESSAGE_BUILDERS`、英語 `NOTIFICATION_MESSAGE_BUILDERS_EN`）に「アプリで確認する」（通知の `link_path`）。
-     リンク先は、生徒宛て: キャンセル・振替候補・予約の承認/却下・マッチング成立は `/live-room`、マッチング不成立は `/coach-matching`、宿題は `/live-room/sessions/<session_id>/result`。
-     コーチ宛て: 予約申請・生徒からの振替候補は承認・却下できる `/calendar`、キャンセル・振替の確定・担当決定は `/students/<student_id>`、
+     リンク先は、生徒宛て: キャンセル・振替候補・予約の承認/却下・マッチング成立は `/live-room`、マッチング不成立・申請の期限切れは `/coach-matching`、宿題は `/live-room/sessions/<session_id>/result`。
+     コーチ宛て: 予約申請・生徒からの振替候補は承認・却下できる `/calendar`、マッチングの申請は `/matching-requests`、キャンセル・振替の確定・担当決定は `/students/<student_id>`、
      月次レポートの承認・承認取消は対象の月 `/monthly-reports?month=YYYY-MM`。チャットは両方 `/chat/<room_id>`。
      件名「【Gabby Blueprint】<タイトル>」／「[Gabby Blueprint] <タイトル>」。
    - 通知の対象の情報（予約・キャンセル・マッチング。メールだけに載せ、アプリ内の通知の文面は変えない）: 送る直前に、通知の payload の ID から業務データを読み、
@@ -108,6 +109,8 @@
      | 予約申請の否認（`SESSION_BOOKING_REJECTED`） | 申請した日時・否認の理由（あれば） | 申請の日時 |
      | マッチング成立（`MATCHING_APPROVED`） | 毎週の曜日・時間と初回のセッション（作られた初回の回の日時から求める。枠はコーチの現地時刻で持つため、そのまま出すと時差で曜日がずれる） | 「初回: <日時>」 |
      | マッチングの否認（`MATCHING_REJECTED`） | 申請した曜日・時間（申請の枠の次の回の日時から求める。生徒の申請画面と同じ求め方）・否認の理由 | 「毎週<曜日> <時刻>」 |
+     | マッチングの申請（`MATCHING_REQUESTED`、コーチ宛て） | 申請された曜日・時間（同上）・回答期限の案内（「<日時> までに承認または否認してください。期限を過ぎるとリクエストは無効になります。」） | 「毎週<曜日> <時刻>」 |
+     | マッチング申請の期限切れ（`MATCHING_EXPIRED`） | 申請した曜日・時間（同上） | 「毎週<曜日> <時刻>」 |
 
      ID が無い・行が読めない場合（対応前に登録された通知）は、payload の開始日時だけを載せ、それも無ければ従来の文面（日時なし）で送る。
      否認の通知の payload には申請の ID を含める（`reject_matching_request` の `request_id`、`reject_slot_proposal` の `proposal_id`。2026-10-06）。

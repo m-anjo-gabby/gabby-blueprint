@@ -30,6 +30,8 @@ export interface NotificationMailFacts {
   reason?: string | null;
   /** 生徒が予約申請に添えたメモ（コーチ宛て） */
   message?: string | null;
+  /** 回答期限（マッチングの申請。コーチ宛て） */
+  respondByIso?: string | null;
 }
 
 /** メールの件名・本文に足す内容 */
@@ -57,6 +59,7 @@ const COPY = {
     reason: '理由',
     message: 'メッセージ',
     expires: (label: string) => `振替候補は ${label} までにお選びください。期限を過ぎると選べなくなります。`,
+    respondBy: (label: string) => `${label} までに承認または否認してください。期限を過ぎるとリクエストは無効になります。`,
     rescheduleTitle: 'セッションがキャンセルされました（振替候補あり）',
     rescheduleSubject: 'セッションのキャンセルと振替候補',
   },
@@ -72,6 +75,7 @@ const COPY = {
     reason: 'Reason',
     message: 'Message from the student',
     expires: (label: string) => `Please respond by ${label}. The alternative times can no longer be selected after that.`,
+    respondBy: (label: string) => `Please approve or reject this request by ${label}. It expires after that.`,
     rescheduleTitle: 'Session cancelled with alternative times',
     rescheduleSubject: 'Session cancelled with alternative times',
   },
@@ -141,9 +145,17 @@ export function buildNotificationDetails({
           )
         : result([], null);
     case 'MATCHING_REJECTED':
+    case 'MATCHING_EXPIRED':
       return result(
         [...(slot ? [{ label: copy.requestedSlot, value: weekly(slot) }] : []), ...textRow(copy.reason, facts.reason)],
         slot ? weekly(slot, false) : null
+      );
+    case 'MATCHING_REQUESTED':
+      return result(
+        slot ? [{ label: copy.requestedSlot, value: weekly(slot) }] : [],
+        slot ? weekly(slot, false) : null,
+        undefined,
+        facts.respondByIso ? copy.respondBy(short({ startIso: facts.respondByIso, endIso: null })) : null
       );
     default:
       return result([], null);

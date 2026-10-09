@@ -8,7 +8,8 @@ import {
   getMyBookableTicketsCore,
   getMyLiveSessionOverviewCore,
   createMatchingRequestCore,
-  cancelMatchingRequestCore,
+  getMatchingSlotOptionsCore,
+  withdrawMatchingRequestCore,
 } from '@gabby/lib/matching/actions/matchingActions';
 import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
 import { createLogger } from '@gabby/lib/logger';
@@ -21,9 +22,11 @@ import {
   LiveSessionOverview,
   LiveSessionTicketSummary,
   MatchingRequestErrorCode,
+  MatchingSlotOption,
   SlotStatusItem,
 } from '@gabby/types/matching';
 import { CountryMaster } from '@gabby/types/country';
+import { DayOfWeek } from '@gabby/types/coachAvailability';
 
 const logger = createLogger('student');
 
@@ -33,6 +36,9 @@ const MATCHING_ERROR_MESSAGES_JA: Record<MatchingRequestErrorCode, string> = {
   not_eligible: 'この操作を行う権限がありません。',
   slot_already_requested: 'この枠は既にマッチング済み、または承認待ちのリクエストがあります。',
   schedule_conflict: 'この時間帯はコーチの既存の予約と重複しています。別の時間帯をお選びください。',
+  insufficient_bookable: 'この時間帯は、契約期間内に予約できる回数が足りません（コーチの他の予定や他の方のリクエストと重なる回が多いため）。別の時間帯をお選びください。',
+  not_pending: 'このリクエストは既にコーチが対応済みです。画面を更新してご確認ください。',
+  expired: 'このリクエストは回答期限（24時間）を過ぎたため、既に無効になっています。画面を更新してご確認ください。',
   db_insert_failed: 'リクエストの送信に失敗しました。',
   db_update_failed: '更新に失敗しました。既にコーチが対応済みの可能性があります。',
   unexpected_error: '予期しないエラーが発生しました。',
@@ -136,7 +142,7 @@ export async function getMyBookableTickets(): Promise<BookableTicketSlot[]> {
  */
 export async function createMatchingRequest(
   input: CreateMatchingRequestInput
-): Promise<{ success: true } | { success: false; message: string }> {
+): Promise<{ success: true; requestId: string; expiresAt: string | null } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await createMatchingRequestCore(input);
 
@@ -146,23 +152,41 @@ export async function createMatchingRequest(
   }
 
   logger.info('student:create_matching_request_success', 'Matching request created', ctx);
-  return { success: true };
+  return { success: true, requestId: result.request.request_id, expiresAt: result.request.expires_at };
 }
 
 /**
- * 承認待ちの自分のマッチングリクエストを取消す
+ * 申請カレンダーの候補（生徒の現地の曜日・開始時刻）ごとに、契約期間内に予約できる回数を取得する
  */
-export async function cancelMatchingRequest(
+export async function getMatchingSlotOptions(
+  ticketId: string,
+  coachId: string,
+  slotNo: number,
+  candidates: { day_of_week: DayOfWeek; start_time: string }[]
+): Promise<{ success: true; options: MatchingSlotOption[] } | { success: false; message: string }> {
+  const result = await getMatchingSlotOptionsCore(ticketId, coachId, slotNo, candidates);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_matching_slot_options_failed', result.errorCode, ctx);
+    return { success: false, message: MATCHING_ERROR_MESSAGES_JA[result.errorCode] };
+  }
+  return { success: true, options: result.options };
+}
+
+/**
+ * 承認待ちの自分のマッチングリクエストを取り下げる（宛先のコーチにアプリ内で通知される）
+ */
+export async function withdrawMatchingRequest(
   requestId: string
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
-  const result = await cancelMatchingRequestCore(requestId);
+  const result = await withdrawMatchingRequestCore(requestId);
 
   if (!result.success) {
-    logger.error('student:cancel_matching_request_failed', result.errorCode, ctx);
+    logger.error('student:withdraw_matching_request_failed', result.errorCode, ctx);
     return { success: false, message: MATCHING_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
-  logger.info('student:cancel_matching_request_success', 'Matching request cancelled', ctx);
+  logger.info('student:withdraw_matching_request_success', 'Matching request withdrawn', ctx);
   return { success: true };
 }

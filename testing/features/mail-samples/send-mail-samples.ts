@@ -77,6 +77,7 @@ const STUDENT_TYPES: [NotificationType, Record<string, unknown>, string, Notific
   ["SESSION_BOOKING_REJECTED", { coach_name: "Suzanne" }, "/live-room", { session: SESSION, reason: "その時間は別の予定が入っています。" }],
   ["MATCHING_APPROVED", { coach_name: "Suzanne" }, "/live-room", { weekly: SESSION }],
   ["MATCHING_REJECTED", { coach_name: "Suzanne" }, "/coach-matching", { weekly: SESSION, reason: "申し訳ありません、その枠は他の生徒の担当が決まりました。" }],
+  ["MATCHING_EXPIRED", { coach_name: "Suzanne" }, "/coach-matching", { weekly: SESSION }],
   ["HOMEWORK_POSTED", { coach_name: "Suzanne", preview: "Please practice the final /n/ sound with the sentences we used today." }, "/live-room/sessions/sample/result", {}],
 ];
 const COACH_TYPES: [NotificationType, Record<string, unknown>, string, NotificationMailFacts][] = [
@@ -85,6 +86,7 @@ const COACH_TYPES: [NotificationType, Record<string, unknown>, string, Notificat
   ["SESSION_BOOKED_BY_STUDENT", { student_name: "Taro Yamada" }, "/students/sample", { session: SESSION }],
   ["SESSION_BOOKING_REQUESTED", { student_name: "Taro Yamada" }, "/calendar", { session: SESSION, message: "I'd like to practice for my presentation." }],
   ["MATCHING_ASSIGNED_TO_COACH", { student_name: "Taro Yamada" }, "/students/sample", {}],
+  ["MATCHING_REQUESTED", { student_name: "Taro Yamada" }, "/matching-requests", { weekly: SESSION, respondByIso: "2026-10-07T10:00:00Z" }],
   ["COACH_REPORT_APPROVED", { report_month: "2026-09-01" }, "/monthly-reports?month=2026-09", {}],
   ["COACH_REPORT_APPROVAL_REVOKED", { report_month: "2026-09-01" }, "/monthly-reports?month=2026-09", {}],
 ];

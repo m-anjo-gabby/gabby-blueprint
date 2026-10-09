@@ -12,6 +12,8 @@ export const MATCHING_REQUEST_STATUS = {
   APPROVED: 2,
   REJECTED: 3,
   CANCELLED: 4,
+  /** 回答期限（申請から24時間。DBの matching_request_ttl()）切れ */
+  EXPIRED: 6,
 } as const;
 export type MatchingRequestStatus = typeof MATCHING_REQUEST_STATUS[keyof typeof MATCHING_REQUEST_STATUS];
 
@@ -28,6 +30,10 @@ export interface MatchingRequestRecord {
   requested_start_time: string; // "HH:MM:SS"
   requested_end_time: string;
   requested_timezone: string;
+  /** 申請時に予約できた回数（生徒が了承した回数）。2026-10-09より前の行・アドミンの直接マッチングはnull */
+  requested_bookable_sessions: number | null;
+  /** 回答期限（承認待ちの申請のみ）。過ぎると期限切れ（毎分の処理で status=6 になる。それまでも承認待ちとして扱わない） */
+  expires_at: string | null;
   status: MatchingRequestStatus;
   reject_reason: string | null;
   responded_by: string | null;
@@ -36,12 +42,48 @@ export interface MatchingRequestRecord {
   update_date: string;
 }
 
+/**
+ * 毎週の枠を申請・承認したときに予約できる回数（DBの fn_matching_slot_availability）。
+ * 予約できる回数が割合（DBの matching_min_bookable_rate()）以上なら申請・承認でき、残りは未予約として個別に調整する。
+ */
+export interface MatchingSlotAvailability {
+  /** コマの契約上の回数 */
+  target_sessions: number;
+  /** 申請（承認）から24時間以降、契約終了までの毎週の回の数 */
+  possible_sessions: number;
+  /** そのうち予約できる回の数（上限 target_sessions） */
+  bookable_sessions: number;
+  /** 申請・承認に必要な回数 */
+  required_sessions: number;
+  /** 申請・承認できるか */
+  is_acceptable: boolean;
+}
+
+/** 予約できる回数から、未予約として残る回数とその内訳（期間が足りない分・他の予定と重なる分）を求める */
+export function getMatchingUnbookedBreakdown(availability: MatchingSlotAvailability): {
+  unbooked: number;
+  periodShort: number;
+  conflicts: number;
+} {
+  const unbooked = Math.max(availability.target_sessions - availability.bookable_sessions, 0);
+  const periodShort = Math.min(Math.max(availability.target_sessions - availability.possible_sessions, 0), unbooked);
+  return { unbooked, periodShort, conflicts: unbooked - periodShort };
+}
+
+/** 申請カレンダーの候補（生徒の現地の曜日・開始時刻）ごとの予約できる回数 */
+export interface MatchingSlotOption extends MatchingSlotAvailability {
+  day_of_week: DayOfWeek;
+  start_time: string; // "HH:MM"
+}
+
 /** コーチ側の受信リクエスト一覧表示用（生徒名・申請した契約の期間を結合） */
 export interface IncomingMatchingRequestItem extends MatchingRequestRecord {
   student_name: string;
   /** 申請した契約（チケットのライセンス）の開始・終了日時。初回の予定日を契約期間内で求めるために使う */
   license_start_date: string | null;
   license_end_date: string | null;
+  /** 承認待ちの申請を今承認した場合に予約できる回数（承認待ち以外・取得できない場合はnull） */
+  availability: MatchingSlotAvailability | null;
 }
 
 /** 生徒側の自分のリクエスト一覧表示用（コーチ名を結合） */
@@ -138,21 +180,12 @@ export interface SlotStatusItem {
   // day_of_week/start_time/end_timeの解釈基準のタイムゾーン。
   // matched: com_m_lesson_schedule.schedule_timezone / pending: com_t_matching_request.requested_timezone
   schedule_timezone: string | null;
-  request_id: string | null; // pending時のリクエストID（取消操作用）
+  request_id: string | null; // pending時のリクエストID（取り下げ操作用）
+  /** pending時の回答期限 */
+  expires_at: string | null;
   reject_reason: string | null; // 直近が否認だった場合の理由（再リクエストを促す表示用）
-}
-
-/**
- * コーチの予約済み枠（曜日・時間帯）。誰が確保しているか（student_id等）は含まない。
- * 承認済みの確定予約、および承認待ちの申請の両方を含む
- * （マッチング申請カレンダーで選択不可として表示するためのソフトチェック用途）。
- */
-export interface CoachUnavailableSlot {
-  /** day_of_week/start_time/end_time の解釈基準のタイムゾーン（定期スケジュール・申請ごとに異なる） */
-  timezone: string;
-  day_of_week: DayOfWeek;
-  start_time: string;
-  end_time: string;
+  /** 直近の申請が回答期限切れだった（再リクエストを促す表示用） */
+  last_request_expired: boolean;
 }
 
 /**
@@ -179,7 +212,6 @@ export interface CoachBrowseItem {
     start_time: string;
     end_time: string;
   }[];
-  unavailable_slots: CoachUnavailableSlot[];
 }
 
 /**
@@ -213,6 +245,12 @@ export type MatchingRequestErrorCode =
   | 'not_eligible'
   | 'slot_already_requested'
   | 'schedule_conflict'
+  /** 予約できる回数が割合に満たない（申請時・承認時） */
+  | 'insufficient_bookable'
+  /** 承認待ちでない（取り下げ・承認の時点で既に対応済み） */
+  | 'not_pending'
+  /** 回答期限（24時間）を過ぎている */
+  | 'expired'
   | 'db_insert_failed'
   | 'db_update_failed'
   | 'unexpected_error';
@@ -221,7 +259,11 @@ export type CreateMatchingRequestResult =
   | { success: true; request: MatchingRequestRecord }
   | { success: false; errorCode: MatchingRequestErrorCode };
 
-export type CancelMatchingRequestResult =
+export type GetMatchingSlotOptionsResult =
+  | { success: true; options: MatchingSlotOption[] }
+  | { success: false; errorCode: MatchingRequestErrorCode };
+
+export type WithdrawMatchingRequestResult =
   | { success: true }
   | { success: false; errorCode: MatchingRequestErrorCode };
 

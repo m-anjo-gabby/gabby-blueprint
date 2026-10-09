@@ -18,6 +18,9 @@
 -- 【権限チェック・通知の共通化 (2026-09-15追加)】
 -- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
 -- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
+--
+-- 【回答期限 (2026-10-09追加)】
+-- 回答期限（expires_at。申請から24時間）を過ぎた申請は EXPIRED で拒否する（期限切れの処理は expire_matching_requests.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.reject_matching_request(p_request_id uuid, p_reason text)
 RETURNS void
@@ -42,6 +45,11 @@ BEGIN
 
     IF v_request.status <> 1 THEN
         RAISE EXCEPTION 'matching request % is not pending (status=%)', p_request_id, v_request.status;
+    END IF;
+
+    -- 回答期限（expires_at）を過ぎた承認待ちは、期限切れの処理（毎分）を待たずに無効として扱う
+    IF v_request.expires_at IS NOT NULL AND v_request.expires_at <= NOW() THEN
+        RAISE EXCEPTION 'EXPIRED: matching request % has expired', p_request_id;
     END IF;
 
     UPDATE public.com_t_matching_request

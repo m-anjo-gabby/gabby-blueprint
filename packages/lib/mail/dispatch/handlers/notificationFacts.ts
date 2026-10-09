@@ -115,14 +115,16 @@ export async function loadNotificationFacts({
       return { weekly: data ? { startIso: data.start_datetime, endIso: data.end_datetime } : null };
     }
 
-    case 'MATCHING_REJECTED': {
-      // 否認された申請にはセッションが無いため、申請した枠（requested_timezone の現地時刻）の次の回の日時から
-      // 曜日・時刻を求める（生徒の申請画面の表示と同じ求め方）
+    case 'MATCHING_REJECTED':
+    case 'MATCHING_REQUESTED':
+    case 'MATCHING_EXPIRED': {
+      // 否認・申請中・期限切れの申請にはセッションが無いため、申請した枠（requested_timezone の現地時刻）の次の回の日時から
+      // 曜日・時刻を求める（生徒の申請画面の表示と同じ求め方）。申請の通知（コーチ宛て）には回答期限も載せる
       const requestId = readText(payload, 'request_id');
       if (!requestId) return {};
       const { data: request, error } = await admin
         .from('com_t_matching_request')
-        .select('requested_day_of_week, requested_start_time, requested_end_time, requested_timezone, reject_reason')
+        .select('requested_day_of_week, requested_start_time, requested_end_time, requested_timezone, reject_reason, expires_at')
         .eq('request_id', requestId)
         .maybeSingle();
       if (error) throw new Error(`matching_request_fetch_failed: ${error.message}`);
@@ -137,7 +139,8 @@ export async function loadNotificationFacts({
       const durationMinutes = minutesOf(request.requested_end_time) - minutesOf(request.requested_start_time);
       return {
         weekly: { startIso: instant.toISOString(), endIso: new Date(instant.getTime() + durationMinutes * 60000).toISOString() },
-        reason: request.reject_reason,
+        reason: type === 'MATCHING_REJECTED' ? request.reject_reason : null,
+        respondByIso: type === 'MATCHING_REQUESTED' ? request.expires_at : null,
       };
     }
 
