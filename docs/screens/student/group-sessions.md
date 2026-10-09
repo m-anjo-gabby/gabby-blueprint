@@ -57,4 +57,4 @@
 - サーバーアクション: `apps/student/actions/calendarEventAction.ts`（`getGroupSessionList`・`joinCalendarEventSeries`、実体は
   `packages/lib/calendarEvent/actions/calendarEventActions.ts` の `joinCalendarEventSeriesCore`）
 - 画面の追加に伴う登録: `constants/shellLayout.ts`（`groupSessions`）、`components/shell/ShellRouteSkeleton.tsx`、`proxy.ts`（`VALID_STUDENT_ROUTES`）
-- E2E: `testing/e2e/tests/home/group-session-list.spec.ts`
+- E2E: `testing/e2e/tests/home/group-session-list.spec.ts`、ジャーニー `testing/e2e/tests/journeys/group-session.spec.ts`（企画から参加・アナウンス・リマインダー・振り返りまで）

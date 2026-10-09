@@ -66,3 +66,4 @@
   `deleteCalendarEventMessageFile`, `getCalendarEventMessageAttachmentUrl`。いずれもRPCではなく
   `com_t_calendar_event_participant` / `com_t_calendar_event_message`への直接CRUD）
 - `packages/types/calendarEvent.ts`（`CalendarEventMessageItem`, `CalendarEventMessageAttachment`の正本）
+- E2E: ジャーニー `testing/e2e/tests/journeys/group-session.spec.ts` 手順3（参加者一覧に参加登録した生徒が出る・アナウンスの送信）
