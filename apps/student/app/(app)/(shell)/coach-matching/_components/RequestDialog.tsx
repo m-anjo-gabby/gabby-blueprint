@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Clock, CalendarClock, TriangleAlert } from 'lucide-react';
+import { Clock, CalendarClock, ChevronDown, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -25,7 +25,8 @@ import {
   formatZonedDate,
 } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { CoachAvailabilityCalendar, AvailabilityCell, AvailabilityCellState } from './CoachAvailabilityCalendar';
+import { AvailabilityLegend, CoachAvailabilityCalendar, AvailabilityCell, AvailabilityCellState } from './CoachAvailabilityCalendar';
+import { cn } from '@/lib/utils';
 
 interface RequestDialogProps {
   coach: CoachBrowseItem | null;
@@ -54,6 +55,8 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
   // 候補ごとの予約できる回数。取得のたびに対象（コーチ×コマ）のkeyと組で持ち、対象が変わったら取得中として扱う
   const [loadedOptions, setLoadedOptions] = useState<{ key: string; options: Map<string, MatchingSlotOption> } | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
+  // 未予約の回の内訳は「詳しく」を押したときだけ出す（ダイアログを短く保つ）
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const { showToast } = useToast();
 
   // ダイアログを開くたび（＝coachが変わるたび）に前回の選択をリセットする
@@ -132,6 +135,7 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
   // 選んだ枠・コマが変わったら、個別調整の了承をやり直す。取得し直した結果、選んだ枠が申請できなくなったら選択を外す
   useEffect(() => {
     setAcknowledged(false);
+    setShowBreakdown(false);
   }, [selectedCell?.key, slotNo]);
   useEffect(() => {
     if (selectedCell && cellStates && cellStates.get(selectedCell.key) === 'unavailable') setSelectedCell(null);
@@ -193,78 +197,24 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
 
   return (
     <Dialog open={!!coach} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-xl">
+      {/*
+        見出し（固定）・本文（スクロール）・送信ボタン（固定）の3段。中身が増えても閉じる・送信が常に見える。
+        モバイルは画面いっぱい、sm以上は中央に浮かせる（高さは画面の9割まで）。
+      */}
+      <DialogContent
+        className={cn(
+          'flex flex-col gap-0 overflow-hidden p-0 sm:max-w-xl sm:max-h-[90dvh]',
+          'max-sm:inset-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:border-0'
+        )}
+      >
         {coach && (
           <>
-            <DialogHeader>
+            <DialogHeader className="shrink-0 border-b border-line/70 px-5 pb-3 pt-5 pr-12 text-left">
               <DialogTitle>{coach.user_name} にリクエスト</DialogTitle>
-              <DialogDescription>
-                カレンダーから希望のセッション開始時刻を選択してください（1セッション25分）。時刻はあなたのタイムゾーンで表示しています。
-              </DialogDescription>
+              <DialogDescription>希望のセッション開始時刻を選んでください（1回25分・あなたのタイムゾーンで表示）。</DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
-              <CoachAvailabilityCalendar
-                cells={cells}
-                cellStates={cellStates}
-                selectedKey={selectedCell?.key ?? null}
-                onSelect={setSelectedCell}
-              />
-              <p className="text-[11px] text-ink-subtle">
-                〇は契約期間内の全ての回を予約できます。△は一部の回がコーチの他の予定と重なるため、その回はコーチと個別に日時を調整します。×は受付終了（他の予定や他の方のリクエストと重なる回が多い）です。
-              </p>
-
-              {selectedCell && (
-                <div className="space-y-1.5 rounded-control border border-brand-100 bg-brand-soft px-3 py-2">
-                  <div className="flex items-center gap-2 text-sm font-bold text-brand-strong">
-                    <Clock size={14} />
-                    毎週 {DAY_OF_WEEK_LABEL_JA[selectedCell.displayDay]} {selectedCell.displayStartTime} - {selectedCell.displayEndTime}
-                  </div>
-                  {firstSession && (
-                    <div className="flex items-center gap-2 border-t border-brand-100 pt-1.5 text-xs font-bold text-brand-strong">
-                      <CalendarClock size={14} />
-                      初回ライブセッション予定日: {formatZonedDate(firstSession.instant, studentTimezone)}（
-                      {DAY_OF_WEEK_LABEL_JA[firstSession.day_of_week as DayOfWeek]}）{firstSession.start_time}〜
-                    </div>
-                  )}
-                  {selectedOption && breakdown && (
-                    <p className="border-t border-brand-100 pt-1.5 text-xs text-brand-strong">
-                      このコマの{selectedOption.target_sessions}回のうち、{selectedOption.bookable_sessions}回を予約します。
-                      {breakdown.unbooked > 0 && `残り${breakdown.unbooked}回は未予約になります。`}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {selectedOption && breakdown && breakdown.unbooked > 0 && (
-                <div className="space-y-2 rounded-control border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
-                  <p className="flex items-center gap-1.5 font-bold">
-                    <TriangleAlert size={14} aria-hidden="true" />
-                    未予約の{breakdown.unbooked}回は、コーチと個別に日時を調整してください
-                  </p>
-                  <ul className="list-disc space-y-0.5 pl-5">
-                    {breakdown.conflicts > 0 && <li>コーチの他の予定（他の方のリクエストを含む）やあなたの他の予定と重なる回: {breakdown.conflicts}回</li>}
-                    {breakdown.periodShort > 0 && <li>契約の残り期間に入りきらない回: {breakdown.periodShort}回</li>}
-                  </ul>
-                  <p>マッチング成立後、ライブセッションのページから未予約の回の日時をリクエストできます。</p>
-                  {needsAcknowledgement && (
-                    <label className="flex items-center gap-2 pt-0.5 font-bold">
-                      <input
-                        type="checkbox"
-                        className="size-4 accent-brand"
-                        checked={acknowledged}
-                        onChange={(e) => setAcknowledged(e.target.checked)}
-                      />
-                      未予約の回を個別に調整することを了承しました
-                    </label>
-                  )}
-                </div>
-              )}
-
-              <p className="text-[11px] text-ink-subtle">
-                コーチは24時間以内に回答します。期限までに回答が無い場合、リクエストは無効になり、別のコーチや時間帯でリクエストし直せます。
-              </p>
-
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
               {unmatchedSlots.length > 1 && (
                 <div className="space-y-1.5">
                   <Label>リクエストするコマ</Label>
@@ -281,21 +231,92 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
                   </select>
                 </div>
               )}
+
+              <AvailabilityLegend />
+              <CoachAvailabilityCalendar
+                cells={cells}
+                cellStates={cellStates}
+                selectedKey={selectedCell?.key ?? null}
+                onSelect={setSelectedCell}
+              />
+
+              {selectedCell && (
+                <div className="space-y-1 rounded-control border border-brand-100 bg-brand-soft px-3 py-2 text-brand-strong">
+                  <p className="flex items-center gap-2 text-sm font-bold">
+                    <Clock size={14} />
+                    毎週 {DAY_OF_WEEK_LABEL_JA[selectedCell.displayDay]} {selectedCell.displayStartTime} - {selectedCell.displayEndTime}
+                  </p>
+                  {firstSession && (
+                    <p className="flex items-center gap-2 text-xs font-bold">
+                      <CalendarClock size={14} />
+                      初回: {formatZonedDate(firstSession.instant, studentTimezone)}（
+                      {DAY_OF_WEEK_LABEL_JA[firstSession.day_of_week as DayOfWeek]}）{firstSession.start_time}〜
+                    </p>
+                  )}
+                  {selectedOption && breakdown && breakdown.unbooked === 0 && (
+                    <p className="text-xs">このコマの{selectedOption.target_sessions}回をすべて予約します。</p>
+                  )}
+                </div>
+              )}
+
+              {selectedOption && breakdown && breakdown.unbooked > 0 && (
+                <div className="space-y-2 rounded-control border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+                  <p className="flex items-start gap-1.5 font-bold">
+                    <TriangleAlert size={14} className="mt-px shrink-0" aria-hidden="true" />
+                    <span>
+                      {selectedOption.target_sessions}回のうち{selectedOption.bookable_sessions}回を予約します。残り{breakdown.unbooked}回はコーチと個別に日時を調整します。
+                    </span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowBreakdown((v) => !v)}
+                    aria-expanded={showBreakdown}
+                    className="inline-flex items-center gap-0.5 font-bold underline underline-offset-2"
+                  >
+                    {showBreakdown ? '閉じる' : '詳しく'}
+                    <ChevronDown size={12} className={cn('transition-transform', showBreakdown && 'rotate-180')} aria-hidden="true" />
+                  </button>
+                  {showBreakdown && (
+                    <div className="space-y-1">
+                      <ul className="list-disc space-y-0.5 pl-5">
+                        {breakdown.conflicts > 0 && <li>コーチの他の予定（他の方のリクエストを含む）やあなたの他の予定と重なる回: {breakdown.conflicts}回</li>}
+                        {breakdown.periodShort > 0 && <li>契約の残り期間に入りきらない回: {breakdown.periodShort}回</li>}
+                      </ul>
+                      <p>マッチング成立後、ライブセッションのページから未予約の回の日時をリクエストできます。</p>
+                    </div>
+                  )}
+                  {needsAcknowledgement && (
+                    <label className="flex items-center gap-2 pt-0.5 font-bold">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-brand"
+                        checked={acknowledged}
+                        onChange={(e) => setAcknowledged(e.target.checked)}
+                      />
+                      未予約の回を個別に調整することを了承しました
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-                キャンセル
-              </Button>
-              <Button
-                pending={isSubmitting}
-                type="button"
-                onClick={handleSubmit}
-                disabled={isSubmitting || !selectedCell || !slotNo || !selectedOption || (needsAcknowledgement && !acknowledged)}
-              >
-                リクエストを送信
-              </Button>
-            </DialogFooter>
+            <div className="shrink-0 space-y-2 border-t border-line/70 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <p className="text-[11px] text-ink-subtle">コーチは24時間以内に回答します（期限を過ぎるとリクエストは無効になります）。</p>
+              {/* モバイルでも横に並べ、本文に使える高さを残す */}
+              <DialogFooter className="flex-row gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
+                <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+                  キャンセル
+                </Button>
+                <Button
+                  pending={isSubmitting}
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || !selectedCell || !slotNo || !selectedOption || (needsAcknowledgement && !acknowledged)}
+                >
+                  リクエストを送信
+                </Button>
+              </DialogFooter>
+            </div>
           </>
         )}
       </DialogContent>

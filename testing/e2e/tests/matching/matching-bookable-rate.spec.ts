@@ -19,6 +19,8 @@ import { getPersonaPassword } from "../../support/personas.ts";
  * （画面: docs/screens/student/coach-matching.md・docs/screens/coach/matching-requests.md、
  *  仕様: testing/e2e/specs/matching/coach-matching.md）。
  * - 全ての回を予約できる枠は○、割合以上なら△（未予約の回の個別調整を了承して申請）、割合未満は×（申請できない）
+ * - 狭い画面（iPhone SE 相当）でも、コーチのカードが画面の幅に収まり、申請ダイアログは画面内に収まって、
+ *   △を選んで注意欄が出ても閉じる・送信のボタンが見える
  * - 申請の取り下げは確認のうえ行い、コーチにアプリ内の通知が届く
  * - 申請後にコーチの予定が埋まって割合を下回ると承認できない。割合以上なら重なる回を飛ばして成立し、成立通知に回数が入る
  * - 同じコーチ宛ての他の生徒の承認待ちの申請と重なる枠は申請できない（承認時は数えない）
@@ -117,8 +119,14 @@ test("予約できる回数の割合で申請・承認を判断し、取り下�
   await agreeToPendingTerms(page);
   await expect(termsDialog).toHaveCount(0);
 
+  // 狭い画面で確かめる（iPhone SE 相当）
+  const viewport = { width: 375, height: 667 };
+  await page.setViewportSize(viewport);
   await page.goto("/coach-matching");
   const coachCard = page.locator("article").filter({ hasText: coachName });
+  const cardBox = await coachCard.boundingBox();
+  expect(cardBox!.x).toBeGreaterThanOrEqual(0);
+  expect(cardBox!.x + cardBox!.width).toBeLessThanOrEqual(viewport.width);
   const openDialog = async () => {
     await coachCard.getByRole("button", { name: "カレンダーからリクエストする" }).click();
     const dialog = page.getByRole("dialog");
@@ -129,8 +137,14 @@ test("予約できる回数の割合で申請・承認を判断し、取り下�
     const dialog = await openDialog();
     await expect(dialog.getByRole("button", { name: "金曜日 21:00 受付終了" })).toBeDisabled();
     await dialog.getByRole("button", { name: "金曜日 20:00 申請可能（一部の回は個別に調整）" }).click();
-    await expect(dialog).toContainText("コーチと個別に日時を調整してください");
+    await expect(dialog).toContainText("コーチと個別に日時を調整します");
     const submit = dialog.getByRole("button", { name: "リクエストを送信" });
+    // 注意欄が出ても、ダイアログは画面内に収まり、閉じる・送信のボタンが見える
+    const dialogBox = await dialog.boundingBox();
+    expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(viewport.height);
+    await expect(dialog.getByRole("button", { name: "Close" })).toBeInViewport();
+    await expect(submit).toBeInViewport();
     // 未予約の回の個別調整を了承するまで送信できない
     await expect(submit).toBeDisabled();
     await dialog.getByLabel("未予約の回を個別に調整することを了承しました").check();

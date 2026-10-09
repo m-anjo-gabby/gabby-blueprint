@@ -1,9 +1,10 @@
 'use client';
 
-import { Circle, Triangle, X } from 'lucide-react';
+import { Circle, Info, Triangle, X } from 'lucide-react';
 import { DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const SLOTS_PER_DAY = 48;
 
@@ -76,7 +77,8 @@ export function CoachAvailabilityCalendar({ cells, cellStates, selectedKey, onSe
   const slotRange = Array.from({ length: endSlot - startSlot + 1 }, (_, i) => startSlot + i);
 
   return (
-    <div className="max-h-[360px] overflow-y-auto rounded-control border border-line select-none" aria-busy={cellStates === null}>
+    // モバイルの全画面のダイアログでは、凡例・選んだ枠の内容がカレンダーの下に見えるよう、高さを画面の約4割にする
+    <div className="max-h-[40dvh] sm:max-h-[360px] overflow-y-auto rounded-control border border-line select-none" aria-busy={cellStates === null}>
       <div className="grid" style={{ gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))' }}>
         <div className="sticky top-0 z-20 bg-white border-b border-line" />
         {DAYS_OF_WEEK.map((day) => (
@@ -147,6 +149,67 @@ export function CoachAvailabilityCalendar({ cells, cellStates, selectedKey, onSe
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** 凡例の記号（カレンダーのセルと同じ見た目） */
+function LegendMark({ state }: { state: AvailabilityCellState }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'inline-flex size-5 items-center justify-center border border-line/70',
+        state === 'full' && 'bg-brand-soft text-brand-500',
+        state === 'partial' && 'bg-amber-50 text-amber-600',
+        state === 'unavailable' && 'bg-canvas text-ink-subtle'
+      )}
+    >
+      {state === 'full' && <Circle size={11} strokeWidth={3} />}
+      {state === 'partial' && <Triangle size={11} strokeWidth={3} />}
+      {state === 'unavailable' && <X size={12} strokeWidth={3} />}
+    </span>
+  );
+}
+
+const LEGEND_ITEMS: { state: AvailabilityCellState; label: string }[] = [
+  { state: 'full', label: '全回予約可' },
+  { state: 'partial', label: '一部は個別調整' },
+  { state: 'unavailable', label: '受付終了' },
+];
+
+/**
+ * カレンダーの凡例（グラフの凡例のように、記号と短い名前だけを1行で並べる）。
+ * 補足（△・×の意味）は ⓘ を押したときだけ吹き出しで出す。
+ */
+export function AvailabilityLegend() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-ink-muted">
+      {LEGEND_ITEMS.map((item) => (
+        <span key={item.state} className="inline-flex items-center gap-1">
+          <LegendMark state={item.state} />
+          {item.label}
+        </span>
+      ))}
+      <Popover>
+        <PopoverTrigger
+          aria-label="記号の説明"
+          className="inline-flex size-6 items-center justify-center rounded-full text-ink-subtle hover:bg-canvas hover:text-ink-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30"
+        >
+          <Info size={14} />
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-72 space-y-2 text-xs leading-relaxed text-ink-soft">
+          <p>
+            <span className="font-bold">〇</span> 契約期間内の全ての回を予約できます。
+          </p>
+          <p>
+            <span className="font-bold">△</span> 一部の回がコーチまたはあなたの他の予定と重なります。重なる回は未予約になり、マッチング成立後にコーチと個別に日時を調整します。
+          </p>
+          <p>
+            <span className="font-bold">×</span> 他の予定や他の方のリクエストと重なる回が多く、リクエストできません。
+          </p>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

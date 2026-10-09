@@ -304,10 +304,12 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                     </Button>
                   </motion.div>
                 ) : (
-                  <div className="grid gap-3 lg:grid-cols-2">
+                  // 列幅を画面幅に収める（列の指定が無いと、省略表示する長い名前の幅まで列が広がり、カードが枠からはみ出す）
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                     {filteredCoaches.map((coach) => (
                       <motion.div
                         key={coach.user_id}
+                        className="min-w-0"
                         layout
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
