@@ -4,7 +4,7 @@
 
 - 対象ロール: 生徒、コーチ
 - なぜ重要か: ライブ付き契約で毎週のように起きる操作で、生徒・コーチの双方の画面とチケット（契約の回数）にまたがる。キャンセルの返還・振替の確定・予約リクエストの承認のどれかが崩れると、契約の回数が合わなくなり（消えた・二重に入った回）、生徒が予約できない・コーチが知らない予定が入るといった実害になる。
-- 前後のジャーニー: [生徒の初日](./student-first-day.md) の手順8（担当の申請・承認）で毎週の予定が入った後、契約期間中に繰り返す。予定どおり実施する回は [コーチのライブセッション](./coach-live-session.md)。
+- 前後のジャーニー: [生徒の初日](./student-first-day.md) の手順8（担当の申請・承認）で毎週の予定が入った後、契約期間中に繰り返す。予定どおり実施する回は [コーチのライブセッション](./coach-live-session.md)。アドミンが代わりに日程・担当を直す場合は [アドミンのライブセッション運用対応](./admin-live-session-ops.md)。
 - E2E: [tests/journeys/live-session-reschedule.spec.ts](../tests/journeys/live-session-reschedule.spec.ts)（手順1〜8）
 
 ## 前提データ
@@ -35,4 +35,3 @@
 ## 未整備の依存ドメイン
 
 - **分岐のE2E** — 予約リクエストの却下（理由の表示）・取り下げ、生徒による振替候補の承諾、振替候補のまとめて却下、開始12時間未満のキャンセル（返還なし）は、[specs/booking](../specs/booking/individual-booking-and-reschedule.md) の「E2Eテストケース候補」のまま（未作成）
-- **アドミンの代理操作** — キャンセル・直接予約・コーチ交代は [specs/admin/live-session-management.md](../specs/admin/live-session-management.md) にあり、E2E は未作成

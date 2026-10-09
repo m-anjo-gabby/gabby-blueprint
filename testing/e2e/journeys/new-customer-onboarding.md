@@ -26,10 +26,9 @@
 | 5 | アドミン | **契約開始日の3日前まで**に生徒を招待する。複数名の契約はCSV一括登録（1回30件まで）で初期ライセンスに手順3の契約を選ぶ。1名の契約は1人ずつ登録し、ライセンスは契約管理のライセンス割当から付ける | ユーザー一覧に「招待中」で表示（メール送信に失敗した行は「送信失敗」）。招待メールが届く。初期ライセンスで登録した場合、**ライセンスは本登録の時点で付く**（それまで契約のライセンス利用状況は増えない） | [docs/screens/admin/users.md](../../../docs/screens/admin/users.md)、[docs/screens/admin/contracts/list.md](../../../docs/screens/admin/contracts/list.md)（ライセンス割当） | どの経路でも、ライブ付き契約ならチケットが付き、割当履歴が残る（`packages/lib/license/issue.ts`）。招待リンクの期限は3日（[common/invite.md](../../../docs/screens/common/invite.md)）。契約開始日前に本登録した生徒も、開始前から利用できる（ホームのご契約プランは「開始前」） |
 | 6 | アドミン | 本登録の状況を見て、期限切れ・未着の生徒に招待メールを再送する | 本登録済みは「招待確認済」→初回ログイン後「アクティブ」。契約のライセンス利用状況が本登録した人数分増える | [docs/screens/admin/users.md](../../../docs/screens/admin/users.md)、[docs/screens/common/invite.md](../../../docs/screens/common/invite.md) | 再送すると以前のリンクは無効になり、期限は再送時点から3日 |
 | 7 | アドミン | （通常は不要）生徒のスプリントのレベル・レベル管理の有無を個別に補正する | ステージ・レベル管理ダイアログに設定値が出て、生徒のスプリントで選べるレベルが変わる | [docs/screens/admin/users.md](../../../docs/screens/admin/users.md)（ステージ・レベル管理） | 新規の生徒はレベル0から始まり、レベル管理の有無は初期ライセンスの契約で決まる（ライブ付き契約はあり、アプリのみ契約はなし。受注時のレベル設定はしない）。進捗レコードは本登録時に作られる（`handle_new_user`）ため、本登録前は設定できない。契約の種類が後から変わった生徒（アプリのみ→ライブ付き等）はここで切り替える |
-| 8 | 生徒・コーチ | ライブ付きプランのみ: 生徒が専属コーチを申請し、コーチが承認する | 承認時に契約期間分のセッションが自動で予約され、生徒のホームに次回のセッションが出る | [docs/screens/student/coach-matching.md](../../../docs/screens/student/coach-matching.md)、[docs/screens/coach/matching-requests.md](../../../docs/screens/coach/matching-requests.md) | 流れは[生徒の初日](./student-first-day.md)のステップ8。アドミンの直接マッチング・コーチ交代は例外措置（[specs/admin/live-session-management.md](../specs/admin/live-session-management.md)） |
+| 8 | 生徒・コーチ | ライブ付きプランのみ: 生徒が専属コーチを申請し、コーチが承認する | 承認時に契約期間分のセッションが自動で予約され、生徒のホームに次回のセッションが出る | [specs/matching](../specs/matching/coach-matching.md)、[docs/screens/student/coach-matching.md](../../../docs/screens/student/coach-matching.md)、[docs/screens/coach/matching-requests.md](../../../docs/screens/coach/matching-requests.md) | 流れは[生徒の初日](./student-first-day.md)のステップ8。アドミンの直接マッチング・コーチ交代は例外措置（[アドミンのライブセッション運用対応](./admin-live-session-ops.md)） |
 
 ## 未整備の依存ドメイン
 
 - **顧客・契約管理（業務フロー）** — 顧客作成・契約作成・教材割当を1つの業務フローとして扱う仕様書が無い（画面仕様書のみ）
 - **ユーザー登録・ライセンス付与** — 招待・即時作成・CSV一括・ライセンス割当の経路と、それぞれの上限・期間の確認をまとめた仕様書が無い（付随する記録は `packages/lib/license/issue.ts` で共通化済み）
-- **マッチング（初回）** — `matching/` ドメインの業務フロー仕様書が無い（申請〜承認〜セッション自動生成）

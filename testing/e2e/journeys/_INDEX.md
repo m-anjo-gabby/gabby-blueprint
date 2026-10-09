@@ -13,4 +13,5 @@
 | [license-renewal.md](license-renewal.md) | 既存顧客の契約継続（継続用の契約・次タームのライセンス割当・継続前後の生徒の見え方・ライブの再マッチング） |
 | [contract-end.md](contract-end.md) | 契約の終了・停止（アプリのみ契約。終了14日前の案内・期間終了後のログイン・レポート・モニターでの見え方・途中の無効化・契約の解約とライセンス・再契約） |
 | [live-session-reschedule.md](live-session-reschedule.md) | ライブセッションの日程変更（生徒のキャンセルと振替候補・コーチが候補で確定・コーチのキャンセルと候補・生徒が見送って予約リクエスト・コーチの承認。契約の回数が保たれること） |
+| [admin-live-session-ops.md](admin-live-session-ops.md) | アドミンのライブセッション運用対応（代理キャンセル・予約し直し・コーチ交代・別のコーチとの直接マッチング〔交代前に使った回を差し引く〕・回数の個別調整。生徒・コーチへは通知しない） |
 | [coach-live-session.md](coach-live-session.md) | コーチのライブセッション（ダッシュボードで今日のセッション・未読を確認・生徒概要とハブで準備・Live Sprint とダイアログの実施・End Session〔入退室の重なりで実施結果を判定〕・宿題の投稿） |

@@ -27,7 +27,7 @@
 | 5 | 生徒 | ホームを見る | 今日やることは自主トレーニングの案内。今週のトレーニングは空、これまでの歩みは案内文のみ、ご契約プランはプラン名と「残りn日」（契約開始日前は「開始前」。開始前でも教材は使える）。ライブの行・タブはライブ付き契約の生徒だけに出る | [docs/screens/student/dashboard.md](../../../docs/screens/student/dashboard.md) | |
 | 6 | 生徒 | ライブラリで教材を選ぶ | 共通公開の教材と、自分の顧客に割り当てられた限定公開の教材が出る | [docs/screens/student/library.md](../../../docs/screens/student/library.md) | |
 | 7 | 生徒 | 最初のトレーニング（単語帳・スプリント）を実施する | 結果画面が出て、トレーニング記録・ホームに実施日数1日・初回トレーニング日が反映される。スプリントは、アプリのみ契約は問題のある全レベル、ライブ付き契約はレベル1まで選べる | [docs/screens/student/training/](../../../docs/screens/student/training/)（`word-detail.md`・`sprint-play.md`・`sprint-result.md`・`performance.md`） | ライブ付き契約はコーチが定期的にレベルを引き上げる |
-| 8 | 生徒・コーチ | ライブ付きプランのみ: ライブセッションから「専属コーチを探す」で申請し、コーチが承認する | 申請した枠は「承認待ち」、承認後は「マッチング済み」。ホームに次回のセッションが出て、チャットタブが使える | [docs/screens/student/coach-matching.md](../../../docs/screens/student/coach-matching.md)、[docs/screens/coach/matching-requests.md](../../../docs/screens/coach/matching-requests.md) | 初回の予定は、選んだ曜日・時刻のうち申請から24時間以上先の最初の回 |
+| 8 | 生徒・コーチ | ライブ付きプランのみ: ライブセッションから「専属コーチを探す」で申請し、コーチが承認する | 申請した枠は「承認待ち」、承認後は「マッチング済み」。ホームに次回のセッションが出て、チャットタブが使える | [specs/matching](../specs/matching/coach-matching.md)、[docs/screens/student/coach-matching.md](../../../docs/screens/student/coach-matching.md)、[docs/screens/coach/matching-requests.md](../../../docs/screens/coach/matching-requests.md) | 初回の予定は、選んだ曜日・時刻のうち申請から24時間以上先の最初の回 |
 
 ## 既知の課題
 
@@ -37,4 +37,3 @@
 ## 未整備の依存ドメイン
 
 - **規約同意** — 画面仕様書が無い（同意の対象になる規約・改定時の再同意・同意までの操作ロック）
-- **マッチング（初回）** — `matching/` ドメインの業務フロー仕様書が無い

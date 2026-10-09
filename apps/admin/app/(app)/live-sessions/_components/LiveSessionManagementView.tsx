@@ -363,6 +363,7 @@ export function LiveSessionManagementView({ clients }: Props) {
                           return (
                             <div
                               key={slot.schedule_id}
+                              data-testid="schedule-slot"
                               className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-slate-100 bg-slate-50/60"
                             >
                               <div className="min-w-0">
@@ -457,6 +458,7 @@ export function LiveSessionManagementView({ clients }: Props) {
                         {!isPastContract && unassignedSlotNos.map((slotNo) => (
                           <div
                             key={`unassigned-${slotNo}`}
+                            data-testid="schedule-slot"
                             className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-dashed border-slate-200 bg-white"
                           >
                             <div className="min-w-0">

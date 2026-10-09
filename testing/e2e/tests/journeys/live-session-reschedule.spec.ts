@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 import { formatDateTimeEn } from "@gabby/lib/date/dateEn";
 import { cleanupAuthFixture, createAuthFixture, deleteFixtureChatRooms, type AuthFixture } from "../../support/authFixtures.ts";
 import { confirmModal, openCoachContext } from "../../support/coachApp.ts";
@@ -9,6 +9,7 @@ import {
   signOutLivePair,
   type LivePair,
 } from "../../support/liveSessionFixtures.ts";
+import { jstSlot, liveRoomBreakdown as breakdown, nextSessionSection, openLiveRoom, studentSlotText } from "../../support/liveRoomView.ts";
 import { expect, loginAsNewStudent, test } from "../../support/studentApp.ts";
 
 /**
@@ -22,8 +23,6 @@ import { expect, loginAsNewStudent, test } from "../../support/studentApp.ts";
 
 const PASSWORD = "LiveReschedule2026a";
 const TZ = "Asia/Tokyo";
-const DAY_MS = 24 * 60 * 60 * 1000;
-const LESSON_MS = 25 * 60 * 1000;
 
 let fixture: AuthFixture | undefined;
 let pair: LivePair | undefined;
@@ -39,32 +38,6 @@ test.afterEach(async () => {
   await cleanupAuthFixture(fixture);
   fixture = undefined;
 });
-
-/** 日本時間で今日から days 日後の hh:mm（日付入力の値 YYYY-MM-DD・時刻の選択肢 HH:MM・開始の ISO） */
-function jstSlot(days: number, time: string): { date: string; time: string; startIso: string; endIso: string } {
-  const date = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(Date.now() + days * DAY_MS));
-  const start = new Date(`${date}T${time}:00+09:00`);
-  return { date, time, startIso: start.toISOString(), endIso: new Date(start.getTime() + LESSON_MS).toISOString() };
-}
-
-/** 生徒の画面の予定の表記（apps/student/lib/sessionFormat.ts の formatSessionSlot と同じ。日付と時刻は別の要素のため続けて書く） */
-function studentSlotText(startIso: string, endIso: string): string {
-  const date = new Intl.DateTimeFormat("ja-JP", { timeZone: TZ, month: "long", day: "numeric", weekday: "short" }).format(new Date(startIso));
-  const time = new Intl.DateTimeFormat("ja-JP", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
-  return `${date}${time.format(new Date(startIso))}〜${time.format(new Date(endIso))}`;
-}
-
-/** 契約の状況の回数の内訳（バーの読み上げ名。実施済み・直前キャンセル・コーチ未選択は0回のまま） */
-function breakdown(page: Page, counts: { scheduled: number; adjusting: number; unbooked: number }): Locator {
-  return page.getByRole("img", {
-    name: `実施済み0回、直前キャンセル0回、予約済み${counts.scheduled}回、調整中${counts.adjusting}回、未予約${counts.unbooked}回、コーチ未選択0回`,
-  });
-}
-
-async function openLiveRoom(page: Page): Promise<void> {
-  await page.goto("/live-room");
-  await expect(page.getByRole("heading", { level: 1, name: "ライブセッション" })).toBeVisible();
-}
 
 /** キャンセル・予約リクエストのダイアログで、候補（n 番目の日付・時刻）を入れて相手の予定との重なりの確認が終わるのを待つ */
 async function fillSlot(dialog: Locator, index: number, slot: { date: string; time: string }): Promise<void> {
@@ -98,9 +71,7 @@ test("生徒・コーチがキャンセル・振替・予約リクエストで�
 
   await test.step("1. 生徒: ライブセッションホームで次回の予定と、契約の回数がすべて予約済みであることを確認する", async () => {
     await openLiveRoom(page);
-    // 見出しと本文のカードを包む区画
-    const next = page.getByRole("heading", { level: 2, name: "次回のセッション" }).locator("xpath=../..");
-    await expect(next).toContainText(studentSlotText(first.start_datetime, first.end_datetime));
+    await expect(nextSessionSection(page)).toContainText(studentSlotText(first.start_datetime, first.end_datetime));
     await expect(breakdown(page, { scheduled: total, adjusting: 0, unbooked: 0 })).toBeVisible();
     await expect(page.getByText("対応が必要です")).toHaveCount(0);
   });
