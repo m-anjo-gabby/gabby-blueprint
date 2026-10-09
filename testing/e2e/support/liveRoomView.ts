@@ -62,3 +62,13 @@ export async function openLiveRoom(page: Page): Promise<void> {
   await page.goto("/live-room");
   await expect(page.getByRole("heading", { level: 1, name: "ライブセッション" })).toBeVisible();
 }
+
+/**
+ * キャンセル・予約リクエストのダイアログ（生徒・コーチ共通の部品）で、n 番目の候補の日付・時刻を入れ、
+ * 相手の予定との重なりの確認が終わるのを待つ
+ */
+export async function fillSlot(dialog: Locator, index: number, slot: { date: string; time: string }): Promise<void> {
+  await dialog.locator("input[type=date]").nth(index).fill(slot.date);
+  await dialog.locator("select").nth(index).selectOption(slot.time);
+  await expect(dialog.getByText(/確認中…|Checking…/)).toHaveCount(0);
+}

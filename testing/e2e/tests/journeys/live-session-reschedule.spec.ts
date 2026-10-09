@@ -1,4 +1,3 @@
-import type { Locator } from "@playwright/test";
 import { formatDateTimeEn } from "@gabby/lib/date/dateEn";
 import { cleanupAuthFixture, createAuthFixture, deleteFixtureChatRooms, type AuthFixture } from "../../support/authFixtures.ts";
 import { confirmModal, openCoachContext } from "../../support/coachApp.ts";
@@ -9,7 +8,7 @@ import {
   signOutLivePair,
   type LivePair,
 } from "../../support/liveSessionFixtures.ts";
-import { jstSlot, liveRoomBreakdown as breakdown, nextSessionSection, openLiveRoom, studentSlotText } from "../../support/liveRoomView.ts";
+import { fillSlot, jstSlot, liveRoomBreakdown as breakdown, nextSessionSection, openLiveRoom, studentSlotText } from "../../support/liveRoomView.ts";
 import { expect, loginAsNewStudent, test } from "../../support/studentApp.ts";
 
 /**
@@ -38,13 +37,6 @@ test.afterEach(async () => {
   await cleanupAuthFixture(fixture);
   fixture = undefined;
 });
-
-/** キャンセル・予約リクエストのダイアログで、候補（n 番目の日付・時刻）を入れて相手の予定との重なりの確認が終わるのを待つ */
-async function fillSlot(dialog: Locator, index: number, slot: { date: string; time: string }): Promise<void> {
-  await dialog.locator("input[type=date]").nth(index).fill(slot.date);
-  await dialog.locator("select").nth(index).selectOption(slot.time);
-  await expect(dialog.getByText(/確認中…|Checking…/)).toHaveCount(0);
-}
 
 test("生徒・コーチがキャンセル・振替・予約リクエストで日程を変えても、契約の回数が保たれる", async ({ page, browser }) => {
   test.setTimeout(240_000);

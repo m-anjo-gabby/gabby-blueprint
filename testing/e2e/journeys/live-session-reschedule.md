@@ -34,4 +34,4 @@
 
 ## 未整備の依存ドメイン
 
-- **分岐のE2E** — 予約リクエストの却下（理由の表示）・取り下げ、生徒による振替候補の承諾、振替候補のまとめて却下、開始12時間未満のキャンセル（返還なし）は、[specs/booking](../specs/booking/individual-booking-and-reschedule.md) の「E2Eテストケース候補」のまま（未作成）
+- なし（分岐〔予約リクエストの却下・取り下げ、振替候補の承諾・まとめて見送り、開始12時間未満のキャンセル〕は [tests/booking/live-session-branches.spec.ts](../tests/booking/live-session-branches.spec.ts)。残りは振替候補の期限切れのみ）
