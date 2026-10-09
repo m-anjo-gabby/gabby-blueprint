@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { cleanupAuthFixture, createAuthFixture, createDisposableCoach, deleteFixtureChatRooms, DISPOSABLE_EMAIL_DOMAIN, type AuthFixture } from "../../support/authFixtures.ts";
-import { openAdminContext } from "../../support/adminApp.ts";
+import { openAdminContext, openLiveSessionsFor, scheduleSlotRow as slotRow } from "../../support/adminApp.ts";
 import { openCoachContext } from "../../support/coachApp.ts";
 import { clickUntilVisible } from "../../support/hydration.ts";
 import {
@@ -55,9 +55,6 @@ function adminSessionText(iso: string): string {
   const time = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
   return `${jstDateOf(iso).replaceAll("-", "/")} (${weekday}) ${time}`;
 }
-
-/** 定期スケジュール枠の行（稼働中・終了済みの枠は「第n枠: 曜日 時刻〜時刻（タイムゾーン）」、未割当の枠は案内文で絞る） */
-const slotRow = (page: Page, text: string): Locator => page.getByTestId("schedule-slot").filter({ hasText: text });
 
 /** セッション一覧のタブを開き、そのタブの一覧を返す */
 async function openSessionTab(page: Page, name: "今後の予定" | "実施済み" | "変更履歴"): Promise<Locator> {
@@ -129,16 +126,7 @@ test("アドミンが代理キャンセル・予約・コーチ交代・直接�
   const { context: adminContext, page: admin } = await openAdminContext(browser);
   try {
     await test.step("1. アドミン: 顧客・生徒を選ぶと現在の契約が選ばれ、担当の枠と予定が出る", async () => {
-      await admin.goto("/live-sessions");
-      await expect(admin.getByRole("heading", { level: 1, name: "ライブセッション管理" })).toBeVisible();
-      const [clientSelect, studentSelect] = [admin.getByRole("combobox").nth(0), admin.getByRole("combobox").nth(1)];
-      await clickUntilVisible(clientSelect, admin.getByPlaceholder("顧客名で検索..."));
-      await admin.getByPlaceholder("顧客名で検索...").fill(f.tag);
-      await admin.getByRole("option", { name: clientName }).click();
-      await expect(studentSelect).toBeEnabled();
-      await studentSelect.click();
-      await admin.getByPlaceholder("生徒名・メールで検索...").fill(f.tag);
-      await admin.getByRole("option", { name: `${p.studentName}（${p.studentEmail}）` }).click();
+      await openLiveSessionsFor(admin, { tag: f.tag, clientName, studentName: p.studentName, studentEmail: p.studentEmail });
 
       await expect(admin.getByRole("combobox").nth(2)).toContainText("現在の契約");
       await expect(admin.getByText("全1枠中 稼働1枠・未割当0枠")).toBeVisible();

@@ -36,4 +36,4 @@
 
 ## 未整備の依存ドメイン
 
-- **過去の契約の参照** — 過去の契約を選んだときに操作のボタンが出ないこと（[specs/admin](../specs/admin/live-session-management.md) の「E2Eテストケース候補」）は E2E が未作成
+- なし（過去の契約が参照のみになることは [tests/admin/live-sessions-past-contract.spec.ts](../tests/admin/live-sessions-past-contract.spec.ts)）
