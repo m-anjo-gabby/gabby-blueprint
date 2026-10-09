@@ -715,7 +715,7 @@
       "dateLabel": "Date",
       "timeLabel": "Start time",
       "timePlaceholder": "Time",
-      "hint": "* Must be within the coach's available hours",
+      "hint": "* Times that overlap the coach's or student's existing sessions cannot be booked. Times outside the coach's Weekly Availability can still be booked, so confirm with the coach first",
       "close": "Close",
       "confirmButton": "Book",
       "toastSuccess": "Session booked"
@@ -732,7 +732,7 @@
       "timePlaceholder": "Time",
       "hint1": "* The slot number represents which session of the weekly contract this is (numbers already in use cannot be reused).",
       "timezoneNote": "* Enter the day and start time in the student's timezone (from their profile). The student's time stays the same across daylight saving time changes.",
-      "hint2": "* Conflicts with the coach's availability or existing schedule are checked automatically.",
+      "hint2": "* Sessions that overlap the coach's or student's existing sessions are skipped and left unbooked. The match is made even outside the coach's Weekly Availability, so confirm with the coach first.",
       "close": "Close",
       "confirmButton": "Complete match",
       "toastSuccess": "Match completed. The session has been booked"
