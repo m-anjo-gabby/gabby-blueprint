@@ -21,28 +21,15 @@ import {
   isSameCVImportEntry,
   toCVEntryKey,
 } from '../../../../apps/admin/lib/cvDictionaryImport';
+import {
+  parseIpa,
+  expectedColorVowel,
+  countVowelPhonemes,
+  stressedVowelPosition,
+} from '../../../../packages/lib/colorVowel/phonemes';
 import { DEFAULT_LEDGER_PATH, type LedgerRow, readLedger, ledgerKey, matchesLedger } from './ledgerLib';
 
 const OUTPUT_HEADERS = [...CV_IMPORT_REQUIRED_HEADERS, ...CV_IMPORT_OPTIONAL_HEADERS];
-
-// IPAのアクセント母音 → cv_id（長いものから順に照合）
-const IPA_TO_CV: Array<[string, string]> = [
-  ['ɔːr', 'orange_door'], ['ɔr', 'orange_door'],
-  ['ɑːr', 'olive_sock'], ['ɑr', 'olive_sock'],
-  ['ɜːr', 'purple_shirt'], ['ɜr', 'purple_shirt'], ['ɝ', 'purple_shirt'], ['ɜː', 'purple_shirt'], ['ɜ', 'purple_shirt'],
-  // 機能語の弱形（for /fər/、your /jər/）。強勢のある /ər/ は無いため、アクセント母音が /ər/ なら弱形の PURPLE SHIRT
-  ['ər', 'purple_shirt'],
-  ['ɔɪ', 'turquoise_toy'], ['aɪ', 'white_tie'], ['aʊ', 'brown_cow'], ['eɪ', 'gray_day'],
-  ['oʊ', 'rose_boat'], ['əʊ', 'rose_boat'],
-  ['iː', 'green_tea'], ['i', 'green_tea'], ['uː', 'blue_moon'], ['u', 'blue_moon'],
-  ['ɪ', 'silver_pin'], ['ɛ', 'red_pepper'], ['e', 'red_pepper'], ['æ', 'black_cat'],
-  ['ʌ', 'cup_of_mustard'], ['ə', 'cup_of_mustard'],
-  ['ɑː', 'olive_sock'], ['ɑ', 'olive_sock'], ['ɒ', 'olive_sock'],
-  ['ɔː', 'auburn_dog'], ['ɔ', 'auburn_dog'], ['ʊ', 'wooden_hook'],
-];
-const IPA_VOWEL_CHARS = /[iɪeɛæaɑɒɔoʊuʌəɜɝ]/;
-// R音化の曖昧なケース（here / hair / tour 等）は判定しない
-const AMBIGUOUS_R = /^[ɪɛeʊ]ː?r/;
 
 interface Row {
   source: string;
@@ -75,18 +62,6 @@ const readTsv = (path: string): { headers: string[]; rows: string[][] } => {
 // チェック関数
 // ------------------------------------------------------------
 
-/** IPAのアクセント母音から期待されるcv_id（判定不能ならnull） */
-const expectedCvFromIpa = (ipa: string): string | null => {
-  const body = ipa.replace(/^\/|\/$/g, '');
-  const stressIdx = body.indexOf('ˈ');
-  const tail = stressIdx >= 0 ? body.slice(stressIdx + 1) : body;
-  const vowelIdx = tail.search(IPA_VOWEL_CHARS);
-  if (vowelIdx < 0) return null;
-  const nucleus = tail.slice(vowelIdx);
-  if (AMBIGUOUS_R.test(nucleus)) return null;
-  return IPA_TO_CV.find(([ipaVowel]) => nucleus.startsWith(ipaVowel))?.[1] ?? null;
-};
-
 const collectWarnings = (e: CVImportEntry): string[] => {
   const warnings: string[] = [];
   const letters = (s: string) => s.toLowerCase().replace(/-/g, '');
@@ -101,7 +76,19 @@ const collectWarnings = (e: CVImportEntry): string[] => {
   const syllableCount = e.syllables.split('-').length;
   if (syllableCount >= 2 && !ipa.includes('ˈ')) warnings.push('複数音節ですがIPAに第一アクセント記号 ˈ がありません');
 
-  const expected = expectedCvFromIpa(ipa);
+  // IPA を音素表記に分解して照合する（生徒アプリの音素表記の表示と同じ変換。packages/lib/colorVowel/phonemes.ts）
+  const { phonemes, unknownSymbols } = parseIpa(ipa.replace(/^\/|\/$/g, ''));
+  if (unknownSymbols.length > 0) {
+    warnings.push(`IPAに音素表記へ変換できない記号があります（${[...new Set(unknownSymbols)].join(' ')}）`);
+  }
+  const vowelCount = countVowelPhonemes(phonemes);
+  if (vowelCount !== syllableCount) {
+    // /aɪər/（hire）・縮めた発音（every /ˈɛvri/）は確認待ち（CVJ-20261010-07・08）
+    warnings.push(`音節の数（${syllableCount}）とIPAの母音の数（${vowelCount}）が合いません`);
+  } else if (stressedVowelPosition(phonemes) !== e.primary_stress_syllable) {
+    warnings.push(`IPAの第一アクセント（${stressedVowelPosition(phonemes)}音節目）が primary_stress_syllable（${e.primary_stress_syllable}）と合いません`);
+  }
+  const expected = expectedColorVowel(phonemes);
   if (expected && expected !== e.cv_id) warnings.push(`IPAのアクセント母音からは ${expected} が想定されます（cv_id: ${e.cv_id}）`);
   // 米国で /ɔ/・/ɑ/ の2通りある語は olive_sock で統一する方針（JUDGEMENT-GUIDE.md CVJ-20261010-03）
   if (e.cv_id === 'auburn_dog') warnings.push('auburn_dog は原則使わない方針です（/ɑː/ の olive_sock で統一）');

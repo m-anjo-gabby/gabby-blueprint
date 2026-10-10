@@ -15,6 +15,11 @@ ColorVowel辞書データ作成で得た判断・気づきを蓄積し、同じ�
 | 論点（open-policies.json の `key`） | 現在の暫定設定 | 候補 |
 |---|---|---|
 | 助動詞・be動詞の弱形（`auxiliary-weak-form`、CVJ-20260925-01） | 強形（`can` のみ弱形） | 強形 / 弱形 |
+| /aɪər/ の音節の数（`aier-syllable`、CVJ-20261010-07） | 音節1つ（hire）・発音記号 /haɪər/ | /haɪr/ に揃える / /haɪər/ のまま |
+| 音節と発音記号の母音の数が合わない語（`syllable-ipa-mismatch`、CVJ-20261010-08） | 音節は綴り（ev-er-y）・発音記号は縮めた形（/ˈɛvri/） | 発音記号を合わせる / 音節を合わせる / 今のまま |
+
+表示（生徒アプリ）に関する論点は辞書データのルールではないため open-policies.json には載せず、
+CVJ-20261010-09 の確認依頼Excelで別に確認している。
 
 2026-10-10 に、それまでの6件（R音化母音 /ɛr/・/ɪr/・/ʊr/、/ɔ/ と /ɑ/、機能語の発音、略語の扱い）は確定した（CVJ-20261010-01〜03、CVJ-20260925-01・03）。
 
@@ -151,3 +156,37 @@ ColorVowel辞書データ作成で得た判断・気づきを蓄積し、同じ�
   - `read`: 回答は「例文の時制による」。辞書は英単語＋品詞で1行のため、現在形のまま（CVJ-20260925-04）。
   - 発音記号の表記: 「IPAよりも English Phonetic Alphabet を使うのはどうか」との提案（draw / draws のコメント）。
     辞書データと生徒アプリの表示に関わるため、別途検討する。
+
+### CVJ-20261010-07 /aɪər/（hire, require）は音節の数と発音記号の母音の数が合わない
+
+- **状態**: 暫定（確認待ち。`open-policies.json` の `aier-syllable`）
+- **対象**: hire / hired / hires / acquire / require / retire / entire など（`higher`・`supplier` のように綴りで2音節に分かれる語は対象外）
+- **論点・事象**: 音節は綴りで1つ（hire）だが、発音記号 /haɪər/ は母音が2つ。発音記号の母音の数と音節の数を機械的に照合すると不一致になる。
+- **判断**: 回答待ち。決まったら `validate.ts` に音節の数と発音記号の母音の数の照合を加える（この語群の扱いを例外にするか、発音記号を /aɪr/ に揃えるか）。
+- **根拠**: 2026-10-10 に dev の登録データ全件（876件）で音節の数・強勢の位置・Color Vowel を発音記号と照合して見つかった。
+- **反映先**: reference.md「8. phonetic_spelling」、`validate.ts`
+
+### CVJ-20261010-08 音節は綴り、発音記号は縮めた発音で、母音の数が合わない語（every, several）
+
+- **状態**: 暫定（確認待ち。`open-policies.json` の `syllable-ipa-mismatch`）
+- **対象**: every（ev-er-y /ˈɛvri/）、several（sev-er-al /ˈsɛvrəl/）、automatically、ratios（ra-tios /ˈreɪʃioʊz/ は逆に発音記号の母音が多い）
+- **論点・事象**: CVJ-20261010-07 と同じ照合で見つかった。
+- **判断**: 回答待ち。決まったら reference.md と `validate.ts` に反映する。
+- **根拠**: 音節の区切りは見出し語の表示（強勢のある音節の位置）に、発音記号は Color Vowel の判定と音素表記の元に使うため、食い違うと説明がつかない。
+- **反映先**: reference.md「4. syllables」「8. phonetic_spelling」、`validate.ts`
+
+### CVJ-20261010-09 生徒アプリでは発音記号（IPA）を表示せず、表示するなら音素表記にする
+
+- **状態**: 暫定（2026-10-10 に暫定方針で実装済み。MVP のため回答を待たずに先行し、回答で変わったら対応表を直す）
+- **対象**: 生徒アプリの辞書ダイアログ
+- **論点・事象**: コンテンツチームから「Color Vowel は発音記号とは別の考え方のメソッドのため、発音記号は画面に表示したくない。表示するなら音素表記がよい」
+  とのコメント（CVJ-20261010-06 の「English Phonetic Alphabet」の提案の続き）。
+- **判断**:
+  - 生徒アプリでは IPA を表示しない（辞書データには残す。Color Vowel の判定・音節と強勢の照合・音素表記の元にするため）。
+  - 音素表記は CHIVOX 利用時に作った表記ルール（ARPAbet 形式。`t ey l er`）に合わせ、IPA から機械的に作る（新しい列は持たない）。
+    dev の登録データ全件の IPA が変換できることを確認済み。表示する前提で、/ɪr/ は `iy r`、/ɔr/ は `ao r` を暫定で採用した
+    （確認依頼Excel `20261010_音素表記の確認` の D-01〜03 で確認中）。
+  - 生徒アプリの辞書は下から出るシートにし、見出し語・音素の強勢のある母音に Color Vowel の色で下線を引く。
+  - CHIVOX の文単位の記号（文の強勢・イントネーション・ポーズ・音のつながり）は単語の辞書には使わない。
+- **根拠**: 音素表記は IPA と1対1に対応するため、二重に管理せずに済む。
+- **反映先**: `packages/lib/colorVowel/phonemes.ts`（変換・Color Vowel の判定。`validate.ts` と共用）、生徒アプリ `ColorVowelDictionarySheet.tsx`、admin の辞書画面（Phoneme）、reference.md「8. phonetic_spelling」、`docs/screens/student/training/sprint-result.md`。回答で D-02・D-03 が変わったら `phonemes.ts` の対応表を直す。
