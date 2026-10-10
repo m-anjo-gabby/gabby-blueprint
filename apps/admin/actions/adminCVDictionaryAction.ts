@@ -7,8 +7,10 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { type ColorVowelDictionaryRow } from '@gabby/types/colorVowel';
 import {
+  type CVImportAudioState,
   type CVImportEntry,
   type CVImportMode,
+  nextTTSStatusOnOverwrite,
   toCVEntryKey,
   validateCVImportEntry,
 } from '@/lib/cvDictionaryImport';
@@ -190,10 +192,9 @@ export async function deleteCVDictionaryEntry(wordEn: string, partOfSpeech: stri
 }
 
 /** 一括インポート時の既存エントリ判定用キー情報 */
-export interface CVDictionaryKey {
+export interface CVDictionaryKey extends CVImportAudioState {
   word_en: string;
   part_of_speech: string;
-  tts_status: number;
 }
 
 /**
@@ -208,7 +209,7 @@ export async function getCVDictionaryKeys(): Promise<CVDictionaryKey[]> {
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await supabase
       .from('com_m_color_vowel_dictionary')
-      .select('word_en, part_of_speech, tts_status')
+      .select('word_en, part_of_speech, tts_status, tts_ssml_mode')
       .order('dic_id', { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
 
@@ -223,6 +224,7 @@ export async function getCVDictionaryKeys(): Promise<CVDictionaryKey[]> {
  * TSV/CSV 一括インポート
  * - insertOnly: 既存キー（英単語[大文字小文字無視]＋品詞）はスキップし、新規のみ登録
  * - overwrite : 既存キーも上書き。登録日時は保持し、音声生成済みのエントリは「要再生成」にする
+ * - overwriteDataOnly : 既存キーも上書きするが、音声はそのまま（発音を個別調整した手動の音声だけ「要再生成」にする）
  * ファイル内の重複キーは先勝ちで除外する（内容差異の検出はクライアント側プレビューで行う）
  */
 export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVImportMode) {
@@ -240,6 +242,7 @@ export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVI
     const rows = [];
     let insertCount = 0;
     let updateCount = 0;
+    let regenerateCount = 0;
 
     for (const e of entries) {
       const key = toCVEntryKey(e.word_en, e.part_of_speech);
@@ -252,12 +255,14 @@ export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVI
       // insert_date は列ごと省略する（新規はDEFAULT、既存は保持される）。
       // lemma 列のないファイル（lemma: undefined）は列ごと省略し、既存の原形を消さない
       const { lemma, ...rest } = e;
+      const ttsStatus = existing ? nextTTSStatusOnOverwrite(existing, mode) : 0;
+      if (existing && ttsStatus !== existing.tts_status) regenerateCount++;
       rows.push({
         ...rest,
         ...(lemma !== undefined && { lemma }),
         // 大文字小文字違いの既存行を更新対象にするため、既存の表記に合わせる
         word_en: existing ? existing.word_en : e.word_en,
-        tts_status: existing ? (existing.tts_status === 1 ? 2 : existing.tts_status) : 0,
+        tts_status: ttsStatus,
         update_date: now,
       });
       if (existing) updateCount++;
@@ -278,7 +283,7 @@ export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVI
 
     logger.info('cvDict:bulk_upsert', `inserted=${insertCount} updated=${updateCount} skipped=${skipCount}`, {
       ...ctx,
-      payload: { mode, total: entries.length },
+      payload: { mode, total: entries.length, regenerate: regenerateCount },
     });
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: '', inserted: insertCount, updated: updateCount, skipped: skipCount };

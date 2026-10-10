@@ -13,12 +13,14 @@ import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
 import {
   CV_IMPORT_REQUIRED_HEADERS,
   CV_IMPORT_OPTIONAL_HEADERS,
+  type CVImportAudioState,
   type CVImportEntry,
   type CVImportMode,
   type CVImportRowErrorCode,
   normalizeCVImportRow,
   validateCVImportEntry,
   isSameCVImportEntry,
+  nextTTSStatusOnOverwrite,
   toCVEntryKey,
 } from '@/lib/cvDictionaryImport';
 import { cn } from '@/lib/utils';
@@ -39,13 +41,15 @@ interface ParsedRow {
   errorCode?: RowErrorCode;
   /** duplicateConflict / duplicate の場合の先行行番号 */
   firstLine?: number;
+  /** 登録済みの場合の音声の状態（上書き時に「要再生成」になる件数の表示用） */
+  audio?: CVImportAudioState;
 }
 
 interface CVWordBulkImportDialogProps {
   onSuccess?: () => void;
 }
 
-const MODES: CVImportMode[] = ['insertOnly', 'overwrite'];
+const MODES: CVImportMode[] = ['insertOnly', 'overwriteDataOnly', 'overwrite'];
 
 // ============================================================
 // Component
@@ -74,7 +78,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
   const analyzeRows = async (rawRows: Record<string, string>[]) => {
     setIsAnalyzing(true);
     try {
-      const existingKeys = new Set((await getCVDictionaryKeys()).map((k) => toCVEntryKey(k.word_en, k.part_of_speech)));
+      const existingByKey = new Map((await getCVDictionaryKeys()).map((k) => [toCVEntryKey(k.word_en, k.part_of_speech), k]));
       const firstByKey = new Map<string, ParsedRow>();
 
       const rows = rawRows.map((raw, index): ParsedRow => {
@@ -91,7 +95,10 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
             : { line, entry, status: 'error', errorCode: 'duplicateConflict', firstLine: first.line };
         }
 
-        const row: ParsedRow = { line, entry, status: existingKeys.has(key) ? 'existing' : 'new' };
+        const existing = existingByKey.get(key);
+        const row: ParsedRow = existing
+          ? { line, entry, status: 'existing', audio: existing }
+          : { line, entry, status: 'new' };
         firstByKey.set(key, row);
         return row;
       });
@@ -145,7 +152,11 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
   const newCount = data.filter((d) => d.status === 'new').length;
   const existingCount = data.filter((d) => d.status === 'existing').length;
   const duplicateCount = data.filter((d) => d.status === 'duplicate').length;
-  const targetCount = mode === 'overwrite' ? newCount + existingCount : newCount;
+  const targetCount = mode === 'insertOnly' ? newCount : newCount + existingCount;
+  const regenerateCount =
+    mode === 'insertOnly'
+      ? 0
+      : data.filter((d) => d.audio && nextTTSStatusOnOverwrite(d.audio, mode) !== d.audio.tts_status).length;
 
   // ----------------------------------------------------------
   // インポート実行
@@ -333,7 +344,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                   {/* 取込モード */}
                   {!hasCompleted && (
                     <div className="w-full max-w-md space-y-2">
-                      <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
+                      <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-2xl">
                         {MODES.map((m) => (
                           <button
                             key={m}
@@ -349,7 +360,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                         ))}
                       </div>
                       <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                        {t(`modeHint.${mode}`, { newCount, existingCount })}
+                        {t(`modeHint.${mode}`, { newCount, existingCount, regenerateCount })}
                       </p>
                     </div>
                   )}

@@ -1640,11 +1640,13 @@
         "duplicateHint": "{count} identical duplicate rows in the file will be excluded.",
         "mode": {
           "insertOnly": "New only",
+          "overwriteDataOnly": "Overwrite data only",
           "overwrite": "Overwrite existing"
         },
         "modeHint": {
           "insertOnly": "Registers {newCount} new entries. {existingCount} existing entries are skipped and left unchanged.",
-          "overwrite": "Registers {newCount} new entries and overwrites {existingCount} existing entries. Entries with generated audio will be marked as needing regeneration."
+          "overwriteDataOnly": "Registers {newCount} new entries and overwrites the data of {existingCount} existing entries. Audio is kept as is (auto-generated audio is built from the word itself, so corrections to IPA or Color Vowel do not change it). Only {regenerateCount} entries with manually tuned pronunciation will be marked as needing regeneration.",
+          "overwrite": "Registers {newCount} new entries and overwrites {existingCount} existing entries. {regenerateCount} entries with generated audio will be marked as needing regeneration."
         },
         "reset": "Reset",
         "close": "Close",

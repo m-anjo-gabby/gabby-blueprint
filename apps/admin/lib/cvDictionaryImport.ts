@@ -24,8 +24,23 @@ const VALID_CV_IDS: ReadonlySet<string> = new Set(Object.keys(COLOR_VOWEL_COLORS
 // 型
 // ============================================================
 
-/** 取込モード: 新規のみ（既存はスキップ）/ 上書き */
-export type CVImportMode = 'insertOnly' | 'overwrite';
+/**
+ * 取込モード
+ * - insertOnly: 新規のみ（既存はスキップ）
+ * - overwrite: 既存も上書きし、音声生成済みの語は「要再生成」にする
+ * - overwriteDataOnly: 既存も上書きするが、音声はそのまま（個別調整した語だけ「要再生成」にする）
+ */
+export type CVImportMode = 'insertOnly' | 'overwrite' | 'overwriteDataOnly';
+
+/** 取込で上書きする既存エントリの音声の状態（com_m_color_vowel_dictionary の tts_status / tts_ssml_mode） */
+export interface CVImportAudioState {
+  tts_status: number;
+  tts_ssml_mode: string;
+}
+
+/** 音声生成ステータス（DDL の tts_status: 0:未生成, 1:生成済, 2:要再生成, 9:エラー） */
+const TTS_STATUS_GENERATED = 1;
+const TTS_STATUS_NEEDS_REGENERATION = 2;
 
 export interface CVImportEntry {
   word_en: string;
@@ -108,6 +123,17 @@ export const validateCVImportEntry = (e: CVImportEntry): CVImportRowErrorCode | 
   // 生徒アプリの単語分割と同じ文字種（英数字・アポストロフィ・ハイフン）のみ
   if (e.lemma && !/^[A-Za-z0-9'-]+$/.test(e.lemma)) return 'lemmaInvalid';
   return null;
+};
+
+/**
+ * 上書き後の音声生成ステータス。
+ * 自動（auto）の音声は英単語のテキストだけから作るため、発音記号・Color Vowel 等の補正では変わらない。
+ * データのみの上書きでは、発音記号を個別に指定している手動（manual）の音声だけを「要再生成」にする
+ */
+export const nextTTSStatusOnOverwrite = (existing: CVImportAudioState, mode: CVImportMode): number => {
+  if (existing.tts_status !== TTS_STATUS_GENERATED) return existing.tts_status;
+  if (mode === 'overwriteDataOnly' && existing.tts_ssml_mode !== 'manual') return existing.tts_status;
+  return TTS_STATUS_NEEDS_REGENERATION;
 };
 
 /** 2行の内容が同一か（ファイル内重複の判定用） */

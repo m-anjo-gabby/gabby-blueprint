@@ -1640,11 +1640,13 @@
         "duplicateHint": "ファイル内で同一内容の重複 {count}件は除外します。",
         "mode": {
           "insertOnly": "新規のみ登録",
+          "overwriteDataOnly": "データのみ上書き",
           "overwrite": "既存も上書き"
         },
         "modeHint": {
           "insertOnly": "新規 {newCount}件を登録します。登録済みの {existingCount}件はスキップされ、既存データは変更されません。",
-          "overwrite": "新規 {newCount}件を登録し、登録済みの {existingCount}件を上書きします。音声生成済みのエントリは「要更新」になります。"
+          "overwriteDataOnly": "新規 {newCount}件を登録し、登録済みの {existingCount}件のデータを上書きします。音声はそのままです（自動作成の音声は英単語から作るため、発音記号等の補正では変わりません）。発音を個別調整した {regenerateCount}件だけ「要更新」になります。",
+          "overwrite": "新規 {newCount}件を登録し、登録済みの {existingCount}件を上書きします。音声生成済みの {regenerateCount}件は「要更新」になります。"
         },
         "reset": "リセット",
         "close": "閉じる",
