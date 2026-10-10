@@ -1,5 +1,5 @@
 {
-  "$comment": "未決の論点（コンテンツチーム確認待ち）。確認依頼Excel（scripts/review_xlsx.py）の「①確認事項（方針）」の元データ。方針が決まったら、ここから削除して JUDGEMENT-GUIDE.md に事例（CVJ-…）として記録する。match.source = ledger: 台帳の pending 行から対象語を選ぶ / dictionary: 辞書TSVの行から対象語を選ぶ。 英語（title_en / question_en / current_en / candidates_en / options_en）も必ず書く（確認依頼Excelは日英併記。options と options_en は同じ順序で対応させる）。",
+  "$comment": "未決の論点（コンテンツチーム確認待ち）。確認依頼Excel（scripts/review_xlsx.py）の「①確認事項（方針）」の元データ。方針が決まったら、ここから削除して JUDGEMENT-GUIDE.md に事例（CVJ-…）として記録する。match.source = ledger: 台帳の pending 行から対象語を選ぶ / dictionary: 辞書TSVの行から対象語を選ぶ（pos / wordPattern / ipaPattern / ipaExclude、syllableMismatch = 音節の数と発音記号の母音の数が合わない語）。 英語（title_en / question_en / current_en / candidates_en / options_en）も必ず書く（確認依頼Excelは日英併記。options と options_en は同じ順序で対応させる）。",
   "policies": [
     {
       "key": "auxiliary-weak-form",
@@ -29,6 +29,64 @@
         ],
         "wordPattern": "^(do|does|did|am|are|is|was|were|be|been|has|have|had|must|could|would|should|will|shall)$",
         "countLabel": "語（助動詞・be動詞）"
+      }
+    },
+    {
+      "key": "aier-syllable",
+      "ref": "CVJ-20261010-07",
+      "title": "/aɪər/（hire, require）の音節の数",
+      "title_en": "Syllable count of /aɪər/ (hire, require)",
+      "question": "hire は音節を1つ（hire）としていますが、発音記号は /haɪər/ で母音が2つ（aɪ と ə）あり、音節の数と合っていません。綴りは2つに分けられないため、発音記号を1音節の /haɪr/ に揃えるか、/haɪər/ のまま（音節の数と合わないことを許容）にするか。",
+      "question_en": "hire is registered as one syllable (hire), but its IPA /haɪər/ has two vowels (aɪ and ə), so the counts do not match. Since the spelling cannot be split in two, should the IPA be changed to the one-syllable /haɪr/, or kept as /haɪər/ (allowing the mismatch)?",
+      "current": "音節は1つ（hire、re-quire）、発音記号は /haɪər/、/rɪˈkwaɪər/（WHITE TIE）",
+      "current_en": "One syllable (hire, re-quire); IPA /haɪər/, /rɪˈkwaɪər/ (WHITE TIE)",
+      "candidates": "/haɪr/（1音節に揃える） / /haɪər/ のまま",
+      "candidates_en": "/haɪr/ (match one syllable) / Keep /haɪər/",
+      "options": [
+        "/haɪr/ に揃える",
+        "/haɪər/ のままでよい",
+        "その他（コメント欄に記入）"
+      ],
+      "options_en": [
+        "Change to /haɪr/",
+        "Keep /haɪər/",
+        "Other (see comments)"
+      ],
+      "match": {
+        "source": "dictionary",
+        "ipaPattern": "aɪər",
+        "syllableMismatch": true,
+        "countLabel": "語"
+      }
+    },
+    {
+      "key": "syllable-ipa-mismatch",
+      "ref": "CVJ-20261010-08",
+      "title": "音節の区切りと発音記号の母音の数が合わない語",
+      "title_en": "Words whose syllables and IPA vowels do not match",
+      "question": "every は音節を ev-er-y（3つ）としていますが、発音記号は会話で縮めた /ˈɛvri/（母音2つ）です。音節と発音記号のどちらに揃えるか、今のままにするか。",
+      "question_en": "every is split as ev-er-y (3 syllables), but its IPA is the reduced /ˈɛvri/ (2 vowels). Should we match the IPA to the syllables, the syllables to the IPA, or keep both as they are?",
+      "current": "音節は綴りで区切り、発音記号は縮めた発音（every: ev-er-y /ˈɛvri/、several: sev-er-al /ˈsɛvrəl/）",
+      "current_en": "Syllables follow the spelling; IPA is the reduced form (every: ev-er-y /ˈɛvri/, several: sev-er-al /ˈsɛvrəl/)",
+      "candidates": "発音記号を音節に合わせる（/ˈɛvəri/） / 音節を発音記号に合わせる（ev-ery） / 今のまま",
+      "candidates_en": "Match IPA to syllables (/ˈɛvəri/) / Match syllables to IPA (ev-ery) / Keep as is",
+      "options": [
+        "発音記号を音節に合わせる",
+        "音節を発音記号に合わせる",
+        "今のままでよい",
+        "その他（コメント欄に記入）"
+      ],
+      "options_en": [
+        "Match IPA to syllables",
+        "Match syllables to IPA",
+        "Keep as is",
+        "Other (see comments)"
+      ],
+      "match": {
+        "source": "dictionary",
+        "syllableMismatch": true,
+        "ipaExclude": "aɪər",
+        "countLabel": "語"
       }
     }
   ]

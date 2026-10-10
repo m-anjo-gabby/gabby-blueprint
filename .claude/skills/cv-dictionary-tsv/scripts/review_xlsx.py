@@ -101,6 +101,7 @@ SHEET_CV = "Color Vowel"
 # 日英併記（同じセルの上段に日本語・下段に英語。間に薄い破線、英語は灰色）
 # ------------------------------------------------------------
 # 細い列（品詞など・幅10）でも折り返さない長さにする
+# ※ CellRichText に空白だけの TextBlock を入れない（openpyxl が xml:space="preserve" を付けず、Excel が「修復」扱いにする）
 BI_SEPARATOR = "- - - - -"
 _in_sep = InlineFont(rFont=FONT, sz=8, color="BFBFBF")
 
@@ -240,10 +241,28 @@ def ledger_matches(row, m):
     return not anys or any(s in q for s in anys)
 
 
+# IPA の母音（音節の核）。二重母音・長母音を1つと数えるため長いものから並べる
+IPA_VOWEL = re.compile(r"ɜːr|ɜr|aɪ|aʊ|ɔɪ|oʊ|əʊ|eɪ|iː|uː|ɑː|ɔː|ɜː|[ɚɝiɪeɛæɑɒɔʊuʌə]")
+
+
+def ipa_vowel_count(ipa):
+    return len(IPA_VOWEL.findall(ipa or ""))
+
+
 def dict_matches(row, m):
     if "pos" in m and row["part_of_speech"] not in m["pos"]:
         return False
-    return not ("wordPattern" in m and not re.fullmatch(m["wordPattern"], row["word_en"]))
+    if "wordPattern" in m and not re.fullmatch(m["wordPattern"], row["word_en"]):
+        return False
+    ipa = row.get("phonetic_spelling") or ""
+    if "ipaPattern" in m and not re.search(m["ipaPattern"], ipa):
+        return False
+    if "ipaExclude" in m and re.search(m["ipaExclude"], ipa):
+        return False
+    # 音節の数（syllables のハイフン区切り）と IPA の母音の数が合わない語
+    if m.get("syllableMismatch") and (not ipa or ipa_vowel_count(ipa) == len(row["syllables"].split("-"))):
+        return False
+    return True
 
 
 def resolve_policies(policies, ledger, dict_rows):
