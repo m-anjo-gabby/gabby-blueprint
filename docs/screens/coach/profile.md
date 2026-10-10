@@ -15,10 +15,11 @@
 ## 画面の構成
 
 1. **Account Summaryカード** — アイコン画像、氏名、所属・ロール、タイムゾーン設定
-2. **Email notificationsカード** — 通知・リマインダーのメールの配信区分ごとの配信・停止
-3. **Public Coach Profileフォーム（左）** — 生徒に公開されるプロフィール項目の編集フォーム、
+2. **My Ratingカード** — 自分の評価（ダッシュボードと同じカード。総合評価・コーチング・親近感の平均と件数）
+3. **Email notificationsカード** — 通知・リマインダーのメールの配信区分ごとの配信・停止
+4. **Public Coach Profileフォーム（左）** — 生徒に公開されるプロフィール項目の編集フォーム、
    入力充実度（完成度%）バッジ、Save Public Profileボタン
-4. **Live Previewパネル（右）** — 編集中の内容をその場で生徒向けカードとして確認できるプレビュー
+5. **Live Previewパネル（右）** — 編集中の内容をその場で生徒向けカードとして確認できるプレビュー（評価がある場合は、生徒のコーチ選択画面と同じく総合評価も出す）
 
 ## 表示要素・操作
 
@@ -51,6 +52,7 @@
 
 - `apps/coach/app/(app)/profile/page.tsx`
 - `apps/coach/app/(app)/profile/_components/ProfileView.tsx`
+- `apps/coach/components/rating/MyRatingCard.tsx`（My Rating・プレビューの総合評価の整形 `toCoachRatingDisplay`）
 - `apps/coach/app/(app)/profile/_components/AccountSummaryCard.tsx`
 - `apps/coach/app/(app)/profile/_components/PublicProfileForm.tsx`
 - `apps/coach/app/(app)/profile/_components/LivePreviewPanel.tsx`

@@ -83,6 +83,9 @@ DELETE FROM public.com_t_coach_monthly_report_approval
 DELETE FROM public.com_m_coach_student_relationship
  WHERE coach_id IN (SELECT id FROM qa_u) OR student_id IN (SELECT id FROM qa_u);
 DELETE FROM public.com_t_admin_impersonation_log WHERE target_user_id IN (SELECT id FROM qa_u);
+-- コーチ評価（FKにCASCADEが無い。削除するとトリガーでコーチの集計 com_t_coach_stats も作り直される）
+DELETE FROM public.com_t_coach_rating
+ WHERE coach_id IN (SELECT id FROM qa_u) OR student_id IN (SELECT id FROM qa_u) OR ticket_id IN (SELECT ticket_id FROM qa_t);
 
 -- チケット・ライセンス・契約
 DELETE FROM public.com_t_user_session_ticket_history

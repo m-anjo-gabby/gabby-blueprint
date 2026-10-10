@@ -21,6 +21,7 @@
 2. **Attentionタイル（3枚）** — Requests／Unread Messages／Updatesの件数タイル。クリックで
    それぞれの画面へ遷移する
 3. **Sessionsセクション** — 「Next 24 Hours」パネルと「Session Tasks」パネルを横並びに表示
+4. **Ratingセクション** — 自分の評価（My Rating）のカード。総合評価（Overall。コーチング・親近感・おすすめ度の3項目の平均）を大きく、星（0.5刻み）・件数とともに出し、横にコーチング（Coaching）・親近感（Friendliness）の平均を並べる。おすすめ度は単独では出さない。個々の評価・生徒のコメントは出さない。新しく作成したコーチは、初期値の評価1件（3項目とも4）から始まる（プロフィールの作成時に自動登録。件数・平均に含める）。評価が無い場合（初期値の導入前からいるコーチ）は「No ratings yet.」。区画単位で遅れて表示する（Suspense、取得中は同じ枠の骨組み）
 
 ## 表示要素・操作
 
@@ -52,6 +53,7 @@
 - `apps/coach/app/(app)/dashboard/_components/AttentionStrip.tsx`
 - `apps/coach/app/(app)/dashboard/_components/TodaysSessionsPanel.tsx`
 - `apps/coach/app/(app)/dashboard/_components/SessionTasksPanel.tsx`
+- `apps/coach/components/rating/MyRatingCard.tsx`（My Rating。プロフィールと共用）, `apps/coach/actions/coachRatingAction.ts`（`getMyCoachRatingStats`。`com_t_coach_stats` を読む）
 - サーバーアクション: `getMyProfile`, `getPendingIncomingRequestsForCoach`, `getMySessions`,
   `getMySessionTasks`（`apps/coach/actions/coachProfileAction.ts`,
   `apps/coach/actions/matchingRequestAction.ts`, `apps/coach/actions/sessionAction.ts`）

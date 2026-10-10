@@ -145,6 +145,20 @@ export interface CoachProfileCardData {
   jobExperience: string | null;
   introduction: string | null;
   introVideoUrl: string | null;
+  /** 評価の表示（総合評価。評価が無い・出さない場合は省略または null） */
+  rating?: CoachProfileRatingDisplay | null;
+}
+
+/** プロフィールカードの評価の表示（文言は各ポータルで整形して渡す） */
+export interface CoachProfileRatingDisplay {
+  /** 総合評価の平均（1〜5。星は0.5刻みに丸めて塗る） */
+  value: number;
+  /** 平均点の表示（例: "4.3"） */
+  valueLabel: string;
+  /** 件数の表示（例: "12件の評価" / "12 ratings"） */
+  countLabel: string;
+  /** 星の読み上げ用の文言 */
+  ariaLabel: string;
 }
 
 /** CoachProfileDialogData: CoachProfileDialog用のエイリアス（カードと表示内容は同一） */

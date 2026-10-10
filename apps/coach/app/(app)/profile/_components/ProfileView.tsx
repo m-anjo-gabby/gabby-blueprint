@@ -23,6 +23,8 @@ import { PublicProfileForm } from './PublicProfileForm';
 import { LivePreviewPanel } from './LivePreviewPanel';
 import { MailSettingsCard } from './MailSettingsCard';
 import type { MailSettings } from '@gabby/lib/mail/settingsActions';
+import type { CoachRatingStats } from '@gabby/types/coachRating';
+import { MyRatingCard, toCoachRatingDisplay } from '@/components/rating/MyRatingCard';
 
 interface ProfileViewProps {
   userName: string;
@@ -35,6 +37,8 @@ interface ProfileViewProps {
   countries: CountryMaster[];
   /** Email notification settings (null if they could not be loaded) */
   mailSettings: MailSettings | null;
+  /** Own rating summary (null if no ratings yet) */
+  ratingStats: CoachRatingStats | null;
 }
 
 const EMPTY_COACH_PROFILE_FORM: CoachProfileFormValues = {
@@ -81,6 +85,7 @@ export function ProfileView({
   initialCoachProfile,
   countries,
   mailSettings,
+  ratingStats,
 }: ProfileViewProps) {
   const [iconPath, setIconPath] = useState(initialIconPath);
   const [timezone, setTimezone] = useState(initialTimezone);
@@ -197,6 +202,8 @@ export function ProfileView({
     jobExperience: coachProfileForm.job_experience,
     introduction: coachProfileForm.introduction,
     introVideoUrl: getCoachIntroVideoUrl(introVideoPath),
+    // 生徒のコーチ選択画面と同じく総合評価を出す
+    rating: toCoachRatingDisplay(ratingStats),
   };
 
   return (
@@ -212,6 +219,8 @@ export function ProfileView({
         timezones={timezones}
         onTimezoneChange={handleTimezoneChange}
       />
+
+      <MyRatingCard stats={ratingStats} />
 
       <MailSettingsCard initialSettings={mailSettings} />
 

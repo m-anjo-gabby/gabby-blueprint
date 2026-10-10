@@ -6,6 +6,8 @@ import { DashboardLayout } from './_components/DashboardLayout';
 import AttentionStrip from './_components/AttentionStrip';
 import TodaysSessionsPanel, { TodaysSessionsPanelSkeleton } from './_components/TodaysSessionsPanel';
 import SessionTasksPanel, { SessionTasksPanelSkeleton } from './_components/SessionTasksPanel';
+import { MyRatingCard, MyRatingCardSkeleton } from '@/components/rating/MyRatingCard';
+import { getMyCoachRatingStats } from '@/actions/coachRatingAction';
 
 function getGreeting(timeZone: string): string {
   const hour = Number(
@@ -15,6 +17,10 @@ function getGreeting(timeZone: string): string {
   if (hour < 12) return 'Good morning';
   if (hour < 18) return 'Good afternoon';
   return 'Good evening';
+}
+
+async function RatingPanel() {
+  return <MyRatingCard stats={await getMyCoachRatingStats()} />;
 }
 
 export default async function Page() {
@@ -41,6 +47,11 @@ export default async function Page() {
       sessionTasks={
         <Suspense fallback={<SessionTasksPanelSkeleton />}>
           <SessionTasksPanel timezone={timezone} />
+        </Suspense>
+      }
+      rating={
+        <Suspense fallback={<MyRatingCardSkeleton />}>
+          <RatingPanel />
         </Suspense>
       }
     />

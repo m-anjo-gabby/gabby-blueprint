@@ -29,6 +29,7 @@ import {
 import { SESSION_STATUS } from '@gabby/types/session';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getFirstLiveSessionOccurrence, getLessonEndTime } from '../../date/date';
+import { getCoachRatingStatsCore } from '../../coachRating/actions/coachRatingActions';
 
 const logger = createLogger('common');
 
@@ -566,13 +567,15 @@ export async function getCoachBrowseListCore(): Promise<
     const coachIds = profiles.map((p) => p.user_id);
 
     // 予約済みの枠との重なりは、申請ダイアログで候補ごとに予約できる回数として取得する（getMatchingSlotOptionsCore）
-    const [{ data: users, error: userError }, { data: availability, error: availabilityError }] = await Promise.all([
+    // 評価の集計は取得に失敗しても一覧は出す（評価なしとして表示する）
+    const [{ data: users, error: userError }, { data: availability, error: availabilityError }, ratingByCoachId] = await Promise.all([
       supabase.from('com_m_user').select('id, user_name, icon_path, timezone').in('id', coachIds),
       supabase
         .from('com_m_coach_availability')
         .select('availability_id, coach_id, day_of_week, start_time, end_time')
         .in('coach_id', coachIds)
         .eq('delete_flg', '0'),
+      getCoachRatingStatsCore(coachIds),
     ]);
 
     if (userError || availabilityError) {
@@ -606,6 +609,7 @@ export async function getCoachBrowseListCore(): Promise<
         job_experience: p.job_experience,
         introduction: p.introduction,
         intro_video_path: p.intro_video_path,
+        rating: ratingByCoachId.get(p.user_id) ?? null,
         availability: (availabilityByCoachId.get(p.user_id) ?? []).map((a) => ({
           availability_id: a.availability_id,
           day_of_week: a.day_of_week as DayOfWeek,

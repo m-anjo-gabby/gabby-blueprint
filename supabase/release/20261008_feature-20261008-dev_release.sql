@@ -2655,3 +2655,564 @@ WITH CHECK (
 );
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】コーチ評価（生徒が契約の終わりに専属コーチを星1〜5で評価する）
+-- 追加日: 2026-10-10
+--
+-- 【内容】
+--   1. com_t_coach_stats を新規作成（コーチ1人1行の画面表示用の集計。ログイン済みなら誰でも参照可）
+--   2. fn_refresh_coach_rating_stats / trg_refresh_coach_rating_stats を新規作成（評価の登録と同時に集計を作り直す）
+--   3. com_t_coach_rating を新規作成（契約×コーチにつき1件。参照は評価した生徒本人とアドミンのみ）
+--   4. fn_coach_rating_targets を新規作成（評価の対象・受付期間の判定。内部専用）
+--   5. get_my_pending_coach_ratings / submit_coach_rating を新規作成（生徒アプリが使う）
+--   シグネチャの変更は無い（すべて新規）。移行元システムの評価データの移行は別タスク
+--   （移行後は fn_refresh_coach_rating_stats をコーチごとに呼んで集計を作り直す）。
+-- 対応ファイル: DDL/table/com_t_coach_stats.sql, DDL/function/fn_refresh_coach_rating_stats.sql,
+--   DDL/table/com_t_coach_rating.sql, DDL/function/fn_coach_rating_targets.sql,
+--   DDL/function/get_my_pending_coach_ratings.sql, DDL/function/submit_coach_rating.sql
+-- 【注意】生徒・コーチアプリが 1・5 を使うため、アプリのデプロイより先に適用すること。
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- コーチの指標の集計 (2026-10-10 追加)
+-- 前提: table/com_m_user.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- コーチ1人につき1行の、画面表示用の集計値。評価の記録（com_t_coach_rating）とは分け、
+-- 一覧・プロフィールでは本テーブルを読むだけにする（評価の行や運営向けコメントを見せないため）。
+-- 評価の項目は com_t_coach_rating のトリガー（fn_refresh_coach_rating_stats）が登録と同時に作り直す。
+-- 宿題の提供率・コーチのキャンセル率などの指標を増やす場合も、列を足して本テーブルに集める。
+--
+-- 総合評価（overall_avg）は移行元システムの「All Over Ratings」と同じく、3項目（コーチング・親近感・
+-- おすすめ度）の平均。コーチ画面では総合・コーチング・親近感を見せ、おすすめ度は単独では見せない。
+---------------------------------------------
+CREATE TABLE public.com_t_coach_stats (
+    coach_id uuid PRIMARY KEY REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    rating_count integer NOT NULL DEFAULT 0,
+    rating_overall_avg numeric(3,2) DEFAULT NULL,
+    rating_coaching_avg numeric(3,2) DEFAULT NULL,
+    rating_friendliness_avg numeric(3,2) DEFAULT NULL,
+    rating_recommendation_avg numeric(3,2) DEFAULT NULL,
+    rating_updated_at timestamp with time zone DEFAULT NULL,
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    update_date timestamp with time zone NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_t_coach_stats IS 'コーチの指標の集計（コーチ1人1行。画面表示用。評価はcom_t_coach_ratingのトリガーで更新）';
+COMMENT ON COLUMN public.com_t_coach_stats.coach_id IS 'コーチのユーザID';
+COMMENT ON COLUMN public.com_t_coach_stats.rating_count IS '評価の件数';
+COMMENT ON COLUMN public.com_t_coach_stats.rating_overall_avg IS '総合評価（3項目の平均。評価0件はNULL）';
+COMMENT ON COLUMN public.com_t_coach_stats.rating_coaching_avg IS 'コーチングの平均';
+COMMENT ON COLUMN public.com_t_coach_stats.rating_friendliness_avg IS '親近感の平均';
+COMMENT ON COLUMN public.com_t_coach_stats.rating_recommendation_avg IS 'おすすめ度の平均（単独では画面に出さない）';
+COMMENT ON COLUMN public.com_t_coach_stats.rating_updated_at IS '評価の集計を最後に作り直した日時';
+COMMENT ON COLUMN public.com_t_coach_stats.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_t_coach_stats.update_date IS '更新日時';
+
+ALTER TABLE public.com_t_coach_stats ENABLE ROW LEVEL SECURITY;
+
+-- 集計値はコーチ選択画面で生徒にも見せるため、ログイン済みなら誰でも参照できる（更新はトリガーのみ）
+DROP POLICY IF EXISTS "Authenticated users can view coach stats" ON public.com_t_coach_stats;
+CREATE POLICY "Authenticated users can view coach stats" ON public.com_t_coach_stats
+FOR SELECT TO authenticated USING (true);
+
+---------------------------------------------
+-- コーチ評価の集計の作り直し (2026-10-10 追加)
+-- 前提: table/com_t_coach_stats.sql の作成が完了していること。
+--       本ファイルの適用後に table/com_t_coach_rating.sql のトリガーを作成すること。
+---------------------------------------------
+-- 【背景】
+-- 評価の登録・変更・削除のたびに、そのコーチの評価の集計（com_t_coach_stats の rating_* 列）を
+-- 全件から作り直す（1人あたりの件数は少なく、差分更新より誤差・不整合が起きない方を優先する）。
+-- 総合評価は移行元システムの「All Over Ratings」と同じく3項目の平均。
+-- 移行データの一括投入後に全コーチ分を作り直す場合は、コーチごとに fn_refresh_coach_rating_stats() を呼ぶ。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_refresh_coach_rating_stats(p_coach_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    INSERT INTO public.com_t_coach_stats AS st (
+        coach_id, rating_count, rating_overall_avg, rating_coaching_avg,
+        rating_friendliness_avg, rating_recommendation_avg, rating_updated_at
+    )
+    SELECT
+        p_coach_id,
+        count(*),
+        round(avg((r.coaching_score + r.friendliness_score + r.recommendation_score) / 3), 2),
+        round(avg(r.coaching_score), 2),
+        round(avg(r.friendliness_score), 2),
+        round(avg(r.recommendation_score), 2),
+        NOW()
+    FROM public.com_t_coach_rating r
+    WHERE r.coach_id = p_coach_id
+    ON CONFLICT (coach_id) DO UPDATE SET
+        rating_count = EXCLUDED.rating_count,
+        rating_overall_avg = EXCLUDED.rating_overall_avg,
+        rating_coaching_avg = EXCLUDED.rating_coaching_avg,
+        rating_friendliness_avg = EXCLUDED.rating_friendliness_avg,
+        rating_recommendation_avg = EXCLUDED.rating_recommendation_avg,
+        rating_updated_at = EXCLUDED.rating_updated_at,
+        update_date = NOW();
+END;
+$$;
+
+-- 集計の作り直しはトリガーと運用作業（移行後の一括作り直し）だけが使う
+REVOKE EXECUTE ON FUNCTION public.fn_refresh_coach_rating_stats(uuid) FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.trg_refresh_coach_rating_stats()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF TG_OP IN ('UPDATE', 'DELETE') THEN
+        PERFORM public.fn_refresh_coach_rating_stats(OLD.coach_id);
+    END IF;
+    -- 更新でコーチが付け替わった場合は、旧・新の両方を作り直す
+    IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NEW.coach_id IS DISTINCT FROM OLD.coach_id) THEN
+        PERFORM public.fn_refresh_coach_rating_stats(NEW.coach_id);
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+---------------------------------------------
+-- コーチ評価 (2026-10-10 追加)
+-- 前提: table/com_t_user_session_ticket.sql, table/com_m_user.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- 生徒が専属コーチを契約の終わりに星1〜5で評価する（3項目＋運営向けの任意コメント）。
+--   - 1件の単位は「契約（チケット）× コーチ」。週n回契約で同じコーチを複数のコマに選んでいても1回だけ評価する。
+--     同じコーチで継続した場合は契約ごとに評価する（推移として残る）。
+--   - 評価の対象・受付期間の判定は fn_coach_rating_targets()、登録は submit_coach_rating() に一本化する
+--     （RLSでのINSERT/UPDATEは許可しない）。
+--   - コーチ・他の生徒へは集計（com_t_coach_stats）だけを見せる。本テーブルの行（特に feedback）は
+--     評価した生徒本人とアドミンだけが参照できる。
+--   - 移行元システムの評価（COM_T_COACH_EVALUATION）を移行する前提で、source=2（移行）の行は
+--     生徒・契約を特定できなくてもよい（名寄せは別タスク）。点数も移行元に合わせ0.5刻みを許可する
+--     （アプリからの評価は整数のみ。submit_coach_rating() で検証）。
+---------------------------------------------
+CREATE TABLE public.com_t_coach_rating (
+    rating_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    coach_id uuid NOT NULL REFERENCES public.com_m_user(id),
+    student_id uuid REFERENCES public.com_m_user(id),
+    ticket_id uuid REFERENCES public.com_t_user_session_ticket(ticket_id),
+    coaching_score numeric(2,1) NOT NULL,
+    friendliness_score numeric(2,1) NOT NULL,
+    recommendation_score numeric(2,1) NOT NULL,
+    feedback text DEFAULT NULL,
+    source smallint NOT NULL DEFAULT 1, -- 1:app 2:legacy(移行元システム)
+    legacy_evaluation_id bigint DEFAULT NULL,
+    rated_at timestamp with time zone NOT NULL DEFAULT NOW(),
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    update_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_coach_rating_scores CHECK (
+        coaching_score BETWEEN 1 AND 5 AND coaching_score * 2 = trunc(coaching_score * 2)
+        AND friendliness_score BETWEEN 1 AND 5 AND friendliness_score * 2 = trunc(friendliness_score * 2)
+        AND recommendation_score BETWEEN 1 AND 5 AND recommendation_score * 2 = trunc(recommendation_score * 2)
+    ),
+    CONSTRAINT chk_coach_rating_source CHECK (source IN (1, 2)),
+    -- アプリからの評価は必ず契約・生徒に紐づく（移行分だけ空を許可）
+    CONSTRAINT chk_coach_rating_app_refs CHECK (source = 2 OR (ticket_id IS NOT NULL AND student_id IS NOT NULL))
+);
+
+COMMENT ON TABLE public.com_t_coach_rating IS 'コーチ評価（生徒が契約×コーチにつき1回。集計はcom_t_coach_stats、登録はsubmit_coach_rating()）';
+COMMENT ON COLUMN public.com_t_coach_rating.rating_id IS '評価ID';
+COMMENT ON COLUMN public.com_t_coach_rating.coach_id IS '評価されたコーチのユーザID';
+COMMENT ON COLUMN public.com_t_coach_rating.student_id IS '評価した生徒のユーザID（移行分で特定できない場合はNULL）';
+COMMENT ON COLUMN public.com_t_coach_rating.ticket_id IS '対象の契約（ライブセッションチケット。移行分で特定できない場合はNULL）';
+COMMENT ON COLUMN public.com_t_coach_rating.coaching_score IS 'コーチング（1〜5。アプリは整数、移行分は0.5刻み）';
+COMMENT ON COLUMN public.com_t_coach_rating.friendliness_score IS '親近感（1〜5）';
+COMMENT ON COLUMN public.com_t_coach_rating.recommendation_score IS 'おすすめ度（他の受講者にすすめたいか。1〜5）';
+COMMENT ON COLUMN public.com_t_coach_rating.feedback IS '運営向けのフィードバック（任意。コーチ・他の生徒には公開しない）';
+COMMENT ON COLUMN public.com_t_coach_rating.source IS '登録元 1:app(生徒アプリ) 2:legacy(移行元システム)';
+COMMENT ON COLUMN public.com_t_coach_rating.legacy_evaluation_id IS '移行元のCOM_T_COACH_EVALUATION.EVALUATIONID（移行分のみ。二重移行の防止用）';
+COMMENT ON COLUMN public.com_t_coach_rating.rated_at IS '評価日時（移行分は移行元のEVALUATIONDATE）';
+COMMENT ON COLUMN public.com_t_coach_rating.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_t_coach_rating.update_date IS '更新日時';
+
+-- 契約×コーチにつき1回（移行分は ticket_id が NULL になり得るため対象外）
+CREATE UNIQUE INDEX uq_coach_rating_ticket_coach ON public.com_t_coach_rating (ticket_id, coach_id) WHERE ticket_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_coach_rating_legacy_id ON public.com_t_coach_rating (legacy_evaluation_id) WHERE legacy_evaluation_id IS NOT NULL;
+CREATE INDEX idx_coach_rating_coach ON public.com_t_coach_rating (coach_id, rated_at DESC);
+CREATE INDEX idx_coach_rating_student ON public.com_t_coach_rating (student_id);
+
+ALTER TABLE public.com_t_coach_rating ENABLE ROW LEVEL SECURITY;
+
+-- 参照は評価した生徒本人とアドミンのみ。コーチには行を見せない（集計は com_t_coach_stats）
+DROP POLICY IF EXISTS "Students and admins can view coach ratings" ON public.com_t_coach_rating;
+CREATE POLICY "Students and admins can view coach ratings" ON public.com_t_coach_rating
+FOR SELECT TO authenticated USING (
+    student_id = auth.uid()
+    OR public.get_jwt_user_type() = '0'
+);
+
+-- 集計（com_t_coach_stats）を評価の登録・変更・削除と同時に作り直す（すぐ反映する）
+DROP TRIGGER IF EXISTS trg_coach_rating_refresh_stats ON public.com_t_coach_rating;
+CREATE TRIGGER trg_coach_rating_refresh_stats
+AFTER INSERT OR UPDATE OR DELETE ON public.com_t_coach_rating
+FOR EACH ROW EXECUTE FUNCTION public.trg_refresh_coach_rating_stats();
+
+---------------------------------------------
+-- コーチ評価の対象（評価を受け付けている契約×コーチ）の判定 (2026-10-10 追加)
+-- 前提: table/com_t_coach_rating.sql, table/com_m_lesson_schedule.sql, table/com_t_session.sql,
+--       table/com_t_user_session_ticket.sql, table/com_t_user_license.sql の作成が完了していること。
+---------------------------------------------
+-- 【判定】次をすべて満たす「契約（チケット）× コーチ」を、まだ評価していなければ対象とする。
+--   1. 契約が有効期間中（ライセンスが有効かつ開始済み・終了前）。受付は契約の終了日時まで。
+--   2. コーチがその契約で今も担当している（交代で終了した枠 status=9 だけのコーチは対象外）。
+--      週n回契約で同じコーチを複数のコマに選んでいても1件にまとめる。
+--   3. そのコーチとの実施済みセッションが1回以上ある（生徒の未参加 completion_result=3 は数えない）。
+--      コーチ交代後に1回しかセッションが無い場合も評価できるよう、最低回数は1回にしている。
+--   4. 次のどちらか
+--      a. そのコーチとの予定済みセッション（status=1）が残っていない（最後のセッションが終わった）
+--      b. 契約の終了日時の14日前を過ぎている
+-- 判定は get_my_pending_coach_ratings()（一覧の表示）と submit_coach_rating()（登録時の検証）で共有する。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_coach_rating_targets(p_student_id uuid)
+RETURNS TABLE (
+    ticket_id uuid,
+    coach_id uuid,
+    license_end_date timestamp with time zone,
+    completed_count integer
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    WITH coaches AS (
+        SELECT DISTINCT ls.ticket_id, ls.coach_id
+        FROM public.com_m_lesson_schedule ls
+        JOIN public.com_t_user_session_ticket t ON t.ticket_id = ls.ticket_id
+        JOIN public.com_t_user_license l ON l.license_id = t.license_id
+        WHERE t.user_id = p_student_id
+          AND ls.status <> 9
+          AND l.status = 1
+          AND l.start_date <= NOW()
+          AND l.end_date > NOW()
+    )
+    SELECT
+        c.ticket_id,
+        c.coach_id,
+        l.end_date,
+        (
+            SELECT count(*)::integer FROM public.com_t_session s
+            WHERE s.ticket_id = c.ticket_id AND s.coach_id = c.coach_id
+              AND s.status = 2 AND s.completion_result IN (1, 2)
+        )
+    FROM coaches c
+    JOIN public.com_t_user_session_ticket t ON t.ticket_id = c.ticket_id
+    JOIN public.com_t_user_license l ON l.license_id = t.license_id
+    WHERE EXISTS (
+            SELECT 1 FROM public.com_t_session s
+            WHERE s.ticket_id = c.ticket_id AND s.coach_id = c.coach_id
+              AND s.status = 2 AND s.completion_result IN (1, 2)
+        )
+      AND (
+            NOT EXISTS (
+                SELECT 1 FROM public.com_t_session s
+                WHERE s.ticket_id = c.ticket_id AND s.coach_id = c.coach_id AND s.status = 1
+            )
+            OR NOW() >= l.end_date - interval '14 days'
+        )
+      AND NOT EXISTS (
+            SELECT 1 FROM public.com_t_coach_rating r
+            WHERE r.ticket_id = c.ticket_id AND r.coach_id = c.coach_id
+        );
+$$;
+
+-- 内部の判定専用（生徒は get_my_pending_coach_ratings() 経由で自分の分だけを取得する）
+REVOKE EXECUTE ON FUNCTION public.fn_coach_rating_targets(uuid) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- 生徒本人の、評価を待っているコーチの一覧RPC (2026-10-10 追加)
+-- 前提: function/fn_coach_rating_targets.sql の作成が完了していること。
+---------------------------------------------
+-- 生徒アプリのライブセッション管理・ホームの「対応が必要です」に出す、評価の依頼の一覧。
+-- 対象の判定は fn_coach_rating_targets() を参照。契約の終了が近い順に返す。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_my_pending_coach_ratings()
+RETURNS TABLE (
+    ticket_id uuid,
+    coach_id uuid,
+    coach_name text,
+    coach_icon_path text,
+    plan_name text,
+    license_end_date timestamp with time zone,
+    completed_count integer
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT
+        tg.ticket_id,
+        tg.coach_id,
+        u.user_name,
+        u.icon_path,
+        ct.plan_name,
+        tg.license_end_date,
+        tg.completed_count
+    FROM public.fn_coach_rating_targets(auth.uid()) tg
+    JOIN public.com_m_user u ON u.id = tg.coach_id
+    JOIN public.com_t_user_session_ticket t ON t.ticket_id = tg.ticket_id
+    JOIN public.com_m_contract ct ON ct.contract_id = t.contract_id
+    ORDER BY tg.license_end_date, u.user_name;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_my_pending_coach_ratings() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_my_pending_coach_ratings() TO authenticated;
+
+---------------------------------------------
+-- 生徒によるコーチ評価の登録RPC (2026-10-10 追加)
+-- 前提: table/com_t_coach_rating.sql, function/fn_coach_rating_targets.sql の作成が完了していること。
+---------------------------------------------
+-- 評価の対象（fn_coach_rating_targets）であることを確かめて1件登録する。登録後の変更・取り消しはできない。
+-- 集計（com_t_coach_stats）は com_t_coach_rating のトリガーが同時に作り直す。
+-- エラー（アプリ側で判別する接頭辞）:
+--   INVALID_SCORE: 点数が1〜5の整数でない / FEEDBACK_TOO_LONG: コメントが2000文字を超える
+--   ALREADY_RATED: 評価済み / NOT_ELIGIBLE: 評価の対象でない（受付期間外・担当外等）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.submit_coach_rating(
+    p_ticket_id uuid,
+    p_coach_id uuid,
+    p_coaching_score smallint,
+    p_friendliness_score smallint,
+    p_recommendation_score smallint,
+    p_feedback text
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_student_id uuid := auth.uid();
+    v_feedback text := NULLIF(btrim(p_feedback), '');
+    v_rating_id uuid;
+BEGIN
+    IF v_student_id IS NULL THEN
+        RAISE EXCEPTION 'NOT_ELIGIBLE: not authenticated';
+    END IF;
+
+    IF p_coaching_score IS NULL OR p_coaching_score NOT BETWEEN 1 AND 5
+       OR p_friendliness_score IS NULL OR p_friendliness_score NOT BETWEEN 1 AND 5
+       OR p_recommendation_score IS NULL OR p_recommendation_score NOT BETWEEN 1 AND 5 THEN
+        RAISE EXCEPTION 'INVALID_SCORE: scores must be integers between 1 and 5';
+    END IF;
+
+    IF v_feedback IS NOT NULL AND char_length(v_feedback) > 2000 THEN
+        RAISE EXCEPTION 'FEEDBACK_TOO_LONG: feedback exceeds 2000 characters';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_coach_rating
+        WHERE ticket_id = p_ticket_id AND coach_id = p_coach_id
+    ) THEN
+        RAISE EXCEPTION 'ALREADY_RATED: ticket % coach % is already rated', p_ticket_id, p_coach_id;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.fn_coach_rating_targets(v_student_id) tg
+        WHERE tg.ticket_id = p_ticket_id AND tg.coach_id = p_coach_id
+    ) THEN
+        RAISE EXCEPTION 'NOT_ELIGIBLE: ticket % coach % is not open for rating', p_ticket_id, p_coach_id;
+    END IF;
+
+    INSERT INTO public.com_t_coach_rating (
+        coach_id, student_id, ticket_id,
+        coaching_score, friendliness_score, recommendation_score, feedback, source
+    ) VALUES (
+        p_coach_id, v_student_id, p_ticket_id,
+        p_coaching_score, p_friendliness_score, p_recommendation_score, v_feedback, 1
+    )
+    RETURNING rating_id INTO v_rating_id;
+
+    RETURN v_rating_id;
+EXCEPTION
+    -- 同時に2回送信された場合（一意制約）も評価済みとして扱う
+    WHEN unique_violation THEN
+        RAISE EXCEPTION 'ALREADY_RATED: ticket % coach % is already rated', p_ticket_id, p_coach_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.submit_coach_rating(uuid, uuid, smallint, smallint, smallint, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.submit_coach_rating(uuid, uuid, smallint, smallint, smallint, text) TO authenticated;
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】コーチ評価: 評価済みの判定を本人の評価に限る
+-- 追加日: 2026-10-10
+--
+-- 【内容】
+--   submit_coach_rating の「評価済み（ALREADY_RATED）」の判定が他人の評価も対象にしていたため、
+--   コーチ等が任意の契約×コーチで呼ぶと、その生徒が評価したかを探れた。本人の評価に限って判定する
+--   （本人以外は従来どおり NOT_ELIGIBLE になる）。シグネチャの変更は無い。
+-- 対応ファイル: DDL/function/submit_coach_rating.sql
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- 生徒によるコーチ評価の登録RPC (2026-10-10 追加)
+-- 前提: table/com_t_coach_rating.sql, function/fn_coach_rating_targets.sql の作成が完了していること。
+---------------------------------------------
+-- 評価の対象（fn_coach_rating_targets）であることを確かめて1件登録する。登録後の変更・取り消しはできない。
+-- 集計（com_t_coach_stats）は com_t_coach_rating のトリガーが同時に作り直す。
+-- エラー（アプリ側で判別する接頭辞）:
+--   INVALID_SCORE: 点数が1〜5の整数でない / FEEDBACK_TOO_LONG: コメントが2000文字を超える
+--   ALREADY_RATED: 評価済み / NOT_ELIGIBLE: 評価の対象でない（受付期間外・担当外等）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.submit_coach_rating(
+    p_ticket_id uuid,
+    p_coach_id uuid,
+    p_coaching_score smallint,
+    p_friendliness_score smallint,
+    p_recommendation_score smallint,
+    p_feedback text
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_student_id uuid := auth.uid();
+    v_feedback text := NULLIF(btrim(p_feedback), '');
+    v_rating_id uuid;
+BEGIN
+    IF v_student_id IS NULL THEN
+        RAISE EXCEPTION 'NOT_ELIGIBLE: not authenticated';
+    END IF;
+
+    IF p_coaching_score IS NULL OR p_coaching_score NOT BETWEEN 1 AND 5
+       OR p_friendliness_score IS NULL OR p_friendliness_score NOT BETWEEN 1 AND 5
+       OR p_recommendation_score IS NULL OR p_recommendation_score NOT BETWEEN 1 AND 5 THEN
+        RAISE EXCEPTION 'INVALID_SCORE: scores must be integers between 1 and 5';
+    END IF;
+
+    IF v_feedback IS NOT NULL AND char_length(v_feedback) > 2000 THEN
+        RAISE EXCEPTION 'FEEDBACK_TOO_LONG: feedback exceeds 2000 characters';
+    END IF;
+
+    -- 評価済みかは本人の評価に限って判定する（他人の契約の評価の有無を探れないようにする）
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_coach_rating
+        WHERE ticket_id = p_ticket_id AND coach_id = p_coach_id AND student_id = v_student_id
+    ) THEN
+        RAISE EXCEPTION 'ALREADY_RATED: ticket % coach % is already rated', p_ticket_id, p_coach_id;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.fn_coach_rating_targets(v_student_id) tg
+        WHERE tg.ticket_id = p_ticket_id AND tg.coach_id = p_coach_id
+    ) THEN
+        RAISE EXCEPTION 'NOT_ELIGIBLE: ticket % coach % is not open for rating', p_ticket_id, p_coach_id;
+    END IF;
+
+    INSERT INTO public.com_t_coach_rating (
+        coach_id, student_id, ticket_id,
+        coaching_score, friendliness_score, recommendation_score, feedback, source
+    ) VALUES (
+        p_coach_id, v_student_id, p_ticket_id,
+        p_coaching_score, p_friendliness_score, p_recommendation_score, v_feedback, 1
+    )
+    RETURNING rating_id INTO v_rating_id;
+
+    RETURN v_rating_id;
+EXCEPTION
+    -- 同時に2回送信された場合（一意制約）も評価済みとして扱う
+    WHEN unique_violation THEN
+        RAISE EXCEPTION 'ALREADY_RATED: ticket % coach % is already rated', p_ticket_id, p_coach_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.submit_coach_rating(uuid, uuid, smallint, smallint, smallint, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.submit_coach_rating(uuid, uuid, smallint, smallint, smallint, text) TO authenticated;
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】コーチ評価: 新人コーチの初期値の評価（3項目とも4）を自動で登録する
+-- 追加日: 2026-10-10
+--
+-- 【内容】
+--   1. com_t_coach_rating の登録元に 3:initial（新人コーチの初期値）を追加し、コーチ1人につき1件までにする
+--   2. fn_create_initial_coach_rating / trg_create_initial_coach_rating を新規作成
+--   3. com_m_coach_profile の作成時に 2 を呼ぶトリガー（trg_coach_profile_initial_rating）を作成
+--   既存のコーチには登録しない（移行元の評価を移行するコーチに初期値が混ざらないようにするため）。
+--   移行の後に評価0件のコーチへ付ける場合は、コーチごとに fn_create_initial_coach_rating を呼ぶ。
+-- 対応ファイル: DDL/table/com_t_coach_rating.sql, DDL/function/fn_create_initial_coach_rating.sql,
+--   DDL/table/com_m_coach_profile.sql
+-- =========================================================================
+
+BEGIN;
+
+ALTER TABLE public.com_t_coach_rating DROP CONSTRAINT IF EXISTS chk_coach_rating_source;
+ALTER TABLE public.com_t_coach_rating ADD CONSTRAINT chk_coach_rating_source CHECK (source IN (1, 2, 3));
+-- アプリからの評価は必ず契約・生徒に紐づく（移行分・初期値は空を許可）
+ALTER TABLE public.com_t_coach_rating DROP CONSTRAINT IF EXISTS chk_coach_rating_app_refs;
+ALTER TABLE public.com_t_coach_rating ADD CONSTRAINT chk_coach_rating_app_refs CHECK (source <> 1 OR (ticket_id IS NOT NULL AND student_id IS NOT NULL));
+COMMENT ON COLUMN public.com_t_coach_rating.source IS '登録元 1:app(生徒アプリ) 2:legacy(移行元システム) 3:initial(新人コーチの初期値。プロフィール作成時に自動登録)';
+-- 初期値の評価はコーチ1人につき1件まで
+CREATE UNIQUE INDEX IF NOT EXISTS uq_coach_rating_initial ON public.com_t_coach_rating (coach_id) WHERE source = 3;
+
+---------------------------------------------
+-- 新人コーチの初期値の評価の登録 (2026-10-10 追加)
+-- 前提: table/com_t_coach_rating.sql の作成が完了していること。
+--       本ファイルの適用後に table/com_m_coach_profile.sql のトリガー（trg_coach_profile_initial_rating）を作成すること。
+---------------------------------------------
+-- 【背景】
+-- 評価0件のコーチはコーチ選択画面で星が出ず、実績のあるコーチより選ばれにくい。新人コーチ対応として、
+-- コーチのプロフィール（com_m_coach_profile）が作られた時点で、3項目とも4の評価を1件（source=3:initial）登録する。
+-- 初期値の評価も件数・平均に含める（生徒・コーチの画面では通常の評価と区別しない）。
+-- コーチ1人につき1件まで（uq_coach_rating_initial）。既にあれば何もしない（何度呼んでもよい）。
+-- 既存のコーチには自動では登録しない（移行元の評価を移行するコーチに初期値が混ざらないようにするため）。
+-- 移行の後に評価0件のコーチへ付ける場合は、運用作業としてコーチごとに本関数を呼ぶ。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_create_initial_coach_rating(p_coach_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    INSERT INTO public.com_t_coach_rating (coach_id, coaching_score, friendliness_score, recommendation_score, source)
+    VALUES (p_coach_id, 4, 4, 4, 3)
+    ON CONFLICT (coach_id) WHERE source = 3 DO NOTHING;
+END;
+$$;
+
+-- 登録はトリガーと運用作業だけが使う
+REVOKE EXECUTE ON FUNCTION public.fn_create_initial_coach_rating(uuid) FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.trg_create_initial_coach_rating()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    PERFORM public.fn_create_initial_coach_rating(NEW.user_id);
+    RETURN NULL;
+END;
+$$;
+
+-- 新人コーチの初期値の評価（3項目とも4）をプロフィールの作成と同時に登録する (2026-10-10 追加)
+-- 前提: function/fn_create_initial_coach_rating.sql
+DROP TRIGGER IF EXISTS trg_coach_profile_initial_rating ON public.com_m_coach_profile;
+CREATE TRIGGER trg_coach_profile_initial_rating
+AFTER INSERT ON public.com_m_coach_profile
+FOR EACH ROW EXECUTE FUNCTION public.trg_create_initial_coach_rating();
+
+COMMIT;

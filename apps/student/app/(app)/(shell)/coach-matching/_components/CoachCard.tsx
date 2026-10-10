@@ -12,6 +12,8 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getCoachIntroVideoUrl } from '@gabby/lib/coachProfile/getCoachIntroVideoUrl';
 import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
 import { CoachProfileDialog } from '@gabby/lib/components/common/CoachProfileDialog';
+import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
+import { toCoachRatingDisplay } from '@/constants/coachRating';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -92,6 +94,8 @@ export function CoachCard({
   const visibleSlots = showAllSlots ? sortedSlots : sortedSlots.slice(0, VISIBLE_SLOT_COUNT);
   const hiddenSlotCount = sortedSlots.length - visibleSlots.length;
 
+  const rating = toCoachRatingDisplay(coach.rating);
+
   const country = useMemo(
     () => countries.find((c) => c.country_code === coach.country_code) ?? null,
     [countries, coach.country_code]
@@ -133,6 +137,13 @@ export function CoachCard({
             {country && coach.teaching_years !== null && <span aria-hidden>・</span>}
             {coach.teaching_years !== null && <span className="shrink-0">指導歴 {coach.teaching_years}年</span>}
           </div>
+          {rating && (
+            <div className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-subtle">
+              <StarRatingDisplay value={rating.value} size={12} label={rating.ariaLabel} />
+              <span className="font-bold text-ink tabular-nums">{rating.valueLabel}</span>
+              <span>（{rating.countLabel}）</span>
+            </div>
+          )}
         </div>
         {/* プロフィール確認を促す目印。モバイルは名前・国名の幅を優先してアイコンのみ、sm以上は文言付き */}
         <span
@@ -227,6 +238,7 @@ export function CoachCard({
             jobExperience: coach.job_experience,
             introduction: coach.introduction,
             introVideoUrl: getCoachIntroVideoUrl(coach.intro_video_path),
+            rating,
           }}
           labels={{
             closeLabel: '閉じる',

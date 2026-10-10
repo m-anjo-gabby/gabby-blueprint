@@ -4,6 +4,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { PageSkeleton } from '@gabby/lib/components/common/PageSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MyRatingCardSkeleton } from '@/components/rating/MyRatingCard';
 import { ScheduleTabs } from '@/components/common/ScheduleTabs';
 import { PageHeader, PageSkeletonFrame } from '@/components/common/PageHeader';
 import { MonthSelector } from '@/app/(app)/monthly-reports/_components/MonthSelector';
@@ -134,6 +135,8 @@ export function ProfileSkeleton() {
         <div aria-hidden className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
           <div className="space-y-6">
             <Skeleton className="h-40 w-full rounded-2xl" />
+            {/* My Rating */}
+            <MyRatingCardSkeleton />
             {/* Email notifications */}
             <Skeleton className="h-36 w-full rounded-2xl" />
             <Skeleton className="h-120 w-full rounded-2xl" />

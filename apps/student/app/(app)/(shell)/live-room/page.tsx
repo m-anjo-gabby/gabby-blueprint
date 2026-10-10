@@ -8,6 +8,7 @@ import {
 import { getMyBookableTickets, getMyLiveSessionOverview } from '@/actions/matchingAction';
 import { getMyLiveSessionContractsCached, getNextContractMatching, pickLiveSessionContract } from '@/lib/liveSessionContracts';
 import { getSessionHomework, getSessionHomeworkChecklist } from '@/actions/sessionHomeworkAction';
+import { getMyPendingCoachRatings } from '@/actions/coachRatingAction';
 import { COMPLETION_RESULT, SESSION_STATUS, type SessionListItem } from '@gabby/types/session';
 import type { LiveSessionOverview } from '@gabby/types/matching';
 import { LiveSessionHub } from './_components/LiveSessionHub';
@@ -75,6 +76,7 @@ export default async function LiveSessionHubPage({ searchParams }: { searchParam
     proposalGroups,
     proposedGroups,
     bookingRequests,
+    pendingRatings,
   ] = await Promise.all([
     contractsPromise,
     contractDataPromise,
@@ -84,6 +86,7 @@ export default async function LiveSessionHubPage({ searchParams }: { searchParam
     getMyRescheduleProposalGroups(),
     getMyProposedRescheduleGroups(),
     getMyBookingRequests(),
+    getMyPendingCoachRatings(),
   ]);
 
   // ライブセッション付き契約を一度も持ったことがない（アプリのみ契約）場合は紹介画面を表示する。
@@ -106,6 +109,7 @@ export default async function LiveSessionHubPage({ searchParams }: { searchParam
       proposalGroups={proposalGroups}
       proposedGroups={proposedGroups}
       bookingRequests={bookingRequests}
+      pendingRatings={pendingRatings}
     />
   );
 }

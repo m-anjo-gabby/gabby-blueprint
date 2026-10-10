@@ -1,4 +1,5 @@
 import { DayOfWeek } from './coachAvailability';
+import type { CoachRatingStats } from './coachRating';
 
 /**
  * ----------------------------------------------
@@ -207,6 +208,8 @@ export interface CoachBrowseItem {
   introduction: string | null;
   intro_video_path: string | null;
   timezone: string; // コーチのIANAタイムゾーン（コーチの現地時刻の表示用）
+  /** 評価の集計（評価がまだ無いコーチは null） */
+  rating: CoachRatingStats | null;
   /** 空き時間（UTCの曜日・時刻） */
   availability: {
     availability_id: string;

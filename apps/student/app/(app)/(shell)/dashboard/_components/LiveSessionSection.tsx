@@ -1,5 +1,6 @@
 import { getMyBookingRequests, getMyProposedRescheduleGroups, getMyRescheduleProposalGroups, getMyUpcomingSessions } from '@/actions/sessionAction';
 import { getMyBookableTickets, getMyLiveSessionOverview } from '@/actions/matchingAction';
+import { getMyPendingCoachRatings } from '@/actions/coachRatingAction';
 import type { LiveSessionContractSummary } from '@gabby/types/matching';
 import { getNextContractMatching } from '@/lib/liveSessionContracts';
 import { LiveSessionCard, type LiveSessionAction } from './LiveSessionCard';
@@ -11,7 +12,7 @@ import { LiveSessionCard, type LiveSessionAction } from './LiveSessionCard';
  */
 export async function LiveSessionSection({ contract, contracts }: { contract: LiveSessionContractSummary; contracts: LiveSessionContractSummary[] }) {
   const isCurrent = contract.is_current;
-  const [upcomingSessions, overview, bookableSlots, proposalGroups, proposedGroups, bookingRequests, nextMatching] = await Promise.all([
+  const [upcomingSessions, overview, bookableSlots, proposalGroups, proposedGroups, bookingRequests, nextMatching, pendingRatings] = await Promise.all([
     getMyUpcomingSessions(1),
     getMyLiveSessionOverview(contract.ticket_id),
     getMyBookableTickets(),
@@ -19,6 +20,7 @@ export async function LiveSessionSection({ contract, contracts }: { contract: Li
     getMyProposedRescheduleGroups(),
     getMyBookingRequests(),
     isCurrent ? getNextContractMatching(contracts) : Promise.resolve(null),
+    getMyPendingCoachRatings(),
   ]);
 
   const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length + proposedGroups.length : 0;
@@ -47,6 +49,10 @@ export async function LiveSessionSection({ contract, contracts }: { contract: Li
     if (unbookedCount > 0 && bookableSlots.length > 0) {
       actions.push({ key: 'unbooked', label: `日時が決まっていないセッションが${unbookedCount}回あります`, href: '/live-room' });
     }
+  }
+  const ratingCount = pendingRatings.filter((r) => r.ticketId === contract.ticket_id).length;
+  if (ratingCount > 0) {
+    actions.push({ key: 'rating', label: `専属コーチの評価をお願いします（${ratingCount}件）`, href: `/live-room?contract=${contract.ticket_id}` });
   }
   // 専属コーチの申請の回答待ち（生徒の対応ではないため最後に、注意の見た目にせず出す）。
   // ライブセッション管理の「契約の状況」のコマの一覧から、申請の確認・取り下げができる

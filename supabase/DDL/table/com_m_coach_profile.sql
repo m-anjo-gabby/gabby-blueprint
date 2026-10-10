@@ -110,3 +110,10 @@ ALTER TABLE public.com_m_coach_profile
   ADD COLUMN IF NOT EXISTS availability_confirmed_at timestamp with time zone DEFAULT NULL;
 
 COMMENT ON COLUMN public.com_m_coach_profile.availability_confirmed_at IS '空き時間を最後に確認した日時（空き時間の保存・「変更なしで確認」で更新。NULLは未確認。14日を過ぎると見直しの通知を出す）';
+
+-- 新人コーチの初期値の評価（3項目とも4）をプロフィールの作成と同時に登録する (2026-10-10 追加)
+-- 前提: function/fn_create_initial_coach_rating.sql
+DROP TRIGGER IF EXISTS trg_coach_profile_initial_rating ON public.com_m_coach_profile;
+CREATE TRIGGER trg_coach_profile_initial_rating
+AFTER INSERT ON public.com_m_coach_profile
+FOR EACH ROW EXECUTE FUNCTION public.trg_create_initial_coach_rating();

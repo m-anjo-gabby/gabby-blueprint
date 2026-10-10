@@ -2,6 +2,7 @@
 
 import { GraduationCap, Award, Clock, Briefcase, MessageSquare } from 'lucide-react';
 import { CoachProfileCardData, CoachProfileCardLabels } from '@gabby/types/coachProfile';
+import { StarRatingDisplay } from './StarRating';
 
 export interface CoachProfileCardProps {
   data: CoachProfileCardData;
@@ -22,7 +23,7 @@ export interface CoachProfileCardHeaderProps {
 }
 
 /**
- * プロフィールカードのヘッダー部（アバター・氏名・国籍）。
+ * プロフィールカードのヘッダー部（アバター・氏名・国籍・総合評価）。
  * CoachProfileDialogでは、この部分だけをスクロール領域の外に固定表示するために単独で利用する。
  */
 export function CoachProfileCardHeader({ data, className = 'flex items-center gap-4' }: CoachProfileCardHeaderProps) {
@@ -45,6 +46,13 @@ export function CoachProfileCardHeader({ data, className = 'flex items-center ga
               <img src={data.countryFlagUrl} alt={data.countryName} className="w-4 h-4 rounded-full object-cover" />
             )}
             <span className="text-xs text-slate-500">{data.countryName}</span>
+          </div>
+        )}
+        {data.rating && (
+          <div className="flex items-center gap-1.5 mt-1.5">
+            <StarRatingDisplay value={data.rating.value} size={14} label={data.rating.ariaLabel} />
+            <span className="text-sm font-bold text-slate-800 tabular-nums">{data.rating.valueLabel}</span>
+            <span className="text-xs text-slate-500">{data.rating.countLabel}</span>
           </div>
         )}
       </div>
