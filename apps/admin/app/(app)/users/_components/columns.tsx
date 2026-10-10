@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
 import type { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,7 @@ import { UserFormDialog } from "./UserFormDialog";
 import { LicenseFormDialog } from "./LicenseFormDialog";
 import { ImpersonateButton } from "./ImpersonateButton";
 import { SprintProgressFormDialog } from "./SprintProgressFormDialog";
-import { Calendar, Building2, ShieldAlert, Pencil, Rocket } from "lucide-react";
+import { Calendar, Building2, ShieldAlert, Pencil, Rocket, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserTypeLabel, UserRecord, USER_TYPES } from "@gabby/types/user";
 
@@ -180,6 +181,7 @@ export function createColumns(t: TableT): ColumnDef<UserRecord>[] {
       const isRegistered = !!user.last_sign_in_at || !!user.confirmed_at;
       const canImpersonate = isImpersonatableType && isRegistered;
       const isStudent = user.user_type === USER_TYPES.STUDENT;
+      const isCoach = user.user_type === USER_TYPES.COACH;
 
       return (
         <div className="flex justify-end items-center gap-2 px-2">
@@ -193,6 +195,15 @@ export function createColumns(t: TableT): ColumnDef<UserRecord>[] {
                 <Rocket size={14} /> {t('stageButton')}
               </Button>
             </SprintProgressFormDialog>
+          )}
+
+          {/* コーチの評価（生徒からの評価・運営へのコメント）の確認 */}
+          {isCoach && (
+            <Button asChild variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
+              <Link href={`/users/${user.id}/ratings`}>
+                <Star size={14} /> {t('ratingsButton')}
+              </Link>
+            </Button>
           )}
 
           {/* ユーザー基本情報の編集 */}
