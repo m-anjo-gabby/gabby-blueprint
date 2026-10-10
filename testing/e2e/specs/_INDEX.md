@@ -23,6 +23,7 @@
 | [homework/session-homework.md](homework/session-homework.md) | ライブセッションの宿題（1セッション1件の本体・最大5項目のチェックリスト・添付・追記のコメント・生徒への通知・生徒のチェック・前回の宿題の表示） | コーチ, 生徒 | なし（トリガー `notify_session_homework_posted` / `notify_session_homework_comment_posted`） |
 | [group-session/group-sessions.md](group-session/group-sessions.md) | グループセッション（シリーズの登録・配信対象〔生徒全体/顧客指定/担当コーチ〕・回ごと/シリーズごとの参加登録と取り消し・アナウンス・24時間前/1時間前のリマインダー・過去のセッション） | アドミン, 生徒, コーチ | `admin_create_calendar_event_series`, `admin_add_calendar_event_series_sessions`, `enqueue_event_reminders` |
 | [logging/client-log.md](logging/client-log.md) | ブラウザのログの受け口（`/api/client-log`。ログインなしで受け付け・本文の検証〔形・大きさ・回数〕・`source: client`。ログの規約は docs/LOGGING.md） | 全ロール（未ログインを含む） | なし |
+| [rating/coach-rating.md](rating/coach-rating.md) | コーチ評価（契約×コーチにつき1回・受付の条件〔実施済み1回以上かつ予定なし or 終了14日前〕・3項目の星と運営へのコメント・集計のすぐの反映・新人コーチの初期値・アドミンの評価一覧） | 生徒, コーチ, アドミン | `get_my_pending_coach_ratings`, `submit_coach_rating`, `admin_get_coach_ratings`（内部 `fn_coach_rating_targets`・トリガー `trg_coach_rating_refresh_stats` / `trg_coach_profile_initial_rating`） |
 
 ## 未着手ドメイン（ファイルが無い＝仕様書はまだ存在しない）
 

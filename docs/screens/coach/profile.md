@@ -48,6 +48,10 @@
 | プロフィール取得失敗 | 「Failed to load your profile information.」 | プロフィール情報の取得に失敗した場合 |
 | 保存中 | 「Save Public Profile」ボタンがローディング表示になる | Public Coach Profileの保存処理中 |
 
+## 関連する業務フロー仕様書
+
+- [コーチ評価](../../../testing/e2e/specs/rating/coach-rating.md) — My Rating・プレビューの総合評価の集計と反映のタイミング
+
 ## 実装参照（エンジニア向け）
 
 - `apps/coach/app/(app)/profile/page.tsx`

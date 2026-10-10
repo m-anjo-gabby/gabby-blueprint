@@ -46,6 +46,10 @@
 | Next 24 Hours 空 | 「No sessions in the next 24 hours」 | 該当ウィンドウ内に実施予定のセッションが無い場合 |
 | Session Tasks 空 | 「You're all caught up」 | 3種のタスクがいずれも0件の場合 |
 
+## 関連する業務フロー仕様書
+
+- [コーチ評価](../../../testing/e2e/specs/rating/coach-rating.md) — My Rating の集計（総合＝3項目の平均）と反映のタイミング、新人コーチの初期値
+
 ## 実装参照（エンジニア向け）
 
 - `apps/coach/app/(app)/dashboard/page.tsx`

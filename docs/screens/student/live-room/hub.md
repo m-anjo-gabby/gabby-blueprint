@@ -107,6 +107,7 @@
 - [個別予約リクエスト・振替候補フロー](../../../../testing/e2e/specs/booking/individual-booking-and-reschedule.md)
   — この画面での予約リクエスト取り下げ・振替候補応答が、コーチ側の操作とどう連動するか、
   異常系の一覧
+- [コーチ評価](../../../../testing/e2e/specs/rating/coach-rating.md) — 評価のお願いが出る条件、評価の登録と集計への反映、異常系の一覧
 
 ## 実装参照（エンジニア向け）
 
