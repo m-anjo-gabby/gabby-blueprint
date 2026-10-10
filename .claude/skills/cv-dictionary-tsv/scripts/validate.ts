@@ -30,6 +30,8 @@ const IPA_TO_CV: Array<[string, string]> = [
   ['ɔːr', 'orange_door'], ['ɔr', 'orange_door'],
   ['ɑːr', 'olive_sock'], ['ɑr', 'olive_sock'],
   ['ɜːr', 'purple_shirt'], ['ɜr', 'purple_shirt'], ['ɝ', 'purple_shirt'], ['ɜː', 'purple_shirt'], ['ɜ', 'purple_shirt'],
+  // 機能語の弱形（for /fər/、your /jər/）。強勢のある /ər/ は無いため、アクセント母音が /ər/ なら弱形の PURPLE SHIRT
+  ['ər', 'purple_shirt'],
   ['ɔɪ', 'turquoise_toy'], ['aɪ', 'white_tie'], ['aʊ', 'brown_cow'], ['eɪ', 'gray_day'],
   ['oʊ', 'rose_boat'], ['əʊ', 'rose_boat'],
   ['iː', 'green_tea'], ['i', 'green_tea'], ['uː', 'blue_moon'], ['u', 'blue_moon'],
@@ -101,6 +103,8 @@ const collectWarnings = (e: CVImportEntry): string[] => {
 
   const expected = expectedCvFromIpa(ipa);
   if (expected && expected !== e.cv_id) warnings.push(`IPAのアクセント母音からは ${expected} が想定されます（cv_id: ${e.cv_id}）`);
+  // 米国で /ɔ/・/ɑ/ の2通りある語は olive_sock で統一する方針（JUDGEMENT-GUIDE.md CVJ-20261010-03）
+  if (e.cv_id === 'auburn_dog') warnings.push('auburn_dog は原則使わない方針です（/ɑː/ の olive_sock で統一）');
   return warnings;
 };
 

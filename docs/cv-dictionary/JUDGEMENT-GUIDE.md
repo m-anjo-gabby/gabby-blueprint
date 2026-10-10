@@ -14,12 +14,9 @@ ColorVowel辞書データ作成で得た判断・気づきを蓄積し、同じ�
 
 | 論点（open-policies.json の `key`） | 現在の暫定設定 | 候補 |
 |---|---|---|
-| R音化母音 /ɛr/（`rhotic-er`） | `red_pepper` | `red_pepper` / `gray_day` |
-| R音化母音 /ɪr/（`rhotic-ir`） | `green_tea` | `green_tea` / `silver_pin` |
-| R音化母音 /ʊr/（`rhotic-ur`） | `wooden_hook` | `wooden_hook` / `blue_moon`（ensure は /ɔːr/ `orange_door` の読みもある） |
-| 米国発音で /ɔ/ と /ɑ/ の2通りある語（`cot-caught`） | `auburn_dog` | `auburn_dog` / `olive_sock` |
-| 機能語の発音（`function-word-strong-form`、CVJ-20260925-01） | 強形 | 強形 / 弱形 |
-| 略語の扱い（`abbreviation-letters`、CVJ-20260925-03） | 1文字＝1音節・最後の文字にアクセント | — |
+| 助動詞・be動詞の弱形（`auxiliary-weak-form`、CVJ-20260925-01） | 強形（`can` のみ弱形） | 強形 / 弱形 |
+
+2026-10-10 に、それまでの6件（R音化母音 /ɛr/・/ɪr/・/ʊr/、/ɔ/ と /ɑ/、機能語の発音、略語の扱い）は確定した（CVJ-20261010-01〜03、CVJ-20260925-01・03）。
 
 ## 記入フォーマット
 
@@ -36,14 +33,21 @@ ColorVowel辞書データ作成で得た判断・気づきを蓄積し、同じ�
 
 ---
 
-### CVJ-20260925-01 機能語の発音は辞書の見出し発音（強形）で統一する
+### CVJ-20260925-01 機能語は、一般的な弱形がある語を弱形で登録する
 
-- **状態**: 暫定（コンテンツチームの確認で変更可）
-- **対象**: 冠詞・前置詞・代名詞・助動詞などの機能語（the, a, for, you, to, was など）
+- **状態**: 確定（2026-10-10 コンテンツチーム。当初の暫定は「強形で統一」）
+- **対象**: 冠詞・前置詞・代名詞・接続詞（the, a, for, you, to など）。助動詞は `can` のみ
 - **論点・事象**: 機能語は会話では弱形（the /ðə/、for /fər/）で発音されることが多いが、辞書には1つの発音しか登録できない。
-- **判断**: 辞書の見出し発音（強形）で統一する（例: `the` → `/ðiː/` `green_tea`、`for` → `/fɔːr/` `orange_door`）。
-- **根拠**: 既存の辞書データ（`for` = `/fɔːr/`）に合わせた。弱形に揃える場合は、機能語を一括で見直す。
-- **反映先**: reference.md「8. phonetic_spelling」
+- **判断**: 弱形で登録する。/ə/ は `cup_of_mustard`、/ər/ は `purple_shirt`
+  （例: `the` → `/ðə/`、`for` → `/fər/`、`your` → `/jər/`、`can` → `/kən/`）。
+  弱形が無い語（`I`, `in`, `with`）、アクセント母音が変わらない語（`he`）、2音節以上の語、
+  指示代名詞の `that`（`/ðæt/`。接続詞の `that` は `/ðət/`）は強形のまま。
+- **根拠**: 確認依頼Excel（2回分）の回答「弱く読む形に変更」「可能な限り」と、③での語ごとの指摘
+  （a / an / and / at / can / the / to は MUSTARD、for / or / your は PURPLE SHIRT）。
+  弱形の有無は一般的な辞書の弱形の記載で判断した。指示代名詞の that は英語で弱く読まないため、
+  コンテンツチームの指摘（両方 MUSTARD）のうち接続詞だけを採った（開発側で判断）。
+- **反映先**: reference.md「8. phonetic_spelling」、`validate.ts`（/ər/ → `purple_shirt`）、台帳（コンテンツチーム指摘の18行）。
+  助動詞・be動詞（do, was, have, must など）は確認していないため、`open-policies.json` の `auxiliary-weak-form` で次回確認する。
 
 ### CVJ-20260925-02 Gem で作成した既存データに cv_id の誤りがあった（for = rose_boat）
 
@@ -57,7 +61,7 @@ ColorVowel辞書データ作成で得た判断・気づきを蓄積し、同じ�
 
 ### CVJ-20260925-03 略語は1文字を1音節とし、最後の文字にアクセントを置く
 
-- **状態**: 暫定（コンテンツチームの確認で変更可）
+- **状態**: 確定（2026-10-10 コンテンツチーム。「例外あり。その時はチェックします」とのことなので、迷う略語は要確認に出す）
 - **対象**: 1文字ずつ読む略語（CEO など）
 - **論点・事象**: 略語は通常の単語のように音節に分けられない。
 - **判断**: 大文字のまま登録し、`C-E-O` のように1文字を1音節とする。第一アクセントは最後の文字、
@@ -86,3 +90,64 @@ ColorVowel辞書データ作成で得た判断・気づきを蓄積し、同じ�
   固有名詞と判定した語は `skipped.tsv`（`reason` = `proper_noun`）から固有名詞リスト（`proper-nouns.tsv`）に蓄積し、次回から抽出時に除外する。
 - **根拠**: 大文字かどうかだけでは一般語と固有名詞を区別できない。判定の手間は固有名詞リストの蓄積で回を追うごとに減る。
 - **反映先**: `extract.ts`、`ledger.ts sync`、reference.md「1. word_en」、SKILL.md 手順1・2・3.5
+
+### CVJ-20261010-01 R音化母音 /ɛr/ は RED PEPPER、/ɪr/ は GREEN TEA
+
+- **状態**: 確定（2026-10-10 コンテンツチーム）
+- **対象**: share, there, where, compare など（/ɛr/）、year, clear, experience など（/ɪr/）。台帳 CVR-0002 ほか17件
+- **論点・事象**: 「母音＋r」の /ɛr/・/ɪr/ は Color Vowel の対応が一意でない。
+- **判断**: /ɛr/ → `red_pepper`、/ɪr/ → `green_tea`（暫定設定のとおり）。
+- **根拠**: 確認依頼Excel（セブン＆アイ様向け Lv1）①の回答。
+- **反映先**: reference.md「7. cv_id」
+
+### CVJ-20261010-02 R音化母音 /ʊr/ は PURPLE SHIRT（invisible y）
+
+- **状態**: 確定（2026-10-10 コンテンツチーム）
+- **対象**: during, ensure, ensures, secure, securing（CVR-0011 ほか）、cure / cured / cures / curing（GC様向け）
+- **論点・事象**: 候補は WOODEN HOOK / BLUE MOON としていたが、回答はどちらでもなく「Purple Shirt (invisible y)」。
+- **判断**: `purple_shirt` とし、IPAも /ɜːr/ で書く（`/ˈdɜːrɪŋ/`、`/sɪˈkjɜːr/`、`/ɪnˈʃɜːr/`）。
+  IPAを /ʊr/ のままにすると `validate.ts` の IPA と cv_id の照合が働かないため、IPA側を合わせた。
+- **根拠**: 確認依頼Excel①の回答（その他）と、②③の語ごとの指摘。
+- **反映先**: reference.md「7. cv_id」、台帳
+
+### CVJ-20261010-03 米国で /ɔ/ と /ɑ/ の2通りある語は OLIVE SOCK で統一する
+
+- **状態**: 確定（2026-10-10 コンテンツチーム）
+- **対象**: offer, office, cost, launch, strong, across ほか（CVR-0001 ほか）、all, audit, caution, raw, draw など、それまで `auburn_dog` にしていた語すべて
+- **論点・事象**: 米国では /ɔ/（AUBURN DOG）と /ɑ/（OLIVE SOCK）のどちらも一般的（cot–caught merger）。
+- **判断**: `olive_sock` で統一し、IPAも /ɑː/ で書く（`/ˈɑːfər/`、`/ɑːl/`）。`auburn_dog` は原則使わない
+  （/ɔɪ/ `turquoise_toy`・/ɔːr/ `orange_door` は別の母音のため対象外）。
+- **根拠**: 回答「OLIVE SOCK で統一」「一般的に北米では Olive Sock で OK」。③では要確認に出していない
+  `auburn_dog` の語（all, audit, caution, raw など）にも「OLIVE SOCK as the most common (AUBURN DOG possible for some people)」と指摘があった。
+- **反映先**: reference.md「7. cv_id」、`validate.ts`（`auburn_dog` を要確認に出す）、台帳
+
+### CVJ-20261010-04 「③登録データ一覧」の指摘も台帳に確定行として記録する
+
+- **状態**: 確定
+- **対象**: impact, in-store, online, our, private-brand, translate, update ほか（台帳の分類「コンテンツチーム指摘」40行）
+- **論点・事象**: コンテンツチームは要確認（②）に出していない語にも、③の「指摘・コメント」で修正を書いてくれる。
+  台帳に記録しないと、次回の辞書データ作成で同じ語が元の値で生成され、上書き取込用のTSVにも出ない。
+- **判断**: ③の指摘で値を変えた語と、方針の適用で値が変わった語は、台帳に `confirmed` で追記する（分類「コンテンツチーム指摘」）。
+  指摘のうち値を変えないもの（`am` の「短縮形になることが多い」など）は記録しない。
+- **根拠**: 台帳の確定値は `validate.ts` で次回以降の生成に強制され、`ledger.ts export` で上書き取込用に書き出せる。
+- **反映先**: README.md「台帳の列」
+
+### CVJ-20261010-05 確認依頼Excelに載った語が台帳に無かった（X-ray / X-rays）
+
+- **状態**: 確定
+- **対象**: `X-ray` / `X-rays`（CVR-0063 / CVR-0064、GC様向け Lv1）
+- **論点・事象**: 確認依頼Excel（20261007）には CVR-0063 / 0064 として載っていたが、コミット済みの台帳には無かった
+  （Excel出力後の台帳の更新がコミットされなかったとみられる）。
+- **判断**: 回答の反映時に、Excelと同じIDで台帳に記録した。確認依頼Excelを出力したら、台帳の変更も同じコミットに含める。
+- **根拠**: 台帳とExcelのIDがずれると、回答をどの行に反映するか取り違える。
+- **反映先**: 台帳
+
+### CVJ-20261010-06 その他の指摘（未対応・別途検討）
+
+- **状態**: 暫定（未対応）
+- **対象・内容**:
+  - `private-brand`: 「1語ではなく、private brand にハイフンは付かない」との指摘。辞書はアクセント位置（brand・`black_cat`）だけ直した。
+    名詞を修飾する複合形容詞（private-brand products）のハイフンは一般的な表記のため、教材本文を直すかはコンテンツチームと別途確認する。
+  - `read`: 回答は「例文の時制による」。辞書は英単語＋品詞で1行のため、現在形のまま（CVJ-20260925-04）。
+  - 発音記号の表記: 「IPAよりも English Phonetic Alphabet を使うのはどうか」との提案（draw / draws のコメント）。
+    辞書データと生徒アプリの表示に関わるため、別途検討する。

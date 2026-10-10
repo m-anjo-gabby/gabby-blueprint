@@ -41,6 +41,8 @@ export const LEDGER_HEADERS = [
   'cv_id',
   'phonetic_spelling',
   'question',
+  // 確認事項の英語（コンテンツチームは日本語・英語の混在のため。確認依頼Excelを出す前に Claude が書く）
+  'question_en',
   'decision_note',
   'decided_by',
   'decided_date',

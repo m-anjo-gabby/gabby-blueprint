@@ -1,6 +1,6 @@
 ---
 name: cv-dictionary-tsv
-description: スプリント教材の一括登録TSV（statement_en / question_en / answer_sentence_yes_en / answer_sentence_no_en）から、admin「CV辞書 一括登録」に取り込めるColorVowel辞書TSVを作成する。「辞書データを作って」「CV辞書TSV」「スプリントTSVから辞書」などの依頼で使う。
+description: スプリント教材の一括登録TSV（statement_en / question_en / answer_sentence_yes_en / answer_sentence_no_en）から、admin「CV辞書 一括登録」に取り込めるColorVowel辞書TSVを作成する。「辞書データを作って」「CV辞書TSV」「スプリントTSVから辞書」などの依頼で使う。コンテンツチームへの確認依頼Excel・回答の台帳への反映・補正結果サマリーExcelの作成（「確認依頼を作って」「回答を反映して」「補正結果のサマリー」）にも使う。
 ---
 
 # CV辞書TSV作成
@@ -84,17 +84,28 @@ npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts sync --work "<作業�
 ## コンテンツチームへの確認依頼Excelを作るとき
 
 「確認依頼Excelを作って」「コンテンツチームに確認を依頼したい」という依頼では、生成済みの辞書TSVを指定して出力する
-（Python 3 + openpyxl が必要）。
+（Python 3 + openpyxl が必要）。コンテンツチームは日本語話者と英語ネイティブの混在のため、Excel は日英併記にする。
+
+1. 出力する前に、台帳で対象の `pending` 行の `question_en`（確認事項の英語）を書く。
+   `question_en` が空の行は日本語だけで出力され、スクリプトが「注意」として行IDを出す。
+   新しい方針を `open-policies.json` に足した場合は、英語（`title_en` / `question_en` / `current_en` / `candidates_en` / `options_en`）も書く。
+2. 出力する。
 
 ```bash
-python .claude/skills/cv-dictionary-tsv/scripts/review_xlsx.py --dict "<辞書TSV>" [--out "<出力xlsx>"] [--title "<表題（例: セブン＆アイ様向け Lv1）>"] [--all-pending]
+python .claude/skills/cv-dictionary-tsv/scripts/review_xlsx.py --dict "<辞書TSV>" [--out "<出力xlsx>"] [--title "<表題（例: セブン＆アイ様向け Lv1）>"] [--title-en "<英語の表題（例: Seven & i Lv1）>"] [--all-pending]
 ```
 
-- 既定の出力先は辞書TSVと同じフォルダの `<辞書TSV名>_確認依頼.xlsx`。表題は顧客名・レベルが分かるものを `--title` で渡す。
+- 既定の出力先は辞書TSVと同じフォルダの `<辞書TSV名>_確認依頼.xlsx`。表題は顧客名・レベルが分かるものを `--title` / `--title-en` で渡す。
+- 日英併記の書き方: 「はじめに」は日本語・英語を別の列、①②の本文は同じセルの上段に日本語・下段に英語（間に薄い破線）、
+  ③登録データ一覧は見出しだけ併記（データ部は日本語のまま）。補正結果サマリーも同じ部品（`review_xlsx.py` の `bi()` 等）を使う。
+- 回答欄の選択肢は「日本語 / English」の1つの文言（`ANS_POLICY` / `ANS_WORD`、方針は `options` と `options_en` を組み合わせる）。
+  回答を読み取るときは、この文言の日本語の部分で判断する。
 - 「①確認事項（方針）」の元データは [open-policies.json](../../../docs/cv-dictionary/open-policies.json)。
   新しい論点（複数の語に効くもの）が出たら、JUDGEMENT-GUIDE.md の「未決の論点」と併せてここに追記する
   （`match` で台帳の分類・確認事項の文言、または辞書の品詞・語の形から対象語を選ぶ）。
-- 見本: [docs/cv-dictionary/sample/](../../../docs/cv-dictionary/sample/)。シート構成を変えたら見本も再出力する。
+- 見本: [docs/cv-dictionary/sample/](../../../docs/cv-dictionary/sample/)。シート構成を変えたら見本も再出力する
+  （`--dict docs/cv-dictionary/sample/cv_dictionary_sample.tsv --ledger docs/cv-dictionary/sample/sample-ledger.tsv --title サンプル --title-en Sample`。
+  見本用の台帳は、本番の台帳の確認状況に左右されずに語別のシートを見せるためのもの）。
 - 出力後、方針・語別の件数とファイルのパスを報告する。
 
 ## コンテンツチームの回答を反映するとき
@@ -103,10 +114,34 @@ python .claude/skills/cv-dictionary-tsv/scripts/review_xlsx.py --dict "<辞書TS
 方針の回答（①）は「方針の回答に従う」の語すべてに適用し、②で例外とされた語は個別の回答を優先する）。
 
 1. 台帳の該当行の値を確定値に直し、`status` を `confirmed`、`decision_note` / `decided_by` / `decided_date` を記入する。
-2. 複数の語に効く方針なら、JUDGEMENT-GUIDE.md に事例（CVJ-…）として記録し、「未決の論点」から外す。
-   reference.md の該当節にも反映する。
-3. 取込済みデータへの反映用に、確定行を書き出す（取込画面で「既存も上書き」を選ぶよう案内する）。
+   ルール（rules.json）に基づく補正は `decision_note` の先頭に `[R-11]` のようにルールIDを付ける（補正結果サマリーの「ルール」列になる）。
+   要確認に載せていない語でも、「③登録データ一覧」の指摘や方針の適用で値を変えた語は、分類「コンテンツチーム指摘」で
+   `confirmed` の行として追記する（次回以降の生成で守られ、上書き取込用のTSVにも出るように）。
+2. 複数の語に効く方針なら、JUDGEMENT-GUIDE.md に事例（CVJ-…）として記録し、`open-policies.json` から外す。
+   reference.md の該当節と、コンテンツチーム向けのルール一覧 [rules.json](../../../docs/cv-dictionary/rules.json)
+   （`history` に変更前と経緯を追記）にも反映する。回答で決めきれなかった論点は `open-policies.json` に次回の確認として残す。
+3. 取込済みデータへの反映用に、確定行を書き出す（取込画面で「データのみ上書き」を選ぶよう案内する。音声は作り直さず、発音を個別調整した語だけ「要更新」になる）。
 
 ```bash
 npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts export --dict "<生成済みの辞書TSV>" --out "<出力TSV>" --since <確定日>
 ```
+
+   `--dict` に含まれる語の確定行だけが出るため、確認依頼が複数あるときは辞書TSVごとに実行する。
+
+## 補正結果をコンテンツチームに共有するとき
+
+回答を反映したら（「補正結果のサマリーを作って」という依頼でも）、補正結果サマリーExcelを出力する。
+
+1. 語ごとの補正以外の連絡事項を `docs/cv-dictionary/feedback/<確定日>.json` に書く
+   （回答と異なる対応・回答の解釈・保留やご相談・提案への回答。書き方は既存のファイルを参照）。
+   回答と異なる対応や、回答を広げて・狭めて適用した箇所は必ず書く（コンテンツチームとの認識のずれを防ぐため）。
+   コンテンツチームは日本語話者と英語ネイティブの混在のため、`*_en`（英語）も必ず書く（rules.json・open-policies.json の追記も同じ）。
+2. 出力する（`--dict` は確認依頼のもとにした補正前の辞書TSV。「表示名=パス」、複数可）。
+
+```bash
+python .claude/skills/cv-dictionary-tsv/scripts/summary_xlsx.py --since <確定日> --notes docs/cv-dictionary/feedback/<確定日>.json --dict "<表示名>=<辞書TSV>" --out "<出力xlsx>"
+```
+
+- シート: ①ルールの変更（rules.json の今回の history）／②補正結果（語別。補正前→補正後）／③ご回答への対応・保留（feedback）／
+  ④辞書データ作成ルール（rules.json の全体。今回の変更に印）／Color Vowel 一覧。「はじめに」に次回の確認予定（open-policies.json）を載せる。
+- 出力後、ルールの変更・語別・対応の件数とファイルのパスを報告する。

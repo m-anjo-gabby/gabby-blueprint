@@ -1,0 +1,4 @@
+﻿id	status	category	word_en	part_of_speech	syllables	primary_stress_syllable	stress_vowel_spelling	cv_id	phonetic_spelling	question	question_en	decision_note	decided_by	decided_date	registered_date	source
+CVR-S001	pending	発音の揺れ	data	NOUN	da-ta	1	a	gray_day	/ˈdeɪtə/	米国では /ˈdætə/（black_cat）も一般的	/ˈdætə/ (BLACK CAT) is also common in the US				2026-10-10	sample
+CVR-S002	pending	発音の揺れ	want	VERB	want	1	a	olive_sock	/wɑːnt/	/wʌnt/（cup_of_mustard）も一般的	/wʌnt/ (MUSTARD) is also common				2026-10-10	sample
+CVR-S003	pending	アクセント位置の揺れ	report	NOUN	re-port	2	o	orange_door	/rɪˈpɔːrt/	/ˈriːpɔːrt/（1音節目にアクセント・green_tea）も一般的	/ˈriːpɔːrt/ (stress on the 1st syllable, GREEN TEA) is also common				2026-10-10	sample

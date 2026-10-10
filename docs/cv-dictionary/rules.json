@@ -1,0 +1,244 @@
+{
+  "$comment": "コンテンツチーム向けの辞書データ作成ルール一覧（補正結果サマリーExcel「③辞書データ作成ルール」の元データ）。生成の詳細は .claude/skills/cv-dictionary-tsv/reference.md。ルールを変えたら reference.md と合わせて直し、history に変更を追記する（date / kind = 確定・変更・追加 / before = 変更前 / note = 経緯）。status: 確定 = コンテンツチームと合意済み / 開発側の基準 = 開発側で決めたもの（ご意見歓迎）/ 確認予定 = 次回の確認依頼で確認する。コンテンツチームは日本語・英語の混在のため、*_en の英語も必ず書く",
+  "rules": [
+    {
+      "id": "R-01",
+      "area": "登録の単位",
+      "area_en": "Entry unit",
+      "rule": "「英単語＋品詞」の組み合わせごとに1行登録する。同じ綴り・同じ品詞で発音が異なる語は1行しか登録できないため、原形（現在形）の発音で登録する。",
+      "rule_en": "Register one row per \"word + part of speech\". A word with the same spelling and part of speech but different pronunciations can only have one row, so the base (present-tense) pronunciation is used.",
+      "example": "update（名詞）と update（動詞）は別の行。read（動詞）は現在形 /riːd/ GREEN TEA のみ",
+      "example_en": "update (noun) and update (verb) are separate rows. read (verb) is registered only as present tense /riːd/ GREEN TEA",
+      "status": "開発側の基準",
+      "history": []
+    },
+    {
+      "id": "R-02",
+      "area": "登録の単位",
+      "area_en": "Entry unit",
+      "rule": "見出し語は教材の文中の形のまま登録する（アプリは文中の形で辞書を引くため）。語形変化した語は「原形」列に元の形を書く。",
+      "rule_en": "Register each word in the form it appears in the material (the app looks words up by their in-sentence form). For inflected forms, put the base form in the \"lemma\" column.",
+      "example": "offers（原形 offer）、launched（原形 launch）、company's（原形 company）",
+      "example_en": "offers (lemma: offer), launched (lemma: launch), company's (lemma: company)",
+      "status": "開発側の基準",
+      "history": []
+    },
+    {
+      "id": "R-03",
+      "area": "登録の単位",
+      "area_en": "Entry unit",
+      "rule": "固有名詞（社名・人名・地名・製品名）は登録しない。慣用的に大文字で書く一般語や、名称の一部として使われる一般語は登録する。",
+      "rule_en": "Do not register proper nouns (company, person, place and product names). Register common words that are conventionally capitalized or used as part of a name.",
+      "example": "登録する: X-ray、Mid-term（Mid-term Management Plan）／登録しない: 社名・人名",
+      "example_en": "Registered: X-ray, Mid-term (Mid-term Management Plan) / Not registered: company and person names",
+      "status": "開発側の基準",
+      "history": []
+    },
+    {
+      "id": "R-04",
+      "area": "品詞",
+      "area_en": "Part of speech",
+      "rule": "例文での使われ方で品詞を決める。紛らわしいものは右の例のとおりに統一する。",
+      "rule_en": "Decide the part of speech from how the word is used in the example sentences. Ambiguous cases follow the examples.",
+      "example": "a / an / the = 冠詞、助動詞・be動詞（can, is, do）= 動詞、our / your = 代名詞、不定詞の to = 前置詞、not = 副詞",
+      "example_en": "a / an / the = article, auxiliaries & be-verbs (can, is, do) = verb, our / your = pronoun, infinitive to = preposition, not = adverb",
+      "status": "開発側の基準",
+      "history": []
+    },
+    {
+      "id": "R-05",
+      "area": "日本語訳",
+      "area_en": "Japanese translation",
+      "rule": "例文の文脈に合う訳を簡潔に書く。機能語は文法上の役割を括弧で添える。",
+      "rule_en": "Write a short Japanese translation that fits the context. For function words, add their grammatical role in parentheses.",
+      "example": "offer（動詞）= 提供する、the = その（定冠詞）",
+      "example_en": "offer (verb) = 提供する, the = その（定冠詞）",
+      "status": "開発側の基準",
+      "history": []
+    },
+    {
+      "id": "R-06",
+      "area": "音節・アクセント",
+      "area_en": "Syllables & stress",
+      "rule": "音節はハイフンで区切る（ハイフンを除くと綴りと一致させる）。第一アクセントは米国英語の辞書の位置。ハイフン付きの複合語は語全体として読んだときの位置。",
+      "rule_en": "Split syllables with hyphens (the letters must match the spelling). Primary stress follows a US English dictionary. Hyphenated compounds use the stress of the whole word.",
+      "example": "cus-tom-er（1音節目）、private-brand（3音節目 brand）",
+      "example_en": "cus-tom-er (1st syllable), private-brand (3rd syllable: brand)",
+      "status": "開発側の基準",
+      "history": []
+    },
+    {
+      "id": "R-07",
+      "area": "音節・アクセント",
+      "area_en": "Syllables & stress",
+      "rule": "アクセント母音の綴りは、第一アクセント音節の中で母音を表す文字だけを書く（サイレントe・r は含めない）。",
+      "rule_en": "The stressed-vowel spelling is only the letters that spell the vowel in the primary stressed syllable (no silent e, no r).",
+      "example": "tai-lor → ai、for → o、law → aw",
+      "example_en": "tai-lor → ai, for → o, law → aw",
+      "status": "開発側の基準",
+      "history": []
+    },
+    {
+      "id": "R-08",
+      "area": "発音・Color Vowel",
+      "area_en": "Pronunciation & Color Vowel",
+      "rule": "発音記号は米国英語（General American）のIPAで書き、Color Vowel は第一アクセント母音から「Color Vowel 一覧」の対応で決める。",
+      "rule_en": "Write pronunciation in General American IPA, and choose the Color Vowel from the primary stressed vowel using the \"Color Vowel\" sheet.",
+      "example": "tailor /ˈteɪlər/ → GRAY DAY",
+      "example_en": "tailor /ˈteɪlər/ → GRAY DAY",
+      "status": "開発側の基準",
+      "history": []
+    },
+    {
+      "id": "R-09",
+      "area": "発音・Color Vowel",
+      "area_en": "Pronunciation & Color Vowel",
+      "rule": "「母音＋r」の /ɛr/ は RED PEPPER にする。",
+      "rule_en": "R-colored /ɛr/ is RED PEPPER.",
+      "example": "share /ʃɛr/、there、where、compare",
+      "example_en": "share /ʃɛr/, there, where, compare",
+      "status": "確定",
+      "history": [
+        {
+          "date": "2026-10-10",
+          "kind": "確定",
+          "before": "RED PEPPER（暫定）",
+          "note": "確認依頼（セブン＆アイ様 Lv1）①の回答「RED PEPPER で統一」",
+          "before_en": "RED PEPPER (provisional)",
+          "note_en": "Review request (Seven & i Lv1) ① answer: \"RED PEPPER for all\""
+        }
+      ]
+    },
+    {
+      "id": "R-10",
+      "area": "発音・Color Vowel",
+      "area_en": "Pronunciation & Color Vowel",
+      "rule": "「母音＋r」の /ɪr/ は GREEN TEA にする。",
+      "rule_en": "R-colored /ɪr/ is GREEN TEA.",
+      "example": "year /jɪr/、clear、experience",
+      "example_en": "year /jɪr/, clear, experience",
+      "status": "確定",
+      "history": [
+        {
+          "date": "2026-10-10",
+          "kind": "確定",
+          "before": "GREEN TEA（暫定）",
+          "note": "確認依頼（セブン＆アイ様 Lv1）①の回答「GREEN TEA で統一」",
+          "before_en": "GREEN TEA (provisional)",
+          "note_en": "Review request (Seven & i Lv1) ① answer: \"GREEN TEA for all\""
+        }
+      ]
+    },
+    {
+      "id": "R-11",
+      "area": "発音・Color Vowel",
+      "area_en": "Pronunciation & Color Vowel",
+      "rule": "「母音＋r」の /ʊr/ は PURPLE SHIRT にする（invisible y）。発音記号も /ɜːr/ で書く。",
+      "rule_en": "R-colored /ʊr/ is PURPLE SHIRT (invisible y). The IPA is also written as /ɜːr/.",
+      "example": "during /ˈdɜːrɪŋ/、secure /sɪˈkjɜːr/、ensure、cure",
+      "example_en": "during /ˈdɜːrɪŋ/, secure /sɪˈkjɜːr/, ensure, cure",
+      "status": "確定",
+      "history": [
+        {
+          "date": "2026-10-10",
+          "kind": "変更",
+          "before": "WOODEN HOOK（暫定）、発音記号 /ʊr/",
+          "note": "確認依頼（セブン＆アイ様 Lv1）①の回答「Purple Shirt (invisible y)」",
+          "before_en": "WOODEN HOOK (provisional), IPA /ʊr/",
+          "note_en": "Review request (Seven & i Lv1) ① answer: \"Purple Shirt (invisible y)\""
+        }
+      ]
+    },
+    {
+      "id": "R-12",
+      "area": "発音・Color Vowel",
+      "area_en": "Pronunciation & Color Vowel",
+      "rule": "米国で /ɔ/ と /ɑ/ の2通りある語は OLIVE SOCK にする（北米で一般的な発音）。発音記号も /ɑː/ で書き、AUBURN DOG は原則使わない。",
+      "rule_en": "Words pronounced with either /ɔ/ or /ɑ/ in the US are OLIVE SOCK (the common North American pronunciation). The IPA is written with /ɑː/, and AUBURN DOG is not used in principle.",
+      "example": "offer /ˈɑːfər/、cost、all、law、draw（/ɔɪ/ の TURQUOISE TOY、/ɔːr/ の ORANGE DOOR は対象外）",
+      "example_en": "offer /ˈɑːfər/, cost, all, law, draw (TURQUOISE TOY /ɔɪ/ and ORANGE DOOR /ɔːr/ are not affected)",
+      "status": "確定",
+      "history": [
+        {
+          "date": "2026-10-10",
+          "kind": "変更",
+          "before": "AUBURN DOG（暫定）、発音記号 /ɔː/",
+          "note": "確認依頼①の回答「OLIVE SOCK で統一」「一般的に北米では Olive Sock で OK」と、③の語ごとのご指摘",
+          "before_en": "AUBURN DOG (provisional), IPA /ɔː/",
+          "note_en": "① answer: \"OLIVE SOCK for all\" / \"OLIVE SOCK is fine for North America in general\", and your word-level comments on ③"
+        }
+      ]
+    },
+    {
+      "id": "R-13",
+      "area": "発音・Color Vowel",
+      "area_en": "Pronunciation & Color Vowel",
+      "rule": "冠詞・前置詞・代名詞・接続詞は、一般的な弱形（弱く読む形）がある語を弱形で登録する。/ə/ は MUSTARD、/ər/ は PURPLE SHIRT。弱形の無い語、2音節以上の語、指示代名詞の that は強形のまま。",
+      "rule_en": "Articles, prepositions, pronouns and conjunctions that have a common weak form are registered in the weak form: /ə/ = MUSTARD, /ər/ = PURPLE SHIRT. Words without a weak form, words of two or more syllables, and demonstrative \"that\" keep the strong form.",
+      "example": "弱形: a /ə/、the /ðə/、and、at、to、of、from、as、them、us、you、that（接続詞）→ MUSTARD／for /fər/、or、your → PURPLE SHIRT／強形のまま: I、in、with、by、my、that（代名詞）",
+      "example_en": "Weak: a /ə/, the /ðə/, and, at, to, of, from, as, them, us, you, that (conj.) → MUSTARD / for /fər/, or, your → PURPLE SHIRT / Strong: I, in, with, by, my, that (pron.)",
+      "status": "確定",
+      "history": [
+        {
+          "date": "2026-10-10",
+          "kind": "変更",
+          "before": "辞書の見出し発音（強形）で統一（例: the /ðiː/ GREEN TEA、for /fɔːr/ ORANGE DOOR）",
+          "note": "確認依頼（2回分）①の回答「弱く読む形に変更」「可能な限り」と、③の語ごとのご指摘",
+          "before_en": "Strong (citation) form for all (e.g. the /ðiː/ GREEN TEA, for /fɔːr/ ORANGE DOOR)",
+          "note_en": "① answers in both requests: \"Change to the weak form\" / \"as far as possible\", and your word-level comments on ③"
+        }
+      ]
+    },
+    {
+      "id": "R-14",
+      "area": "発音・Color Vowel",
+      "area_en": "Pronunciation & Color Vowel",
+      "rule": "助動詞・be動詞は強形で登録する。ただし can は弱形 /kən/（MUSTARD）。",
+      "rule_en": "Auxiliaries and be-verbs keep the strong form, except can, which uses the weak form /kən/ (MUSTARD).",
+      "example": "was /wʌz/、have /hæv/、do /duː/、can /kən/",
+      "example_en": "was /wʌz/, have /hæv/, do /duː/, can /kən/",
+      "status": "確認予定",
+      "history": [
+        {
+          "date": "2026-10-10",
+          "kind": "変更",
+          "before": "強形で統一（can /kæn/ BLACK CAT）",
+          "note": "③で can に「MUSTARD when reduced」とご指摘。ほかの助動詞・be動詞は次回の確認依頼でお尋ねします",
+          "before_en": "Strong form for all (can /kæn/ BLACK CAT)",
+          "note_en": "Your comment on can: \"MUSTARD when reduced\". Other auxiliaries and be-verbs will be asked in the next review request"
+        }
+      ]
+    },
+    {
+      "id": "R-15",
+      "area": "略語",
+      "area_en": "Abbreviations",
+      "rule": "1文字ずつ読む略語は大文字のまま登録し、1文字を1音節、最後の文字に第一アクセントを置き、その文字の名前の読みで Color Vowel を決める。例外になりそうな略語は確認依頼でお尋ねする。",
+      "rule_en": "Letter-by-letter abbreviations are registered in capitals, one letter per syllable, with primary stress on the last letter; the Color Vowel comes from that letter's name. Possible exceptions are asked in the review request.",
+      "example": "CEO → C-E-O / 3音節目 / ROSE BOAT /ˌsiːiːˈoʊ/、HR、PR",
+      "example_en": "CEO → C-E-O / 3rd syllable / ROSE BOAT /ˌsiːiːˈoʊ/, HR, PR",
+      "status": "確定",
+      "history": [
+        {
+          "date": "2026-10-10",
+          "kind": "確定",
+          "before": "同じ扱い（暫定）",
+          "note": "確認依頼①の回答「この扱いでよい」「例外あり。その時はチェックします」",
+          "before_en": "Same rule (provisional)",
+          "note_en": "① answer: \"This rule is fine\" / \"There are exceptions; we will check them when they come up\""
+        }
+      ]
+    },
+    {
+      "id": "R-16",
+      "area": "確認の進め方",
+      "area_en": "Review process",
+      "rule": "判断が分かれる語は確認依頼でお尋ねし、ご回答で決まった値は次回以降の辞書データ作成でもそのまま使う。「登録データ一覧」でいただいたご指摘も同じく記録して守る。",
+      "rule_en": "Words with uncertain judgments are asked in the review request. Values decided by your answers are kept in all future dictionary data. Comments on the registered-data sheet are recorded and kept in the same way.",
+      "example": "employee は2音節目アクセント（TURQUOISE TOY）で確定 → 次回以降も同じ",
+      "example_en": "employee is fixed with stress on the 2nd syllable (TURQUOISE TOY) → the same from now on",
+      "status": "開発側の基準",
+      "history": []
+    }
+  ]
+}

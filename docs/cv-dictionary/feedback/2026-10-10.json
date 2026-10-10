@@ -1,0 +1,110 @@
+{
+  "$comment": "確認依頼の回答を反映したときの、語ごとの補正（台帳）以外の連絡事項。補正結果サマリーExcel（scripts/summary_xlsx.py --notes）の「④ご回答への対応・保留」の元データ。kind: ご回答と異なる対応 / ご回答の解釈 / 保留・ご相談 / ご提案への回答。英語（*_en）も必ず書く（コンテンツチームは日本語・英語の混在）",
+  "title": "セブン＆アイ様向け Lv1・GC様向け Lv1",
+  "title_en": "Seven & i Lv1 / GC Lv1",
+  "requests": [
+    "cv_dictionary_20260925_7andi_確認依頼.xlsx",
+    "20261007_CV辞書データ確認依頼.xlsx"
+  ],
+  "items": [
+    {
+      "kind": "ご回答と異なる対応",
+      "kind_en": "Handled differently from your answer",
+      "target": "that（代名詞「それ、そのこと」）",
+      "target_en": "that (pronoun: \"it, that thing\")",
+      "answer": "③「a CUP of MUSTARD when reduced」（接続詞・代名詞の両方）",
+      "action": "接続詞の that だけ弱形 /ðət/（MUSTARD）にし、代名詞の that は /ðæt/（BLACK CAT）のままにしました。",
+      "action_en": "Only conjunction that uses the weak form /ðət/ (MUSTARD). Pronoun that stays /ðæt/ (BLACK CAT).",
+      "reason": "「それ、そのこと」の意味の指示代名詞 that は、英語では通常弱く読まないためです。弱形にすべき例文があればお知らせください。",
+      "reason_en": "Demonstrative that (\"that thing\") is normally not reduced in English. Please let us know if any example sentence should use the weak form."
+    },
+    {
+      "kind": "ご回答の解釈",
+      "kind_en": "How we interpreted your answer",
+      "target": "機能語の弱形の範囲（R-13）",
+      "target_en": "Scope of weak forms (R-13)",
+      "answer": "①「弱く読む形に変更」、コメント「可能な限り…」",
+      "action": "一般的な辞書に弱形が載っている語だけを弱形にしました（a, an, the, and, or, at, for, from, of, to, as, them, us, you, your, that（接続詞）, can）。",
+      "action_en": "Only words that have a weak form listed in standard dictionaries were changed (a, an, the, and, or, at, for, from, of, to, as, them, us, you, your, that (conj.), can).",
+      "reason": "I, in, it, with, by, my など弱形の無い語、he のように弱形でも Color Vowel が変わらない語、about のような2音節以上の語は変えていません。",
+      "reason_en": "Words without a weak form (I, in, it, with, by, my), words whose Color Vowel does not change in the weak form (he), and words of two or more syllables (about) were not changed."
+    },
+    {
+      "kind": "ご回答の解釈",
+      "kind_en": "How we interpreted your answer",
+      "target": "/ɔ/ と /ɑ/ の2通りある語（R-12）",
+      "target_en": "Words with both /ɔ/ and /ɑ/ (R-12)",
+      "answer": "①「OLIVE SOCK で統一」",
+      "action": "確認依頼に載せた語だけでなく、AUBURN DOG にしていた語すべて（all, audit, caution, raw など）を OLIVE SOCK にしました。",
+      "action_en": "Not only the words in the review request but every word previously set to AUBURN DOG (all, audit, caution, raw, etc.) was changed to OLIVE SOCK.",
+      "reason": "③で同じご指摘を多数いただいたため、方針として全体に適用しました。",
+      "reason_en": "You gave the same comment on many words in ③, so we applied it as a general rule."
+    },
+    {
+      "kind": "ご回答の解釈",
+      "kind_en": "How we interpreted your answer",
+      "target": "carry / carries / carried / carrying",
+      "target_en": "carry / carries / carried / carrying",
+      "answer": "1回目③ carrying「RED PEPPER」、2回目② carry ほか「現状のままでよい」③「carrying が RED PEPPER なら揃える」",
+      "action": "4語とも RED PEPPER（/ˈkɛri/）に揃えました。",
+      "action_en": "All four words were aligned to RED PEPPER (/ˈkɛri/).",
+      "reason": "2回目のコメントの条件どおり、carrying に揃えました。",
+      "reason_en": "Following the condition in your 2nd comment, we aligned them with carrying."
+    },
+    {
+      "kind": "保留・ご相談",
+      "kind_en": "On hold / your decision needed",
+      "target": "private-brand",
+      "target_en": "private-brand",
+      "answer": "③「1語ではない。private brand にハイフンは付かず、主アクセントは brand」",
+      "action": "辞書は主アクセントを brand（3音節目・BLACK CAT）に直しました。教材本文の表記（ハイフン）は変えていません。",
+      "action_en": "In the dictionary, the primary stress was moved to brand (3rd syllable, BLACK CAT). The hyphen in the materials was not changed.",
+      "reason": "名詞の前に置く場合（private-brand products）はハイフン付きの表記も一般的なため、教材本文のハイフンを外すかどうかご判断ください。",
+      "reason_en": "Before a noun (private-brand products), the hyphenated spelling is also common. Please decide whether to remove the hyphen from the materials."
+    },
+    {
+      "kind": "保留・ご相談",
+      "kind_en": "On hold / your decision needed",
+      "target": "read（動詞）",
+      "target_en": "read (verb)",
+      "answer": "②「例文の時制による」",
+      "action": "現在形 /riːd/（GREEN TEA）のままにしました。",
+      "action_en": "Kept the present tense /riːd/ (GREEN TEA).",
+      "reason": "辞書は「英単語＋品詞」ごとに1行しか登録できないため、過去形 /rɛd/ を別に持てません（R-01）。",
+      "reason_en": "The dictionary can hold only one row per \"word + part of speech\", so the past tense /rɛd/ cannot be stored separately (R-01)."
+    },
+    {
+      "kind": "ご提案への回答",
+      "kind_en": "Response to your suggestion",
+      "target": "発音記号の表記",
+      "target_en": "Pronunciation notation",
+      "answer": "draw / draws のコメント「IPAよりも、English Phonetic Alphabet をつかうのはどうか」",
+      "action": "今回は IPA のままにしました。",
+      "action_en": "We kept IPA for now.",
+      "reason": "生徒アプリの表示にも関わるため、開発側で別途検討します。具体的な表記の例をいただけると助かります。",
+      "reason_en": "This also affects how the student app displays pronunciation, so the development team will consider it separately. Examples of the notation you have in mind would be helpful."
+    },
+    {
+      "kind": "ご回答の解釈",
+      "kind_en": "How we interpreted your answer",
+      "target": "am",
+      "target_en": "am",
+      "answer": "③「Will mostly become a contraction (I'm)」",
+      "action": "変更していません（I'm は別の見出し語として登録されます）。",
+      "action_en": "No change (I'm is registered as a separate word).",
+      "reason": "ご指摘は表記・用法についてのもので、am の発音・Color Vowel の変更ではないと解釈しました。",
+      "reason_en": "We understood your comment as a note on usage, not a change to the pronunciation or Color Vowel of am."
+    },
+    {
+      "kind": "お知らせ",
+      "kind_en": "For your information",
+      "target": "弱形にした語の音声",
+      "target_en": "Audio of words changed to the weak form",
+      "answer": "—",
+      "action": "単語の音声は作り直していません。単語単体の音声は Azure の標準の読み上げのため、the / for などは強く読まれる場合があります。",
+      "action_en": "Word audio was not regenerated. Single-word audio uses Azure's standard TTS, so words such as the / for may still be read in the strong form.",
+      "reason": "音声は原則として標準の読み上げで作り、語ごとの調整はしない方針です（メンテナンスの負担を抑えるため）。特に気になる語があればお知らせください。個別に調整します。",
+      "reason_en": "As a rule, audio is generated with standard TTS without per-word tuning, to keep maintenance manageable. Please tell us about any word that matters in particular, and we will tune it individually."
+    }
+  ]
+}
