@@ -184,6 +184,7 @@
       "notApplicable": "N/A",
       "stageButton": "Stage",
       "ratingsButton": "Ratings",
+      "specialtyButton": "Specialties",
       "editButton": "Edit",
       "actions": "Actions",
       "searchPlaceholder": "Enter search term...",
@@ -359,6 +360,17 @@
       "toastProcessError": "An error occurred during processing",
       "toastClientFetchFailed": "Failed to fetch the client list",
       "toastContractFetchFailed": "Failed to fetch contract information"
+    },
+    "specialty": {
+      "title": "Specialties",
+      "description": "Shown on the student's coach selection screen and on the coach's profile (coaches cannot change them).",
+      "fieldsLabel": "Fields (up to {max})",
+      "fieldsCount": "{count} / {max}",
+      "skillsLabel": "Teaching skills (shown as a separate badge; not counted toward the limit)",
+      "loadFailed": "Failed to load specialties.",
+      "toastSaved": "Specialties saved",
+      "errorTooMany": "You can select up to {max} fields",
+      "errorSave": "Failed to save specialties"
     },
     "ratingsPage": {
       "backToList": "Back to users",

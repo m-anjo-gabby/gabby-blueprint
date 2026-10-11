@@ -24,6 +24,7 @@ import { LivePreviewPanel } from './LivePreviewPanel';
 import { MailSettingsCard } from './MailSettingsCard';
 import type { MailSettings } from '@gabby/lib/mail/settingsActions';
 import type { CoachRatingStats } from '@gabby/types/coachRating';
+import type { CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
 import { MyRatingCard, toCoachRatingDisplay } from '@/components/rating/MyRatingCard';
 
 interface ProfileViewProps {
@@ -39,6 +40,8 @@ interface ProfileViewProps {
   mailSettings: MailSettings | null;
   /** Own rating summary (null if no ratings yet) */
   ratingStats: CoachRatingStats | null;
+  /** Specialties set by admins (read-only here) */
+  specialties: CoachSpecialtyTag[];
 }
 
 const EMPTY_COACH_PROFILE_FORM: CoachProfileFormValues = {
@@ -86,6 +89,7 @@ export function ProfileView({
   countries,
   mailSettings,
   ratingStats,
+  specialties,
 }: ProfileViewProps) {
   const [iconPath, setIconPath] = useState(initialIconPath);
   const [timezone, setTimezone] = useState(initialTimezone);
@@ -204,6 +208,7 @@ export function ProfileView({
     introVideoUrl: getCoachIntroVideoUrl(introVideoPath),
     // 生徒のコーチ選択画面と同じく総合評価を出す
     rating: toCoachRatingDisplay(ratingStats),
+    specialties,
   };
 
   return (
@@ -230,6 +235,7 @@ export function ProfileView({
           form={coachProfileForm}
           onFieldChange={handleCoachProfileFieldChange}
           coachSinceLabel={formatCoachSinceLabel(coachSince)}
+          specialties={specialties}
           introVideoUrl={getCoachIntroVideoUrl(introVideoPath)}
           introVideoPath={introVideoPath}
           onUploadIntroVideo={handleUploadIntroVideo}

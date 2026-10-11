@@ -184,6 +184,7 @@
       "notApplicable": "対象外",
       "stageButton": "ステージ",
       "ratingsButton": "評価",
+      "specialtyButton": "専門",
       "editButton": "編集",
       "actions": "操作",
       "searchPlaceholder": "検索語句を入力...",
@@ -359,6 +360,17 @@
       "toastProcessError": "処理中にエラーが発生しました",
       "toastClientFetchFailed": "顧客リストの取得に失敗しました",
       "toastContractFetchFailed": "契約情報の取得に失敗しました"
+    },
+    "specialty": {
+      "title": "専門の設定",
+      "description": "生徒のコーチ選択画面とコーチのプロフィールに表示されます（コーチ本人は変更できません）。",
+      "fieldsLabel": "分野（{max}つまで）",
+      "fieldsCount": "{count} / {max}",
+      "skillsLabel": "得意分野（別バッジで表示・上限に数えません）",
+      "loadFailed": "専門を読み込めませんでした。",
+      "toastSaved": "専門を保存しました",
+      "errorTooMany": "分野は{max}つまで選択できます",
+      "errorSave": "専門を保存できませんでした"
     },
     "ratingsPage": {
       "backToList": "ユーザー管理へ戻る",

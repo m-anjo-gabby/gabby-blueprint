@@ -210,6 +210,8 @@ export interface CoachBrowseItem {
   timezone: string; // コーチのIANAタイムゾーン（コーチの現地時刻の表示用）
   /** 評価の集計（評価がまだ無いコーチは null） */
   rating: CoachRatingStats | null;
+  /** 専門コード（com_m_coach_specialty。名称・表示順はマスタで解決する。未設定は空） */
+  specialty_codes: string[];
   /** 空き時間（UTCの曜日・時刻） */
   availability: {
     availability_id: string;

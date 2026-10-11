@@ -13,6 +13,8 @@ import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { CoachBrowseItem, SlotStatusItem } from '@gabby/types/matching';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { CountryMaster } from '@gabby/types/country';
+import { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { matchesCoachSpecialtyFilter } from '@gabby/lib/coachSpecialty/tags';
 import { LiveSessionContractSummary, LiveSessionTicketSummary } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
@@ -30,6 +32,7 @@ interface CoachMatchingViewProps {
   initialSlots: SlotStatusItem[];
   coaches: CoachBrowseItem[];
   countries: CountryMaster[];
+  specialties: CoachSpecialtyMaster[];
 }
 
 const STATUS_BADGE: Record<SlotStatusItem['status'], { label: string; className: string }> = {
@@ -42,7 +45,7 @@ function formatTimeRange(startTime: string, endTime: string): string {
   return `${startTime.slice(0, 5)} - ${endTime.slice(0, 5)}`;
 }
 
-export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, countries }: CoachMatchingViewProps) {
+export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, countries, specialties }: CoachMatchingViewProps) {
   const studentTimezone = useTimezone();
   const router = useRouter();
   const [isSwitching, startSwitch] = useTransition();
@@ -59,6 +62,7 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
   // --- コーチ検索フィルター（コーチ名・曜日・大まかな時間帯） ---
   const [selectedDays, setSelectedDays] = useState<Set<DayOfWeek>>(new Set());
   const [selectedTimeBuckets, setSelectedTimeBuckets] = useState<Set<string>>(new Set());
+  const [selectedSpecialties, setSelectedSpecialties] = useState<Set<string>>(new Set());
   const [nameQuery, setNameQuery] = useState('');
 
   const { showToast } = useToast();
@@ -66,7 +70,8 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
 
   const unmatchedSlots = slots.filter((s) => s.status === 'unmatched');
 
-  const hasFilter = selectedDays.size > 0 || selectedTimeBuckets.size > 0 || nameQuery.trim() !== '';
+  const hasFilter =
+    selectedDays.size > 0 || selectedTimeBuckets.size > 0 || selectedSpecialties.size > 0 || nameQuery.trim() !== '';
 
   // 曜日・時間帯で絞り込み中は、条件に一致する枠が多いコーチを上に並べる（同数なら元の並び順を保つ）
   const filteredCoaches = useMemo(() => {
@@ -75,6 +80,7 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
 
     const matched = coaches.flatMap((coach) => {
       if (trimmedQuery && !coach.user_name.toLowerCase().includes(trimmedQuery)) return [];
+      if (!matchesCoachSpecialtyFilter(coach.specialty_codes, selectedSpecialties, specialties)) return [];
       if (!hasSlotFilter) return [{ coach, matchCount: 0 }];
 
       const matchCount = coach.availability.filter((slot) => {
@@ -92,7 +98,7 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
 
     if (hasSlotFilter) matched.sort((a, b) => b.matchCount - a.matchCount);
     return matched.map(({ coach }) => coach);
-  }, [coaches, selectedDays, selectedTimeBuckets, nameQuery, studentTimezone]);
+  }, [coaches, selectedDays, selectedTimeBuckets, selectedSpecialties, specialties, nameQuery, studentTimezone]);
 
   // コーチごとの自分の枠の状況（承認待ち・担当中）。カード上で重複リクエストに気付けるようにする
   const slotRelationsByCoach = useMemo(() => {
@@ -124,9 +130,19 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
     });
   };
 
+  const handleToggleSpecialty = (code: string) => {
+    setSelectedSpecialties((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  };
+
   const handleClearFilter = () => {
     setSelectedDays(new Set());
     setSelectedTimeBuckets(new Set());
+    setSelectedSpecialties(new Set());
     setNameQuery('');
   };
 
@@ -260,6 +276,9 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                 onToggleDay={handleToggleDay}
                 selectedTimeBuckets={selectedTimeBuckets}
                 onToggleTimeBucket={handleToggleTimeBucket}
+                specialties={specialties}
+                selectedSpecialties={selectedSpecialties}
+                onToggleSpecialty={handleToggleSpecialty}
                 nameQuery={nameQuery}
                 onChangeNameQuery={setNameQuery}
                 onClear={handleClearFilter}
@@ -318,6 +337,8 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                         <CoachCard
                           coach={coach}
                           countries={countries}
+                          specialties={specialties}
+                          selectedSpecialties={selectedSpecialties}
                           onRequest={setRequestTarget}
                           selectedDays={selectedDays}
                           selectedTimeBuckets={selectedTimeBuckets}

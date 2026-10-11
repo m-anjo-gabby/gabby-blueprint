@@ -5,6 +5,9 @@ import { GraduationCap, IdCard, CalendarClock } from 'lucide-react';
 import { CoachBrowseItem, SlotMatchStatus } from '@gabby/types/matching';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { CountryMaster } from '@gabby/types/country';
+import { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
+import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyTags';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
@@ -33,6 +36,9 @@ const RELATION_BADGE: Record<CoachSlotRelation['status'], { label: string; class
 interface CoachCardProps {
   coach: CoachBrowseItem;
   countries: CountryMaster[];
+  specialties: CoachSpecialtyMaster[];
+  /** 絞り込み中の専門（当てはまらない専門のタグを薄く表示する） */
+  selectedSpecialties: Set<string>;
   onRequest: (coach: CoachBrowseItem) => void;
   selectedDays: Set<DayOfWeek>;
   selectedTimeBuckets: Set<string>;
@@ -59,6 +65,8 @@ function formatCoachSinceLabel(dateStr: string | null): string | null {
 export function CoachCard({
   coach,
   countries,
+  specialties,
+  selectedSpecialties,
   onRequest,
   selectedDays,
   selectedTimeBuckets,
@@ -95,6 +103,11 @@ export function CoachCard({
   const hiddenSlotCount = sortedSlots.length - visibleSlots.length;
 
   const rating = toCoachRatingDisplay(coach.rating);
+
+  const specialtyTags = useMemo(
+    () => toCoachSpecialtyTags(coach.specialty_codes, specialties, 'ja'),
+    [coach.specialty_codes, specialties]
+  );
 
   const country = useMemo(
     () => countries.find((c) => c.country_code === coach.country_code) ?? null,
@@ -171,6 +184,8 @@ export function CoachCard({
         </div>
       )}
 
+      <CoachSpecialtyTags tags={specialtyTags} highlightCodes={selectedSpecialties} />
+
       {coach.introduction && (
         <p className="text-xs text-ink-muted leading-relaxed line-clamp-2">{coach.introduction}</p>
       )}
@@ -239,6 +254,7 @@ export function CoachCard({
             introduction: coach.introduction,
             introVideoUrl: getCoachIntroVideoUrl(coach.intro_video_path),
             rating,
+            specialties: specialtyTags,
           }}
           labels={{
             closeLabel: '閉じる',

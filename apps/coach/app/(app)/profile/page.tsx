@@ -1,5 +1,5 @@
 // apps/coach/app/(app)/profile/page.tsx
-import { getMyProfile, getTimezoneList, getMyCoachProfile, getCountryList } from '@/actions/coachProfileAction';
+import { getMyProfile, getTimezoneList, getMyCoachProfile, getCountryList, getMyCoachSpecialties } from '@/actions/coachProfileAction';
 import { getMyMailSettings } from '@/actions/mailSettingAction';
 import { getMyCoachRatingStats } from '@/actions/coachRatingAction';
 import { USER_TYPES } from '@gabby/types/user';
@@ -13,13 +13,14 @@ const USER_TYPE_LABELS_EN: Record<string, string> = {
 };
 
 export default async function ProfilePage() {
-  const [profile, timezones, coachProfile, countries, mailSettings, ratingStats] = await Promise.all([
+  const [profile, timezones, coachProfile, countries, mailSettings, ratingStats, specialties] = await Promise.all([
     getMyProfile(),
     getTimezoneList(),
     getMyCoachProfile(),
     getCountryList(),
     getMyMailSettings(),
     getMyCoachRatingStats(),
+    getMyCoachSpecialties(),
   ]);
 
   if (!profile) {
@@ -47,6 +48,7 @@ export default async function ProfilePage() {
           countries={countries}
           mailSettings={mailSettings}
           ratingStats={ratingStats}
+          specialties={specialties}
         />
       </div>
     </div>

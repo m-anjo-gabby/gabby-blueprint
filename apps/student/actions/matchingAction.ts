@@ -12,6 +12,7 @@ import {
   withdrawMatchingRequestCore,
 } from '@gabby/lib/matching/actions/matchingActions';
 import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
+import { getCoachSpecialtyListCore } from '@gabby/lib/coachSpecialty/actions/coachSpecialtyActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
@@ -26,6 +27,7 @@ import {
   SlotStatusItem,
 } from '@gabby/types/matching';
 import { CountryMaster } from '@gabby/types/country';
+import { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 
 const logger = createLogger('student');
@@ -94,6 +96,19 @@ export async function getCountryList(): Promise<CountryMaster[]> {
     return [];
   }
   return result.countries;
+}
+
+/**
+ * コーチの専門（表示名・絞り込みの選択肢）用の専門マスタ一覧を取得
+ */
+export async function getCoachSpecialtyList(): Promise<CoachSpecialtyMaster[]> {
+  const result = await getCoachSpecialtyListCore();
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_coach_specialty_list_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.specialties;
 }
 
 /**

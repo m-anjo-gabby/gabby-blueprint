@@ -22,8 +22,9 @@
 4. **ライセンス管理ダイアログ**（生徒のみ、一覧の「ライセンス」欄から開く）
 5. **ステージ・レベル管理ダイアログ**（生徒のみ、一覧の「ステージ」ボタンから開く）
 6. **代理ログインダイアログ**（本登録済みの生徒・コーチのみ、一覧の「代理ログイン」ボタンから開く）
-7. **コーチの評価画面**（コーチのみ、一覧の「評価」ボタンから `/users/[id]/ratings` へ遷移）
-8. **CSV一括登録ダイアログ**（生徒のみ対象）
+7. **専門の設定ダイアログ**（コーチのみ、一覧の「専門」ボタンから開く）
+8. **コーチの評価画面**（コーチのみ、一覧の「評価」ボタンから `/users/[id]/ratings` へ遷移）
+9. **CSV一括登録ダイアログ**（生徒のみ対象）
 
 ## 表示要素・操作
 
@@ -39,6 +40,7 @@
 | 一覧の「ライセンス」列 | 生徒のみ表示（生徒以外は「対象外」）。契約名・期限、状態に応じ「未設定」「[開始待ち]」「[期限切れ]」のラベル | 本登録済みの生徒のみクリック可能。クリックでライセンス管理ダイアログを開く |
 | 一覧の「代理ログイン」ボタン | 本登録済み（招待中でない）の生徒・コーチのみ表示（管理者は対象外） | 代理ログインダイアログを開く |
 | 一覧の「ステージ」ボタン | 生徒のみ表示 | ステージ・レベル管理ダイアログを開く |
+| 一覧の「専門」ボタン | コーチのみ表示 | 専門の設定ダイアログを開く |
 | 一覧の「評価」ボタン | コーチのみ表示 | コーチの評価画面（`/users/[id]/ratings`）へ遷移する |
 | 一覧の「編集」ボタン | 全ユーザーに表示 | ユーザー編集ダイアログを開く |
 | 「一括登録」ボタン | 常時表示 | CSV一括登録ダイアログを開く（生徒のみ対象） |
@@ -94,6 +96,17 @@
   「開始時・終了時のレベル」に使われる。管理者による**引き下げは「誤った引き上げの修正」**として扱い、
   修正後より高い直近の記録を取り消して、その記録の日時に遡って修正後の値にする（修正前に期間が
   終わった生徒のレポートにも、誤ったレベルは出ない）
+
+## 専門の設定ダイアログ（コーチのみ）
+
+- コーチの専門（生徒の「専属コーチを探す」のカード・プロフィールと、コーチのプロフィール画面に表示する）を設定する。
+  設定できるのはアドミンだけで、コーチ本人は参照のみ（DBでもコーチ・生徒からの変更を拒否する）。
+- 「分野（4つまで）」: ビジネス／金融／テクノロジー／エンジニアリング／ジャーナリズム／メディア／芸術／教育 のチェックボックス。
+  選択数「n / 4」を表示し、4つ選ぶと残りは選べなくなる。
+- 「得意分野」: 発音プロ。生徒・コーチの画面では分野とは別のバッジで表示し、4つの上限に数えない。
+- 「保存」でコーチ1人分の設定をまとめて置き換える（成功で「専門を保存しました」と表示して閉じる）。
+- 項目（専門マスタ `com_m_coach_specialty`）は管理画面では編集せず、リリースSQLで追加・変更する。
+- CSV一括登録では専門を扱わない。
 
 ## 代理ログインダイアログ
 
@@ -153,6 +166,8 @@
 - `apps/admin/app/(app)/users/_components/SprintProgressFormDialog.tsx`
 - `apps/admin/app/(app)/users/_components/ImpersonateButton.tsx`
 - `apps/admin/app/(app)/users/_components/UserBulkImportDialog.tsx`
+- `apps/admin/app/(app)/users/_components/CoachSpecialtyFormDialog.tsx`, `apps/admin/actions/adminCoachSpecialtyAction.ts`
+  （`getCoachSpecialtySettings`, `setCoachSpecialties`。RPC `admin_set_coach_specialties`：アドミン以外・分野5つ以上・マスタに無いコードを拒否）
 - `apps/admin/app/(app)/users/[id]/ratings/page.tsx`（コーチの評価画面。`_components/CoachRatingSummary.tsx`・`CoachRatingTable.tsx`）, `apps/admin/actions/adminCoachRatingAction.ts`（`getCoachRatings`）
 - `apps/admin/actions/adminUserAction.ts`（`getUsers`, `createUser`, `createUserDirect`,
   `updateUser`, `resendInvite`, `getRoles`, `bulkCreateUsers`）

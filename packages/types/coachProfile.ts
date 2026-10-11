@@ -1,3 +1,5 @@
+import type { CoachSpecialtyTag } from './coachSpecialty';
+
 /**
  * ----------------------------------------------
  * 定数・区分値
@@ -147,6 +149,8 @@ export interface CoachProfileCardData {
   introVideoUrl: string | null;
   /** 評価の表示（総合評価。評価が無い・出さない場合は省略または null） */
   rating?: CoachProfileRatingDisplay | null;
+  /** 専門（アドミンが設定。名称は各ポータルの言語。未設定・出さない場合は省略または空） */
+  specialties?: CoachSpecialtyTag[];
 }
 
 /** プロフィールカードの評価の表示（文言は各ポータルで整形して渡す） */

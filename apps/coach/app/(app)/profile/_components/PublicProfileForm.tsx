@@ -1,12 +1,14 @@
 'use client';
 
-import { GraduationCap, Briefcase, MessageSquare } from 'lucide-react';
+import { GraduationCap, Briefcase, MessageSquare, Sparkles } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { VideoUploader } from '@gabby/lib/components/common/VideoUploader';
 import { CoachProfileFormValues } from '@gabby/types/coachProfile';
+import { CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyTags';
 import { CountryMaster } from '@gabby/types/country';
 import { ProfileFieldGroup } from './ProfileFieldGroup';
 import { ProfileTextAreaField } from './ProfileTextAreaField';
@@ -57,6 +59,8 @@ interface PublicProfileFormProps {
   form: CoachProfileFormValues;
   onFieldChange: <K extends keyof CoachProfileFormValues>(field: K, value: CoachProfileFormValues[K]) => void;
   coachSinceLabel: string | null;
+  /** Specialties set by admins (read-only) */
+  specialties: CoachSpecialtyTag[];
   introVideoUrl: string | null;
   introVideoPath: string | null;
   onUploadIntroVideo: (file: File) => Promise<void>;
@@ -71,6 +75,7 @@ export function PublicProfileForm({
   form,
   onFieldChange,
   coachSinceLabel,
+  specialties,
   introVideoUrl,
   introVideoPath,
   onUploadIntroVideo,
@@ -138,6 +143,19 @@ export function PublicProfileForm({
               </div>
             </div>
           </div>
+        </ProfileFieldGroup>
+
+        {/* 専門はアドミンだけが設定する（コーチは参照のみ） */}
+        <ProfileFieldGroup icon={Sparkles} label="Specialties">
+          {specialties.length > 0 ? (
+            <CoachSpecialtyTags tags={specialties} />
+          ) : (
+            <p className="text-sm text-slate-500">Not set yet</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Your specialties are set by the Gabby team and shown to students when they choose a coach. Please contact
+            the Gabby team if you would like to change them.
+          </p>
         </ProfileFieldGroup>
 
         {TEXT_FIELD_GROUPS.map((group) => (

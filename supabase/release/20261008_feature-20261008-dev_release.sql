@@ -3315,3 +3315,201 @@ REVOKE EXECUTE ON FUNCTION public.admin_get_coach_ratings(uuid) FROM PUBLIC, ano
 GRANT EXECUTE ON FUNCTION public.admin_get_coach_ratings(uuid) TO authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】コーチの専門（アドミンが設定し、コーチのプロフィール・生徒のコーチ選択に表示する）
+-- 追加日: 2026-10-11
+--
+-- 【内容】
+--   1. com_m_coach_specialty（専門マスタ）を新規作成し、9項目（分野8つ＋発音プロ）を登録
+--   2. com_m_coach_specialty_assignment（コーチの専門の設定）を新規作成
+--   3. admin_set_coach_specialties(uuid, text[]) を新規作成（アドミンのみ。分野は4つまで）
+--   シグネチャの変更は無い（新規のみ）。
+-- 対応ファイル: DDL/table/com_m_coach_specialty.sql, DDL/table/com_m_coach_specialty_assignment.sql,
+--   DDL/function/admin_set_coach_specialties.sql
+-- 【注意】3アプリ（admin の設定・coach のプロフィール・student のコーチ選択）が新しいテーブルを参照するため、
+--   アプリのデプロイより先に適用すること。
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- DDL: com_m_coach_specialty (コーチの専門マスタ) (2026-10-11 追加)
+-- コーチの専門（Business / Finance 等の分野と、Pronunciation Pro の得意分野）の選択肢。
+---------------------------------------------
+-- 【背景】
+-- 生徒がコーチを選ぶ際の手がかりとして、コーチに専門を設定する（設定はアドミンのみ。
+-- コーチとの紐付けは com_m_coach_specialty_assignment、登録は admin_set_coach_specialties()）。
+--   - kind = 'field'（分野）: コーチ1人につき最大4つ（admin_set_coach_specialties() で検証）。
+--   - kind = 'skill'（指導の得意分野。Pronunciation Pro）: 分野とは別のバッジで表示し、4つの上限に数えない。
+-- 項目の追加・名称変更は頻繁に行わないため、管理画面は作らずリリースSQLで登録する（下の初期データに追記）。
+---------------------------------------------
+CREATE TABLE IF NOT EXISTS public.com_m_coach_specialty (
+  specialty_code text PRIMARY KEY, -- 例: 'business', 'pronunciation_pro'
+  kind text NOT NULL DEFAULT 'field',
+  name_en text NOT NULL,
+  name_ja text NOT NULL,
+  sort_no smallint NOT NULL DEFAULT 1,
+  delete_flg text NOT NULL DEFAULT '0',
+  insert_date timestamp with time zone not null default now(),
+  update_date timestamp with time zone not null default now(),
+  CONSTRAINT chk_coach_specialty_kind CHECK (kind IN ('field', 'skill'))
+);
+
+COMMENT ON TABLE public.com_m_coach_specialty IS 'コーチの専門マスタ（分野・得意分野の選択肢。コーチとの紐付けはcom_m_coach_specialty_assignment）';
+COMMENT ON COLUMN public.com_m_coach_specialty.specialty_code IS '専門コード（例: business, pronunciation_pro）';
+COMMENT ON COLUMN public.com_m_coach_specialty.kind IS '種類 field:分野（コーチ1人につき最大4つ） skill:指導の得意分野（別バッジで表示。上限に数えない）';
+COMMENT ON COLUMN public.com_m_coach_specialty.name_en IS '名称（英語表記、coach/adminアプリ用）';
+COMMENT ON COLUMN public.com_m_coach_specialty.name_ja IS '名称（日本語表記、student/adminアプリ用）';
+COMMENT ON COLUMN public.com_m_coach_specialty.sort_no IS '表示順';
+COMMENT ON COLUMN public.com_m_coach_specialty.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_coach_specialty.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_coach_specialty.update_date IS '更新日時';
+
+---------------------------------------------
+-- 初期データ（項目を増やす場合はここに追記し、リリースSQLにも同じ行を入れる。冪等）
+---------------------------------------------
+INSERT INTO public.com_m_coach_specialty (specialty_code, kind, name_en, name_ja, sort_no) VALUES
+  ('business', 'field', 'Business', 'ビジネス', 1),
+  ('finance', 'field', 'Finance', '金融', 2),
+  ('tech', 'field', 'Tech', 'テクノロジー', 3),
+  ('engineering', 'field', 'Engineering', 'エンジニアリング', 4),
+  ('journalism', 'field', 'Journalism', 'ジャーナリズム', 5),
+  ('media', 'field', 'Media', 'メディア', 6),
+  ('arts', 'field', 'Arts', '芸術', 7),
+  ('education', 'field', 'Education', '教育', 8),
+  ('pronunciation_pro', 'skill', 'Pronunciation Pro', '発音プロ', 9)
+ON CONFLICT (specialty_code) DO UPDATE SET
+  kind = EXCLUDED.kind,
+  name_en = EXCLUDED.name_en,
+  name_ja = EXCLUDED.name_ja,
+  sort_no = EXCLUDED.sort_no,
+  update_date = now();
+
+---------------------------------------------
+-- 行レベルセキュリティ (RLS)
+---------------------------------------------
+ALTER TABLE public.com_m_coach_specialty ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view coach specialties" ON public.com_m_coach_specialty;
+
+CREATE POLICY "Anyone can view coach specialties" ON public.com_m_coach_specialty
+FOR SELECT TO authenticated USING (delete_flg = '0');
+
+-- 追加・更新・論理削除はリリースSQL経由のみを想定しており、更新系ポリシーは意図的に定義していない。
+
+---------------------------------------------
+-- DDL: com_m_coach_specialty_assignment (コーチの専門の設定) (2026-10-11 追加)
+-- 前提: table/com_m_coach_specialty.sql, table/com_m_user.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- コーチごとに設定した専門（com_m_coach_specialty）。設定はアドミンのみで、
+-- admin_set_coach_specialties() でコーチ1人分をまとめて置き換える（RLSでの登録・変更・削除は許可しない）。
+-- コーチ本人が更新できる com_m_coach_profile とは別のテーブルにして、コーチが書き換えられないようにする。
+-- 参照は認証済みユーザー全員（生徒のコーチ選択・コーチのプロフィール・アドミン）。
+---------------------------------------------
+CREATE TABLE IF NOT EXISTS public.com_m_coach_specialty_assignment (
+  coach_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+  specialty_code text NOT NULL REFERENCES public.com_m_coach_specialty(specialty_code),
+  created_by uuid REFERENCES public.com_m_user(id) ON DELETE SET NULL,
+  insert_date timestamp with time zone not null default now(),
+  PRIMARY KEY (coach_id, specialty_code)
+);
+
+COMMENT ON TABLE public.com_m_coach_specialty_assignment IS 'コーチの専門の設定（アドミンのみ設定。登録はadmin_set_coach_specialties()）';
+COMMENT ON COLUMN public.com_m_coach_specialty_assignment.coach_id IS 'コーチのユーザID';
+COMMENT ON COLUMN public.com_m_coach_specialty_assignment.specialty_code IS '専門コード（com_m_coach_specialty.specialty_code）';
+COMMENT ON COLUMN public.com_m_coach_specialty_assignment.created_by IS '設定したアドミンのユーザID';
+COMMENT ON COLUMN public.com_m_coach_specialty_assignment.insert_date IS '登録日時';
+
+---------------------------------------------
+-- 行レベルセキュリティ (RLS)
+---------------------------------------------
+ALTER TABLE public.com_m_coach_specialty_assignment ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view coach specialty assignments" ON public.com_m_coach_specialty_assignment;
+
+CREATE POLICY "Anyone can view coach specialty assignments" ON public.com_m_coach_specialty_assignment
+FOR SELECT TO authenticated USING (true);
+
+-- 登録・削除は admin_set_coach_specialties()（SECURITY DEFINER）経由のみ。更新系ポリシーは意図的に定義していない。
+
+---------------------------------------------
+-- アドミンによるコーチの専門の設定RPC (2026-10-11 追加)
+-- 前提: table/com_m_coach_specialty.sql, table/com_m_coach_specialty_assignment.sql の作成が完了していること。
+---------------------------------------------
+-- admin のユーザー管理 → コーチの「専門」ダイアログで使う。コーチ1人分の専門を、渡したコードの集合に置き換える
+-- （外したものを削除し、足したものを登録する。続けて設定されているものは登録日時を変えない）。
+-- 検証:
+--   - アドミン（JWT の user_type='0'）以外は NOT_AUTHORIZED
+--   - 対象がコーチでない（存在しない）場合は COACH_NOT_FOUND
+--   - 有効なマスタに無いコードは INVALID_SPECIALTY
+--   - 分野（kind='field'）は4つまで（TOO_MANY_FIELDS）。得意分野（kind='skill'）は数えない。
+--     上限はアプリ側の COACH_SPECIALTY_FIELD_MAX（packages/types/coachSpecialty.ts）と揃える。
+-- 返り値: 設定後の専門コード（マスタの表示順）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_set_coach_specialties(p_coach_id uuid, p_specialty_codes text[])
+RETURNS text[]
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    c_field_max CONSTANT integer := 4;
+    v_codes text[];
+    v_invalid text;
+    v_field_count integer;
+BEGIN
+    IF COALESCE(public.get_jwt_user_type(), '') <> '0' THEN
+        RAISE EXCEPTION 'NOT_AUTHORIZED: only admins can set coach specialties';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM public.com_m_user WHERE id = p_coach_id AND user_type = '2') THEN
+        RAISE EXCEPTION 'COACH_NOT_FOUND: %', p_coach_id;
+    END IF;
+
+    -- 同じコーチへの同時の設定を順番に処理する（置き換えの途中で混ざらないようにする）
+    PERFORM pg_advisory_xact_lock(hashtext('coach_specialty:' || p_coach_id::text));
+
+    v_codes := ARRAY(SELECT DISTINCT unnest(COALESCE(p_specialty_codes, ARRAY[]::text[])));
+
+    SELECT c INTO v_invalid
+    FROM unnest(v_codes) AS c
+    WHERE NOT EXISTS (
+        SELECT 1 FROM public.com_m_coach_specialty s
+        WHERE s.specialty_code = c AND s.delete_flg = '0'
+    )
+    LIMIT 1;
+    IF v_invalid IS NOT NULL THEN
+        RAISE EXCEPTION 'INVALID_SPECIALTY: %', v_invalid;
+    END IF;
+
+    SELECT count(*) INTO v_field_count
+    FROM public.com_m_coach_specialty s
+    WHERE s.specialty_code = ANY(v_codes) AND s.kind = 'field';
+    IF v_field_count > c_field_max THEN
+        RAISE EXCEPTION 'TOO_MANY_FIELDS: % (max %)', v_field_count, c_field_max;
+    END IF;
+
+    DELETE FROM public.com_m_coach_specialty_assignment
+    WHERE coach_id = p_coach_id AND NOT (specialty_code = ANY(v_codes));
+
+    INSERT INTO public.com_m_coach_specialty_assignment (coach_id, specialty_code, created_by)
+    SELECT p_coach_id, c, auth.uid()
+    FROM unnest(v_codes) AS c
+    ON CONFLICT (coach_id, specialty_code) DO NOTHING;
+
+    RETURN ARRAY(
+        SELECT a.specialty_code
+        FROM public.com_m_coach_specialty_assignment a
+        JOIN public.com_m_coach_specialty s ON s.specialty_code = a.specialty_code
+        WHERE a.coach_id = p_coach_id
+        ORDER BY s.sort_no
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_set_coach_specialties(uuid, text[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_set_coach_specialties(uuid, text[]) TO authenticated;
+
+COMMIT;

@@ -19,7 +19,7 @@
 3. **Email notificationsカード** — 通知・リマインダーのメールの配信区分ごとの配信・停止
 4. **Public Coach Profileフォーム（左）** — 生徒に公開されるプロフィール項目の編集フォーム、
    入力充実度（完成度%）バッジ、Save Public Profileボタン
-5. **Live Previewパネル（右）** — 編集中の内容をその場で生徒向けカードとして確認できるプレビュー（評価がある場合は、生徒のコーチ選択画面と同じく総合評価も出す）
+5. **Live Previewパネル（右）** — 編集中の内容をその場で生徒向けカードとして確認できるプレビュー（評価がある場合は、生徒のコーチ選択画面と同じく総合評価も出す。専門も氏名の下に出す）
 
 ## 表示要素・操作
 
@@ -32,6 +32,7 @@
 | 完成度バッジ「N% complete」 | Nationality・English Teaching年数・Education・Qualifications・Job Experience・Personal Introduction・紹介動画の7項目の入力状況から算出 | 100%になると緑色のバッジに変わる |
 | Nationality（国籍）プルダウン | 常時表示 | 選択するとプレビューの国旗表示にも反映される |
 | Gabby Coach Since | 読み取り専用（初回保存時に自動設定される日付） | 編集不可 |
+| Specialties（専門） | 読み取り専用。アドミンが設定した専門（発音プロは塗りのバッジ、分野は枠線のタグ）。未設定なら「Not set yet」。変更は運営へ依頼する旨の注記を表示する。完成度の算出には含めない | 編集不可（設定はアドミンのユーザー管理の「専門」から） |
 | English Teaching（指導年数） | 数値入力（0〜60） | — |
 | Education / Qualifications / Job Experience | 自由記述のテキストエリア | — |
 | Personal Introduction | 自由記述のテキストエリア（長め） | — |
@@ -63,5 +64,5 @@
 - `apps/coach/app/(app)/profile/_components/ProfileFieldGroup.tsx`
 - `apps/coach/app/(app)/profile/_components/ProfileTextAreaField.tsx`
 - `apps/coach/app/(app)/profile/_lib/profileCompleteness.ts`
-- `apps/coach/actions/coachProfileAction.ts`
+- `apps/coach/actions/coachProfileAction.ts`（専門は `getMyCoachSpecialties`。表示は共通部品 `packages/lib/components/common/CoachSpecialtyTags.tsx`）
 - メール通知: `_components/MailSettingsCard.tsx`、`apps/coach/actions/mailSettingAction.ts`（実体は `packages/lib/mail/settingsActions.ts`。配信区分・送る条件は [notification/mail-dispatch.md](../../../testing/e2e/specs/notification/mail-dispatch.md)）

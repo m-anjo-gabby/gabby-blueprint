@@ -4,6 +4,9 @@ import { getMyProfileCore } from '@gabby/lib/profile/actions/profileActions';
 import { uploadProfileIconCore, removeProfileIconCore } from '@gabby/lib/profile/actions/profileIconActions';
 import { getTimezoneListCore, updateMyTimezoneCore } from '@gabby/lib/profile/actions/timezoneActions';
 import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
+import { getCoachSpecialtyCodesCore, getCoachSpecialtyListCore } from '@gabby/lib/coachSpecialty/actions/coachSpecialtyActions';
+import { toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getMyCoachProfileCore, updateMyCoachProfileCore, updateMyCoachZoomSettingsCore } from '@gabby/lib/coachProfile/actions/coachProfileActions';
 import { uploadCoachIntroVideoCore, removeCoachIntroVideoCore } from '@gabby/lib/coachProfile/actions/coachIntroVideoActions';
 import { createLogger } from '@gabby/lib/logger';
@@ -11,6 +14,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { ProfileIconErrorCode, MyProfile, UpdateTimezoneErrorCode } from '@gabby/types/profile';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { CountryMaster } from '@gabby/types/country';
+import { CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
 import {
   CoachProfileErrorCode,
   CoachProfileFormValues,
@@ -131,6 +135,25 @@ export async function updateMyTimezone(
 
   logger.info('coach:update_timezone_success', `Coach timezone updated: ${result.timezone}`, ctx);
   return { success: true, timezone: result.timezone };
+}
+
+/**
+ * Fetches the current coach's specialties (set by admins only; read-only for coaches)
+ */
+export async function getMyCoachSpecialties(): Promise<CoachSpecialtyTag[]> {
+  const user = await getAuthUser();
+  if (!user) return [];
+
+  const [listResult, codesByCoachId] = await Promise.all([
+    getCoachSpecialtyListCore(),
+    getCoachSpecialtyCodesCore([user.id]),
+  ]);
+  if (!listResult.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_my_specialties_failed', listResult.errorCode, ctx);
+    return [];
+  }
+  return toCoachSpecialtyTags(codesByCoachId.get(user.id) ?? [], listResult.specialties, 'en');
 }
 
 /**
