@@ -23,7 +23,8 @@
 5. **ステージ・レベル管理ダイアログ**（生徒のみ、一覧の「ステージ」ボタンから開く）
 6. **代理ログインダイアログ**（本登録済みの生徒・コーチのみ、一覧の「代理ログイン」ボタンから開く）
 7. **専門の設定ダイアログ**（コーチのみ、一覧の「専門」ボタンから開く）
-8. **コーチの評価画面**（コーチのみ、一覧の「評価」ボタンから `/users/[id]/ratings` へ遷移）
+8. **マッチング対象の設定ダイアログ**（コーチのみ、一覧の「マッチング」ボタンから開く）
+9. **コーチの評価画面**（コーチのみ、一覧の「評価」ボタンから `/users/[id]/ratings` へ遷移）
 9. **CSV一括登録ダイアログ**（生徒のみ対象）
 
 ## 表示要素・操作
@@ -41,6 +42,7 @@
 | 一覧の「代理ログイン」ボタン | 本登録済み（招待中でない）の生徒・コーチのみ表示（管理者は対象外） | 代理ログインダイアログを開く |
 | 一覧の「ステージ」ボタン | 生徒のみ表示 | ステージ・レベル管理ダイアログを開く |
 | 一覧の「専門」ボタン | コーチのみ表示 | 専門の設定ダイアログを開く |
+| 一覧の「マッチング」ボタン | コーチのみ表示 | マッチング対象の設定ダイアログを開く |
 | 一覧の「評価」ボタン | コーチのみ表示 | コーチの評価画面（`/users/[id]/ratings`）へ遷移する |
 | 一覧の「編集」ボタン | 全ユーザーに表示 | ユーザー編集ダイアログを開く |
 | 「一括登録」ボタン | 常時表示 | CSV一括登録ダイアログを開く（生徒のみ対象） |
@@ -108,6 +110,19 @@
 - 項目（専門マスタ `com_m_coach_specialty`）は管理画面では編集せず、リリースSQLで追加・変更する。
 - CSV一括登録では専門を扱わない。
 
+## マッチング対象の設定ダイアログ（コーチのみ）
+
+- コーチが生徒の「専属コーチを探す」に出るかどうかの内訳を表示し、アドミンによる休止を設定する。
+  一覧に出る条件は [専属コーチを探す（student）](../student/coach-matching.md)「一覧に出るコーチ」。
+- 状態: 「生徒のコーチ選択に表示中」（緑）／「生徒のコーチ選択に非表示」（黄）。デモコーチには「デモの生徒にだけ表示されます」を添える。
+- 「プロフィールの必須項目」: 未設定の項目を一覧で出す（設定はコーチ本人が行う）。
+- 「コーチ本人の新規受付」: 受付中／停止中（表示のみ。切り替えはコーチ本人のプロフィール画面）。
+- 「アドミンによる休止」スイッチと「休止の理由」（運営の内部メモ。500文字まで。コーチ・生徒には表示されず、DBでもアドミンしか参照できない）。
+  休止中は休止した日時を表示する。コーチ本人は解除できない。休止で止めるのは新しいマッチングだけで、担当中の生徒・
+  確定済みのセッション・回答待ちの申請はそのまま。
+- 「保存」で休止・解除を反映する（成功で「マッチングを休止しました」／「マッチングの休止を解除しました」と表示して閉じる）。
+  解除するとメモも消える。
+
 ## 代理ログインダイアログ
 
 - 実行理由（チケット番号・問合せ内容等）の入力が必須
@@ -168,6 +183,8 @@
 - `apps/admin/app/(app)/users/_components/UserBulkImportDialog.tsx`
 - `apps/admin/app/(app)/users/_components/CoachSpecialtyFormDialog.tsx`, `apps/admin/actions/adminCoachSpecialtyAction.ts`
   （`getCoachSpecialtySettings`, `setCoachSpecialties`。RPC `admin_set_coach_specialties`：アドミン以外・分野5つ以上・マスタに無いコードを拒否）
+- `apps/admin/app/(app)/users/_components/CoachMatchingFormDialog.tsx`, `apps/admin/actions/adminCoachMatchingAction.ts`
+  （`getCoachMatchingStatus`, `setCoachMatchingSuspension`。RPC `get_coach_matching_status`・`admin_set_coach_matching_suspension`、休止は `com_m_coach_matching_suspension`）
 - `apps/admin/app/(app)/users/[id]/ratings/page.tsx`（コーチの評価画面。`_components/CoachRatingSummary.tsx`・`CoachRatingTable.tsx`）, `apps/admin/actions/adminCoachRatingAction.ts`（`getCoachRatings`）
 - `apps/admin/actions/adminUserAction.ts`（`getUsers`, `createUser`, `createUserDirect`,
   `updateUser`, `resendInvite`, `getRoles`, `bulkCreateUsers`）

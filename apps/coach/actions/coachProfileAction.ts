@@ -9,6 +9,7 @@ import { toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getMyCoachProfileCore, updateMyCoachProfileCore, updateMyCoachZoomSettingsCore } from '@gabby/lib/coachProfile/actions/coachProfileActions';
 import { uploadCoachIntroVideoCore, removeCoachIntroVideoCore } from '@gabby/lib/coachProfile/actions/coachIntroVideoActions';
+import { getCoachMatchingStatusCore, updateMyAcceptingStudentsCore } from '@gabby/lib/coachProfile/actions/coachMatchingStatusActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { ProfileIconErrorCode, MyProfile, UpdateTimezoneErrorCode } from '@gabby/types/profile';
@@ -20,6 +21,7 @@ import {
   CoachProfileFormValues,
   CoachProfileRecord,
   CoachIntroVideoErrorCode,
+  CoachMatchingStatus,
   CoachZoomSettingsFormValues,
 } from '@gabby/types/coachProfile';
 
@@ -198,6 +200,35 @@ export async function updateMyCoachProfile(
 
   logger.info('coach:update_coach_profile_success', 'Coach public profile updated', ctx);
   return { success: true, profile: result.profile };
+}
+
+/**
+ * Fetches whether the current coach appears in the students' coach search (missing items, accepting, paused by admins)
+ */
+export async function getMyCoachMatchingStatus(): Promise<CoachMatchingStatus | null> {
+  const user = await getAuthUser();
+  if (!user) return null;
+
+  const result = await getCoachMatchingStatusCore(user.id);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:get_matching_status_failed', result.errorCode, ctx);
+    return null;
+  }
+  return result.status;
+}
+
+/**
+ * Turns accepting new students on or off for the current coach
+ */
+export async function updateMyAcceptingStudents(
+  acceptingStudents: boolean
+): Promise<{ success: true; acceptingStudents: boolean } | { success: false; message: string }> {
+  const result = await updateMyAcceptingStudentsCore(acceptingStudents);
+  if (!result.success) {
+    return { success: false, message: COACH_PROFILE_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+  return { success: true, acceptingStudents: result.acceptingStudents };
 }
 
 /**

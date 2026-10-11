@@ -265,10 +265,14 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-          <p className="text-xs text-slate-600">
+        <div
+          className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 ${
+            slots.length === 0 ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-slate-50'
+          }`}
+        >
+          <p className={`text-xs ${slots.length === 0 ? 'font-bold text-amber-800' : 'text-slate-600'}`}>
             {slots.length === 0
-              ? 'You have no availability yet. Students cannot send you matching requests until you add some.'
+              ? "You have no availability yet. You will not appear in the students' coach search until you add some."
               : `${confirmedAt ? `Last reviewed ${formatDateEn(confirmedAt, timezone)}.` : 'Not reviewed yet.'}${isReviewDue ? ' Please check that these times still work for you.' : ''}`}
           </p>
           {slots.length > 0 && (

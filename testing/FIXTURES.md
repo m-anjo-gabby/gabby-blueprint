@@ -118,6 +118,9 @@ Resend のテスト用アドレス `delivered+${TAG}-<用途>@resend.dev` を使
   staging には元々無かったため、dev から `copy-generic-sprint.ts` で移植した。
   問題種別×レベルを持つのは汎用スプリントだけのため、レベルに関わる画面（お気に入りのレベル絞り込み等）の
   検証に使う。付与により、固定アカウントの教材一覧に汎用スプリントが表示される。
+- コーチ（固定アカウント・ペルソナ・E2E の使い捨て）は、生徒の「専属コーチを探す」に出す条件（アイコン・プロフィールの
+  必須6項目・空き時間）を満たすよう、未設定の項目をテスト用の値で埋める（`testing/helpers/coach-matching-profile.ts`。
+  アイコンは共有の `profile/qa-fixtures/coach-icon.png`）。dev は投入済み（2026-10-11）、staging は次回の投入時に埋まる。
 
 ## 状態ペルソナのコーチ（タイムゾーン・Availability）
 

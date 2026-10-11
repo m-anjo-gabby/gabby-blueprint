@@ -9,7 +9,8 @@ import { LicenseFormDialog } from "./LicenseFormDialog";
 import { ImpersonateButton } from "./ImpersonateButton";
 import { SprintProgressFormDialog } from "./SprintProgressFormDialog";
 import { CoachSpecialtyFormDialog } from "./CoachSpecialtyFormDialog";
-import { Calendar, Building2, ShieldAlert, Pencil, Rocket, Star, Sparkles } from "lucide-react";
+import { CoachMatchingFormDialog } from "./CoachMatchingFormDialog";
+import { Calendar, Building2, ShieldAlert, Pencil, Rocket, Star, Sparkles, UserSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserTypeLabel, UserRecord, USER_TYPES } from "@gabby/types/user";
 
@@ -205,6 +206,15 @@ export function createColumns(t: TableT): ColumnDef<UserRecord>[] {
                 <Sparkles size={14} /> {t('specialtyButton')}
               </Button>
             </CoachSpecialtyFormDialog>
+          )}
+
+          {/* コーチのマッチング対象（生徒の「専属コーチを探す」に出るかの内訳と、アドミンによる休止） */}
+          {isCoach && (
+            <CoachMatchingFormDialog user={user}>
+              <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
+                <UserSearch size={14} /> {t('matchingButton')}
+              </Button>
+            </CoachMatchingFormDialog>
           )}
 
           {/* コーチの評価（生徒からの評価・運営へのコメント）の確認 */}

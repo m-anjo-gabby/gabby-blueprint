@@ -18,6 +18,33 @@ export const COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES = [
 export type CoachIntroVideoMimeType = typeof COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES[number];
 
 /**
+ * 生徒の「専属コーチを探す」に出るための必須項目（紹介ビデオは任意）。
+ * コードと順は DB の fn_coach_matching_missing_items()（supabase/DDL/function/fn_coach_matching_missing_items.sql）と揃える。
+ */
+export const COACH_MATCHING_REQUIRED_ITEMS = [
+  'icon',
+  'country',
+  'teaching_years',
+  'education',
+  'qualifications',
+  'job_experience',
+  'introduction',
+  'availability',
+] as const;
+
+export type CoachMatchingRequiredItem = (typeof COACH_MATCHING_REQUIRED_ITEMS)[number];
+
+/** 必須項目のうち、公開プロフィールのフォーム（CoachProfileFormValues）で入力するもの */
+export const COACH_PROFILE_FORM_REQUIRED_ITEMS = [
+  'country',
+  'teaching_years',
+  'education',
+  'qualifications',
+  'job_experience',
+  'introduction',
+] as const satisfies readonly CoachMatchingRequiredItem[];
+
+/**
  * ----------------------------------------------
  * 型定義
  * ----------------------------------------------
@@ -40,6 +67,7 @@ export interface CoachProfileRecord {
   introduction: string | null;
   intro_video_path: string | null; // 紹介ビデオのStorageパス（profileバケット内）
   zoom_meeting_url: string | null; // ライブセッション用の固定ビデオ通話URL（生徒への公開範囲はUI側で制御。公開プロフィールの一部としては扱わない）
+  accepting_students: boolean; // 新規の生徒の受付（コーチ本人が切り替える。false の間は生徒のコーチ選択に出さない）
   delete_flg: string;
   insert_date: string;
   update_date: string;
@@ -70,6 +98,33 @@ export type GetMyCoachProfileResult =
 
 export type UpdateMyCoachProfileResult =
   | { success: true; profile: CoachProfileRecord }
+  | { success: false; errorCode: CoachProfileErrorCode };
+
+/**
+ * CoachMatchingStatus: 生徒の「専属コーチを探す」に出るかどうかの内訳（get_coach_matching_status RPC）。
+ * 一覧に出るのは、受付中・休止でない・足りない項目が無いコーチ（デモコーチはデモの生徒にだけ出る）。
+ */
+export interface CoachMatchingStatus {
+  /** 足りない必須項目（COACH_MATCHING_REQUIRED_ITEMS の順） */
+  missingItems: CoachMatchingRequiredItem[];
+  /** コーチ本人の新規の生徒の受付 */
+  acceptingStudents: boolean;
+  /** アドミンによる休止 */
+  isSuspended: boolean;
+  /** 休止の理由（運営の内部メモ。アドミンが取得した場合のみ。それ以外は null） */
+  suspendedNote: string | null;
+  /** 休止した日時（休止中でなければ null） */
+  suspendedAt: string | null;
+  /** デモコーチ（通常の生徒には出ず、デモの生徒にだけ出る） */
+  isDemo: boolean;
+}
+
+export type GetCoachMatchingStatusResult =
+  | { success: true; status: CoachMatchingStatus }
+  | { success: false; errorCode: 'unauthorized' | 'not_found' | 'unexpected_error' };
+
+export type UpdateMyAcceptingStudentsResult =
+  | { success: true; acceptingStudents: boolean }
   | { success: false; errorCode: CoachProfileErrorCode };
 
 /**

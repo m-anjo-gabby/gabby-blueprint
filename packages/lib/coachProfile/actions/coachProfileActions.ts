@@ -16,6 +16,9 @@ const logger = createLogger('common');
 
 const MAX_TEACHING_YEARS = 60;
 
+/** 空白だけの入力は未入力（null）として保存する（マッチングの必須項目の判定と揃える） */
+const normalizeText = (value: string | null) => value?.trim() || null;
+
 /**
  * ログイン中コーチ自身の公開プロフィールを取得する（ポータル共通）
  */
@@ -117,11 +120,11 @@ export async function updateMyCoachProfileCore(values: CoachProfileFormValues): 
       .from('com_m_coach_profile')
       .update({
         country_code: values.country_code,
-        education: values.education,
-        qualifications: values.qualifications,
+        education: normalizeText(values.education),
+        qualifications: normalizeText(values.qualifications),
         teaching_years: values.teaching_years,
-        job_experience: values.job_experience,
-        introduction: values.introduction,
+        job_experience: normalizeText(values.job_experience),
+        introduction: normalizeText(values.introduction),
         update_date: new Date().toISOString(),
       })
       .eq('user_id', user.id)

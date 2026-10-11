@@ -3513,3 +3513,360 @@ REVOKE EXECUTE ON FUNCTION public.admin_set_coach_specialties(uuid, text[]) FROM
 GRANT EXECUTE ON FUNCTION public.admin_set_coach_specialties(uuid, text[]) TO authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】専属コーチのマッチング: プロフィールを設定し終えたコーチだけを出し、休止できるようにする
+-- 追加日: 2026-10-11
+--
+-- 【内容】
+--   1. com_m_coach_profile に accepting_students（コーチ本人の新規の生徒の受付。初期値ON）を追加
+--   2. com_m_coach_matching_suspension（アドミンによる休止。参照はアドミンのみ）を新規作成
+--   3. fn_coach_matching_missing_items(uuid) を新規作成（アイコン・プロフィールの必須6項目・空き時間のうち足りないもの）
+--   4. get_coach_matching_status(uuid) を新規作成（コーチ本人・アドミン向けの内訳）
+--   5. admin_set_coach_matching_suspension(uuid, boolean, text) を新規作成（アドミンのみ）
+--   6. get_matchable_coach_ids() に「受付ON・休止でない・必須項目と空き時間がそろっている」を追加
+--   7. enqueue_coach_availability_reminders() から受付OFF・休止中のコーチを除く
+--   シグネチャの変更は無い（6・7 は条件の追加のみ）。
+-- 対応ファイル: DDL/table/com_m_coach_profile.sql, DDL/table/com_m_coach_matching_suspension.sql,
+--   DDL/function/fn_coach_matching_missing_items.sql, DDL/function/get_coach_matching_status.sql,
+--   DDL/function/admin_set_coach_matching_suspension.sql, DDL/function/get_matchable_coach_ids.sql,
+--   DDL/function/enqueue_coach_availability_reminders.sql
+-- 【注意】適用した時点で、プロフィール・アイコン・空き時間が未設定のコーチは生徒のコーチ選択に出なくなる。
+--   適用前に対象のコーチ数を確認し、コーチへ設定を案内しておくこと（確認SQL: SELECT u.user_name,
+--   public.fn_coach_matching_missing_items(u.id) FROM com_m_user u WHERE u.user_type = '2' AND u.delete_flg = '0';）。
+--   coach のプロフィール・admin のユーザー管理が新しい列・RPCを参照するため、アプリのデプロイより先に適用すること。
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- 追加パッチ: 新規の生徒の受付（マッチング対象のON/OFF） (2026-10-11)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- コーチにはライセンスの概念が無いため、休止するコーチが生徒の「専属コーチを探す」に出ないよう、
+-- コーチ本人が新規の生徒の受付をON/OFFできるようにする（初期値はON）。アドミンによる休止は
+-- 別テーブル（table/com_m_coach_matching_suspension.sql）。一覧に出る条件は get_matchable_coach_ids() 参照
+-- （受付ON・休止でない・プロフィールの必須項目と空き時間がそろっている）。
+-- OFFで止めるのは新しいマッチングだけで、担当中の生徒・確定済みのセッションはそのまま続く。
+---------------------------------------------
+ALTER TABLE public.com_m_coach_profile
+  ADD COLUMN IF NOT EXISTS accepting_students boolean NOT NULL DEFAULT true;
+
+COMMENT ON COLUMN public.com_m_coach_profile.accepting_students IS '新規の生徒の受付（コーチ本人が切り替える。falseの間は生徒のコーチ選択に出さない）';
+
+---------------------------------------------
+-- DDL: com_m_coach_matching_suspension (コーチのマッチング休止) (2026-10-11 追加)
+-- 既存環境に対しては、このDDLをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- コーチにはライセンスの概念が無いため、休止するコーチを生徒の「専属コーチを探す」から外す手段として、
+-- マッチング対象のON/OFFを持つ。ON/OFFは次の2つに分ける（どちらかがOFFなら一覧に出ない）。
+--   - コーチ本人の受付: com_m_coach_profile.accepting_students（コーチがプロフィールで切り替える）
+--   - アドミンの休止  : 本テーブル（行がある＝休止中）。コーチ本人は解除できない。
+-- 休止の理由のメモは運営の内部メモのため、プロフィール（認証済みユーザーなら誰でも参照できる）とは
+-- 別のテーブルにし、参照はアドミンだけにする（コーチ本人には get_coach_matching_status() で休止中かどうかだけを返す）。
+--
+-- 休止で止めるのは新しいマッチング（一覧への表示と申請）だけ。担当中の生徒・確定済みのセッション・
+-- 回答待ちの申請（24時間で期限切れ）はそのまま続く。
+--
+-- 登録・解除は admin_set_coach_matching_suspension() のみ（休止＝行の登録・更新、解除＝行の削除）。
+-- 判定は get_matchable_coach_ids() / get_coach_matching_status() で行う。
+---------------------------------------------
+CREATE TABLE IF NOT EXISTS public.com_m_coach_matching_suspension (
+    coach_id uuid PRIMARY KEY REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    note text,
+    suspended_by uuid REFERENCES public.com_m_user(id) ON DELETE SET NULL,
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    update_date timestamp with time zone NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_m_coach_matching_suspension IS 'コーチのマッチング休止（アドミンが設定。行がある間は生徒のコーチ選択に出さない）';
+COMMENT ON COLUMN public.com_m_coach_matching_suspension.coach_id IS 'コーチのユーザーID (com_m_user.id)';
+COMMENT ON COLUMN public.com_m_coach_matching_suspension.note IS '休止の理由（運営の内部メモ。アドミンのみ参照）';
+COMMENT ON COLUMN public.com_m_coach_matching_suspension.suspended_by IS '最後に設定したアドミン (com_m_user.id)';
+COMMENT ON COLUMN public.com_m_coach_matching_suspension.insert_date IS '休止した日時';
+COMMENT ON COLUMN public.com_m_coach_matching_suspension.update_date IS '更新日時（メモの変更）';
+
+---------------------------------------------
+-- 行レベルセキュリティ (RLS)
+---------------------------------------------
+ALTER TABLE public.com_m_coach_matching_suspension ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can view coach matching suspensions" ON public.com_m_coach_matching_suspension;
+
+-- [参照] アドミンのみ。登録・更新・削除のポリシーは作らない（admin_set_coach_matching_suspension() 経由のみ）
+CREATE POLICY "Admins can view coach matching suspensions" ON public.com_m_coach_matching_suspension
+FOR SELECT TO authenticated USING (
+    COALESCE(public.get_jwt_user_type(), '') = '0'
+);
+
+---------------------------------------------
+-- コーチがマッチング対象になるために足りない項目 (2026-10-11 追加)
+-- 前提: table/com_m_coach_profile.sql, table/com_m_user.sql（icon_path）, table/com_m_coach_availability.sql
+---------------------------------------------
+-- 【背景】
+-- 生徒の「専属コーチを探す」には、プロフィールを設定し終えたコーチだけを出す。必須の項目は次のとおり
+-- （紹介ビデオは任意。資格の無いコーチには「None」と入力してもらう）。
+--   icon            ... プロフィールアイコン（com_m_user.icon_path）
+--   country         ... 国籍
+--   teaching_years  ... 英語指導年数
+--   education       ... 学歴
+--   qualifications  ... 保有資格
+--   job_experience  ... 職務経験
+--   introduction    ... 自己紹介
+--   availability    ... 空き時間（1件以上。無いと申請できる枠が無い）
+-- 文字の項目は空白だけの入力を未入力とみなす。
+--
+-- 返り値: 足りない項目のコード（上の順。そろっていれば空配列。コーチのプロフィールが無ければ NULL）。
+-- 項目のコードと順は、アプリ側の COACH_MATCHING_REQUIRED_ITEMS（packages/types/coachProfile.ts）と
+-- 判定 getCoachMatchingMissingItems（packages/lib/coachProfile/matchingReadiness.ts）と揃える。
+--
+-- 内部処理専用（get_matchable_coach_ids() / get_coach_matching_status() から呼ぶ）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_coach_matching_missing_items(p_coach_id uuid)
+RETURNS text[]
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT array_remove(ARRAY[
+        CASE WHEN NULLIF(btrim(u.icon_path), '') IS NULL THEN 'icon' END,
+        CASE WHEN p.country_code IS NULL THEN 'country' END,
+        CASE WHEN p.teaching_years IS NULL THEN 'teaching_years' END,
+        CASE WHEN NULLIF(btrim(p.education, E' \t\r\n　'), '') IS NULL THEN 'education' END,
+        CASE WHEN NULLIF(btrim(p.qualifications, E' \t\r\n　'), '') IS NULL THEN 'qualifications' END,
+        CASE WHEN NULLIF(btrim(p.job_experience, E' \t\r\n　'), '') IS NULL THEN 'job_experience' END,
+        CASE WHEN NULLIF(btrim(p.introduction, E' \t\r\n　'), '') IS NULL THEN 'introduction' END,
+        CASE WHEN NOT EXISTS (
+            SELECT 1 FROM public.com_m_coach_availability a
+            WHERE a.coach_id = p.user_id AND a.delete_flg = '0'
+        ) THEN 'availability' END
+    ], NULL)
+    FROM public.com_m_coach_profile p
+    JOIN public.com_m_user u ON u.id = p.user_id
+    WHERE p.user_id = p_coach_id;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_coach_matching_missing_items(uuid) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- コーチのマッチング対象の状態の取得 (2026-10-11 追加)
+-- 前提: function/fn_coach_matching_missing_items.sql, table/com_m_coach_matching_suspension.sql,
+--       table/com_m_coach_profile.sql（accepting_students パッチ）
+---------------------------------------------
+-- 生徒の「専属コーチを探す」に出るかどうかの内訳を返す（get_matchable_coach_ids() と同じ条件）。
+--   - コーチ本人: プロフィール画面の「Student matching」カード（足りない項目・受付・休止中かどうか）
+--   - アドミン  : ユーザー管理のコーチの「マッチング」ダイアログ（休止の理由のメモも返す）
+-- 休止の理由のメモは運営の内部メモのため、アドミン以外には NULL を返す。
+-- 検証:
+--   - 本人・アドミン以外は NOT_AUTHORIZED
+--   - 対象のコーチのプロフィールが無い場合は COACH_NOT_FOUND
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_coach_matching_status(p_coach_id uuid)
+RETURNS TABLE (
+    missing_items text[],
+    accepting_students boolean,
+    is_suspended boolean,
+    suspended_note text,
+    suspended_at timestamptz,
+    is_demo boolean
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_is_admin boolean := COALESCE(public.get_jwt_user_type(), '') = '0';
+BEGIN
+    IF NOT v_is_admin AND p_coach_id IS DISTINCT FROM auth.uid() THEN
+        RAISE EXCEPTION 'NOT_AUTHORIZED: only the coach or admins can view the matching status';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.com_m_coach_profile p
+        JOIN public.com_m_user u ON u.id = p.user_id AND u.user_type = '2'
+        WHERE p.user_id = p_coach_id
+    ) THEN
+        RAISE EXCEPTION 'COACH_NOT_FOUND: %', p_coach_id;
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        public.fn_coach_matching_missing_items(p.user_id),
+        p.accepting_students,
+        s.coach_id IS NOT NULL,
+        CASE WHEN v_is_admin THEN s.note END,
+        s.insert_date,
+        EXISTS (
+            SELECT 1 FROM public.com_t_user_role r
+            WHERE r.user_id = p.user_id AND r.role_id = 'demo_user'
+        )
+    FROM public.com_m_coach_profile p
+    LEFT JOIN public.com_m_coach_matching_suspension s ON s.coach_id = p.user_id
+    WHERE p.user_id = p_coach_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_coach_matching_status(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coach_matching_status(uuid) TO authenticated;
+
+---------------------------------------------
+-- アドミンによるコーチのマッチング休止の設定RPC (2026-10-11 追加)
+-- 前提: table/com_m_coach_matching_suspension.sql
+---------------------------------------------
+-- admin のユーザー管理 → コーチの「マッチング」ダイアログで使う。
+--   - p_suspended = true  ... 休止にする（既に休止中ならメモだけ更新し、休止した日時は変えない）
+--   - p_suspended = false ... 休止を解除する（行を削除。メモも消える）
+-- 休止で止めるのは新しいマッチングだけ（担当中の生徒・確定済みのセッション・回答待ちの申請はそのまま）。
+-- 検証:
+--   - アドミン（JWT の user_type='0'）以外は NOT_AUTHORIZED
+--   - 対象がコーチでない（存在しない）場合は COACH_NOT_FOUND
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_set_coach_matching_suspension(p_coach_id uuid, p_suspended boolean, p_note text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF COALESCE(public.get_jwt_user_type(), '') <> '0' THEN
+        RAISE EXCEPTION 'NOT_AUTHORIZED: only admins can suspend coach matching';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM public.com_m_user WHERE id = p_coach_id AND user_type = '2') THEN
+        RAISE EXCEPTION 'COACH_NOT_FOUND: %', p_coach_id;
+    END IF;
+
+    IF p_suspended THEN
+        INSERT INTO public.com_m_coach_matching_suspension (coach_id, note, suspended_by)
+        VALUES (p_coach_id, NULLIF(btrim(p_note), ''), auth.uid())
+        ON CONFLICT (coach_id) DO UPDATE
+        SET note = EXCLUDED.note,
+            suspended_by = EXCLUDED.suspended_by,
+            update_date = NOW();
+    ELSE
+        DELETE FROM public.com_m_coach_matching_suspension WHERE coach_id = p_coach_id;
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_set_coach_matching_suspension(uuid, boolean, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_set_coach_matching_suspension(uuid, boolean, text) TO authenticated;
+
+---------------------------------------------
+-- マッチング対象コーチID取得関数 (2026-09-28 追加)
+---------------------------------------------
+-- 【背景】
+-- 本番環境でのリリース検証・顧客向けプレゼン用に、デモユーザー（com_t_user_role.role_id =
+-- 'demo_user'）のコーチを運用する。デモコーチが通常の生徒からマッチング申請を受けないよう、
+-- 生徒向けの「専属コーチを探す」(apps/student /coach-matching) の対象から除外する。
+--
+-- 【対象コーチの定義】有効なコーチプロフィール（com_m_coach_profile.delete_flg = '0'）のうち、
+--   - 呼び出した生徒（auth.uid()）がデモユーザーの場合 ... 全コーチ（デモコーチを含む）
+--   - それ以外の場合                                 ... デモユーザーではないコーチのみ
+-- さらに、次をすべて満たすコーチに限る (2026-10-11 追加。担当中・継続の生徒にも例外は設けない)
+--   - コーチ本人が新規の生徒を受け付けている（com_m_coach_profile.accepting_students）
+--   - アドミンが休止にしていない（com_m_coach_matching_suspension に行が無い）
+--   - プロフィールの必須項目と空き時間がそろっている（fn_coach_matching_missing_items() が空）
+-- 内訳は get_coach_matching_status() でコーチ本人・アドミンが確認できる。
+--
+-- com_t_user_role はRLSで本人・adminしか閲覧できず、生徒からはコーチのロールを判定できないため
+-- SECURITY DEFINER とする。戻り値はコーチIDのみで、ロール情報そのものは返さない。
+--
+-- 【呼び出し元】packages/lib/matching/actions/matchingActions.ts
+--   - getCoachBrowseListCore ... コーチ一覧の絞り込み
+--   - createMatchingRequestCore ... 申請先コーチの妥当性チェック（一覧外のコーチIDを直接送る申請を拒否）
+-- admin の直接マッチング（admin_match_student_with_coach）は運営の手動操作のため対象外。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_matchable_coach_ids()
+RETURNS TABLE (coach_id uuid) AS $$
+  SELECT p.user_id
+  FROM public.com_m_coach_profile p
+  WHERE p.delete_flg = '0'
+    AND p.accepting_students
+    AND NOT EXISTS (SELECT 1 FROM public.com_m_coach_matching_suspension s WHERE s.coach_id = p.user_id)
+    AND cardinality(public.fn_coach_matching_missing_items(p.user_id)) = 0
+    AND (
+      -- 呼び出した生徒がデモユーザーなら、デモコーチも対象に含める
+      EXISTS (
+        SELECT 1 FROM public.com_t_user_role r
+        WHERE r.user_id = auth.uid() AND r.role_id = 'demo_user'
+      )
+      OR NOT EXISTS (
+        SELECT 1 FROM public.com_t_user_role r
+        WHERE r.user_id = p.user_id AND r.role_id = 'demo_user'
+      )
+    );
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.get_matchable_coach_ids() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_matchable_coach_ids() TO authenticated;
+
+---------------------------------------------
+-- DDL/function/enqueue_coach_availability_reminders.sql（enqueue_coach_availability_reminders のみ）
+---------------------------------------------
+-- 見直しの通知を登録する（pg_cron から毎日実行）。戻り値は通知したコーチの数
+CREATE OR REPLACE FUNCTION public.enqueue_coach_availability_reminders()
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_count integer;
+BEGIN
+    WITH coaches AS (
+        SELECT
+            p.user_id AS coach_id,
+            COUNT(a.availability_id) AS slot_count,
+            -- 確認日時が無い（本機能の追加前から登録している）場合は、空き時間の最終更新を確認日時とみなす
+            COALESCE(p.availability_confirmed_at, MAX(a.update_date)) AS confirmed_at
+        FROM public.com_m_coach_profile p
+        JOIN public.com_m_user u ON u.id = p.user_id AND u.user_type = '2' AND u.delete_flg = '0'
+        LEFT JOIN public.com_m_coach_availability a ON a.coach_id = p.user_id AND a.delete_flg = '0'
+        WHERE p.delete_flg = '0'
+          AND p.accepting_students
+          AND NOT EXISTS (SELECT 1 FROM public.com_m_coach_matching_suspension s WHERE s.coach_id = p.user_id)
+          AND NOT EXISTS (
+              SELECT 1 FROM public.com_t_user_role r
+              WHERE r.user_id = p.user_id AND r.role_id = 'demo_user'
+          )
+        GROUP BY p.user_id, p.availability_confirmed_at
+    ),
+    targets AS (
+        SELECT c.coach_id, CASE WHEN c.slot_count = 0 THEN 'empty' ELSE 'review' END AS kind
+        FROM coaches c
+        WHERE (c.slot_count = 0 OR c.confirmed_at IS NULL OR c.confirmed_at < NOW() - interval '14 days')
+          AND NOT EXISTS (
+              SELECT 1 FROM public.com_t_notification n
+              WHERE n.user_id = c.coach_id
+                AND n.notification_type = 'COACH_AVAILABILITY_REMINDER'
+                AND n.dedup_key = 'availability'
+                AND n.occurred_at >= NOW() - interval '14 days'
+          )
+    ),
+    upserted AS (
+        INSERT INTO public.com_t_notification (user_id, notification_type, dedup_key, payload, link_path)
+        SELECT coach_id, 'COACH_AVAILABILITY_REMINDER', 'availability', jsonb_build_object('kind', kind), '/availability'
+        FROM targets
+        ON CONFLICT (user_id, notification_type, dedup_key) DO UPDATE
+        SET payload = EXCLUDED.payload,
+            link_path = EXCLUDED.link_path,
+            is_read = FALSE,
+            read_at = NULL,
+            occurred_at = NOW(),
+            update_date = NOW()
+        RETURNING 1
+    )
+    SELECT COUNT(*) INTO v_count FROM upserted;
+
+    RETURN v_count;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.enqueue_coach_availability_reminders() FROM PUBLIC, anon, authenticated;
+
+COMMIT;

@@ -9,6 +9,11 @@
 -- 【対象コーチの定義】有効なコーチプロフィール（com_m_coach_profile.delete_flg = '0'）のうち、
 --   - 呼び出した生徒（auth.uid()）がデモユーザーの場合 ... 全コーチ（デモコーチを含む）
 --   - それ以外の場合                                 ... デモユーザーではないコーチのみ
+-- さらに、次をすべて満たすコーチに限る (2026-10-11 追加。担当中・継続の生徒にも例外は設けない)
+--   - コーチ本人が新規の生徒を受け付けている（com_m_coach_profile.accepting_students）
+--   - アドミンが休止にしていない（com_m_coach_matching_suspension に行が無い）
+--   - プロフィールの必須項目と空き時間がそろっている（fn_coach_matching_missing_items() が空）
+-- 内訳は get_coach_matching_status() でコーチ本人・アドミンが確認できる。
 --
 -- com_t_user_role はRLSで本人・adminしか閲覧できず、生徒からはコーチのロールを判定できないため
 -- SECURITY DEFINER とする。戻り値はコーチIDのみで、ロール情報そのものは返さない。
@@ -23,6 +28,9 @@ RETURNS TABLE (coach_id uuid) AS $$
   SELECT p.user_id
   FROM public.com_m_coach_profile p
   WHERE p.delete_flg = '0'
+    AND p.accepting_students
+    AND NOT EXISTS (SELECT 1 FROM public.com_m_coach_matching_suspension s WHERE s.coach_id = p.user_id)
+    AND cardinality(public.fn_coach_matching_missing_items(p.user_id)) = 0
     AND (
       -- 呼び出した生徒がデモユーザーなら、デモコーチも対象に含める
       EXISTS (

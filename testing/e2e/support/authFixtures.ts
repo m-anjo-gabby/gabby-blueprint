@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "../../helpers/auth.ts";
+import { fillCoachMatchingProfile } from "../../helpers/coach-matching-profile.ts";
 
 /**
  * 認証まわり（パスワード再設定・招待）のE2E用の使い捨てデータ。
@@ -160,8 +161,8 @@ export async function grantLiveLicense(
 }
 
 /**
- * 使い捨てのコーチを作る（コーチのプロフィールはユーザー作成時のトリガーで作られる）。
- * 空き時間（`com_m_coach_availability`）は UTC の曜日（0=日〜6=土）・時刻で渡す。生徒の「専属コーチを探す」に表示され、申請を受けられる。
+ * 使い捨てのコーチを作る（コーチのプロフィールはユーザー作成時のトリガーで作られる。アイコンと必須項目はテスト用の値で埋める）。
+ * 空き時間（`com_m_coach_availability`）は UTC の曜日（0=日〜6=土）・時刻で渡す。1件以上あれば生徒の「専属コーチを探す」に表示され、申請を受けられる。
  */
 export async function createDisposableCoach(
   fixture: AuthFixture,
@@ -184,6 +185,7 @@ export async function createDisposableCoach(
   const coachId = data.user.id;
   fixture.userIds.push(coachId);
   await admin.from("com_m_user").update({ timezone: params.timezone }).eq("id", coachId);
+  await fillCoachMatchingProfile(admin, coachId, { countryCode: "US" });
   if (params.availability.length > 0) {
     const { error: availabilityError } = await admin.from("com_m_coach_availability").insert(
       params.availability.map((a) => ({ coach_id: coachId, day_of_week: a.dayOfWeek, start_time: a.startTime, end_time: a.endTime }))

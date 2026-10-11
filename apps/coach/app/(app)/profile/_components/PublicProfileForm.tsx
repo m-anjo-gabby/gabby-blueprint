@@ -12,6 +12,7 @@ import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyT
 import { CountryMaster } from '@gabby/types/country';
 import { ProfileFieldGroup } from './ProfileFieldGroup';
 import { ProfileTextAreaField } from './ProfileTextAreaField';
+import type { CoachProfileFormProgress } from '../_lib/profileCompleteness';
 
 /**
  * 自由記述の項目グループ定義。同じ形（見出しアイコン + テキストエリアの並び）の項目を
@@ -37,7 +38,12 @@ const TEXT_FIELD_GROUPS: {
         placeholder: 'e.g. University of Alberta - Bachelor of Science in Nursing',
         rows: 2,
       },
-      { key: 'qualifications', label: 'Qualifications', placeholder: 'e.g. TESOL Certificate', rows: 2 },
+      {
+        key: 'qualifications',
+        label: 'Qualifications',
+        placeholder: 'e.g. TESOL Certificate (enter "None" if you have none)',
+        rows: 2,
+      },
     ],
   },
   {
@@ -67,7 +73,8 @@ interface PublicProfileFormProps {
   onRemoveIntroVideo: () => Promise<void>;
   onSave: () => void;
   isSaving: boolean;
-  completionPercent: number;
+  /** Required fields filled in this card (everything except the introduction video) */
+  formProgress: CoachProfileFormProgress;
 }
 
 export function PublicProfileForm({
@@ -82,8 +89,10 @@ export function PublicProfileForm({
   onRemoveIntroVideo,
   onSave,
   isSaving,
-  completionPercent,
+  formProgress,
 }: PublicProfileFormProps) {
+  const isComplete = formProgress.filled >= formProgress.total;
+
   return (
     <Card>
       <CardHeader>
@@ -91,17 +100,18 @@ export function PublicProfileForm({
           Public Coach Profile
           <span
             className={
-              completionPercent >= 100
+              isComplete
                 ? 'inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold px-2 py-0.5'
-                : 'inline-flex items-center rounded-full bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-0.5'
+                : 'inline-flex items-center rounded-full bg-amber-50 text-amber-700 text-[11px] font-bold px-2 py-0.5'
             }
           >
-            {completionPercent}% complete
+            {isComplete ? 'Required fields complete' : `${formProgress.filled} / ${formProgress.total} required fields`}
           </span>
         </CardTitle>
         <CardDescription>
-          These details are shown to students when they choose a coach. The panel on the right previews your changes
-          as you type, but nothing is saved until you press Save Public Profile below.
+          These details are shown to students when they choose a coach. All fields except the introduction video are
+          required to appear in the coach search. The panel on the right previews your changes as you type, but nothing
+          is saved until you press Save Public Profile below.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -186,7 +196,9 @@ export function PublicProfileForm({
             />
 
             <div className="space-y-1.5">
-              <Label>Introduction Video</Label>
+              <Label>
+                Introduction Video <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
               <VideoUploader
                 currentVideoUrl={introVideoUrl}
                 onUpload={onUploadIntroVideo}

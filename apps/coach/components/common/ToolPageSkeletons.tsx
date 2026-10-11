@@ -134,6 +134,8 @@ export function ProfileSkeleton() {
       <div className="max-w-330">
         <div aria-hidden className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
           <div className="space-y-6">
+            {/* Student matching */}
+            <Skeleton className="h-32 w-full rounded-2xl" />
             <Skeleton className="h-40 w-full rounded-2xl" />
             {/* My Rating */}
             <MyRatingCardSkeleton />

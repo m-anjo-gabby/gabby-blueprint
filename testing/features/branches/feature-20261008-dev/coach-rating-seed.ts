@@ -172,7 +172,7 @@ const coachEmail = `${TAG}-rating-coach@gabby-qa-test.example`;
 const coachId = await kit.ensureUser({ email: coachEmail, userType: "2", userName: `QA Coach Rating ${TAG}`, clientId, timezone: COACH_TIMEZONE });
 await kit.ensureLatestTermsAgreed(coachId);
 // プロフィールの作成と同時に、初期値の評価（3項目とも4）がトリガーで1件入る
-await kit.ensureCoachProfile(coachId);
+await kit.ensureCoachProfile(coachId, "US");
 await kit.ensureCoachAvailability(coachId, COACH_TIMEZONE, [1, 2, 3, 4, 5], "09:00:00", "22:00:00");
 
 const adminClient = await signInAsRole("qa-admin@gabby-qa-test.example", PASSWORD);

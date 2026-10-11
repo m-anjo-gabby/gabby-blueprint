@@ -13,6 +13,9 @@
 - 見直し: 14日ごとにアプリ内通知（`COACH_AVAILABILITY_REMINDER`。メールは送らない）で見直しを促す。空き時間が0件の
   コーチには登録を促す（`enqueue_coach_availability_reminders`、毎日 00:15 UTC）。空き時間の保存または「No changes needed」で
   確認日時（`com_m_coach_profile.availability_confirmed_at`）を更新し、通知を既読にする。
+  新規の生徒の受付をOFFにしているコーチ・アドミンが休止にしているコーチには通知しない（空き時間はマッチングにだけ使うため）。
+- 空き時間が0件のコーチは、プロフィールを設定し終えていても生徒の「専属コーチを探す」に出ない
+  （[専属コーチを探す（student）](../student/coach-matching.md)「一覧に出るコーチ」）。
 
 ## この画面に来る経路
 
@@ -34,7 +37,7 @@
 | タイムゾーンバッジ | 常時表示（例: "Asia/Tokyo (UTC+09:00)"） | 表示のみ。変更はプロフィール画面で行う |
 | 説明文 | "Sessions are booked in 30-minute blocks (each lesson runs 25 minutes)." と、生徒には同じ時刻で表示されるため夏時間の切り替えでこの画面の時刻が1時間ずれる旨 | 表示のみ |
 | 夏時間の切り替えの案内 | 14日以内にコーチのタイムゾーンの時差が変わる場合のみ（例: "Daylight saving time changes on Nov 1, 2026. From then, your availability will show 1 hour earlier ..."） | 表示のみ |
-| 最終確認日 | 空き時間が1件以上ある場合 "Last reviewed {日付}."（未確認なら "Not reviewed yet."）。確認から14日以上たつと見直しを促す一文を足す。0件の場合は登録を促す文言 | 表示のみ |
+| 最終確認日 | 空き時間が1件以上ある場合 "Last reviewed {日付}."（未確認なら "Not reviewed yet."）。確認から14日以上たつと見直しを促す一文を足す。0件の場合は黄色の枠で「You have no availability yet. You will not appear in the students' coach search until you add some.」 | 表示のみ |
 | 「No changes needed」ボタン | 空き時間が1件以上あり、保存前の変更が無い場合に活性 | 変更せずに確認済みにする（`confirm_my_coach_availability`）。見直しの通知も既読になる |
 | 週間グリッドのセル | 1マス30分。クリックまたはドラッグで塗る/消せる（Calendly風） | クリックした状態（選択/解除）を起点に、ドラッグした範囲全体が同じ状態になる |
 | 選択中の時間帯チップ | 連続する30分マスをまとめた範囲ごとに1件表示（例: "Mon 09:00 - 12:00"。コーチの現地時刻） | 表示のみ |

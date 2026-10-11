@@ -117,3 +117,19 @@ DROP TRIGGER IF EXISTS trg_coach_profile_initial_rating ON public.com_m_coach_pr
 CREATE TRIGGER trg_coach_profile_initial_rating
 AFTER INSERT ON public.com_m_coach_profile
 FOR EACH ROW EXECUTE FUNCTION public.trg_create_initial_coach_rating();
+
+---------------------------------------------
+-- 追加パッチ: 新規の生徒の受付（マッチング対象のON/OFF） (2026-10-11)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- コーチにはライセンスの概念が無いため、休止するコーチが生徒の「専属コーチを探す」に出ないよう、
+-- コーチ本人が新規の生徒の受付をON/OFFできるようにする（初期値はON）。アドミンによる休止は
+-- 別テーブル（table/com_m_coach_matching_suspension.sql）。一覧に出る条件は get_matchable_coach_ids() 参照
+-- （受付ON・休止でない・プロフィールの必須項目と空き時間がそろっている）。
+-- OFFで止めるのは新しいマッチングだけで、担当中の生徒・確定済みのセッションはそのまま続く。
+---------------------------------------------
+ALTER TABLE public.com_m_coach_profile
+  ADD COLUMN IF NOT EXISTS accepting_students boolean NOT NULL DEFAULT true;
+
+COMMENT ON COLUMN public.com_m_coach_profile.accepting_students IS '新規の生徒の受付（コーチ本人が切り替える。falseの間は生徒のコーチ選択に出さない）';

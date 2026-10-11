@@ -19,7 +19,7 @@
 ## 前提条件
 
 - 生徒: 有効なライブ付き契約のライセンスとチケット（`com_t_user_session_ticket`。`weekly_frequency` がコマ数）。開始前の次の契約でも申請できる。
-- コーチ: 有効なコーチプロフィール（`com_m_coach_profile.delete_flg = '0'`）と、1件以上の空き時間。デモコーチ（`demo_user`）はデモの生徒にだけ対象になる（`get_matchable_coach_ids`）。
+- コーチ: 有効なコーチプロフィール（`com_m_coach_profile.delete_flg = '0'`）で、アイコンとプロフィールの必須6項目（紹介ビデオは任意）と1件以上の空き時間がそろい（`fn_coach_matching_missing_items`）、本人が新規の生徒を受け付けていて（`accepting_students`）、アドミンが休止にしていない（`com_m_coach_matching_suspension`）。デモコーチ（`demo_user`）はデモの生徒にだけ対象になる（`get_matchable_coach_ids`）。テスト用のコーチは `testing/helpers/coach-matching-profile.ts` で必須項目を埋める。
 - アカウント: 申請〜承認はデータを作るため、使い捨ての生徒・コーチを都度作る（[FIXTURES.md](../../../FIXTURES.md)「アカウントの種類と使い分け」）。固定アカウントは閲覧の確認だけに使う。
 
 ## 時刻の基準
@@ -75,6 +75,7 @@ status 値の意味: [_GLOSSARY.md](../_GLOSSARY.md#com_t_matching_requeststatus
 |---|---|---|---|
 | 1 | ライブ付き契約の有効なチケットが無い生徒が画面を開く | 「この機能はライブセッション付きプランの方のみ…」のみ表示 | UI |
 | 2 | 通常の生徒がデモコーチへ申請（コーチIDを直接指定） | 「この操作を行う権限がありません。」（`not_eligible`） | RPC（UI導線なし） |
+| 2b | 通常の生徒が、一覧に出ないコーチ（必須項目の未設定・本人の受付OFF・アドミンの休止）へ申請（コーチIDを直接指定） | `not_eligible`。外れる前に届いていた回答待ちの申請は残り、承認・否認できる | RPC（UI導線なし。`testing/features/branches/feature-20261008-dev/coach-matching-visibility-check.ts` で一覧の出し分けと権限を確認） |
 | 3 | 他人のチケット、またはコマ数を超える `slot_no` で申請 | `not_eligible`（RLS でも他人のチケットへの登録は拒否） | RPC（UI導線なし） |
 | 4 | 申請した枠の初回の回（24時間以上先・契約開始以降）がコーチの空き時間（UTC）に収まらない | `invalid_input`（「希望時間がコーチの対応可能時間内に収まっているか…」） | RPC（UI導線なし） |
 | 5 | 契約期間内に申請した枠の回が無い（初回が契約終了より後） | `invalid_input` | RPC（UI導線なし） |
@@ -114,3 +115,6 @@ status 値の意味: [_GLOSSARY.md](../_GLOSSARY.md#com_t_matching_requeststatus
 | 高 | 予約できる回数の割合での申請・承認、取り下げ | 実装済み: `e2e/tests/matching/matching-bookable-rate.spec.ts`（〇△×の表示、△の了承、送信直後の取り下げとコーチへの通知、申請後に予定が埋まると承認不可（#6）、重なる回を飛ばした成立と通知の回数、他の生徒の承認待ちと重なる枠は×（#14）、アドミンの直接マッチングは割合の基準なし・0回なら不可。コーチの予定は休みで作る） |
 | 中 | コーチの空き時間の保存・確認・削除 | 実装済み: `e2e/tests/coach/availability.spec.ts`（手順1・5。現地時刻で選んだ枠が UTC で保存され、保存・「No changes needed」で確認日時が更新される） |
 | 低 | コーチの空き時間の見直し通知 | 対象・14日の間隔・保存で既読（pg_cron の処理は RPC・データで確認し、保存・「No changes needed」はコーチの画面で確認） |
+| 高 | 一覧に出るコーチの出し分け（必須項目・本人の受付・アドミンの休止） | 未実装（2026-10-11 時点。DB の判定と権限は `testing/features/branches/feature-20261008-dev/coach-matching-visibility-check.ts` で確認済み）。生徒の「専属コーチを探す」で、必須項目が欠けたコーチ・受付OFFのコーチ・休止中のコーチが出ず、そろう・ONに戻す・解除すると出ること。休止・OFFの前に届いた申請はコーチが承認できること（#2b） |
+| 中 | コーチのプロフィールの Student matching カード | 未実装（2026-10-11 時点）。状態バッジ、受付スイッチの保存と失敗時の巻き戻し、未設定の項目の案内（空き時間は `/availability` へ）、保存・アイコンの変更での即時反映、休止中の注記（メモは出さない）、必須項目のバッジ「n / 6 required fields」 |
+| 中 | アドミンのマッチング対象の設定ダイアログ | 未実装（2026-10-11 時点）。内訳（必須項目・本人の受付・デモコーチの注記）の表示、休止と理由のメモの保存・解除（ja/en の文言） |
