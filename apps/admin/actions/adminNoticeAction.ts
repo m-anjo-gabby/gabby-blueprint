@@ -5,17 +5,12 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { NoticeItem, NoticeAttachment, NoticeType, NoticeTargetType } from '@gabby/types/notice';
+import { NOTICE_TYPES, NoticeAttachment, NoticeType, NoticeTargetType, type AdminNoticeListItem } from '@gabby/types/notice';
+import { containsPattern } from '@gabby/lib/supabase/ilike';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { USER_TYPES } from '@gabby/types/user';
 
 const logger = createLogger('admin');
-
-export interface AdminNoticeFilterParams {
-  page?: number;
-  pageSize?: number;
-  searchQuery?: string;
-  noticeType?: string;
-}
 
 export interface NoticeFormData {
   notice_id?: string;
@@ -66,19 +61,17 @@ export async function utcToJstInputStr(utcStr: string | null | undefined): Promi
 }
 
 /**
- * お知らせ一覧取得（ページネーション・検索・顧客名結合付き）
+ * お知らせ一覧取得（ページネーション・タイトルの部分一致検索・種別での絞り込み・顧客名結合付き）
  */
-export async function getNotices(params: AdminNoticeFilterParams = {}) {
+export async function getNotices(params: ListParams<'type'>): Promise<ListResult<AdminNoticeListItem>> {
   const ctx = await getLogContext();
-  const page = params.page || 1;
-  const pageSize = params.pageSize || 10;
-  const searchQuery = params.searchQuery || '';
-  const noticeType = params.noticeType || '';
+  const { q, filters } = params;
+  // 種別は既知の値だけを条件にする（旧URLの type=ALL・不正な値は「すべて」として扱う）
+  const noticeType = Object.hasOwn(NOTICE_TYPES, filters.type) ? filters.type : '';
 
   try {
     const supabase = createAdminClient();
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+    const [from, to] = toRange(params);
 
     let query = supabase
       .from('com_m_notice')
@@ -90,11 +83,11 @@ export async function getNotices(params: AdminNoticeFilterParams = {}) {
       `, { count: 'exact' })
       .eq('delete_flg', '0');
 
-    if (searchQuery) {
-      query = query.ilike('title', `%${searchQuery}%`);
+    if (q) {
+      query = query.ilike('title', containsPattern(q));
     }
 
-    if (noticeType && noticeType !== 'ALL') {
+    if (noticeType) {
       query = query.eq('notice_type', noticeType);
     }
 
@@ -104,21 +97,21 @@ export async function getNotices(params: AdminNoticeFilterParams = {}) {
       .range(from, to);
 
     if (error) {
-      logger.error('notice:get_notices_failed', error.message, { ...ctx, err: error, payload: params });
+      logger.error('notice:get_notices_failed', error.message, { ...ctx, err: error, payload: { from, to, noticeType } });
       throw error;
     }
 
-    const formattedNotices = (data || []).map((item: any) => ({
+    const rows = (data || []).map(({ com_m_client, ...item }) => ({
       ...item,
-      client_name: item.com_m_client?.client_name || null,
-    }));
+      client_name: (com_m_client as { client_name: string } | null)?.client_name ?? null,
+    })) as AdminNoticeListItem[];
 
     return {
-      notices: formattedNotices,
+      rows,
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('notice:get_notices_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: params });
+    logger.error('notice:get_notices_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeType } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }

@@ -27,14 +27,30 @@
       "searchPlaceholder": "顧客名で検索...",
       "emptyMessage": "見つかりませんでした。"
     },
+    "list": {
+      "search": "検索",
+      "clear": "条件をクリア",
+      "totalCount": "全 <styled>{count}</styled> 件",
+      "prevPage": "前のページ",
+      "nextPage": "次のページ"
+    },
     "monthPicker": {
       "prevYear": "前年",
       "nextYear": "翌年",
       "yearLabel": "{year}年",
       "months": {
-        "m1": "1月", "m2": "2月", "m3": "3月", "m4": "4月",
-        "m5": "5月", "m6": "6月", "m7": "7月", "m8": "8月",
-        "m9": "9月", "m10": "10月", "m11": "11月", "m12": "12月"
+        "m1": "1月",
+        "m2": "2月",
+        "m3": "3月",
+        "m4": "4月",
+        "m5": "5月",
+        "m6": "6月",
+        "m7": "7月",
+        "m8": "8月",
+        "m9": "9月",
+        "m10": "10月",
+        "m11": "11月",
+        "m12": "12月"
       }
     },
     "monthLabel": "{year}年{month}月",
@@ -153,18 +169,42 @@
     "noIssues": "問題なし",
     "alertBadge": "{label} {count}件",
     "modules": {
-      "clients": { "title": "顧客管理", "desc": "法人・団体アカウントの管理", "countLabel": "登録顧客数", "alertLabel": "有効契約なし" },
-      "contracts": { "title": "契約管理", "desc": "ライセンス発行・有効期限確認", "countLabel": "稼働中の契約", "alertLabel": "期限間近・超過契約" },
-      "users": { "title": "ユーザー管理", "desc": "受講生・講師の権限管理", "countLabel": "総ユーザー数", "alertLabel": "招待対応待ち" },
-      "contents": { "title": "教材管理", "desc": "カリキュラム・コンテンツ更新", "countLabel": "登録教材数", "alertLabel": "非公開教材" },
-      "notice": { "title": "お知らせ管理", "desc": "生徒・顧客への告知配信", "countLabel": "公開中のお知らせ", "alertLabel": "下書き・掲載期限切れ" }
+      "clients": {
+        "title": "顧客管理",
+        "desc": "法人・団体アカウントの管理",
+        "countLabel": "登録顧客数",
+        "alertLabel": "有効契約なし"
+      },
+      "contracts": {
+        "title": "契約管理",
+        "desc": "ライセンス発行・有効期限確認",
+        "countLabel": "稼働中の契約",
+        "alertLabel": "期限間近・超過契約"
+      },
+      "users": {
+        "title": "ユーザー管理",
+        "desc": "受講生・講師の権限管理",
+        "countLabel": "総ユーザー数",
+        "alertLabel": "招待対応待ち"
+      },
+      "contents": {
+        "title": "教材管理",
+        "desc": "カリキュラム・コンテンツ更新",
+        "countLabel": "登録教材数",
+        "alertLabel": "非公開教材"
+      },
+      "notice": {
+        "title": "お知らせ管理",
+        "desc": "生徒・顧客への告知配信",
+        "countLabel": "公開中のお知らせ",
+        "alertLabel": "下書き・掲載期限切れ"
+      }
     }
   },
   "users": {
     "page": {
       "title": "ユーザー管理",
-      "subtitle": "各テナントに所属するユーザーアカウントの作成・編集および権限管理を行います",
-      "loading": "ユーザーデータを読み込み中..."
+      "subtitle": "各テナントに所属するユーザーアカウントの作成・編集および権限管理を行います"
     },
     "table": {
       "user": "ユーザー",
@@ -189,11 +229,7 @@
       "editButton": "編集",
       "actions": "操作",
       "searchPlaceholder": "検索語句を入力...",
-      "searchButton": "検索",
-      "totalCount": "全 <styled>{count}</styled> 件",
-      "noData": "データが見つかりませんでした。"
-    },
-    "filter": {
+      "noData": "データが見つかりませんでした。",
       "allUserTypes": "すべての区分"
     },
     "form": {
@@ -506,9 +542,7 @@
       "industryOther": "その他",
       "industryNotSet": "未設定",
       "registeredDateHeader": "登録日",
-      "searchPlaceholder": "顧客名、コードで検索...",
-      "searchButton": "検索",
-      "totalCount": "全 <styled>{count}</styled> 件",
+      "searchPlaceholder": "顧客名で検索...",
       "noData": "顧客データが見つかりませんでした。"
     },
     "form": {
@@ -558,7 +592,6 @@
       "deleteDialogBody": "「<bold>{name}</bold>」を削除してもよろしいですか？ 既にこのタイムゾーンを設定しているユーザーには影響しませんが、選択肢からは表示されなくなります。",
       "deleteConfirm": "削除する",
       "searchPlaceholder": "タイムゾーン名、表示名称で検索...",
-      "totalCount": "全 <styled>{count}</styled> 件",
       "noData": "タイムゾーンデータが見つかりませんでした。",
       "toastDeleted": "タイムゾーンを削除しました",
       "toastDeleteFailed": "削除に失敗しました"
@@ -618,13 +651,9 @@
       "editTooltip": "規約を編集",
       "deleteTooltip": "規約を削除",
       "searchPlaceholder": "バージョン名で検索...",
-      "searchButton": "検索",
-      "totalCount": "全 <styled>{count}</styled> 件",
-      "deletingOverlay": "削除しています...",
       "noData": "規約データが見つかりませんでした。",
       "deleteDialogTitle": "規約を削除しますか？",
       "deleteDialogBody": "{termType} のバージョン「<bold>{version}</bold>」を完全に削除します。この操作は取り消すことができません。",
-      "deleteConfirming": "削除中...",
       "deleteConfirm": "はい、削除します",
       "toastDeleted": "規約を削除しました",
       "toastUnexpectedError": "予期せぬエラーが発生しました"
@@ -882,12 +911,12 @@
   "notice": {
     "page": {
       "title": "お知らせ管理",
-      "subtitle": "アプリ内でお知らせする通知・キャンペーン・メンテナンス情報の管理を行います。"
+      "subtitle": "アプリ内でお知らせする通知・キャンペーン・メンテナンス情報の管理を行います。",
+      "createButton": "新規お知らせ作成"
     },
     "table": {
       "searchPlaceholder": "タイトルで検索...",
       "allTypes": "すべての種別",
-      "createButton": "新規お知らせ作成",
       "titleHeader": "タイトル",
       "typeHeader": "種別",
       "targetHeader": "対象",
@@ -908,10 +937,8 @@
       "editTooltip": "編集",
       "readsTooltip": "既読状況を確認",
       "deleteTooltip": "削除",
-      "paginationSummary": "全 {total} 件中 {shown} 件表示",
       "deleteDialogTitle": "お知らせを削除しますか？",
       "deleteDialogBody": "この操作を取り消すことはできません。このお知らせはユーザー画面から削除されます。",
-      "deleteConfirming": "削除中...",
       "deleteConfirm": "削除する",
       "toastDeleted": "お知らせを削除しました",
       "toastDeleteFailed": "削除に失敗しました",
@@ -1062,7 +1089,6 @@
       "participantsButton": "参加者",
       "manageParticipants": "参加者・アナウンスを管理",
       "searchPlaceholder": "タイトルで検索...",
-      "totalCount": "全 <styled>{count}</styled> 件",
       "noData": "カレンダーイベントが見つかりませんでした。",
       "deleteDialogTitle": "カレンダーイベントの削除",
       "deleteDialogBody": "「<bold>{title}</bold>」を削除してもよろしいですか？削除後は生徒/コーチのカレンダーから表示されなくなります。",
@@ -1349,12 +1375,8 @@
       "statusCancelled": "解約済",
       "statusEnded": "期間終了",
       "statusUpcoming": "開始待ち",
-      "statusActive": "稼働中"
-    },
-    "dataTable": {
+      "statusActive": "稼働中",
       "searchPlaceholder": "顧客名・契約名で契約を検索...",
-      "searchButton": "検索",
-      "totalCount": "全 <styled>{count}</styled> 件",
       "noData": "一致する契約情報が見つかりませんでした。"
     },
     "formDialog": {
@@ -1750,9 +1772,7 @@
       "actionsHeader": "操作",
       "accessAlertHint": "公開先を設定してください",
       "searchPlaceholder": "教材名、ラベルで検索...",
-      "searchButton": "検索",
       "typeFilterAllOption": "すべての種別",
-      "totalCount": "全 <styled>{count}</styled> 件",
       "noData": "教材データが見つかりませんでした。",
       "editorButton": {
         "word": "単語を編集",

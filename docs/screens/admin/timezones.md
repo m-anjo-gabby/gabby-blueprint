@@ -21,7 +21,9 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 検索欄 | 常時表示 | タイムゾーン名・表示名称でその場で絞り込む |
+| 検索欄 | 常時表示 | IANAタイムゾーン名・表示名称（日英）の部分一致で絞り込む（全件を取得済みのため、ブラウザ側で絞る）。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る。サーバーへの再取得はしない） |
+| 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
+| 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | 「新規登録」ボタン | 常時表示 | 登録ダイアログを開く |
 | 一覧の各列 | 表示順（SEQ）、表示名称（日英2段）、IANAタイムゾーン名、現地の現在日時 | 表示のみ |
 | 表示名称列 | 画面の言語（日本語/英語）の名称を上段（太字）、もう一方を下段に表示 | 表示のみ（検索は日英どちらの名称でもヒットする） |
@@ -50,6 +52,7 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/timezones/page.tsx`
-- `apps/admin/app/(app)/timezones/_components/TimezoneDataTable.tsx`
+- `apps/admin/app/(app)/timezones/_components/TimezoneDataTable.tsx`, `_components/columns.tsx`（列の定義）
+- `apps/admin/components/list/`（一覧の共通部品: `useListQuery`・`ListToolbar`・`DataTable`・`ListSelectFilter`・`ClientFilter`）, `apps/admin/lib/list.ts`（URLの条件の読み取り・ページ範囲）
 - `apps/admin/app/(app)/timezones/_components/TimezoneFormDialog.tsx`
 - `apps/admin/actions/adminTimezoneAction.ts`（`getTimezones`, `upsertTimezone`, `deleteTimezone`）

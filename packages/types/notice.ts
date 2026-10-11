@@ -74,3 +74,10 @@ export interface NoticeItem {
   // 結合フィールド
   is_read: boolean;        // com_t_notice_read から結合
 }
+
+/**
+ * 管理画面のお知らせ一覧の行（既読の結合は無く、配信先の顧客名を結合する）
+ */
+export interface AdminNoticeListItem extends Omit<NoticeItem, 'is_read'> {
+  client_name: string | null;
+}

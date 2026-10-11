@@ -31,9 +31,11 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 検索欄 | 常時表示 | キーワード検索。Enterまたは「検索」ボタンで実行し、1ページ目に戻る |
-| 区分フィルタ | 常時表示 | 「すべての区分」「生徒」「コーチ」「管理者」を切り替えて絞り込む |
-| 顧客フィルタ | 常時表示 | 検索式セレクトで顧客を選択して絞り込む（未選択時は「すべての顧客」で全件対象）。選択すると1ページ目に戻る |
+| 検索欄 | 常時表示 | 氏名・メールアドレス・所属顧客名の部分一致で検索。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る）。入力した文字はそのまま文字として検索する（`%`・`,`等も特別な意味を持たない） |
+| 区分フィルタ | 常時表示 | 「すべての区分」「生徒」「コーチ」「管理者」を切り替えて絞り込む（URLの`userType`）。選択すると1ページ目に戻る |
+| 顧客フィルタ | 常時表示 | 検索式セレクトで顧客を選択して絞り込む（未選択時は「すべての顧客」で全件対象。URLの`clientId`）。選択すると1ページ目に戻る |
+| 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
+| 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | 一覧の「ユーザー」列 | 氏名・メールアドレス | 表示のみ |
 | 一覧のステータスバッジ | ログイン実績あり:「アクティブ」／招待確認済み・未ログイン:「招待確認済」／招待メール未送信・送信失敗:「送信失敗」（ツールチップにエラー内容）／それ以外:「招待中」 | 表示のみ |
 | 一覧の「所属顧客」列 | 顧客名。未所属なら「未所属」 | 表示のみ |
@@ -160,7 +162,7 @@
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
-| データ読み込み中 | スピナー付きプレースホルダー | ユーザー一覧取得中（Suspense） |
+| データ読み込み中 | 見出し・操作欄・表の骨組み（`users/loading.tsx`）。検索・絞り込み・ページ送りの取り直し中は表を薄く表示する | 画面を開いた直後／条件を変えた直後 |
 | 検索結果が空 | 「データが見つかりませんでした。」 | 検索・フィルタ条件に一致するユーザーが0件の場合 |
 | 割当可能なライセンスなし | 選択欄に「割当可能な契約プランがありません」、登録・保存ボタンが非活性 | 対象顧客に有効な契約が無い場合 |
 
@@ -171,10 +173,10 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/users/page.tsx`
-- `apps/admin/app/(app)/users/_components/user-data-table.tsx`
+- `apps/admin/app/(app)/users/_components/UserDataTable.tsx`, `apps/admin/app/(app)/users/_lib/list.ts`（絞り込みのURLのクエリ名）
+- `apps/admin/components/list/`（一覧の共通部品: `useListQuery`・`ListToolbar`・`DataTable`・`ListSelectFilter`・`ClientFilter`）, `apps/admin/lib/list.ts`（URLの条件の読み取り・ページ範囲）
 - `apps/admin/app/(app)/users/_components/columns.tsx`
-- `apps/admin/app/(app)/users/_components/UserTypeFilter.tsx`
-- `apps/admin/components/common/ClientFilter.tsx`（顧客フィルタ。`contracts`一覧とも共用する共通
+- `apps/admin/components/list/ClientFilter.tsx`（顧客フィルタ。`contracts`一覧とも共用する共通
   コンポーネント。URLクエリパラメータ`clientId`と同期）
 - `apps/admin/app/(app)/users/_components/UserFormDialog.tsx`
 - `apps/admin/app/(app)/users/_components/LicenseFormDialog.tsx`

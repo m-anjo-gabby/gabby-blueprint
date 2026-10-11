@@ -27,14 +27,30 @@
       "searchPlaceholder": "Search by client name...",
       "emptyMessage": "No results found."
     },
+    "list": {
+      "search": "Search",
+      "clear": "Clear filters",
+      "totalCount": "<styled>{count}</styled> total",
+      "prevPage": "Previous page",
+      "nextPage": "Next page"
+    },
     "monthPicker": {
       "prevYear": "Previous year",
       "nextYear": "Next year",
       "yearLabel": "{year}",
       "months": {
-        "m1": "Jan", "m2": "Feb", "m3": "Mar", "m4": "Apr",
-        "m5": "May", "m6": "Jun", "m7": "Jul", "m8": "Aug",
-        "m9": "Sep", "m10": "Oct", "m11": "Nov", "m12": "Dec"
+        "m1": "Jan",
+        "m2": "Feb",
+        "m3": "Mar",
+        "m4": "Apr",
+        "m5": "May",
+        "m6": "Jun",
+        "m7": "Jul",
+        "m8": "Aug",
+        "m9": "Sep",
+        "m10": "Oct",
+        "m11": "Nov",
+        "m12": "Dec"
       }
     },
     "monthLabel": "{month} {year}",
@@ -153,18 +169,42 @@
     "noIssues": "No issues",
     "alertBadge": "{label}: {count}",
     "modules": {
-      "clients": { "title": "Clients", "desc": "Manage corporate and group accounts", "countLabel": "Registered clients", "alertLabel": "No active contract" },
-      "contracts": { "title": "Contracts", "desc": "Issue licenses and check expiration dates", "countLabel": "Active contracts", "alertLabel": "Expiring soon / overdue" },
-      "users": { "title": "Users", "desc": "Manage student and coach permissions", "countLabel": "Total users", "alertLabel": "Pending invitations" },
-      "contents": { "title": "Contents", "desc": "Update curriculum and course content", "countLabel": "Registered contents", "alertLabel": "Unpublished contents" },
-      "notice": { "title": "Notices", "desc": "Publish announcements to students and clients", "countLabel": "Published notices", "alertLabel": "Drafts / expired" }
+      "clients": {
+        "title": "Clients",
+        "desc": "Manage corporate and group accounts",
+        "countLabel": "Registered clients",
+        "alertLabel": "No active contract"
+      },
+      "contracts": {
+        "title": "Contracts",
+        "desc": "Issue licenses and check expiration dates",
+        "countLabel": "Active contracts",
+        "alertLabel": "Expiring soon / overdue"
+      },
+      "users": {
+        "title": "Users",
+        "desc": "Manage student and coach permissions",
+        "countLabel": "Total users",
+        "alertLabel": "Pending invitations"
+      },
+      "contents": {
+        "title": "Contents",
+        "desc": "Update curriculum and course content",
+        "countLabel": "Registered contents",
+        "alertLabel": "Unpublished contents"
+      },
+      "notice": {
+        "title": "Notices",
+        "desc": "Publish announcements to students and clients",
+        "countLabel": "Published notices",
+        "alertLabel": "Drafts / expired"
+      }
     }
   },
   "users": {
     "page": {
       "title": "User Management",
-      "subtitle": "Create, edit, and manage permissions for user accounts belonging to each tenant",
-      "loading": "Loading user data..."
+      "subtitle": "Create, edit, and manage permissions for user accounts belonging to each tenant"
     },
     "table": {
       "user": "User",
@@ -189,11 +229,7 @@
       "editButton": "Edit",
       "actions": "Actions",
       "searchPlaceholder": "Enter search term...",
-      "searchButton": "Search",
-      "totalCount": "<styled>{count}</styled> total",
-      "noData": "No data found."
-    },
-    "filter": {
+      "noData": "No data found.",
       "allUserTypes": "All types"
     },
     "form": {
@@ -506,9 +542,7 @@
       "industryOther": "Other",
       "industryNotSet": "Not set",
       "registeredDateHeader": "Registered",
-      "searchPlaceholder": "Search by client name or code...",
-      "searchButton": "Search",
-      "totalCount": "<styled>{count}</styled> total",
+      "searchPlaceholder": "Search by client name...",
       "noData": "No client data found."
     },
     "form": {
@@ -558,7 +592,6 @@
       "deleteDialogBody": "Are you sure you want to delete \"<bold>{name}</bold>\"? This will not affect users who already have this timezone set, but it will no longer appear as an option.",
       "deleteConfirm": "Delete",
       "searchPlaceholder": "Search by timezone name or display name...",
-      "totalCount": "<styled>{count}</styled> total",
       "noData": "No timezone data found.",
       "toastDeleted": "Timezone deleted",
       "toastDeleteFailed": "Failed to delete"
@@ -618,13 +651,9 @@
       "editTooltip": "Edit term",
       "deleteTooltip": "Delete term",
       "searchPlaceholder": "Search by version name...",
-      "searchButton": "Search",
-      "totalCount": "<styled>{count}</styled> total",
-      "deletingOverlay": "Deleting...",
       "noData": "No term data found.",
       "deleteDialogTitle": "Delete this term?",
       "deleteDialogBody": "This will permanently delete version \"<bold>{version}</bold>\" of the {termType}. This action cannot be undone.",
-      "deleteConfirming": "Deleting...",
       "deleteConfirm": "Yes, delete",
       "toastDeleted": "Term deleted",
       "toastUnexpectedError": "An unexpected error occurred"
@@ -882,12 +911,12 @@
   "notice": {
     "page": {
       "title": "Notice Management",
-      "subtitle": "Manage in-app notices, campaigns, and maintenance announcements."
+      "subtitle": "Manage in-app notices, campaigns, and maintenance announcements.",
+      "createButton": "Create notice"
     },
     "table": {
       "searchPlaceholder": "Search by title...",
       "allTypes": "All types",
-      "createButton": "Create notice",
       "titleHeader": "Title",
       "typeHeader": "Type",
       "targetHeader": "Target",
@@ -908,10 +937,8 @@
       "editTooltip": "Edit",
       "readsTooltip": "View read status",
       "deleteTooltip": "Delete",
-      "paginationSummary": "Showing {shown} of {total}",
       "deleteDialogTitle": "Delete this notice?",
       "deleteDialogBody": "This action cannot be undone. This notice will be removed from user screens.",
-      "deleteConfirming": "Deleting...",
       "deleteConfirm": "Delete",
       "toastDeleted": "Notice deleted",
       "toastDeleteFailed": "Failed to delete",
@@ -1062,7 +1089,6 @@
       "participantsButton": "Participants",
       "manageParticipants": "Manage participants & announcements",
       "searchPlaceholder": "Search by title...",
-      "totalCount": "<styled>{count}</styled> total",
       "noData": "No calendar events found.",
       "deleteDialogTitle": "Delete Calendar Event",
       "deleteDialogBody": "Are you sure you want to delete \"<bold>{title}</bold>\"? It will no longer appear on the student/coach calendar after deletion.",
@@ -1349,12 +1375,8 @@
       "statusCancelled": "Cancelled",
       "statusEnded": "Ended",
       "statusUpcoming": "Upcoming",
-      "statusActive": "Active"
-    },
-    "dataTable": {
+      "statusActive": "Active",
       "searchPlaceholder": "Search by client or contract name...",
-      "searchButton": "Search",
-      "totalCount": "<styled>{count}</styled> total",
       "noData": "No matching contract information found."
     },
     "formDialog": {
@@ -1750,9 +1772,7 @@
       "actionsHeader": "Actions",
       "accessAlertHint": "Please set a target for this content to be published to",
       "searchPlaceholder": "Search by content name or label...",
-      "searchButton": "Search",
       "typeFilterAllOption": "All Types",
-      "totalCount": "<styled>{count}</styled> total",
       "noData": "No content data found.",
       "editorButton": {
         "word": "Edit Words",

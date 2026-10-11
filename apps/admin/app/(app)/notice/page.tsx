@@ -1,45 +1,31 @@
-// apps/admin/app/(app)/notice/page.tsx
+import Link from 'next/link';
+import { Plus } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import { getNotices } from "@/actions/adminNoticeAction";
-import { NoticeDataTable } from "./_components/NoticeDataTable";
+import { getNotices } from '@/actions/adminNoticeAction';
+import { PageHeader } from '@/components/common/PageHeader';
+import { Button } from '@/components/ui/button';
+import { parseListParams, toPageCount, type RawSearchParams } from '@/lib/list';
+import { NoticeDataTable } from './_components/NoticeDataTable';
+import { NOTICE_LIST_FILTERS } from './_lib/list';
 
-export default async function NoticePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string; q?: string; type?: string }>;
-}) {
-  const t = await getTranslations('notice.page');
-  const params = await searchParams;
-  const currentPage = Number(params.page) || 1;
-  const searchQuery = params.q || "";
-  const noticeType = params.type || "ALL";
-  const pageSize = 10;
-
-  const { notices, totalCount } = await getNotices({
-    page: currentPage,
-    pageSize,
-    searchQuery,
-    noticeType,
-  });
-
-  const pageCount = Math.ceil(totalCount / pageSize);
+export default async function NoticePage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
+  const [t, params] = await Promise.all([getTranslations('notice'), searchParams]);
+  const { rows, totalCount } = await getNotices(parseListParams(params, NOTICE_LIST_FILTERS));
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">{t('title')}</h1>
-          <p className="text-[13px] text-slate-500 mt-1">
-            {t('subtitle')}
-          </p>
-        </div>
-      </div>
-
-      <NoticeDataTable
-        data={notices || []}
-        pageCount={pageCount}
-        totalCount={totalCount}
+      <PageHeader
+        title={t('page.title')}
+        description={t('page.subtitle')}
+        actions={
+          <Button asChild>
+            <Link href="/notice/new">
+              <Plus /> {t('page.createButton')}
+            </Link>
+          </Button>
+        }
       />
+      <NoticeDataTable data={rows} totalCount={totalCount} pageCount={toPageCount(totalCount)} />
     </div>
   );
 }

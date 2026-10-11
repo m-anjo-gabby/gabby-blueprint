@@ -3,6 +3,9 @@
  * エディタ画面から一覧へ戻る際に復元するための保存領域。
  * タブ単位で保持できれば十分なため sessionStorage を使用する。
  */
+/** 教材一覧の絞り込み（URL のクエリ名。type = 教材種別） */
+export const CONTENT_LIST_FILTERS = ['type'] as const;
+
 const STORAGE_KEY = 'admin:contents:listQuery';
 export const CONTENTS_LIST_PATH = '/contents';
 

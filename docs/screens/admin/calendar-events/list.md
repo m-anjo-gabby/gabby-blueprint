@@ -23,7 +23,9 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 検索ボックス | 常時表示 | タイトルの部分一致で一覧を絞り込む |
+| 検索ボックス | 常時表示 | タイトル・シリーズ名の部分一致で絞り込む（全件を取得済みのため、ブラウザ側で絞る）。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る。サーバーへの再取得はしない） |
+| 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
+| 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | 種別バッジ | 「グループセッション」「メンテナンス」のいずれか | 表示のみ |
 | タイトル | シリーズに属する回は、下に「シリーズ: <シリーズ名>」を表示 | シリーズ名でシリーズの詳細（`/calendar-events/series/[seriesId]`）へ遷移する |
 | 開始日時 | 日本時間で表示 | 表示のみ |
@@ -72,7 +74,8 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/calendar-events/page.tsx`
-- `apps/admin/app/(app)/calendar-events/_components/CalendarEventDataTable.tsx`
+- `apps/admin/app/(app)/calendar-events/_components/CalendarEventDataTable.tsx`, `_components/columns.tsx`（列の定義。シリーズの詳細でも共用）
+- `apps/admin/components/list/`（一覧の共通部品: `useListQuery`・`ListToolbar`・`DataTable`・`ListSelectFilter`・`ClientFilter`）, `apps/admin/lib/list.ts`（URLの条件の読み取り・ページ範囲）
 - `apps/admin/app/(app)/calendar-events/_components/CalendarEventFormDialog.tsx`
 - `apps/admin/app/(app)/calendar-events/_components/CalendarEventCoachPicker.tsx`
 - `apps/admin/actions/adminCalendarEventAction.ts`
