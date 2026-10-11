@@ -2,8 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { openAdminContext } from "../../support/adminApp.ts";
 
 /**
- * アドミンの一覧（顧客・契約・ユーザー・教材・お知らせ・カレンダーイベント・規約・タイムゾーン）の
- * 検索・絞り込み・条件のクリア・ページ送り（共通部品 apps/admin/components/list/）。
+ * アドミンの一覧の検索・絞り込み・条件のクリア・ページ送り（共通部品 apps/admin/components/list/）。
+ * 仕様書: e2e/specs/admin/list-filters.md
  * dev の既存データを読むだけで、データは作らない。admin は PC 表示の別コンテキストで開くため desktop だけで実行する。
  */
 
@@ -16,9 +16,14 @@ const LISTS = [
   { path: "/users", heading: "ユーザー管理", placeholder: "検索語句を入力...", empty: "データが見つかりませんでした。" },
   { path: "/contents", heading: "教材管理", placeholder: "教材名、ラベルで検索...", empty: "教材データが見つかりませんでした。" },
   { path: "/notice", heading: "お知らせ管理", placeholder: "タイトルで検索...", empty: "お知らせが見つかりません" },
-  { path: "/calendar-events", heading: "カレンダーイベント管理", placeholder: "タイトルで検索...", empty: "カレンダーイベントが見つかりませんでした。" },
+  { path: "/calendar-events", heading: "カレンダーイベント管理", placeholder: "タイトル・シリーズ名で検索...", empty: "カレンダーイベントが見つかりませんでした。" },
+  { path: "/calendar-events/series", heading: "グループセッションのシリーズ", placeholder: "シリーズ名で検索...", empty: "シリーズはまだありません。" },
   { path: "/terms", heading: "規約管理", placeholder: "バージョン名で検索...", empty: "規約データが見つかりませんでした。" },
   { path: "/timezones", heading: "タイムゾーン管理", placeholder: "タイムゾーン名、表示名称で検索...", empty: "タイムゾーンデータが見つかりませんでした。" },
+  { path: "/contents/tags", heading: "タグ管理", placeholder: "タグ名、IDで検索...", empty: "タグデータが見つかりませんでした。" },
+  { path: "/contracts/plans", heading: "プランマスタ管理", placeholder: "プラン名、コードで検索...", empty: "プランデータが見つかりませんでした。" },
+  { path: "/tools/ai-knowledge-base", heading: "AI Knowledge Base", placeholder: "タイトル・本文で検索...", empty: "該当するナレッジが見つかりません" },
+  { path: "/tools/tts-designer", heading: "TTS Voice Designer", placeholder: "Search phrases or comments...", empty: "No assets found." },
 ] as const;
 
 const clearButton = (page: Page) => page.getByRole("button", { name: "条件をクリア" });
@@ -29,7 +34,7 @@ test.describe("アドミンの一覧の検索・絞り込み", () => {
   });
 
   test("各一覧で検索すると URL に条件が載り、「条件をクリア」で初期状態に戻る", async ({ browser }) => {
-    test.setTimeout(240_000);
+    test.setTimeout(420_000);
     const { context, page } = await openAdminContext(browser);
     try {
       for (const list of LISTS) {
@@ -102,6 +107,46 @@ test.describe("アドミンの一覧の検索・絞り込み", () => {
       await expect(page).toHaveURL((url) => url.search === "");
       await expect(search).toHaveValue("");
       await expect(clearButton(page)).toBeDisabled();
+    } finally {
+      await context.close();
+    }
+  });
+
+  test("カレンダーイベント一覧（サーバーで絞る）: 公開状態で絞り込むと URL に載り、1ページ目に戻る", async ({ browser }) => {
+    const { context, page } = await openAdminContext(browser);
+    try {
+      await page.goto("/calendar-events");
+      await page.getByRole("combobox", { name: "公開状態" }).click();
+      await page.getByRole("option", { name: "公開中" }).click();
+      await expect(page).toHaveURL((url) => url.searchParams.get("status") === "published");
+      await expect(page.getByRole("combobox", { name: "公開状態" })).toHaveText("公開中");
+      // 表示中の行はすべて公開中（下書きのバッジが無い）
+      await expect(page.getByRole("cell", { name: "下書き", exact: true })).toHaveCount(0);
+
+      await clearButton(page).click();
+      await expect(page).toHaveURL((url) => url.search === "");
+    } finally {
+      await context.close();
+    }
+  });
+
+  test("お知らせの既読状況（詳細の中の一覧）: 検索・クリアができ、お知らせの一覧へ戻れる", async ({ browser }) => {
+    const { context, page } = await openAdminContext(browser);
+    try {
+      await page.goto("/notice");
+      await page.getByRole("link", { name: "既読状況を確認" }).first().click();
+      await expect(page.getByRole("heading", { level: 1, name: /^既読状況: / })).toBeVisible({ timeout: 30_000 });
+      const readsPath = new URL(page.url()).pathname;
+
+      const search = page.getByLabel("氏名で検索...");
+      await search.fill(NO_MATCH);
+      await search.press("Enter");
+      await expect(page.getByText("対象ユーザーが見つかりません")).toBeVisible();
+      await clearButton(page).click();
+      await expect(page).toHaveURL((url) => url.pathname === readsPath && url.search === "");
+
+      await page.getByRole("link", { name: "お知らせ一覧に戻る" }).click();
+      await expect(page.getByRole("heading", { level: 1, name: "お知らせ管理" })).toBeVisible();
     } finally {
       await context.close();
     }

@@ -1,7 +1,6 @@
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BackLink } from '@/components/common/PageHeader';
 import { CoachRatingSummarySkeleton } from './_components/CoachRatingSummary';
 import { CoachRatingTableSkeleton } from './_components/CoachRatingTable';
 
@@ -12,11 +11,10 @@ export default async function Loading() {
   return (
     <div role="status" aria-busy aria-label={common('loading')} className="space-y-6">
       <div>
-        <Link href="/users" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-brand transition-colors mb-2">
-          <ArrowLeft size={14} /> {t('backToList')}
-        </Link>
+        {/* 見出しは PageHeader と同じ並び（戻り先・タイトル・説明） */}
+        <BackLink href="/users" label={t('backToList')} className="mb-2" />
         <Skeleton className="h-7 w-64" />
-        <p className="text-[13px] text-slate-500 mt-1">{t('subtitle')}</p>
+        <p className="mt-1 text-xs text-slate-500">{t('subtitle')}</p>
       </div>
       <CoachRatingSummarySkeleton />
       <CoachRatingTableSkeleton />

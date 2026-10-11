@@ -150,13 +150,6 @@ export async function getNoticeById(noticeId: string) {
   }
 }
 
-export interface NoticeReadStatusParams {
-  page?: number;
-  pageSize?: number;
-  clientId?: string;
-  userType?: string; // '1': 生徒, '2': コーチ
-}
-
 export interface NoticeReadStatusUser {
   id: string;
   user_id: number;
@@ -168,28 +161,24 @@ export interface NoticeReadStatusUser {
   read_at: string | null;
 }
 
-export interface NoticeReadStatusResult {
+export interface NoticeReadStatusResult extends ListResult<NoticeReadStatusUser> {
   notice: { notice_id: string; title: string; target_type: NoticeTargetType; client_id: string | null } | null;
-  users: NoticeReadStatusUser[];
-  totalCount: number;
+  /** 絞り込み後の対象者のうち既読・未読の人数 */
   readCount: number;
   unreadCount: number;
-  pageCount: number;
 }
 
 /**
  * お知らせ単位の既読/未読ユーザー一覧取得
- * (配信対象ユーザー全体をお知らせのtarget_typeに基づいて特定し、既読トランザクションと突合する)
+ * (配信対象ユーザー全体をお知らせのtarget_typeに基づいて特定し、既読トランザクションと突合する。
+ *  既読を先頭に並べるため、対象者を全件突合してからページ分けする。検索は氏名の部分一致)
  */
 export async function getNoticeReadStatus(
   noticeId: string,
-  params: NoticeReadStatusParams = {}
+  params: ListParams<'clientId' | 'userType'>
 ): Promise<NoticeReadStatusResult> {
   const ctx = await getLogContext();
-  const page = params.page || 1;
-  const pageSize = params.pageSize || 10;
-  const clientId = params.clientId || '';
-  const userType = params.userType || '';
+  const { q, filters: { clientId, userType } } = params;
 
   try {
     const supabase = createAdminClient();
@@ -202,7 +191,7 @@ export async function getNoticeReadStatus(
 
     if (noticeError || !notice) {
       logger.error('notice:read_status_notice_not_found', noticeError?.message || 'notice not found', { ...ctx, err: noticeError, payload: { noticeId } });
-      return { notice: null, users: [], totalCount: 0, readCount: 0, unreadCount: 0, pageCount: 0 };
+      return { notice: null, rows: [], totalCount: 0, readCount: 0, unreadCount: 0 };
     }
 
     // 配信対象ユーザー母集団を、お知らせのtarget_typeに基づいて絞り込む
@@ -233,11 +222,14 @@ export async function getNoticeReadStatus(
     if (userType) {
       query = query.eq('user_type', userType);
     }
+    if (q) {
+      query = query.ilike('user_name', containsPattern(q));
+    }
 
     const { data: targetUsers, error: usersError } = await query.order('user_id', { ascending: true });
 
     if (usersError) {
-      logger.error('notice:read_status_users_failed', usersError.message, { ...ctx, err: usersError, payload: { noticeId, params } });
+      logger.error('notice:read_status_users_failed', usersError.message, { ...ctx, err: usersError, payload: { noticeId, clientId, userType } });
       throw usersError;
     }
 
@@ -253,15 +245,16 @@ export async function getNoticeReadStatus(
     }
 
     const readMap = new Map<string, string>();
-    (reads || []).forEach((r: any) => readMap.set(r.user_id, r.read_at));
+    (reads || []).forEach((r) => readMap.set(r.user_id, r.read_at));
 
-    const merged: NoticeReadStatusUser[] = (targetUsers || []).map((u: any) => ({
+    const merged: NoticeReadStatusUser[] = (targetUsers || []).map((u) => ({
       id: u.id,
       user_id: u.user_id,
       user_name: u.user_name,
       user_type: u.user_type,
       client_id: u.client_id,
-      client_name: u.com_m_client?.client_name || null,
+      // 多対一の埋め込みは型推論上は配列になるため、単一行として取り出す
+      client_name: [u.com_m_client].flat()[0]?.client_name || null,
       is_read: readMap.has(u.id),
       read_at: readMap.get(u.id) || null,
     }));
@@ -278,8 +271,7 @@ export async function getNoticeReadStatus(
     const totalCount = merged.length;
     const readCount = merged.filter((u) => u.is_read).length;
     const unreadCount = totalCount - readCount;
-    const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
-    const from = (page - 1) * pageSize;
+    const [from, to] = toRange(params);
 
     return {
       notice: {
@@ -288,14 +280,13 @@ export async function getNoticeReadStatus(
         target_type: notice.target_type,
         client_id: notice.client_id,
       },
-      users: merged.slice(from, from + pageSize),
+      rows: merged.slice(from, to + 1),
       totalCount,
       readCount,
       unreadCount,
-      pageCount,
     };
   } catch (error) {
-    logger.error('notice:read_status_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId, params } });
+    logger.error('notice:read_status_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }

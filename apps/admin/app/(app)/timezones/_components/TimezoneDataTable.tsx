@@ -9,16 +9,7 @@ import { DataTable } from '@/components/list/DataTable';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
 import { paginateLocally } from '@/lib/list';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
 import { createColumns } from './columns';
 
 /** 検索の対象（日英の表示名・IANA名） */
@@ -31,7 +22,6 @@ interface TimezoneDataTableProps {
 
 export function TimezoneDataTable({ data }: TimezoneDataTableProps) {
   const t = useTranslations('timezones.table');
-  const tCommon = useTranslations('common');
   const locale = useLocale();
   const { showToast } = useToast();
   const query = useListQuery([], { shallow: true });
@@ -67,26 +57,14 @@ export function TimezoneDataTable({ data }: TimezoneDataTableProps) {
         pending={isDeleting}
       />
 
-      <AlertDialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('deleteDialogTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleting &&
-                t.rich('deleteDialogBody', {
-                  name: locale === 'en' ? deleting.display_name_en : deleting.display_name_ja,
-                  bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
-                })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleting && handleDelete(deleting)} className="bg-rose-600 text-white hover:bg-rose-700">
-              {t('deleteConfirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        target={deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={handleDelete}
+        title={t('deleteDialogTitle')}
+        description={(timezone) => t.rich('deleteDialogBody', { name: locale === 'en' ? timezone.display_name_en : timezone.display_name_ja, bold: boldChunks })}
+        confirmLabel={t('deleteConfirm')}
+      />
     </div>
   );
 }

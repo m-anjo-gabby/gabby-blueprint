@@ -4,6 +4,7 @@ import { PageSkeleton } from '@gabby/lib/components/common/PageSkeleton';
 import { currentReportingMonth } from '@gabby/lib/date/reporting';
 import { MonthSwitcher } from '@/components/common/MonthSwitcher';
 import { TrainingReportSection } from './_components/TrainingReportSection';
+import { PageHeader } from '@/components/common/PageHeader';
 
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -18,11 +19,15 @@ export default async function TrainingReportsPage({ searchParams }: { searchPara
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-800">{t('title')}</h1>
-        <p className="text-xs text-slate-500 mt-1">{t('subtitle')}</p>
-        <p className="text-xs text-amber-700 mt-1">{t('draftNote')}</p>
-      </div>
+      <PageHeader
+        title={t('title')}
+        description={
+          <>
+            {t('subtitle')}
+            <span className="mt-1 block text-amber-700">{t('draftNote')}</span>
+          </>
+        }
+      />
 
       <MonthSwitcher currentMonth={yearMonth} />
 

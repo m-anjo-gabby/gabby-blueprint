@@ -4,6 +4,8 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { containsPattern, ilikeAny } from '@gabby/lib/supabase/ilike';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import {
   CALENDAR_EVENT_TYPES,
   CalendarEventItem,
@@ -51,7 +53,8 @@ function jstDateTimeToUtcIso(dateStr: string, timeStr: string): string | null {
 }
 
 /**
- * カレンダーイベント一覧取得（seriesId を指定するとそのシリーズの回だけ）
+ * カレンダーイベントの全件取得（seriesId を指定するとそのシリーズの回だけ。シリーズの詳細・回の追加で使う。
+ * 管理画面の一覧は getCalendarEventList でページ分けして取得する）
  */
 export async function getCalendarEvents(options: { seriesId?: string } = {}): Promise<CalendarEventItem[]> {
   const ctx = await getLogContext();
@@ -80,6 +83,71 @@ export async function getCalendarEvents(options: { seriesId?: string } = {}): Pr
     })) as CalendarEventItem[];
   } catch (error) {
     logger.error('calendarEvent:get_calendar_events_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
+  }
+}
+
+/** 一覧の公開状態の絞り込み（URL の status） */
+const PUBLISH_STATUS_FILTER = { published: true, draft: false } as const;
+
+/**
+ * カレンダーイベントの一覧（管理画面の一覧用。ページネーション・タイトル/シリーズ名の部分一致検索・種別/公開状態での絞り込み）
+ * 開始日時の新しい順。
+ */
+export async function getCalendarEventList(params: ListParams<'type' | 'status'>): Promise<ListResult<CalendarEventItem>> {
+  const ctx = await getLogContext();
+  const { q, filters } = params;
+  // 種別・公開状態は既知の値だけを条件にする（不正な値は「すべて」として扱う）
+  const eventType = Object.hasOwn(CALENDAR_EVENT_TYPES, filters.type) ? filters.type : '';
+  const isPublished = Object.hasOwn(PUBLISH_STATUS_FILTER, filters.status)
+    ? PUBLISH_STATUS_FILTER[filters.status as keyof typeof PUBLISH_STATUS_FILTER]
+    : undefined;
+  try {
+    const supabase = createAdminClient();
+    const [from, to] = toRange(params);
+
+    let query = supabase
+      .from('com_m_calendar_event')
+      .select('*, series:com_m_calendar_event_series(series_id, title, description)', { count: 'exact' })
+      .eq('delete_flg', '0');
+
+    if (q) {
+      // シリーズ名でも探せるよう、名前が一致するシリーズの回も含める
+      const { data: series, error: seriesError } = await supabase
+        .from('com_m_calendar_event_series')
+        .select('series_id')
+        .eq('delete_flg', '0')
+        .ilike('title', containsPattern(q));
+      if (seriesError) throw seriesError;
+      const seriesIds = (series ?? []).map((row) => row.series_id);
+      query = query.or([ilikeAny(['title'], q), ...(seriesIds.length ? [`series_id.in.(${seriesIds.join(',')})`] : [])].join(','));
+    }
+    if (eventType) query = query.eq('event_type', eventType);
+    if (isPublished !== undefined) query = query.eq('is_published', isPublished);
+
+    const { data, count, error } = await query
+      .order('start_datetime', { ascending: false })
+      .order('calendar_event_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
+      .range(from, to);
+
+    if (error) {
+      logger.error('calendarEvent:get_calendar_event_list_failed', error.message, { ...ctx, err: error, payload: { from, to, eventType, isPublished } });
+      throw new Error(error.message);
+    }
+
+    const coachesByEventId = await getCoachesByEventId((data ?? []).map((row) => row.calendar_event_id));
+
+    // is_joined/is_assigned_coach は生徒/コーチ向けクエリでのみ計算する結合フィールドのため、管理一覧では常にfalseとする
+    const rows = (data ?? []).map((row) => ({
+      ...row,
+      is_joined: false,
+      is_assigned_coach: false,
+      coaches: coachesByEventId.get(row.calendar_event_id) ?? [],
+    })) as CalendarEventItem[];
+
+    return { rows, totalCount: count || 0 };
+  } catch (error) {
+    logger.error('calendarEvent:get_calendar_event_list_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }

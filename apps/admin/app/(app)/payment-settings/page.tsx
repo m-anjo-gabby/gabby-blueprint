@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { getSessionPayRate } from '@/actions/adminPaymentSettingsAction';
 import { PaymentSettingsForm } from './_components/PaymentSettingsForm';
+import { PageHeader } from '@/components/common/PageHeader';
 
 export default async function PaymentSettingsPage() {
   const t = await getTranslations('paymentSettings');
@@ -16,12 +17,7 @@ export default async function PaymentSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-800">{t('title')}</h1>
-        <p className="text-xs text-slate-500 mt-1">
-          {t('subtitle')}
-        </p>
-      </div>
+      <PageHeader title={t('title')} description={t('subtitle')} />
 
       <PaymentSettingsForm initialSessionPayRate={sessionPayRate} />
     </div>

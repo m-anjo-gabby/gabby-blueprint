@@ -1,14 +1,17 @@
 import Link from 'next/link';
 import { Layers } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import { getCalendarEvents } from '@/actions/adminCalendarEventAction';
+import { getCalendarEventList } from '@/actions/adminCalendarEventAction';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
+import { parseListParams, toPageCount, type RawSearchParams } from '@/lib/list';
 import { CalendarEventDataTable } from './_components/CalendarEventDataTable';
 import { CalendarEventFormDialog } from './_components/CalendarEventFormDialog';
+import { CALENDAR_EVENT_LIST_FILTERS } from './_lib/list';
 
-export default async function CalendarEventsPage() {
-  const [t, events] = await Promise.all([getTranslations('calendarEvents.page'), getCalendarEvents()]);
+export default async function CalendarEventsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
+  const [t, params] = await Promise.all([getTranslations('calendarEvents.page'), searchParams]);
+  const { rows, totalCount } = await getCalendarEventList(parseListParams(params, CALENDAR_EVENT_LIST_FILTERS));
 
   return (
     <div className="space-y-6">
@@ -26,7 +29,7 @@ export default async function CalendarEventsPage() {
           </>
         }
       />
-      <CalendarEventDataTable data={events} />
+      <CalendarEventDataTable data={rows} totalCount={totalCount} pageCount={toPageCount(totalCount)} />
     </div>
   );
 }

@@ -15,7 +15,7 @@
 ## 画面の構成
 
 1. **ヘッダー** — 画面タイトル、説明文、「シリーズ管理」リンク（グループセッションのシリーズの一覧 `/calendar-events/series` へ。[series.md](./series.md)）、「新規登録」ボタン
-2. **一覧テーブル** — 登録済みカレンダーイベントの一覧（検索・ページング付き）
+2. **一覧テーブル** — 登録済みカレンダーイベントの一覧（開始日時の新しい順。検索・種別/公開状態の絞り込み・ページング付き。サーバーで1ページ10件ずつ取得する）
 3. **新規登録／編集ダイアログ**（一覧から開く）
 4. **削除確認ダイアログ**（一覧から開く）
 
@@ -23,7 +23,9 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 検索ボックス | 常時表示 | タイトル・シリーズ名の部分一致で絞り込む（全件を取得済みのため、ブラウザ側で絞る）。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る。サーバーへの再取得はしない） |
+| 検索ボックス | 常時表示 | タイトル・シリーズ名の部分一致で検索（シリーズ名が一致した場合はそのシリーズの回をすべて表示）。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る）。入力した文字はそのまま文字として検索する（`%`・`,`等も特別な意味を持たない） |
+| 種別フィルター | 「すべての種別」「グループセッション」「メンテナンス」 | 選択した種別で絞り込む（URLの`type`。1ページ目に戻る） |
+| 公開状態フィルター | 「すべての公開状態」「公開中」「下書き」 | 選択した公開状態で絞り込む（URLの`status` = `published` / `draft`。1ページ目に戻る） |
 | 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
 | 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | 種別バッジ | 「グループセッション」「メンテナンス」のいずれか | 表示のみ |
@@ -74,8 +76,9 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/calendar-events/page.tsx`
-- `apps/admin/app/(app)/calendar-events/_components/CalendarEventDataTable.tsx`, `_components/columns.tsx`（列の定義。シリーズの詳細でも共用）
-- `apps/admin/components/list/`（一覧の共通部品: `useListQuery`・`ListToolbar`・`DataTable`・`ListSelectFilter`・`ClientFilter`）, `apps/admin/lib/list.ts`（URLの条件の読み取り・ページ範囲）
+- `apps/admin/app/(app)/calendar-events/_components/CalendarEventDataTable.tsx`（検索・絞り込み）, `_components/CalendarEventTable.tsx`（表と削除の確認。シリーズの詳細でも共用）, `_components/columns.tsx`, `_lib/list.ts`（絞り込みのURLのクエリ名）
+- `apps/admin/actions/adminCalendarEventAction.ts`（`getCalendarEventList`: 一覧のページ取得。`getCalendarEvents`: シリーズの回の全件取得）
+- `apps/admin/components/list/`（一覧の共通部品）, `apps/admin/lib/list.ts`。E2E: `testing/e2e/tests/admin/list-filters.spec.ts`（仕様: `testing/e2e/specs/admin/list-filters.md`）
 - `apps/admin/app/(app)/calendar-events/_components/CalendarEventFormDialog.tsx`
 - `apps/admin/app/(app)/calendar-events/_components/CalendarEventCoachPicker.tsx`
 - `apps/admin/actions/adminCalendarEventAction.ts`

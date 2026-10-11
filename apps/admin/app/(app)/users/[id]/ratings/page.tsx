@@ -1,7 +1,6 @@
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { getCoachRatings } from '@/actions/adminCoachRatingAction';
+import { BackLink, PageHeader } from '@/components/common/PageHeader';
 import { CoachRatingSummary } from './_components/CoachRatingSummary';
 import { CoachRatingTable } from './_components/CoachRatingTable';
 
@@ -21,16 +20,12 @@ export default async function CoachRatingsPage({
   const feedbackOnly = sp.feedback === '1';
   const result = await getCoachRatings(id);
 
-  const backLink = (
-    <Link href="/users" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-brand transition-colors mb-2">
-      <ArrowLeft size={14} /> {t('backToList')}
-    </Link>
-  );
+  const back = { href: '/users', label: t('backToList') };
 
   if (!result) {
     return (
       <div className="space-y-4">
-        {backLink}
+        <BackLink {...back} />
         <p className="text-sm text-slate-500 font-bold">{t('notFound')}</p>
       </div>
     );
@@ -41,11 +36,7 @@ export default async function CoachRatingsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        {backLink}
-        <h1 className="text-xl font-bold text-slate-800 tracking-tight">{t('title', { name: result.coach.name ?? result.coach.email ?? '' })}</h1>
-        <p className="text-[13px] text-slate-500 mt-1">{t('subtitle')}</p>
-      </div>
+      <PageHeader back={back} title={t('title', { name: result.coach.name ?? result.coach.email ?? '' })} description={t('subtitle')} />
 
       <CoachRatingSummary stats={result.stats} />
 

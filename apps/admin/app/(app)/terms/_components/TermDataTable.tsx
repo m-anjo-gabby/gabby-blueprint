@@ -8,16 +8,7 @@ import { deleteTerm } from '@/actions/adminTermAction';
 import { DataTable } from '@/components/list/DataTable';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
 import { createColumns } from './columns';
 
 interface TermDataTableProps {
@@ -29,7 +20,6 @@ interface TermDataTableProps {
 export function TermDataTable({ data, totalCount, pageCount }: TermDataTableProps) {
   const t = useTranslations('terms.table');
   const tTerms = useTranslations('terms');
-  const tCommon = useTranslations('common');
   const { showToast } = useToast();
   const query = useListQuery();
   const [deleting, setDeleting] = useState<TermListItem | null>(null);
@@ -64,27 +54,14 @@ export function TermDataTable({ data, totalCount, pageCount }: TermDataTableProp
         pending={query.isPending || isDeleting}
       />
 
-      <AlertDialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('deleteDialogTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleting &&
-                t.rich('deleteDialogBody', {
-                  termType: termTypeLabel(deleting),
-                  version: deleting.version_name,
-                  bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
-                })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleting && handleDelete(deleting)} className="bg-rose-600 text-white hover:bg-rose-700">
-              {t('deleteConfirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        target={deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={handleDelete}
+        title={t('deleteDialogTitle')}
+        description={(term) => t.rich('deleteDialogBody', { termType: termTypeLabel(term), version: term.version_name, bold: boldChunks })}
+        confirmLabel={t('deleteConfirm')}
+      />
     </div>
   );
 }

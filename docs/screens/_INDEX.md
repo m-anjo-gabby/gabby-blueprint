@@ -84,7 +84,8 @@
 | [monthly-reports.md](admin/monthly-reports.md) | `/monthly-reports` | コーチ稼働実績の承認・承認取消 | ✅ |
 | [notification.md](admin/notification.md) | `/notification` | 通知一覧 | ✅ |
 | [training-reports.md](admin/training-reports.md) | `/training-reports` | トレーニングレポート（満了月ごとのライセンス一覧・生徒ごとのPDF・契約の全員分のZIP。ドラフト版） | ✅ |
-| [payment-settings.md](admin/payment-settings.md) | `/payment-settings` | セッション単価設定（会社情報は `/company-profiles` へ移設・未文書化） | ✅ |
+| [payment-settings.md](admin/payment-settings.md) | `/payment-settings` | セッション単価設定 | ✅ |
+| [company-profiles.md](admin/company-profiles.md) | `/company-profiles` | 書面（PDF）の発行元の会社情報（日本法人・バンクーバー法人の会社名・住所・税務登録番号・ロゴ） | ✅ |
 | [profile.md](admin/profile.md) | `/profile` | アイコン・タイムゾーン設定 | ✅ |
 | [profile-password.md](admin/profile-password.md) | `/profile/password` | パスワード変更 | ✅ |
 | [timezones.md](admin/timezones.md) | `/timezones` | タイムゾーンマスタ管理 | ✅ |

@@ -1003,11 +1003,9 @@
       "targetUsers": "対象ユーザー",
       "read": "既読",
       "unread": "未読",
-      "allClients": "すべての顧客",
       "allTypes": "すべての区分",
       "studentType": "生徒",
       "coachType": "コーチ",
-      "totalCount": "全 <styled>{count}</styled> 件",
       "userHeader": "ユーザー",
       "clientHeader": "所属顧客",
       "typeHeader": "区分",
@@ -1015,7 +1013,8 @@
       "readAtHeader": "既読日時 (JST)",
       "noUsers": "対象ユーザーが見つかりません",
       "unnamed": "名称未設定",
-      "noClient": "未所属"
+      "noClient": "未所属",
+      "searchPlaceholder": "氏名で検索..."
     }
   },
   "calendarEvents": {
@@ -1042,7 +1041,6 @@
     "participantsTable": {
       "participantCount": "参加人数",
       "searchPlaceholder": "氏名で検索...",
-      "totalCount": "全 <styled>{count}</styled> 件",
       "noParticipants": "参加者がまだいません。",
       "unknown": "(不明)",
       "nameHeader": "氏名",
@@ -1088,12 +1086,16 @@
       "actionsHeader": "操作",
       "participantsButton": "参加者",
       "manageParticipants": "参加者・アナウンスを管理",
-      "searchPlaceholder": "タイトルで検索...",
+      "searchPlaceholder": "タイトル・シリーズ名で検索...",
       "noData": "カレンダーイベントが見つかりませんでした。",
       "deleteDialogTitle": "カレンダーイベントの削除",
       "deleteDialogBody": "「<bold>{title}</bold>」を削除してもよろしいですか？削除後は生徒/コーチのカレンダーから表示されなくなります。",
       "deleteConfirm": "削除する",
-      "seriesPrefix": "シリーズ: {title}"
+      "seriesPrefix": "シリーズ: {title}",
+      "allTypes": "すべての種別",
+      "allStatuses": "すべての公開状態",
+      "toastDeleted": "カレンダーイベントを削除しました",
+      "toastDeleteFailed": "削除に失敗しました"
     },
     "formDialog": {
       "createButton": "新規登録",
@@ -1226,7 +1228,8 @@
         "timeRequired": "開始時刻を入力してください",
         "sessionTitleRequired": "内容を入力してください",
         "clientRequired": "対象の顧客を選択してください"
-      }
+      },
+      "searchPlaceholder": "シリーズ名で検索..."
     }
   },
   "chat": {
@@ -1494,7 +1497,8 @@
       "toastDeleted": "契約を削除しました",
       "toastDeleteFailed": "削除に失敗しました",
       "toastNetworkError": "通信エラーが発生しました",
-      "toastPurged": "契約と関連する割当履歴を完全に削除しました"
+      "toastPurged": "契約と関連する割当履歴を完全に削除しました",
+      "back": "戻る"
     },
     "plans": {
       "table": {
@@ -1509,11 +1513,9 @@
         "codeHeader": "プランコード",
         "actionsHeader": "操作",
         "searchPlaceholder": "プラン名、コードで検索...",
-        "totalCount": "全 <styled>{count}</styled> 件",
         "noData": "プランデータが見つかりませんでした。",
         "deleteDialogTitle": "プランの削除",
         "deleteDialogBody": "プラン「<bold>{name}</bold>」を削除してもよろしいですか？既にこのプランを選択して作成された契約には影響しません（選択肢から消えるのみです）。",
-        "cancel": "キャンセル",
         "deleteConfirm": "削除する",
         "toastDeleted": "プランを削除しました",
         "toastDeleteFailed": "削除に失敗しました"
@@ -1603,18 +1605,19 @@
       },
       "list": {
         "searchPlaceholder": "タイトル・本文で検索...",
-        "filterPlaceholder": "区分で絞り込み",
         "allTypes": "すべての区分",
         "emptyRegistered": "ナレッジがまだ登録されていません",
         "emptyFiltered": "該当するナレッジが見つかりません",
         "notEmbeddedBadge": "未Embedding",
         "deleteDialogTitle": "ナレッジ削除の確認",
         "deleteDialogBody": "<bold>「{title}」</bold>を削除しますか？AIチャットの検索対象から除外されます。",
-        "cancel": "キャンセル",
         "deleteConfirm": "削除する",
-        "totalCount": "全 <styled>{count}</styled> 件",
         "toastDeleted": "ナレッジを削除しました",
-        "toastDeleteFailed": "削除に失敗しました"
+        "toastDeleteFailed": "削除に失敗しました",
+        "typeHeader": "区分",
+        "titleHeader": "タイトル / 本文",
+        "embeddingHeader": "Embedding",
+        "actionsHeader": "操作"
       },
       "formDialog": {
         "createButton": "新規ナレッジ登録",
@@ -1886,11 +1889,10 @@
         "deleteDialogTitle": "タグの削除",
         "deleteDialogBody": "タグ「<bold>{name}</bold>」を削除してもよろしいですか？",
         "deleteDialogHint": "この操作は取り消せません。",
-        "cancelButton": "キャンセル",
         "deleteConfirmButton": "削除する",
         "searchPlaceholder": "タグ名、IDで検索...",
-        "totalCount": "全 <styled>{count}</styled> 件",
-        "noData": "タグデータが見つかりませんでした。"
+        "noData": "タグデータが見つかりませんでした。",
+        "allTypes": "すべての種別"
       },
       "formDialog": {
         "createButton": "新規登録",

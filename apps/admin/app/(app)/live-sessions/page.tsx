@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { LiveSessionManagementView } from './_components/LiveSessionManagementView';
+import { PageHeader } from '@/components/common/PageHeader';
 
 export default async function LiveSessionsPage() {
   const t = await getTranslations('liveSessions.page');
@@ -8,12 +9,7 @@ export default async function LiveSessionsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-800">{t('title')}</h1>
-        <p className="text-xs text-slate-500 mt-1">
-          {t('subtitle')}
-        </p>
-      </div>
+      <PageHeader title={t('title')} description={t('subtitle')} />
 
       <LiveSessionManagementView clients={clients} />
     </div>

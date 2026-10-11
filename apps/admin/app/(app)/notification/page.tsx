@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
 import { NotificationItem } from '@gabby/types/notification';
 import { NotificationCard } from './_components/NotificationCard';
+import { PageHeader } from '@/components/common/PageHeader';
 
 export default function NotificationPage() {
   const t = useTranslations('notification');
@@ -30,18 +31,16 @@ export default function NotificationPage() {
 
   return (
     <div className="space-y-6 h-full flex flex-col">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">{t('title')}</h1>
-          <p className="text-[13px] text-slate-500 mt-1">
-            {t('subtitle')}
-          </p>
-        </div>
-        <div className="text-[10px] font-black text-brand uppercase tracking-widest bg-brand-50 px-3 py-1.5 rounded-xl border border-brand-100 flex items-center gap-1.5 shrink-0">
-          <Bell size={10} />
-          {notifications.length} <span className="opacity-60 ml-0.5">{t('itemsLabel')}</span>
-        </div>
-      </div>
+      <PageHeader
+        title={t('title')}
+        description={t('subtitle')}
+        actions={
+          <div className="flex shrink-0 items-center gap-1.5 rounded-xl border border-brand-100 bg-brand-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-brand">
+            <Bell size={10} />
+            {notifications.length} <span className="ml-0.5 opacity-60">{t('itemsLabel')}</span>
+          </div>
+        }
+      />
 
       <div className="flex-1 min-h-0 overflow-y-auto space-y-3 max-w-2xl">
         <AnimatePresence mode="wait">

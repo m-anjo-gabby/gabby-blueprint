@@ -1003,11 +1003,9 @@
       "targetUsers": "Target users",
       "read": "Read",
       "unread": "Unread",
-      "allClients": "All clients",
       "allTypes": "All types",
       "studentType": "Student",
       "coachType": "Coach",
-      "totalCount": "<styled>{count}</styled> total",
       "userHeader": "User",
       "clientHeader": "Client",
       "typeHeader": "Type",
@@ -1015,7 +1013,8 @@
       "readAtHeader": "Read at (JST)",
       "noUsers": "No target users found",
       "unnamed": "Unnamed",
-      "noClient": "Unassigned"
+      "noClient": "Unassigned",
+      "searchPlaceholder": "Search by name..."
     }
   },
   "calendarEvents": {
@@ -1042,7 +1041,6 @@
     "participantsTable": {
       "participantCount": "Participants",
       "searchPlaceholder": "Search by name...",
-      "totalCount": "<styled>{count}</styled> total",
       "noParticipants": "There are no participants yet.",
       "unknown": "(Unknown)",
       "nameHeader": "Name",
@@ -1088,12 +1086,16 @@
       "actionsHeader": "Actions",
       "participantsButton": "Participants",
       "manageParticipants": "Manage participants & announcements",
-      "searchPlaceholder": "Search by title...",
+      "searchPlaceholder": "Search by title or series...",
       "noData": "No calendar events found.",
       "deleteDialogTitle": "Delete Calendar Event",
       "deleteDialogBody": "Are you sure you want to delete \"<bold>{title}</bold>\"? It will no longer appear on the student/coach calendar after deletion.",
       "deleteConfirm": "Delete",
-      "seriesPrefix": "Series: {title}"
+      "seriesPrefix": "Series: {title}",
+      "allTypes": "All types",
+      "allStatuses": "All statuses",
+      "toastDeleted": "Calendar event deleted.",
+      "toastDeleteFailed": "Failed to delete the calendar event."
     },
     "formDialog": {
       "createButton": "Add event",
@@ -1226,7 +1228,8 @@
         "timeRequired": "Please enter a start time",
         "sessionTitleRequired": "Please enter a topic",
         "clientRequired": "Please select a client"
-      }
+      },
+      "searchPlaceholder": "Search by series name..."
     }
   },
   "chat": {
@@ -1494,7 +1497,8 @@
       "toastDeleted": "Contract deleted",
       "toastDeleteFailed": "Failed to delete",
       "toastNetworkError": "A network error occurred",
-      "toastPurged": "The contract and its related assignment history were permanently deleted"
+      "toastPurged": "The contract and its related assignment history were permanently deleted",
+      "back": "Back"
     },
     "plans": {
       "table": {
@@ -1509,11 +1513,9 @@
         "codeHeader": "Plan Code",
         "actionsHeader": "Actions",
         "searchPlaceholder": "Search by plan name or code...",
-        "totalCount": "<styled>{count}</styled> total",
         "noData": "No plan data found.",
         "deleteDialogTitle": "Delete Plan",
         "deleteDialogBody": "Are you sure you want to delete plan \"<bold>{name}</bold>\"? This will not affect contracts already created with this plan (it will simply no longer appear as an option).",
-        "cancel": "Cancel",
         "deleteConfirm": "Delete",
         "toastDeleted": "Plan deleted",
         "toastDeleteFailed": "Failed to delete"
@@ -1603,18 +1605,19 @@
       },
       "list": {
         "searchPlaceholder": "Search by title or body...",
-        "filterPlaceholder": "Filter by type",
         "allTypes": "All types",
         "emptyRegistered": "No knowledge entries have been registered yet",
         "emptyFiltered": "No matching knowledge entries found",
         "notEmbeddedBadge": "Not embedded",
         "deleteDialogTitle": "Confirm Knowledge Deletion",
         "deleteDialogBody": "Are you sure you want to delete <bold>\"{title}\"</bold>? It will be excluded from the AI chat's search targets.",
-        "cancel": "Cancel",
         "deleteConfirm": "Delete",
-        "totalCount": "<styled>{count}</styled> total",
         "toastDeleted": "Knowledge entry deleted",
-        "toastDeleteFailed": "Failed to delete"
+        "toastDeleteFailed": "Failed to delete",
+        "typeHeader": "Type",
+        "titleHeader": "Title / Body",
+        "embeddingHeader": "Embedding",
+        "actionsHeader": "Actions"
       },
       "formDialog": {
         "createButton": "Add new knowledge entry",
@@ -1886,11 +1889,10 @@
         "deleteDialogTitle": "Delete Tag",
         "deleteDialogBody": "Are you sure you want to delete the tag <bold>{name}</bold>?",
         "deleteDialogHint": "This action cannot be undone.",
-        "cancelButton": "Cancel",
         "deleteConfirmButton": "Delete",
         "searchPlaceholder": "Search by tag name or ID...",
-        "totalCount": "<styled>{count}</styled> total",
-        "noData": "No tag data found."
+        "noData": "No tag data found.",
+        "allTypes": "All types"
       },
       "formDialog": {
         "createButton": "Add New",
