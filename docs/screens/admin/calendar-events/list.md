@@ -79,7 +79,7 @@
 - `apps/admin/app/(app)/calendar-events/_components/CalendarEventDataTable.tsx`（検索・絞り込み）, `_components/CalendarEventTable.tsx`（表と削除の確認。シリーズの詳細でも共用）, `_components/columns.tsx`, `_lib/list.ts`（絞り込みのURLのクエリ名）
 - `apps/admin/actions/adminCalendarEventAction.ts`（`getCalendarEventList`: 一覧のページ取得。`getCalendarEvents`: シリーズの回の全件取得）
 - `apps/admin/components/list/`（一覧の共通部品）, `apps/admin/lib/list.ts`。E2E: `testing/e2e/tests/admin/list-filters.spec.ts`（仕様: `testing/e2e/specs/admin/list-filters.md`）
-- `apps/admin/app/(app)/calendar-events/_components/CalendarEventFormDialog.tsx`
+- `apps/admin/app/(app)/calendar-events/_components/CalendarEventFormDialog.tsx`（配信対象の顧客・担当コーチの選択肢は画面のサーバー側で1回だけ取得し、`options` で渡す。シリーズの詳細も同じ）
 - `apps/admin/app/(app)/calendar-events/_components/CalendarEventCoachPicker.tsx`
 - `apps/admin/actions/adminCalendarEventAction.ts`
   （`getCalendarEvents`, `upsertCalendarEvent`, `deleteCalendarEvent`, `getCoachesFilter`。

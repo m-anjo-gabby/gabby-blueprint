@@ -7,6 +7,7 @@ import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
 import { CALENDAR_EVENT_LIST_FILTERS } from '../_lib/list';
 import { CalendarEventTable } from './CalendarEventTable';
+import type { CalendarEventFormOptions } from './CalendarEventFormDialog';
 
 const EVENT_TYPE_OPTIONS = Object.entries(CALENDAR_EVENT_TYPES).map(([value, { label }]) => ({ value, label }));
 
@@ -14,9 +15,10 @@ interface CalendarEventDataTableProps {
   data: CalendarEventItem[];
   totalCount: number;
   pageCount: number;
+  formOptions: CalendarEventFormOptions;
 }
 
-export function CalendarEventDataTable({ data, totalCount, pageCount }: CalendarEventDataTableProps) {
+export function CalendarEventDataTable({ data, totalCount, pageCount, formOptions }: CalendarEventDataTableProps) {
   const t = useTranslations('calendarEvents.dataTable');
   const query = useListQuery(CALENDAR_EVENT_LIST_FILTERS);
   const statusOptions = [
@@ -43,7 +45,7 @@ export function CalendarEventDataTable({ data, totalCount, pageCount }: Calendar
           className="w-32"
         />
       </ListToolbar>
-      <CalendarEventTable data={data} pending={query.isPending} />
+      <CalendarEventTable data={data} formOptions={formOptions} pending={query.isPending} />
     </div>
   );
 }

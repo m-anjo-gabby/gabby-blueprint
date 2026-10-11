@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { CALENDAR_EVENT_TYPES, type CalendarEventItem } from '@gabby/types/calendarEvent';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { CalendarEventFormDialog } from './CalendarEventFormDialog';
+import { CalendarEventFormDialog, type CalendarEventFormOptions } from './CalendarEventFormDialog';
 
 type TableT = ReturnType<typeof useTranslations<'calendarEvents.dataTable'>>;
 
@@ -26,10 +26,12 @@ interface ColumnOptions {
    * 参加者・アナウンス管理へのリンクに ?from=series を付けて戻り先をシリーズの詳細にする
    */
   hideSeries: boolean;
+  /** 編集ダイアログの選択肢 */
+  formOptions: CalendarEventFormOptions;
   onDelete: (event: CalendarEventItem) => void;
 }
 
-export function createColumns(t: TableT, { hideSeries, onDelete }: ColumnOptions): ColumnDef<CalendarEventItem>[] {
+export function createColumns(t: TableT, { hideSeries, formOptions, onDelete }: ColumnOptions): ColumnDef<CalendarEventItem>[] {
   return [
     {
       accessorKey: 'event_type',
@@ -102,7 +104,7 @@ export function createColumns(t: TableT, { hideSeries, onDelete }: ColumnOptions
             </span>
           )}
 
-          <CalendarEventFormDialog mode="edit" initialData={row.original} />
+          <CalendarEventFormDialog mode="edit" initialData={row.original} options={formOptions} />
 
           <Button
             variant="ghost"

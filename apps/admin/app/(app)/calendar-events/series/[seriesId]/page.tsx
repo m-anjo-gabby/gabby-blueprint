@@ -62,7 +62,7 @@ export default async function CalendarEventSeriesDetailPage({ params }: { params
         )}
       </div>
 
-      <CalendarEventTable data={sessions} hideSeries standalone />
+      <CalendarEventTable data={sessions} formOptions={{ clients, coaches }} hideSeries standalone />
     </div>
   );
 }

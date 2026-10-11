@@ -8,9 +8,12 @@ import { deleteCalendarEvent } from '@/actions/adminCalendarEventAction';
 import { DataTable } from '@/components/list/DataTable';
 import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
 import { createColumns } from './columns';
+import type { CalendarEventFormOptions } from './CalendarEventFormDialog';
 
 interface CalendarEventTableProps {
   data: CalendarEventItem[];
+  /** 編集ダイアログの選択肢（画面のサーバー側で取得する） */
+  formOptions: CalendarEventFormOptions;
   /** シリーズの詳細で、同じシリーズの回だけを並べる場合（columns.tsx の hideSeries） */
   hideSeries?: boolean;
   /** 一覧を取り直している最中（条件の変更） */
@@ -20,7 +23,7 @@ interface CalendarEventTableProps {
 }
 
 /** カレンダーイベントの表と削除の確認（一覧・シリーズの詳細で共用） */
-export function CalendarEventTable({ data, hideSeries = false, pending = false, standalone = false }: CalendarEventTableProps) {
+export function CalendarEventTable({ data, formOptions, hideSeries = false, pending = false, standalone = false }: CalendarEventTableProps) {
   const t = useTranslations('calendarEvents.dataTable');
   const { showToast } = useToast();
   const [deleting, setDeleting] = useState<CalendarEventItem | null>(null);
@@ -40,7 +43,7 @@ export function CalendarEventTable({ data, hideSeries = false, pending = false, 
   return (
     <>
       <DataTable
-        columns={createColumns(t, { hideSeries, onDelete: setDeleting })}
+        columns={createColumns(t, { hideSeries, formOptions, onDelete: setDeleting })}
         data={data}
         getRowId={(row) => row.calendar_event_id}
         emptyMessage={t('noData')}

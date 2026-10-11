@@ -1,91 +1,55 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Bell, BellOff } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { BellOff } from 'lucide-react';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
+import { useFetchOnMount } from '@gabby/lib/hooks/useFetchOnMount';
 import { NotificationItem } from '@gabby/types/notification';
 import { NotificationCard } from './_components/NotificationCard';
-import { PageHeader } from '@/components/common/PageHeader';
+import { NotificationListSkeleton, NotificationPageLayout } from './_components/NotificationPageParts';
 
 export default function NotificationPage() {
   const t = useTranslations('notification');
   const { notifications, isLoading, fetchNotifications, markAsRead } = useNotificationStore();
   const router = useRouter();
 
-  // このページは常に最新を見せる
-  useEffect(() => {
-    fetchNotifications(true);
-  }, [fetchNotifications]);
+  // 開くたびに最新を取り直し、取り直しが終わるまでは骨組みを出す
+  // （ストアに残った古い一覧や、取得前の「0件」を一瞬出さない）
+  const isReady = useFetchOnMount(fetchNotifications, isLoading);
 
-  const handleOpen = useCallback((notification: NotificationItem) => {
-    if (!notification.is_read) {
-      markAsRead(notification.notification_id);
-    }
-    if (notification.link_path) {
-      router.push(notification.link_path);
-    }
-  }, [markAsRead, router]);
+  const handleOpen = useCallback(
+    (notification: NotificationItem) => {
+      if (!notification.is_read) {
+        markAsRead(notification.notification_id);
+      }
+      if (notification.link_path) {
+        router.push(notification.link_path);
+      }
+    },
+    [markAsRead, router]
+  );
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
-      <PageHeader
-        title={t('title')}
-        description={t('subtitle')}
-        actions={
-          <div className="flex shrink-0 items-center gap-1.5 rounded-xl border border-brand-100 bg-brand-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-brand">
-            <Bell size={10} />
-            {notifications.length} <span className="ml-0.5 opacity-60">{t('itemsLabel')}</span>
+    // 骨組みから本番へは、その場で置き換える（フェードイン・AnimatePresence は使わない）
+    <NotificationPageLayout count={isReady ? notifications.length : null}>
+      {!isReady ? (
+        <NotificationListSkeleton />
+      ) : notifications.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-20 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 text-slate-300">
+            <BellOff size={22} />
           </div>
-        }
-      />
-
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 max-w-2xl">
-        <AnimatePresence mode="wait">
-          {isLoading ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-3"
-            >
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-16 w-full rounded-2xl bg-slate-100 animate-pulse" />
-              ))}
-            </motion.div>
-          ) : notifications.length === 0 ? (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-slate-200"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4 border border-slate-100">
-                <BellOff size={22} />
-              </div>
-              <p className="text-sm font-bold text-slate-500">{t('empty')}</p>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="list"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-3 pb-6"
-            >
-              {notifications.map(notification => (
-                <NotificationCard
-                  key={notification.notification_id}
-                  notification={notification}
-                  onOpen={handleOpen}
-                />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
+          <p className="text-sm font-bold text-slate-500">{t('empty')}</p>
+        </div>
+      ) : (
+        <div className="space-y-3 pb-6">
+          {notifications.map((notification) => (
+            <NotificationCard key={notification.notification_id} notification={notification} onOpen={handleOpen} />
+          ))}
+        </div>
+      )}
+    </NotificationPageLayout>
   );
 }

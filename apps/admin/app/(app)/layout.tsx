@@ -6,6 +6,9 @@ import ToastContainer from '@gabby/lib/components/common/ToastContainer';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { UserAppMetadata } from '@gabby/lib/stores/useUserStore';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { loadCommonShellData } from '@gabby/lib/shell/loadCommonShellData';
+import { ShellDataLoader } from '@/components/common/ShellDataLoader';
+import { ADMIN_SHELL_DATA_OPTIONS } from '@/lib/shellData';
 
 /**
  * 管理者用 統合アプリケーションレイアウト
@@ -27,10 +30,15 @@ export default async function AdminAppLayout({
   // 💡 user_type/roles に基づく詳細なアクセス制御は apps/admin/proxy.ts (Middleware) で
   // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。
 
+  // ヘッダー・サイドバーの未読（通知・チャット）はサーバーで並列に取得し、await せず Promise のまま渡す
+  // （画面の表示を待たせず、ブラウザからのサーバーアクションの往復も発生させない）
+  const shellData = loadCommonShellData(ADMIN_SHELL_DATA_OPTIONS);
+
   return (
     <>
       {/* Zustandへのデータ流し込みとAuth監視 */}
       <UserStoreInitializer user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }} />
+      <ShellDataLoader data={shellData} />
       
       {/* --- 旧 AdminLayout のデザイン構造 --- */}
       {/* ヘッダーエリア / サイドメニュー / メインエリアの3ペイン構成 */}
