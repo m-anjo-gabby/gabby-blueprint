@@ -11,7 +11,6 @@ export const AudioTroubleshootingDialog: React.FC<AudioTroubleshootingDialogProp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        onOpenAutoFocus={(e) => e.preventDefault()}
         className="max-w-md rounded-panel p-6 bg-white border border-line/60 shadow-2xl"
       >
         <DialogHeader>

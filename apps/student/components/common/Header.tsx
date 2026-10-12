@@ -13,6 +13,7 @@ import {
   Loader2
 } from 'lucide-react';
 import * as Dialog from "@radix-ui/react-dialog"; // Radix UI Dialogをインポート
+import { focusDialogContent } from '@gabby/lib/components/common/dialogFocus';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Shadcn UI Components
@@ -188,7 +189,7 @@ export default function Header() {
               {/* ダイアログ本体 */}
               <Dialog.Content 
                 asChild 
-                onOpenAutoFocus={(e) => e.preventDefault()}
+                onOpenAutoFocus={focusDialogContent}
               >
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}

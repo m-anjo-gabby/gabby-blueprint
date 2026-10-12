@@ -5,6 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { focusDialogContent } from "@gabby/lib/components/common/dialogFocus"
 
 const Dialog = DialogPrimitive.Root
 
@@ -32,11 +33,13 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, onInteractOutside, ...props }, ref) => (
+>(({ className, children, onInteractOutside, onOpenAutoFocus, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      // 開いた時は中の要素（×ボタン等）にフォーカスせず枠にフォーカスする。特定の要素に当てる場合はその要素に autoFocus を付ける
+      onOpenAutoFocus={onOpenAutoFocus ?? focusDialogContent}
       onInteractOutside={(event) => {
         // 共通確認ダイアログ(ConfirmModal)はRadixのポータル外に描画されるため、
         // それをクリックした際に背後のDialogまで閉じてしまわないようにする
@@ -51,7 +54,7 @@ const DialogContent = React.forwardRef<
         // max-w(各ダイアログで個別指定)未満の場合に左右マージンが一切無くなり、
         // ダイアログが画面端まで広がってしまう(内部コンテンツが右端に押し込まれる形で発覚)。
         // 最低限の左右余白(片側1rem)を保証する。max-wはこれまで通り各ダイアログ側で上書きされる。
-        "fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        "outline-none fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
         className
       )}
       {...props}

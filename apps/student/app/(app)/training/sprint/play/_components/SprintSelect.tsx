@@ -333,7 +333,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                         </button>
                       </DialogTrigger>
                       <DialogContent
-                        onOpenAutoFocus={(e) => e.preventDefault()}
                         className="sm:max-w-sm border-none bg-surface p-6 shadow-2xl rounded-card text-ink"
                       >
                         <DialogHeader><DialogTitle className="text-sm font-bold text-ink-muted">モードの説明</DialogTitle></DialogHeader>
@@ -476,7 +475,6 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
                   </button>
                 </DialogTrigger>
                 <DialogContent
-                  onOpenAutoFocus={(e) => e.preventDefault()}
                   className="sm:max-w-sm border-none bg-surface p-6 shadow-2xl rounded-card text-ink"
                 >
                   <DialogHeader><DialogTitle className="text-sm font-bold text-ink-subtle">出題テーマとTips</DialogTitle></DialogHeader>

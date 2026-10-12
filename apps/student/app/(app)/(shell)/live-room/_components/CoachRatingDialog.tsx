@@ -30,7 +30,6 @@ export function CoachRatingDialog({ target, onClose, onSubmitted }: CoachRatingD
   return (
     <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        onOpenAutoFocus={(e) => e.preventDefault()}
         className="max-w-md rounded-panel border border-line/60 bg-surface p-6 text-ink shadow-2xl"
       >
         {/* 対象が替わるたびに入力を初期化する */}
