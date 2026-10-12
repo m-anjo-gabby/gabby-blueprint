@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { CalendarClock, CheckCircle2, ClipboardList, type LucideIcon, TriangleAlert } from 'lucide-react';
 import { getMySessionTasks } from '@/actions/sessionAction';
 import { formatWeeklySlotEn } from '@/lib/weeklySlot';
-import { DashboardPanelCard, PanelRowsSkeleton } from './DashboardPanelCard';
+import { DashboardPanelCard, PanelRowList, PanelRowsSkeleton } from './DashboardPanelCard';
 
 function TaskRow({ href, icon: Icon, title, subtitle }: { href: string; icon: LucideIcon; title: string; subtitle: string }) {
   return (
@@ -57,7 +57,7 @@ export default async function SessionTasksPanel({ timezone }: { timezone: string
           <p className="text-xs font-semibold text-slate-400">You&apos;re all caught up</p>
         </div>
       ) : (
-        <ul className="space-y-2">
+        <PanelRowList>
           {tasks.unfinalizedSessions.map((task) => (
             <li key={`unfinalized-${task.session_id}`}>
               <TaskRow
@@ -88,7 +88,7 @@ export default async function SessionTasksPanel({ timezone }: { timezone: string
               />
             </li>
           ))}
-        </ul>
+        </PanelRowList>
       )}
     </DashboardPanelCard>
   );

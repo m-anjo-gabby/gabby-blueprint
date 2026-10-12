@@ -36,6 +36,7 @@
 | Session Tasksの「… — Homework not posted」行 | 結果確定済み（completed）だが宿題が未投稿のセッションがある場合 | クリックでセッション結果画面（`/students/[id]/sessions/[sessionId]/result`）へ遷移 |
 | Session Tasksの「… — Makeup session available」行 | 担当する生徒の定期コマで、本来の実施回数に対して実際の予定回数が不足している（未消化枠がある）場合 | クリックで生徒概要（`/students/[id]`）へ遷移 |
 | Session Tasksの件数バッジ「N open」 | 上記3種のタスク合計が1件以上の場合のみ表示 | — |
+| 「Next 24 Hours」「Session Tasks」の行の一覧 | それぞれ約5件分の高さで止まり、それより多い場合は一覧の中だけスクロールする（6件目が半分見える高さにして続きがあることを示す） | スクロールで残りの行を表示 |
 
 ## 状態
 

@@ -4,7 +4,7 @@ import { getMySessions } from '@/actions/sessionAction';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { SESSION_STATUS } from '@gabby/types/session';
 import { LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
-import { DashboardPanelCard, PanelRowsSkeleton } from './DashboardPanelCard';
+import { DashboardPanelCard, PanelRowList, PanelRowsSkeleton } from './DashboardPanelCard';
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -64,7 +64,7 @@ export default async function TodaysSessionsPanel({ timezone }: { timezone: stri
           <p className="text-xs font-semibold text-slate-400">No sessions in the next 24 hours</p>
         </div>
       ) : (
-        <ul className="space-y-2">
+        <PanelRowList>
           {next24hSessions.map((session) => (
             <li key={session.session_id}>
               <Link
@@ -88,7 +88,7 @@ export default async function TodaysSessionsPanel({ timezone }: { timezone: stri
               </Link>
             </li>
           ))}
-        </ul>
+        </PanelRowList>
       )}
     </DashboardPanelCard>
   );
