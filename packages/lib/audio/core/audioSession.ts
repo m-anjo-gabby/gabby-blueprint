@@ -19,6 +19,8 @@
  *   マイクを使う直前には必ず requestPlayAndRecordSession() を呼ぶこと。
  */
 
+import { clientLogger } from '../../logger/client';
+
 type AudioSessionType = 'auto' | 'playback' | 'transient' | 'transient-solo' | 'ambient' | 'play-and-record';
 
 interface AudioSessionLike {
@@ -44,7 +46,7 @@ function applySessionType(type: AudioSessionType) {
   try {
     if (session.type !== type) session.type = type;
   } catch (err) {
-    console.warn(`Failed to set audioSession type to ${type}:`, err);
+    clientLogger.debug('audio:set_session_type_failed', `Failed to set audioSession type to ${type}`, { err });
   }
 }
 

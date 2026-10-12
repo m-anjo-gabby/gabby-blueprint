@@ -194,7 +194,7 @@ export async function getCoachMonthlyReportCore(reportMonth: string): Promise<Ge
 
     return await buildMonthlyReport(supabase, user.id, reportMonth);
   } catch (err) {
-    logger.error('monthlyReport:get_coach_report_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('monthlyReport:get_coach_report_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -208,7 +208,7 @@ export async function getAdminCoachMonthlyReportCore(coachId: string, reportMont
     const supabase = createAdminClient();
     return await buildMonthlyReport(supabase, coachId, reportMonth);
   } catch (err) {
-    logger.error('monthlyReport:get_admin_report_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('monthlyReport:get_admin_report_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -227,14 +227,14 @@ export async function approveCoachMonthlyReportCore(coachId: string, reportMonth
     });
 
     if (error) {
-      logger.error('monthlyReport:approve_failed', error.message, { ...ctx, payload: { coachId, reportMonth } });
+      logger.error('monthlyReport:approve_failed', error.message, { ...ctx, err: error, payload: { coachId, reportMonth } });
       return { success: false, errorCode: classifyMonthlyReportRpcError(error.message) };
     }
 
     logger.info('monthlyReport:approve_success', 'Monthly report approved', { ...ctx, payload: { coachId, reportMonth } });
     return { success: true };
   } catch (err) {
-    logger.error('monthlyReport:approve_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('monthlyReport:approve_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -252,14 +252,14 @@ export async function revokeCoachMonthlyReportApprovalCore(coachId: string, repo
     });
 
     if (error) {
-      logger.error('monthlyReport:revoke_failed', error.message, { ...ctx, payload: { coachId, reportMonth } });
+      logger.error('monthlyReport:revoke_failed', error.message, { ...ctx, err: error, payload: { coachId, reportMonth } });
       return { success: false, errorCode: classifyMonthlyReportRpcError(error.message) };
     }
 
     logger.info('monthlyReport:revoke_success', 'Monthly report approval revoked', { ...ctx, payload: { coachId, reportMonth } });
     return { success: true };
   } catch (err) {
-    logger.error('monthlyReport:revoke_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('monthlyReport:revoke_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

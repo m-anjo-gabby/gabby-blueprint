@@ -37,7 +37,7 @@ export async function getDashboardContentData(): Promise<ContentItem[]> {
       .order('seq_no', { ascending: true });
 
     if (error) {
-      logger.error("dashboard:get_content_failed", error.message, ctx);
+      logger.error("dashboard:get_content_failed", error.message, { ...ctx, err: error });
       return [];
     }
 
@@ -47,7 +47,7 @@ export async function getDashboardContentData(): Promise<ContentItem[]> {
       is_favorite: ((c.is_favorite as any)?.[0]?.count || 0) > 0
     })) as unknown as ContentItem[];
   } catch (err) {
-    logger.error("dashboard:get_content_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("dashboard:get_content_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return [];
   }
 }
@@ -70,14 +70,14 @@ export async function getMyClientInfo(): Promise<ClientInfo | null> {
       // 所属情報が見つからない、または複数ある場合（PGRST116: 0件, PGRST117: 複数件）
       // single()のエラーは、要件に応じて警告かエラーかを使い分ける
       if (error.code !== 'PGRST116') {
-        logger.warn("dashboard:get_client_info_failed", error.message, ctx);
+        logger.warn("dashboard:get_client_info_failed", error.message, { ...ctx, err: error });
       }
       return null;
     }
 
     return data as ClientInfo;
   } catch (err) {
-    logger.error("dashboard:get_client_info_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("dashboard:get_client_info_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return null;
   }
 }
@@ -120,7 +120,7 @@ export async function getMyActivePlans(): Promise<MyPlan[]> {
     }));
   } catch (err) {
     // ホームの補助表示のため、失敗時は契約なしと同じ扱いにして画面全体は表示させる
-    logger.error('dashboard:get_active_plans_failed', err instanceof Error ? err.message : String(err), ctx);
+    logger.error('dashboard:get_active_plans_failed', err instanceof Error ? err.message : String(err), { ...ctx, err });
     return [];
   }
 }

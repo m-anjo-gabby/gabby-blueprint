@@ -7,6 +7,28 @@ import { type CVImportEntry, toCVEntryKey } from '../../../../apps/admin/lib/cvD
 
 export const DEFAULT_LEDGER_PATH = 'docs/cv-dictionary/review-ledger.tsv';
 
+// 過去の作成で固有名詞と判定した語（extract.ts が機械的に除外する）
+export const DEFAULT_PROPER_NOUNS_PATH = 'docs/cv-dictionary/proper-nouns.tsv';
+export const PROPER_NOUN_HEADERS = ['word', 'note', 'registered_date', 'source'];
+
+/** ヘッダー付きTSVを列名→値のレコードで読む（ファイルが無ければ空） */
+export const readTsvRecords = (path: string): Record<string, string>[] => {
+  if (!existsSync(path)) return [];
+  const lines = readFileSync(path, 'utf-8').replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length === 0) return [];
+  const headers = lines[0].split('\t').map((h) => h.trim());
+  return lines.slice(1).map((line) => {
+    const cells = line.split('\t');
+    return Object.fromEntries(headers.map((h, i) => [h, cells[i]?.trim() ?? '']));
+  });
+};
+
+/** 固有名詞リストを台帳と同じ形式（UTF-8 BOM付き・CRLF）で保存する */
+export const writeProperNouns = (path: string, rows: Record<string, string>[]): void => {
+  const body = rows.map((r) => PROPER_NOUN_HEADERS.map((h) => (r[h] ?? '').replace(/[\t\r\n]/g, ' ')).join('\t'));
+  writeFileSync(path, '﻿' + [PROPER_NOUN_HEADERS.join('\t'), ...body].join('\r\n') + '\r\n', 'utf-8');
+};
+
 export const LEDGER_HEADERS = [
   'id',
   'status',

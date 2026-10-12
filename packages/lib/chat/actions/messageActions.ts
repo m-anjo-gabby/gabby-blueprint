@@ -68,7 +68,7 @@ export async function sendChatMessage(
       .single();
 
     if (error) {
-      logger.error('chat:send_message_failed', error.message, { ...ctx, payload: { roomId: payload.roomId } });
+      logger.error('chat:send_message_failed', error.message, { ...ctx, err: error, payload: { roomId: payload.roomId } });
       return { success: false, error: error.message };
     }
 
@@ -89,6 +89,7 @@ export async function sendChatMessage(
       if (attachmentError) {
         logger.error('chat:send_message_attachments_failed', attachmentError.message, {
           ...ctx,
+          err: attachmentError,
           payload: { roomId: payload.roomId, chatId: chatRow.chat_id },
         });
         return { success: true, data: { ...chatRow, attachments: [] } as ChatMessage };
@@ -101,6 +102,7 @@ export async function sendChatMessage(
   } catch (err) {
     logger.error('chat:send_message_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: { roomId: payload.roomId },
     });
     return { success: false, error: 'Unexpected error' };
@@ -139,7 +141,7 @@ export async function getChatMessages(params: {
     const { data, error } = await query;
 
     if (error) {
-      logger.error('chat:get_messages_failed', error.message, { ...ctx, payload: { roomId: params.roomId } });
+      logger.error('chat:get_messages_failed', error.message, { ...ctx, err: error, payload: { roomId: params.roomId } });
       return { success: false, data: [], hasMore: false, error: error.message };
     }
 
@@ -150,6 +152,7 @@ export async function getChatMessages(params: {
   } catch (err) {
     logger.error('chat:get_messages_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: { roomId: params.roomId },
     });
     return { success: false, data: [], hasMore: false, error: 'Unexpected error' };
@@ -176,7 +179,7 @@ export async function getChatMessageById(chatId: string): Promise<{
       .single();
 
     if (error || !data) {
-      logger.error('chat:get_message_by_id_failed', error?.message || 'Not found', { ...ctx, payload: { chatId } });
+      logger.error('chat:get_message_by_id_failed', error?.message || 'Not found', { ...ctx, err: error, payload: { chatId } });
       return { success: false, error: error?.message || 'Not found' };
     }
 
@@ -184,6 +187,7 @@ export async function getChatMessageById(chatId: string): Promise<{
   } catch (err) {
     logger.error('chat:get_message_by_id_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: { chatId },
     });
     return { success: false, error: 'Unexpected error' };
@@ -233,7 +237,7 @@ export async function markAsRead(params: {
       .eq('user_id', user.id);
 
     if (error) {
-      logger.error('chat:mark_read_failed', error.message, { ...ctx, payload: params });
+      logger.error('chat:mark_read_failed', error.message, { ...ctx, err: error, payload: params });
       return { success: false, error: error.message };
     }
 
@@ -246,13 +250,14 @@ export async function markAsRead(params: {
       .eq('dedup_key', params.roomId);
 
     if (notificationError) {
-      logger.warn('chat:mark_read_notification_sync_failed', notificationError.message, { ...ctx, payload: params });
+      logger.warn('chat:mark_read_notification_sync_failed', notificationError.message, { ...ctx, err: notificationError, payload: params });
     }
 
     return { success: true };
   } catch (err) {
     logger.error('chat:mark_read_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: params,
     });
     return { success: false, error: 'Unexpected error' };
@@ -286,7 +291,7 @@ export async function deleteChatMessage(params: {
       .eq('chat_id', params.chatId);
 
     if (error) {
-      logger.error('chat:delete_message_failed', error.message, { ...ctx, payload: params });
+      logger.error('chat:delete_message_failed', error.message, { ...ctx, err: error, payload: params });
       return { success: false, error: error.message };
     }
 
@@ -295,6 +300,7 @@ export async function deleteChatMessage(params: {
   } catch (err) {
     logger.error('chat:delete_message_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: params,
     });
     return { success: false, error: 'Unexpected error' };

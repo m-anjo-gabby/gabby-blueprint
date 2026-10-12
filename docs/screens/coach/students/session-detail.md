@@ -27,8 +27,8 @@
 
 1. **Session Info** — セッションのステータス・日時、通話開始・End Session・（必要時）
    Resolve Manuallyの操作
-2. **Training**（実施予定かつ操作可能な間のみ表示） — Live Sprintの開始導線（Dialog Practiceは
-   準備中で無効表示）
+2. **Training**（実施予定かつ操作可能な間のみ表示） — Live Sprintの開始導線と、Dialogue Practiceカード
+   （教材の割当・セッションの完了操作・教材リンクを開いた記録）
 3. **Prep** — 前回のLive Sprint（このセッション自身の実施分を除く直近3件）、前回の宿題
    （このセッション自身の投稿を除く直近分）
 4. **Self-Training** — 直近数日間の自主トレ状況（アクティブ日数・回答数・スピーキング評価回数）
@@ -88,6 +88,13 @@
 | 確定済み | 通常操作エリアの代わりに「This lesson has already been finalized.」＋結果画面へのリンク | 既にfinalize_session/resolve_stale_sessionで確定済みの場合（このハブへの通常の導線は生じないが、別タブで先に確定された場合等に発生しうる） |
 | 該当データが無い | 404ページ | 指定した`sessionId`が存在しない、または生徒との担当関係が無い場合 |
 | 読み込み中 | Session Info（通話開始・終了の操作）を先に表示し、Dialogue Practice・Prep・Self-Trainingの各区画は骨組みから取得が終わった順に置き換わる | セッション情報の取得後、区画ごとに個別の `Suspense` で遅延表示 |
+
+## 関連する業務フロー仕様書
+
+- [ライブセッションの実施・終了処理](../../../../testing/e2e/specs/session-lifecycle/session-completion.md)
+  — End Session の判定・Resolve Manually・チケットの消化・異常系の一覧
+- [ライブセッションの宿題](../../../../testing/e2e/specs/homework/session-homework.md)
+  — 前回の宿題（Last Homework）の元になる宿題の業務フロー
 
 ## 実装参照（エンジニア向け）
 

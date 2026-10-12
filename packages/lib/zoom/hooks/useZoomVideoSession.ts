@@ -7,6 +7,7 @@ import { useCallback, useRef, useState } from 'react';
 import { ensureZoomClientInitialized } from '../client';
 import { describeZoomError } from '../errors';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
+import { clientLogger } from '../../logger/client';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ZoomClient = any;
@@ -111,7 +112,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
         playerContainer.appendChild(videoElement);
       }
     } catch (err) {
-      console.error('Failed to render peer video', err);
+      clientLogger.error('liveRoom:render_peer_video_failed', 'Failed to render peer video', { err });
     }
   }, []);
 
@@ -161,7 +162,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
               }
               setIsReceivingScreenShare(true);
             } catch (err) {
-              console.error('Failed to render screen share', err);
+              clientLogger.error('liveRoom:render_screen_share_failed', 'Failed to render screen share', { err });
             }
           } else {
             shareWrapper.replaceChildren();
@@ -238,7 +239,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
         setIsJoined(true);
       } catch (err) {
         const { detail, message } = describeZoomError(err);
-        console.error('Failed to join live session room:', message, detail);
+        clientLogger.error('liveRoom:join_failed', message, { payload: { detail } });
         setErrorMessage(message);
       } finally {
         setIsJoining(false);
@@ -254,7 +255,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       await client.leave(end);
     } catch (err) {
       const { detail, message } = describeZoomError(err);
-      console.error('Failed to leave live session room:', message, detail);
+      clientLogger.warn('liveRoom:leave_failed', message, { payload: { detail } });
     } finally {
       clientRef.current = null;
       setIsJoined(false);
@@ -282,7 +283,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       setIsMicOn((prev) => !prev);
     } catch (err) {
       const { detail, message } = describeZoomError(err);
-      console.error('Failed to toggle microphone:', message, detail);
+      clientLogger.error('liveRoom:toggle_microphone_failed', message, { payload: { detail } });
       setErrorMessage(message);
     }
   }, [isMicOn]);
@@ -309,7 +310,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       setIsCameraOn((prev) => !prev);
     } catch (err) {
       const { detail, message } = describeZoomError(err);
-      console.error('Failed to toggle camera:', message, detail);
+      clientLogger.error('liveRoom:toggle_camera_failed', message, { payload: { detail } });
       setErrorMessage(message);
     }
   }, [isCameraOn, isBlurOn]);
@@ -324,7 +325,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       setIsBlurOn(next);
     } catch (err) {
       const { detail, message } = describeZoomError(err);
-      console.error('Failed to toggle background blur:', message, detail);
+      clientLogger.warn('liveRoom:toggle_blur_failed', message, { payload: { detail } });
       setErrorMessage(message);
     }
   }, [isBlurOn, isCameraOn]);
@@ -343,7 +344,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
         setIsScreenSharing((prev) => !prev);
       } catch (err) {
         const { detail, message } = describeZoomError(err);
-        console.error('Failed to toggle screen share:', message, detail);
+        clientLogger.warn('liveRoom:toggle_screen_share_failed', message, { payload: { detail } });
         // 共有ダイアログでユーザーが「キャンセル」した場合は正常な操作なので、
         // エラーバナーは出さずログのみに留める
         const reason = (detail as { reason?: string } | null)?.reason ?? '';
@@ -366,7 +367,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       await chatClient.sendToAll(trimmed);
     } catch (err) {
       const { detail, message } = describeZoomError(err);
-      console.error('Failed to send chat message:', message, detail);
+      clientLogger.error('liveRoom:send_chat_failed', message, { payload: { detail } });
       setErrorMessage(message);
     }
   }, []);

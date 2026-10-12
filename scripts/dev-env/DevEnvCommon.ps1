@@ -18,6 +18,7 @@ $script:DevEnvRepoAssets = @(
   @{ Path = 'supabase/release/env/.env.dev';     Required = $false; Note = 'リリース作業（dev）' }
   @{ Path = 'supabase/release/env/.env.staging'; Required = $false; Note = 'リリース作業（staging）' }
   @{ Path = 'supabase/release/env/.env.prod';    Required = $false; Note = 'リリース作業（prod）' }
+  @{ Path = 'scripts/vercel-env/values';        Required = $false; Note = 'アプリの環境変数の値（staging・本番の秘密の値を含む）' }
   @{ Path = '.vercel';                         Required = $false; Note = 'Vercel CLI のプロジェクト紐づけ' }
   @{ Path = 'apps/admin/.vercel';              Required = $false; Note = 'Vercel CLI のプロジェクト紐づけ（admin）' }
   @{ Path = '.github';                         Required = $false; Note = 'Copilot 指示ファイル等（Git管理外）' }

@@ -71,13 +71,13 @@ export async function getChatRoomTargetUsers(): Promise<{
       .order('user_name', { ascending: true });
 
     if (error) {
-      logger.error('chat:get_target_users_failed', error.message, ctx);
+      logger.error('chat:get_target_users_failed', error.message, { ...ctx, err: error });
       return { success: false, data: [], error: error.message };
     }
 
     return { success: true, data: (data || []) as ChatTargetUser[] };
   } catch (err) {
-    logger.error('chat:get_target_users_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('chat:get_target_users_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, data: [], error: 'Unexpected error' };
   }
 }
@@ -110,7 +110,7 @@ export async function createChatRoom(
     }
     return createOneOnOneChatRoom(payload, ctx);
   } catch (err) {
-    logger.error('chat:create_room_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('chat:create_room_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -153,7 +153,7 @@ async function createOneOnOneChatRoom(
     .single<{ room_id: string; created: boolean }>();
 
   if (ensureError || !ensured) {
-    logger.error('chat:create_room_failed', ensureError?.message || 'Unknown error', { ...ctx, payload });
+    logger.error('chat:create_room_failed', ensureError?.message || 'Unknown error', { ...ctx, err: ensureError, payload });
     return { success: false, error: ensureError?.message || 'Failed to create chat room' };
   }
 
@@ -204,7 +204,7 @@ async function createGroupChatRoom(
     .single();
 
   if (roomError || !newRoom) {
-    logger.error('chat:create_room_failed', roomError?.message || 'Unknown error', { ...ctx, payload });
+    logger.error('chat:create_room_failed', roomError?.message || 'Unknown error', { ...ctx, err: roomError, payload });
     return { success: false, error: roomError?.message || 'Failed to create chat room' };
   }
 
@@ -215,6 +215,7 @@ async function createGroupChatRoom(
   if (memberError) {
     logger.error('chat:create_room_members_failed', memberError.message, {
       ...ctx,
+      err: memberError,
       payload: { roomId: newRoom.room_id },
     });
     return { success: false, error: memberError.message };
@@ -294,7 +295,7 @@ export async function addChatRoomMember(
           .insert({ room_id: payload.roomId, user_id: profile.id, user_type: profile.user_type });
 
     if (memberError) {
-      logger.error('chat:add_member_failed', memberError.message, { ...ctx, payload });
+      logger.error('chat:add_member_failed', memberError.message, { ...ctx, err: memberError, payload });
       return { success: false, error: memberError.message };
     }
 
@@ -314,7 +315,7 @@ export async function addChatRoomMember(
       },
     };
   } catch (err) {
-    logger.error('chat:add_member_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('chat:add_member_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -372,7 +373,7 @@ export async function removeChatRoomMember(
       .select('user_id');
 
     if (updateError) {
-      logger.error('chat:remove_member_failed', updateError.message, { ...ctx, payload });
+      logger.error('chat:remove_member_failed', updateError.message, { ...ctx, err: updateError, payload });
       return { success: false, error: updateError.message };
     }
 
@@ -384,7 +385,7 @@ export async function removeChatRoomMember(
 
     return { success: true };
   } catch (err) {
-    logger.error('chat:remove_member_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('chat:remove_member_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -525,7 +526,7 @@ export async function getChatRooms(): Promise<{
       .is('left_at', null);
 
     if (memberError) {
-      logger.error('chat:get_rooms_failed', memberError.message, ctx);
+      logger.error('chat:get_rooms_failed', memberError.message, { ...ctx, err: memberError });
       return { success: false, data: [], error: memberError.message };
     }
 
@@ -542,7 +543,7 @@ export async function getChatRooms(): Promise<{
         .in('room_id', roomIds);
 
       if (roomsError) {
-        logger.error('chat:get_rooms_failed', roomsError.message, ctx);
+        logger.error('chat:get_rooms_failed', roomsError.message, { ...ctx, err: roomsError });
         return { success: false, data: [], error: roomsError.message };
       }
       rooms = (roomRows || []) as RoomBase[];
@@ -551,7 +552,7 @@ export async function getChatRooms(): Promise<{
     const data = await buildChatRoomListItems(supabase, rooms, user.id, myMembershipByRoom);
     return { success: true, data };
   } catch (err) {
-    logger.error('chat:get_rooms_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('chat:get_rooms_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, data: [], error: 'Unexpected error' };
   }
 }
@@ -579,7 +580,7 @@ export async function getAllChatRoomsForAdmin(): Promise<{
       .select('room_id, room_type, room_name, created_at, closed_at');
 
     if (roomsError) {
-      logger.error('chat:get_all_rooms_failed', roomsError.message, ctx);
+      logger.error('chat:get_all_rooms_failed', roomsError.message, { ...ctx, err: roomsError });
       return { success: false, data: [], error: roomsError.message };
     }
 
@@ -596,7 +597,7 @@ export async function getAllChatRoomsForAdmin(): Promise<{
     const data = await buildChatRoomListItems(supabase, (allRooms || []) as RoomBase[], currentUser.id, myMembershipByRoom);
     return { success: true, data };
   } catch (err) {
-    logger.error('chat:get_all_rooms_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('chat:get_all_rooms_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, data: [], error: 'Unexpected error' };
   }
 }
@@ -686,6 +687,7 @@ export async function getChatRoomDetail(roomId: string): Promise<{
   } catch (err) {
     logger.error('chat:get_room_detail_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
+      err,
       payload: { roomId },
     });
     return { success: false, error: 'Unexpected error' };

@@ -1,4 +1,5 @@
 import { expect, type Browser, type BrowserContext, type Locator, type Page } from "@playwright/test";
+import { clickUntilVisible } from "./hydration.ts";
 import { getPersonaPassword } from "./personas.ts";
 
 /**
@@ -39,17 +40,10 @@ export async function openAdminContext(browser: Browser): Promise<{ context: Bro
   return { context, page };
 }
 
-/**
- * ダイアログを開くボタン等を、ダイアログが開くまで押す。
- * 本番ビルド（ステージングの Vercel）はサーバーで描いた画面が先に表示されるため、画面の部品が動き出す前（ハイドレーション前）に
- * 押すと操作が無視される。開いたことを確かめ、開かなければ押し直す。
- */
+/** ダイアログを開くボタン等を、ダイアログが開くまで押す（ハイドレーション前の押下対策。support/hydration.ts） */
 export async function openDialogBy(page: Page, trigger: Locator): Promise<Locator> {
   const dialog = page.getByRole("dialog");
-  await expect(async () => {
-    if (!(await dialog.isVisible())) await trigger.click();
-    await expect(dialog).toBeVisible({ timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+  await clickUntilVisible(trigger, dialog);
   return dialog;
 }
 

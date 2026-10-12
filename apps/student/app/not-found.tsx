@@ -4,30 +4,20 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { Home, Compass, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { logClientError } from '@gabby/lib/logger/actions'; // 共通パッケージからインポート
+import { clientLogger } from '@gabby/lib/logger/client';
 
 export default function NotFound() {
   useEffect(() => {
-    // 404が発生した際のコンテキスト（アクセスURLと流入元）を収集
-    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'Unknown URL';
-    const referrer = typeof document !== 'undefined' ? document.referrer : 'No referrer';
-
-    // サーバー側の共通アクション（Pino）を呼び出し、Vercelログへ構造化データとして記録
-    logClientError({
-      service: 'student',
-      message: `404 Not Found: User tried to access an invalid page`,
-      // system:runtime_error と区別しやすくするために digest の領域等にコンテキストを詰める
-      digest: '404_NOT_FOUND',
-      stack: `Requested URL: ${currentUrl}\nReferrer: ${referrer}`
-    }).catch((err) => {
-      console.error('Failed to send 404 log to Vercel:', err);
+    // 存在しない画面へのアクセスを記録する（表示中のパスは clientLogger が付ける。流入元はクエリを除く）
+    clientLogger.warn('system:not_found', 'Page not found', {
+      payload: { referrer: document.referrer.split('?')[0] || undefined },
     });
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 px-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-canvas px-4">
       {/* 統一された外枠カード（インディゴ系デザインのガタつき防止コンテナ） */}
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 min-h-[380px] flex flex-col justify-center items-center text-center">
+      <div className="w-full max-w-md bg-white p-8 rounded-control shadow-xl shadow-line/50 border border-line/60 min-h-[380px] flex flex-col justify-center items-center text-center">
         
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -43,13 +33,13 @@ export default function NotFound() {
 
           {/* 見出しセクション */}
           <div className="mb-6">
-            <span className="text-xs font-bold text-brand uppercase tracking-widest bg-brand-50 px-2.5 py-1 rounded-full">
+            <span className="text-xs font-bold text-brand bg-brand-50 px-2.5 py-1 rounded-full">
               404 Error
             </span>
-            <h1 className="text-xl font-bold text-slate-800 mt-3">
+            <h1 className="text-xl font-bold text-ink mt-3">
               ページが見つかりません
             </h1>
-            <p className="text-sm text-slate-500 mt-2 leading-relaxed max-w-sm">
+            <p className="text-sm text-ink-muted mt-2 leading-relaxed max-w-sm">
               アクセスしようとしたアドレスが存在しないか、別のURLに移動した可能性があります。
             </p>
           </div>
@@ -65,7 +55,7 @@ export default function NotFound() {
             </Link>
 
             {/* 補助用のセカンダリ導線 */}
-            <p className="text-xs text-slate-400 mt-4 leading-normal">
+            <p className="text-xs text-ink-subtle mt-4 leading-normal">
               上のボタンからダッシュボードへ戻ってください。
             </p>
           </div>

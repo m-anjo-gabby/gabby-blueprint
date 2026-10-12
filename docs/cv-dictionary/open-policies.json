@@ -1,0 +1,62 @@
+{
+  "$comment": "未決の論点（コンテンツチーム確認待ち）。確認依頼Excel（scripts/review_xlsx.py）の「①確認事項（方針）」の元データ。方針が決まったら、ここから削除して JUDGEMENT-GUIDE.md に事例（CVJ-…）として記録する。match.source = ledger: 台帳の pending 行から対象語を選ぶ / dictionary: 辞書TSVの行から対象語を選ぶ。",
+  "policies": [
+    {
+      "key": "rhotic-er",
+      "title": "R音化母音 /ɛr/ の Color Vowel",
+      "question": "share, there, where のように「母音＋r」になる /ɛr/ を、どの Color Vowel に割り当てるか。",
+      "candidates": "RED PEPPER / GRAY DAY",
+      "options": ["RED PEPPER で統一", "GRAY DAY で統一", "その他（コメント欄に記入）"],
+      "match": { "source": "ledger", "category": "R音化母音", "questionIncludes": ["/ɛr/"] }
+    },
+    {
+      "key": "rhotic-ir",
+      "title": "R音化母音 /ɪr/ の Color Vowel",
+      "question": "year, clear のように「母音＋r」になる /ɪr/ を、どの Color Vowel に割り当てるか。",
+      "candidates": "GREEN TEA / SILVER PIN",
+      "options": ["GREEN TEA で統一", "SILVER PIN で統一", "その他（コメント欄に記入）"],
+      "match": { "source": "ledger", "category": "R音化母音", "questionIncludes": ["/ɪr/"] }
+    },
+    {
+      "key": "rhotic-ur",
+      "title": "R音化母音 /ʊr/ の Color Vowel",
+      "question": "secure, during のように「母音＋r」になる /ʊr/ を、どの Color Vowel に割り当てるか。ensure / ensures は /ɪnˈʃɔːr/（ORANGE DOOR）と読む場合もあります。",
+      "candidates": "WOODEN HOOK / BLUE MOON",
+      "options": ["WOODEN HOOK で統一", "BLUE MOON で統一", "その他（コメント欄に記入）"],
+      "match": { "source": "ledger", "category": "R音化母音", "questionIncludes": ["/ʊr/"] }
+    },
+    {
+      "key": "cot-caught",
+      "title": "米国発音で /ɔ/ と /ɑ/ の2通りある語",
+      "question": "offer, office, cost, launch, strong などは、米国では /ɔ/（AUBURN DOG）と /ɑ/（OLIVE SOCK）のどちらの発音も一般的です。どちらに揃えるか。",
+      "candidates": "AUBURN DOG / OLIVE SOCK",
+      "options": ["AUBURN DOG で統一", "OLIVE SOCK で統一", "語ごとに判断（「語別」シートに記入）", "その他（コメント欄に記入）"],
+      "match": {
+        "source": "ledger",
+        "category": "発音の揺れ",
+        "cvIds": ["auburn_dog", "olive_sock"],
+        "questionIncludesAny": ["auburn_dog", "olive_sock"]
+      }
+    },
+    {
+      "key": "function-word-strong-form",
+      "ref": "CVJ-20260925-01",
+      "title": "機能語（冠詞・前置詞・代名詞など）の発音",
+      "question": "the, for, to などは会話では弱く（the /ðə/、for /fər/）発音されることが多いですが、辞書には1つの発音しか登録できません。辞書の見出し発音（強く読む形）で統一してよいか。",
+      "current": "強く読む形で統一（例: the /ðiː/ GREEN TEA、for /fɔːr/ ORANGE DOOR）",
+      "candidates": "強く読む形 / 弱く読む形",
+      "options": ["強く読む形のままでよい", "弱く読む形に変更", "その他（コメント欄に記入）"],
+      "match": { "source": "dictionary", "pos": ["ART", "PREP", "PRON", "CONJ"], "countLabel": "語（冠詞・前置詞・代名詞・接続詞）" }
+    },
+    {
+      "key": "abbreviation-letters",
+      "ref": "CVJ-20260925-03",
+      "title": "略語（1文字ずつ読むもの）の扱い",
+      "question": "CEO のような略語は、1文字を1音節（C-E-O）とし、最後の文字にアクセントを置いて、その文字の読み（O /oʊ/ → ROSE BOAT）で Color Vowel を決めています。この扱いでよいか。",
+      "current": "例: CEO → C-E-O / 3音節目 / ROSE BOAT /ˌsiːiːˈoʊ/",
+      "candidates": "—",
+      "options": ["この扱いでよい", "その他（コメント欄に記入）"],
+      "match": { "source": "dictionary", "wordPattern": "^[A-Z]{2,}s?$", "countLabel": "語" }
+    }
+  ]
+}

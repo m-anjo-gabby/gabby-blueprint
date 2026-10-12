@@ -1,0 +1,22 @@
+word_en	part_of_speech	word_ja	syllables	primary_stress_syllable	stress_vowel_spelling	cv_id	phonetic_spelling	lemma
+accelerate	VERB	加速させる、早める	ac-cel-er-ate	2	e	red_pepper	/əkˈsɛləreɪt/	
+accelerated	VERB	加速させた、早めた	ac-cel-er-at-ed	2	e	red_pepper	/əkˈsɛləreɪtɪd/	accelerate
+CEO	NOUN	最高経営責任者（Chief Executive Officer）	C-E-O	3	O	rose_boat	/ˌsiːiːˈoʊ/	
+clear	ADJ	明確な、はっきりした	clear	1	ea	green_tea	/klɪr/	
+cost	NOUN	費用、コスト	cost	1	o	auburn_dog	/kɔːst/	
+customer	NOUN	顧客、お客様	cus-tom-er	1	u	cup_of_mustard	/ˈkʌstəmər/	
+data	NOUN	データ	da-ta	1	a	gray_day	/ˈdeɪtə/	
+for	PREP	〜を、〜のために、〜に対して	for	1	o	orange_door	/fɔːr/	
+launch	VERB	発売する、立ち上げる	launch	1	au	auburn_dog	/lɔːntʃ/	
+manager	NOUN	マネージャー、管理者	man-ag-er	1	a	black_cat	/ˈmænɪdʒər/	
+office	NOUN	事務所、オフィス（head office: 本社）	of-fice	1	o	auburn_dog	/ˈɔːfɪs/	
+read	VERB	読む	read	1	ea	green_tea	/riːd/	
+report	NOUN	報告書、レポート	re-port	2	o	orange_door	/rɪˈpɔːrt/	
+report	VERB	報告する、計上する	re-port	2	o	orange_door	/rɪˈpɔːrt/	
+sales	NOUN	売上、販売	sales	1	a	gray_day	/seɪlz/	
+secure	VERB	確保する	se-cure	2	u	wooden_hook	/sɪˈkjʊr/	
+share	NOUN	シェア、占有率（market share: 市場シェア）	share	1	a	red_pepper	/ʃɛr/	
+the	ART	その（定冠詞）	the	1	e	green_tea	/ðiː/	
+there	ADV	（there are: 〜がある）	there	1	e	red_pepper	/ðɛr/	
+want	VERB	望む、〜したい（want to: 〜したい）	want	1	a	olive_sock	/wɑːnt/	
+year	NOUN	年（this year: 今年）	year	1	ea	green_tea	/jɪr/	

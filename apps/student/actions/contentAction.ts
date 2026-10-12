@@ -55,7 +55,7 @@ export async function getAllContent(): Promise<ContentItem[]> {
       .order('seq_no', { ascending: true });
 
     if (error) {
-      logger.error("content:get_all_failed", error.message, ctx);
+      logger.error("content:get_all_failed", error.message, { ...ctx, err: error });
       return [];
     }
 
@@ -74,7 +74,7 @@ export async function getAllContent(): Promise<ContentItem[]> {
       .in('content_id', assignments.map(a => a.content_id));
 
     if (dialogueError) {
-      logger.error("content:get_all_dialogue_failed", dialogueError.message, ctx);
+      logger.error("content:get_all_dialogue_failed", dialogueError.message, { ...ctx, err: dialogueError });
       return normalContents;
     }
 
@@ -86,7 +86,7 @@ export async function getAllContent(): Promise<ContentItem[]> {
 
     return [...normalContents, ...dialogueContents];
   } catch (err) {
-    logger.error("content:get_all_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("content:get_all_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return [];
   }
 }
@@ -127,13 +127,13 @@ export async function saveResumeContent<T extends ResumeMetadata>(
       });
 
     if (error) {
-      logger.error("training:save_resume_failed", error.message, { ...ctx, payload: { contentId, itemId } });
+      logger.error("training:save_resume_failed", error.message, { ...ctx, err: error, payload: { contentId, itemId } });
       throw new Error(`栞の保存に失敗しました: ${error.message}`);
     }
 
     logger.info("training:save_resume_success", "Resume point saved", { ...ctx, payload: { contentId, itemId } });
   } catch (err) {
-    logger.error("training:save_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId, itemId } });
+    logger.error("training:save_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId, itemId } });
     throw err;
   }
 }
@@ -154,13 +154,13 @@ export async function clearResumeContent() {
       .eq('user_id', user.id);
 
     if (error) {
-      logger.error("training:clear_resume_failed", error.message, ctx);
+      logger.error("training:clear_resume_failed", error.message, { ...ctx, err: error });
       throw new Error(`栞の削除に失敗しました: ${error.message}`);
     }
 
     logger.info("training:clear_resume_success", "Resume point cleared", ctx);
   } catch (err) {
-    logger.error("training:clear_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("training:clear_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     throw err;
   }
 }
@@ -186,7 +186,7 @@ export async function takeResumeContent(contentId: string): Promise<string | nul
       .maybeSingle();
 
     if (error) {
-      logger.error("training:take_resume_failed", error.message, { ...ctx, payload: { contentId } });
+      logger.error("training:take_resume_failed", error.message, { ...ctx, err: error, payload: { contentId } });
       return null;
     }
 
@@ -195,7 +195,7 @@ export async function takeResumeContent(contentId: string): Promise<string | nul
     }
     return data?.item_id ?? null;
   } catch (err) {
-    logger.error("training:take_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    logger.error("training:take_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId } });
     return null;
   }
 }
@@ -230,7 +230,7 @@ export async function getLatestResumeContent(): Promise<ResumeContentResponse | 
       .maybeSingle();
 
     if (error) {
-      logger.error("training:get_resume_failed", error.message, ctx);
+      logger.error("training:get_resume_failed", error.message, { ...ctx, err: error });
       return null;
     }
 
@@ -246,7 +246,7 @@ export async function getLatestResumeContent(): Promise<ResumeContentResponse | 
 
     return data as unknown as ResumeContentResponse;
   } catch (err) {
-    logger.error("training:get_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("training:get_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return null;
   }
 }

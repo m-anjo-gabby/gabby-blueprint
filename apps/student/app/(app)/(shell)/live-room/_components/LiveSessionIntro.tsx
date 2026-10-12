@@ -48,7 +48,7 @@ export function LiveSessionIntro() {
               <h2 className="text-sm font-bold text-ink">ご利用の流れ</h2>
               <ol className="grid grid-cols-3 gap-2">
                 {steps.map((step, index) => (
-                  <li key={step.title} className="rounded-control border border-line/60 bg-slate-50/70 px-2 py-3 sm:p-3 text-center">
+                  <li key={step.title} className="rounded-control border border-line/60 bg-canvas/70 px-2 py-3 sm:p-3 text-center">
                     <span className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
                       {index + 1}
                     </span>

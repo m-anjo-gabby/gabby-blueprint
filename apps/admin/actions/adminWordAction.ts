@@ -23,13 +23,13 @@ export async function getWordsByContentId(contentId: string): Promise<WordRecord
       .order('frequency_rank', { ascending: true });
 
     if (error) {
-      logger.error('word:get_words_by_content_id_failed', error.message, { ...ctx, payload: { contentId } });
+      logger.error('word:get_words_by_content_id_failed', error.message, { ...ctx, err: error, payload: { contentId } });
       return [];
     }
 
     return data as WordRecord[];
   } catch (err) {
-    logger.error('word:get_words_by_content_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    logger.error('word:get_words_by_content_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId } });
     return [];
   }
 }
@@ -75,7 +75,7 @@ export async function upsertWord(payload: Partial<WordRecord>) {
     }
 
     if (error) {
-      logger.error('word:upsert_word_failed', error.message, { ...ctx, payload });
+      logger.error('word:upsert_word_failed', error.message, { ...ctx, err: error, payload });
       return { success: false, message: error.message || "データベース操作に失敗しました" };
     }
 
@@ -87,7 +87,7 @@ export async function upsertWord(payload: Partial<WordRecord>) {
     revalidatePath('/contents/[id]/words', 'page');
     return { success: true };
   } catch (error) {
-    logger.error('word:upsert_word_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload });
+    logger.error('word:upsert_word_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -127,7 +127,7 @@ export async function deleteWord(wordId: string) {
       .eq('word_id', wordId);
 
     if (dbError) {
-      logger.error('word:delete_word_db_failed', dbError.message, { ...ctx, payload: { wordId } });
+      logger.error('word:delete_word_db_failed', dbError.message, { ...ctx, err: dbError, payload: { wordId } });
       throw dbError;
     }
 
@@ -135,7 +135,7 @@ export async function deleteWord(wordId: string) {
     return { success: true };
 
   } catch (error) {
-    logger.error("word:delete_word_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { wordId } });
+    logger.error("word:delete_word_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { wordId } });
     return { success: false, message: "予期せぬエラーが発生しました" };
   }
 }
@@ -154,12 +154,12 @@ export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]
       .order('seq_no', { ascending: true });
 
     if (error) {
-      logger.error('word:get_phrases_by_word_id_failed', error.message, { ...ctx, payload: { wordId } });
+      logger.error('word:get_phrases_by_word_id_failed', error.message, { ...ctx, err: error, payload: { wordId } });
       return [];
     }
     return data as PhraseRecord[];
   } catch (err) {
-    logger.error('word:get_phrases_by_word_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { wordId } });
+    logger.error('word:get_phrases_by_word_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { wordId } });
     return [];
   }
 }
@@ -203,7 +203,7 @@ export async function upsertPhrase(payload: Partial<PhraseRecord>) {
     }
 
     if (error) {
-      logger.error('word:upsert_phrase_failed', error.message, { ...ctx, payload });
+      logger.error('word:upsert_phrase_failed', error.message, { ...ctx, err: error, payload });
       if (error.code === '23505') {
         return { success: false, message: "表示順 (Seq No) が重複しています。" };
       }
@@ -218,7 +218,7 @@ export async function upsertPhrase(payload: Partial<PhraseRecord>) {
     revalidatePath('/contents/[id]/words', 'page');
     return { success: true };
   } catch (error) {
-    logger.error('word:upsert_phrase_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload });
+    logger.error('word:upsert_phrase_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -252,14 +252,14 @@ export async function deletePhrase(phraseId: string, audioPath?: string | null) 
       .eq('phrase_id', phraseId);
 
     if (dbError) {
-      logger.error('word:delete_phrase_db_failed', dbError.message, { ...ctx, payload: { phraseId } });
+      logger.error('word:delete_phrase_db_failed', dbError.message, { ...ctx, err: dbError, payload: { phraseId } });
       throw dbError;
     }
 
     logger.info('word:delete_phrase_success', `Phrase deleted`, { ...ctx, payload: { phraseId, audioPath } });
     return { success: true };
   } catch (error) {
-    logger.error("word:delete_phrase_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { phraseId, audioPath } });
+    logger.error("word:delete_phrase_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { phraseId, audioPath } });
     return { success: false, message: error instanceof Error ? error.message : '予期せぬエラーが発生しました' };
   }
 }
@@ -288,7 +288,7 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[
         .single();
 
       if (wordError) {
-        logger.error('word:bulk_upsert_word_failed', wordError.message, { ...ctx, payload: { contentId, item } });
+        logger.error('word:bulk_upsert_word_failed', wordError.message, { ...ctx, err: wordError, payload: { contentId, item } });
         throw wordError;
       }
       return { word_id: word.word_id, phrases: item.phrases };
@@ -304,7 +304,7 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[
       .in('word_id', wordIds);
 
     if (deleteError) {
-      logger.error('word:bulk_upsert_delete_phrases_failed', deleteError.message, { ...ctx, payload: { wordIds } });
+      logger.error('word:bulk_upsert_delete_phrases_failed', deleteError.message, { ...ctx, err: deleteError, payload: { wordIds } });
       throw deleteError;
     }
 
@@ -327,7 +327,7 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[
         .insert(allPhrasesToInsert);
       
       if (phraseError) {
-        logger.error('word:bulk_upsert_insert_phrases_failed', phraseError.message, { ...ctx, payload: { contentId } });
+        logger.error('word:bulk_upsert_insert_phrases_failed', phraseError.message, { ...ctx, err: phraseError, payload: { contentId } });
         throw phraseError;
       }
     }
@@ -341,7 +341,7 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[
     return { success: true };
 
   } catch (err) {
-    logger.error("word:bulk_upsert_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    logger.error("word:bulk_upsert_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId } });
     return { success: false, message: "予期せぬエラーが発生しました" };
   }
 }

@@ -25,6 +25,8 @@ interface ResendEmailSummary {
 
 export interface ResendEmail extends ResendEmailSummary {
   html: string | null;
+  /** テキスト版 */
+  text: string | null;
 }
 
 async function resendGet<T>(path: string): Promise<T> {
@@ -37,15 +39,19 @@ async function resendGet<T>(path: string): Promise<T> {
 
 /**
  * 指定の宛先に `since` 以降に送られたメールを待って取得する（送信は非同期のため、見つかるまで取り直す）。
+ * 同じ宛先に複数のメールを送る場合は、subject で件名を絞る。
  */
-export async function waitForEmail(params: { to: string; since: Date; timeoutMs?: number }): Promise<ResendEmail> {
+export async function waitForEmail(params: { to: string; since: Date; subject?: RegExp; timeoutMs?: number }): Promise<ResendEmail> {
   let found: ResendEmailSummary | undefined;
   await expect
     .poll(
       async () => {
         const list = await resendGet<{ data: ResendEmailSummary[] }>("/emails?limit=50");
         found = list.data.find(
-          (mail) => mail.to.includes(params.to) && new Date(mail.created_at).getTime() >= params.since.getTime() - 5_000
+          (mail) =>
+            mail.to.includes(params.to) &&
+            new Date(mail.created_at).getTime() >= params.since.getTime() - 5_000 &&
+            (!params.subject || params.subject.test(mail.subject))
         );
         return !!found;
       },

@@ -20,6 +20,7 @@ export const SHELL_CONTENT_WIDTH = {
   wordHistory: 'medium',
   sprintHistory: 'medium',
   dialogue: 'medium',
+  groupSessions: 'medium',
 } as const satisfies Record<string, ContentWidth>;
 
 export type ShellContentKey = keyof typeof SHELL_CONTENT_WIDTH;

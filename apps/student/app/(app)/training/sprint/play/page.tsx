@@ -228,8 +228,8 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   if (ui.view === 'loading') {
     return (
       <ContentLoading
-        title="Preparing your session"
-        subtitle="トレーニングを準備しています..."
+        title="トレーニングを準備しています"
+        subtitle="少々お待ちください"
       />
     );
   }

@@ -16,6 +16,7 @@ CREATE TABLE public.lesson_t_sprint (
   paused_duration_sec SMALLINT NOT NULL DEFAULT 0, -- 一時停止していた合計秒数（参考値）
   session_note TEXT,                    -- スプリント中に記録したコーチのメモ
   answered_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+  CONSTRAINT lesson_t_sprint_answered_history_is_array CHECK (jsonb_typeof(answered_history) = 'array'), -- 要素の形はアプリ（packages/lib/sprint/answeredHistory.ts）で検証
   insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );

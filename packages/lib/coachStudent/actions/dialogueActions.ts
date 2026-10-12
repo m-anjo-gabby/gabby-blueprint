@@ -2,7 +2,7 @@
 
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
-import type { LogEvent } from '../../logger';
+import type { LogContext } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { getStudentAvailableContentIds, hasCoachStudentRelationship } from './coachStudentActions';
 import {
@@ -69,7 +69,7 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
       .order('content_id', { ascending: true }); // 同順位（seq_noの重複）の並びを固定する
 
     if (contentsError) {
-      logger.error('dialogue:get_contents_failed', contentsError.message, { ...ctx, userId: user.id });
+      logger.error('dialogue:get_contents_failed', contentsError.message, { ...ctx, err: contentsError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -86,7 +86,7 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
       .eq('delete_flg', '0');
 
     if (sessionsError) {
-      logger.error('dialogue:get_contents_session_count_failed', sessionsError.message, { ...ctx, userId: user.id });
+      logger.error('dialogue:get_contents_session_count_failed', sessionsError.message, { ...ctx, err: sessionsError, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -110,7 +110,7 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
 
     return { success: true, contents: result };
   } catch (err) {
-    logger.error('dialogue:get_contents_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('dialogue:get_contents_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -153,7 +153,7 @@ export async function assignDialogueContentCore(
       .maybeSingle();
 
     if (existingError) {
-      logger.error('dialogue:assign_lookup_failed', existingError.message, { ...ctx, userId: user.id, payload: { studentId, contentId } });
+      logger.error('dialogue:assign_lookup_failed', existingError.message, { ...ctx, err: existingError, userId: user.id, payload: { studentId, contentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -174,7 +174,7 @@ export async function assignDialogueContentCore(
         .eq('assignment_id', existing.assignment_id);
 
       if (reactivateError) {
-        logger.error('dialogue:assign_reactivate_failed', reactivateError.message, { ...ctx, userId: user.id, payload: { studentId, contentId } });
+        logger.error('dialogue:assign_reactivate_failed', reactivateError.message, { ...ctx, err: reactivateError, userId: user.id, payload: { studentId, contentId } });
         return { success: false, errorCode: 'unexpected_error' };
       }
 
@@ -192,14 +192,14 @@ export async function assignDialogueContentCore(
       .single();
 
     if (error || !data) {
-      logger.error('dialogue:assign_failed', error?.message ?? 'No row inserted', { ...ctx, userId: user.id, payload: { studentId, contentId } });
+      logger.error('dialogue:assign_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id, payload: { studentId, contentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     logger.info('dialogue:assign_success', 'Dialogue content assigned', { ...ctx, userId: user.id, payload: { studentId, contentId, assignmentId: data.assignment_id } });
     return { success: true, assignment_id: data.assignment_id };
   } catch (err) {
-    logger.error('dialogue:assign_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('dialogue:assign_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -225,7 +225,7 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
       .maybeSingle();
 
     if (fetchError) {
-      logger.error('dialogue:unassign_lookup_failed', fetchError.message, { ...ctx, userId: user.id, payload: { assignmentId } });
+      logger.error('dialogue:unassign_lookup_failed', fetchError.message, { ...ctx, err: fetchError, userId: user.id, payload: { assignmentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!assignment) {
@@ -243,7 +243,7 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
       .limit(1);
 
     if (progressCheckError) {
-      logger.error('dialogue:unassign_progress_check_failed', progressCheckError.message, { ...ctx, userId: user.id, payload: { assignmentId } });
+      logger.error('dialogue:unassign_progress_check_failed', progressCheckError.message, { ...ctx, err: progressCheckError, userId: user.id, payload: { assignmentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (completedProgress && completedProgress.length > 0) {
@@ -256,13 +256,13 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
       .eq('assignment_id', assignmentId);
 
     if (error) {
-      logger.error('dialogue:unassign_failed', error.message, { ...ctx, userId: user.id, payload: { assignmentId } });
+      logger.error('dialogue:unassign_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { assignmentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('dialogue:unassign_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('dialogue:unassign_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -275,7 +275,7 @@ async function fetchDialogueAssignmentSummaries(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   studentId: string,
   userId: string,
-  ctx: Partial<LogEvent>
+  ctx: LogContext
 ): Promise<GetStudentDialogueAssignmentsResult> {
   try {
     const { data: assignments, error: assignmentsError } = await supabase
@@ -286,7 +286,7 @@ async function fetchDialogueAssignmentSummaries(
       .order('assigned_date', { ascending: false });
 
     if (assignmentsError) {
-      logger.error('dialogue:get_assignments_failed', assignmentsError.message, { ...ctx, userId, payload: { studentId } });
+      logger.error('dialogue:get_assignments_failed', assignmentsError.message, { ...ctx, err: assignmentsError, userId, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -305,7 +305,7 @@ async function fetchDialogueAssignmentSummaries(
       .order('session_no', { ascending: true });
 
     if (sessionsError) {
-      logger.error('dialogue:get_assignments_sessions_failed', sessionsError.message, { ...ctx, userId, payload: { studentId } });
+      logger.error('dialogue:get_assignments_sessions_failed', sessionsError.message, { ...ctx, err: sessionsError, userId, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -315,7 +315,7 @@ async function fetchDialogueAssignmentSummaries(
       .in('assignment_id', assignmentIds);
 
     if (progressError) {
-      logger.error('dialogue:get_assignments_progress_failed', progressError.message, { ...ctx, userId, payload: { studentId } });
+      logger.error('dialogue:get_assignments_progress_failed', progressError.message, { ...ctx, err: progressError, userId, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -372,7 +372,7 @@ async function fetchDialogueAssignmentSummaries(
 
     return { success: true, assignments: result };
   } catch (err) {
-    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -394,7 +394,7 @@ export async function getStudentDialogueAssignmentsCore(studentId: string): Prom
 
     return await fetchDialogueAssignmentSummaries(supabase, studentId, user.id, ctx);
   } catch (err) {
-    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -414,7 +414,7 @@ export async function getMyDialogueAssignmentsCore(): Promise<GetStudentDialogue
 
     return await fetchDialogueAssignmentSummaries(supabase, user.id, user.id, ctx);
   } catch (err) {
-    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -441,7 +441,7 @@ export async function updateDialogueSessionProgressCore(
       .maybeSingle();
 
     if (assignmentError) {
-      logger.error('dialogue:update_progress_lookup_failed', assignmentError.message, { ...ctx, userId: user.id, payload: input });
+      logger.error('dialogue:update_progress_lookup_failed', assignmentError.message, { ...ctx, err: assignmentError, userId: user.id, payload: input });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!assignment) {
@@ -459,7 +459,7 @@ export async function updateDialogueSessionProgressCore(
       .maybeSingle();
 
     if (existingProgressError) {
-      logger.error('dialogue:update_progress_existing_lookup_failed', existingProgressError.message, { ...ctx, userId: user.id, payload: input });
+      logger.error('dialogue:update_progress_existing_lookup_failed', existingProgressError.message, { ...ctx, err: existingProgressError, userId: user.id, payload: input });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -484,13 +484,13 @@ export async function updateDialogueSessionProgressCore(
       );
 
     if (error) {
-      logger.error('dialogue:update_progress_failed', error.message, { ...ctx, userId: user.id, payload: input });
+      logger.error('dialogue:update_progress_failed', error.message, { ...ctx, err: error, userId: user.id, payload: input });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('dialogue:update_progress_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('dialogue:update_progress_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -517,7 +517,7 @@ export async function logSessionDialogueOpenCore(input: LogSessionDialogueOpenIn
       .maybeSingle();
 
     if (assignmentError) {
-      logger.error('dialogue:log_open_assignment_lookup_failed', assignmentError.message, { ...ctx, userId: user.id, payload: input });
+      logger.error('dialogue:log_open_assignment_lookup_failed', assignmentError.message, { ...ctx, err: assignmentError, userId: user.id, payload: input });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!assignment) {
@@ -537,13 +537,13 @@ export async function logSessionDialogueOpenCore(input: LogSessionDialogueOpenIn
       });
 
     if (error) {
-      logger.error('dialogue:log_open_failed', error.message, { ...ctx, userId: user.id, payload: input });
+      logger.error('dialogue:log_open_failed', error.message, { ...ctx, err: error, userId: user.id, payload: input });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('dialogue:log_open_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('dialogue:log_open_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

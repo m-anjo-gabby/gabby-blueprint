@@ -28,6 +28,10 @@
 -- 意図的にfn_assert_actor_or_admin()を使わず素のIF文のままとする。本関数にはアドミンの
 -- 代理実行を許可しない（アドミンはadmin_book_session_direct()という別の専用RPCを使う）ため。
 --
+-- 【通知のリンク先 (2026-10-06変更)】
+-- コーチへの通知（アプリ内・メール）のリンク先は、リクエストを承認・却下できる
+-- カレンダー（/calendar の Pending Requests）とする（従来の生徒詳細では承認できなかったため）。
+--
 -- 【スロット提案の統合 (2026-09-15追加)】
 -- 書き込み先をcom_t_session_booking_requestからcom_t_session_slot_proposalへ変更する
 -- （キャンセル時の振替候補(cancel_session参照)と統合した単一テーブル。詳細は
@@ -111,7 +115,7 @@ BEGIN
             'student_name', v_student_name,
             'requested_start_datetime', p_start_datetime
         ),
-        '/students/' || v_schedule.student_id
+        '/calendar'
     );
 
     RETURN v_request_id;

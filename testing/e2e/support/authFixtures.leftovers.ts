@@ -1,8 +1,7 @@
 /**
  * 認証E2Eの残骸（失敗で後始末できなかった使い捨てユーザー・顧客）を確認・削除する。
  * 実行: pnpm exec tsx e2e/support/authFixtures.leftovers.ts [--delete]
- * 対象は authFixtures.ts が作る命名（メール `e2e(reset|invite|mail|onb|match)<数字>-…`、顧客 `【QAテスト】認証E2E（…）`）に限る。
- * `onb` は受注〜初日のジャーニー（e2e/tests/journeys/）、`match` は専属コーチの申請（e2e/tests/matching/）。
+ * 対象は authFixtures.ts が作る命名（メール `e2e<接頭辞><数字>-…`。接頭辞は createAuthFixture に渡す英小文字。顧客 `【QAテスト】認証E2E（…）`）に限る。
  */
 import { loadTestEnv } from "../../helpers/env.ts";
 import { createAdminClient } from "../../helpers/auth.ts";
@@ -10,7 +9,7 @@ import { createAdminClient } from "../../helpers/auth.ts";
 loadTestEnv("dev");
 const doDelete = process.argv.includes("--delete");
 const admin = await createAdminClient();
-const PATTERN = /^(delivered\+)?e2e(reset|invite|mail|onb|match)\d+-/;
+const PATTERN = /^(delivered\+)?e2e[a-z]+\d+-/;
 
 const users: { id: string; email: string }[] = [];
 for (let page = 1; page <= 20; page++) {

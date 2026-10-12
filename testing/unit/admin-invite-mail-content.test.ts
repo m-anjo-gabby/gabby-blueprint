@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { renderAdminInvitationEmail } from "@gabby/lib/mail/render";
+import { renderMail } from "@gabby/lib/mail/render";
+import { buildAdminInviteMail } from "@gabby/lib/mail/templates/AdminInviteEmailTemplate";
 
 /**
  * 管理者向け招待メールの文面（日英併記。送信はしない。送信処理と同じ組み立て関数で検証する）
@@ -10,7 +11,7 @@ import { renderAdminInvitationEmail } from "@gabby/lib/mail/render";
 const INVITE_URL = "https://localhost:3001/auth/invite?token=e2e-token";
 
 test("admin 向け招待（日英併記）: 件名・宛名・ボタン・有効期限・リンク", () => {
-  const { subject, html } = renderAdminInvitationEmail({ userName: "山田 太郎", inviteUrl: INVITE_URL, expiresDays: 3 });
+  const { subject, html } = renderMail(buildAdminInviteMail({ userName: "山田 太郎", inviteUrl: INVITE_URL, expiresDays: 3 }));
   assert.equal(subject, "【Gabby Blueprint】管理者アカウント招待のご案内 / Invitation to the Admin Console");
   assert.ok(html.includes("山田 太郎 様"));
   assert.ok(html.includes("Dear 山田 太郎,"));
@@ -22,7 +23,7 @@ test("admin 向け招待（日英併記）: 件名・宛名・ボタン・有効
 });
 
 test("admin 向け招待: 氏名が無い場合は既定の宛名", () => {
-  const { html } = renderAdminInvitationEmail({ userName: "", inviteUrl: INVITE_URL, expiresDays: 3 });
+  const { html } = renderMail(buildAdminInviteMail({ userName: "", inviteUrl: INVITE_URL, expiresDays: 3 }));
   assert.ok(html.includes("管理者様"));
   assert.ok(html.includes("Dear Administrator,"));
   assert.ok(!html.includes("会員"));

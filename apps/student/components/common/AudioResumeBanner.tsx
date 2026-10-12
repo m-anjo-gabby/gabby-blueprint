@@ -23,15 +23,15 @@ export const AudioResumeBanner: React.FC<AudioResumeBannerProps> = ({ status, on
 
   if (status === 'failedAgain') {
     return (
-      <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center z-[130] p-6 animate-in fade-in duration-300">
-        <div role="alertdialog" aria-labelledby="audio-failed-again-title" className="bg-white rounded-[28px] shadow-2xl p-6 max-w-xs w-full text-center space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto text-rose-500">
+      <div className="absolute inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-[130] p-6 animate-in fade-in duration-300">
+        <div role="alertdialog" aria-labelledby="audio-failed-again-title" className="bg-white rounded-panel shadow-2xl p-6 max-w-xs w-full text-center space-y-4">
+          <div className="w-12 h-12 rounded-control bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto text-rose-500">
             <Volume2 size={22} strokeWidth={2.5} />
           </div>
           <div className="space-y-2">
-            <h3 id="audio-failed-again-title" className="text-sm font-bold text-slate-800 tracking-tight">音声を復旧できませんでした</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">再読み込みでは直らない状態です。お手数ですが、ブラウザのタブを閉じてから、もう一度開いてください。</p>
-            <ol className="text-xs text-slate-600 leading-relaxed text-left list-decimal pl-5 space-y-0.5">
+            <h3 id="audio-failed-again-title" className="text-sm font-bold text-ink tracking-tight">音声を復旧できませんでした</h3>
+            <p className="text-xs text-ink-muted leading-relaxed">再読み込みでは直らない状態です。お手数ですが、ブラウザのタブを閉じてから、もう一度開いてください。</p>
+            <ol className="text-xs text-ink-soft leading-relaxed text-left list-decimal pl-5 space-y-0.5">
               <li>タブ一覧を開き、このタブを閉じる</li>
               <li>新しいタブで Gabby Blueprint を開く</li>
               <li>改善しない場合は、ブラウザのアプリを終了してから開き直す</li>
@@ -44,19 +44,19 @@ export const AudioResumeBanner: React.FC<AudioResumeBannerProps> = ({ status, on
 
   if (status === 'failed') {
     return (
-      <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center z-[130] p-6 animate-in fade-in duration-300">
-        <div className="bg-white rounded-[28px] shadow-2xl p-6 max-w-xs w-full text-center space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto text-rose-500">
+      <div className="absolute inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-[130] p-6 animate-in fade-in duration-300">
+        <div className="bg-white rounded-panel shadow-2xl p-6 max-w-xs w-full text-center space-y-4">
+          <div className="w-12 h-12 rounded-control bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto text-rose-500">
             <Volume2 size={22} strokeWidth={2.5} />
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-black text-slate-800 tracking-tight">セッションが切断されました</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">音声の接続を復旧できませんでした。お手数ですが再読み込みしてください。</p>
+            <h3 className="text-sm font-bold text-ink tracking-tight">セッションが切断されました</h3>
+            <p className="text-xs text-ink-muted leading-relaxed">音声の接続を復旧できませんでした。お手数ですが再読み込みしてください。</p>
           </div>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="w-full h-11 rounded-xl bg-brand hover:bg-brand-strong text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+            className="w-full h-11 rounded-xl bg-brand hover:bg-brand-strong text-white text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
           >
             <RefreshCw size={14} strokeWidth={2.5} />
             <span>再読み込み</span>
@@ -71,10 +71,10 @@ export const AudioResumeBanner: React.FC<AudioResumeBannerProps> = ({ status, on
       <button
         type="button"
         onClick={onResume}
-        className="pointer-events-auto flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-slate-900 text-white shadow-xl border border-slate-800 active:scale-95 transition-all cursor-pointer"
+        className="pointer-events-auto flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-ink text-white shadow-xl border border-ink active:scale-95 transition-all cursor-pointer"
       >
         <Volume2 size={14} className="text-amber-300 shrink-0" />
-        <span className="text-[11px] font-black tracking-tight">音声が停止しました。タップして再開</span>
+        <span className="text-[11px] font-bold tracking-tight">音声が停止しました。タップして再開</span>
       </button>
     </div>
   );

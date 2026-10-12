@@ -40,7 +40,7 @@ export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
   radius,
   strokeWidth,
   progress,
-  trackClassName = 'stroke-slate-100',
+  trackClassName = 'stroke-line/60',
   strokeClassName = 'stroke-brand-500',
   trackFill = 'transparent',
   transitionDuration = 1,

@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 import { buildSSML } from "../azure/ssml";
+import { clientLogger } from '../logger/client';
 
 export interface TTSParameters {
   voice: string;
@@ -112,13 +113,12 @@ export function usePlayAzureSpeech() {
         const durationMs = result.audioDuration / 10000;
         await new Promise((resolve) => setTimeout(resolve, durationMs));
         
-        console.log(`Playback finished. Duration: ${durationMs}ms`);
       } else if (result.reason === SpeechSDK.ResultReason.Canceled) {
         const details = SpeechSDK.CancellationDetails.fromResult(result);
         setError(`Canceled: ${details.errorDetails}`);
       }
     } catch (err) {
-      console.error("Azure TTS error:", err);
+      clientLogger.error('tts:azure_playback_failed', 'Azure TTS playback failed', { err });
       setError("再生中にシステムエラーが発生しました。");
     } finally {
       // 6. 状態のリセットとリソースの解放

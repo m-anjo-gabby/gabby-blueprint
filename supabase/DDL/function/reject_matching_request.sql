@@ -11,6 +11,10 @@
 -- 生徒への配慮なく入力する場合もあるため、通知本文にはそのまま転記せず、
 -- 柔らかい定型文のみとする（理由の詳細は生徒がアプリ側の変更履歴等で別途確認する想定）。
 --
+-- 【通知メールに申請の内容を載せる (2026-10-06追加)】
+-- 通知メールには、申請した曜日・時間と否認理由を載せる（理由は生徒のマッチング画面でも「前回否認理由」として表示済み）。
+-- 送信処理が送る直前に申請の行を読めるよう、payload に request_id を含める（アプリ内の通知の文面は定型文のまま）。
+--
 -- 【権限チェック・通知の共通化 (2026-09-15追加)】
 -- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
 -- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
@@ -48,7 +52,7 @@ BEGIN
     PERFORM public.fn_notify(
         v_request.student_id,
         'MATCHING_REJECTED',
-        jsonb_build_object('coach_name', v_coach_name),
+        jsonb_build_object('coach_name', v_coach_name, 'request_id', p_request_id),
         '/coach-matching'
     );
 END;

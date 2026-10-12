@@ -56,7 +56,7 @@
 - RPC: なし（Supabase Auth の `generateLink` / `verifyOtp` / `updateUser`、`get_user_lock_status_by_email` はログイン時のみ）
 - テーブル: `com_t_invitation`、`com_m_user`、`com_m_client`（使い捨て顧客）、本登録時のライセンス発行: `com_t_user_license`・`com_t_user_license_history`・`com_t_user_session_ticket`・`com_t_user_session_ticket_history`
 - 実装参照: `packages/lib/auth/core.ts`・`portalActions.ts`・`recovery.ts`・`callback.ts`、`packages/lib/components/auth/`、
-  `packages/lib/mail/actions/sendPasswordReset.ts`
+  `packages/lib/mail/actions/sendAccountMail.ts`（招待・パスワード再設定の送信）
 - 用語: [_GLOSSARY.md](../_GLOSSARY.md)
 
 ## E2Eテストケース

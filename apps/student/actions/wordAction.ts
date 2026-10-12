@@ -41,7 +41,7 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
     // 結果として data 自体が空配列になります。
 
     if (error) {
-      logger.error("word:get_training_data_failed", error.message, { ...ctx, payload: { contentId } });
+      logger.error("word:get_training_data_failed", error.message, { ...ctx, err: error, payload: { contentId } });
       throw new Error(`取得失敗: ${error.message}`);
     }
 
@@ -90,7 +90,7 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
     };
     
   } catch (err) {
-    logger.error("word:get_training_data_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    logger.error("word:get_training_data_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId } });
     throw err;
   }
 }
@@ -118,13 +118,13 @@ export async function getFavoriteCount(): Promise<number> {
       .eq('user_id', user.id);
 
     if (error) {
-      logger.error("word:get_favorite_count_failed", error.message, ctx);
+      logger.error("word:get_favorite_count_failed", error.message, { ...ctx, err: error });
       return 0;
     }
 
     return count || 0;
   } catch (err) {
-    logger.error("word:get_favorite_count_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("word:get_favorite_count_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return 0;
   }
 }
@@ -163,7 +163,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
       .limit(FAVORITE_LIMIT);
 
     if (error) {
-      logger.error("word:get_favorite_phrases_failed", error.message, ctx);
+      logger.error("word:get_favorite_phrases_failed", error.message, { ...ctx, err: error });
       throw new Error(`取得失敗: ${error.message}`);
     }
 
@@ -176,7 +176,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
       content_name: com_m_word.com_m_contents.content_name,
     }));
   } catch (err) {
-    logger.error("word:get_favorite_phrases_unexpected", err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error("word:get_favorite_phrases_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return [];
   }
 }
@@ -204,7 +204,7 @@ export async function reportWordProgress(contentId: string, wordCount: number, p
     logger.info("word:report_progress_success", `Reported progress: ${wordCount} words, ${phraseCount} phrases, ${assessmentCount} assessments`, { ...ctx, payload: { contentId, wordCount, phraseCount, assessmentCount } });
   } catch (err) {
     // 記録処理の失敗が学習体験を阻害しないよう、エラーは捕捉してログに留める（学習継続を優先）
-    logger.error("word:report_progress_failed", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId, wordCount, phraseCount, assessmentCount } });
+    logger.error("word:report_progress_failed", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId, wordCount, phraseCount, assessmentCount } });
   }
 }
 
@@ -229,7 +229,6 @@ export interface WordSummaryHistoryItem {
  */
 export async function getUserWordHistoryAction(yearMonth: string): Promise<{ success: boolean; data: WordSummaryHistoryItem[]; error?: string }> {
   const ctx = await getLogContext();
-  logger.info("word:get_history_start", "getUserWordHistoryAction start", { ...ctx, yearMonth });
 
   try {
     const supabase = await createServerClient();
@@ -267,17 +266,17 @@ export async function getUserWordHistoryAction(yearMonth: string): Promise<{ suc
       com_m_contents: Array.isArray(item.com_m_contents) ? item.com_m_contents[0] : item.com_m_contents
     })) || [];
 
-    logger.info("word:get_history_success", "Successfully fetched word summary history", {
+    logger.debug("word:get_history_success", "Successfully fetched word summary history", {
       ...ctx,
-      count: formattedData.length
+      payload: { count: formattedData.length },
     });
 
     return { success: true, data: formattedData as WordSummaryHistoryItem[] };
 
   } catch (error: any) {
-    logger.error("word:get_history_error", "Failed to fetch word summary history", {
+    logger.error("word:get_history_failed", "Failed to fetch word summary history", {
       ...ctx,
-      payload: { error: error.message }
+      err: error,
     });
     return { success: false, data: [], error: error.message };
   }

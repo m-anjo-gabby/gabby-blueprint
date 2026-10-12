@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { logClientError } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 export default function GlobalError({
   error,
@@ -9,12 +9,11 @@ export default function GlobalError({
   error: Error & { digest?: string };
 }) {
   useEffect(() => {
-    logClientError({
-      service: 'coach',
-      digest: error.digest,
-      message: `[FATAL] Global Layout Crash: ${error.message}`,
-      stack: error.stack,
-    }).catch((err) => console.error(err));
+    // ルートレイアウトごと描画できなかった例外（最後の受け皿）をサーバーのログへ送る
+    clientLogger.error('system:global_error', error.message || 'Root layout crashed', {
+      err: error,
+      payload: { digest: error.digest },
+    });
   }, [error]);
 
   return (

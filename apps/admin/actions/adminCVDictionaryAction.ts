@@ -50,7 +50,7 @@ export async function getCVDictionaryWords(): Promise<CVWordSummary[]> {
       .order('word_en', { ascending: true });
 
     if (error) {
-      logger.error('cv_dict:get_words_failed', error.message, ctx);
+      logger.error('cvDict:get_words_failed', error.message, { ...ctx, err: error });
       return [];
     }
 
@@ -71,7 +71,7 @@ export async function getCVDictionaryWords(): Promise<CVWordSummary[]> {
       has_audio_count: counts.hasAudio,
     }));
   } catch (err) {
-    logger.error('cv_dict:get_words_unexpected', err instanceof Error ? err.message : 'Unknown', ctx);
+    logger.error('cvDict:get_words_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err });
     return [];
   }
 }
@@ -91,13 +91,13 @@ export async function getCVDictionaryByWord(wordEn: string): Promise<CVDictionar
       .order('part_of_speech', { ascending: true });
 
     if (error) {
-      logger.error('cv_dict:get_by_word_failed', error.message, { ...ctx, payload: { wordEn } });
+      logger.error('cvDict:get_by_word_failed', error.message, { ...ctx, err: error, payload: { wordEn } });
       return [];
     }
 
     return data as CVDictionaryEntry[];
   } catch (err) {
-    logger.error('cv_dict:get_by_word_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, payload: { wordEn } });
+    logger.error('cvDict:get_by_word_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { wordEn } });
     return [];
   }
 }
@@ -137,14 +137,14 @@ export async function upsertCVDictionaryEntry(
       });
 
     if (error) {
-      logger.error('cv_dict:upsert_failed', error.message, { ...ctx, payload });
+      logger.error('cvDict:upsert_failed', error.message, { ...ctx, err: error, payload });
       return { success: false, message: error.message };
     }
 
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: '登録しました' };
   } catch (err) {
-    logger.error('cv_dict:upsert_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, payload });
+    logger.error('cvDict:upsert_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -172,7 +172,7 @@ export async function deleteCVDictionaryEntry(wordEn: string, partOfSpeech: stri
       .eq('part_of_speech', partOfSpeech);
 
     if (error) {
-      logger.error('cv_dict:delete_failed', error.message, { ...ctx, payload: { wordEn, partOfSpeech } });
+      logger.error('cvDict:delete_failed', error.message, { ...ctx, err: error, payload: { wordEn, partOfSpeech } });
       return { success: false, message: error.message };
     }
 
@@ -184,7 +184,7 @@ export async function deleteCVDictionaryEntry(wordEn: string, partOfSpeech: stri
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: '削除しました' };
   } catch (err) {
-    logger.error('cv_dict:delete_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, payload: { wordEn, partOfSpeech } });
+    logger.error('cvDict:delete_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { wordEn, partOfSpeech } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -271,19 +271,19 @@ export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVI
         .from('com_m_color_vowel_dictionary')
         .upsert(rows, { onConflict: 'word_en,part_of_speech' });
       if (error) {
-        logger.error('cv_dict:bulk_upsert_failed', error.message, ctx);
+        logger.error('cvDict:bulk_upsert_failed', error.message, { ...ctx, err: error });
         return { success: false, message: error.message };
       }
     }
 
-    logger.info('cv_dict:bulk_upsert', `inserted=${insertCount} updated=${updateCount} skipped=${skipCount}`, {
+    logger.info('cvDict:bulk_upsert', `inserted=${insertCount} updated=${updateCount} skipped=${skipCount}`, {
       ...ctx,
       payload: { mode, total: entries.length },
     });
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: '', inserted: insertCount, updated: updateCount, skipped: skipCount };
   } catch (err) {
-    logger.error('cv_dict:bulk_upsert_unexpected', err instanceof Error ? err.message : 'Unknown', ctx);
+    logger.error('cvDict:bulk_upsert_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -329,8 +329,9 @@ export async function saveCVDictionaryAudio(
       });
 
     if (uploadError) {
-      logger.error('cv_dict:audio_upload_failed', uploadError.message, {
-        ...ctx, payload: { wordEn, partOfSpeech, newFilePath },
+      logger.error('cvDict:audio_upload_failed', uploadError.message, {
+        ...ctx,
+        err: uploadError, payload: { wordEn, partOfSpeech, newFilePath },
       });
       throw uploadError;
     }
@@ -351,8 +352,9 @@ export async function saveCVDictionaryAudio(
       .eq('part_of_speech', partOfSpeech);
 
     if (dbError) {
-      logger.error('cv_dict:audio_db_update_failed', dbError.message, {
-        ...ctx, payload: { wordEn, partOfSpeech, newFilePath },
+      logger.error('cvDict:audio_db_update_failed', dbError.message, {
+        ...ctx,
+        err: dbError, payload: { wordEn, partOfSpeech, newFilePath },
       });
       await supabase.storage.from('audio').remove([newFilePath]);
       throw dbError;
@@ -363,15 +365,16 @@ export async function saveCVDictionaryAudio(
       await supabase.storage.from('audio').remove([currentAudioPath]);
     }
 
-    logger.info('cv_dict:audio_saved', `Audio updated: ${wordEn} [${partOfSpeech}]`, {
+    logger.info('cvDict:audio_saved', `Audio updated: ${wordEn} [${partOfSpeech}]`, {
       ...ctx, payload: { wordEn, partOfSpeech, path: newFilePath },
     });
 
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: '音声を更新しました', path: newFilePath };
   } catch (err) {
-    logger.error('cv_dict:audio_save_unexpected', err instanceof Error ? err.message : 'Unknown', {
-      ...ctx, payload: { wordEn, partOfSpeech },
+    logger.error('cvDict:audio_save_unexpected', err instanceof Error ? err.message : 'Unknown', {
+      ...ctx,
+      err, payload: { wordEn, partOfSpeech },
     });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
@@ -391,13 +394,13 @@ export async function getAllCVDictionaryEntries(): Promise<CVDictionaryEntry[]> 
       .order('word_en', { ascending: true });
 
     if (error) {
-      logger.error('cv_dict:get_all_failed', error.message, ctx);
+      logger.error('cvDict:get_all_failed', error.message, { ...ctx, err: error });
       return [];
     }
 
     return data as CVDictionaryEntry[];
   } catch (err) {
-    logger.error('cv_dict:get_all_unexpected', err instanceof Error ? err.message : 'Unknown', ctx);
+    logger.error('cvDict:get_all_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err });
     return [];
   }
 }

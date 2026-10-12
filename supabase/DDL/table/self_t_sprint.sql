@@ -13,6 +13,7 @@ CREATE TABLE public.self_t_sprint (
   total_answered SMALLINT NOT NULL,     -- タイムアップまでに答えた総問題数
   total_assessments SMALLINT NOT NULL,  -- タイムアップまでに発話評価した回数
   answered_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+  CONSTRAINT self_t_sprint_answered_history_is_array CHECK (jsonb_typeof(answered_history) = 'array'), -- 要素の形はアプリ（packages/lib/sprint/answeredHistory.ts）で検証
   insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -28,7 +29,7 @@ COMMENT ON COLUMN public.self_t_sprint.difficulty_level IS '難易度レベル (
 COMMENT ON COLUMN public.self_t_sprint.time_limit_sec IS '制限時間 (60, 90, 120, 150秒)';
 COMMENT ON COLUMN public.self_t_sprint.total_answered IS '総回答数';
 COMMENT ON COLUMN public.self_t_sprint.total_assessments IS '総発話評価数';
-COMMENT ON COLUMN public.self_t_sprint.answered_history IS '実施問題の履歴情報(JSON)';
+COMMENT ON COLUMN public.self_t_sprint.answered_history IS '実施問題の履歴情報(JSON配列。出題順): question_id, group_id, seq_no, is_skipped, assessment(発話評価。未評価はnull: total_score(0-100), analysis(結果画面のフィードバック用の詳細。古い記録には無い))。2026-06以前の記録には is_skipped・group_id・seq_no が無い要素がある';
 COMMENT ON COLUMN public.self_t_sprint.insert_date IS '登録日時';
 COMMENT ON COLUMN public.self_t_sprint.update_date IS '更新日時';
 

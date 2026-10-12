@@ -45,9 +45,8 @@ export const formatDateByZone = (
       day: '2-digit',
       timeZone: zoneForDate(dateString, timeZone),
     }).format(date).replace(/\//g, '-');
-  } catch (e) {
+  } catch {
     // 不正なタイムゾーンが渡された場合のフォールバック
-    console.error("Invalid timezone:", timeZone);
     return formatDateByZone(dateString, 'Asia/Tokyo');
   }
 };
@@ -239,12 +238,13 @@ function nextOccurrenceDateInZone(dayOfWeek: number, timeZone: string): string {
 }
 
 /**
- * 週次の曜日+時刻パターン（例: コーチのローカル基準の「火曜18:00-22:00」）を、
- * 別のタイムゾーンでの曜日+時刻表示に変換する（コーチ空き時間の生徒向け表示専用）。
+ * 週次の曜日+時刻パターン（例: UTC基準の空き時間「火曜09:00-13:00」、生徒の申請時のタイムゾーン基準の
+ * 定期スケジュール「火曜20:00」）を、別のタイムゾーンでの曜日+時刻表示に変換する。
  * 直近の実在日（fromTimeZoneの「今日」以降で最初に該当曜日となる日）を基準にオフセットを
  * 算出するため、DSTの有無も実態に近い形で反映される。実際のセッション日時（絶対時刻）は
- * DB側のfn_generate_sessions_for_scheduleがcoach_timezoneを使ってAT TIME ZONE変換するため、
- * 本関数はUI表示専用の近似変換である（DST切り替え直後・直前の週はズレる場合がある）。
+ * DB側のfn_generate_sessions_for_scheduleがschedule_timezoneを使ってAT TIME ZONE変換するため、
+ * 本関数は表示用の近似変換である（DST切り替え直後・直前の週はズレる場合がある。期間中の変化は
+ * getWeeklyTimeChanges で求める）。
  */
 export const convertWeeklyTimeZone = (
   input: { day_of_week: number; start_time: string; end_time: string },
@@ -355,4 +355,97 @@ export const isAtLeastHoursFromNow = (datetime: string | Date, hours: number): b
   const target = typeof datetime === 'string' ? new Date(datetime) : datetime;
   if (isNaN(target.getTime())) return false;
   return target.getTime() - Date.now() >= hours * 60 * 60 * 1000;
+};
+
+/**
+ * 指定タイムゾーンの、指定時点でのUTCからの時差（分。東側が正。例: Asia/Tokyo は 540）。
+ * 内部の換算は秒単位の表示とミリ秒単位の時刻を比べるため、ミリ秒の端数を落としてから求める（端数があると分が小数になる）。
+ */
+export const getUtcOffsetMinutes = (timeZone: string, at: Date = new Date()): number =>
+  getTimeZoneOffsetMinutes(new Date(Math.floor(at.getTime() / 1000) * 1000), timeZone);
+
+const MINUTES_PER_DAY = 24 * 60;
+const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY;
+
+/**
+ * 週の中の位置（曜日+その日の分）を deltaMinutes だけずらす（週をまたぐ場合は折り返す）。
+ * UTC基準の空き時間とコーチの現地時刻の、1つの時差での相互換算に使う（getUtcOffsetMinutes と組み合わせる）。
+ */
+export const shiftWeeklyMinute = (
+  dayOfWeek: number,
+  minuteOfDay: number,
+  deltaMinutes: number
+): { day_of_week: number; minute_of_day: number } => {
+  const total = (((dayOfWeek * MINUTES_PER_DAY + minuteOfDay + deltaMinutes) % MINUTES_PER_WEEK) + MINUTES_PER_WEEK) % MINUTES_PER_WEEK;
+  return { day_of_week: Math.floor(total / MINUTES_PER_DAY), minute_of_day: total % MINUTES_PER_DAY };
+};
+
+const formatHourMinuteInZone = (instant: Date, timeZone: string): string => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone, hourCycle: 'h23', hour: '2-digit', minute: '2-digit',
+  }).formatToParts(instant);
+  const h = parts.find((p) => p.type === 'hour')?.value ?? '00';
+  const m = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  return `${h}:${m}`;
+};
+
+/**
+ * 毎週の枠（timeZoneの現地の曜日・時刻）の、from〜to に開始する各回の日時（UTC）を返す
+ * （DB側の fn_weekly_occurrences / fn_generate_sessions_for_schedule と同じ変換）。
+ */
+export const listWeeklyOccurrences = (
+  dayOfWeek: number,
+  startTime: string,
+  timeZone: string,
+  from: Date,
+  to: Date
+): Date[] => {
+  const time = startTime.slice(0, 5);
+  const fromDateStr = toIsoDateInZone(from, timeZone);
+  const fromDow = new Date(`${fromDateStr}T00:00:00Z`).getUTCDay();
+  let cursor = new Date(`${fromDateStr}T00:00:00Z`).getTime() + ((dayOfWeek - fromDow + 7) % 7) * 86400000;
+  const result: Date[] = [];
+  for (;;) {
+    const dateStr = new Date(cursor).toISOString().slice(0, 10);
+    const instant = zonedWallClockToUtc(`${dateStr}T${time}:00`, timeZone);
+    if (instant.getTime() > to.getTime()) break;
+    if (instant.getTime() >= from.getTime()) result.push(instant);
+    cursor += 7 * 86400000;
+  }
+  return result;
+};
+
+export interface WeeklyTimeChange {
+  /** この曜日・時刻になる最初の回の日時（UTC） */
+  from: Date;
+  /** targetTimeZoneでの曜日 (0:日...6:土) */
+  day_of_week: number;
+  /** targetTimeZoneでの開始時刻 "HH:MM" */
+  start_time: string;
+}
+
+/**
+ * 毎週の枠（sourceTimeZoneの現地の曜日・時刻）を targetTimeZone で見たときの曜日・時刻を、from〜to の期間で
+ * 変わるごとに返す（先頭は最初の回）。夏時間の切り替えで、生徒の時刻で固定した枠のコーチ側の時刻が
+ * 期間の途中で変わる場合に、変わる日と変わった後の時刻を示すために使う。回が無ければ空配列。
+ */
+export const getWeeklyTimeChanges = (
+  dayOfWeek: number,
+  startTime: string,
+  sourceTimeZone: string,
+  targetTimeZone: string,
+  from: Date,
+  to: Date
+): WeeklyTimeChange[] => {
+  const changes: WeeklyTimeChange[] = [];
+  for (const instant of listWeeklyOccurrences(dayOfWeek, startTime, sourceTimeZone, from, to)) {
+    const targetDateStr = toIsoDateInZone(instant, targetTimeZone);
+    const day = new Date(`${targetDateStr}T00:00:00Z`).getUTCDay();
+    const start = formatHourMinuteInZone(instant, targetTimeZone);
+    const last = changes[changes.length - 1];
+    if (!last || last.day_of_week !== day || last.start_time !== start) {
+      changes.push({ from: instant, day_of_week: day, start_time: start });
+    }
+  }
+  return changes;
 };

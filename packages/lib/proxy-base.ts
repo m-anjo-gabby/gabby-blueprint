@@ -4,12 +4,26 @@ import type { User } from '@supabase/supabase-js';
 import type { UserType } from '@gabby/types/user';
 import { createLogger, type createRequestLogger } from '@gabby/lib/logger';
 import { buildLoginPath, RETURN_TO_PARAM, sanitizeReturnTo } from './auth/returnTo';
+import { IMPERSONATION_REQUEST_HEADER_ADMIN_ID, IMPERSONATION_REQUEST_HEADER_ID } from './impersonation';
+import { CLIENT_LOG_PATH } from './logger/client';
 
 export type ProxyLogger = ReturnType<typeof createRequestLogger>;
 
+/**
+ * proxy が付けて、Server Action・Server Component 側（getLogContext）が信用するヘッダー。
+ * proxy が付けない場合（未ログイン・代理ログインでない等）にブラウザから送られた値が素通りしないよう、入口で必ず除く。
+ */
+const PROXY_TRUSTED_HEADERS = ['x-user-id', 'x-request-id', IMPERSONATION_REQUEST_HEADER_ID, IMPERSONATION_REQUEST_HEADER_ADMIN_ID];
+
+function withoutTrustedHeaders(source: Headers): Headers {
+  const headers = new Headers(source);
+  PROXY_TRUSTED_HEADERS.forEach((name) => headers.delete(name));
+  return headers;
+}
+
 export async function createSupabaseProxy(req: NextRequest) {
   let res = NextResponse.next({
-    request: { headers: req.headers },
+    request: { headers: withoutTrustedHeaders(req.headers) },
   });
 
   const supabase = createServerClient(
@@ -20,7 +34,7 @@ export async function createSupabaseProxy(req: NextRequest) {
         getAll: () => req.cookies.getAll(),
         setAll: (cookiesToSet) => {
           cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
-          res = NextResponse.next({ request: req });
+          res = NextResponse.next({ request: { headers: withoutTrustedHeaders(req.headers) } });
           cookiesToSet.forEach(({ name, value, options }) =>
             res.cookies.set(name, value, options)
           );
@@ -43,7 +57,7 @@ export async function createSupabaseProxy(req: NextRequest) {
       'supabase.auth.getUser() failed in proxy',
       {
         path: req.nextUrl.pathname,
-        payload: { error: err instanceof Error ? err.message : String(err) },
+        err,
       }
     );
   }
@@ -112,7 +126,8 @@ export function isDefaultPublicRoute(
   options?: { extraExactPaths?: string[]; extraPrefixes?: string[] }
 ): boolean {
   const loginPath = '/login';
-  const exactPaths = ['/favicon.ico', ...(options?.extraExactPaths ?? [])];
+  // CLIENT_LOG_PATH: ブラウザのログの受け口。エラー画面は未ログインでも出るため公開する（受け口側で大きさ・回数を制限）
+  const exactPaths = ['/favicon.ico', CLIENT_LOG_PATH, ...(options?.extraExactPaths ?? [])];
   const prefixes = [...(options?.extraPrefixes ?? [])];
 
   if (pathname === loginPath) return true;
@@ -139,7 +154,7 @@ export function logPageView(
 
   const message = options?.appLabel ? `${options.appLabel}: ${pathname}` : `Access: ${pathname}`;
 
-  logger.info('page_view', message, {
+  logger.info('proxy:page_view', message, {
     userId: user.id,
     path: pathname,
     payload: {

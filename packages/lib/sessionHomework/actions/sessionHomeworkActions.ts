@@ -63,13 +63,13 @@ export async function getSessionHomeworkCore(sessionId: string): Promise<GetSess
       .maybeSingle();
 
     if (error) {
-      logger.error('sessionHomework:get_homework_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('sessionHomework:get_homework_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, homework: data ? normalizeHomeworkRow(data as unknown as RawHomeworkRow) : null };
   } catch (err) {
-    logger.error('sessionHomework:get_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('sessionHomework:get_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -101,7 +101,7 @@ export async function getRecentSessionHomeworkCore(
       .limit(limit);
 
     if (error) {
-      logger.error('sessionHomework:get_recent_homework_failed', error.message, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('sessionHomework:get_recent_homework_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -112,7 +112,7 @@ export async function getRecentSessionHomeworkCore(
 
     return { success: true, entries };
   } catch (err) {
-    logger.error('sessionHomework:get_recent_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('sessionHomework:get_recent_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -155,7 +155,7 @@ export async function createSessionHomeworkCore(
       .maybeSingle();
 
     if (sessionError || !session) {
-      logger.error('sessionHomework:create_homework_session_lookup_failed', sessionError?.message ?? 'session not found', { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('sessionHomework:create_homework_session_lookup_failed', sessionError?.message ?? 'session not found', { ...ctx, err: sessionError, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (session.coach_id !== user.id) {
@@ -175,7 +175,7 @@ export async function createSessionHomeworkCore(
 
     if (error || !homeworkRow) {
       const errorCode = error?.code === '23505' ? 'already_exists' : 'unexpected_error';
-      logger.error('sessionHomework:create_homework_failed', error?.message ?? 'No row inserted', { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('sessionHomework:create_homework_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode };
     }
 
@@ -195,6 +195,7 @@ export async function createSessionHomeworkCore(
       if (checklistError) {
         logger.error('sessionHomework:create_homework_checklist_failed', checklistError.message, {
           ...ctx,
+          err: checklistError,
           userId: user.id,
           payload: { sessionId, homeworkId: homeworkRow.homework_id },
         });
@@ -221,6 +222,7 @@ export async function createSessionHomeworkCore(
       if (attachmentError) {
         logger.error('sessionHomework:create_homework_attachments_failed', attachmentError.message, {
           ...ctx,
+          err: attachmentError,
           userId: user.id,
           payload: { sessionId, homeworkId: homeworkRow.homework_id },
         });
@@ -236,7 +238,7 @@ export async function createSessionHomeworkCore(
       checklistItems,
     };
   } catch (err) {
-    logger.error('sessionHomework:create_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('sessionHomework:create_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -270,7 +272,7 @@ export async function addHomeworkCommentCore(
       .maybeSingle();
 
     if (homeworkError) {
-      logger.error('sessionHomework:add_comment_homework_lookup_failed', homeworkError.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('sessionHomework:add_comment_homework_lookup_failed', homeworkError.message, { ...ctx, err: homeworkError, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!homework) {
@@ -291,7 +293,7 @@ export async function addHomeworkCommentCore(
       .single();
 
     if (error || !commentRow) {
-      logger.error('sessionHomework:add_comment_failed', error?.message ?? 'No row inserted', { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('sessionHomework:add_comment_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -313,6 +315,7 @@ export async function addHomeworkCommentCore(
       if (attachmentError) {
         logger.error('sessionHomework:add_comment_attachments_failed', attachmentError.message, {
           ...ctx,
+          err: attachmentError,
           userId: user.id,
           payload: { sessionId, commentId: commentRow.comment_id },
         });
@@ -324,7 +327,7 @@ export async function addHomeworkCommentCore(
     logger.info('sessionHomework:add_comment_success', 'Homework comment posted', { ...ctx, userId: user.id, payload: { sessionId } });
     return { success: true, comment: { ...commentRow, attachments: attachmentRows } as SessionHomeworkComment };
   } catch (err) {
-    logger.error('sessionHomework:add_comment_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('sessionHomework:add_comment_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -348,7 +351,7 @@ export async function getHomeworkChecklistCore(sessionId: string): Promise<GetHo
       .maybeSingle();
 
     if (homeworkError) {
-      logger.error('sessionHomework:get_checklist_homework_lookup_failed', homeworkError.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('sessionHomework:get_checklist_homework_lookup_failed', homeworkError.message, { ...ctx, err: homeworkError, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!homework) {
@@ -362,13 +365,13 @@ export async function getHomeworkChecklistCore(sessionId: string): Promise<GetHo
       .order('item_no', { ascending: true });
 
     if (error) {
-      logger.error('sessionHomework:get_checklist_failed', error.message, { ...ctx, userId: user.id, payload: { sessionId } });
+      logger.error('sessionHomework:get_checklist_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, items: data ?? [] };
   } catch (err) {
-    logger.error('sessionHomework:get_checklist_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('sessionHomework:get_checklist_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -399,7 +402,7 @@ export async function updateHomeworkChecklistItemStatusCore(
       .maybeSingle();
 
     if (error) {
-      logger.error('sessionHomework:update_checklist_item_failed', error.message, { ...ctx, userId: user.id, payload: { checklistItemId } });
+      logger.error('sessionHomework:update_checklist_item_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { checklistItemId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!item) {
@@ -409,7 +412,7 @@ export async function updateHomeworkChecklistItemStatusCore(
     logger.info('sessionHomework:update_checklist_item_success', 'Checklist item updated', { ...ctx, userId: user.id, payload: { checklistItemId, isDone } });
     return { success: true, item };
   } catch (err) {
-    logger.error('sessionHomework:update_checklist_item_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('sessionHomework:update_checklist_item_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

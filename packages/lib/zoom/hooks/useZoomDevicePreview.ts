@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ensureZoomClientInitialized } from '../client';
 import { describeZoomError } from '../errors';
+import { clientLogger } from '../../logger/client';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LocalAudioTrack = any;
@@ -93,7 +94,7 @@ export function useZoomDevicePreview(): UseZoomDevicePreviewResult {
       setIsPreviewing(true);
     } catch (err) {
       const { detail, message } = describeZoomError(err);
-      console.error('Failed to start device preview:', message, detail);
+      clientLogger.error('liveRoom:start_device_preview_failed', message, { payload: { detail } });
       setErrorMessage(message);
     }
   }, [clearVolumePolling]);
@@ -104,7 +105,7 @@ export function useZoomDevicePreview(): UseZoomDevicePreviewResult {
       await videoTrackRef.current?.stop();
       await audioTrackRef.current?.stop();
     } catch (err) {
-      console.error('Failed to stop device preview', err);
+      clientLogger.warn('liveRoom:stop_device_preview_failed', 'Failed to stop device preview', { err });
     } finally {
       videoTrackRef.current = null;
       audioTrackRef.current = null;
@@ -155,7 +156,7 @@ export function useZoomDevicePreview(): UseZoomDevicePreviewResult {
         setIsBlurOn(next);
       } catch (err) {
         const { detail, message } = describeZoomError(err);
-        console.error('Failed to toggle background blur:', message, detail);
+        clientLogger.warn('liveRoom:toggle_blur_failed', message, { payload: { detail } });
         setErrorMessage(message);
       }
     },

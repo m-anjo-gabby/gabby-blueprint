@@ -66,7 +66,7 @@ export async function uploadProfileIconCore(formData: FormData): Promise<UploadP
       .upload(newIconPath, buffer, { contentType: mimeType, upsert: false });
 
     if (uploadError) {
-      logger.error('profile:upload_icon_failed', uploadError.message, { ...ctx, userId: user.id });
+      logger.error('profile:upload_icon_failed', uploadError.message, { ...ctx, err: uploadError, userId: user.id });
       return { success: false, errorCode: 'upload_failed' };
     }
 
@@ -76,7 +76,7 @@ export async function uploadProfileIconCore(formData: FormData): Promise<UploadP
       .eq('id', user.id);
 
     if (updateError) {
-      logger.error('profile:update_icon_path_failed', updateError.message, { ...ctx, userId: user.id });
+      logger.error('profile:update_icon_path_failed', updateError.message, { ...ctx, err: updateError, userId: user.id });
       // DB更新に失敗した場合は、アップロード済みの新ファイルを削除してロールバックする
       await adminSupabase.storage.from(PROFILE_ICON_BUCKET).remove([newIconPath]);
       return { success: false, errorCode: 'db_update_failed' };
@@ -88,14 +88,14 @@ export async function uploadProfileIconCore(formData: FormData): Promise<UploadP
         .from(PROFILE_ICON_BUCKET)
         .remove([previousIconPath]);
       if (removeError) {
-        logger.warn('profile:remove_previous_icon_failed', removeError.message, { ...ctx, userId: user.id });
+        logger.warn('profile:remove_previous_icon_failed', removeError.message, { ...ctx, err: removeError, userId: user.id });
       }
     }
 
     logger.info('profile:upload_icon_success', `Profile icon updated: ${newIconPath}`, { ...ctx, userId: user.id });
     return { success: true, iconPath: newIconPath };
   } catch (err) {
-    logger.error('profile:upload_icon_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('profile:upload_icon_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -128,7 +128,7 @@ export async function removeProfileIconCore(): Promise<RemoveProfileIconResult> 
       .eq('id', user.id);
 
     if (updateError) {
-      logger.error('profile:remove_icon_db_update_failed', updateError.message, { ...ctx, userId: user.id });
+      logger.error('profile:remove_icon_db_update_failed', updateError.message, { ...ctx, err: updateError, userId: user.id });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
@@ -137,13 +137,13 @@ export async function removeProfileIconCore(): Promise<RemoveProfileIconResult> 
       .from(PROFILE_ICON_BUCKET)
       .remove([previousIconPath]);
     if (removeError) {
-      logger.warn('profile:remove_icon_storage_failed', removeError.message, { ...ctx, userId: user.id });
+      logger.warn('profile:remove_icon_storage_failed', removeError.message, { ...ctx, err: removeError, userId: user.id });
     }
 
     logger.info('profile:remove_icon_success', 'Profile icon removed', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('profile:remove_icon_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('profile:remove_icon_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

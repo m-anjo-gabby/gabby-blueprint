@@ -3,6 +3,9 @@ import { getTranslations } from 'next-intl/server';
 import { getNoticeById } from "@/actions/adminNoticeAction";
 import { NoticeEditor } from "../../_components/NoticeEditor";
 import { notFound } from "next/navigation";
+import { createLogger } from '@gabby/lib/logger';
+
+const logger = createLogger('admin');
 
 export default async function NoticeEditPage({
   params,
@@ -19,7 +22,7 @@ export default async function NoticeEditPage({
       notFound();
     }
   } catch (error) {
-    console.error("Failed to load notice data:", error);
+    logger.error('notice:get_notice_detail_failed', 'Failed to load notice data', { err: error });
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] text-rose-600">
         <p className="font-bold text-sm">{t('loadFailedTitle')}</p>

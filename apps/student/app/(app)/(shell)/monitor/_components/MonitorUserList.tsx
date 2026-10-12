@@ -5,7 +5,7 @@ import { CheckCircle2, Download, Users } from 'lucide-react';
 import type { MonitorSprintHistoryResponse, MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { REPORTING_TIMEZONE, currentReportingMonth } from '@gabby/lib/date/reporting';
-import { logClientEvent } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -109,13 +109,9 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
   const formatDate = (value: string | null) => formatZonedDate(value, REPORTING_TIMEZONE) || '—';
 
   const handleExportCSV = () => {
-    logClientEvent({
-      service: 'student',
-      event: 'monitor:user_summary_csv_exported',
-      level: 'info',
-      message: `User summary CSV exported: ${targetMonth}`,
+    clientLogger.info('monitor:user_summary_csv_exported', `User summary CSV exported: ${targetMonth}`, {
       payload: { month: targetMonth, targetUserIds: users.map((u) => u.id), rowCount: users.length },
-    }).catch(() => {});
+    });
 
     const rows = users.map((user) => {
       const stats = userStats.get(user.id) ?? emptyStats();

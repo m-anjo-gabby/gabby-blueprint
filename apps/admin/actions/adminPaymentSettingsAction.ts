@@ -22,7 +22,7 @@ export async function getSessionPayRate(): Promise<SessionPayRate | null> {
     .maybeSingle();
 
   if (error) {
-    logger.error('admin:get_session_pay_rate_failed', error.message, ctx);
+    logger.error('admin:get_session_pay_rate_failed', error.message, { ...ctx, err: error });
     return null;
   }
   return data;
@@ -50,7 +50,7 @@ export async function updateSessionPayRate(
     .eq('session_pay_rate_id', SESSION_PAY_RATE_ID);
 
   if (error) {
-    logger.error('admin:update_session_pay_rate_failed', error.message, ctx);
+    logger.error('admin:update_session_pay_rate_failed', error.message, { ...ctx, err: error });
     return { success: false, message: 'セッション単価の更新に失敗しました。' };
   }
 

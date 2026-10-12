@@ -13,6 +13,7 @@ import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@g
 import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
 import { isPreviewableFile, forceDownloadFile } from '@gabby/lib/notice/download';
 import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 // ─── File size formatting ──────────────────────
 function formatFileSize(bytes: number): string {
@@ -73,7 +74,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         await forceDownloadFile(url, name);
       }
     } catch (err) {
-      console.error(err);
+      clientLogger.error('notice:download_attachment_failed', 'Attachment download failed', { err });
     } finally {
       setLoadingActionId(null);
     }

@@ -16,7 +16,7 @@ function SlotRow({ slot, weeklyFrequency, timezone }: { slot: SlotStatusItem; we
     slot.day_of_week !== null && slot.start_time && slot.end_time
       ? convertWeeklyTimeZone(
           { day_of_week: slot.day_of_week, start_time: slot.start_time, end_time: slot.end_time },
-          slot.coach_timezone || 'Asia/Tokyo',
+          slot.schedule_timezone || 'Asia/Tokyo',
           timezone
         )
       : null;

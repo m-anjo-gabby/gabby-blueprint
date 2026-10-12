@@ -20,14 +20,21 @@
 -- 契約期間(start_date/end_date)による絞り込みは行わない（コーチのその曜日・時間帯が
 -- 現に埋まっているかどうかの単純な表示用途のため。日付範囲まで含めた厳密な判定は
 -- check_coach_schedule_conflict()側の役割とする）。
+--
+-- 【タイムゾーン (2026-10-06変更)】
+-- 曜日・時間帯は、行ごとの基準のタイムゾーン（定期スケジュールは schedule_timezone、申請は requested_timezone）の
+-- 現地時刻で返す。呼び出し側は直近の回の日時に換算して、UTCの空き時間（com_m_coach_availability）と比べる。
+-- 戻り値の列が増えるため、旧定義を削除してから作り直す。
 ---------------------------------------------
+DROP FUNCTION IF EXISTS public.get_coaches_unavailable_slots(uuid[]);
+
 CREATE OR REPLACE FUNCTION public.get_coaches_unavailable_slots(p_coach_ids uuid[])
-RETURNS TABLE (coach_id uuid, day_of_week smallint, start_time time, end_time time) AS $$
-  SELECT s.coach_id, s.day_of_week, s.start_time, s.end_time
+RETURNS TABLE (coach_id uuid, timezone text, day_of_week smallint, start_time time, end_time time) AS $$
+  SELECT s.coach_id, s.schedule_timezone, s.day_of_week, s.start_time, s.end_time
   FROM public.com_m_lesson_schedule s
   WHERE s.coach_id = ANY(p_coach_ids) AND s.status = 1
   UNION
-  SELECT r.coach_id, r.requested_day_of_week, r.requested_start_time, r.requested_end_time
+  SELECT r.coach_id, r.requested_timezone, r.requested_day_of_week, r.requested_start_time, r.requested_end_time
   FROM public.com_t_matching_request r
   WHERE r.coach_id = ANY(p_coach_ids) AND r.status = 1;
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;

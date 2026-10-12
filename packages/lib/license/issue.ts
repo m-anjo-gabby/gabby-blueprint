@@ -12,12 +12,11 @@
  */
 import 'server-only';
 import type { createAdminClient } from '../supabase/admin';
-import { createLogger, type LogEvent } from '../logger';
+import { createLogger, type LogContext } from '../logger';
 
 const logger = createLogger('common');
 
 type AdminClient = ReturnType<typeof createAdminClient>;
-type LogContext = Partial<LogEvent>;
 
 /** ライブセッション付き契約（`com_m_contract.contract_type`） */
 const LIVE_SESSION_CONTRACT_TYPE = 2;
@@ -49,7 +48,7 @@ export async function recordLicenseHistory(supabase: AdminClient, entry: License
   const { error } = await supabase.from('com_t_user_license_history').insert(entry);
   if (error) {
     // 履歴記録の失敗で本処理（割当/更新/解除）自体を失敗させない。ログにのみ残す。
-    logger.error('license:history_record_failed', error.message, { ...ctx, payload: entry });
+    logger.error('license:history_record_failed', error.message, { ...ctx, err: error, payload: entry });
   }
 }
 
@@ -71,7 +70,7 @@ interface TicketHistoryEntry {
 async function recordTicketHistory(supabase: AdminClient, entry: TicketHistoryEntry, ctx: LogContext) {
   const { error } = await supabase.from('com_t_user_session_ticket_history').insert(entry);
   if (error) {
-    logger.error('license:ticket_history_record_failed', error.message, { ...ctx, payload: entry });
+    logger.error('license:ticket_history_record_failed', error.message, { ...ctx, err: error, payload: entry });
   }
 }
 
@@ -104,7 +103,7 @@ async function grantSessionTicket(
     .single();
 
   if (error || !ticket) {
-    logger.error('license:grant_session_ticket_failed', error?.message || 'Ticket insert failed', { ...ctx, payload: params });
+    logger.error('license:grant_session_ticket_failed', error?.message || 'Ticket insert failed', { ...ctx, err: error, payload: params });
     return;
   }
 
@@ -247,6 +246,6 @@ async function applyInitialLevelManagement(
       { onConflict: 'user_id' }
     );
   if (error) {
-    logger.error('license:apply_level_management_failed', error.message, { ...ctx, payload: params });
+    logger.error('license:apply_level_management_failed', error.message, { ...ctx, err: error, payload: params });
   }
 }

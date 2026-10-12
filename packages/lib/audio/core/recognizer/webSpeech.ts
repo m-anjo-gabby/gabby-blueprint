@@ -1,4 +1,5 @@
 import type { RecognitionCallbacks, RecognitionHandle, RecognitionStartOptions, SpeechRecognizerEngine } from './types';
+import { clientLogger } from '../../../logger/client';
 
 type SpeechRecognitionConstructor = new () => SpeechRecognition;
 
@@ -34,7 +35,7 @@ export const webSpeechRecognizer: SpeechRecognizerEngine = {
   start(options: RecognitionStartOptions, callbacks: RecognitionCallbacks): RecognitionHandle {
     const SpeechRecognitionClass = getSpeechRecognitionClass();
     if (!SpeechRecognitionClass) {
-      console.error('Web Speech API is not supported in this browser.');
+      clientLogger.warn('speech:not_supported', 'Web Speech API is not supported in this browser');
       queueMicrotask(() => callbacks.onError?.('not-supported'));
       return { stop: () => { /* no-op */ } };
     }
@@ -55,14 +56,14 @@ export const webSpeechRecognizer: SpeechRecognizerEngine = {
       try {
         recognition.start();
       } catch (e) {
-        console.warn('Speech recognition auto-restart failed:', e);
+        clientLogger.debug('speech:auto_restart_failed', 'Speech recognition auto-restart failed', { err: e });
       }
     };
 
     recognition.onerror = (event: Event) => {
       const { error } = event as RecognitionErrorEventLike;
       if (!active) return;
-      console.warn('Speech Recognition Error:', error);
+      clientLogger.debug('speech:recognition_failed', 'Speech recognition error', { payload: { error } });
       if (error === 'no-speech' || error === 'aborted') return;
       active = false;
       try { recognition.abort(); } catch { /* no-op */ }
@@ -84,7 +85,7 @@ export const webSpeechRecognizer: SpeechRecognizerEngine = {
     try {
       recognition.start();
     } catch (e) {
-      console.error('Speech recognition start failed:', e);
+      clientLogger.error('speech:start_failed', 'Speech recognition start failed', { err: e });
       active = false;
       queueMicrotask(() => callbacks.onError?.('start-failed'));
     }

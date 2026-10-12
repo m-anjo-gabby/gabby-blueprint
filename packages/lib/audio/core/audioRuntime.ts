@@ -21,6 +21,9 @@
  *   'failedAgain'（Safari のタブを閉じて開き直すよう案内）。タブ側の音声処理が壊れていると再読み込みでは直らないため。
  */
 
+import type { LogEventName } from '../../logger';
+import { clientLogger } from '../../logger/client';
+
 /**
  * 'ok': 通常状態。
  * 'needsResume': 中断から自動では復旧できなかった。「タップして音声を再開」を出す。
@@ -36,7 +39,7 @@ export type AudioLifecycleEvent = 'interrupted' | 'recovered';
 export type PlayClipResult = 'ended' | 'stopped' | 'interrupted';
 
 export interface AudioDiagnosticEvent {
-  event: string;
+  event: LogEventName;
   level: 'info' | 'warn';
   detail: Record<string, unknown>;
 }
@@ -111,7 +114,7 @@ export function setAudioDiagnosticsReporter(reporter: ((event: AudioDiagnosticEv
   diagnosticsReporter = reporter;
 }
 
-function report(event: string, level: 'info' | 'warn', detail: Record<string, unknown> = {}) {
+function report(event: LogEventName, level: 'info' | 'warn', detail: Record<string, unknown> = {}) {
   if (!diagnosticsReporter || typeof window === 'undefined') return;
   try {
     diagnosticsReporter({
@@ -155,7 +158,7 @@ export function subscribeAudioLifecycle(listener: (event: AudioLifecycleEvent) =
 
 function emitLifecycle(event: AudioLifecycleEvent) {
   lifecycleListeners.forEach((listener) => {
-    try { listener(event); } catch (e) { console.warn('Audio lifecycle listener failed:', e); }
+    try { listener(event); } catch (e) { clientLogger.warn('audio:lifecycle_listener_failed', 'Audio lifecycle listener failed', { err: e }); }
   });
 }
 
@@ -495,7 +498,7 @@ export async function playAudioClip(
     try {
       source.start(0);
     } catch (err) {
-      console.error('AudioSource start error:', err);
+      clientLogger.error('audio:clip_start_failed', 'AudioSource start failed', { err });
       if (activeClip === clip) activeClip = null;
       clip.finish('interrupted');
       return;
@@ -550,7 +553,7 @@ function getChimeBuffer(): Promise<AudioBuffer | null> {
       return rendered;
     })
     .catch((e: unknown) => {
-      console.warn('Chime pre-render failed:', e);
+      clientLogger.warn('audio:chime_render_failed', 'Chime pre-render failed', { err: e });
       chimePromise = null;
       return null;
     });
@@ -583,7 +586,7 @@ export async function playChimeSound(): Promise<void> {
       source.onended = () => { clearTimeout(safety); resolve(); };
       source.start(0);
     } catch (e) {
-      console.warn('Chime playback failed:', e);
+      clientLogger.warn('audio:chime_play_failed', 'Chime playback failed', { err: e });
       clearTimeout(safety);
       resolve();
     }

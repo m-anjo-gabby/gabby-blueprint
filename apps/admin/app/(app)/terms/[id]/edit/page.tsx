@@ -6,6 +6,9 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import type { TermDetail } from '@gabby/types/term';
+import { createLogger } from '@gabby/lib/logger';
+
+const logger = createLogger('admin');
 
 export default async function TermEditPage({
   params,
@@ -22,7 +25,7 @@ export default async function TermEditPage({
     term = await getTermDetail(id);
   } catch (error) {
     // データ取得中にエラーが発生した場合
-    console.error("Failed to load term data:", error);
+    logger.error('term:get_term_detail_failed', 'Failed to load term data', { err: error });
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] text-rose-600">
         <p>{t('loadFailedTitle')}</p>

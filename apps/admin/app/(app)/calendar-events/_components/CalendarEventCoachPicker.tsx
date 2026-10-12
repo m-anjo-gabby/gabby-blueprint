@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,11 +15,19 @@ interface CalendarEventCoachPickerProps {
 }
 
 /**
- * グループセッションの担当コーチ選択用ピッカー（複数選択可、上限なし）
+ * グループセッションの担当コーチ選択用ピッカー（複数選択可、上限なし）。
+ * cmdk は表示直後に先頭の候補を自動で選び、その候補が見えるよう scrollIntoView で親のスクロール領域まで動かすため、
+ * ダイアログの下の方に置くとダイアログが少しスクロールした状態で開いてしまう。
+ * 候補の選択（ハイライト）を制御し、利用者がキーボード・マウスで操作するまでは何も選ばない（自動のスクロールが起きない）。
  */
 export function CalendarEventCoachPicker({ coaches, selectedIds, onChange, disabled }: CalendarEventCoachPickerProps) {
   const t = useTranslations('calendarEvents.coachPicker');
   const coachById = useMemo(() => new Map(coaches.map((c) => [c.coach_id, c])), [coaches]);
+  const [highlighted, setHighlighted] = useState('');
+  const interactedRef = useRef(false);
+  const markInteracted = () => {
+    interactedRef.current = true;
+  };
 
   const toggle = (coachId: string) => {
     onChange(selectedIds.includes(coachId) ? selectedIds.filter((id) => id !== coachId) : [...selectedIds, coachId]);
@@ -27,7 +35,15 @@ export function CalendarEventCoachPicker({ coaches, selectedIds, onChange, disab
 
   return (
     <div className="space-y-2">
-      <Command className="rounded-xl border border-slate-200">
+      <Command
+        className="rounded-xl border border-slate-200"
+        value={highlighted}
+        onValueChange={(value) => {
+          if (interactedRef.current) setHighlighted(value);
+        }}
+        onKeyDownCapture={markInteracted}
+        onPointerMoveCapture={markInteracted}
+      >
         <CommandInput placeholder={t('searchPlaceholder')} className="h-9" disabled={disabled} />
         <CommandList className="max-h-[180px]">
           <CommandEmpty>{t('empty')}</CommandEmpty>

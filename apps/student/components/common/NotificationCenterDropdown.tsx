@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Bell, BellOff, Sparkles, Flame, MessageCircle } from 'lucide-react';
+import { Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DropdownMenu,
@@ -19,12 +19,10 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
-import { NOTIFICATION_TYPES, NOTIFICATION_MESSAGE_BUILDERS, NotificationType } from '@gabby/types/notification';
+import { getNotificationDisplay } from '@gabby/lib/notification/display';
 
 // お知らせ(告知)と通知(個人イベント)を1つの通知センターに統合したベル。
 // データソースは別ストアのまま、UIの入口とタブ切替のみ統合する。
-const NOTIFICATION_ICONS = { Sparkles, Flame, MessageCircle } as const;
-
 type CenterTab = 'notice' | 'notification';
 
 const UnreadDot = () => (
@@ -103,7 +101,7 @@ export function NotificationCenterDropdown() {
         <button
           id="notification-center-bell-button"
           aria-label="通知センター"
-          className="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-100 active:scale-90 transition-all outline-none"
+          className="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-canvas active:scale-90 transition-all outline-none"
         >
           <Bell size={18} className="text-ink-muted" />
           <AnimatePresence>
@@ -139,7 +137,7 @@ export function NotificationCenterDropdown() {
               <span className="text-xs font-bold text-ink tracking-tight shrink-0">
                 通知センター
               </span>
-              <TabsList className="ml-auto h-8 p-0.5 bg-slate-100 rounded-full">
+              <TabsList className="ml-auto h-8 p-0.5 bg-canvas rounded-full">
                 <TabsTrigger
                   value="notice"
                   className="text-[11px] font-bold rounded-full px-2.5 py-1 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-ink text-ink-muted"
@@ -172,12 +170,12 @@ export function NotificationCenterDropdown() {
                 {isNoticeLoading ? (
                   <div className="p-3 space-y-2">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="h-14 bg-slate-50 rounded-2xl animate-pulse" />
+                      <div key={i} className="h-14 bg-canvas rounded-control animate-pulse" />
                     ))}
                   </div>
                 ) : previewNotices.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                    <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-ink-subtle mb-3">
+                    <div className="w-10 h-10 rounded-control bg-canvas flex items-center justify-center text-ink-subtle mb-3">
                       <BellOff size={18} />
                     </div>
                     <p className="text-xs font-bold text-ink-subtle">お知らせはありません</p>
@@ -193,7 +191,7 @@ export function NotificationCenterDropdown() {
                             setSelectedNoticeId(notice.notice_id);
                           }}
                           className={cn(
-                            'w-full text-left flex items-start gap-2.5 p-3 rounded-2xl transition-all hover:bg-slate-50 cursor-pointer outline-none block',
+                            'w-full text-left flex items-start gap-2.5 p-3 rounded-control transition-all hover:bg-canvas cursor-pointer outline-none block',
                             !notice.is_read && 'bg-brand-soft/50'
                           )}
                         >
@@ -209,7 +207,7 @@ export function NotificationCenterDropdown() {
                             <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                               <span
                                 className={cn(
-                                  'text-[11px] font-bold uppercase px-1.5 py-0.5 rounded-md border',
+                                  'text-[11px] font-bold px-1.5 py-0.5 rounded-md border',
                                   NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
                                 )}
                               >
@@ -218,7 +216,7 @@ export function NotificationCenterDropdown() {
                               {notice.is_important && (
                                 <span
                                   className={cn(
-                                    'text-[11px] font-bold uppercase px-1.5 py-0.5 rounded-md border',
+                                    'text-[11px] font-bold px-1.5 py-0.5 rounded-md border',
                                     NOTICE_IMPORTANT_BADGE.badgeClass
                                   )}
                                 >
@@ -265,12 +263,12 @@ export function NotificationCenterDropdown() {
                 {isNotificationLoading ? (
                   <div className="p-3 space-y-2">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="h-14 bg-slate-50 rounded-2xl animate-pulse" />
+                      <div key={i} className="h-14 bg-canvas rounded-control animate-pulse" />
                     ))}
                   </div>
                 ) : previewNotifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                    <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-ink-subtle mb-3">
+                    <div className="w-10 h-10 rounded-control bg-canvas flex items-center justify-center text-ink-subtle mb-3">
                       <BellOff size={18} />
                     </div>
                     <p className="text-xs font-bold text-ink-subtle">通知はありません</p>
@@ -278,11 +276,8 @@ export function NotificationCenterDropdown() {
                 ) : (
                   <div className="p-2 space-y-1">
                     {previewNotifications.map((notification) => {
-                      const meta = NOTIFICATION_TYPES[notification.notification_type as NotificationType];
-                      const Icon = NOTIFICATION_ICONS[meta?.icon as keyof typeof NOTIFICATION_ICONS] ?? Bell;
-                      const text = NOTIFICATION_MESSAGE_BUILDERS[notification.notification_type as NotificationType](
-                        notification.payload
-                      );
+                      const display = getNotificationDisplay(notification, 'ja');
+                      const Icon = display.icon ?? Bell;
 
                       return (
                         <DropdownMenuItem
@@ -296,7 +291,7 @@ export function NotificationCenterDropdown() {
                               if (notification.link_path) router.push(notification.link_path);
                             }}
                             className={cn(
-                              'w-full text-left flex items-start gap-2.5 p-3 rounded-2xl transition-all hover:bg-slate-50 cursor-pointer outline-none block',
+                              'w-full text-left flex items-start gap-2.5 p-3 rounded-control transition-all hover:bg-canvas cursor-pointer outline-none block',
                               !notification.is_read && 'bg-brand-soft/50'
                             )}
                           >
@@ -311,7 +306,7 @@ export function NotificationCenterDropdown() {
                             <div
                               className={cn(
                                 'flex items-center justify-center w-8 h-8 rounded-xl border shrink-0',
-                                meta?.badgeClass ?? 'bg-slate-50 text-ink-muted border-line/70'
+                                display.badgeClass ?? 'bg-canvas text-ink-muted border-line/70'
                               )}
                             >
                               <Icon size={14} />
@@ -324,10 +319,10 @@ export function NotificationCenterDropdown() {
                                   !notification.is_read && 'text-ink font-bold'
                                 )}
                               >
-                                {text.title}
+                                {display.title}
                               </p>
                               <p className="text-[11px] text-ink-muted mt-0.5 line-clamp-2 leading-snug">
-                                {text.body}
+                                {display.body}
                               </p>
                               <p className="text-[11px] text-ink-subtle mt-1 font-bold">
                                 {formatZonedDate(notification.occurred_at, timezone)}
@@ -348,7 +343,7 @@ export function NotificationCenterDropdown() {
             <DropdownMenuItem asChild className="p-0 border-none outline-none">
               <Link
                 href={activeTab === 'notice' ? '/notice' : '/notification'}
-                className="flex items-center justify-center w-full h-10 !bg-brand hover:!bg-brand-strong !text-white focus:!text-white focus:!bg-brand-strong data-[highlighted]:!bg-brand-strong data-[highlighted]:!text-white rounded-xl text-[11px] font-bold uppercase shadow-sm transition-all outline-none cursor-pointer"
+                className="flex items-center justify-center w-full h-10 !bg-brand hover:!bg-brand-strong !text-white focus:!text-white focus:!bg-brand-strong data-[highlighted]:!bg-brand-strong data-[highlighted]:!text-white rounded-xl text-[11px] font-bold shadow-sm transition-all outline-none cursor-pointer"
               >
                 すべて見る →
               </Link>

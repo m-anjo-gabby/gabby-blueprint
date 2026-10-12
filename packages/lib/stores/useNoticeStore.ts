@@ -5,6 +5,7 @@ import {
   markNoticesAsReadBatchAction,
 } from '@gabby/lib/notice/actions/noticeActions';
 import { NoticeItem } from '@gabby/types/notice';
+import { clientLogger } from '../logger/client';
 
 interface NoticeState {
   notices: NoticeItem[];
@@ -55,7 +56,7 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
       if (!res.success) return;
       get().applyNotices(res.data);
     } catch (err) {
-      console.error('Notice fetch error:', err);
+      clientLogger.error('notice:fetch_notices_failed', 'Notice fetch failed', { err });
     } finally {
       set({ isLoading: false });
     }

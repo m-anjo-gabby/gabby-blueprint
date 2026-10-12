@@ -59,5 +59,6 @@
 
 - `apps/coach/app/(app)/notification/page.tsx`
 - `apps/coach/app/(app)/notification/_components/NotificationCard.tsx`
-- `apps/coach/constants/notification.ts`（通知種別ごとの英語タイトル・本文の組み立てロジック）
+- `packages/types/notificationEn.ts`（通知種別ごとの英語タイトル・本文。コーチ宛ての通知メールと共有）、
+  表示は `packages/lib/notification/display.ts` の `getNotificationDisplay(notification, 'en')`
 - ストア: `@gabby/lib/stores/useNotificationStore`

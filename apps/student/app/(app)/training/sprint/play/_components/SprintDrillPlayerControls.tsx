@@ -57,8 +57,8 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
   const isManualPlaying = isPlaying && !isAutoPlaying;
 
   // --- 共通スタイル定義 ---
-  const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-slate-100 bg-slate-50 text-slate-400";
-  const unitBase = "flex items-center rounded-2xl border shadow-sm transition-all";
+  const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-control transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-line/60 bg-canvas text-ink-subtle";
+  const unitBase = "flex items-center rounded-control border shadow-sm transition-all";
 
   return (
     <div className="shrink-0 w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2 relative">
@@ -69,7 +69,7 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
           <button 
             onClick={onPrev} 
             disabled={isInteractionDisabled || isFirstStep} 
-            className={cn("w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r text-slate-400 hover:bg-slate-50 border-brand-50 disabled:opacity-20")}
+            className={cn("w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r text-ink-subtle hover:bg-canvas border-brand-50 disabled:opacity-20")}
           >
             <ArrowLeft size={18} strokeWidth={3} />
           </button>
@@ -84,8 +84,8 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
                 : "bg-brand text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
             )}
           >
-            <span className="text-[10px] font-black uppercase tracking-[0.15em]">
-              {isLastStep ? 'Finish' : 'Next'}
+            <span className="text-[11px] font-bold">
+              {isLastStep ? '完了' : '次へ'}
             </span>
             {isLastStep ? <Check size={18} strokeWidth={3} /> : <ArrowRight size={18} strokeWidth={3} />}
           </button>
@@ -99,7 +99,7 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
             isAutoPlaying ? "bg-brand text-white border-brand shadow-lg shadow-brand-100" : "hover:bg-brand-50 hover:text-brand"
           )}
         >
-          <RotateCw size={18} strokeWidth={2.5} className={cn(isAutoPlaying ? "text-white animate-spin-slow" : "text-slate-400")} />
+          <RotateCw size={18} strokeWidth={2.5} className={cn(isAutoPlaying ? "text-white animate-spin-slow" : "text-ink-subtle")} />
         </button>
       </div>
 
@@ -109,7 +109,7 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
         isRateMenuOpen ? "z-40 relative" : "z-20 relative"
       )}>
         
-        <div className={cn("h-full bg-slate-50 border-slate-200 overflow-visible", unitBase)}>
+        <div className={cn("h-full bg-canvas border-line overflow-visible", unitBase)}>
           
           {/* ⏱️ 再生速度セクション */}
           <PlaybackRateControl
@@ -124,8 +124,8 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
           <button
             onClick={onPlayAudio}
             disabled={isInteractionDisabled}
-            className={cn("flex-1 h-full flex items-center justify-center transition-all cursor-pointer rounded-r-2xl",
-              isManualPlaying ? "bg-brand-50 text-brand" : "text-slate-600 hover:text-brand"
+            className={cn("flex-1 h-full flex items-center justify-center transition-all cursor-pointer rounded-r-control",
+              isManualPlaying ? "bg-brand-50 text-brand" : "text-ink-soft hover:text-brand"
             )}
           >
             {isManualPlaying ? (
@@ -141,8 +141,8 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
           onClick={isRecording ? onStopRecord : onStartRecord}
           disabled={(isInteractionDisabled && !isRecording) || isManualPlaying || !isAssessmentMode}
           aria-label={isRecording ? '発話を止める' : '発話練習'}
-          className={cn("h-full rounded-2xl flex items-center justify-center font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative cursor-pointer",
-            isRecording ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
+          className={cn("h-full rounded-control flex items-center justify-center font-bold text-[11px] transition-all overflow-hidden relative cursor-pointer",
+            isRecording ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-ink text-white hover:bg-ink/90 active:scale-[0.97]",
             ((isInteractionDisabled && !isRecording) || isManualPlaying || !isAssessmentMode) && "opacity-20 disabled:pointer-events-none disabled:cursor-not-allowed"
           )}
         >

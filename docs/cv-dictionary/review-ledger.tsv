@@ -47,3 +47,17 @@ CVR-0045	pending	発音の揺れ	want	VERB	want	1	a	olive_sock	/wɑːnt/	/wʌnt/
 CVR-0046	pending	R音化母音	where	ADV	where	1	e	red_pepper	/wɛr/	R音化母音 /ɛr/ の cv_id 要確認（red_pepper / gray_day）				2026-09-25	cv_dict_work_20260925_full
 CVR-0047	pending	R音化母音	year	NOUN	year	1	ea	green_tea	/jɪr/	R音化母音 /ɪr/ の cv_id 要確認（green_tea / silver_pin）				2026-09-25	cv_dict_work_20260925_full
 CVR-0048	pending	R音化母音	year's	NOUN	year's	1	ea	green_tea	/jɪrz/	R音化母音 /ɪr/ の cv_id 要確認（green_tea / silver_pin）				2026-09-25	cv_dict_work_20260925_full
+CVR-0049	pending	発音の揺れ	because	CONJ	be-cause	2	au	auburn_dog	/bɪˈkɔːz/	米国では /bɪˈkʌz/（cup_of_mustard）も一般的				2026-10-07	cv_dict_work_20261007
+CVR-0050	pending	その他	carried	VERB	car-ried	1	a	black_cat	/ˈkærid/	米国では /ˈkɛrid/（red_pepper）とも発音される				2026-10-07	cv_dict_work_20261007
+CVR-0051	pending	その他	carries	VERB	car-ries	1	a	black_cat	/ˈkæriz/	米国では /ˈkɛriz/（red_pepper）とも発音される				2026-10-07	cv_dict_work_20261007
+CVR-0052	pending	その他	carry	VERB	car-ry	1	a	black_cat	/ˈkæri/	米国では /ˈkɛri/（red_pepper）とも発音される				2026-10-07	cv_dict_work_20261007
+CVR-0053	pending	その他	directed	VERB	di-rect-ed	2	e	red_pepper	/dəˈrɛktɪd/	/daɪˈrɛktɪd/（1音節目は white_tie の音）とも発音される				2026-10-07	cv_dict_work_20261007
+CVR-0054	pending	その他	direction	NOUN	di-rec-tion	2	e	red_pepper	/dəˈrɛkʃən/	/daɪˈrɛkʃən/（1音節目は white_tie の音）とも発音される				2026-10-07	cv_dict_work_20261007
+CVR-0055	pending	その他	diversity	NOUN	di-ver-si-ty	2	e	purple_shirt	/dəˈvɜːrsəti/	/daɪˈvɜːrsəti/（1音節目は white_tie の音）とも発音される				2026-10-07	cv_dict_work_20261007
+CVR-0056	pending	発音の揺れ	draw	VERB	draw	1	aw	auburn_dog	/drɔː/	米国では /drɑː/（olive_sock）も一般的				2026-10-07	cv_dict_work_20261007
+CVR-0057	pending	発音の揺れ	draws	VERB	draws	1	aw	auburn_dog	/drɔːz/	米国では /drɑːz/（olive_sock）も一般的				2026-10-07	cv_dict_work_20261007
+CVR-0058	pending	発音の揺れ	fluoride	NOUN	fluor-ide	1	uo	wooden_hook	/ˈflʊraɪd/	米国では /ˈflɔːraɪd/（orange_door）も一般的。辞書の音節区切りは flu-o-ride				2026-10-07	cv_dict_work_20261007
+CVR-0059	pending	アクセント位置の揺れ	headquarters	NOUN	head-quar-ters	1	ea	red_pepper	/ˈhɛdkwɔːrtərz/	/hɛdˈkwɔːrtərz/（2音節目にアクセント・orange_door）も一般的				2026-10-07	cv_dict_work_20261007
+CVR-0060	pending	その他	indirect	ADJ	in-di-rect	3	e	red_pepper	/ˌɪndəˈrɛkt/	/ˌɪndaɪˈrɛkt/ とも発音される（アクセント母音は同じ）				2026-10-07	cv_dict_work_20261007
+CVR-0061	pending	アクセント位置の揺れ	Mid-term	ADJ	Mid-term	1	i	silver_pin	/ˈmɪdtɜːrm/	/ˌmɪdˈtɜːrm/（2音節目にアクセント・purple_shirt）も一般的				2026-10-07	cv_dict_work_20261007
+CVR-0062	pending	発音の揺れ	toward	PREP	to-ward	2	a	orange_door	/təˈwɔːrd/	/tɔːrd/（1音節）も一般的				2026-10-07	cv_dict_work_20261007

@@ -95,7 +95,8 @@ BEGIN
         p_coach_id,
         'COACH_REPORT_APPROVED',
         jsonb_build_object('report_month', v_month),
-        '/monthly-reports'
+        -- 対象の月を開く（月の指定が無いと今月が開くため。2026-10-06変更）
+        '/monthly-reports?month=' || to_char(v_month, 'YYYY-MM')
     );
 END;
 $$;

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { setAudioDiagnosticsReporter } from '@gabby/lib/audio/core/audioRuntime';
-import { logClientEvent } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 /**
  * 音声の中断・復旧の発生状況（iOS の放置・バックグラウンド・通話等）をサーバーのログへ送る。
@@ -12,9 +12,7 @@ import { logClientEvent } from '@gabby/lib/logger/actions';
 export function AudioDiagnosticsReporter() {
   useEffect(() => {
     setAudioDiagnosticsReporter(({ event, level, detail }) => {
-      logClientEvent({ service: 'student', event, level, message: event, payload: detail }).catch(() => {
-        /* ログ送信自体の失敗は利用者の操作に影響させない */
-      });
+      clientLogger[level](event, event, { payload: detail });
     });
     return () => setAudioDiagnosticsReporter(null);
   }, []);

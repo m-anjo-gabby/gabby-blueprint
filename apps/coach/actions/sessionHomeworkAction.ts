@@ -7,11 +7,45 @@ import {
   addHomeworkCommentCore,
   getHomeworkChecklistCore,
 } from '@gabby/lib/sessionHomework/actions/sessionHomeworkActions';
+import { uploadSessionHomeworkAttachmentCore } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { PendingHomeworkAttachment, SessionHomeworkChecklistItem, SessionHomeworkComment, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import {
+  HomeworkAttachmentErrorCode,
+  PendingHomeworkAttachment,
+  SessionHomeworkChecklistItem,
+  SessionHomeworkComment,
+  SessionHomeworkEntry,
+} from '@gabby/types/sessionHomework';
 
 const logger = createLogger('coach');
+
+const ATTACHMENT_ERROR_MESSAGES_EN: Record<HomeworkAttachmentErrorCode, string> = {
+  no_file: 'No file was selected.',
+  file_too_large: 'File size must be 10MB or less.',
+  unsupported_type: 'This file type is not supported. Use an image, PDF, text, Word or Excel file.',
+  unauthorized: 'Your session has expired. Please sign in again.',
+  forbidden: "You don't have permission to post homework for this session.",
+  upload_failed: 'Failed to upload the file. Please try again.',
+  unexpected_error: 'An unexpected error occurred.',
+};
+
+/**
+ * Uploads a homework attachment (body or follow-up comment) before posting it.
+ * Only the session's own coach can upload.
+ */
+export async function uploadSessionHomeworkAttachment(
+  sessionId: string,
+  formData: FormData
+): Promise<{ success: true; attachment: PendingHomeworkAttachment } | { success: false; message: string }> {
+  const result = await uploadSessionHomeworkAttachmentCore(sessionId, formData);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('coach:upload_homework_attachment_failed', result.errorCode, ctx);
+    return { success: false, message: ATTACHMENT_ERROR_MESSAGES_EN[result.errorCode] };
+  }
+  return { success: true, attachment: result.attachment };
+}
 
 /**
  * Fetches the homework body (with follow-up comments) for a session, if posted yet.

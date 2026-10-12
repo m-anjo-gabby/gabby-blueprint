@@ -1,6 +1,7 @@
 import { getSprintResultAction, type SprintHistoryItem } from '@/actions/sprintAction';
 import { getFavoriteSprintQuestionIds } from '@/actions/sprintFavoriteAction';
 import { getSprintTitle } from '@gabby/lib';
+import { readSprintHistory } from '@gabby/lib/sprint/answeredHistory';
 import type { SprintResultData } from './types';
 
 /**
@@ -14,11 +15,7 @@ export async function loadSprintResult(selfSprintId: string): Promise<SprintResu
   // 発話数・平均スコア・hasLevel は Server Action 側で計算済み
   const { scoreRecord, questions, totalAssessmentCount, averageAssessmentScore, hasLevel } = res.data;
 
-  // DBの answered_history は文字列またはJSONオブジェクトのため、一貫した型に揃える
-  const answeredHistory: SprintHistoryItem[] =
-    typeof scoreRecord.answered_history === 'string'
-      ? JSON.parse(scoreRecord.answered_history)
-      : scoreRecord.answered_history ?? [];
+  const answeredHistory = readSprintHistory<SprintHistoryItem>(scoreRecord.answered_history);
 
   const favoriteQuestionIds = await getFavoriteSprintQuestionIds(questions.map((q) => q.question_id));
 

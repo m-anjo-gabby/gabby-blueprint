@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { CalendarClock, CheckCircle2, ClipboardList, type LucideIcon, TriangleAlert } from 'lucide-react';
 import { getMySessionTasks } from '@/actions/sessionAction';
-import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
-import type { DayOfWeek } from '@gabby/types/coachAvailability';
+import { formatWeeklySlotEn } from '@/lib/weeklySlot';
 import { DashboardPanelCard, PanelRowsSkeleton } from './DashboardPanelCard';
 
 function TaskRow({ href, icon: Icon, title, subtitle }: { href: string; icon: LucideIcon; title: string; subtitle: string }) {
@@ -37,7 +36,7 @@ export function SessionTasksPanelSkeleton() {
  * 生徒単位の画面（生徒概要のLive Sessionsカード等）でしか見えなかった「対応が必要な項目」を、
  * 担当生徒全員分まとめてここに集約する。
  */
-export default async function SessionTasksPanel() {
+export default async function SessionTasksPanel({ timezone }: { timezone: string }) {
   const tasks = await getMySessionTasks();
   const totalCount = tasks.unfinalizedSessions.length + tasks.missingHomeworkSessions.length + tasks.shortfalls.length;
 
@@ -85,7 +84,7 @@ export default async function SessionTasksPanel() {
                 href={`/students/${shortfall.student_id}`}
                 icon={CalendarClock}
                 title={`${shortfall.student_name} — Makeup session available`}
-                subtitle={`${DAY_OF_WEEK_SHORT_LABEL_EN[shortfall.day_of_week as DayOfWeek]} ${shortfall.start_time.slice(0, 5)}: only ${shortfall.actual_sessions} of ${shortfall.expected_sessions} sessions scheduled`}
+                subtitle={`${formatWeeklySlotEn(shortfall, shortfall.schedule_timezone, timezone)}: only ${shortfall.actual_sessions} of ${shortfall.expected_sessions} sessions scheduled`}
               />
             </li>
           ))}

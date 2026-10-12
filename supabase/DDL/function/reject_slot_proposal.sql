@@ -17,6 +17,9 @@
 -- 呼び出し元は対象となる候補のうちどれか1件のproposal_idを渡せばよく（振替候補の場合、
 -- UIは特定の候補を選ばせず「まとめて却下」ボタンのみを提示するため、グループの先頭要素の
 -- proposal_idを渡す想定）、本関数側でsource_session_id単位のグルーピングを解決する。
+--
+-- 【通知メールに申請の日時を載せる (2026-10-06追加)】
+-- 通知メールに申請した日時（開始〜終了）と理由を載せるため、payload に proposal_id を含める。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.reject_slot_proposal(p_proposal_id uuid, p_reason text DEFAULT NULL)
 RETURNS void
@@ -54,7 +57,7 @@ BEGIN
         PERFORM public.fn_notify(
             v_proposal.student_id,
             'SESSION_BOOKING_REJECTED',
-            jsonb_build_object('coach_name', v_coach_name, 'reject_reason', p_reason, 'requested_start_datetime', v_proposal.proposed_start_datetime),
+            jsonb_build_object('proposal_id', p_proposal_id, 'coach_name', v_coach_name, 'reject_reason', p_reason, 'requested_start_datetime', v_proposal.proposed_start_datetime),
             '/live-room'
         );
     END IF;

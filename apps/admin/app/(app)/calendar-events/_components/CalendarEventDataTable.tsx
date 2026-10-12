@@ -11,7 +11,8 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight, Search, X, Trash2, Users } from 'lucide-react';
@@ -32,11 +33,22 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
+/** 「参加者」ボタン（「編集」と同じ枠付きの小さいボタン） */
+const PARTICIPANTS_BUTTON_CLASS = cn(
+  buttonVariants({ variant: 'outline', size: 'sm' }),
+  'h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50'
+);
+
 interface CalendarEventDataTableProps {
   data: CalendarEventItem[];
+  /**
+   * シリーズの詳細で、同じシリーズの回だけを並べる場合。シリーズ名を出さず、
+   * 参加者・アナウンス管理へのリンクに ?from=series を付けて戻り先をシリーズの詳細にする
+   */
+  hideSeries?: boolean;
 }
 
-export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
+export function CalendarEventDataTable({ data, hideSeries = false }: CalendarEventDataTableProps) {
   const t = useTranslations('calendarEvents.dataTable');
   const tCommon = useTranslations('common');
   const { showToast } = useToast();
@@ -68,7 +80,19 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
       {
         accessorKey: 'title',
         header: t('titleHeader'),
-        cell: ({ row }) => <span className="font-bold text-slate-700">{row.original.title}</span>,
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <span className="font-bold text-slate-700">{row.original.title}</span>
+            {!hideSeries && row.original.series && (
+              <Link
+                href={`/calendar-events/series/${row.original.series.series_id}`}
+                className="block truncate text-xs text-slate-500 hover:text-brand"
+              >
+                {t('seriesPrefix', { title: row.original.series.title })}
+              </Link>
+            )}
+          </div>
+        ),
       },
       {
         accessorKey: 'start_datetime',
@@ -107,14 +131,19 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
         header: () => <div className="text-right">{t('actionsHeader')}</div>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
-            {(row.original.rsvp_enabled || (row.original.coaches?.length ?? 0) > 0) && (
+            {/* 参加確認が無く担当コーチもいない行は、同じ幅の空きを取って「編集」「削除」の位置を他の行とそろえる */}
+            {row.original.rsvp_enabled || (row.original.coaches?.length ?? 0) > 0 ? (
               <Link
-                href={`/calendar-events/${row.original.calendar_event_id}/participants`}
-                className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all active:scale-95"
+                href={`/calendar-events/${row.original.calendar_event_id}/participants${hideSeries ? '?from=series' : ''}`}
+                className={cn(PARTICIPANTS_BUTTON_CLASS)}
                 title={t('manageParticipants')}
               >
-                <Users size={15} />
+                <Users size={14} /> {t('participantsButton')}
               </Link>
+            ) : (
+              <span className={cn(PARTICIPANTS_BUTTON_CLASS, 'invisible')} aria-hidden>
+                <Users size={14} /> {t('participantsButton')}
+              </span>
             )}
 
             <CalendarEventFormDialog mode="edit" initialData={row.original} />
@@ -150,7 +179,7 @@ export function CalendarEventDataTable({ data }: CalendarEventDataTableProps) {
         ),
       },
     ],
-    [t, tCommon]
+    [t, tCommon, hideSeries]
   );
 
   const table = useReactTable({

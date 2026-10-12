@@ -3,7 +3,8 @@
  *
  * 使い方:
  *   # validate.ts が出力した review.tsv のうち、台帳に未登録の行を「pending」で追記する
- *   npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts sync --work <作業ディレクトリ> [--ledger <台帳TSV>]
+ *   # あわせて skipped.tsv の reason = proper_noun の語を固有名詞リストに追記する（次回の extract.ts で機械的に除外される）
+ *   npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts sync --work <作業ディレクトリ> [--ledger <台帳TSV>] [--proper-nouns <固有名詞リスト>]
  *
  *   # 確定（confirmed）行を、CV辞書 一括登録用のTSVとして書き出す（取込画面で「既存も上書き」を選んで反映）
  *   # （word_ja・lemma は --dict で指定した生成済みの辞書TSVから引く。--since で確定日を絞り込める）
@@ -20,6 +21,9 @@ import {
 } from '../../../../apps/admin/lib/cvDictionaryImport';
 import {
   DEFAULT_LEDGER_PATH,
+  DEFAULT_PROPER_NOUNS_PATH,
+  readTsvRecords,
+  writeProperNouns,
   type LedgerRow,
   readLedger,
   writeLedger,
@@ -36,6 +40,26 @@ const argOf = (name: string) => {
 };
 const ledgerPath = argOf('--ledger') || DEFAULT_LEDGER_PATH;
 const ledger = readLedger(ledgerPath);
+const properNounsPath = argOf('--proper-nouns') || DEFAULT_PROPER_NOUNS_PATH;
+
+// skipped.tsv（word / reason / note）の固有名詞 → 固有名詞リスト（word / note / registered_date / source）
+const syncProperNouns = (workDir: string, source: string): void => {
+  const skipped = readTsvRecords(join(workDir, 'skipped.tsv')).filter((r) => r.reason === 'proper_noun' && r.word);
+  const list = readTsvRecords(properNounsPath);
+  const existing = new Set(list.map((r) => r.word.toLowerCase()));
+  const added = skipped.filter((r) => !existing.has(r.word.toLowerCase()));
+  if (added.length === 0) {
+    console.log(`固有名詞リストに追記: 0件 → ${properNounsPath}`);
+    return;
+  }
+  for (const r of added) {
+    list.push({ word: r.word, note: r.note ?? '', registered_date: today(), source });
+    existing.add(r.word.toLowerCase());
+  }
+  list.sort((a, b) => a.word.toLowerCase().localeCompare(b.word.toLowerCase()));
+  writeProperNouns(properNounsPath, list);
+  console.log(`固有名詞リストに追記: ${added.length}件（${added.map((r) => r.word).join(', ')}） → ${properNounsPath}`);
+};
 
 // ------------------------------------------------------------
 // sync: review.tsv → 台帳（pending で追記）
@@ -82,6 +106,7 @@ const sync = () => {
 
   writeLedger(ledgerPath, ledger);
   console.log(`台帳に追記: ${added}件（台帳合計 ${ledger.length}件） → ${ledgerPath}`);
+  syncProperNouns(workDir, source);
 };
 
 // ------------------------------------------------------------

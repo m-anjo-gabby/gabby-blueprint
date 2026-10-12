@@ -243,7 +243,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                   { label: '実施', value: shown(stats.sprintSessions), unit: '回' },
                   { label: '回答', value: shown(stats.sprintAnswers), unit: '問' },
                 ]}
-                note="※ 回答数にドリルモードの回答は含みません"
+                note="※ 回答数にドリルの回答は含みません"
               />
             </div>
           </section>

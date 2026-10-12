@@ -262,6 +262,29 @@ if (Confirm-Action 'Playwright のブラウザ（chromium / webkit）を取得�
 }
 
 # ---------------------------------------------------------------------------
+Write-Step '10. CV辞書ツール用の Python（任意）'
+# ---------------------------------------------------------------------------
+# python が Microsoft Store への案内（App Execution Alias）の場合もあるため、実際に起動できるかで判定する
+function Test-PythonModule([string]$Module) {
+  try { & python -c "import $Module" 2>$null; return $LASTEXITCODE -eq 0 } catch { return $false }
+}
+$hasPython = Test-PythonModule 'sys'
+if ($hasPython -and (Test-PythonModule 'openpyxl')) {
+  Write-Skip 'Python と openpyxl はインストール済みです。'
+} elseif (Confirm-Action 'CV辞書の確認依頼Excelを出力するための Python と openpyxl をインストールしますか？ CV辞書の作業をしない場合は不要です。' $false -Yes:$Yes) {
+  if (-not $hasPython) {
+    Write-Info 'Python をインストールしています...'
+    Invoke-Native 'winget' @('install', '--id', 'Python.Python.3.14', '-e', '--accept-source-agreements', '--accept-package-agreements')
+    Update-SessionPath
+    if (-not (Test-PythonModule 'sys')) { throw 'Python のインストール後も起動できません。PowerShell を開き直して再実行してください。' }
+  }
+  Invoke-Native 'python' @('-m', 'pip', 'install', '--user', 'openpyxl')
+  Write-Ok 'Python と openpyxl をインストールしました。'
+} else {
+  Write-Skip 'スキップしました（後から docs/SETUP.md の手順10でインストールできます）。'
+}
+
+# ---------------------------------------------------------------------------
 Write-Host ''
 Write-Host 'セットアップが完了しました。' -ForegroundColor Green
 Write-Host ''

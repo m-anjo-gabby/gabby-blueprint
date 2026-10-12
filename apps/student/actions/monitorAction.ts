@@ -100,7 +100,6 @@ export async function getMonitorUserList(
   includeMonitor: boolean = false
 ): Promise<{ success: boolean; data: MonitorUser[]; error?: string }> {
   const ctx = await getLogContext();
-  logger.info("monitor:get_user_list_start", "Fetching monitor user list via RPC", { ...ctx, includeMonitor, startDate, endDate });
 
   try {
     const supabase = await createServerClient();
@@ -117,13 +116,13 @@ export async function getMonitorUserList(
 
     if (error) throw error;
 
-    logger.info("monitor:get_user_list_success", `Fetched ${data?.length || 0} users`, ctx);
+    logger.debug("monitor:get_user_list_success", `Fetched ${data?.length || 0} users`, ctx);
     return { success: true, data: data || [] };
 
   } catch (error: any) {
-    logger.error("monitor:get_user_list_error", "Failed to fetch monitor user list", {
+    logger.error("monitor:get_user_list_failed", "Failed to fetch monitor user list", {
       ...ctx,
-      payload: { error: error.message }
+      err: error,
     });
     return { success: false, data: [], error: error.message };
   }
@@ -139,7 +138,6 @@ export async function getMonitorWordHistory(
   includeMonitor: boolean = false // 💡 引数を追加
 ): Promise<{ success: boolean; data: MonitorWordSummaryHistoryItem[]; error?: string }> {
   const ctx = await getLogContext();
-  logger.info("monitor:get_word_history_start", "Fetching monitor word history via RPC", { ...ctx, startDate, endDate, userIds, includeMonitor });
 
   try {
     const supabase = await createServerClient();
@@ -174,6 +172,11 @@ export async function getMonitorWordHistory(
 
     return { success: true, data: formattedData as MonitorWordSummaryHistoryItem[] };
   } catch (error: any) {
+    logger.error("monitor:get_word_history_failed", "Failed to fetch monitor word history", {
+      ...ctx,
+      err: error,
+      payload: { startDate, endDate, userIds, includeMonitor },
+    });
     return { success: false, data: [], error: error.message };
   }
 }
@@ -188,7 +191,6 @@ export async function getMonitorSprintHistory(
   includeMonitor: boolean = false
 ): Promise<{ success: boolean; data: MonitorSprintHistoryResponse; error?: string }> {
   const ctx = await getLogContext();
-  logger.info("monitor:get_sprint_history_start", "Fetching monitor sprint and drill history via RPC", { ...ctx, startDate, endDate, userIds, includeMonitor });
 
   try {
     const supabase = await createServerClient();
@@ -259,7 +261,7 @@ export async function getMonitorSprintHistory(
       }
     }));
 
-    logger.info("monitor:get_sprint_history_success", `Fetched ${formattedSessions.length} sessions, ${formattedDrills.length} drills`, ctx);
+    logger.debug("monitor:get_sprint_history_success", `Fetched ${formattedSessions.length} sessions, ${formattedDrills.length} drills`, ctx);
 
     return { 
       success: true, 
@@ -269,9 +271,9 @@ export async function getMonitorSprintHistory(
       }
     };
   } catch (error: any) {
-    logger.error("monitor:get_sprint_history_error", "Error in getMonitorSprintHistory via RPC", {
+    logger.error("monitor:get_sprint_history_failed", "Error in getMonitorSprintHistory via RPC", {
       ...ctx,
-      payload: { error: error.message, stack: error.stack }
+      err: error,
     });
     return { 
       success: false, 

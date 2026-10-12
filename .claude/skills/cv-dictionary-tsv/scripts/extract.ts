@@ -2,14 +2,19 @@
  * スプリント一括登録TSVから、CV辞書登録用の単語ワークリストを作成する。
  *
  * 使い方:
- *   npx tsx .claude/skills/cv-dictionary-tsv/scripts/extract.ts --out <作業ディレクトリ> [--exclude <辞書TSV>]... <スプリントTSV>...
+ *   npx tsx .claude/skills/cv-dictionary-tsv/scripts/extract.ts --out <作業ディレクトリ> [--exclude <辞書TSV>]... [--proper-nouns <固有名詞リスト>] <スプリントTSV>...
  *
  * 出力（<作業ディレクトリ>配下）:
  *   worklist.tsv … 辞書化対象の単語（word / count / note / contexts）
- *   excluded.tsv … 機械的に除外した単語と理由（固有名詞・数字のみ・除外ファイル掲載語）
+ *   excluded.tsv … 機械的に除外した単語と理由（数字のみ・除外ファイル掲載語・固有名詞リスト掲載語）
+ *
+ * 文中でも常に大文字で始まる語は、固有名詞（社名・人名）とは限らない（X-ray、Mid-term Management Plan の Mid-term 等）。
+ * 機械的には除外せず note = capitalized_mid_sentence で worklist に残し、生成時に判定する。
+ * 判定で固有名詞とした語は skipped.tsv から固有名詞リスト（ledger.ts sync で追記）に蓄積し、次回から機械的に除外する。
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { DEFAULT_PROPER_NOUNS_PATH } from './ledgerLib';
 
 // 対象列（ステートメント・質問/指示・解答文）
 const SOURCE_COLUMNS = ['statement_en', 'question_en', 'answer_sentence_yes_en', 'answer_sentence_no_en'];
@@ -40,10 +45,12 @@ interface WordStat {
 const args = process.argv.slice(2);
 let outDir = '';
 const excludeFiles: string[] = [];
+let properNounsPath = DEFAULT_PROPER_NOUNS_PATH;
 const inputs: string[] = [];
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--out') outDir = args[++i];
   else if (args[i] === '--exclude') excludeFiles.push(args[++i]);
+  else if (args[i] === '--proper-nouns') properNounsPath = args[++i];
   else inputs.push(args[i]);
 }
 if (!outDir || inputs.length === 0) {
@@ -107,6 +114,12 @@ for (const path of excludeFiles) {
   for (const row of readTsv(path)) if (row.word_en) excludeKeys.add(row.word_en.toLowerCase());
 }
 
+// 過去の作成で固有名詞と判定した語（docs/cv-dictionary/proper-nouns.tsv）
+const properNounKeys = new Set<string>();
+if (existsSync(properNounsPath)) {
+  for (const row of readTsv(properNounsPath)) if (row.word) properNounKeys.add(row.word.toLowerCase());
+}
+
 // ------------------------------------------------------------
 // 分類
 // ------------------------------------------------------------
@@ -122,17 +135,22 @@ for (const [key, s] of [...stats.entries()].sort(([a], [b]) => a.localeCompare(b
   let reason = '';
   if (/^[0-9]+$/.test(key)) reason = 'digits';
   else if (excludeKeys.has(key)) reason = 'already_in_exclude_file';
-  else if (!isPronounI && !isAbbreviation && !isCapitalizedVocab && !s.hasLowercase && s.capitalizedMidSentence) reason = 'proper_noun';
+  else if (properNounKeys.has(key)) reason = 'known_proper_noun';
 
   if (reason) {
     excluded.push([forms[0], reason, String(s.count)]);
     continue;
   }
 
+  const alwaysCapitalized = !isPronounI && !isAbbreviation && !isCapitalizedVocab && !s.hasLowercase;
   const note = isAbbreviation
     ? 'abbreviation'
-    : !isPronounI && !isCapitalizedVocab && !s.hasLowercase ? 'capitalized_sentence_initial_only' : '';
-  const word = isPronounI ? key.replace(/^i/, 'I') : isAbbreviation || isCapitalizedVocab ? forms[0] : key;
+    : alwaysCapitalized
+      ? s.capitalizedMidSentence ? 'capitalized_mid_sentence' : 'capitalized_sentence_initial_only'
+      : '';
+  // 文中でも大文字で始まる語は出現形のまま（X-ray）。文頭でしか大文字にならない語は小文字にする
+  const keepForm = isAbbreviation || isCapitalizedVocab || note === 'capitalized_mid_sentence';
+  const word = isPronounI ? key.replace(/^i/, 'I') : keepForm ? forms[0] : key;
   const contexts = [...s.contexts].sort((a, b) => a.length - b.length).slice(0, MAX_CONTEXTS);
   work.push([word, String(s.count), note, contexts.join(' || ')]);
 }

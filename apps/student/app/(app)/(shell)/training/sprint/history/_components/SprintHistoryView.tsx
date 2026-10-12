@@ -11,6 +11,7 @@ import { formatZonedDate } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { resolveSprintHasLevel } from '@gabby/lib';
 import type { ContentMetadata } from '@gabby/types/content';
+import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { scrollIntoContainer } from '@/lib/scroll';
 import { MonthSwitcher } from '../../../_components/MonthSwitcher';
@@ -177,8 +178,8 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
 
       <div className="mb-6 grid grid-cols-3 gap-3">
         <StatTile label="実施日数" value={isLoading ? null : sortedDates.length} unit="日" icon={Calendar} />
-        <StatTile label="スプリント" value={isLoading ? null : initialData.sessions.length} unit="回" metric="sprint" />
-        <StatTile label="ドリル" value={isLoading ? null : initialData.drills.length} unit="件" metric="drill" />
+        <StatTile label={SPRINT_MODE_LABEL.sprint} value={isLoading ? null : initialData.sessions.length} unit="回" metric="sprint" />
+        <StatTile label={SPRINT_MODE_LABEL.drill} value={isLoading ? null : initialData.drills.length} unit="件" metric="drill" />
       </div>
 
       <div className="space-y-3">
@@ -202,8 +203,8 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                   <div>
                     <p className="text-base font-bold text-ink tabular-nums">{date}</p>
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <HistoryMetric metric="sprint" label="スプリント" value={sessions.length} />
-                      <HistoryMetric metric="drill" label="ドリル" value={drills.length} />
+                      <HistoryMetric metric="sprint" label={SPRINT_MODE_LABEL.sprint} value={sessions.length} />
+                      <HistoryMetric metric="drill" label={SPRINT_MODE_LABEL.drill} value={drills.length} />
                     </div>
                   </div>
                   <ChevronDown size={18} className={cn('shrink-0 text-ink-subtle transition-transform duration-200', isExpanded && 'rotate-180')} />
@@ -222,7 +223,7 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                         {/* 1. ドリル履歴一覧（結果画面は無いため表示のみ） */}
                         {drills.length > 0 && (
                           <div className="space-y-2">
-                            <p className={SUB_LIST_TITLE_CLASS}>ドリル</p>
+                            <p className={SUB_LIST_TITLE_CLASS}>{SPRINT_MODE_LABEL.drill}</p>
                             <ul className="space-y-2">
                               {drills.map((drill) => (
                                 <li key={drill.summary_id} className="rounded-control border border-line bg-surface p-3.5">
@@ -245,10 +246,10 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
                           </div>
                         )}
 
-                        {/* 2. スプリントセッション履歴一覧（タップで結果画面へ） */}
+                        {/* 2. タイムアタックの履歴一覧（タップで結果画面へ） */}
                         {sessions.length > 0 && (
                           <div className="space-y-2">
-                            <p className={SUB_LIST_TITLE_CLASS}>スプリント</p>
+                            <p className={SUB_LIST_TITLE_CLASS}>{SPRINT_MODE_LABEL.sprint}</p>
                             <ul className="space-y-2">
                               {sessions.map((session) => {
                                 const typeInfo = QUESTION_TYPES[session.question_type as keyof typeof QUESTION_TYPES];

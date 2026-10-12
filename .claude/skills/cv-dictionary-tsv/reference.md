@@ -24,6 +24,11 @@ word_en	part_of_speech	word_ja	syllables	primary_stress_syllable	stress_vowel_sp
 - 同じ単語が文脈によって異なる品詞で使われている場合（例: `update` の名詞/動詞）は、品詞ごとに1行ずつ出す。
 - `note` 列が `capitalized_sentence_initial_only` の語は、文頭でしか出現していない。
   人名・地名・社名などの固有名詞なら行を作らず `skipped.tsv` に記録する。
+- `note` 列が `capitalized_mid_sentence` の語は、文中でも常に大文字で始まっている。例文から判定する。
+  - 一般語なら行を作る。慣用的に大文字で書く語（`X-ray`）や、固有の名称の一部として使われている一般語
+    （`Mid-term Management Plan` の `Mid-term`、`Working Rules` の `Working`）がこれに当たる。`word_en` は worklist の表記のまま。
+  - 社名・人名・地名・製品名、および名称の中でしか意味を持たない語は行を作らず、`skipped.tsv` に
+    `reason` = `proper_noun`、`note` に種類を書く（固有名詞リストに蓄積され、次回から抽出時に除外される）。
 - `note` 列が `abbreviation` の語は略語。大文字のまま登録し、「略語」の節のルールで作る。
 
 ## 2. part_of_speech

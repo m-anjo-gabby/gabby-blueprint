@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { renderPasswordResetEmail } from "@gabby/lib/mail/render";
+import { renderMail } from "@gabby/lib/mail/render";
+import { buildPasswordResetMail } from "@gabby/lib/mail/templates/PasswordResetEmailTemplate";
 
 /**
  * パスワード再設定メールの文面（送信はしない。送信処理と同じ組み立て関数で検証する）
@@ -14,7 +15,7 @@ import { renderPasswordResetEmail } from "@gabby/lib/mail/render";
 const RESET_URL = "https://localhost:3000/auth/callback?token_hash=e2e-token&type=recovery&next=/update-password";
 
 test("student 向け（日本語）: 件名・本文・有効期限・リンク", () => {
-  const { subject, html } = renderPasswordResetEmail({ resetUrl: RESET_URL, language: "ja" });
+  const { subject, html } = renderMail(buildPasswordResetMail({ resetUrl: RESET_URL, language: "ja" }));
   assert.equal(subject, "【Gabby Blueprint】パスワード再設定手続きのご案内");
   assert.ok(html.includes("パスワードを再設定する"));
   assert.ok(html.includes("メール送信から30分間です"));
@@ -25,7 +26,7 @@ test("student 向け（日本語）: 件名・本文・有効期限・リンク"
 });
 
 test("coach 向け（英語）: 日本語を含まない", () => {
-  const { subject, html } = renderPasswordResetEmail({ resetUrl: RESET_URL, language: "en" });
+  const { subject, html } = renderMail(buildPasswordResetMail({ resetUrl: RESET_URL, language: "en" }));
   assert.equal(subject, "[Gabby Blueprint] Reset your password");
   assert.ok(html.includes("Reset password"));
   assert.ok(html.includes("expires 30 minutes after"));
@@ -33,7 +34,7 @@ test("coach 向け（英語）: 日本語を含まない", () => {
 });
 
 test("admin 向け（日英併記）: 日本語→英語の順で両方を載せる", () => {
-  const { subject, html } = renderPasswordResetEmail({ resetUrl: RESET_URL, language: "bilingual" });
+  const { subject, html } = renderMail(buildPasswordResetMail({ resetUrl: RESET_URL, language: "bilingual" }));
   assert.equal(subject, "【Gabby Blueprint】パスワード再設定のご案内 / Reset your password");
   assert.ok(html.includes("パスワードを再設定する / Reset password"));
   assert.ok(html.includes("メール送信から30分間です"));

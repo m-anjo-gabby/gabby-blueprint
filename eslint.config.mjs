@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // ログは共通ロガー（サーバー: logger、ブラウザ: clientLogger）に集約する。docs/LOGGING.md
+  {
+    files: ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
+    rules: {
+      "no-console": "error",
+    },
+  },
+
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

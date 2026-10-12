@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { X } from "lucide-react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
@@ -21,6 +22,20 @@ const DrawerTrigger = DrawerPrimitive.Trigger
 const DrawerPortal = DrawerPrimitive.Portal
 
 const DrawerClose = DrawerPrimitive.Close
+
+/** 見出しの右端に置く「×」（枠外のタップ・下へのスワイプ以外でも閉じられるように） */
+const DrawerCloseButton = ({ className }: { className?: string }) => (
+  <DrawerPrimitive.Close
+    aria-label="閉じる"
+    data-vaul-no-drag
+    className={cn(
+      "flex size-9 shrink-0 items-center justify-center rounded-full bg-canvas text-ink-subtle transition-colors hover:bg-line/60 hover:text-ink-soft",
+      className
+    )}
+  >
+    <X size={18} />
+  </DrawerPrimitive.Close>
+)
 
 const DrawerOverlay = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Overlay>,
@@ -119,6 +134,7 @@ export {
   DrawerOverlay,
   DrawerTrigger,
   DrawerClose,
+  DrawerCloseButton,
   DrawerContent,
   DrawerHeader,
   DrawerFooter,

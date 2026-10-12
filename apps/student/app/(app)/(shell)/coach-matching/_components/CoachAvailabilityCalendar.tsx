@@ -10,10 +10,10 @@ const SLOTS_PER_DAY = 48;
 /** カレンダー上でクリック可能な1つのセッション開始候補（25分セッション、30分刻み） */
 export interface AvailabilityCell {
   key: string;
-  // 送信値：コーチのローカル時刻（DBの解釈基準）
+  // 空き時間の基準（UTC）の曜日・時刻。予約済みの枠との重なりの判定に使う
   sourceDay: DayOfWeek;
   sourceStartTime: string; // "HH:MM"
-  // 表示値：生徒のタイムゾーンに変換した曜日・時刻
+  // 表示値・送信値：生徒のタイムゾーンに変換した曜日・時刻（申請は生徒の現地時刻で送る）
   displayDay: DayOfWeek;
   displayStartTime: string; // "HH:MM"
   displayEndTime: string; // "HH:MM"
@@ -64,13 +64,13 @@ export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey,
   const slotRange = Array.from({ length: endSlot - startSlot + 1 }, (_, i) => startSlot + i);
 
   return (
-    <div className="max-h-[360px] overflow-y-auto rounded-2xl border border-line select-none">
+    <div className="max-h-[360px] overflow-y-auto rounded-control border border-line select-none">
       <div className="grid" style={{ gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))' }}>
         <div className="sticky top-0 z-20 bg-white border-b border-line" />
         {DAYS_OF_WEEK.map((day) => (
           <div
             key={day}
-            className="sticky top-0 z-20 bg-white border-b border-line py-1.5 text-center text-[11px] font-bold text-ink-muted tracking-wide"
+            className="sticky top-0 z-20 bg-white border-b border-line py-1.5 text-center text-[11px] font-bold text-ink-muted"
           >
             {DAY_OF_WEEK_LABEL_JA[day].slice(0, 1)}
           </div>
@@ -110,9 +110,9 @@ export function CoachAvailabilityCalendar({ cells, unavailableKeys, selectedKey,
                     }
                     className={cn(
                       'h-[26px] border-l border-line/70 transition-colors disabled:cursor-default flex items-center justify-center',
-                      isHour ? 'border-t border-t-slate-200' : 'border-t border-t-slate-100',
+                      isHour ? 'border-t border-t-line' : 'border-t border-t-line/60',
                       isUnavailable
-                        ? 'bg-slate-100 text-ink-subtle'
+                        ? 'bg-canvas text-ink-subtle'
                         : cell
                           ? isSelected
                             ? 'bg-brand text-white'

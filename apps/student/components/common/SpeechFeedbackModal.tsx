@@ -23,8 +23,8 @@ export interface SpeechFeedbackModalProps {
 
 const VARIANT_STYLES = {
   word: {
-    overlay: "z-[100] bg-slate-900/60 backdrop-blur-sm",
-    panel: "rounded-[32px]",
+    overlay: "z-[100] bg-ink/60 backdrop-blur-sm",
+    panel: "rounded-panel",
     panelMotion: {
       initial: { scale: 0.95, y: 10, opacity: 0 },
       animate: { scale: 1, y: 0, opacity: 1 },
@@ -32,14 +32,14 @@ const VARIANT_STYLES = {
     },
     closeBtn: "p-1",
     closeIconStroke: 2,
-    scoreBox: "p-4 rounded-3xl bg-slate-50/50 border border-slate-100/50",
+    scoreBox: "p-4 rounded-card bg-canvas/50 border border-line/30",
     tag: "px-2 py-0.5",
     matchesWrap: "gap-x-3 gap-y-5",
     matchText: "text-xl sm:text-2xl",
   },
   sprint: {
-    overlay: "z-[110] bg-slate-950/40 backdrop-blur-md",
-    panel: "rounded-[36px] border border-white/50",
+    overlay: "z-[110] bg-ink/40 backdrop-blur-md",
+    panel: "rounded-panel border border-white/50",
     panelMotion: {
       initial: { scale: 0.9, y: 20, opacity: 0 },
       animate: { scale: 1, y: 0, opacity: 1 },
@@ -47,7 +47,7 @@ const VARIANT_STYLES = {
     },
     closeBtn: "p-2 -mr-2",
     closeIconStroke: 2.5,
-    scoreBox: "p-5 rounded-[28px] bg-slate-50 border border-slate-100/50",
+    scoreBox: "p-5 rounded-panel bg-canvas border border-line/30",
     tag: "px-2.5 py-0.5",
     matchesWrap: "gap-x-3 gap-y-4 max-h-[160px] overflow-y-auto w-full py-1",
     matchText: "text-lg",
@@ -108,11 +108,11 @@ export const SpeechFeedbackModal: React.FC<SpeechFeedbackModalProps> = ({
         >
           {/* 1. Header（スクロールしても常に表示） */}
           <div className="w-full flex justify-between items-center px-6 pt-6 pb-2 shrink-0">
-            <h2 className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+            <h2 className="flex items-center gap-2 text-[11px] font-bold text-ink-subtle">
               <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: feedback.fill }} />
               {title}
             </h2>
-            <button onClick={handleClose} className={cn("text-slate-300 hover:text-slate-500 transition-colors", s.closeBtn)}>
+            <button onClick={handleClose} className={cn("text-ink-subtle hover:text-ink-muted transition-colors", s.closeBtn)}>
               <X size={20} strokeWidth={s.closeIconStroke} />
             </button>
           </div>
@@ -123,7 +123,7 @@ export const SpeechFeedbackModal: React.FC<SpeechFeedbackModalProps> = ({
             <div className={cn("flex items-center gap-6 w-full", s.scoreBox)}>
               <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
                 <svg className="w-full h-full -rotate-90">
-                  <circle cx="40" cy="40" r="36" className="stroke-slate-100" strokeWidth="6" fill="none" />
+                  <circle cx="40" cy="40" r="36" className="stroke-line/60" strokeWidth="6" fill="none" />
                   <motion.circle
                     cx="40" cy="40" r="36"
                     style={{ stroke: feedback.fill, strokeDasharray: 226 }}
@@ -134,18 +134,18 @@ export const SpeechFeedbackModal: React.FC<SpeechFeedbackModalProps> = ({
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[18px] font-black tabular-nums leading-none" style={{ color: feedback.fill }}>
+                  <span className="text-[18px] font-bold tabular-nums leading-none" style={{ color: feedback.fill }}>
                     {Math.round(analysis.score * 100)}
                   </span>
-                  <span className="text-[8px] font-bold opacity-60" style={{ color: feedback.fill }}>SCORE</span>
+                  <span className="text-[11px] font-bold opacity-60" style={{ color: feedback.fill }}>スコア</span>
                 </div>
               </div>
 
               <div className="flex-1 flex flex-col gap-1.5">
-                <div className={cn("inline-flex rounded-full w-fit bg-white border text-[9px] font-black uppercase tracking-wider", s.tag)} style={{ color: feedback.fill, borderColor: `${feedback.fill}20` }}>
+                <div className={cn("inline-flex rounded-full w-fit bg-white border text-[11px] font-bold", s.tag)} style={{ color: feedback.fill, borderColor: `${feedback.fill}20` }}>
                   {feedback.tagText}
                 </div>
-                <p className="text-[13px] font-bold text-slate-700 leading-tight">
+                <p className="text-[13px] font-bold text-ink-soft leading-tight">
                   {analysis.summary}
                 </p>
               </div>
@@ -174,23 +174,23 @@ export const SpeechFeedbackModal: React.FC<SpeechFeedbackModalProps> = ({
                             initial={{ opacity: 0, y: 5, scale: 0.9 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 5, scale: 0.9 }}
-                            className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1.5 bg-slate-900 text-white rounded-xl shadow-xl z-30"
+                            className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1.5 bg-ink text-white rounded-xl shadow-xl z-30"
                           >
-                            <div className="flex items-center gap-2 text-[10px] font-bold">
+                            <div className="flex items-center gap-2 text-[11px] font-bold">
                               {m.isMatch ? (
-                                <><span className="text-slate-400 line-through decoration-slate-500">{m.heard}</span>
+                                <><span className="text-ink-subtle line-through decoration-ink-muted">{m.heard}</span>
                                 <span className="text-sky-400">{m.word}</span></>
                               ) : (
                                 <span>聞き取れませんでした</span>
                               )}
                             </div>
-                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45" />
+                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-ink rotate-45" />
                           </motion.div>
                         )}
                       </AnimatePresence>
                     )}
 
-                    <span className={cn("font-black transition-all duration-300", s.matchText, text, deco)}>
+                    <span className={cn("font-bold transition-all duration-300", s.matchText, text, deco)}>
                       {m.word}
                     </span>
                   </div>
@@ -200,14 +200,14 @@ export const SpeechFeedbackModal: React.FC<SpeechFeedbackModalProps> = ({
 
             {/* 4. Advice Area: 改善のヒント */}
             {analysis.issues && analysis.issues.length > 0 && (
-              <div className="w-full bg-brand-50/50 p-4 rounded-[24px] border border-brand-100/50">
+              <div className="w-full bg-brand-50/50 p-4 rounded-card border border-brand-100/50">
                 <div className="flex items-center gap-2 mb-3">
                   <Lightbulb size={14} className="text-brand-500" />
-                  <p className="text-[10px] font-black uppercase text-brand-500 tracking-wider">{adviceTitle}</p>
+                  <p className="text-[11px] font-bold text-brand-500">{adviceTitle}</p>
                 </div>
                 <ul className="space-y-2">
                   {analysis.issues.map((issue, i) => (
-                    <li key={i} className="flex items-start gap-2 text-[11px] font-medium text-slate-600 leading-relaxed">
+                    <li key={i} className="flex items-start gap-2 text-[11px] font-medium text-ink-soft leading-relaxed">
                       <div className="w-1 h-1 rounded-full bg-brand-300 mt-1.5 shrink-0" />
                       {issue}
                     </li>
@@ -224,7 +224,7 @@ export const SpeechFeedbackModal: React.FC<SpeechFeedbackModalProps> = ({
                   e.stopPropagation();
                   setShowHeard(v => !v);
                 }}
-                className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                className="flex items-center gap-1 text-[11px] font-bold text-ink-subtle hover:text-ink-soft transition-colors"
               >
                 {showHeard ? '聞き取った内容を隠す' : '聞き取った内容を見る'}
                 <ChevronDown size={12} className={cn("transition-transform", showHeard && "rotate-180")} />
@@ -237,7 +237,7 @@ export const SpeechFeedbackModal: React.FC<SpeechFeedbackModalProps> = ({
                     exit={{ height: 0, opacity: 0 }}
                     className="w-full overflow-hidden"
                   >
-                    <p className="text-[11px] leading-relaxed text-slate-500 bg-slate-50 rounded-2xl px-4 py-3">
+                    <p className="text-[11px] leading-relaxed text-ink-muted bg-canvas rounded-control px-4 py-3">
                       &quot;{reconstructedHeard}&quot;
                     </p>
                   </motion.div>

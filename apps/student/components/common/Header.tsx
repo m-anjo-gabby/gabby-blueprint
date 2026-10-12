@@ -31,6 +31,7 @@ import { getLatestTerms } from '@/actions/termAction';
 import { TermsAgreementModal } from './TermsAgreementModal';
 import type { TermDocument } from '@gabby/types/term';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 
 export default function Header() {
@@ -57,7 +58,7 @@ export default function Header() {
       // これによりページが完全にリロードされ、Zustandの全メモリキャッシュ(UserAのデータ)が破棄されます。
       window.location.href = '/login';
     } catch (error) {
-      console.error('Logout failed:', error);
+      clientLogger.error('auth:sign_out_failed', 'Logout failed', { err: error });
       setIsSigningOut(false);
       // 必要に応じてエラー通知など
     }
@@ -91,7 +92,7 @@ export default function Header() {
             <DropdownMenuTrigger asChild>
               <button
                 aria-label="アカウントメニュー"
-                className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-line/70 hover:bg-slate-100 transition-all outline-none active:scale-95"
+                className="flex items-center gap-2 px-3 py-1.5 bg-canvas rounded-full border border-line/70 hover:bg-line/60 transition-all outline-none active:scale-95"
               >
                 <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-brand-500 overflow-hidden shrink-0">
                   {profileIconUrl ? (
@@ -109,10 +110,10 @@ export default function Header() {
             </DropdownMenuTrigger>
 
             {/* ドロップダウンメニュー内容 */}
-            <DropdownMenuContent className="w-56 p-2 rounded-2xl shadow-xl border-line/70" align="end">
+            <DropdownMenuContent className="w-56 p-2 rounded-control shadow-xl border-line/70" align="end">
               {/* プロフィール概要（アイコン画像・名前） */}
               <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 border border-line text-ink-subtle overflow-hidden shrink-0">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-canvas border border-line text-ink-subtle overflow-hidden shrink-0">
                   {profileIconUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
@@ -133,13 +134,13 @@ export default function Header() {
               <DropdownMenuSeparator className="mb-1 border-line/70" />
 
               <DropdownMenuItem asChild>
-                <Link href="/profile" className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-slate-50">
+                <Link href="/profile" className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-canvas">
                   <UserIcon size={14} /> プロフィール
                 </Link>
               </DropdownMenuItem>
 
               <DropdownMenuItem asChild>
-                <Link href="/profile/password" className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-slate-50">
+                <Link href="/profile/password" className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-canvas">
                   <Lock size={14} /> パスワード変更
                 </Link>
               </DropdownMenuItem>
@@ -149,7 +150,7 @@ export default function Header() {
                   e.preventDefault();
                   void openTermsModal();
                 }}
-                className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-slate-50"
+                className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-canvas"
               >
                 <FileText size={14} /> 利用規約
               </DropdownMenuItem>
@@ -178,7 +179,7 @@ export default function Header() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110]"
+                  className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-[110]"
                 />
               </Dialog.Overlay>
               
@@ -200,7 +201,7 @@ export default function Header() {
                     </div>
                   </div>
                   
-                  <Dialog.Title className="text-sm font-bold text-ink mb-2 uppercase">
+                  <Dialog.Title className="text-sm font-bold text-ink mb-2">
                     ログアウトしますか？
                   </Dialog.Title>
                   <Dialog.Description className="text-[11px] text-ink-muted mb-6">
@@ -210,13 +211,13 @@ export default function Header() {
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={handleSignOut}
-                      className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-bold uppercase transition-colors shadow-lg shadow-rose-100 outline-none"
+                      className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-bold transition-colors shadow-lg shadow-rose-100 outline-none"
                     >
                       ログアウト
                     </button>
                     <button
                       onClick={() => setShowLogoutConfirm(false)}
-                      className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-ink-soft rounded-xl text-[11px] font-bold uppercase transition-colors outline-none"
+                      className="w-full py-3 bg-canvas hover:bg-line text-ink-soft rounded-xl text-[11px] font-bold transition-colors outline-none"
                     >
                       キャンセル
                     </button>

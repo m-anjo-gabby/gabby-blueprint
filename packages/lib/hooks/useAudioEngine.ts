@@ -17,6 +17,7 @@ import {
 import { requestPlaybackSession } from '../audio/core/audioSession';
 import { useAudioResumeStatus } from '../audio/react/useAudioResumeStatus';
 import { cancelSpeech } from '../speech/synthesis';
+import { clientLogger } from '../logger/client';
 
 export type { AudioResumeStatus };
 
@@ -155,7 +156,7 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
     try {
       buffer = await loadAudioBuffer(resolveUrl(path, bucketName), { decodeTimeoutMs });
     } catch (err) {
-      console.warn('Audio fetch/decode error:', err);
+      clientLogger.warn('audio:load_failed', 'Audio fetch/decode failed', { err, payload: { path } });
       if (playTokenRef.current === token) {
         currentPlayingIdRef.current = null;
         setIsPlaying(null);

@@ -93,11 +93,17 @@ export const getContentTypeConfig = (type: number): ContentTypeConfig =>
 /**
  * トレーニング指標（記録・履歴・モニター・ホームの数値）の分類。
  * 色は「どのトレーニングの指標か」で決め、教材種別の色を引き継ぐ
- * （単語・フレーズ＝単語帳、スプリント・ドリル＝スプリント）。
+ * （単語・フレーズ＝単語帳、タイムアタック・ドリル＝スプリント）。
  * 種別をまたぐ発話評価だけは独自の色（薄いローズ）を持つ。
  * 実施日数など分類でない指標はここに含めず、各アプリのブランド色で表示する。
  */
 export type TrainingMetric = "word" | "phrase" | "sprint" | "drill" | "speech";
+
+/**
+ * スプリント教材のモードの表示名。教材種別の「スプリント」と区別するため、
+ * 時間制限のあるモード（内部の識別子は sprint）は「タイムアタック」と表示する。
+ */
+export const SPRINT_MODE_LABEL = { sprint: "タイムアタック", drill: "ドリル" } as const;
 
 type TrainingMetricConfig = { label: string; icon: LucideIcon; theme: ContentTheme };
 
@@ -111,8 +117,8 @@ const SPEECH_THEME: ContentTheme = {
 const TRAINING_METRIC_CONFIG: Record<TrainingMetric, TrainingMetricConfig> = {
   word: { label: "単語", icon: BookOpen, theme: CONTENT_TYPE_CONFIG[0].theme },
   phrase: { label: "フレーズ", icon: MessageSquareText, theme: CONTENT_TYPE_CONFIG[0].theme },
-  sprint: { label: "スプリント", icon: Zap, theme: CONTENT_TYPE_CONFIG[2].theme },
-  drill: { label: "ドリル", icon: Sliders, theme: CONTENT_TYPE_CONFIG[2].theme },
+  sprint: { label: SPRINT_MODE_LABEL.sprint, icon: Zap, theme: CONTENT_TYPE_CONFIG[2].theme },
+  drill: { label: SPRINT_MODE_LABEL.drill, icon: Sliders, theme: CONTENT_TYPE_CONFIG[2].theme },
   speech: { label: "発話評価", icon: Mic, theme: SPEECH_THEME },
 };
 

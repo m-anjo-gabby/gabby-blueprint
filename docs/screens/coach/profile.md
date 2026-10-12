@@ -15,9 +15,10 @@
 ## 画面の構成
 
 1. **Account Summaryカード** — アイコン画像、氏名、所属・ロール、タイムゾーン設定
-2. **Public Coach Profileフォーム（左）** — 生徒に公開されるプロフィール項目の編集フォーム、
+2. **Email notificationsカード** — 通知・リマインダーのメールの配信区分ごとの配信・停止
+3. **Public Coach Profileフォーム（左）** — 生徒に公開されるプロフィール項目の編集フォーム、
    入力充実度（完成度%）バッジ、Save Public Profileボタン
-3. **Live Previewパネル（右）** — 編集中の内容をその場で生徒向けカードとして確認できるプレビュー
+4. **Live Previewパネル（右）** — 編集中の内容をその場で生徒向けカードとして確認できるプレビュー
 
 ## 表示要素・操作
 
@@ -26,6 +27,7 @@
 | アイコン画像 | 未設定の場合は人型アイコン | クリックしてアップロード（切り抜き調整あり）、または削除できる。変更は即時保存される |
 | 氏名・所属・ロール | 常時表示（読み取り専用） | — |
 | タイムゾーン設定 | 現在時刻付きで表示 | 変更すると即時保存される（カレンダー等、画面全体の時刻表示に反映される） |
+| Email notifications | メールが1種類以上ある配信区分だけ切り替えを表示（生徒と同じ区分。「Notifications」〔チャット・生徒による予約やキャンセル・マッチング・月次レポート等〕と「Reminders」〔担当・参加登録したグループセッションの24時間前と1時間前〕）。初期値はオン | 切り替えるとその場で保存する。失敗した場合は元に戻してエラーを表示する |
 | 完成度バッジ「N% complete」 | Nationality・English Teaching年数・Education・Qualifications・Job Experience・Personal Introduction・紹介動画の7項目の入力状況から算出 | 100%になると緑色のバッジに変わる |
 | Nationality（国籍）プルダウン | 常時表示 | 選択するとプレビューの国旗表示にも反映される |
 | Gabby Coach Since | 読み取り専用（初回保存時に自動設定される日付） | 編集不可 |
@@ -56,3 +58,4 @@
 - `apps/coach/app/(app)/profile/_components/ProfileTextAreaField.tsx`
 - `apps/coach/app/(app)/profile/_lib/profileCompleteness.ts`
 - `apps/coach/actions/coachProfileAction.ts`
+- メール通知: `_components/MailSettingsCard.tsx`、`apps/coach/actions/mailSettingAction.ts`（実体は `packages/lib/mail/settingsActions.ts`。配信区分・送る条件は [notification/mail-dispatch.md](../../../testing/e2e/specs/notification/mail-dispatch.md)）

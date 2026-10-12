@@ -13,8 +13,8 @@ import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
-import { createSessionHomework, addHomeworkComment } from '@/actions/sessionHomeworkAction';
-import { uploadSessionHomeworkAttachment, getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
+import { createSessionHomework, addHomeworkComment, uploadSessionHomeworkAttachment } from '@/actions/sessionHomeworkAction';
+import { getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
 import {
   HOMEWORK_ATTACHMENT_MAX_SIZE,
   HOMEWORK_CHECKLIST_MAX_ITEMS,
@@ -86,11 +86,12 @@ function HomeworkCreateForm({
         const formData = new FormData();
         formData.append('file', file);
         const uploadRes = await uploadSessionHomeworkAttachment(sessionId, formData);
-        if (!uploadRes.success || !uploadRes.attachment) {
-          showToast(uploadRes.message || `Failed to upload ${file.name}`, 'error');
+        if (!uploadRes.success) {
+          showToast(`${file.name}: ${uploadRes.message}`, 'error');
           continue;
         }
-        setPendingAttachments((prev) => [...prev, uploadRes.attachment!]);
+        const { attachment } = uploadRes;
+        setPendingAttachments((prev) => [...prev, attachment]);
       }
     } finally {
       setIsUploading(false);
@@ -278,11 +279,12 @@ function PostedHomework({
         const formData = new FormData();
         formData.append('file', file);
         const uploadRes = await uploadSessionHomeworkAttachment(sessionId, formData);
-        if (!uploadRes.success || !uploadRes.attachment) {
-          showToast(uploadRes.message || `Failed to upload ${file.name}`, 'error');
+        if (!uploadRes.success) {
+          showToast(`${file.name}: ${uploadRes.message}`, 'error');
           continue;
         }
-        setPendingAttachments((prev) => [...prev, uploadRes.attachment!]);
+        const { attachment } = uploadRes;
+        setPendingAttachments((prev) => [...prev, attachment]);
       }
     } finally {
       setIsUploading(false);

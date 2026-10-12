@@ -3,6 +3,9 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { Speech, History, Sparkles } from 'lucide-react';
 import TTSAssetGenerator from './_components/TTSAssetGenerator';
 import TTSAssetTable from './_components/TTSAssetTable';
+import { createLogger } from '@gabby/lib/logger';
+
+const logger = createLogger('admin');
 
 // 常に最新のDB状態を反映させるため、キャッシュを無効化
 export const revalidate = 0;
@@ -21,7 +24,7 @@ export default async function TTSDesignerPage() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('[TTS Designer] Fetch Error:', error);
+    logger.error('tts:get_assets_failed', error.message, { err: error });
   }
 
   return (

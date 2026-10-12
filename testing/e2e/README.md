@@ -26,7 +26,7 @@ Gherkinシナリオを起こす際の元ネタとしても使ってよい。た�
 ```
 testing/e2e/
 ├── README.md            # 本ファイル（仕様書の運用ルール）
-├── CONVENTIONS.md        # Playwrightの技術規約（ロケーター戦略、外部連携の検証範囲等）
+├── CONVENTIONS.md        # Playwrightの技術規約（ロケーター戦略、外部連携の検証範囲、実行・トークン節約の運用等）
 ├── specs/                # 機能（ドメイン）仕様書。1ドメイン内で完結する業務フロー
 │   ├── _INDEX.md         # 索引（どのspecに何が書いてあるか。まずここを見る）
 │   ├── _TEMPLATE.md      # 新規仕様書のひな形
@@ -37,7 +37,8 @@ testing/e2e/
 │   ├── _INDEX.md
 │   ├── _TEMPLATE.md
 │   └── <journey>.md
-└── tests/                # （未整備）Playwrightのテストコード本体。着手時に追加する
+├── support/              # テスト共通の操作・ロケーター・使い捨てデータ（studentApp / adminApp / coachApp / authFixtures 等）
+└── tests/                # Playwrightのテストコード本体（機能ごとのディレクトリ。`*.setup.ts` はログイン準備）
 ```
 
 `specs/`配下は機能（ユースケース）単位でファイルを分割する。1画面に閉じないフロー
@@ -112,11 +113,10 @@ testing/e2e/
 
 ## Playwright環境について
 
-本リポジトリには現時点でPlaywrightは未導入。`specs/`の整備が一段落し、実際に
-テストコードを書く段階になったら、`testing/tests/`（本パッケージ）にdevDependencyとして
-追加し、ロール別（student/coach/admin）に`storageState`でログイン済みセッションを
-保存する方式を想定している（認証情報の扱いは`testing/CONVENTIONS.md`の方針を踏襲する）。
+Playwright は `testing/`（`@gabby/testing`）に導入済み。設定は [`../playwright.config.ts`](../playwright.config.ts)、
+テストは `tests/`、共通部品は `support/` に置く。実行方法・接続先（dev / ステージング）・ロール別のログイン方法・
+トークン消費を抑える運用は [`CONVENTIONS.md`](./CONVENTIONS.md) にまとめてある。着手時はまずそちらを参照する。
 
-ロケーター戦略・外部サービス依存機能の検証範囲・失敗時証跡の保存方針等、Playwright導入前に
-決めておいた技術方針は[`CONVENTIONS.md`](./CONVENTIONS.md)にまとめてある。着手時はまず
-そちらを参照する。
+- 生徒: テストの標準の画面。固定アカウントは `auth.setup.ts` で1回ログインし、`storageState` を使い回す。
+- アドミン・コーチ: 別のブラウザコンテキストで開く（`support/adminApp.ts` / `support/coachApp.ts`）。
+- 実行: `pnpm --filter @gabby/testing e2e`（ステージングは `e2e:staging`）。dev サーバーは自前で起動せず Playwright の `webServer` に任せる。

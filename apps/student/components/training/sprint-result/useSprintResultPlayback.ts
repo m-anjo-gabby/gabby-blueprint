@@ -5,6 +5,7 @@ import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import type { SprintQuestion } from '@gabby/types/sprint';
 import { scrollIntoContainer } from '@/lib/scroll';
 import type { SprintResultScore } from './types';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 /**
  * 進行中の再生アクション種別。'all' 実施中は他の再生操作を無効化し、
@@ -129,7 +130,7 @@ export function useSprintResultPlayback(
       try {
         await playQuestionSequence(q, () => !isMountedRef.current || playbackTokenRef.current !== token);
       } catch (e) {
-        console.error('Single sequence play error:', e);
+        clientLogger.warn('sprint:result_playback_failed', 'Single sequence playback failed', { err: e });
       } finally {
         if (isMountedRef.current && playbackTokenRef.current === token) {
           setFocusedQuestionId(null);

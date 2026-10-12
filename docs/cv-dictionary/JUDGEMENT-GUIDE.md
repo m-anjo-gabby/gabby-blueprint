@@ -9,14 +9,17 @@ ColorVowel辞書データ作成で得た判断・気づきを蓄積し、同じ�
 
 ## 未決の論点（コンテンツチーム確認待ち）
 
-方針が決まったら、ここから削除して下の事例として記録する。
+未決の論点は [open-policies.json](./open-policies.json) で管理する（確認依頼Excelの「①確認事項（方針）」の元データ）。
+方針が決まったら、そこから削除して下の事例として記録する。
 
-| 論点 | 現在の暫定設定 | 候補 | 台帳の分類 |
-|---|---|---|---|
-| R音化母音 /ɛr/（share, there, where, compare） | `red_pepper` | `red_pepper` / `gray_day` | R音化母音 |
-| R音化母音 /ɪr/（year, clear, experience） | `green_tea` | `green_tea` / `silver_pin` | R音化母音 |
-| R音化母音 /ʊr/（ensure, secure, during） | `wooden_hook` | `wooden_hook` / `blue_moon`（ensure は /ɔːr/ `orange_door` の読みもある） | R音化母音 |
-| 米国発音で /ɔ/ と /ɑ/ の2通りある語（offer, office, cost, launch, strong） | `auburn_dog` | `auburn_dog` / `olive_sock` | 発音の揺れ |
+| 論点（open-policies.json の `key`） | 現在の暫定設定 | 候補 |
+|---|---|---|
+| R音化母音 /ɛr/（`rhotic-er`） | `red_pepper` | `red_pepper` / `gray_day` |
+| R音化母音 /ɪr/（`rhotic-ir`） | `green_tea` | `green_tea` / `silver_pin` |
+| R音化母音 /ʊr/（`rhotic-ur`） | `wooden_hook` | `wooden_hook` / `blue_moon`（ensure は /ɔːr/ `orange_door` の読みもある） |
+| 米国発音で /ɔ/ と /ɑ/ の2通りある語（`cot-caught`） | `auburn_dog` | `auburn_dog` / `olive_sock` |
+| 機能語の発音（`function-word-strong-form`、CVJ-20260925-01） | 強形 | 強形 / 弱形 |
+| 略語の扱い（`abbreviation-letters`、CVJ-20260925-03） | 1文字＝1音節・最後の文字にアクセント | — |
 
 ## 記入フォーマット
 
@@ -71,3 +74,15 @@ ColorVowel辞書データ作成で得た判断・気づきを蓄積し、同じ�
 - **判断**: 現在形（原形）の発音で登録し、要確認メモに過去形の発音を残す。
 - **根拠**: 辞書の見出しは原形の発音が一般的。区別が必要になった場合はDB設計（キー）の見直しが必要。
 - **反映先**: 台帳（read / VERB）
+
+### CVJ-20261007-01 文中で常に大文字の語は機械的に除外せず、判定に回す
+
+- **状態**: 確定
+- **対象**: `X-ray` / `X-rays` / `Mid-term`（GC様向け教材 Lv1）
+- **論点・事象**: 抽出スクリプトは「小文字で一度も出現せず、文中で大文字始まり」の語を固有名詞として機械的に除外していた。
+  専門用語コーパスの教材では、慣用的に大文字で書く一般語（X-ray）や、固有の名称（Mid-term Management Plan）の一部の一般語が
+  記録も残らずに落ちていた。
+- **判断**: 機械的な除外をやめ、`note` = `capitalized_mid_sentence` として worklist に残し、生成時に一般語か固有名詞かを判定する。
+  固有名詞と判定した語は `skipped.tsv`（`reason` = `proper_noun`）から固有名詞リスト（`proper-nouns.tsv`）に蓄積し、次回から抽出時に除外する。
+- **根拠**: 大文字かどうかだけでは一般語と固有名詞を区別できない。判定の手間は固有名詞リストの蓄積で回を追うごとに減る。
+- **反映先**: `extract.ts`、`ledger.ts sync`、reference.md「1. word_en」、SKILL.md 手順1・2・3.5

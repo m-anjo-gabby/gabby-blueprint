@@ -24,13 +24,13 @@ export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]
       .order('seq_no', { ascending: true });
 
     if (error) {
-      logger.error('phrase:get_phrases_by_word_id_failed', error.message, { ...ctx, payload: { wordId } });
+      logger.error('phrase:get_phrases_by_word_id_failed', error.message, { ...ctx, err: error, payload: { wordId } });
       return [];
     }
 
     return data as PhraseRecord[];
   } catch (err) {
-    logger.error('phrase:get_phrases_by_word_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { wordId } });
+    logger.error('phrase:get_phrases_by_word_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { wordId } });
     return [];
   }
 }
@@ -60,7 +60,7 @@ export async function createPhrase(wordId: string, seqNo: number) {
       .single();
 
     if (error) {
-      logger.error('phrase:create_phrase_failed', error.message, { ...ctx, payload: { wordId, seqNo } });
+      logger.error('phrase:create_phrase_failed', error.message, { ...ctx, err: error, payload: { wordId, seqNo } });
       return { success: false, message: error.message };
     }
 
@@ -72,7 +72,7 @@ export async function createPhrase(wordId: string, seqNo: number) {
 
     return { success: true, data: newPhrase };
   } catch (err) {
-    logger.error('phrase:create_phrase_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { wordId, seqNo } });
+    logger.error('phrase:create_phrase_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { wordId, seqNo } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -105,7 +105,7 @@ export async function updatePhrase(
       .single();
 
     if (error) {
-      logger.error('phrase:update_phrase_failed', error.message, { ...ctx, payload: { phraseId, updates } });
+      logger.error('phrase:update_phrase_failed', error.message, { ...ctx, err: error, payload: { phraseId, updates } });
       return { success: false, message: error.message };
     }
 
@@ -116,7 +116,7 @@ export async function updatePhrase(
 
     return { success: true, data: data as PhraseRecord };
   } catch (err) {
-    logger.error('phrase:update_phrase_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { phraseId, updates } });
+    logger.error('phrase:update_phrase_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { phraseId, updates } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -138,7 +138,7 @@ export async function deletePhrase(phraseId: string) {
       .eq('phrase_id', phraseId);
 
     if (error) {
-      logger.error('phrase:delete_phrase_failed', error.message, { ...ctx, payload: { phraseId } });
+      logger.error('phrase:delete_phrase_failed', error.message, { ...ctx, err: error, payload: { phraseId } });
       return { success: false, message: error.message };
     }
 
@@ -149,7 +149,7 @@ export async function deletePhrase(phraseId: string) {
 
     return { success: true };
   } catch (err) {
-    logger.error('phrase:delete_phrase_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { phraseId } });
+    logger.error('phrase:delete_phrase_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { phraseId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -180,7 +180,7 @@ export async function getPhrasesByContentId(contentId: string): Promise<PhraseRe
         .range(from, from + PAGE_SIZE - 1);
 
       if (error) {
-        logger.error('phrase:get_phrases_by_content_id_failed', error.message, { ...ctx, payload: { contentId } });
+        logger.error('phrase:get_phrases_by_content_id_failed', error.message, { ...ctx, err: error, payload: { contentId } });
         return [];
       }
 
@@ -198,7 +198,7 @@ export async function getPhrasesByContentId(contentId: string): Promise<PhraseRe
 
     return allData as PhraseRecord[];
   } catch (err) {
-    logger.error('phrase:get_phrases_by_content_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload: { contentId } });
+    logger.error('phrase:get_phrases_by_content_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId } });
     return [];
   }
 }

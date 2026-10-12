@@ -60,6 +60,12 @@
 -- 「契約終了の直後の回」が作られ得た（例: NYのコーチの火曜9:00は、水曜0:00 JST開始の契約の前）。
 -- 各回の開始・終了日時をライセンスの開始・終了日時と直接比べ、開始前の回はスキップ（カウントしない）、
 -- 終了を過ぎる回に達したら打ち切る。全ての呼び出し元（承認・アドミン代理・目標数の調整）に効く。
+--
+-- 【基準のタイムゾーン (2026-10-06変更)】
+-- 曜日・時刻は schedule.schedule_timezone（旧 coach_timezone。2026-10-06以降の成立分は生徒の申請時の
+-- タイムゾーン）の現地時刻で解釈する。コーチ側の夏時間の切り替えをまたいでも、生徒側の時刻は全回同じになる。
+-- BLOCK（休み）の例外はコーチの現地の日付・時刻で持つため、コーチの現在のタイムゾーンで実際の日時に
+-- 直してから、各回の日時と重なるかを比べる。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.fn_generate_sessions_for_schedule(uuid);
 
@@ -74,6 +80,7 @@ SET search_path = public
 AS $$
 DECLARE
     v_schedule RECORD;
+    v_schedule_tz text;
     v_coach_tz text;
     v_cursor_date date;
     v_start_ts timestamptz;
@@ -88,7 +95,8 @@ BEGIN
     END IF;
 
     -- com_m_user.timezoneはライブ参照しない（上記【タイムゾーン変換】コメント参照）
-    v_coach_tz := v_schedule.coach_timezone;
+    v_schedule_tz := v_schedule.schedule_timezone;
+    SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_coach_tz FROM public.com_m_user WHERE id = v_schedule.coach_id;
 
     -- 予約できる範囲（ライセンスの開始・終了日時。上記【ライセンス期間の境目】参照）
     SELECT l.start_date, l.end_date INTO v_license_start, v_license_end
@@ -101,8 +109,8 @@ BEGIN
         + ((v_schedule.day_of_week - EXTRACT(DOW FROM v_schedule.start_date)::int + 7) % 7);
 
     WHILE v_cursor_date <= v_schedule.end_date AND v_generated_count < v_schedule.target_sessions LOOP
-        v_start_ts := (v_cursor_date + v_schedule.start_time) AT TIME ZONE v_coach_tz;
-        v_end_ts := (v_cursor_date + v_schedule.end_time) AT TIME ZONE v_coach_tz;
+        v_start_ts := (v_cursor_date + v_schedule.start_time) AT TIME ZONE v_schedule_tz;
+        v_end_ts := (v_cursor_date + v_schedule.end_time) AT TIME ZONE v_schedule_tz;
 
         -- ライセンスの終了を過ぎる回に達したら打ち切る（以降の回も全て終了後）
         IF v_end_ts > v_license_end THEN
@@ -121,14 +129,15 @@ BEGIN
             CONTINUE;
         END IF;
 
-        -- 当該日・当該コーチのBLOCK例外（時間帯重複）が無いことを確認
+        -- この回と重なるBLOCK例外（コーチの現地の日付・時刻）が無いことを確認
+        -- （タイムゾーンの差で日付がずれるため、前後1日の例外を実際の日時に直して比べる）
         IF NOT EXISTS (
             SELECT 1 FROM public.com_t_coach_availability_exception e
             WHERE e.coach_id = v_schedule.coach_id
-              AND e.exception_date = v_cursor_date
+              AND e.exception_date BETWEEN v_cursor_date - 1 AND v_cursor_date + 1
               AND e.exception_type = 'BLOCK'
-              AND e.start_time < v_schedule.end_time
-              AND e.end_time > v_schedule.start_time
+              AND (e.exception_date + e.start_time) AT TIME ZONE v_coach_tz < v_end_ts
+              AND (e.exception_date + e.end_time) AT TIME ZONE v_coach_tz > v_start_ts
         ) THEN
             INSERT INTO public.com_t_session (
                 schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status

@@ -94,6 +94,11 @@ export const NOTIFICATION_TYPES = {
     icon: 'CalendarX',
     badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
   },
+  // コーチ宛て。空き時間の見直し（14日ごと）・登録の催促（enqueue_coach_availability_reminders）。メールは送らない
+  COACH_AVAILABILITY_REMINDER: {
+    icon: 'CalendarClock',
+    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
@@ -213,6 +218,16 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
     title: '月次コーチングレポートの承認が取り消されました',
     body: `${formatReportMonthJa(payload.report_month)}分のレポートの承認が取り消されました。`,
   }),
+  COACH_AVAILABILITY_REMINDER: (payload) =>
+    payload.kind === 'empty'
+      ? {
+          title: '対応可能時間を登録してください',
+          body: '対応可能時間が登録されていないため、生徒からマッチングの申請を受けられません。',
+        }
+      : {
+          title: '対応可能時間を確認してください',
+          body: '最後の確認から2週間が経ちました。夏時間の切り替え等で表示がずれていないか確認してください。',
+        },
 };
 
 /** payload.report_month ("YYYY-MM-DD"等) を "YYYY年M月" 表記へ変換する（通知本文用） */

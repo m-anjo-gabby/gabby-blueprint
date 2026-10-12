@@ -9,6 +9,8 @@ import {
   GetCoachAvailabilityResult,
   AddCoachAvailabilityResult,
   DeleteCoachAvailabilityResult,
+  GetAvailabilityConfirmedAtResult,
+  ConfirmAvailabilityResult,
 } from '@gabby/types/coachAvailability';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
@@ -38,13 +40,13 @@ export async function getMyAvailabilityCore(): Promise<GetCoachAvailabilityResul
       .order('start_time', { ascending: true });
 
     if (error) {
-      logger.error('coach_availability:get_my_availability_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('coachAvailability:get_my_availability_failed', error.message, { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, slots: (data ?? []) as CoachAvailabilitySlot[] };
   } catch (err) {
-    logger.error('coach_availability:get_my_availability_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachAvailability:get_my_availability_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -67,19 +69,21 @@ export async function getCoachAvailabilityByUserIdCore(coachId: string): Promise
       .order('start_time', { ascending: true });
 
     if (error) {
-      logger.error('coach_availability:get_by_coach_id_failed', error.message, { ...ctx, coachId });
+      logger.error('coachAvailability:get_by_coach_id_failed', error.message, { ...ctx, err: error, payload: { coachId } });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, slots: (data ?? []) as CoachAvailabilitySlot[] };
   } catch (err) {
-    logger.error('coach_availability:get_by_coach_id_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachAvailability:get_by_coach_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * ログイン中コーチ自身の空き時間を1件追加する（ポータル共通）
+ * 曜日・時刻はUTC（画面側でコーチの現地時刻から換算する）。日の終わりは "24:00"。
+ * 追加・削除のたびにDBのトリガーで「確認済み」（availability_confirmed_at）になる。
  */
 export async function addAvailabilityCore(values: CoachAvailabilityFormValues): Promise<AddCoachAvailabilityResult> {
   const ctx = await getLogContext();
@@ -108,14 +112,14 @@ export async function addAvailabilityCore(values: CoachAvailabilityFormValues): 
       .single();
 
     if (error || !data) {
-      logger.error('coach_availability:add_failed', error?.message ?? 'No row inserted', { ...ctx, userId: user.id });
+      logger.error('coachAvailability:add_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'db_insert_failed' };
     }
 
-    logger.info('coach_availability:add_success', 'Coach availability slot added', { ...ctx, userId: user.id });
+    logger.info('coachAvailability:add_success', 'Coach availability slot added', { ...ctx, userId: user.id });
     return { success: true, slot: data as CoachAvailabilitySlot };
   } catch (err) {
-    logger.error('coach_availability:add_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachAvailability:add_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -138,14 +142,70 @@ export async function deleteAvailabilityCore(availabilityId: string): Promise<De
       .eq('coach_id', user.id);
 
     if (error) {
-      logger.error('coach_availability:delete_failed', error.message, { ...ctx, userId: user.id, payload: { availabilityId } });
+      logger.error('coachAvailability:delete_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { availabilityId } });
       return { success: false, errorCode: 'db_delete_failed' };
     }
 
-    logger.info('coach_availability:delete_success', 'Coach availability slot removed', { ...ctx, userId: user.id });
+    logger.info('coachAvailability:delete_success', 'Coach availability slot removed', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('coach_availability:delete_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachAvailability:delete_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中コーチ自身の、空き時間を最後に確認した日時を取得する（ポータル共通）
+ */
+export async function getMyAvailabilityConfirmedAtCore(): Promise<GetAvailabilityConfirmedAtResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_m_coach_profile')
+      .select('availability_confirmed_at')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      logger.error('coachAvailability:get_confirmed_at_failed', error.message, { ...ctx, err: error, userId: user.id });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+
+    return { success: true, confirmedAt: data?.availability_confirmed_at ?? null };
+  } catch (err) {
+    logger.error('coachAvailability:get_confirmed_at_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ログイン中コーチ自身の空き時間を「変更なしで確認」する（ポータル共通）。
+ * 確認日時を更新し、見直しの通知（COACH_AVAILABILITY_REMINDER）を既読にする（confirm_my_coach_availability RPC）。
+ */
+export async function confirmMyAvailabilityCore(): Promise<ConfirmAvailabilityResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase.rpc('confirm_my_coach_availability');
+
+    if (error || !data) {
+      logger.error('coachAvailability:confirm_failed', error?.message ?? 'No timestamp returned', { ...ctx, err: error, userId: user.id });
+      return { success: false, errorCode: 'db_update_failed' };
+    }
+
+    logger.info('coachAvailability:confirm_success', 'Coach availability confirmed without changes', { ...ctx, userId: user.id });
+    return { success: true, confirmedAt: data as string };
+  } catch (err) {
+    logger.error('coachAvailability:confirm_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

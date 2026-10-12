@@ -153,3 +153,37 @@ ALTER TABLE public.com_m_lesson_schedule DROP CONSTRAINT IF EXISTS chk_lesson_sc
 ALTER TABLE public.com_m_lesson_schedule ADD CONSTRAINT chk_lesson_schedule_target_sessions CHECK (target_sessions >= 1);
 
 COMMENT ON COLUMN public.com_m_lesson_schedule.target_sessions IS 'このコマ(slot_no)が契約上持つべき目標セッション数。承認時にtotal_sessions/weekly_frequencyの均等割り(余りはslot_no昇順に配分)で確定し、以後は不変。fn_generate_sessions_for_schedule()の生成上限、fn_schedule_shortfall()の期待値として使う唯一の真実源。正当な理由がある追加予約の例外措置として、admin_adjust_schedule_target_sessions()経由でtotal_sessionsを変更せずに個別枠のみ引き上げ可能（詳細は同関数のコメント参照）。';
+
+---------------------------------------------
+-- 追加パッチ: 曜日・時刻の基準を生徒の申請時のタイムゾーンに変更 (2026-10-06)
+-- 既存環境に対しては、このブロックのみを実行してください（何度実行しても安全）。
+---------------------------------------------
+-- 【背景】
+-- day_of_week/start_time/end_time をコーチの現地時刻で持っていたため、コーチ側の夏時間の
+-- 切り替えで、生徒（日本時間）から見たセッションの時刻が1時間ずれていた。
+-- 以後は、成立元の申請（com_t_matching_request.requested_timezone = 生徒の申請時のタイムゾーン）の
+-- 曜日・時刻をそのまま引き継ぎ、セッションもそのタイムゾーンで作る（夏時間をまたいでも生徒側の時刻は変わらない）。
+-- 列は「曜日・時刻を解釈するタイムゾーン」のまま意味を変えないため、名前だけ schedule_timezone に変える。
+-- 既存の行（コーチのタイムゾーンで成立した分）は変換しない（そのタイムゾーンで解釈すれば従来どおり動く）。
+-- start_date/end_date も schedule_timezone での日付として扱う。
+---------------------------------------------
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'com_m_lesson_schedule' AND column_name = 'coach_timezone'
+    ) THEN
+        ALTER TABLE public.com_m_lesson_schedule RENAME COLUMN coach_timezone TO schedule_timezone;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'com_m_lesson_schedule_coach_timezone_fkey') THEN
+        ALTER TABLE public.com_m_lesson_schedule
+            RENAME CONSTRAINT com_m_lesson_schedule_coach_timezone_fkey TO com_m_lesson_schedule_schedule_timezone_fkey;
+    END IF;
+END $$;
+
+COMMENT ON COLUMN public.com_m_lesson_schedule.day_of_week IS '曜日 0:日 ... 6:土（schedule_timezone基準）';
+COMMENT ON COLUMN public.com_m_lesson_schedule.start_time IS 'レッスン開始時刻（schedule_timezoneの現地時刻）';
+COMMENT ON COLUMN public.com_m_lesson_schedule.end_time IS 'レッスン終了時刻（schedule_timezoneの現地時刻、通常25分）';
+COMMENT ON COLUMN public.com_m_lesson_schedule.schedule_timezone IS 'day_of_week/start_time/end_time/start_date/end_dateの解釈に使うIANAタイムゾーン。2026-10-06以降の成立分は生徒の申請時のタイムゾーン（com_t_matching_request.requested_timezone）、それ以前の成立分はコーチの承認時のタイムゾーン。以後のプロフィールのtimezone変更の影響を受けない';
+COMMENT ON COLUMN public.com_m_lesson_schedule.start_date IS 'Session自動生成の起点日（schedule_timezoneの日付）';
+COMMENT ON COLUMN public.com_m_lesson_schedule.end_date IS 'Session自動生成の終点日（通常はライセンス終了日、schedule_timezoneの日付）';

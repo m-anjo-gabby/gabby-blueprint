@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import { HomeView } from './_components/HomeView';
 import { LiveSessionSection } from './_components/LiveSessionSection';
 import { LiveSessionCardSkeleton } from './_components/LiveSessionCard';
+import { HomeEventSection } from './_components/HomeEventSection';
+import { HomeEventCardSkeleton } from './_components/HomeEventCard';
 import { fetchHomeData } from './_lib/fetchHomeData';
 import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
 import { createRenderId } from '@gabby/lib/navigation/renderId';
@@ -10,7 +12,8 @@ import { createRenderId } from '@gabby/lib/navigation/renderId';
  * ホーム（ダッシュボード）
  * サーバー側で課題・今週・通算のトレーニング実績・再開情報（ブックマーク）・契約をまとめて取得し、
  * 「今日やること」の判定材料として渡す。開くたびに取得するため、トレーニング後の再開情報もそのまま反映される。
- * ライブセッションの区画は取得が重いため、区画ごとに Suspense で遅れて表示する。
+ * ライブセッションとグループセッションの区画は、区画ごとに Suspense で遅れて表示する。
+ * グループセッションは全プランの生徒に出す。
  * 対象の契約は利用中の契約、無ければ開始前の契約（シェルのナビと同じく、有効な契約がある生徒だけに出す）。
  */
 export default async function DashboardPage() {
@@ -35,6 +38,11 @@ export default async function DashboardPage() {
             <LiveSessionSection contract={liveContract} contracts={liveContracts} />
           </Suspense>
         )
+      }
+      eventSection={
+        <Suspense fallback={<HomeEventCardSkeleton />}>
+          <HomeEventSection />
+        </Suspense>
       }
       renderId={createRenderId()}
     />

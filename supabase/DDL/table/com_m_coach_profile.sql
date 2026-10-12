@@ -96,3 +96,17 @@ ALTER TABLE public.com_m_coach_profile
   ADD COLUMN IF NOT EXISTS zoom_meeting_url text DEFAULT NULL;
 
 COMMENT ON COLUMN public.com_m_coach_profile.zoom_meeting_url IS 'ライブセッション用の固定ビデオ通話URL（現状はZoomの個人ミーティングURLを想定。生徒への公開は自身の確定レッスン参加者に限定するため、UI側で表示範囲を制御する）';
+
+---------------------------------------------
+-- 追加パッチ: 空き時間の最終確認日時 (2026-10-06)
+-- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- 空き時間（com_m_coach_availability）はUTCで持つため、コーチの現地時刻での表示は夏時間の切り替えで
+-- 1時間ずれる。コーチに14日ごとに空き時間の見直しを促す通知を出すため、最後に空き時間を確認した
+-- 日時を持つ（空き時間の保存、または「変更なしで確認」で更新。function/enqueue_coach_availability_reminders.sql）。
+---------------------------------------------
+ALTER TABLE public.com_m_coach_profile
+  ADD COLUMN IF NOT EXISTS availability_confirmed_at timestamp with time zone DEFAULT NULL;
+
+COMMENT ON COLUMN public.com_m_coach_profile.availability_confirmed_at IS '空き時間を最後に確認した日時（空き時間の保存・「変更なしで確認」で更新。NULLは未確認。14日を過ぎると見直しの通知を出す）';

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
+import { clientLogger } from '@gabby/lib/logger/client';
 
 export function useAzureSpeechTest() {
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -58,7 +59,7 @@ export function useAzureSpeechTest() {
         }
       },
       (err) => {
-        console.error(err);
+        clientLogger.error('azureSpeechTest:synthesis_failed', 'Azure TTS synthesis failed', { err });
         setIsSpeaking(false);
         synth.close();
         if (synthRef.current === synth) {
@@ -122,7 +123,7 @@ export function useAzureSpeechTest() {
         recorder.stop();
         stream.getTracks().forEach(t => t.stop());
       } catch (e) {
-        console.warn("Cleanup warning:", e);
+        clientLogger.debug('azureSpeechTest:cleanup_failed', 'Recorder cleanup failed', { err: e });
       }
       setIsRecording(false);
       setTimeLeft(0);
@@ -153,7 +154,7 @@ export function useAzureSpeechTest() {
         cleanup();
       },
       (err) => {
-        console.error(err);
+        clientLogger.error('azureSpeechTest:recognition_failed', 'Azure pronunciation assessment failed', { err });
         cleanup();
       }
     );

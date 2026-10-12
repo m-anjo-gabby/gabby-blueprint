@@ -10,7 +10,8 @@ export type DayOfWeek = typeof DAYS_OF_WEEK[number]; // 0:日 ... 6:土
 
 /**
  * CoachAvailabilitySlot: com_m_coach_availability の1レコード
- * day_of_week / start_time / end_time はコーチ本人のローカル時刻（壁時計時刻）で保持される。
+ * day_of_week / start_time / end_time は UTC の曜日・時刻（日の終わりは "24:00:00"）。
+ * コーチの画面では、表示時点の時差でコーチの現地時刻に換算して表示・編集する。
  */
 export interface CoachAvailabilitySlot {
   availability_id: string;
@@ -23,6 +24,7 @@ export interface CoachAvailabilitySlot {
   update_date: string;
 }
 
+/** 追加する空き時間（UTCの曜日・時刻） */
 export interface CoachAvailabilityFormValues {
   day_of_week: DayOfWeek;
   start_time: string; // "HH:MM"
@@ -34,6 +36,7 @@ export type CoachAvailabilityErrorCode =
   | 'invalid_input'
   | 'db_insert_failed'
   | 'db_delete_failed'
+  | 'db_update_failed'
   | 'unexpected_error';
 
 export type GetCoachAvailabilityResult =
@@ -46,4 +49,13 @@ export type AddCoachAvailabilityResult =
 
 export type DeleteCoachAvailabilityResult =
   | { success: true }
+  | { success: false; errorCode: CoachAvailabilityErrorCode };
+
+/** 空き時間を最後に確認した日時（com_m_coach_profile.availability_confirmed_at。未確認は null） */
+export type GetAvailabilityConfirmedAtResult =
+  | { success: true; confirmedAt: string | null }
+  | { success: false; errorCode: CoachAvailabilityErrorCode };
+
+export type ConfirmAvailabilityResult =
+  | { success: true; confirmedAt: string }
   | { success: false; errorCode: CoachAvailabilityErrorCode };

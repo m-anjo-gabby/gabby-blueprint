@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import type { ChatMessage } from '@gabby/lib/ai';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 interface KnowledgeSourceRef {
   title: string;
@@ -81,7 +82,7 @@ export default function ChatPlayground() {
         });
       }
     } catch (err) {
-      console.error('AI Chat Error:', err);
+      clientLogger.error('aiPlayground:chat_failed', 'AI chat request failed', { err });
       showToast(t('toastError'), 'error');
       setMessages((prev) => prev.slice(0, -1));
     } finally {

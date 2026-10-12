@@ -1,6 +1,6 @@
 import 'server-only';
 import { headers } from 'next/headers';
-import type { LogEvent } from './index';
+import type { LogContext } from './index';
 import { IMPERSONATION_REQUEST_HEADER_ID, IMPERSONATION_REQUEST_HEADER_ADMIN_ID } from '../impersonation';
 
 /**
@@ -8,9 +8,10 @@ import { IMPERSONATION_REQUEST_HEADER_ID, IMPERSONATION_REQUEST_HEADER_ADMIN_ID 
  * 認証ユーザーID等のコンテキストを抽出する。
  * next/headers に依存するため、Server Component / Server Action からのみ import すること
  * （Middleware や Client Component から参照するとビルドエラーになる）。
- * * @returns {Promise<Partial<LogEvent>>} ログに付与するコンテキスト
+ * ヘッダーは proxy-base の createSupabaseProxy で、ブラウザから送られた同名の値を除いたうえで付け直す。
+ * @returns ログに付与するコンテキスト
  */
-export async function getLogContext(): Promise<Partial<LogEvent>> {
+export async function getLogContext(): Promise<LogContext> {
   try {
     const h = await headers();
     const userId = h.get('x-user-id');

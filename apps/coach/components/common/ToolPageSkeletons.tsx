@@ -134,6 +134,8 @@ export function ProfileSkeleton() {
         <div aria-hidden className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
           <div className="space-y-6">
             <Skeleton className="h-40 w-full rounded-2xl" />
+            {/* Email notifications */}
+            <Skeleton className="h-36 w-full rounded-2xl" />
             <Skeleton className="h-120 w-full rounded-2xl" />
           </div>
           <Skeleton className="h-96 w-full rounded-2xl" />

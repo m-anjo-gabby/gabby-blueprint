@@ -21,17 +21,17 @@ export function ContentLoading({
 }: ContentLoadingProps) {
   return (
     <div 
-      className="fixed inset-0 bg-[#f5f5f7] flex items-center justify-center p-6 z-50"
+      className="fixed inset-0 bg-canvas flex items-center justify-center p-6 z-50"
       role="status"
       aria-live="polite"
-      aria-label="Loading content"
+      aria-label="読み込み中"
     >
       <div className="w-full max-w-sm text-center space-y-8">
         {/* スピナーアニメーションエリア */}
         <div className="relative w-20 h-20 mx-auto">
-          <div className="absolute inset-0 border-4 border-brand-100 rounded-2xl" />
+          <div className="absolute inset-0 border-4 border-brand-100 rounded-control" />
           <motion.div 
-            className="absolute inset-0 border-4 border-brand border-t-transparent rounded-2xl"
+            className="absolute inset-0 border-4 border-brand border-t-transparent rounded-control"
             animate={{ rotate: 360 }}
             transition={{
               repeat: Infinity,
@@ -46,15 +46,15 @@ export function ContentLoading({
 
         {/* テキスト & プログレスバーバーエリア */}
         <div className="space-y-3">
-          <h2 className="text-xl font-black text-slate-900 tracking-tight">
+          <h2 className="text-xl font-bold text-ink tracking-tight">
             {title}
           </h2>
           {subtitle && (
-            <p className="text-sm font-medium text-slate-500">
+            <p className="text-sm font-medium text-ink-muted">
               {subtitle}
             </p>
           )}
-          <div className="w-48 h-1 bg-slate-200 rounded-full overflow-hidden mx-auto mt-4 relative">
+          <div className="w-48 h-1 bg-line rounded-full overflow-hidden mx-auto mt-4 relative">
             <motion.div 
               initial={{ x: '-100%' }}
               animate={{ x: '100%' }}

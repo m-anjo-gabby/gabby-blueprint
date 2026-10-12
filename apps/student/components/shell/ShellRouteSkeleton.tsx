@@ -22,6 +22,7 @@ import { TrainingPerformanceSkeleton } from '@/app/(app)/(shell)/training/perfor
 import { WordHistorySkeleton } from '@/app/(app)/(shell)/training/word/history/_components/WordHistorySkeleton';
 import { SprintHistoryRouteSkeleton } from '@/app/(app)/(shell)/training/sprint/history/_components/SprintHistoryRouteSkeleton';
 import { DialogueSkeleton } from '@/app/(app)/(shell)/training/dialogue/_components/DialogueSkeleton';
+import { GroupSessionsSkeleton } from '@/app/(app)/(shell)/group-sessions/_components/GroupSessionsSkeleton';
 
 /** 表示中のパスに対応する、シェル内の画面の枠の幅と骨組み（各画面のフォルダの loading.tsx と同じ部品） */
 function resolveShellSkeleton(pathname: string): { width: ContentWidth; skeleton: ReactNode } | 'chat' | null {
@@ -39,6 +40,8 @@ function resolveShellSkeleton(pathname: string): { width: ContentWidth; skeleton
       return { width: SHELL_CONTENT_WIDTH.coachMatching, skeleton: <CoachMatchingSkeleton /> };
     case 'monitor':
       return { width: SHELL_CONTENT_WIDTH.monitor, skeleton: <MonitorSkeleton /> };
+    case 'group-sessions':
+      return { width: SHELL_CONTENT_WIDTH.groupSessions, skeleton: <GroupSessionsSkeleton /> };
     case 'notice':
       return { width: SHELL_CONTENT_WIDTH.notice, skeleton: <NoticeRouteSkeleton /> };
     case 'notification':

@@ -45,7 +45,6 @@ export interface UserTrainingPerformanceResponse {
  */
 export async function getUserTrainingPerformanceAction(yearMonth: string): Promise<{ success: boolean; data: UserTrainingPerformanceResponse; error?: string }> {
   const ctx = await getLogContext();
-  logger.info("performance:get_user_performance_start", "Fetching user performance data via RPC", { ...ctx, yearMonth });
 
   try {
     const supabase = await createServerClient();
@@ -64,12 +63,12 @@ export async function getUserTrainingPerformanceAction(yearMonth: string): Promi
       sprint_drills: data?.sprint_drills || []
     };
 
-    logger.info("performance:get_user_performance_success", `Fetched user performance data: ${resData.words.length} words, ${resData.sprint_sessions.length} sessions`, ctx);
+    logger.debug("performance:get_user_performance_success", `Fetched user performance data: ${resData.words.length} words, ${resData.sprint_sessions.length} sessions`, ctx);
     return { success: true, data: resData };
 
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error("performance:get_user_performance_error", "Failed to fetch user performance data", {
+    logger.error("performance:get_user_performance_failed", "Failed to fetch user performance data", {
       ...ctx,
       payload: { error: message }
     });
@@ -116,9 +115,9 @@ export async function getMyTrainingLifetimeStats(): Promise<TrainingLifetimeStat
     if (error) throw error;
     return data;
   } catch (error) {
-    logger.error("performance:get_lifetime_stats_error", "Failed to fetch training lifetime stats", {
+    logger.error("performance:get_lifetime_stats_failed", "Failed to fetch training lifetime stats", {
       ...ctx,
-      payload: { error: error instanceof Error ? error.message : String(error) }
+      err: error,
     });
     // ホームの補助表示のため、失敗時は「実績なし」と同じ扱いにして画面全体は表示させる
     return null;

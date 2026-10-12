@@ -10,6 +10,8 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { signInAsRole } from "../../helpers/auth.ts";
+import { toUtcAvailabilityRows, type LocalWeeklyRange } from "../../helpers/coach-availability.ts";
+import { toIsoDateInZone } from "@gabby/lib/date/date";
 
 /** タイムゾーン tz の暦日 date・時刻 time（'HH:MM:SS'）を UTC の Date にする */
 export function zonedToUtc(date: string, time: string, tz: string): Date {
@@ -42,7 +44,8 @@ export interface LiveScheduleSeed {
   studentId: string;
   coach: LiveCoach;
   slotNo: number;
-  /** コーチのローカル時刻基準 */
+  /** コーチのローカル時刻基準（このシードは定期スケジュールの基準のタイムゾーン schedule_timezone をコーチのタイムゾーンにする。
+   *  アプリの申請は生徒の申請時のタイムゾーンを基準にするが、投入済みのデータとそろえるためシードはこのまま） */
   dayOfWeek: number;
   startTime: string;
   endTime: string;
@@ -66,12 +69,11 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
     return client;
   }
 
-  /** 週次の対応可能時間帯（未登録のときだけ作る） */
-  async function ensureAvailabilities(coachId: string, ranges: { days: number[]; start: string; end: string }[]): Promise<void> {
+  /** 週次の対応可能時間帯（未登録のときだけ作る）。ranges はコーチの現地時刻で書き、UTC に換算して保存する */
+  async function ensureAvailabilities(coachId: string, timeZone: string, ranges: LocalWeeklyRange[]): Promise<void> {
     const { data: existing } = await admin.from("com_m_coach_availability").select("availability_id").eq("coach_id", coachId).limit(1);
     if (existing && existing.length > 0) return;
-    const rows = ranges.flatMap((r) => r.days.map((dow) => ({ coach_id: coachId, day_of_week: dow, start_time: r.start, end_time: r.end })));
-    const { error } = await admin.from("com_m_coach_availability").insert(rows);
+    const { error } = await admin.from("com_m_coach_availability").insert(toUtcAvailabilityRows(coachId, ranges, timeZone));
     if (error) throw error;
   }
 
@@ -97,6 +99,7 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
         requested_day_of_week: seed.dayOfWeek,
         requested_start_time: seed.startTime,
         requested_end_time: seed.endTime,
+        requested_timezone: seed.coach.timezone,
         status: seed.terminated ? 5 : 2,
         responded_by: seed.coach.id,
         responded_at: respondedAt,
@@ -117,7 +120,7 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
         day_of_week: seed.dayOfWeek,
         start_time: seed.startTime,
         end_time: seed.endTime,
-        coach_timezone: seed.coach.timezone,
+        schedule_timezone: seed.coach.timezone,
         status: seed.terminated ? 9 : 1,
         start_date: seed.startDate,
         end_date: seed.endDate,
@@ -138,15 +141,30 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
     if (exErr) throw exErr;
     const have = new Set((existing ?? []).map((r) => new Date(r.start_datetime as string).getTime()));
 
-    let cursor = addDays(seed.startDate, (seed.dayOfWeek - dayOfWeek(seed.startDate) + 7) % 7);
+    // 各回の日時は DB のスケジュールの基準（schedule_timezone・曜日・時刻・期間）で求める。新しく作った行はシードの値
+    // （コーチのタイムゾーン）のまま。投入後に生徒の時刻の基準へ直した環境（feature-20261004-dev/matching-schedule-reanchor.sql）でも、
+    // 移動済みの回を「足りない」とみなして元の時刻で作り直さないようにする
+    const { data: schedule, error: schErr } = await admin
+      .from("com_m_lesson_schedule")
+      .select("schedule_timezone, day_of_week, start_time, end_time, start_date, end_date")
+      .eq("schedule_id", scheduleId)
+      .single();
+    if (schErr) throw schErr;
+    const tz = schedule.schedule_timezone as string;
+    const startDate = schedule.start_date as string;
+    const endDate = schedule.end_date as string;
+
+    let cursor = addDays(startDate, ((schedule.day_of_week as number) - dayOfWeek(startDate) + 7) % 7);
     const rows: Record<string, unknown>[] = [];
     let count = 0;
-    while (cursor <= seed.endDate && count < seed.targetSessions) {
+    while (cursor <= endDate && count < seed.targetSessions) {
       count++;
-      const start = zonedToUtc(cursor, seed.startTime, seed.coach.timezone);
-      const end = zonedToUtc(cursor, seed.endTime, seed.coach.timezone);
+      const start = zonedToUtc(cursor, schedule.start_time as string, tz);
+      const end = zonedToUtc(cursor, schedule.end_time as string, tz);
       if (!have.has(start.getTime())) {
-        const cancel = seed.cancellations?.find((c) => c.date === cursor);
+        // キャンセルの日付はシードの定義どおりコーチの現地日付で照合する
+        const coachDate = toIsoDateInZone(start, seed.coach.timezone);
+        const cancel = seed.cancellations?.find((c) => c.date === coachDate);
         const base = {
           schedule_id: scheduleId,
           ticket_id: seed.ticketId,

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import type { MonitorSprintHistoryResponse, MonitorUser } from '@/actions/monitorAction';
-import { logClientEvent } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { cn } from '@/lib/utils';
 import { HistoryEmpty, HistoryMetric } from '../../training/_components/HistoryParts';
@@ -11,6 +11,7 @@ import { MonitorFilterBar } from './MonitorFilterBar';
 import { MONITOR_DAYS_PER_PAGE, MonitorDayCard, MonitorDayRow, MonitorPager, MonitorUserName } from './MonitorParts';
 import { downloadCsv, getMonitorAccountIds, toDayLabel, type MonitorQuery } from './monitorQuery';
 import { useMonitorNavigation } from './useMonitorNavigation';
+import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
 
 /** 受講生・教材・種別（スプリント／ドリル）ごとに1日分を集約した行 */
 interface SprintDayItem {
@@ -22,13 +23,11 @@ interface SprintDayItem {
   userName: string;
   contentId: string;
   contentName: string;
-  /** スプリント本数（ドリルは本数の概念が無いため null） */
+  /** タイムアタックの回数（ドリルは回数の概念が無いため null） */
   sprintCount: number | null;
   answeredCount: number;
   assessmentCount: number;
 }
-
-const MODE_LABEL = { sprint: 'スプリント', drill: 'ドリル' } as const;
 
 interface MonitorSprintHistoryViewProps {
   initialData: MonitorSprintHistoryResponse;
@@ -113,7 +112,7 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
       (groups.get(date) ?? []).map((item) => [
         toDayLabel(date),
         item.userName,
-        MODE_LABEL[item.mode],
+        SPRINT_MODE_LABEL[item.mode],
         item.contentName,
         item.sprintCount ?? '-',
         item.answeredCount,
@@ -121,17 +120,13 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
       ])
     );
 
-    logClientEvent({
-      service: 'student',
-      event: 'monitor:sprint_history_csv_exported',
-      level: 'info',
-      message: `Sprint history CSV exported: ${startDate}~${endDate}`,
+    clientLogger.info('monitor:sprint_history_csv_exported', `Sprint history CSV exported: ${startDate}~${endDate}`, {
       payload: { startDate, endDate, targetUserIds: userIds, rowCount: rows.length },
-    }).catch(() => {});
+    });
 
     downloadCsv(
       `blueprint_sprint_drill_history_${startDate}_to_${endDate}${includeMonitor ? '_with_monitor' : ''}.csv`,
-      ['日付', '受講生名', 'モード', '教材名', 'スプリント本数', '回答数', '発話数'],
+      ['日付', '受講生名', 'モード', '教材名', 'タイムアタック回数', '回答数', '発話数'],
       rows
     );
   };
@@ -177,8 +172,8 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
                 date={date}
                 metrics={
                   <>
-                    {sprintCount > 0 && <HistoryMetric metric="sprint" label="スプリント" value={sprintCount} />}
-                    {drillCount > 0 && <HistoryMetric metric="drill" label="ドリル" value={drillCount} />}
+                    {sprintCount > 0 && <HistoryMetric metric="sprint" label={SPRINT_MODE_LABEL.sprint} value={sprintCount} />}
+                    {drillCount > 0 && <HistoryMetric metric="drill" label={SPRINT_MODE_LABEL.drill} value={drillCount} />}
                     <HistoryMetric icon={CheckCircle2} label="回答" value={answeredCount} />
                     <HistoryMetric metric="speech" label="発話" value={assessmentCount} />
                   </>
@@ -192,7 +187,7 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
                       <span className="flex min-w-0 items-center gap-2">
                         <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-line bg-canvas px-2 py-0.5 text-xs font-semibold text-ink-soft">
                           <TrainingMetricIcon metric={item.mode} size={12} />
-                          {MODE_LABEL[item.mode]}
+                          {SPRINT_MODE_LABEL[item.mode]}
                         </span>
                         <span className="truncate text-ink-soft" title={item.contentName}>
                           {item.contentName}
@@ -201,7 +196,7 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
                     }
                     metrics={
                       <>
-                        {item.sprintCount !== null && <HistoryMetric metric="sprint" label="本数" value={item.sprintCount} />}
+                        {item.sprintCount !== null && <HistoryMetric metric="sprint" label="回数" value={item.sprintCount} />}
                         <HistoryMetric icon={CheckCircle2} label="回答" value={item.answeredCount} />
                         <HistoryMetric metric="speech" label="発話" value={item.assessmentCount} />
                       </>

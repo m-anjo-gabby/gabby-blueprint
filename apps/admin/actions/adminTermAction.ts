@@ -71,7 +71,7 @@ export async function getTerms(page: number = 1, pageSize: number = 10, searchQu
 
     const error = listResult.error ?? publishedResult.error;
     if (error) {
-      logger.error('term:get_terms_failed', error.message, { ...ctx, payload: { page, pageSize, searchQuery } });
+      logger.error('term:get_terms_failed', error.message, { ...ctx, err: error, payload: { page, pageSize, searchQuery } });
       throw error;
     }
 
@@ -99,7 +99,7 @@ export async function getTerms(page: number = 1, pageSize: number = 10, searchQu
       totalCount: listResult.count || 0,
     };
   } catch (error) {
-    logger.error('term:get_terms_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { page, pageSize, searchQuery } });
+    logger.error('term:get_terms_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { page, pageSize, searchQuery } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -120,7 +120,7 @@ export async function deleteTerm(termId: string): Promise<TermActionResult> {
       .select('term_id');
 
     if (error) {
-      logger.error('term:delete_term_failed', error.message, { ...ctx, payload: { termId } });
+      logger.error('term:delete_term_failed', error.message, { ...ctx, err: error, payload: { termId } });
       return { success: false, errorCode: 'UNEXPECTED' };
     }
 
@@ -134,7 +134,7 @@ export async function deleteTerm(termId: string): Promise<TermActionResult> {
     revalidatePath('/terms');
     return { success: true };
   } catch (error) {
-    logger.error('term:delete_term_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { termId } });
+    logger.error('term:delete_term_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { termId } });
     return { success: false, errorCode: 'UNEXPECTED' };
   }
 }
@@ -167,7 +167,7 @@ export async function getTermDetail(termId: string): Promise<TermDetail | null> 
       .maybeSingle();
 
     if (error) {
-      logger.error('term:get_term_detail_failed', error.message, { ...ctx, payload: { termId } });
+      logger.error('term:get_term_detail_failed', error.message, { ...ctx, err: error, payload: { termId } });
       throw error;
     }
     if (!data) return null;
@@ -187,7 +187,7 @@ export async function getTermDetail(termId: string): Promise<TermDetail | null> 
       })),
     };
   } catch (error) {
-    logger.error('term:get_term_detail_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { termId } });
+    logger.error('term:get_term_detail_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { termId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -212,7 +212,7 @@ export async function addTermRevision(
 
     if (error) {
       const errorCode = toErrorCode(error.message);
-      logger.error('term:add_revision_failed', error.message, { ...ctx, payload: { termId, changeNote } });
+      logger.error('term:add_revision_failed', error.message, { ...ctx, err: error, payload: { termId, changeNote } });
       return { success: false, errorCode };
     }
 
@@ -222,7 +222,7 @@ export async function addTermRevision(
     revalidatePath(`/terms/${termId}/edit`);
     return { success: true };
   } catch (error) {
-    logger.error('term:add_revision_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { termId } });
+    logger.error('term:add_revision_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { termId } });
     return { success: false, errorCode: 'UNEXPECTED' };
   }
 }
@@ -256,7 +256,7 @@ export async function createTerm(params: {
       if (error.code === '23505') {
         return { success: false, errorCode: 'DUPLICATE_VERSION' };
       }
-      logger.error("term:create_term_failed", error.message, { ...ctx, payload: { ...params, content: undefined } });
+      logger.error("term:create_term_failed", error.message, { ...ctx, err: error, payload: { ...params, content: undefined } });
       return { success: false, errorCode: 'UNEXPECTED' };
     }
 
@@ -264,7 +264,7 @@ export async function createTerm(params: {
     revalidatePath('/terms');
     return { success: true };
   } catch (error) {
-    logger.error("term:create_term_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, payload: { ...params, content: undefined } });
+    logger.error("term:create_term_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { ...params, content: undefined } });
     return { success: false, errorCode: 'UNEXPECTED' };
   }
 }

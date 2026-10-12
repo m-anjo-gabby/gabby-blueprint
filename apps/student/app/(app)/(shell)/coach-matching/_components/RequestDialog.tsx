@@ -52,7 +52,7 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coach?.user_id]);
 
-  // コーチの対応可能時間ブロックを、25分セッションの開始候補（30分刻み）に展開し、
+  // コーチの対応可能時間ブロック（UTC）を、25分セッションの開始候補（30分刻み）に展開し、
   // それぞれ生徒のタイムゾーンでの表示曜日・時刻に変換してカレンダーのセルとする
   const cells = useMemo<AvailabilityCell[]>(() => {
     if (!coach) return [];
@@ -62,7 +62,7 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
       for (const t of options) {
         const display = convertWeeklyTimeZone(
           { day_of_week: block.day_of_week, start_time: t, end_time: getLessonEndTime(t) },
-          coach.timezone,
+          'UTC',
           studentTimezone
         );
         list.push({
@@ -79,15 +79,16 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
   }, [coach, studentTimezone]);
 
   // 既に埋まっている（確定済み、または承認待ちの）曜日・時間帯と重なるセルを選択不可にする。
-  // 判定はコーチのローカル時刻（sourceDay/sourceStartTime）ベースで行う
-  // （coach.unavailable_slotsもcom_m_lesson_schedule/com_t_matching_request由来でコーチのローカル時刻）。
+  // 予約済みの枠は行ごとの基準のタイムゾーン（生徒の申請時のタイムゾーン等）で持つため、直近の回の日時で
+  // UTCに換算し、セルのUTCの曜日・時刻（sourceDay/sourceStartTime）と比べる。
   // あくまでUI上のソフトチェックで、最終的な整合性はサーバー側(schedule_conflict)で担保する。
   const unavailableKeys = useMemo(() => {
     if (!coach) return new Set<string>();
+    const bookedUtc = coach.unavailable_slots.map((slot) => convertWeeklyTimeZone(slot, slot.timezone, 'UTC'));
     const keys = new Set<string>();
     for (const cell of cells) {
       const cellEndTime = getLessonEndTime(cell.sourceStartTime);
-      const isBooked = coach.unavailable_slots.some((slot) =>
+      const isBooked = bookedUtc.some((slot) =>
         slot.day_of_week === cell.sourceDay &&
         doTimeRangesOverlap(cell.sourceStartTime, cellEndTime, slot.start_time, slot.end_time)
       );
@@ -103,9 +104,9 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
   const firstSession = useMemo(() => {
     if (!coach || !selectedCell) return null;
     return getFirstLiveSessionOccurrence(
-      selectedCell.sourceDay,
-      selectedCell.sourceStartTime,
-      coach.timezone,
+      selectedCell.displayDay,
+      selectedCell.displayStartTime,
+      studentTimezone,
       studentTimezone,
       undefined,
       new Date(contractStartDate)
@@ -121,9 +122,9 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
         ticket_id: ticketId,
         coach_id: coach.user_id,
         slot_no: slotNo,
-        day_of_week: selectedCell.sourceDay,
-        start_time: selectedCell.sourceStartTime,
-        end_time: getLessonEndTime(selectedCell.sourceStartTime),
+        day_of_week: selectedCell.displayDay,
+        start_time: selectedCell.displayStartTime,
+        end_time: getLessonEndTime(selectedCell.displayStartTime),
       });
 
       if (!result.success) {
@@ -135,10 +136,10 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
         status: 'pending',
         coach_id: coach.user_id,
         coach_name: coach.user_name,
-        day_of_week: selectedCell.sourceDay,
-        start_time: `${selectedCell.sourceStartTime}:00`,
-        end_time: `${getLessonEndTime(selectedCell.sourceStartTime)}:00`,
-        coach_timezone: coach.timezone,
+        day_of_week: selectedCell.displayDay,
+        start_time: `${selectedCell.displayStartTime}:00`,
+        end_time: `${getLessonEndTime(selectedCell.displayStartTime)}:00`,
+        schedule_timezone: studentTimezone,
       });
       showToast('リクエストを送信しました。コーチの承認をお待ちください。', 'success');
       onClose();

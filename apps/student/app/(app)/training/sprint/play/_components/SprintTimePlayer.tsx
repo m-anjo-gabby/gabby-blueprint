@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
 import { getFeedbackConfig, getScoreTier, getSprintTitle, resolveSprintHasLevel, extractContentWords } from '@gabby/lib';
-import { logClientEvent } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 import { SprintQuestion, SPRINT_FLOW_TIMING } from "@gabby/types/sprint";
 import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
 import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
@@ -26,6 +26,7 @@ import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 import { CircularProgressRing } from '@/components/common/CircularProgressRing';
 import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 import { QuestionStepBadge, StepIndicator } from '@/components/common/QuestionStepBadge';
+import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
 
 interface SprintTimePlayerProps {
   questions: SprintQuestion[];
@@ -68,14 +69,14 @@ const StatPreviewTile: React.FC<StatPreviewTileProps> = ({ icon: Icon, label, va
   return (
     <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
       <Icon size={13} strokeWidth={2.5} className={cn(color, "shrink-0")} />
-      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">{label}</span>
-      <span className="text-sm font-black text-slate-800 font-mono leading-none inline-flex items-baseline">
+      <span className="text-[11px] font-bold text-ink-subtle leading-none">{label}</span>
+      <span className="text-sm font-bold text-ink font-mono leading-none inline-flex items-baseline">
         {value === null ? (
-          <span className="text-slate-400 font-normal">-</span>
+          <span className="text-ink-subtle font-normal">-</span>
         ) : (
           <>
             {animated}
-            {suffix && <span className="text-[10px] font-medium text-slate-400 ml-0.5 font-sans">{suffix}</span>}
+            {suffix && <span className="text-[11px] font-medium text-ink-subtle ml-0.5 font-sans">{suffix}</span>}
           </>
         )}
       </span>
@@ -226,7 +227,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     // 4つの必須パラメータが揃っているかチェック（型ガード）
     if (!sprintType || !contentId || !questionType || !answerType) {
-      console.error("Missing required sprint parameters:", { sprintType, contentId, questionType, answerType });
+      clientLogger.error('sprint:missing_params', 'Missing required sprint parameters', { payload: { sprintType, contentId, questionType, answerType } });
       showToast("パラメータが不足しているため、実績を保存できませんでした。", "error");
       setIsSaving(false);
       onExit?.();
@@ -309,7 +310,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
         throw new Error(res.error || "Failed to persist score history");
       }
     } catch (err) {
-      console.error("Sprint score save transaction failed:", err);
+      clientLogger.error('sprint:save_score_failed', 'Sprint score save failed', { err });
       showToast("実績の保存に失敗しました。一覧に戻ります。", "error");
       resetStore();
       onExit?.();
@@ -400,7 +401,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       incrementAssessmentCount();
       const { isLast } = commitAssessmentResult(questionId, getFeedbackConfig(result.score), result);
       if (isLast || timeUpTriggeredRef.current) {
-        if (isLast) showToast("すべての問題を消化しました！スプリント完了です。", "success");
+        if (isLast) showToast("すべての問題を消化しました！タイムアタック完了です。", "success");
         // 🆕 タイムアップ経由の確定時は、seconds=0・現在問題を含める指定で保存へ進む
         handlePersistAndRedirect(timeUpTriggeredRef.current ? 0 : secondsLeftRef.current, timeUpTriggeredRef.current);
       }
@@ -432,19 +433,16 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   ) => {
     audioFailedQuestionIdsRef.current.add(question.question_id);
     showToast('この問題は音声を再生できないため、スキップしました。', 'error');
-    logClientEvent({
-      service: 'student',
-      event: 'sprint:audio_playback_failed',
-      message: `Sprint audio unavailable: ${question.question_id}`,
+    clientLogger.warn('sprint:audio_playback_failed', `Sprint audio unavailable: ${question.question_id}`, {
+      err: info.error,
       payload: {
         contentId: config.contentId,
         questionId: question.question_id,
         mode: 'sprint',
         text: info.text,
         audioPath: info.audioPath,
-        error: info.error instanceof Error ? info.error.message : String(info.error),
       },
-    }).catch(() => { /* ログ送信自体の失敗はユーザー体験に影響させない */ });
+    });
 
     await unlockAudioContext();
     stopAllAudio();
@@ -492,7 +490,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       }
       if (outcome.result) handleAssessmentResult(question.question_id, outcome.result);
     } catch (e) {
-      console.error("Sprint flow error:", e);
+      clientLogger.error('sprint:flow_failed', 'Sprint flow failed', { err: e });
       if (!signal.aborted) {
         setAudioPhase('answer');
       }
@@ -517,7 +515,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
     const { isLast } = commitSkipResult(currentQuestion.question_id);
     if (isLast) {
-      showToast("スプリントを終了します。", "success");
+      showToast("タイムアタックを終了します。", "success");
       handlePersistAndRedirect(secondsLeftRef.current);
     }
   }, [commitSkipResult, showToast, handlePersistAndRedirect, currentQuestion, stopAllAudio, unlockAudioContext]);
@@ -558,8 +556,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
   // 🚀 終了確認→ローディング表示→強制クリーンアップ→iOSのマイク解放待ちバッファ→
   // 実際の離脱、という一連の流れは Word/Sprint 共通のためフック化（進捗同期は不要なため sync 未指定）
   const handleExit = useExitConfirmFlow({
-    confirmTitle: "Quit Sprint?",
-    confirmMessage: "進行中のスプリントを終了して戻りますか？（スコアは記録されません）",
+    confirmTitle: "タイムアタックを終了しますか？",
+    confirmMessage: "進行中のタイムアタックを終了して戻りますか？（スコアは記録されません）",
     confirmVariant: 'warning',
     setLoading: setExitLoading,
     cleanup: stopAllAudio,
@@ -596,24 +594,24 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
     <ImmersivePanel as="main">
 
         {/* ① 上部ヘッダー（プログレスバー一体型・タイトル領域最大化） */}
-        <div className="shrink-0 w-full px-6 pt-5 pb-3 border-b border-slate-100/60 bg-white relative z-10">
+        <div className="shrink-0 w-full px-6 pt-5 pb-3 border-b border-line/40 bg-white relative z-10">
 
           {/* 上段：ナビゲーション ＆ 拡大されたタイトル領域 */}
           <div className="flex items-center justify-between h-10">
             {/* 左：戻るボタン */}
             <button 
               onClick={handleExit}
-              className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200/80 active:scale-95 cursor-pointer transition-all shrink-0"
+              className="h-10 w-10 flex items-center justify-center rounded-xl bg-canvas text-ink-soft hover:bg-line/80 active:scale-95 cursor-pointer transition-all shrink-0"
             >
               <ChevronLeft size={16} strokeWidth={2.5} />
             </button>
 
             {/* 中央：タイマー排除により、圧倒的に広がったタイトル表示エリア */}
             <div className="flex-1 flex flex-col items-center px-4 min-w-0">
-              <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mb-0.5 select-none shrink-0">
-                {contentName || 'Sprint Mode'}
+              <span className="text-[11px] font-bold text-brand mb-0.5 select-none shrink-0">
+                {contentName || SPRINT_MODE_LABEL.sprint}
               </span>
-              <h1 className="text-sm font-black text-slate-800 tracking-tight text-center w-full max-w-[280px] sm:max-w-[360px] truncate">
+              <h1 className="text-sm font-bold text-ink tracking-tight text-center w-full max-w-[280px] sm:max-w-[360px] truncate">
                 {courseTitle}
               </h1>
             </div>
@@ -624,7 +622,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
           {/* 下段：プログレスバーと秒数バッジを横並びに固定表示。バッジは常に白背景のため、進捗状態によらず視認性が一定 */}
           <div className="mt-4 w-full flex items-center gap-2 select-none">
-            <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden relative border border-slate-200/30">
+            <div className="flex-1 h-6 bg-canvas rounded-full overflow-hidden relative border border-line/30">
               {/* 動的プログレスバー本体 */}
               <div
                 className={cn(
@@ -642,8 +640,8 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
             <div
               className={cn(
-                "shrink-0 flex items-center gap-1 font-mono text-xs font-black tracking-tight tabular-nums whitespace-nowrap bg-white border rounded-full px-2 py-0.5 shadow-sm text-slate-700",
-                isCritical ? "border-rose-200" : isWarning ? "border-amber-200" : "border-slate-200"
+                "shrink-0 flex items-center gap-1 font-mono text-xs font-bold tracking-tight tabular-nums whitespace-nowrap bg-white border rounded-full px-2 py-0.5 shadow-sm text-ink-soft",
+                isCritical ? "border-rose-200" : isWarning ? "border-amber-200" : "border-line"
               )}
             >
               <Timer
@@ -671,7 +669,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               questionNumber={isSpeedMode ? currentIndex + 1 : groupData.uniqueGroupIndex}
               rightSlot={
                 isSpeedMode ? (
-                  <span className="text-[11px] font-black tracking-tight text-slate-700 whitespace-nowrap">
+                  <span className="text-[11px] font-bold tracking-tight text-ink-soft whitespace-nowrap">
                     {answerType === '1' ? 'NOで回答' : 'YESで回答'}
                   </span>
                 ) : (
@@ -682,7 +680,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
 
             {/* 改修箇所：洗練されたカプセル・コネクト型のステッププログレスバー表示 */}
             <div className="w-full flex justify-center pt-2 select-none">
-              <div className="w-full max-w-md bg-slate-50 border border-slate-100 rounded-2xl p-2 flex items-center justify-between gap-1.5 sm:gap-3">
+              <div className="w-full max-w-md bg-canvas border border-line/60 rounded-control p-2 flex items-center justify-between gap-1.5 sm:gap-3">
                 {userActionSteps.map((step, idx) => {
                   const isCurrent = idx === currentActionIndex;
                   const isCompleted = idx < currentActionIndex;
@@ -693,10 +691,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                       <div className={cn(
                         "flex-1 flex items-center justify-center py-2 px-2 rounded-xl border text-center transition-all duration-300",
                         isCurrent 
-                          ? "bg-brand border-brand text-white font-black shadow-md shadow-brand/10 scale-[1.02]" 
+                          ? "bg-brand border-brand text-white font-bold shadow-md shadow-brand/10 scale-[1.02]" 
                           : isCompleted 
                             ? "bg-brand-50 border-brand-100 text-brand font-bold" 
-                            : "bg-white border-slate-200 text-slate-400 font-medium"
+                            : "bg-white border-line text-ink-subtle font-medium"
                       )}>
                         <span className="text-xs sm:text-sm tracking-tight whitespace-nowrap">
                           {step}
@@ -707,7 +705,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                       {idx < userActionSteps.length - 1 && (
                         <span className={cn(
                           "text-xs font-bold font-mono transition-colors duration-300 shrink-0 px-0.5",
-                          isCompleted ? "text-brand-400" : "text-slate-300"
+                          isCompleted ? "text-brand-400" : "text-ink-subtle"
                         )}>
                           ➔
                         </span>
@@ -729,7 +727,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   className={cn(
                     "w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0 transition-colors duration-200",
                     displayPhase === 'idle'
-                      ? "text-slate-300"
+                      ? "text-ink-subtle"
                       : displayPhase === 'answer'
                         ? (isBrainAnswerMode ? "text-rose-500" : "text-brand-500")
                         : "text-brand"
@@ -747,7 +745,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                     <Headphones className="w-full h-full" strokeWidth={2.5} />
                   )}
                 </div>
-                <h2 className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight whitespace-nowrap select-none">
+                <h2 className="text-lg sm:text-2xl font-bold text-ink tracking-tight whitespace-nowrap select-none">
                   {displayPhase === 'statement' && "基本文を再生中"}
                   {displayPhase === 'question' && (isQuestionBased ? "質問を再生中" : "指示文を再生中")}
                   {displayPhase === 'answer' && (
@@ -758,7 +756,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               </div>
               {/* サブテキスト表示（iOSでもメッセージを表示するように条件をシンプル化） */}
               <p className={cn(
-                "text-xs sm:text-sm font-semibold text-slate-400 transition-opacity duration-150",
+                "text-xs sm:text-sm font-semibold text-ink-subtle transition-opacity duration-150",
                 displayPhase === 'answer' ? "opacity-100" : "opacity-0 select-none pointer-events-none"
               )}>
                 {isBrainAnswerMode && displayPhase === 'answer'
@@ -795,9 +793,9 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                           onClick={handleSkipQuestion}
                           disabled={isSaving || isBrainActionDisabled}
                           className={cn(
-                            "flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl text-white font-black text-sm tracking-wider shadow-md active:scale-[0.98] cursor-pointer transition-all w-60 group border-none",
+                            "flex items-center justify-center gap-2.5 px-8 py-4 rounded-control text-white font-bold text-sm shadow-md active:scale-[0.98] cursor-pointer transition-all w-60 group border-none",
                             isBrainActionDisabled 
-                              ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none" 
+                              ? "bg-line text-ink-subtle cursor-not-allowed shadow-none" 
                               : "bg-brand hover:bg-brand-strong shadow-brand/10"
                           )}
                           title="この問題をスキップして次へ"
@@ -823,14 +821,14 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                             isGood ? "stroke-amber-500" : 
                             isFair ? "stroke-orange-500" : 
                             isPoor ? "stroke-rose-500" : 
-                            isControlDisabled ? "stroke-slate-200" : "stroke-rose-500";
+                            isControlDisabled ? "stroke-line" : "stroke-rose-500";
                           const trackColor = 
                             isExcellent ? "stroke-emerald-100" : 
                             isGreat ? "stroke-blue-100" : 
                             isGood ? "stroke-amber-100" : 
                             isFair ? "stroke-orange-100" : 
                             isPoor ? "stroke-rose-100" : 
-                            isControlDisabled ? "stroke-slate-100" : "stroke-rose-100";
+                            isControlDisabled ? "stroke-line/60" : "stroke-rose-100";
                           const fillColor = 
                             isExcellent ? "rgba(16, 185, 129, 0.05)" : 
                             isGreat ? "rgba(59, 130, 246, 0.05)" : 
@@ -861,7 +859,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                                   className="flex flex-col items-center justify-center"
                                 >
                                   <span className={cn(
-                                    "text-[10px] font-black tracking-normal uppercase leading-none",
+                                    "text-[11px] font-bold tracking-normal leading-none",
                                     isExcellent ? "text-emerald-600" :
                                     isGreat ? "text-blue-600" :
                                     isGood ? "text-amber-600" :
@@ -875,22 +873,22 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                                 </motion.div>
                               ) : isControlDisabled ? (
                                 <>
-                                  <span className="text-3xl font-black font-mono text-slate-300 leading-none">
+                                  <span className="text-3xl font-bold font-mono text-ink-subtle leading-none">
                                     --
                                   </span>
-                                  <div className="flex items-center gap-1 mt-0.5 text-slate-400">
-                                    <MicOff size={10} className="text-slate-400" />
-                                    <span className="text-[9px] font-black uppercase tracking-wider leading-none">WAIT</span>
+                                  <div className="flex items-center gap-1 mt-0.5 text-ink-subtle">
+                                    <MicOff size={10} className="text-ink-subtle" />
+                                    <span className="text-[11px] font-bold leading-none">待機中</span>
                                   </div>
                                 </>
                               ) : (
                                 <>
-                                  <span className="text-3xl font-black font-mono text-rose-600 leading-none">
+                                  <span className="text-3xl font-bold font-mono text-rose-600 leading-none">
                                     {timeLeft}
                                   </span>
                                   <div className="flex items-center gap-1 mt-0.5 text-rose-400">
                                     <Mic size={10} fill="currentColor" className="animate-pulse" />
-                                    <span className="text-[9px] font-black uppercase tracking-wider leading-none">REC</span>
+                                    <span className="text-[11px] font-bold leading-none">録音中</span>
                                   </div>
                                 </>
                               )}
@@ -907,15 +905,15 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                                 onClick={handleStopRecord}
                                 disabled={isBtnDisabled}
                                 className={cn(
-                                  "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl transition-all active:scale-[0.98] cursor-pointer shadow-sm w-48 group border-none",
+                                  "flex items-center justify-center gap-2 px-6 py-3 rounded-control transition-all active:scale-[0.98] cursor-pointer shadow-sm w-48 group border-none",
                                   isBtnDisabled
-                                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                    ? "bg-canvas text-ink-subtle cursor-not-allowed"
                                     : "bg-rose-500 text-white hover:bg-rose-600"
                                 )}
                                 title="発話を完了して次へ"
                               >
                                 <CheckCircle2 size={16} strokeWidth={2.5} className={cn(!isBtnDisabled && "group-hover:scale-110 transition-transform")} />
-                                <span className="text-sm font-black tracking-wider">発話を完了</span>
+                                <span className="text-sm font-bold">発話を完了</span>
                               </button>
 
                               <button
@@ -925,13 +923,13 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                                 className={cn(
                                   "flex items-center justify-center gap-2 px-6 py-2 rounded-xl transition-all active:scale-[0.98] cursor-pointer w-48 border-none",
                                   isBtnDisabled
-                                    ? "text-slate-200 cursor-not-allowed"
-                                    : "text-slate-400 hover:text-slate-600"
+                                    ? "text-line cursor-not-allowed"
+                                    : "text-ink-subtle hover:text-ink-soft"
                                 )}
                                 title="この問題をスキップして次へ"
                               >
                                 <FastForward size={14} strokeWidth={2.5} />
-                                <span className="text-[11px] font-bold uppercase tracking-wider">スキップする</span>
+                                <span className="text-[11px] font-bold">スキップする</span>
                               </button>
                             </div>
                           );
@@ -952,11 +950,11 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       {/* 統合された完了レイヤー：結果先出しプレビュー＋自動進行プログレスバー型 */}
       {(isSaving || showTimeUpOverlay) && (
         <div
-          className="absolute inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300 cursor-pointer"
+          className="absolute inset-0 bg-ink/40 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-in fade-in duration-300 cursor-pointer"
           onClick={showTimeUpOverlay ? handleGoToResult : undefined}
         >
           {/* shadcn Dialog相当：暗いスクリムの上に浮く独立したモーダルカード（裏のプレイ画面は透けて見える） */}
-          <div className="w-full max-w-xs bg-white rounded-[32px] border border-white/60 shadow-2xl p-6 sm:p-7 text-center space-y-5 transform transition-all animate-in zoom-in-95 duration-300 ease-out">
+          <div className="w-full max-w-xs bg-white rounded-panel border border-white/60 shadow-2xl p-6 sm:p-7 text-center space-y-5 transform transition-all animate-in zoom-in-95 duration-300 ease-out">
             {/* アイコンはスピナー→チェックへ共有layoutIdで滑らかに変形させる */}
             <div className="relative w-16 h-16 mx-auto">
               <AnimatePresence mode="popLayout" initial={false}>
@@ -965,7 +963,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                     key="saving-icon"
                     layoutId="sprint-completion-icon"
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute inset-0 bg-brand-50 rounded-2xl flex items-center justify-center border border-brand-100 shadow-sm text-brand"
+                    className="absolute inset-0 bg-brand-50 rounded-control flex items-center justify-center border border-brand-100 shadow-sm text-brand"
                   >
                     <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
                   </motion.div>
@@ -974,7 +972,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                     key="done-icon"
                     layoutId="sprint-completion-icon"
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute inset-0 bg-brand-50 rounded-2xl flex items-center justify-center border border-brand-100 shadow-sm text-brand"
+                    className="absolute inset-0 bg-brand-50 rounded-control flex items-center justify-center border border-brand-100 shadow-sm text-brand"
                   >
                     <CheckCircle2 className="w-7 h-7" strokeWidth={2.2} />
                   </motion.div>
@@ -983,10 +981,10 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <h3 className="text-lg font-black text-slate-800 tracking-tight">
-                {isSaving ? "スプリントの記録を保存中" : "スプリント完了"}
+              <h3 className="text-lg font-bold text-ink tracking-tight">
+                {isSaving ? "タイムアタックの記録を保存中" : "タイムアタック完了"}
               </h3>
-              <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[220px] mx-auto">
+              <p className="text-xs text-ink-subtle font-medium leading-relaxed max-w-[220px] mx-auto">
                 {isSaving ? "今回の成果を集計しています..." : "今回の成果はこちらです"}
               </p>
             </div>
@@ -1033,7 +1031,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
                   handleGoToResult();
                 }}
                 className={cn(
-                  "w-full h-12 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 group cursor-pointer",
+                  "w-full h-12 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 group cursor-pointer",
                   SHARED_BRAND_BUTTON
                 )}
               >
@@ -1042,7 +1040,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
               </button>
 
               {/* 自動遷移の演出：テキストカウントダウンの代わりに薄い自動進行バーで示す */}
-              <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-1 w-full bg-canvas rounded-full overflow-hidden">
                 {showTimeUpOverlay && (
                   <motion.div
                     key={resultId}

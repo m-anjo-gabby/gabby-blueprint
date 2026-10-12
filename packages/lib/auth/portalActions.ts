@@ -17,7 +17,7 @@ import {
   type VerifyInvitationResponse,
 } from './core';
 import { RETURN_TO_PARAM, sanitizeReturnTo } from './returnTo';
-import type { PasswordResetMailLanguage } from '../mail/templates/PasswordResetEmailTemplate';
+import type { MailLanguage } from '../mail/layout/document';
 import {
   AUTH_ERROR_MESSAGES_JA,
   formatAuthErrorMessage,
@@ -42,7 +42,7 @@ export interface PortalAuthConfig {
   /** signInCore に渡す追加オプション（生徒ポータルのライセンスチェック等） */
   signInOptions?: { checkLicense?: boolean };
   /** パスワード再設定メールの言語（student: 'ja' / coach: 'en' / admin: 'bilingual'） */
-  resetMailLanguage: PasswordResetMailLanguage;
+  resetMailLanguage: MailLanguage;
   /** ログイン成功後、そのユーザーがこのポータルへのアクセスを許可されるかを判定する（不許可時の文言は `portal_forbidden`） */
   guardUser: (user: User) => GuardResult;
   /**
@@ -131,7 +131,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       logger.error(
         `auth:${config.appName}_login_unexpected`,
         error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, payload: { email } }
+        { ...ctx, err: error, payload: { email } }
       );
       return errorResponse('unexpected');
     }
@@ -159,7 +159,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       logger.error(
         `auth:${config.appName}_logout_unexpected`,
         error instanceof Error ? error.message : 'Unknown error',
-        ctx
+        { ...ctx, err: error }
       );
       // ログアウト失敗してもリダイレクトを試みる
       redirect(loginPath);
@@ -190,7 +190,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       logger.error(
         `auth:${config.appName}_forgot_password_unexpected`,
         error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, payload: { email } }
+        { ...ctx, err: error, payload: { email } }
       );
       return errorResponse('unexpected');
     }
@@ -222,7 +222,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       logger.error(
         `auth:${config.appName}_reset_password_unexpected`,
         error instanceof Error ? error.message : 'Unknown error',
-        ctx
+        { ...ctx, err: error }
       );
       return errorResponse('unexpected');
     }
@@ -248,7 +248,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       logger.error(
         `auth:${config.appName}_update_password_unexpected`,
         error instanceof Error ? error.message : 'Unknown error',
-        ctx
+        { ...ctx, err: error }
       );
       return errorResponse('unexpected');
     }

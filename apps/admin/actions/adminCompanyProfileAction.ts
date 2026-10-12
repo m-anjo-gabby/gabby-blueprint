@@ -40,7 +40,7 @@ export async function getCompanyProfiles(): Promise<CompanyProfile[] | null> {
   const { data, error } = await supabase.from('com_m_company_profile').select(COMPANY_PROFILE_SELECT);
 
   if (error) {
-    logger.error('admin:get_company_profiles_failed', error.message, ctx);
+    logger.error('admin:get_company_profiles_failed', error.message, { ...ctx, err: error });
     return null;
   }
   const rows = (data ?? []) as CompanyProfile[];
@@ -72,7 +72,7 @@ export async function updateCompanyProfile(companyCode: CompanyCode, input: Comp
     .eq('company_code', companyCode);
 
   if (error) {
-    logger.error('admin:update_company_profile_failed', error.message, { ...ctx, payload: { companyCode } });
+    logger.error('admin:update_company_profile_failed', error.message, { ...ctx, err: error, payload: { companyCode } });
     return { success: false, message: t('updateFailed') };
   }
 
@@ -105,7 +105,7 @@ export async function uploadCompanyLogo(
     contentType: file.type || 'image/png',
   });
   if (uploadError) {
-    logger.error('admin:upload_company_logo_failed', uploadError.message, { ...ctx, payload: { companyCode } });
+    logger.error('admin:upload_company_logo_failed', uploadError.message, { ...ctx, err: uploadError, payload: { companyCode } });
     return { success: false, message: t('logoUploadFailed') };
   }
 
@@ -114,7 +114,7 @@ export async function uploadCompanyLogo(
     .update({ logo_path: path, update_date: new Date().toISOString() })
     .eq('company_code', companyCode);
   if (updateError) {
-    logger.error('admin:update_logo_path_failed', updateError.message, { ...ctx, payload: { companyCode } });
+    logger.error('admin:update_logo_path_failed', updateError.message, { ...ctx, err: updateError, payload: { companyCode } });
     return { success: false, message: t('logoPathFailed') };
   }
 

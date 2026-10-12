@@ -80,8 +80,9 @@ export async function lookupColorVowelDictionary(
       .ilike("word_en", cleanWord);
 
     if (error) {
-      logger.error("cv_dict:lookup_failed", error.message, {
+      logger.error("cvDict:lookup_failed", error.message, {
         ...ctx,
+        err: error,
         payload: { rawWord, cleanWord },
       });
       return [];
@@ -89,7 +90,7 @@ export async function lookupColorVowelDictionary(
 
     if (!records || records.length === 0) {
       logger.info(
-        "cv_dict:word_not_found",
+        "cvDict:word_not_found",
         `Word '${cleanWord}' not found in dictionary`,
         { ...ctx, payload: { cleanWord } }
       );
@@ -106,7 +107,7 @@ export async function lookupColorVowelDictionary(
         : (record.vowel as ColorVowelJoinRow);
 
       if (!vowelRaw) {
-        logger.warn("cv_dict:vowel_join_empty", `Vowel join returned empty for '${cleanWord}'`, {
+        logger.warn("cvDict:vowel_join_empty", `Vowel join returned empty for '${cleanWord}'`, {
           ...ctx,
           payload: { cleanWord },
         });
@@ -163,8 +164,8 @@ export async function lookupColorVowelDictionary(
       });
     }
 
-    logger.info(
-      "cv_dict:lookup_success",
+    logger.debug(
+      "cvDict:lookup_success",
       `Successfully looked up Color Vowel for '${cleanWord}' (found ${results.length} record(s))`,
       { ...ctx, payload: { cleanWord, count: results.length } }
     );
@@ -175,9 +176,9 @@ export async function lookupColorVowelDictionary(
     return results;
   } catch (err) {
     logger.error(
-      "cv_dict:lookup_unexpected",
+      "cvDict:lookup_unexpected",
       err instanceof Error ? err.message : "Unknown error",
-      { ...ctx, payload: { rawWord } }
+      { ...ctx, err, payload: { rawWord } }
     );
     return [];
   }

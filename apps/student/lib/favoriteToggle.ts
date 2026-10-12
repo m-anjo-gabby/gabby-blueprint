@@ -43,14 +43,14 @@ export async function toggleFavoriteRow(target: FavoriteTarget, targetId: string
         logger.info("favorite:limit_exceeded", "Favorite limit exceeded", { ...ctx, payload });
         return { ok: false, reason: 'limit' };
       }
-      logger.error("favorite:toggle_failed", error.message, { ...ctx, payload });
+      logger.error("favorite:toggle_failed", error.message, { ...ctx, err: error, payload });
       return { ok: false, reason: 'error' };
     }
 
     logger.info("favorite:toggle_success", `Favorite ${isFavorite ? 'added' : 'removed'}`, { ...ctx, payload });
     return { ok: true };
   } catch (err) {
-    logger.error("favorite:toggle_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, payload });
+    logger.error("favorite:toggle_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload });
     return { ok: false, reason: 'error' };
   }
 }

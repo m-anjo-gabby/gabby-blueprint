@@ -1,5 +1,6 @@
 // apps/coach/app/(app)/profile/page.tsx
 import { getMyProfile, getTimezoneList, getMyCoachProfile, getCountryList } from '@/actions/coachProfileAction';
+import { getMyMailSettings } from '@/actions/mailSettingAction';
 import { USER_TYPES } from '@gabby/types/user';
 import { ProfileView } from './_components/ProfileView';
 import { ProfilePageHeader } from '@/components/common/ToolPageSkeletons';
@@ -11,11 +12,12 @@ const USER_TYPE_LABELS_EN: Record<string, string> = {
 };
 
 export default async function ProfilePage() {
-  const [profile, timezones, coachProfile, countries] = await Promise.all([
+  const [profile, timezones, coachProfile, countries, mailSettings] = await Promise.all([
     getMyProfile(),
     getTimezoneList(),
     getMyCoachProfile(),
     getCountryList(),
+    getMyMailSettings(),
   ]);
 
   if (!profile) {
@@ -41,6 +43,7 @@ export default async function ProfilePage() {
           timezones={timezones}
           initialCoachProfile={coachProfile}
           countries={countries}
+          mailSettings={mailSettings}
         />
       </div>
     </div>

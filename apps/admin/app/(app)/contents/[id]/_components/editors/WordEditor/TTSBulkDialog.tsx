@@ -22,6 +22,7 @@ import { buildSSML } from '@gabby/lib/azure/ssml';
 import { PhraseRecord, TTSAdjustmentData } from '@gabby/types/word';
 import { getPhrasesByContentId } from '@/actions/adminPhraseAction';
 import { useWordStore } from '@/stores/useWordStore';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 interface TTSBulkDialogProps {
   contentId: string;
@@ -158,7 +159,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
         if (result.success) successCount++;
         else errorCount++;
       } catch (err) {
-        console.error("Bulk process item error:", err);
+        clientLogger.error('tts:bulk_item_failed', 'Bulk TTS item failed', { err });
         errorCount++;
       }
     }

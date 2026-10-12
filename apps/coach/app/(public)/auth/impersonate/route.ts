@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   });
 
   if (verifyError) {
-    logger.error('impersonation:verify_failed', verifyError.message, { payload: { impersonationId } });
+    logger.error('impersonation:verify_failed', verifyError.message, { err: verifyError, payload: { impersonationId } });
     return NextResponse.redirect(`${origin}/login?error=impersonation`);
   }
 
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     .single();
 
   if (logError || !logRow?.admin_id) {
-    logger.error('impersonation:audit_log_update_failed', logError?.message || 'Log row not found or already redeemed', { payload: { impersonationId } });
+    logger.error('impersonation:audit_log_update_failed', logError?.message || 'Log row not found or already redeemed', { err: logError, payload: { impersonationId } });
     return NextResponse.redirect(`${origin}/login?error=impersonation`);
   }
 

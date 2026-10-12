@@ -58,10 +58,10 @@ export const WordControls: React.FC<WordControlsProps> = ({
   const isManualPlaying = isPlaying && !isAutoPlaying;
 
   // --- 共通スタイル定義 ---
-  const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-slate-100 bg-slate-50";
+  const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-control transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-line/60 bg-canvas";
   // 💡 ポップオーバーが枠外に突き出るため overflow-hidden から overflow-visible に調整
-  const unitBase = "flex items-center rounded-2xl border shadow-sm transition-all overflow-visible";
-  const splitLeftBase = "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-2xl";
+  const unitBase = "flex items-center rounded-control border shadow-sm transition-all overflow-visible";
+  const splitLeftBase = "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-control";
 
   return (
     <div className="shrink-0 w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2 relative">
@@ -72,21 +72,21 @@ export const WordControls: React.FC<WordControlsProps> = ({
           {isListening ? (
             <motion.div key="rec" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-              <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em]">Recording {timeLeft}s</span>
+              <span className="text-[11px] font-bold text-rose-500">録音中 {timeLeft}秒</span>
             </motion.div>
           ) : isAutoPlaying ? (
             <motion.div key="auto" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
               <RotateCw size={10} className="animate-spin text-brand" />
-              <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">Auto Playing</span>
+              <span className="text-[11px] font-bold text-brand">自動再生中</span>
             </motion.div>
           ) : isPlaying ? (
             <motion.div key="play" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="flex items-center gap-2">
               <RotateCw size={10} className="animate-spin text-brand" />
-              <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">Playing</span>
+              <span className="text-[11px] font-bold text-brand">再生中</span>
             </motion.div>
           ) : (
-            <motion.span key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-              Tap Card to Flip
+            <motion.span key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[11px] font-bold text-ink-subtle">
+              カードをタップで裏返します
             </motion.span>
           )}
         </AnimatePresence>
@@ -99,7 +99,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
           onClick={onSaveResume}
           aria-label="ブックマークして終了"
           disabled={isAutoPlaying || isPlaying}
-          className={cn(sideBtnBase, "hover:bg-brand-50 hover:text-brand text-slate-400")}
+          className={cn(sideBtnBase, "hover:bg-brand-50 hover:text-brand text-ink-subtle")}
         >
           <Bookmark size={18} strokeWidth={2.5} />
         </button>
@@ -111,7 +111,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
             onClick={onPrev} 
             aria-label="前へ"
             disabled={isInteractionDisabled || isFirstStep} 
-            className={cn(splitLeftBase, "text-slate-400 hover:bg-slate-50 border-brand-50")}
+            className={cn(splitLeftBase, "text-ink-subtle hover:bg-canvas border-brand-50")}
           >
             <ArrowLeft size={18} strokeWidth={3} />
           </button>
@@ -121,14 +121,14 @@ export const WordControls: React.FC<WordControlsProps> = ({
             onClick={onNext} 
             disabled={isInteractionDisabled} 
             className={cn(
-              "flex-1 h-full flex items-center justify-center gap-2 transition-all active:brightness-90 disabled:opacity-40 rounded-r-2xl",
+              "flex-1 h-full flex items-center justify-center gap-2 transition-all active:brightness-90 disabled:opacity-40 rounded-r-control",
               isLastStep 
                 ? "bg-emerald-500 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]" 
                 : "bg-brand text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
             )}
           >
-            <span className="text-[10px] font-black uppercase tracking-[0.15em] tabular-nums">
-              {isLastStep ? 'Finish' : 'Next'}
+            <span className="text-[11px] font-bold tabular-nums">
+              {isLastStep ? '完了' : '次へ'}
             </span>
             {isLastStep ? <Check size={18} strokeWidth={3} /> : <ArrowRight size={18} strokeWidth={3} />}
           </button>
@@ -141,10 +141,10 @@ export const WordControls: React.FC<WordControlsProps> = ({
           disabled={isManualPlaying}
           className={cn(
             sideBtnBase,
-            isAutoPlaying ? "bg-brand text-white border-brand shadow-lg shadow-brand-100" : "hover:bg-brand-50 hover:text-brand text-slate-400"
+            isAutoPlaying ? "bg-brand text-white border-brand shadow-lg shadow-brand-100" : "hover:bg-brand-50 hover:text-brand text-ink-subtle"
           )}
         >
-          <RotateCw size={18} strokeWidth={2.5} className={cn(isAutoPlaying ? "text-white animate-spin-slow" : "text-slate-400")} />
+          <RotateCw size={18} strokeWidth={2.5} className={cn(isAutoPlaying ? "text-white animate-spin-slow" : "text-ink-subtle")} />
         </button>
       </div>
 
@@ -155,7 +155,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
       )}>
         
         {/* スプリット・オーディオユニット（速度設定 + 再生） */}
-        <div className={cn("h-full bg-slate-50 border-slate-200", unitBase)}>
+        <div className={cn("h-full bg-canvas border-line", unitBase)}>
           
           {/* ⏱️ 再生速度セクション（ポップオーバー開閉ボタン） */}
           <PlaybackRateControl
@@ -172,8 +172,8 @@ export const WordControls: React.FC<WordControlsProps> = ({
             onClick={onSpeak}
             disabled={isInteractionDisabled}
             className={cn(
-              "flex-1 h-full flex items-center justify-center gap-2 transition-all rounded-r-2xl",
-              isManualPlaying ? "bg-brand-50 text-brand" : "text-slate-600 hover:text-brand"
+              "flex-1 h-full flex items-center justify-center gap-2 transition-all rounded-r-control",
+              isManualPlaying ? "bg-brand-50 text-brand" : "text-ink-soft hover:text-brand"
             )}
           >
             {isManualPlaying ? (
@@ -181,8 +181,8 @@ export const WordControls: React.FC<WordControlsProps> = ({
             ) : (
               <Volume2 size={20} strokeWidth={2.5} />
             )}
-            <span className="text-[10px] font-black uppercase tracking-widest hidden xs:block">
-              {isManualPlaying ? 'Playing' : 'Listen'}
+            <span className="text-[11px] font-bold hidden xs:block">
+              {isManualPlaying ? '再生中' : '聞く'}
             </span>
           </button>
         </div>
@@ -193,8 +193,8 @@ export const WordControls: React.FC<WordControlsProps> = ({
           disabled={isAutoPlaying || isPlaying}
           aria-label={isListening ? '発話を止める' : '発話練習'}
           className={cn(
-            "h-full rounded-2xl flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest transition-all overflow-hidden relative",
-            isListening ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
+            "h-full rounded-control flex items-center justify-center gap-3 font-bold text-[11px] transition-all overflow-hidden relative",
+            isListening ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-ink text-white hover:bg-ink/90 active:scale-[0.97]",
             (isAutoPlaying || isPlaying) && "opacity-20 disabled:pointer-events-none"
           )}
         >
@@ -204,12 +204,12 @@ export const WordControls: React.FC<WordControlsProps> = ({
             {isListening ? (
               <motion.div key="stop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 relative z-10">
                 <Square size={14} fill="currentColor" strokeWidth={0} />
-                <span className="tracking-[0.1em]">Stop</span>
+                <span>停止</span>
               </motion.div>
             ) : (
               <motion.div key="mic" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 relative z-10">
                 <Mic size={20} strokeWidth={2.5} />
-                <span className="hidden xs:block tracking-[0.1em]">Practice</span>
+                <span className="hidden xs:block">発話練習</span>
               </motion.div>
             )}
           </AnimatePresence>

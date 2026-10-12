@@ -33,6 +33,7 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
     if (error || !data) {
       logger.error('profile:get_my_profile_failed', error?.message || 'Profile not found', {
         ...ctx,
+        err: error,
         userId: user.id,
       });
       return { success: false, errorCode: 'not_found' };
@@ -54,7 +55,7 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
       },
     };
   } catch (err) {
-    logger.error('profile:get_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('profile:get_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

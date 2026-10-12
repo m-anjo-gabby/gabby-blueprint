@@ -4,21 +4,13 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { LayoutDashboard, Terminal, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { logClientError } from '@gabby/lib/logger/actions';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 export default function NotFound() {
   useEffect(() => {
-    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'Unknown URL';
-    const referrer = typeof document !== 'undefined' ? document.referrer : 'No referrer';
-
-    // 管理画面用のサービス識別子 'admin' を指定してログを送信
-    logClientError({
-      service: 'admin',
-      message: `[AdminConsole] 404 Not Found: Resource or route does not exist`,
-      digest: 'ADMIN_404_NOT_FOUND',
-      stack: `Requested URL: ${currentUrl}\nReferrer: ${referrer}`
-    }).catch((err) => {
-      console.error('Failed to send admin 404 log to Vercel:', err);
+    // 存在しない画面へのアクセスを記録する（表示中のパスは clientLogger が付ける。流入元はクエリを除く）
+    clientLogger.warn('system:not_found', 'Page not found', {
+      payload: { referrer: document.referrer.split('?')[0] || undefined },
     });
   }, []);
 

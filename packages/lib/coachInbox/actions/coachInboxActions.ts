@@ -45,7 +45,7 @@ export async function getPendingIncomingRequestsForCoachCore(): Promise<GetIncom
 
     return { success: true, requests: items };
   } catch (err) {
-    logger.error('coachInbox:get_pending_incoming_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachInbox:get_pending_incoming_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

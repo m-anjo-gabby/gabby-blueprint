@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { clientLogger } from '@gabby/lib/logger/client';
 
 interface TranslateResult {
   translation: string;
@@ -44,7 +45,7 @@ export default function TranslatePlayground() {
       const data: TranslateResult = await response.json();
       setResult(data);
     } catch (err) {
-      console.error('AI Translate Error:', err);
+      clientLogger.error('aiPlayground:translate_failed', 'AI translate request failed', { err });
       showToast(t('toastError'), 'error');
     } finally {
       setIsLoading(false);

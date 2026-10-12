@@ -34,7 +34,7 @@ export async function getMyCoachProfileCore(): Promise<GetMyCoachProfileResult> 
       .maybeSingle();
 
     if (error) {
-      logger.error('coach_profile:get_my_profile_failed', error.message, { ...ctx, userId: user.id });
+      logger.error('coachProfile:get_my_profile_failed', error.message, { ...ctx, err: error, userId: user.id });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -44,7 +44,7 @@ export async function getMyCoachProfileCore(): Promise<GetMyCoachProfileResult> 
 
     return { success: true, profile: data };
   } catch (err) {
-    logger.error('coach_profile:get_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachProfile:get_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -66,7 +66,7 @@ export async function getCoachProfileByUserIdCore(userId: string): Promise<GetMy
       .maybeSingle();
 
     if (error) {
-      logger.error('coach_profile:get_profile_by_user_id_failed', error.message, { ...ctx, userId });
+      logger.error('coachProfile:get_profile_by_user_id_failed', error.message, { ...ctx, err: error, userId });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -76,7 +76,7 @@ export async function getCoachProfileByUserIdCore(userId: string): Promise<GetMy
 
     return { success: true, profile: data };
   } catch (err) {
-    logger.error('coach_profile:get_profile_by_user_id_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachProfile:get_profile_by_user_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -129,14 +129,14 @@ export async function updateMyCoachProfileCore(values: CoachProfileFormValues): 
       .single();
 
     if (updateError || !data) {
-      logger.error('coach_profile:update_my_profile_failed', updateError?.message ?? 'No row updated', { ...ctx, userId: user.id });
+      logger.error('coachProfile:update_my_profile_failed', updateError?.message ?? 'No row updated', { ...ctx, err: updateError, userId: user.id });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
-    logger.info('coach_profile:update_my_profile_success', 'Coach profile updated', { ...ctx, userId: user.id });
+    logger.info('coachProfile:update_my_profile_success', 'Coach profile updated', { ...ctx, userId: user.id });
     return { success: true, profile: data };
   } catch (err) {
-    logger.error('coach_profile:update_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachProfile:update_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -171,14 +171,14 @@ export async function updateMyCoachZoomSettingsCore(
       .single();
 
     if (updateError || !data) {
-      logger.error('coach_profile:update_my_zoom_settings_failed', updateError?.message ?? 'No row updated', { ...ctx, userId: user.id });
+      logger.error('coachProfile:update_my_zoom_settings_failed', updateError?.message ?? 'No row updated', { ...ctx, err: updateError, userId: user.id });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
-    logger.info('coach_profile:update_my_zoom_settings_success', 'Coach zoom meeting URL updated', { ...ctx, userId: user.id });
+    logger.info('coachProfile:update_my_zoom_settings_success', 'Coach zoom meeting URL updated', { ...ctx, userId: user.id });
     return { success: true, profile: data };
   } catch (err) {
-    logger.error('coach_profile:update_my_zoom_settings_unexpected', err instanceof Error ? err.message : 'Unknown error', ctx);
+    logger.error('coachProfile:update_my_zoom_settings_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
