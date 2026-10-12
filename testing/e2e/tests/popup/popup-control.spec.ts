@@ -16,7 +16,7 @@ import {
  *
  * - 規約同意（ゲート）が未解決の間は、お知らせを表示しない
  * - お知らせの自動表示はダッシュボードのみ
- * - 閉じたときは、実際に表示したお知らせだけを既読にする
+ * - 1件ずつ表示し、閉じたときは表示したお知らせだけを既読にする（残りは件数で一覧へ案内する）
  *
  * 専用ペルソナ（qa-student-07）の規約同意・お知らせを各テストで作り直すため、
  * studentApp.ts の test（お知らせを自動で閉じる）ではなく素の test を使う。
@@ -24,7 +24,7 @@ import {
 test.use({ storageState: storageStatePath("popupStudent") });
 
 const noticeDialog = (page: Page): Locator =>
-  page.getByRole("dialog").filter({ has: page.getByRole("button", { name: /次のお知らせ|確認しました/ }) });
+  page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "確認しました" }) });
 
 const termsDialog = (page: Page): Locator =>
   page.getByRole("dialog").filter({ has: page.getByRole("button", { name: /規約を最下部までスクロールして確認|同意して次へ進む/ }) });
@@ -72,12 +72,12 @@ test("お知らせはダッシュボード以外では自動表示しない", as
   await expect(noticeDialog(page)).toBeVisible();
 });
 
-test("途中で閉じると、表示したお知らせだけが既読になる", async ({ page }) => {
+test("1件ずつ表示し、閉じると表示したお知らせだけが既読になる", async ({ page }) => {
   const titles = await createPopupNotices(fixture, 2);
 
   await page.goto("/dashboard");
   const dialog = noticeDialog(page);
-  await expect(dialog.getByText("1 / 2")).toBeVisible();
+  await expect(dialog.getByRole("link", { name: /ほかに新しいお知らせが1件あります/ })).toBeVisible();
   const firstTitle = (await dialog.getByRole("heading").first().textContent())?.trim() ?? "";
   expect(titles).toContain(firstTitle);
 
@@ -89,18 +89,31 @@ test("途中で閉じると、表示したお知らせだけが既読になる",
   const remaining = titles.filter((t) => t !== firstTitle);
   await page.reload();
   await expect(dialog.getByRole("heading", { name: remaining[0] }).first()).toBeVisible();
-  await expect(dialog.getByText("1 / 2")).toHaveCount(0);
+  await expect(dialog.getByRole("link", { name: /ほかに新しいお知らせ/ })).toHaveCount(0);
 });
 
-test("最後まで確認するとすべて既読になり、再表示しない", async ({ page }) => {
+test("「ほかに新しいお知らせ」からお知らせ一覧へ移り、表示した1件だけが既読になる", async ({ page }) => {
   const titles = await createPopupNotices(fixture, 2);
 
   await page.goto("/dashboard");
   const dialog = noticeDialog(page);
-  await dialog.getByRole("button", { name: "次のお知らせ" }).click();
+  const firstTitle = (await dialog.getByRole("heading").first().textContent())?.trim() ?? "";
+  expect(titles).toContain(firstTitle);
+
+  await dialog.getByRole("link", { name: /ほかに新しいお知らせが1件あります/ }).click();
+  await page.waitForURL("**/notice");
+  await expect(dialog).toBeHidden();
+  await expect.poll(() => readNoticeTitles(fixture)).toEqual([firstTitle]);
+});
+
+test("確認したお知らせは再表示しない", async ({ page }) => {
+  const [title] = await createPopupNotices(fixture, 1);
+
+  await page.goto("/dashboard");
+  const dialog = noticeDialog(page);
   await dialog.getByRole("button", { name: "確認しました" }).click();
   await expect(dialog).toBeHidden();
-  await expect.poll(() => readNoticeTitles(fixture)).toEqual([...titles].sort());
+  await expect.poll(() => readNoticeTitles(fixture)).toEqual([title]);
 
   await page.reload();
   await page.waitForLoadState("networkidle");

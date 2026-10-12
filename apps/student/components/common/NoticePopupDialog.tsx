@@ -1,303 +1,208 @@
 'use client';
 
-import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import * as Dialog from '@radix-ui/react-dialog';
-import { X, Paperclip, Download, Loader2, Eye } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import type { ReactNode } from 'react';
+import Link from 'next/link';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { ChevronDown, ChevronRight, Info, Megaphone, Sparkles, Wrench, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Drawer, DrawerCloseButton, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import { NoticeMarkdown } from '@/components/common/NoticeMarkdown';
+import { NoticeAttachmentList } from '@/components/common/NoticeAttachmentList';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
-import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeItem, NoticeType } from '@gabby/types/notice';
-import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
-import { isPreviewableFile, forceDownloadFile } from '@gabby/lib/notice/download';
+import { useMediaQuery } from '@gabby/lib/hooks/useMediaQuery';
+import { useSmartClamp } from '@gabby/lib/hooks/useSmartClamp';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { formatZonedDateJapanese } from '@gabby/lib/date/date';
+import { toNoticePlainText } from '@gabby/lib/notice/plainText';
 import { clientLogger } from '@gabby/lib/logger/client';
+import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, type NoticeItem, type NoticeType } from '@gabby/types/notice';
+
+const NOTICE_TYPE_ICONS: Record<NoticeType, LucideIcon> = {
+  INFO: Info,
+  CAMPAIGN: Megaphone,
+  MAINTENANCE: Wrench,
+  UPDATE: Sparkles,
+};
+
+/** ボトムシートをやめて中央のダイアログにする画面幅（Tailwind の sm） */
+const DESKTOP_QUERY = '(min-width: 640px)';
 
 interface NoticePopupDialogProps {
-  /** ポップアップ対象のお知らせ一覧 (show_dialog=TRUE かつ未読) */
-  notices: NoticeItem[];
+  notice: NoticeItem;
+  /** ほかに未読のポップアップ対象が何件あるか。1件以上なら一覧への案内を出す */
+  moreCount?: number;
   onClose: () => void;
 }
 
-export function NoticePopupDialog({ notices, onClose }: NoticePopupDialogProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  // 実際に表示したお知らせ。閉じたときはこれだけを既読にする（未表示分は次回に再表示）
-  const [viewedIds, setViewedIds] = useState<ReadonlySet<string>>(
-    () => new Set(notices[0] ? [notices[0].notice_id] : [])
-  );
-  const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
-  const markBatchAsRead = useNoticeStore((s) => s.markBatchAsRead);
+/**
+ * お知らせのポップアップ（1件ずつ）。
+ * スマホはボトムシート、sm 以上は中央の小さなダイアログで出す。本文は先頭の数行だけを見せ、
+ * 「続きを読む」でその場に全文と添付ファイルを広げる。
+ * 表示したお知らせは閉じ方（確認・×・枠外・一覧へ移動）によらず既読にする。
+ */
+export function NoticePopupDialog({ notice, moreCount = 0, onClose }: NoticePopupDialogProps) {
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
+  const markAsRead = useNoticeStore((s) => s.markAsRead);
 
-  const current = notices[currentIndex];
-  const total = notices.length;
-
-  const handlePreview = async (attId: string, path: string) => {
-    const actionKey = `preview-${attId}`;
-    setLoadingActionId(actionKey);
-    try {
-      const { url } = await getNoticeAttachmentUrlAction(path);
-      if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }
-    } finally {
-      setLoadingActionId(null);
-    }
-  };
-
-  const handleDownload = async (attId: string, path: string, name: string) => {
-    const actionKey = `dl-${attId}`;
-    setLoadingActionId(actionKey);
-    try {
-      const { url } = await getNoticeAttachmentUrlAction(path);
-      if (url) {
-        await forceDownloadFile(url, name);
-      }
-    } catch (err) {
-      clientLogger.error('notice:download_attachment_failed', 'Attachment download failed', { err });
-    } finally {
-      setLoadingActionId(null);
-    }
-  };
-
-  const goTo = (index: number) => {
-    const target = notices[index];
-    if (!target) return;
-    setCurrentIndex(index);
-    setViewedIds(prev => new Set(prev).add(target.notice_id));
-  };
-
-  const handleClose = async () => {
-    await markBatchAsRead([...viewedIds]);
+  const close = () => {
     onClose();
-  };
-
-  const handleNext = () => {
-    if (currentIndex < total - 1) {
-      goTo(currentIndex + 1);
-    } else {
-      handleClose();
+    if (!notice.is_read) {
+      markAsRead(notice.notice_id).catch((err: unknown) => {
+        clientLogger.error('notice:mark_read_failed', 'Failed to mark notice as read', { err });
+      });
     }
   };
 
-  if (!current) return null;
+  const handleOpenChange = (open: boolean) => {
+    if (!open) close();
+  };
+
+  if (isDesktop) {
+    return (
+      <DialogPrimitive.Root open onOpenChange={handleOpenChange}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink/30 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Content
+            aria-describedby={undefined}
+            className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-4rem)] w-[calc(100vw-2rem)] max-w-120 -translate-x-1/2 -translate-y-1/2 flex-col rounded-panel bg-surface p-6 shadow-2xl outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+          >
+            <NoticePopupBody
+              notice={notice}
+              moreCount={moreCount}
+              onClose={close}
+              title={<DialogPrimitive.Title className={TITLE_CLASS}>{notice.title}</DialogPrimitive.Title>}
+              closeButton={
+                <DialogPrimitive.Close
+                  aria-label="閉じる"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-canvas text-ink-subtle transition-colors hover:bg-line/60 hover:text-ink-soft"
+                >
+                  <X size={18} />
+                </DialogPrimitive.Close>
+              }
+            />
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+    );
+  }
 
   return (
-    <Dialog.Root open onOpenChange={(open) => { if (!open) handleClose(); }}>
-      <Dialog.Portal>
-        {/* オーバーレイ */}
-        <Dialog.Overlay className="fixed inset-0 bg-ink/40 backdrop-blur-md z-[90] animate-in fade-in duration-300" />
-
-        {/* ダイアログ本体 */}
-        <Dialog.Content
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          className="fixed left-[50%] top-[50%] z-[91] w-[95vw] max-w-2xl translate-x-[-50%] translate-y-[-50%] outline-none"
-        >
-          <motion.div
-            key={currentIndex}
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="bg-surface rounded-panel shadow-2xl overflow-hidden border border-line flex flex-col max-h-[90vh]"
-          >
-            {/* ─── ヘッダーエリア ──────────────────────────────────── */}
-            <div className="p-6 sm:p-8 pb-5 sm:pb-6 bg-surface relative border-b border-line flex-shrink-0">
-              <Dialog.Title className="sr-only">{current.title}</Dialog.Title>
-              <Dialog.Description className="sr-only">お知らせの詳細内容</Dialog.Description>
-
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      className={cn(
-                        'text-[11px] font-bold px-3 py-1 rounded-full border',
-                        NOTICE_TYPES[current.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
-                      )}
-                    >
-                      {NOTICE_TYPES[current.notice_type as NoticeType]?.label ?? current.notice_type}
-                    </span>
-                    {current.is_important && (
-                      <span
-                        className={cn(
-                          'text-[11px] font-bold px-3 py-1 rounded-full border',
-                          NOTICE_IMPORTANT_BADGE.badgeClass
-                        )}
-                      >
-                        {NOTICE_IMPORTANT_BADGE.label}
-                      </span>
-                    )}
-                    {total > 1 && (
-                      <span className="text-[11px] font-bold text-ink-subtle tabular-nums">
-                        {currentIndex + 1} / {total}
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-ink leading-snug">
-                    {current.title}
-                  </h2>
-                </div>
-                <button
-                  onClick={handleClose}
-                  className="p-2 rounded-control bg-canvas text-ink-muted hover:bg-line/60 transition-all active:scale-95 flex-shrink-0"
-                  aria-label="閉じる"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-
-            {/* ─── 本文エリア (MD 形式) ────────────────────────────── */}
-            <div className="flex-1 min-h-0 bg-canvas border-b border-line flex flex-col overflow-y-auto overscroll-contain p-6 sm:p-8">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={current.notice_id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.15 }}
-                  className="space-y-6"
-                >
-                  <article className="prose prose-sm prose-a:text-brand sm:prose-base max-w-none break-words [word-break:break-word] text-ink-soft">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        h1: ({ node, ...props }) => (
-                          <h1 {...props} className="!text-xl sm:!text-2xl !font-bold !text-ink !mt-2 !mb-4" />
-                        ),
-                        h2: ({ node, ...props }) => (
-                          <h2 {...props} className="!text-lg sm:!text-xl !font-bold !text-ink !mt-6 !mb-3" />
-                        ),
-                        h3: ({ node, ...props }) => (
-                          <h3 {...props} className="!text-sm sm:!text-base !font-bold !text-ink !mt-6 !mb-2" />
-                        ),
-                        p: ({ node, ...props }) => (
-                          <p {...props} className="!whitespace-pre-wrap !leading-relaxed !text-ink-soft !my-3" />
-                        ),
-                        ul: ({ node, ...props }) => (
-                          <ul {...props} className="!list-disc !pl-5 !my-3 !space-y-1" />
-                        ),
-                        ol: ({ node, ...props }) => (
-                          <ol {...props} className="!list-decimal !pl-5 !my-3 !space-y-1" />
-                        ),
-                        li: ({ node, ...props }) => (
-                          <li {...props} className="!text-ink-soft" />
-                        ),
-                        a: ({ node, ...props }) => (
-                          <a {...props} className="!text-brand !font-semibold underline hover:!text-brand-800" target="_blank" rel="noopener noreferrer" />
-                        ),
-                        blockquote: ({ node, ...props }) => (
-                          <blockquote {...props} className="!border-l-4 !border-brand-200 !pl-4 !italic !text-ink-muted !my-4" />
-                        ),
-                        code: ({ node, className, children, ...props }) => {
-                          return (
-                            <code className={cn("!bg-line/60 !text-ink !px-1.5 !py-0.5 !rounded !text-xs !font-mono", className)} {...props}>
-                              {children}
-                            </code>
-                          );
-                        }
-                      }}
-                    >
-                      {current.content}
-                    </ReactMarkdown>
-                  </article>
-
-                  {/* 添付ファイル */}
-                  {current.attachments && current.attachments.length > 0 && (
-                    <div className="pt-6 border-t border-line space-y-2">
-                      <p className="text-[11px] font-bold text-ink-muted flex items-center gap-1.5">
-                        <Paperclip size={12} /> 添付ファイル
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {current.attachments.map(att => {
-                          const canPreview = isPreviewableFile(att.name, att.mime_type);
-                          const isPreviewLoading = loadingActionId === `preview-${att.id}`;
-                          const isDlLoading = loadingActionId === `dl-${att.id}`;
-
-                          return (
-                            <div
-                              key={att.id}
-                              className="flex items-center justify-between gap-2 p-3 bg-surface border border-line rounded-control shadow-sm hover:border-ink-subtle/40 transition-all"
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <Paperclip size={14} className="text-ink-subtle shrink-0" />
-                                <span className="text-xs font-bold text-ink-soft truncate">
-                                  {att.name}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-1 shrink-0">
-                                {canPreview && (
-                                  <button
-                                    type="button"
-                                    disabled={!!loadingActionId}
-                                    onClick={() => handlePreview(att.id, att.path)}
-                                    className="flex items-center gap-1 px-2 py-1 bg-canvas hover:bg-brand-50 border border-line text-ink-soft hover:text-brand rounded-lg text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer"
-                                    title="別タブで表示"
-                                  >
-                                    {isPreviewLoading ? (
-                                      <Loader2 size={11} className="animate-spin text-brand" />
-                                    ) : (
-                                      <Eye size={11} />
-                                    )}
-                                    表示
-                                  </button>
-                                )}
-
-                                <button
-                                  type="button"
-                                  disabled={!!loadingActionId}
-                                  onClick={() => handleDownload(att.id, att.path, att.name)}
-                                  className="flex items-center gap-1 px-2 py-1 bg-ink hover:bg-ink-soft text-white rounded-lg text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
-                                  title="保存"
-                                >
-                                  {isDlLoading ? (
-                                    <Loader2 size={11} className="animate-spin text-white" />
-                                  ) : (
-                                    <Download size={11} />
-                                  )}
-                                  保存
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* ─── フッターエリア ────────────────────────────────── */}
-            <div className="p-6 sm:p-8 bg-surface flex flex-col gap-4 flex-shrink-0">
-              <button
-                onClick={handleNext}
-                className="w-full h-14 bg-brand hover:bg-brand-strong text-white rounded-control font-bold text-sm shadow-lg shadow-brand/20 active:scale-[0.98] transition-all flex items-center justify-center"
-              >
-                {currentIndex < total - 1 ? '次のお知らせ →' : '確認しました'}
-              </button>
-
-              {/* ページインジケーター */}
-              {total > 1 && (
-                <div className="flex justify-center gap-2">
-                  {notices.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => goTo(i)}
-                      className={cn(
-                        'h-1.5 rounded-full transition-all duration-300',
-                        i === currentIndex ? 'bg-brand w-6' : 'bg-line w-1.5'
-                      )}
-                      aria-label={`お知らせ ${i + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <Drawer open onOpenChange={handleOpenChange} shouldScaleBackground={false}>
+      <DrawerContent
+        aria-describedby={undefined}
+        overlayClassName="bg-ink/30"
+        className="mx-auto max-h-[calc(100dvh-2.75rem)] max-w-2xl rounded-t-panel border-none bg-surface px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-1"
+      >
+        <NoticePopupBody
+          notice={notice}
+          moreCount={moreCount}
+          onClose={close}
+          title={<DrawerTitle className={TITLE_CLASS}>{notice.title}</DrawerTitle>}
+          closeButton={<DrawerCloseButton />}
+        />
+      </DrawerContent>
+    </Drawer>
   );
 }
 
+const TITLE_CLASS = 'text-lg font-bold leading-snug tracking-normal text-ink sm:text-xl';
+
+interface NoticePopupBodyProps {
+  notice: NoticeItem;
+  moreCount: number;
+  onClose: () => void;
+  /** 読み上げの見出しにもなる件名（シート・ダイアログそれぞれの Title 部品で包んで渡す） */
+  title: ReactNode;
+  closeButton: ReactNode;
+}
+
+function NoticePopupBody({ notice, moreCount, onClose, title, closeButton }: NoticePopupBodyProps) {
+  const timezone = useTimezone();
+  const { ref: summaryRef, isTruncated, isExpanded, setExpanded } = useSmartClamp<HTMLParagraphElement>();
+
+  const summary = toNoticePlainText(notice.content);
+  const hasAttachments = notice.attachments.length > 0;
+  // 要約で省略された・Markdown の見た目（見出し・箇条書き等）が落ちた・添付がある場合は全文を見られるようにする
+  const canExpand = isTruncated || hasAttachments || summary !== notice.content.trim();
+
+  const TypeIcon = NOTICE_TYPE_ICONS[notice.notice_type] ?? Info;
+  const typeLabel = NOTICE_TYPES[notice.notice_type]?.label ?? notice.notice_type;
+
+  return (
+    <>
+      {/* 種別・日付・件名 */}
+      <div className={cn('flex shrink-0 flex-col gap-3 pt-3 sm:pt-0', isExpanded && 'border-b border-line pb-3')}>
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand">
+            <TypeIcon size={20} aria-hidden />
+          </span>
+          <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-ink-muted">
+            <span>
+              {typeLabel}・{formatZonedDateJapanese(notice.published_at, timezone)}
+            </span>
+            {notice.is_important && (
+              <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">
+                {NOTICE_IMPORTANT_BADGE.label}
+              </span>
+            )}
+          </p>
+          {closeButton}
+        </div>
+        {title}
+      </div>
+
+      {/* 本文: 先頭の数行 → 「続きを読む」で全文と添付 */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-3">
+        {isExpanded ? (
+          <div className="space-y-5">
+            <NoticeMarkdown content={notice.content} />
+            <NoticeAttachmentList attachments={notice.attachments} />
+          </div>
+        ) : (
+          <>
+            <p ref={summaryRef} className="line-clamp-3 text-sm leading-relaxed text-ink-soft">
+              {summary}
+            </p>
+            {canExpand && (
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                className="mt-1 flex h-9 items-center gap-1 text-[13px] font-bold text-brand hover:text-brand-strong"
+              >
+                続きを読む
+                <ChevronDown size={16} aria-hidden />
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* 操作 */}
+      <div
+        className={cn(
+          'flex shrink-0 flex-col gap-1 pt-2 sm:flex-row-reverse sm:items-center sm:justify-between sm:gap-3',
+          isExpanded && 'border-t border-line pt-3'
+        )}
+      >
+        <Button
+          type="button"
+          onClick={onClose}
+          className="h-12 w-full rounded-control bg-brand text-[15px] font-bold text-white shadow-none hover:bg-brand-strong sm:h-11 sm:w-auto sm:px-6 sm:text-sm"
+        >
+          確認しました
+        </Button>
+        {moreCount > 0 && (
+          <Link
+            href="/notice"
+            onClick={onClose}
+            className="flex h-11 items-center justify-center gap-1 text-[13px] font-medium text-ink-muted transition-colors hover:text-ink-soft"
+          >
+            ほかに新しいお知らせが{moreCount}件あります
+            <ChevronRight size={16} aria-hidden />
+          </Link>
+        )}
+      </div>
+    </>
+  );
+}

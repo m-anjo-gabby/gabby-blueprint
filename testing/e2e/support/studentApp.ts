@@ -22,7 +22,7 @@ export const navTab = (page: Page, label: string | RegExp): Locator =>
 async function autoCloseNoticePopup(page: Page): Promise<void> {
   const popup = page
     .getByRole("dialog")
-    .filter({ has: page.getByRole("button", { name: /次のお知らせ|確認しました/ }) });
+    .filter({ has: page.getByRole("button", { name: "確認しました" }) });
   await page.addLocatorHandler(popup, async (dialog) => {
     await dialog.getByRole("button", { name: "閉じる" }).click();
   });

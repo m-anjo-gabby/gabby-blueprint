@@ -45,7 +45,7 @@ export function PopupHost({ hasPendingGate }: PopupHostProps) {
     return (
       <NoticePopupDialog
         key={selectedNotice.notice_id}
-        notices={[selectedNotice]}
+        notice={selectedNotice}
         onClose={() => setSelectedNoticeId(null)}
       />
     );
