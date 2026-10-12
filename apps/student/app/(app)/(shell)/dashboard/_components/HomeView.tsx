@@ -41,6 +41,8 @@ interface HomeViewProps {
   resume: ResumeContentResponse | null;
   /** 有効な契約（利用中・開始前） */
   plans: MyPlan[];
+  /** お知らせのカード（表示方法が「ホームのカード」の未読がある場合だけ。無ければ null） */
+  noticeCard: React.ReactNode;
   /** ライブセッションの区画（サーバー側で Suspense に包んで渡す。ライブセッション付きの契約が無い場合は null） */
   liveSection: React.ReactNode;
   /** グループセッションの区画（サーバー側で Suspense に包んで渡す。全プランで出す） */
@@ -69,6 +71,7 @@ export function HomeView({
   timezoneNames,
   resume: serverResume,
   plans,
+  noticeCard,
   liveSection,
   eventSection,
   renderId,
@@ -135,6 +138,8 @@ export function HomeView({
       ) : (
         <HomeHeaderSkeleton />
       )}
+
+      {noticeCard}
 
       <div className={HOME_LAYOUT.grid}>
         <div className={HOME_LAYOUT.focus}>

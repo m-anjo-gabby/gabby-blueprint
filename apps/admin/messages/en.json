@@ -942,7 +942,9 @@
       "deleteConfirm": "Delete",
       "toastDeleted": "Notice deleted",
       "toastDeleteFailed": "Failed to delete",
-      "toastDeleteError": "An error occurred while deleting"
+      "toastDeleteError": "An error occurred while deleting",
+      "homeBadge": "Home",
+      "ctaBadge": "Button"
     },
     "editor": {
       "loadFailedTitle": "Failed to load the notice data.",
@@ -973,8 +975,6 @@
       "publishedFlagHint": "ON publishes it; OFF saves it as a draft",
       "importantFlagLabel": "Important notice (is_important)",
       "importantFlagHint": "Highlights the \"Important\" badge in red",
-      "dialogFlagLabel": "Show as popup (show_dialog)",
-      "dialogFlagHint": "Automatically shows as a full-screen dialog when the user logs in",
       "attachmentsTitle": "Attachments",
       "addButton": "Add",
       "noAttachments": "There are no attachments",
@@ -991,7 +991,32 @@
       "toastUpdated": "Notice updated",
       "toastCreated": "Notice created",
       "toastSaveFailed": "Failed to save",
-      "toastSaveError": "An error occurred while saving"
+      "toastSaveError": "An error occurred while saving",
+      "displayModeTitle": "Display",
+      "displayModePopupLabel": "Popup",
+      "displayModePopupHint": "Shown one at a time when students or coaches open the home screen. For urgent or important announcements.",
+      "displayModeHomeLabel": "Home card",
+      "displayModeHomeHint": "Shown as a card at the top of the student's home screen until dismissed. For campaigns and new features.",
+      "displayModeListLabel": "List only",
+      "displayModeListHint": "Shown only in the notice list and the notification center.",
+      "displayModeCoachNote": "Notices for coaches can use \"Popup\" or \"List only\".",
+      "studentExtrasTitle": "Header image & action button (students only)",
+      "imageLabel": "Header image (optional)",
+      "imageHint": "PNG, JPEG or WebP, up to 2MB. Displayed in a 16:9 frame.",
+      "imageSelect": "Choose image",
+      "imageRemove": "Remove image",
+      "imageAlt": "Header image preview",
+      "ctaLabelLabel": "Button label (optional)",
+      "ctaLabelPlaceholder": "e.g. Learn more",
+      "ctaUrlLabel": "Link",
+      "ctaUrlPlaceholder": "/library or https://...",
+      "ctaUrlHint": "An in-app path starting with \"/\", or an external page starting with \"https://\" (opens in a new tab). Enter both the label and the link.",
+      "errorCtaIncomplete": "Enter both the button label and the link.",
+      "errorCtaUrl": "The link must be an in-app path starting with \"/\" or a URL starting with \"https://\".",
+      "errorCtaLabelTooLong": "The button label must be {max} characters or fewer.",
+      "errorImageType": "Choose a PNG, JPEG or WebP image.",
+      "errorImageTooLarge": "Choose an image of 2MB or less.",
+      "errorImageUploadFailed": "Failed to upload the header image."
     },
     "readsPage": {
       "backToList": "Back to notice list",
@@ -1014,7 +1039,10 @@
       "noUsers": "No target users found",
       "unnamed": "Unnamed",
       "noClient": "Unassigned",
-      "searchPlaceholder": "Search by name..."
+      "searchPlaceholder": "Search by name...",
+      "ctaClicked": "Clicked button",
+      "ctaRateOfRead": "{rate}% of read",
+      "ctaClickedAtHeader": "Button clicked at (JST)"
     }
   },
   "calendarEvents": {

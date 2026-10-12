@@ -942,7 +942,9 @@
       "deleteConfirm": "削除する",
       "toastDeleted": "お知らせを削除しました",
       "toastDeleteFailed": "削除に失敗しました",
-      "toastDeleteError": "削除中にエラーが発生しました"
+      "toastDeleteError": "削除中にエラーが発生しました",
+      "homeBadge": "ホーム",
+      "ctaBadge": "ボタン"
     },
     "editor": {
       "loadFailedTitle": "お知らせデータの読み込みに失敗しました。",
@@ -973,8 +975,6 @@
       "publishedFlagHint": "ONで公開状態、OFFで下書き保存となります",
       "importantFlagLabel": "重要お知らせ (is_important)",
       "importantFlagHint": "「重要」バッジを赤色で強調表示します",
-      "dialogFlagLabel": "ポップアップ表示 (show_dialog)",
-      "dialogFlagHint": "ユーザーログイン時にダイアログで全画面自動ポップアップします",
       "attachmentsTitle": "添付ファイル",
       "addButton": "追加",
       "noAttachments": "添付ファイルはありません",
@@ -991,7 +991,32 @@
       "toastUpdated": "お知らせを更新しました",
       "toastCreated": "お知らせを作成しました",
       "toastSaveFailed": "保存に失敗しました",
-      "toastSaveError": "保存中にエラーが発生しました"
+      "toastSaveError": "保存中にエラーが発生しました",
+      "displayModeTitle": "表示方法",
+      "displayModePopupLabel": "ポップアップ",
+      "displayModePopupHint": "生徒・コーチがホームを開いた時に1件ずつ表示します。緊急・重要な案内向けです",
+      "displayModeHomeLabel": "ホームのカード",
+      "displayModeHomeHint": "生徒のホームの上部にカードで表示します（閉じるまで表示）。キャンペーン・新機能の案内向けです",
+      "displayModeListLabel": "一覧のみ",
+      "displayModeListHint": "お知らせ一覧と通知センターにだけ表示します",
+      "displayModeCoachNote": "コーチ向けは「ポップアップ」か「一覧のみ」を選べます",
+      "studentExtrasTitle": "見出し画像・行動ボタン（生徒向けのみ）",
+      "imageLabel": "見出し画像（任意）",
+      "imageHint": "PNG・JPEG・WebP、2MBまで。横長（16:9）で表示します",
+      "imageSelect": "画像を選ぶ",
+      "imageRemove": "画像を外す",
+      "imageAlt": "見出し画像のプレビュー",
+      "ctaLabelLabel": "ボタンの文言（任意）",
+      "ctaLabelPlaceholder": "例: 詳しく見る",
+      "ctaUrlLabel": "リンク先",
+      "ctaUrlPlaceholder": "/library または https://...",
+      "ctaUrlHint": "「/」で始まるアプリ内の画面、または「https://」で始まる外部ページ（別タブで開きます）。文言とリンク先は両方入力してください",
+      "errorCtaIncomplete": "行動ボタンは文言とリンク先を両方入力してください",
+      "errorCtaUrl": "リンク先は「/」で始まるアプリ内の画面か「https://」で始まるURLを入力してください",
+      "errorCtaLabelTooLong": "ボタンの文言は{max}文字以内で入力してください",
+      "errorImageType": "画像はPNG・JPEG・WebPのいずれかを選んでください",
+      "errorImageTooLarge": "画像は2MB以下のファイルを選んでください",
+      "errorImageUploadFailed": "見出し画像のアップロードに失敗しました"
     },
     "readsPage": {
       "backToList": "お知らせ一覧に戻る",
@@ -1014,7 +1039,10 @@
       "noUsers": "対象ユーザーが見つかりません",
       "unnamed": "名称未設定",
       "noClient": "未所属",
-      "searchPlaceholder": "氏名で検索..."
+      "searchPlaceholder": "氏名で検索...",
+      "ctaClicked": "ボタンを押した",
+      "ctaRateOfRead": "既読の{rate}%",
+      "ctaClickedAtHeader": "ボタンを押した日時 (JST)"
     }
   },
   "calendarEvents": {

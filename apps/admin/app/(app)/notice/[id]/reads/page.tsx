@@ -14,7 +14,7 @@ export default async function NoticeReadStatusPage({
   searchParams: Promise<RawSearchParams>;
 }) {
   const [t, { id }, query] = await Promise.all([getTranslations('notice.readsPage'), params, searchParams]);
-  const [{ notice, rows, totalCount, readCount, unreadCount }, clients] = await Promise.all([
+  const [{ notice, rows, totalCount, readCount, unreadCount, ctaClickCount }, clients] = await Promise.all([
     getNoticeReadStatus(id, parseListParams(query, NOTICE_READ_LIST_FILTERS)),
     getClientsFilter(),
   ]);
@@ -38,6 +38,7 @@ export default async function NoticeReadStatusPage({
         pageCount={toPageCount(totalCount)}
         readCount={readCount}
         unreadCount={unreadCount}
+        ctaClickCount={notice.has_cta ? ctaClickCount : null}
         clients={clients}
       />
     </div>

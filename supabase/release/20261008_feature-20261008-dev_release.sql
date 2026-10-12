@@ -3870,3 +3870,59 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.enqueue_coach_availability_reminders() FROM PUBLIC, anon, authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】お知らせ: 表示方法の選択（ポップアップ／ホームのカード／一覧のみ）・見出し画像・行動ボタン
+-- 追加日: 2026-10-12
+--
+-- 【内容】
+--   1. com_m_notice に display_mode・image_path・cta_label・cta_url を追加し、show_dialog を display_mode に移して削除する
+--      （show_dialog = TRUE → 'POPUP' / FALSE → 'LIST'）
+--   2. コーチ向け（target_type = 'COACH'）はホームのカード・見出し画像・行動ボタンを使えない制約を追加
+--   3. com_t_notice_read に cta_clicked_at（行動ボタンを最初に押した日時）を追加
+-- 対応ファイル: DDL/table/com_m_notice.sql, DDL/table/com_t_notice_read.sql
+-- 【注意】show_dialog を削除するため、適用からアプリのデプロイまでの間は、旧アプリのポップアップが出ず、
+--   アドミンのお知らせの保存が失敗する。アプリのデプロイの直前に適用すること。
+-- =========================================================================
+
+BEGIN;
+
+ALTER TABLE public.com_m_notice
+    ADD COLUMN IF NOT EXISTS display_mode VARCHAR(10) NOT NULL DEFAULT 'LIST',
+    ADD COLUMN IF NOT EXISTS image_path TEXT,
+    ADD COLUMN IF NOT EXISTS cta_label TEXT,
+    ADD COLUMN IF NOT EXISTS cta_url TEXT;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'com_m_notice' AND column_name = 'show_dialog'
+    ) THEN
+        UPDATE public.com_m_notice SET display_mode = CASE WHEN show_dialog THEN 'POPUP' ELSE 'LIST' END;
+        ALTER TABLE public.com_m_notice DROP COLUMN show_dialog;
+    END IF;
+END $$;
+
+ALTER TABLE public.com_m_notice DROP CONSTRAINT IF EXISTS chk_notice_display_mode;
+ALTER TABLE public.com_m_notice ADD CONSTRAINT chk_notice_display_mode CHECK (display_mode IN ('POPUP', 'HOME', 'LIST'));
+ALTER TABLE public.com_m_notice DROP CONSTRAINT IF EXISTS chk_notice_coach_display;
+ALTER TABLE public.com_m_notice ADD CONSTRAINT chk_notice_coach_display CHECK (
+    target_type <> 'COACH' OR (display_mode <> 'HOME' AND image_path IS NULL AND cta_url IS NULL)
+);
+ALTER TABLE public.com_m_notice DROP CONSTRAINT IF EXISTS chk_notice_cta;
+ALTER TABLE public.com_m_notice ADD CONSTRAINT chk_notice_cta CHECK (
+    (cta_label IS NULL) = (cta_url IS NULL)
+    AND (cta_label IS NULL OR char_length(cta_label) BETWEEN 1 AND 30)
+    AND (cta_url IS NULL OR cta_url ~ '^(/([^/]|$)|https://)')
+);
+
+COMMENT ON COLUMN public.com_m_notice.display_mode IS '表示方法 (POPUP: ホームを開いた時にポップアップ / HOME: ホームのカード（生徒のみ） / LIST: お知らせ一覧のみ)';
+COMMENT ON COLUMN public.com_m_notice.image_path IS '見出し画像のStorageパス (notices バケット。生徒向けのみ)';
+COMMENT ON COLUMN public.com_m_notice.cta_label IS '行動ボタンの文言 (生徒向けのみ。30文字まで)';
+COMMENT ON COLUMN public.com_m_notice.cta_url IS '行動ボタンのリンク先 (アプリ内の /... または https://...)';
+
+ALTER TABLE public.com_t_notice_read ADD COLUMN IF NOT EXISTS cta_clicked_at TIMESTAMP WITH TIME ZONE;
+COMMENT ON COLUMN public.com_t_notice_read.cta_clicked_at IS '行動ボタンを最初に押した日時';
+
+COMMIT;

@@ -46,7 +46,7 @@ export function useAutoPopups(): AutoPopupCandidates {
 
   const popups: AutoPopup[] = [];
 
-  // お知らせ: show_dialog=TRUE かつ未読。先頭の1件（重要→新しい順）だけを出し、残りは件数で一覧へ案内する
+  // お知らせ: 表示方法がポップアップかつ未読。先頭の1件（重要→新しい順）だけを出し、残りは件数で一覧へ案内する
   const [firstNotice] = dialogNotices;
   if (firstNotice) {
     popups.push({

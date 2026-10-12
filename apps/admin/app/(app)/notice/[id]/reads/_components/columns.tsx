@@ -12,8 +12,8 @@ type TableT = ReturnType<typeof useTranslations<'notice.readsTable'>>;
 
 const BADGE_CLASS = 'inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border';
 
-export function createColumns(t: TableT): ColumnDef<NoticeReadStatusUser>[] {
-  return [
+export function createColumns(t: TableT, { hasCta }: { hasCta: boolean }): ColumnDef<NoticeReadStatusUser>[] {
+  const columns: ColumnDef<NoticeReadStatusUser>[] = [
     {
       accessorKey: 'user_name',
       header: t('userHeader'),
@@ -63,6 +63,19 @@ export function createColumns(t: TableT): ColumnDef<NoticeReadStatusUser>[] {
       cell: ({ row }) => (
         <span className="font-mono text-[11px] text-slate-600">
           {row.original.read_at ? formatToJstDateTime(row.original.read_at) : <span className="text-slate-400">-</span>}
+        </span>
+      ),
+    },
+  ];
+  if (!hasCta) return columns;
+  return [
+    ...columns,
+    {
+      accessorKey: 'cta_clicked_at',
+      header: t('ctaClickedAtHeader'),
+      cell: ({ row }) => (
+        <span className="font-mono text-[11px] text-slate-600">
+          {row.original.cta_clicked_at ? formatToJstDateTime(row.original.cta_clicked_at) : <span className="text-slate-400">-</span>}
         </span>
       ),
     },

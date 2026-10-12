@@ -20,7 +20,8 @@ import {
   Building2,
   FileText,
   X,
-  RotateCcw
+  RotateCcw,
+  ImagePlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,12 +29,22 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { TermViewer } from '@gabby/lib/components/term/TermViewer';
-import { NOTICE_TYPES, NoticeAttachment, NoticeType, NoticeTargetType } from '@gabby/types/notice';
+import {
+  NOTICE_CTA_LABEL_MAX,
+  NOTICE_DISPLAY_MODES,
+  NOTICE_TYPES,
+  NoticeAttachment,
+  NoticeType,
+  NoticeTargetType,
+  type NoticeDisplayMode,
+} from '@gabby/types/notice';
+import { getNoticeImageUrl, isValidNoticeCtaUrl } from '@gabby/lib/notice/links';
 import { ClientOption } from '@gabby/types/client';
 import { 
   createNotice, 
   updateNotice, 
   uploadNoticeFile, 
+  uploadNoticeImage,
   deleteNoticeFile, 
   utcToJstInputStr,
   NoticeFormData 
@@ -56,7 +67,10 @@ interface NoticeEditorProps {
     client_id?: string | null;
     notice_type?: NoticeType;
     is_important?: boolean;
-    show_dialog?: boolean;
+    display_mode?: NoticeDisplayMode;
+    image_path?: string | null;
+    cta_label?: string | null;
+    cta_url?: string | null;
     title?: string;
     content?: string;
     attachments?: NoticeAttachment[];
@@ -66,6 +80,20 @@ interface NoticeEditorProps {
   };
   mode: 'create' | 'edit';
 }
+
+/** 見出し画像として受け付ける形式と上限（サーバー側の uploadNoticeImage と同じ） */
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+
+/** 表示方法の選択肢の文言キー */
+const DISPLAY_MODE_KEYS = {
+  POPUP: { label: 'displayModePopupLabel', hint: 'displayModePopupHint' },
+  HOME: { label: 'displayModeHomeLabel', hint: 'displayModeHomeHint' },
+  LIST: { label: 'displayModeListLabel', hint: 'displayModeListHint' },
+} as const satisfies Record<NoticeDisplayMode, { label: string; hint: string }>;
+
+/** 見出し画像の編集状態（保存済みのパス / 新しく選んだファイル） */
+type ImageState = { kind: 'none' } | { kind: 'saved'; path: string } | { kind: 'new'; file: File; previewUrl: string };
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -87,7 +115,13 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
   const [targetType, setTargetType] = React.useState<NoticeTargetType>(initialData?.target_type || 'ALL');
   const [clientId, setClientId] = React.useState<string>(initialData?.client_id || '');
   const [isImportant, setIsImportant] = React.useState(initialData?.is_important || false);
-  const [showDialog, setShowDialog] = React.useState(initialData?.show_dialog || false);
+  const [displayMode, setDisplayMode] = React.useState<NoticeDisplayMode>(initialData?.display_mode ?? 'LIST');
+  const [image, setImage] = React.useState<ImageState>(() =>
+    initialData?.image_path ? { kind: 'saved', path: initialData.image_path } : { kind: 'none' }
+  );
+  const [ctaLabel, setCtaLabel] = React.useState(initialData?.cta_label ?? '');
+  const [ctaUrl, setCtaUrl] = React.useState(initialData?.cta_url ?? '');
+  const isCoachTarget = targetType === 'COACH';
   const [isPublished, setIsPublished] = React.useState(initialData?.is_published ?? true);
 
   // JST日付入力用文字列 (YYYY-MM-DD)
@@ -140,6 +174,36 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
     fetchClients();
   }, []);
 
+  // 選び直し・画面を離れる時に、前のプレビューURLを片付ける
+  React.useEffect(() => {
+    if (image.kind !== 'new') return;
+    return () => URL.revokeObjectURL(image.previewUrl);
+  }, [image]);
+
+  // コーチ向けは「ホームのカード」を使えない（コーチアプリが未対応）
+  const handleTargetChange = (next: NoticeTargetType) => {
+    setTargetType(next);
+    if (next === 'COACH' && displayMode === 'HOME') setDisplayMode('LIST');
+  };
+
+  // 見出し画像の選択 (保存時にアップロードする)
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!IMAGE_TYPES.includes(file.type)) {
+      showToast(t('errorImageType'), 'error');
+      return;
+    }
+    if (file.size > IMAGE_MAX_BYTES) {
+      showToast(t('errorImageTooLarge'), 'error');
+      return;
+    }
+    setImage({ kind: 'new', file, previewUrl: URL.createObjectURL(file) });
+  };
+
+  const imagePreviewUrl = image.kind === 'new' ? image.previewUrl : image.kind === 'saved' ? getNoticeImageUrl(image.path) : null;
+
   // 添付ファイルのローカル追加 (まだStorageへはアップロードしない)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -186,6 +250,22 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
       return;
     }
 
+    // 行動ボタン（生徒向けのみ）: 文言とリンク先は両方そろえる
+    const trimmedCtaLabel = isCoachTarget ? '' : ctaLabel.trim();
+    const trimmedCtaUrl = isCoachTarget ? '' : ctaUrl.trim();
+    if (Boolean(trimmedCtaLabel) !== Boolean(trimmedCtaUrl)) {
+      showToast(t('errorCtaIncomplete'), 'error');
+      return;
+    }
+    if (trimmedCtaLabel.length > NOTICE_CTA_LABEL_MAX) {
+      showToast(t('errorCtaLabelTooLong', { max: NOTICE_CTA_LABEL_MAX }), 'error');
+      return;
+    }
+    if (trimmedCtaUrl && !isValidNoticeCtaUrl(trimmedCtaUrl)) {
+      showToast(t('errorCtaUrl'), 'error');
+      return;
+    }
+
     try {
       setIsSaving(true);
 
@@ -213,19 +293,40 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
         }
       }
 
-      // 2. 削除マークされた既存ファイルの Storage からの削除
-      for (const path of deletedPaths) {
+      // 2. 見出し画像（生徒向けのみ）。新しく選んだ画像はアップロードし、外した・差し替えた保存済みの画像は削除する
+      let imagePath: string | null = null;
+      if (!isCoachTarget && image.kind === 'saved') {
+        imagePath = image.path;
+      } else if (!isCoachTarget && image.kind === 'new') {
+        const imageFormData = new FormData();
+        imageFormData.append('file', image.file);
+        const res = await uploadNoticeImage(noticeId, imageFormData);
+        if (!res.success || !res.path) {
+          showToast(res.message || t('errorImageUploadFailed'), 'error');
+          setIsSaving(false);
+          return;
+        }
+        imagePath = res.path;
+      }
+      const initialImagePath = initialData?.image_path ?? null;
+      const removedPaths = initialImagePath && initialImagePath !== imagePath ? [...deletedPaths, initialImagePath] : deletedPaths;
+
+      // 3. 削除マークされた既存ファイルの Storage からの削除
+      for (const path of removedPaths) {
         await deleteNoticeFile(path);
       }
 
-      // 3. DBへ送信
+      // 4. DBへ送信
       const formData: NoticeFormData = {
         notice_id: noticeId,
         target_type: targetType,
         client_id: targetType === 'CLIENT' ? clientId : null,
         notice_type: noticeType,
         is_important: isImportant,
-        show_dialog: showDialog,
+        display_mode: displayMode,
+        image_path: imagePath,
+        cta_label: trimmedCtaLabel || null,
+        cta_url: trimmedCtaUrl || null,
         title,
         content,
         published_at: publishedAtJst,
@@ -325,7 +426,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
               <Label className="text-xs font-black text-slate-700">{t('targetLabel')}</Label>
               <select
                 value={targetType}
-                onChange={(e) => setTargetType(e.target.value as NoticeTargetType)}
+                onChange={(e) => handleTargetChange(e.target.value as NoticeTargetType)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
               >
                 <option value="ALL">{t('targetAllOption')}</option>
@@ -433,20 +534,106 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                   onCheckedChange={setIsImportant}
                 />
               </div>
-
-              {/* ポップアップ表示フラグ */}
-              <div className="flex items-center justify-between border-t border-slate-200/60 pt-3">
-                <div>
-                  <Label className="text-xs font-black text-slate-800 cursor-pointer">{t('dialogFlagLabel')}</Label>
-                  <p className="text-[10px] text-slate-500">{t('dialogFlagHint')}</p>
-                </div>
-                <Switch
-                  checked={showDialog}
-                  onCheckedChange={setShowDialog}
-                />
-              </div>
             </div>
           </div>
+
+          {/* 表示方法 */}
+          <fieldset className="space-y-3 pt-2 border-t border-slate-100">
+            <legend className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('displayModeTitle')}</legend>
+            <div className="space-y-2">
+              {NOTICE_DISPLAY_MODES.map((mode) => {
+                const disabled = mode === 'HOME' && isCoachTarget;
+                return (
+                  <label
+                    key={mode}
+                    className={`flex items-start gap-3 rounded-xl border p-3 transition-colors ${
+                      displayMode === mode ? 'border-brand-300 bg-brand-50/50' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                    } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                  >
+                    <input
+                      type="radio"
+                      name="display_mode"
+                      value={mode}
+                      checked={displayMode === mode}
+                      disabled={disabled}
+                      onChange={() => setDisplayMode(mode)}
+                      className="mt-0.5 accent-brand"
+                    />
+                    <span className="space-y-0.5">
+                      <span className="block text-xs font-black text-slate-800">{t(DISPLAY_MODE_KEYS[mode].label)}</span>
+                      <span className="block text-[10px] text-slate-500">{t(DISPLAY_MODE_KEYS[mode].hint)}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {isCoachTarget && <p className="text-[10px] text-slate-500">{t('displayModeCoachNote')}</p>}
+          </fieldset>
+
+          {/* 見出し画像・行動ボタン（生徒向けのみ） */}
+          {!isCoachTarget && (
+            <div className="space-y-4 pt-2 border-t border-slate-100">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('studentExtrasTitle')}</h3>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-black text-slate-700">{t('imageLabel')}</Label>
+                {imagePreviewUrl ? (
+                  <div className="space-y-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- Storage の公開URL・選択中のファイルのプレビュー */}
+                    <img src={imagePreviewUrl} alt={t('imageAlt')} className="aspect-video w-full rounded-xl border border-slate-200 object-cover" />
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
+                        <ImagePlus size={13} /> {t('imageSelect')}
+                        <input type="file" accept={IMAGE_TYPES.join(',')} onChange={handleImageSelect} className="hidden" />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setImage({ kind: 'none' })}
+                        className="h-8 px-3 text-[11px] font-bold text-slate-500 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors flex items-center gap-1"
+                      >
+                        <Trash2 size={13} /> {t('imageRemove')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer flex aspect-video w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-slate-50/50 text-xs font-bold text-slate-500 transition-colors hover:bg-slate-50">
+                    <ImagePlus size={20} className="text-slate-400" />
+                    {t('imageSelect')}
+                    <input type="file" accept={IMAGE_TYPES.join(',')} onChange={handleImageSelect} className="hidden" />
+                  </label>
+                )}
+                <p className="text-[10px] text-slate-400">{t('imageHint')}</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="notice-cta-label" className="text-[11px] font-bold text-slate-600">{t('ctaLabelLabel')}</Label>
+                  <input
+                    id="notice-cta-label"
+                    type="text"
+                    value={ctaLabel}
+                    maxLength={NOTICE_CTA_LABEL_MAX}
+                    onChange={(e) => setCtaLabel(e.target.value)}
+                    placeholder={t('ctaLabelPlaceholder')}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="notice-cta-url" className="text-[11px] font-bold text-slate-600">{t('ctaUrlLabel')}</Label>
+                  <input
+                    id="notice-cta-url"
+                    type="text"
+                    inputMode="url"
+                    value={ctaUrl}
+                    onChange={(e) => setCtaUrl(e.target.value)}
+                    placeholder={t('ctaUrlPlaceholder')}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400">{t('ctaUrlHint')}</p>
+            </div>
+          )}
 
           {/* 添付ファイル管理 */}
           <div className="space-y-3 pt-2 border-t border-slate-100">

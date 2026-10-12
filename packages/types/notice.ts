@@ -37,6 +37,13 @@ export const NOTICE_IMPORTANT_BADGE = {
 } as const;
 
 
+// 表示方法（POPUP: ホームを開いた時にポップアップ / HOME: ホームのカード（生徒のみ） / LIST: お知らせ一覧のみ）
+export const NOTICE_DISPLAY_MODES = ['POPUP', 'HOME', 'LIST'] as const;
+export type NoticeDisplayMode = (typeof NOTICE_DISPLAY_MODES)[number];
+
+/** 行動ボタンの文言の最大文字数（DB の chk_notice_cta と合わせる） */
+export const NOTICE_CTA_LABEL_MAX = 30;
+
 // 配信対象タイプ (ALL: 生徒全体 / CLIENT: 顧客単位 / COACH: コーチ全体)
 export type NoticeTargetType = 'ALL' | 'CLIENT' | 'COACH';
 
@@ -61,10 +68,15 @@ export interface NoticeItem {
   client_id: string | null;
   notice_type: NoticeType;
   is_important: boolean;
-  show_dialog: boolean;
+  display_mode: NoticeDisplayMode;
   title: string;
   content: string;
   attachments: NoticeAttachment[];
+  /** 見出し画像のStorageパス（生徒向けのみ） */
+  image_path: string | null;
+  /** 行動ボタンの文言・リンク先（生徒向けのみ。両方そろっている場合だけ表示する） */
+  cta_label: string | null;
+  cta_url: string | null;
   published_at: string;    // UTC ISO文字列
   expired_at: string | null;
   is_published: boolean;

@@ -63,8 +63,14 @@ export function createColumns(
               {notice.is_important && (
                 <span className={cn(TAG_BADGE_CLASS, NOTICE_IMPORTANT_BADGE.badgeClass)}>{NOTICE_IMPORTANT_BADGE.label}</span>
               )}
-              {notice.show_dialog && (
+              {notice.display_mode === 'POPUP' && (
                 <span className={cn(TAG_BADGE_CLASS, 'bg-purple-50 text-purple-700 border-purple-200')}>{t('popupBadge')}</span>
+              )}
+              {notice.display_mode === 'HOME' && (
+                <span className={cn(TAG_BADGE_CLASS, 'bg-sky-50 text-sky-700 border-sky-200')}>{t('homeBadge')}</span>
+              )}
+              {notice.cta_url && (
+                <span className={cn(TAG_BADGE_CLASS, 'bg-slate-50 text-slate-600 border-slate-200')}>{t('ctaBadge')}</span>
               )}
               {notice.attachments?.length > 0 && (
                 <span className="flex items-center gap-0.5 text-[9px] font-black text-slate-400">

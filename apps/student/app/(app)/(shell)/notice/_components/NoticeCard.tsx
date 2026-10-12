@@ -7,6 +7,7 @@ import { ChevronDown, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NoticeMarkdown } from '@/components/common/NoticeMarkdown';
 import { NoticeAttachmentList } from '@/components/common/NoticeAttachmentList';
+import { NoticeCtaLink, NoticeImage } from '@/components/common/NoticeCta';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatZonedDateJapanese } from '@gabby/lib/date/date';
 import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
@@ -132,7 +133,9 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 border-t border-line/50 pt-4 space-y-4">
+              <NoticeImage imagePath={notice.image_path} />
               <NoticeMarkdown content={notice.content} />
+              <NoticeCtaLink notice={notice} className="h-11 w-full sm:w-auto" />
               <NoticeAttachmentList attachments={notice.attachments} />
             </div>
           </motion.div>

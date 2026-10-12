@@ -3,6 +3,7 @@ import {
   getNoticesAction,
   markNoticeAsReadAction,
   markNoticesAsReadBatchAction,
+  recordNoticeCtaClickAction,
 } from '@gabby/lib/notice/actions/noticeActions';
 import { NoticeItem } from '@gabby/types/notice';
 import { clientLogger } from '../logger/client';
@@ -16,7 +17,7 @@ interface NoticeState {
   unreadCount: number;
 
   // ダッシュボードのダイアログ表示制御
-  dialogNotices: NoticeItem[];   // show_dialog=TRUE かつ未読
+  dialogNotices: NoticeItem[];   // 表示方法がポップアップ（POPUP）かつ未読
   isDialogDismissed: boolean;    // セッション中に一度閉じたか
 
   // グローバルダイアログ用（ユーザーが個別にクリックして開く用）
@@ -29,7 +30,22 @@ interface NoticeState {
   applyNotices: (notices: NoticeItem[]) => void;
   markAsRead: (noticeId: string) => Promise<void>;
   markBatchAsRead: (noticeIds: string[]) => Promise<void>;
+  /** 行動ボタンを押したことを記録する（既読も兼ねる） */
+  recordCtaClick: (noticeId: string) => Promise<void>;
   dismissDialog: () => void;
+}
+
+/** 1件を既読にした状態（楽観的 UI 更新） */
+function markReadInState(state: NoticeState, noticeId: string): Partial<NoticeState> {
+  return {
+    notices: state.notices.map(n =>
+      n.notice_id === noticeId ? { ...n, is_read: true } : n
+    ),
+    unreadCount: Math.max(0, state.unreadCount - (
+      state.notices.find(n => n.notice_id === noticeId && !n.is_read) ? 1 : 0
+    )),
+    dialogNotices: state.dialogNotices.filter(n => n.notice_id !== noticeId),
+  };
 }
 
 export const useNoticeStore = create<NoticeState>((set, get) => ({
@@ -66,24 +82,21 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
     set({
       notices,
       unreadCount: notices.filter(n => !n.is_read).length,
-      // show_dialog=TRUE かつ未読のお知らせをダイアログ表示対象に
-      dialogNotices: notices.filter(n => n.show_dialog && !n.is_read),
+      // 表示方法がポップアップかつ未読のお知らせをダイアログ表示対象に
+      dialogNotices: notices.filter(n => n.display_mode === 'POPUP' && !n.is_read),
       lastFetched: Date.now(),
     });
   },
 
   markAsRead: async (noticeId: string) => {
     // 楽観的 UI 更新
-    set(state => ({
-      notices: state.notices.map(n =>
-        n.notice_id === noticeId ? { ...n, is_read: true } : n
-      ),
-      unreadCount: Math.max(0, state.unreadCount - (
-        state.notices.find(n => n.notice_id === noticeId && !n.is_read) ? 1 : 0
-      )),
-      dialogNotices: state.dialogNotices.filter(n => n.notice_id !== noticeId),
-    }));
+    set(state => markReadInState(state, noticeId));
     await markNoticeAsReadAction(noticeId);
+  },
+
+  recordCtaClick: async (noticeId: string) => {
+    set(state => markReadInState(state, noticeId));
+    await recordNoticeCtaClickAction(noticeId);
   },
 
   markBatchAsRead: async (noticeIds: string[]) => {

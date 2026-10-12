@@ -1,6 +1,6 @@
 import 'server-only';
 import { getChatRooms } from '../chat/actions/roomActions';
-import { getNoticesAction } from '../notice/actions/noticeActions';
+import { getNoticesCached } from '../notice/getNoticesCached';
 import { getNotificationsAction } from '../notification/actions/notificationActions';
 import type { CommonShellData, CommonShellDataOptions } from './shellDataTypes';
 
@@ -17,7 +17,7 @@ const valueOf = <T>(result: PromiseSettledResult<{ success: boolean; data: T } |
 export async function loadCommonShellData({ includeChat, includeNotices = true }: CommonShellDataOptions): Promise<CommonShellData> {
   const [rooms, notices, notifications] = await Promise.allSettled([
     includeChat ? getChatRooms() : Promise.resolve(null),
-    includeNotices ? getNoticesAction() : Promise.resolve(null),
+    includeNotices ? getNoticesCached() : Promise.resolve(null),
     getNotificationsAction(),
   ]);
   return { rooms: valueOf(rooms), notices: valueOf(notices), notifications: valueOf(notifications) };

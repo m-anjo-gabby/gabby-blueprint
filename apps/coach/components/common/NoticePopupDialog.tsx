@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import * as Dialog from '@radix-ui/react-dialog';
+import { focusDialogContent } from '@gabby/lib/components/common/dialogFocus';
 import { X, Paperclip, Download, Loader2, Eye } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -15,7 +16,7 @@ import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/not
 import { clientLogger } from '@gabby/lib/logger/client';
 
 interface NoticePopupDialogProps {
-  /** Notices to display (show_dialog=TRUE and unread) */
+  /** Notices to display (display mode POPUP and unread) */
   notices: NoticeItem[];
   onClose: () => void;
 }
@@ -77,7 +78,7 @@ export function NoticePopupDialog({ notices, onClose }: NoticePopupDialogProps) 
         <Dialog.Overlay className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[110] animate-in fade-in duration-300" />
 
         <Dialog.Content
-          onOpenAutoFocus={(e) => e.preventDefault()}
+          onOpenAutoFocus={focusDialogContent}
           className="fixed left-[50%] top-[50%] z-[111] w-[95vw] max-w-2xl translate-x-[-50%] translate-y-[-50%] outline-none"
         >
           <motion.div

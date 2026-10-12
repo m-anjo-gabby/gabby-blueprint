@@ -5,6 +5,7 @@ CREATE TABLE public.com_t_notice_read (
     notice_id UUID NOT NULL REFERENCES public.com_m_notice(notice_id) ON DELETE CASCADE,
     user_id UUID NOT NULL, -- auth.users(id) または アプリ内ユーザーID
     read_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    cta_clicked_at TIMESTAMP WITH TIME ZONE,  -- 行動ボタンを最初に押した日時（押していなければ NULL）
     insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
@@ -15,6 +16,7 @@ COMMENT ON TABLE public.com_t_notice_read IS 'お知らせ既読管理トラン�
 COMMENT ON COLUMN public.com_t_notice_read.notice_id IS 'お知らせID';
 COMMENT ON COLUMN public.com_t_notice_read.user_id IS 'ユーザーID';
 COMMENT ON COLUMN public.com_t_notice_read.read_at IS '既読日時';
+COMMENT ON COLUMN public.com_t_notice_read.cta_clicked_at IS '行動ボタンを最初に押した日時';
 COMMENT ON COLUMN public.com_t_notice_read.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_t_notice_read.update_date IS '更新日時';
 
@@ -32,3 +34,9 @@ CREATE POLICY "Users can manage their own notice read status" ON public.com_t_no
 FOR ALL TO authenticated
 USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
+
+---------------------------------------------
+-- 追加パッチ (2026-10-12): 行動ボタンを押した日時
+---------------------------------------------
+ALTER TABLE public.com_t_notice_read ADD COLUMN IF NOT EXISTS cta_clicked_at TIMESTAMP WITH TIME ZONE;
+COMMENT ON COLUMN public.com_t_notice_read.cta_clicked_at IS '行動ボタンを最初に押した日時';

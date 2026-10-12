@@ -7,7 +7,7 @@ import { NoticePopupDialog } from '@/components/common/NoticePopupDialog';
 /**
  * App-wide notice popup wrapper.
  * 1. Shown when the coach clicks a specific notice (selectedNotice)
- * 2. Auto-shown on dashboard access for unread show_dialog notices (dialogNotices)
+ * 2. Auto-shown on dashboard access for unread notices whose display mode is POPUP (dialogNotices)
  */
 export function GlobalNoticePopup() {
   const {
