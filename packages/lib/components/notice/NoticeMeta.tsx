@@ -1,10 +1,10 @@
 'use client';
 
 import { Info, Megaphone, Sparkles, Wrench, type LucideIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { formatZonedDateJapanese } from '@gabby/lib/date/date';
-import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, type NoticeItem, type NoticeType } from '@gabby/types/notice';
+import type { NoticeItem, NoticeType } from '@gabby/types/notice';
+import { useTimezone } from '../../hooks/useTimezone';
+import type { NoticeLabels } from '../../notice/labels';
+import { cn } from '../../utils';
 
 const NOTICE_TYPE_ICONS: Record<NoticeType, LucideIcon> = {
   INFO: Info,
@@ -15,6 +15,7 @@ const NOTICE_TYPE_ICONS: Record<NoticeType, LucideIcon> = {
 
 interface NoticeMetaProps {
   notice: Pick<NoticeItem, 'notice_type' | 'published_at' | 'is_important'>;
+  labels: NoticeLabels;
   size?: 'md' | 'sm';
   className?: string;
 }
@@ -23,10 +24,10 @@ interface NoticeMetaProps {
  * お知らせの種別アイコン・「種別・公開日」・重要の印（ポップアップとホームのカードで共通）。
  * 種別は色分けせず、アイコンとブランド色の下地で示す。
  */
-export function NoticeMeta({ notice, size = 'md', className }: NoticeMetaProps) {
+export function NoticeMeta({ notice, labels, size = 'md', className }: NoticeMetaProps) {
   const timezone = useTimezone();
   const TypeIcon = NOTICE_TYPE_ICONS[notice.notice_type] ?? Info;
-  const typeLabel = NOTICE_TYPES[notice.notice_type]?.label ?? notice.notice_type;
+  const typeLabel = labels.types[notice.notice_type] ?? notice.notice_type;
 
   return (
     <div className={cn('flex min-w-0 flex-1 items-center gap-3', className)}>
@@ -40,12 +41,12 @@ export function NoticeMeta({ notice, size = 'md', className }: NoticeMetaProps) 
       </span>
       <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-ink-muted">
         <span>
-          {typeLabel}・{formatZonedDateJapanese(notice.published_at, timezone)}
+          {typeLabel}
+          {labels.metaSeparator}
+          {labels.formatDate(notice.published_at, timezone)}
         </span>
         {notice.is_important && (
-          <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">
-            {NOTICE_IMPORTANT_BADGE.label}
-          </span>
+          <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">{labels.important}</span>
         )}
       </p>
     </div>

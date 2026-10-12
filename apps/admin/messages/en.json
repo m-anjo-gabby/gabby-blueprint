@@ -1016,7 +1016,17 @@
       "errorCtaLabelTooLong": "The button label must be {max} characters or fewer.",
       "errorImageType": "Choose a PNG, JPEG or WebP image.",
       "errorImageTooLarge": "Choose an image of 2MB or less.",
-      "errorImageUploadFailed": "Failed to upload the header image."
+      "errorImageUploadFailed": "Failed to upload the header image.",
+      "previewMobile": "Mobile",
+      "previewDesktop": "Desktop",
+      "previewDeviceLabel": "Device",
+      "previewCaptionPopup": "Popup shown when the home screen opens",
+      "previewCaptionHome": "Card at the top of the home screen (\"Read more\" opens the popup)",
+      "previewCaptionList": "As shown when opened in the notice list",
+      "previewStudentNote": "As shown in the student app",
+      "previewCoachNote": "As shown in the coach app (English)",
+      "previewNote": "Links, the action button and attachments do not work in the preview. The popup is shown as if there are other notices, and reappears when closed. The date is the publish start date.",
+      "previewNoTitle": "(No title)"
     },
     "readsPage": {
       "backToList": "Back to notice list",

@@ -1016,7 +1016,17 @@
       "errorCtaLabelTooLong": "ボタンの文言は{max}文字以内で入力してください",
       "errorImageType": "画像はPNG・JPEG・WebPのいずれかを選んでください",
       "errorImageTooLarge": "画像は2MB以下のファイルを選んでください",
-      "errorImageUploadFailed": "見出し画像のアップロードに失敗しました"
+      "errorImageUploadFailed": "見出し画像のアップロードに失敗しました",
+      "previewMobile": "スマホ",
+      "previewDesktop": "PC",
+      "previewDeviceLabel": "表示する端末",
+      "previewCaptionPopup": "ホームを開いた時のポップアップ",
+      "previewCaptionHome": "ホームの上部のカード（「詳しく見る」でポップアップを開く）",
+      "previewCaptionList": "お知らせ一覧で開いた時の表示",
+      "previewStudentNote": "生徒アプリの表示です",
+      "previewCoachNote": "コーチアプリの表示です（英語）",
+      "previewNote": "プレビューではリンク・行動ボタン・添付ファイルは動きません。ポップアップは「ほかのお知らせ」がある状態で表示し、閉じるともう一度表示します。日付は公開開始日です。",
+      "previewNoTitle": "（タイトル未入力）"
     },
     "readsPage": {
       "backToList": "お知らせ一覧に戻る",

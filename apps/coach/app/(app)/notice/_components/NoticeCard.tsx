@@ -2,25 +2,15 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Paperclip, Download, Eye, Loader2 } from 'lucide-react';
+import { ChevronDown, Paperclip } from 'lucide-react';
 
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
-import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
-import { isPreviewableFile, forceDownloadFile } from '@gabby/lib/notice/download';
+import { NoticeDetail } from '@gabby/lib/components/notice/NoticeDetail';
+import { NOTICE_LABELS_EN } from '@gabby/lib/notice/labels';
 import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
-import { clientLogger } from '@gabby/lib/logger/client';
-
-// ─── File size formatting ──────────────────────
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 interface NoticeCardProps {
   notice: NoticeItem;
@@ -33,7 +23,6 @@ interface NoticeCardProps {
 export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen = false, onRead }: NoticeCardProps) {
   const timezone = useTimezone();
   const [localIsOpen, setLocalIsOpen] = useState(defaultOpen);
-  const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
 
   const isControlled = propsIsOpen !== undefined;
   const isOpen = isControlled ? propsIsOpen : localIsOpen;
@@ -51,34 +40,6 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
       });
     }
   }, [notice.is_read, notice.notice_id, onToggle, onRead]);
-
-  const handlePreview = useCallback(async (attId: string, path: string) => {
-    const actionKey = `preview-${attId}`;
-    setLoadingActionId(actionKey);
-    try {
-      const { url } = await getNoticeAttachmentUrlAction(path);
-      if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }
-    } finally {
-      setLoadingActionId(null);
-    }
-  }, []);
-
-  const handleDownload = useCallback(async (attId: string, path: string, name: string) => {
-    const actionKey = `dl-${attId}`;
-    setLoadingActionId(actionKey);
-    try {
-      const { url } = await getNoticeAttachmentUrlAction(path);
-      if (url) {
-        await forceDownloadFile(url, name);
-      }
-    } catch (err) {
-      clientLogger.error('notice:download_attachment_failed', 'Attachment download failed', { err });
-    } finally {
-      setLoadingActionId(null);
-    }
-  }, []);
 
   return (
     <article
@@ -168,83 +129,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 border-t border-slate-100 pt-4 space-y-4">
-              {/* Markdown body */}
-              <div className="prose prose-sm prose-slate max-w-none text-slate-600 text-sm leading-relaxed">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {notice.content}
-                </ReactMarkdown>
-              </div>
-
-              {/* Attachments */}
-              {notice.attachments.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Paperclip size={10} /> Attachments
-                  </p>
-                  <div className="space-y-2">
-                    {notice.attachments.map(att => {
-                      const canPreview = isPreviewableFile(att.name, att.mime_type);
-                      const isPreviewLoading = loadingActionId === `preview-${att.id}`;
-                      const isDlLoading = loadingActionId === `dl-${att.id}`;
-
-                      return (
-                        <div
-                          key={att.id}
-                          className="w-full flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm shrink-0">
-                              <Paperclip size={13} className="text-slate-400" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-slate-700 truncate">
-                                {att.name}
-                              </p>
-                              <p className="text-[10px] text-slate-400 font-mono">
-                                {formatFileSize(att.size)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {canPreview && (
-                              <button
-                                type="button"
-                                disabled={!!loadingActionId}
-                                onClick={() => handlePreview(att.id, att.path)}
-                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-brand-50 border border-slate-200 hover:border-brand-200 text-slate-600 hover:text-brand rounded-lg text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
-                                title="Open in a new tab"
-                              >
-                                {isPreviewLoading ? (
-                                  <Loader2 size={12} className="animate-spin text-brand" />
-                                ) : (
-                                  <Eye size={12} />
-                                )}
-                                Preview
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              disabled={!!loadingActionId}
-                              onClick={() => handleDownload(att.id, att.path, att.name)}
-                              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-[11px] font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
-                              title="Download"
-                            >
-                              {isDlLoading ? (
-                                <Loader2 size={12} className="animate-spin text-white" />
-                              ) : (
-                                <Download size={12} />
-                              )}
-                              Save
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              <NoticeDetail notice={notice} labels={NOTICE_LABELS_EN} />
             </div>
           </motion.div>
         )}

@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Eye, Paperclip } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Download, Eye, Loader2, Paperclip } from 'lucide-react';
 import type { NoticeAttachment } from '@gabby/types/notice';
-import { getNoticeAttachmentUrlAction } from '@gabby/lib/notice/actions/noticeActions';
-import { isPreviewableFile, forceDownloadFile } from '@gabby/lib/notice/download';
-import { clientLogger } from '@gabby/lib/logger/client';
+import { getNoticeAttachmentUrlAction } from '../../notice/actions/noticeActions';
+import { isPreviewableFile, forceDownloadFile } from '../../notice/download';
+import type { NoticeLabels } from '../../notice/labels';
+import { clientLogger } from '../../logger/client';
+import { cn } from '../../utils';
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -17,8 +18,18 @@ function formatFileSize(bytes: number): string {
 /** 処理中の操作（ファイルごと・操作ごと） */
 type PendingAction = { attachmentId: string; kind: 'preview' | 'download' };
 
-/** お知らせの添付ファイル一覧（表示・保存）。ポップアップとお知らせ一覧で共通 */
-export function NoticeAttachmentList({ attachments }: { attachments: NoticeAttachment[] }) {
+const BUTTON_CLASS =
+  'inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-bold transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0';
+
+interface NoticeAttachmentListProps {
+  attachments: NoticeAttachment[];
+  labels: NoticeLabels['attachments'];
+  /** アドミンのプレビュー（未保存のファイルを含むため、表示・保存は押せない） */
+  preview?: boolean;
+}
+
+/** お知らせの添付ファイル一覧（表示・保存）。生徒・コーチ・アドミンのプレビューで共通 */
+export function NoticeAttachmentList({ attachments, labels, preview = false }: NoticeAttachmentListProps) {
   const [pending, setPending] = useState<PendingAction | null>(null);
 
   if (attachments.length === 0) return null;
@@ -51,7 +62,7 @@ export function NoticeAttachmentList({ attachments }: { attachments: NoticeAttac
   return (
     <div className="space-y-2">
       <p className="flex items-center gap-1.5 text-[11px] font-bold text-ink-muted">
-        <Paperclip size={12} aria-hidden /> 添付ファイル
+        <Paperclip size={12} aria-hidden /> {labels.title}
       </p>
       <ul className="space-y-2">
         {attachments.map((att) => (
@@ -65,32 +76,29 @@ export function NoticeAttachmentList({ attachments }: { attachments: NoticeAttac
               <p className="text-[11px] tabular-nums text-ink-muted">{formatFileSize(att.size)}</p>
             </div>
             {isPreviewableFile(att.name, att.mime_type) && (
-              <Button
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
-                className="h-9 rounded-xl border-line bg-surface text-xs font-bold text-ink-soft shadow-none hover:bg-brand-soft hover:text-brand"
-                icon={<Eye />}
-                pending={isPending(att, 'preview')}
-                disabled={pending !== null}
+                disabled={preview || pending !== null}
+                aria-busy={isPending(att, 'preview') || undefined}
                 onClick={() => handlePreview(att)}
-                title="別タブで表示"
+                title={labels.previewHint}
+                className={cn(BUTTON_CLASS, 'border border-line bg-surface text-ink-soft hover:bg-brand-soft hover:text-brand')}
               >
-                表示
-              </Button>
+                {isPending(att, 'preview') ? <Loader2 className="animate-spin" aria-hidden /> : <Eye aria-hidden />}
+                {labels.preview}
+              </button>
             )}
-            <Button
+            <button
               type="button"
-              size="sm"
-              className="h-9 rounded-xl bg-ink text-xs font-bold text-white shadow-none hover:bg-ink-soft"
-              icon={<Download />}
-              pending={isPending(att, 'download')}
-              disabled={pending !== null}
+              disabled={preview || pending !== null}
+              aria-busy={isPending(att, 'download') || undefined}
               onClick={() => handleDownload(att)}
-              title="端末に保存"
+              title={labels.saveHint}
+              className={cn(BUTTON_CLASS, 'bg-ink text-white hover:bg-ink-soft')}
             >
-              保存
-            </Button>
+              {isPending(att, 'download') ? <Loader2 className="animate-spin" aria-hidden /> : <Download aria-hidden />}
+              {labels.save}
+            </button>
           </li>
         ))}
       </ul>

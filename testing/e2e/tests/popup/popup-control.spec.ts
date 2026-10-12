@@ -144,6 +144,8 @@ test("「ホームのカード」のお知らせはポップアップにせず�
   await page.goto("/dashboard");
   const card = page.getByRole("region", { name: "お知らせ" });
   await expect(card.getByRole("heading", { name: title })).toBeVisible();
+  // サーバーで描いたカードはハイドレーション前の押下が効かない（WebKit で顕在化。KJ-2026-0928-02）
+  await expect(card).toHaveAttribute("data-ready", "true", { timeout: 30_000 });
   await page.waitForLoadState("networkidle");
   await expect(noticeDialog(page)).toHaveCount(0);
 
@@ -161,6 +163,7 @@ test("ホームのカードの「詳しく見る」で全文を開き、確認�
 
   await page.goto("/dashboard");
   const card = page.getByRole("region", { name: "お知らせ" });
+  await expect(card).toHaveAttribute("data-ready", "true", { timeout: 30_000 });
   await card.getByRole("button", { name: "詳しく見る" }).click();
   const dialog = noticeDialog(page);
   await expect(dialog.getByRole("heading", { name: title })).toBeVisible();

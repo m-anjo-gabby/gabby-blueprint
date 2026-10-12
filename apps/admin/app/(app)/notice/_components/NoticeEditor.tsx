@@ -28,7 +28,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { TermViewer } from '@gabby/lib/components/term/TermViewer';
+import { NoticePreview } from './NoticePreview';
 import {
   NOTICE_CTA_LABEL_MAX,
   NOTICE_DISPLAY_MODES,
@@ -733,10 +733,21 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                 placeholder={t('contentPlaceholder')}
               />
             ) : (
-              <TermViewer
-                content={content}
-                containerClassName="bg-slate-50/50 p-6 sm:p-8"
-                contentClassName="max-w-2xl mx-auto bg-white border rounded-2xl shadow-sm sm:px-10 py-8"
+              // 利用者のアプリと同じ部品で、表示方法ごとの見た目（ポップアップ／ホームのカード／一覧）を描く
+              <NoticePreview
+                draft={{
+                  targetType,
+                  noticeType,
+                  isImportant,
+                  displayMode,
+                  title,
+                  content,
+                  publishedAtJst,
+                  attachments,
+                  imageUrl: isCoachTarget ? null : imagePreviewUrl,
+                  ctaLabel,
+                  ctaUrl,
+                }}
               />
             )}
           </div>

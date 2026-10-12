@@ -2,7 +2,7 @@
 
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { cn } from '@/lib/utils';
+import { cn } from '../../utils';
 
 /** react-markdown が渡す構文木（node）を DOM に渡さないように外す */
 function domProps<P extends { node?: unknown }>(props: P): Omit<P, 'node'> {
