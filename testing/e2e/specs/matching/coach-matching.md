@@ -116,6 +116,6 @@ status 値の意味: [_GLOSSARY.md](../_GLOSSARY.md#com_t_matching_requeststatus
 | 中 | コーチの空き時間の保存・確認・削除 | 実装済み: `e2e/tests/coach/availability.spec.ts`（手順1・5。現地時刻で選んだ枠が UTC で保存され、保存・「No changes needed」で確認日時が更新される） |
 | 低 | コーチの空き時間の見直し通知 | 対象・14日の間隔・保存で既読（pg_cron の処理は RPC・データで確認し、保存・「No changes needed」はコーチの画面で確認） |
 | 高 | 一覧に出るコーチの出し分け（必須項目・本人の受付・アドミンの休止） | 実装済み: `e2e/tests/matching/coach-visibility.spec.ts`（受付OFF・休止・自己紹介の未設定で「専属コーチを探す」から外れ、ONに戻す・解除する・そろえると出る。受付OFFと休止はコーチ・アドミンの画面で操作し、未設定はDBで作る。外れる前に届いた申請をコーチが承認できる〔#2b〕） |
-| 中 | コーチのプロフィールの Student matching カード | 一部実装済み: `e2e/tests/matching/coach-visibility.spec.ts`（状態バッジ、受付スイッチの保存、未設定の項目の案内、休止中の注記〔メモは出さない〕）。未実装: 保存失敗時の巻き戻し、空き時間の案内の `/availability` へのリンク、保存・アイコンの変更での即時反映、必須項目のバッジ「n / 6 required fields」 |
+| 中 | コーチのプロフィールの Student matching カード | 実装済み: `e2e/tests/matching/coach-visibility.spec.ts`（状態バッジ、受付スイッチの保存、未設定の項目の案内、休止中の注記〔メモは出さない〕）。残りは `e2e/tests/coach/profile-matching-card.spec.ts` で実装済み（未設定の項目の案内と空き時間の `/availability` へのリンク、Public Coach Profile の必須項目のバッジ「n / 6 required fields」は入力中の値で数え、カードは保存した内容で更新される、アイコンの削除がすぐ反映される、受付スイッチの保存に失敗〔通信の失敗を含む〕すると元に戻ってエラーが出る〔KJ-2026-1013-02〕） |
 | 中 | アドミンのマッチング対象の設定 | 一部実装済み: `e2e/tests/matching/coach-visibility.spec.ts`（休止と理由のメモの保存・解除、表示中／非表示の表示〔ja〕）。未実装: 内訳（必須項目・本人の受付・デモコーチの注記）の表示、en の文言 |
 | 中 | コーチの専門 | 実装済み: `e2e/tests/matching/coach-specialty.spec.ts`（アドミンのユーザー詳細「専門」で分野は4つまで・得意分野〔発音プロ〕は上限に数えない、コーチのプロフィールに参照のみで出る、生徒の絞り込みは分野が「または」・得意分野が「かつ」。画面仕様: docs/screens/admin/users.md, docs/screens/coach/profile.md, docs/screens/student/coach-matching.md） |

@@ -20,6 +20,8 @@ const ITEM_LABELS: Record<CoachMatchingRequiredItem, string> = {
   availability: 'Weekly availability',
 };
 
+const SAVE_FAILED_MESSAGE = 'Could not save your setting. Please check your connection and try again.';
+
 /** Where each missing item is filled in */
 function ItemHint({ item }: { item: CoachMatchingRequiredItem }) {
   if (item === 'availability') {
@@ -52,8 +54,10 @@ export function MatchingStatusCard({ missingItems, initialAcceptingStudents, isS
   const handleChange = async (next: boolean) => {
     setAcceptingStudents(next);
     setIsSaving(true);
-    const result = await updateMyAcceptingStudents(next);
-    setIsSaving(false);
+    // A failed request (e.g. network error) throws instead of returning a result, so treat it as a failure too
+    const result = await updateMyAcceptingStudents(next)
+      .catch((): { success: false; message: string } => ({ success: false, message: SAVE_FAILED_MESSAGE }))
+      .finally(() => setIsSaving(false));
     if (!result.success) {
       setAcceptingStudents(!next);
       showToast(result.message, 'error');
