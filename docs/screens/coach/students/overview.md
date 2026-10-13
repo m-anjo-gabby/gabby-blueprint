@@ -42,13 +42,14 @@
 | Current Contractカード | 現在有効な契約がある場合、プラン名・期間を緑系で表示 | 操作なし |
 | 契約セッション内訳（Total/Scheduled/Completed/Unbooked） | 現在有効な契約がある場合のみ表示。値は**自分が担当している分のみ**の集計（他コーチ担当分は合算しない） | 操作なし。Unbookedが1件以上あると数字が橙色で強調される |
 | 「+ n session(s) handled by another coach」 | 週2回契約等で他コーチと分担しており、他コーチ担当セッションがある場合 | 操作なし（参考情報） |
-| Sprint Progressパネル（レーダーチャート） | 常時。Stage番号と、Speed/Structure/Builders/Masteryそれぞれの現在レベルを表示。アドミンがレベル管理をオフにした生徒は「All levels unlocked」を併記（自主トレで全レベルを選択可） | 「Manage Levels」ボタンでレベル管理ダイアログを開く |
+| Sprint Progressパネル（レーダーチャート） | 常時。Stage番号と、Speed/Structure/Builders/Masteryそれぞれの現在レベル（習得済みのレベル）を表示。Speed/Structureの0は「Basic」、Lv.1から始まるBuilders/Masteryの0は「Not yet」（幅を取らない短い表記。マウスを乗せると「Not reached yet (Lv.1 not acquired)」）。アドミンがレベル管理をオフにした生徒は「All levels unlocked」を併記（自主トレで全レベルを選択可） | 「Manage Levels」ボタンでレベル管理ダイアログを開く |
 | Next Live Sessionパネル | 実施可能な次回セッションがあれば日時＋「Open Session」ボタン、無ければ「Start Live Sprint」ボタン | 「Open Session」はセッションハブ（`/students/[id]/sessions/[sessionId]`）へ、「Start Live Sprint」はLive Sprint画面（単独実施）へ遷移 |
 
 ### レベル管理ダイアログ（Manage Levels）
 
 「By Question Type」と「Stage」の2タブで構成される。
 
+- 現在レベルの表記はパネルと同じで、Builders/Masteryの0は「Not reached」（共通の `formatAcquiredSprintLevelLabel`。アドミンのユーザー詳細では「未到達」）
 - **By Question Typeタブ**: 種別（Speed/Structure/Builders/Mastery）ごとに、現在レベルより上の
   レベルを選んで「Level Up」ボタンで即時反映する（最大レベルに達している種別は「Max level
   reached」と表示され操作不可）

@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatSprintLevelLabel } from '@gabby/lib';
+import { formatAcquiredSprintLevelLabel, isSprintLevelNotReached } from '@gabby/lib';
+import { SPRINT_LEVEL_NOT_REACHED, SPRINT_LEVEL_NOT_REACHED_HINT, SPRINT_LEVEL_NOT_REACHED_SHORT } from './sprintLevelLabels';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 import {
@@ -29,6 +30,8 @@ interface RadarDatum {
   type: string;
   axisLabel: string;
   levelLabel: string;
+  /** Lv.1から始まる種別で、まだ Lv.1 を習得していない */
+  notReached: boolean;
   maxLevel: number;
   percent: number;
 }
@@ -37,11 +40,11 @@ function buildRadarData(progress: StudentSprintProgress): RadarDatum[] {
   return TYPE_ORDER.map((type) => {
     const level = (progress[type.dbKey as keyof StudentSprintProgress] as number) ?? type.minLevel;
     const percent = ((level - type.minLevel) / (type.maxLevel - type.minLevel)) * 100;
-    const levelLabel = formatSprintLevelLabel(type.value, level);
     return {
       type: type.label,
       axisLabel: type.label.replace(/^UG\s+/, ''),
-      levelLabel,
+      levelLabel: formatAcquiredSprintLevelLabel(type.value, level, SPRINT_LEVEL_NOT_REACHED),
+      notReached: isSprintLevelNotReached(type.value, level),
       maxLevel: type.maxLevel,
       percent: Math.max(0, Math.min(100, percent)),
     };
@@ -92,7 +95,17 @@ export function SprintProgressRadar({ studentId, progress: initialProgress }: Pr
               {data.map((datum) => (
                 <div key={datum.type} className="flex items-baseline justify-between gap-3 text-xs">
                   <span className="font-semibold text-slate-500">{datum.type}</span>
-                  <span className="font-bold text-slate-800 tabular-nums">{datum.levelLabel}</span>
+                  {/* 未到達はレーダーの幅を狭めないよう短い表記にし、レベルの数字より控えめに表示する */}
+                  <span
+                    title={datum.notReached ? SPRINT_LEVEL_NOT_REACHED_HINT : undefined}
+                    className={
+                      datum.notReached
+                        ? 'whitespace-nowrap text-[11px] font-semibold text-slate-400'
+                        : 'font-bold text-slate-800 tabular-nums'
+                    }
+                  >
+                    {datum.notReached ? SPRINT_LEVEL_NOT_REACHED_SHORT : datum.levelLabel}
+                  </span>
                 </div>
               ))}
             </div>

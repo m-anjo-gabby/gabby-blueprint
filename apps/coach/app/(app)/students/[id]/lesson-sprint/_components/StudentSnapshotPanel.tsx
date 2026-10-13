@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
+import { formatAcquiredSprintLevelLabel, formatSprintLevelLabel, isSprintLevelNotReached, resolveCoachContentName } from '@gabby/lib';
+import { SPRINT_LEVEL_NOT_REACHED } from '../../_components/sprintLevelLabels';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
@@ -42,7 +43,8 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
           <div className="space-y-1">
             {TYPE_ORDER.map((type) => {
               const level = (sprint_progress[type.dbKey as keyof typeof sprint_progress] as number) ?? type.minLevel;
-              const levelLabel = formatSprintLevelLabel(type.value, level);
+              const levelLabel = formatAcquiredSprintLevelLabel(type.value, level, SPRINT_LEVEL_NOT_REACHED);
+              const notReached = isSprintLevelNotReached(type.value, level);
               const isCurrentSelection = type.value === highlightedType;
               return (
                 <div
@@ -55,7 +57,13 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
                   <span className={cn('font-semibold', isCurrentSelection ? 'text-brand-strong' : 'text-slate-500')}>
                     {type.label}
                   </span>
-                  <span className={cn('font-bold tabular-nums', isCurrentSelection ? 'text-brand-strong' : 'text-slate-700')}>
+                  <span
+                    className={cn(
+                      'whitespace-nowrap tabular-nums',
+                      notReached ? 'text-[11px] font-semibold' : 'font-bold',
+                      isCurrentSelection ? 'text-brand-strong' : notReached ? 'text-slate-400' : 'text-slate-700'
+                    )}
+                  >
                     {levelLabel}
                   </span>
                 </div>

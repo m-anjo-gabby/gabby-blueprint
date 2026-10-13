@@ -570,7 +570,7 @@ export async function purgeContractWithHistory(contractId: string) {
     logger.warn('contract:purge_contract_with_history_success', 'Contract purged including history', { ...ctx, payload: { contractId } });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:purge_contract_with_history_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId } });
@@ -729,7 +729,7 @@ export async function assignLicenseToUser(
     });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:assign_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId, userId } });
@@ -767,7 +767,7 @@ export async function invalidateUserLicense(licenseId: string) {
     });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:invalidate_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { licenseId } });
@@ -871,7 +871,7 @@ export async function updateUserLicense(
     });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:update_user_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { licenseId, updates } });
@@ -986,7 +986,7 @@ export async function bulkAssignLicenses(
       payload: { contractId, count: data?.length || 0 }
     });
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     revalidatePath('/contracts');
 
     return {

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import type { Download, Page } from "@playwright/test";
 import { test, expect, loginAsNewStudent, navTab } from "../../support/studentApp.ts";
-import { openAdminContext, openDialogBy } from "../../support/adminApp.ts";
+import { openAdminContext } from "../../support/adminApp.ts";
 import {
   DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
@@ -114,10 +114,16 @@ test("アドミンが担当者にモニターロールを付けると、担当�
     await test.step("1. アドミン: ユーザー管理で担当者にモニターロールを付ける", async () => {
       await adminPage.goto(`/users?q=${encodeURIComponent(manager.email)}`);
       const row = adminPage.getByRole("row").filter({ hasText: manager.email });
-      const dialog = await openDialogBy(adminPage, row.getByRole("button", { name: "編集" }));
-      await dialog.getByLabel(monitorRole.role_name, { exact: true }).check();
-      await dialog.getByRole("button", { name: "確認画面へ進む" }).click();
-      await dialog.getByRole("button", { name: "確定して保存" }).click();
+      // 「編集」はユーザー詳細（基本情報タブ）へ移る
+      await row.getByRole("link", { name: "編集" }).click();
+      await adminPage.waitForURL(`**/users/${manager.userId}`);
+      // 部品が動き出す前（ハイドレーション前）の押下は無視されるため、チェックが付くまで押す
+      const roleCheckbox = adminPage.getByLabel(monitorRole.role_name, { exact: true });
+      await expect(async () => {
+        if (!(await roleCheckbox.isChecked())) await roleCheckbox.click({ timeout: 2_000 });
+        await expect(roleCheckbox).toBeChecked({ timeout: 2_000 });
+      }).toPass({ timeout: 30_000 });
+      await adminPage.getByRole("button", { name: "保存" }).click();
       await expect(adminPage.getByText("ユーザー情報を更新しました")).toBeVisible();
 
       const { count } = await admin.from("com_t_user_role").select("user_id", { count: "exact", head: true }).eq("user_id", manager.userId).eq("role_id", "monitor");

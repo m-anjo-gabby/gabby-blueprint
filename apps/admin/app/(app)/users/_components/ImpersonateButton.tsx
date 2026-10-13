@@ -19,13 +19,15 @@ import { UserRecord, USER_TYPES } from '@gabby/types/user';
 
 interface Props {
   user: UserRecord;
+  /** 狭い画面ではアイコンだけにする（一覧の操作列用） */
+  compact?: boolean;
 }
 
 /**
  * 障害対応・問合せ調査のため、対象ユーザーとして生徒／コーチポータルへ代理ログインするボタン。
  * 理由の入力を必須とし、実行内容は監査ログ(com_t_admin_impersonation_log)に記録される。
  */
-export function ImpersonateButton({ user }: Props) {
+export function ImpersonateButton({ user, compact = false }: Props) {
   const t = useTranslations('users.impersonate');
   const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
@@ -68,8 +70,14 @@ export function ImpersonateButton({ user }: Props) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
-          <LogIn size={14} /> {t('button')}
+        <Button
+          variant="outline"
+          size="sm"
+          title={compact ? t('button') : undefined}
+          aria-label={compact ? t('button') : undefined}
+          className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 transition-all"
+        >
+          <LogIn size={14} /> <span className={compact ? 'hidden 2xl:inline' : undefined}>{t('button')}</span>
         </Button>
       </DialogTrigger>
 

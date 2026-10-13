@@ -222,24 +222,42 @@
       "licenseFuture": "[Not started]",
       "licenseExpired": "[Expired]",
       "notApplicable": "N/A",
-      "stageButton": "Stage",
-      "ratingsButton": "Ratings",
-      "specialtyButton": "Specialties",
-      "matchingButton": "Matching",
       "editButton": "Edit",
       "actions": "Actions",
       "searchPlaceholder": "Enter search term...",
       "noData": "No data found.",
-      "allUserTypes": "All types",
-      "legalButton": "Legal name"
+      "allUserTypes": "All types"
+    },
+    "detail": {
+      "backToList": "Back to users",
+      "notFound": "User not found.",
+      "tabs": {
+        "basic": "Basic info",
+        "sprint": "Sprint",
+        "specialty": "Specialties",
+        "matching": "Matching",
+        "ratings": "Ratings",
+        "legal": "Legal name"
+      },
+      "basic": {
+        "title": "Basic info",
+        "invitingNote": "This user has not completed registration yet, so the details cannot be edited. Resend the invitation email if needed.",
+        "majorChangeTitle": "Change the type or client?",
+        "majorChangeBody": "Changing the user type or client changes the available features, licenses and visible information. Please review before saving.",
+        "licenseTitle": "License",
+        "manageLicense": "Manage",
+        "licenseAfterRegistration": "A license can be assigned after registration is completed.",
+        "accountTitle": "Account",
+        "userId": "User ID",
+        "copyId": "Copy user ID",
+        "lastSignIn": "Last sign-in",
+        "neverSignedIn": "Never signed in"
+      }
     },
     "form": {
       "createButton": "Add user",
-      "editButton": "Edit",
       "confirmTitle": "Confirm details",
       "createTitle": "Create new user",
-      "editTitle": "Edit user details",
-      "idLabel": "User ID (UUID)",
       "idCopied": "ID copied",
       "creationModeLabel": "Creation method",
       "creationModeInvite": "Send invitation email",
@@ -358,7 +376,8 @@
       "levelManagedOn": "The student can select up to one level above their current level.",
       "levelManagedOff": "The student can select any level (for contracts without a coach).",
       "toastLevelManagedOn": "Turned level management on",
-      "toastLevelManagedOff": "Turned level management off"
+      "toastLevelManagedOff": "Turned level management off",
+      "notReached": "Not reached"
     },
     "bulkImport": {
       "button": "Bulk import",
@@ -464,8 +483,6 @@
       "errorTooLong": "Enter up to {max} characters"
     },
     "ratingsPage": {
-      "backToList": "Back to users",
-      "title": "Ratings for {name}",
       "subtitle": "Ratings and comments from students. Comments are not shown to the coach.",
       "notFound": "Coach not found.",
       "overall": "Overall",

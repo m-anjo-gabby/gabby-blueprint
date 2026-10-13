@@ -3,7 +3,7 @@ import { getUsers } from '@/actions/adminUserAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { PageHeader } from '@/components/common/PageHeader';
 import { parseListParams, toPageCount, type RawSearchParams } from '@/lib/list';
-import { UserFormDialog } from './_components/UserFormDialog';
+import { UserCreateDialog } from './_components/UserCreateDialog';
 import { UserBulkImportDialog } from './_components/UserBulkImportDialog';
 import { UserDataTable } from './_components/UserDataTable';
 import { USER_LIST_FILTERS } from './_lib/list';
@@ -23,7 +23,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
         actions={
           <>
             <UserBulkImportDialog />
-            <UserFormDialog mode="create" />
+            <UserCreateDialog />
           </>
         }
       />

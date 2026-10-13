@@ -12,6 +12,7 @@ import {
 } from "@gabby/types/user";
 import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
@@ -99,6 +100,34 @@ export async function getUsers(params: ListParams<'clientId' | 'userType'>): Pro
     logger.error('user:get_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId, userType } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
+}
+
+/**
+ * ユーザー1件の取得（詳細画面用。一覧と同じ項目）。見つからない場合は null
+ */
+export async function getUserById(id: string): Promise<UserRecord | null> {
+  const ctx = await getLogContext();
+  if (!z.uuid().safeParse(id).success) return null;
+
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .schema('private')
+    .from('vw_user_list')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    logger.error('user:get_user_failed', error.message, { ...ctx, err: error, payload: { id } });
+    throw error;
+  }
+  if (!data) return null;
+
+  return {
+    ...data,
+    license_start_date: data.license_start_date ? formatToJstDate(data.license_start_date) : null,
+    license_end_date: data.license_end_date ? formatToJstDate(data.license_end_date) : null,
+  } as UserRecord;
 }
 
 /**
@@ -205,7 +234,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       payload: { userId, email, clientId: client_id } 
     });
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true, user_id: userId, errorType: null, message: mailResult.success ? null : (mailResult.error || "招待メールの送信に失敗しました") };
 
   } catch (err) {
@@ -326,7 +355,7 @@ export async function createUserDirect(
       });
     }
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true, user_id: userId, errorType: null, message: null };
 
   } catch (err) {
@@ -412,7 +441,7 @@ export async function resendInvite(email: string, userType?: string) {
       payload: { email } 
     });
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('user:resend_invite_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { email } });
@@ -492,7 +521,7 @@ export async function updateUser(
       payload: { userId: id, email, roles }
     });
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
 
   } catch (err) {
@@ -544,7 +573,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
     payload: { total: users.length, successCount, errorCount } 
   });
 
-  revalidatePath('/users');
+  revalidatePath('/users', 'layout');
   return { success: true, total: users.length, successCount, errorCount, details: results };
 }
 

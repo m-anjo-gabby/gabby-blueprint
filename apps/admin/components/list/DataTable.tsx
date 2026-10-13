@@ -1,8 +1,16 @@
 'use client';
 
-import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table';
+import { flexRender, getCoreRowModel, useReactTable, type ColumnDef, type RowData } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
+declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    /** 見出しと各行のセルに付けるクラス（狭い画面で列を隠す `hidden xl:table-cell` 等） */
+    className?: string;
+  }
+}
 
 interface DataTableProps<T> {
   columns: ColumnDef<T>[];
@@ -38,7 +46,10 @@ export function DataTable<T>({ columns, data, emptyMessage, pending = false, get
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="border-slate-200 hover:bg-transparent">
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-600">
+                <TableHead
+                  key={header.id}
+                  className={cn('whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-600', header.column.columnDef.meta?.className)}
+                >
                   {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
@@ -50,7 +61,7 @@ export function DataTable<T>({ columns, data, emptyMessage, pending = false, get
             table.getRowModel().rows.map((row) => (
               <TableRow key={row.id} className="border-slate-100 transition-colors hover:bg-slate-50/40">
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="px-4 py-3 text-slate-700">
+                  <TableCell key={cell.id} className={cn('px-4 py-3 text-slate-700', cell.column.columnDef.meta?.className)}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
