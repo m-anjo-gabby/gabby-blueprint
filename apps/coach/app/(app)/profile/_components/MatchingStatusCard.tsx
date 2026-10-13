@@ -8,6 +8,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { CoachMatchingRequiredItem } from '@gabby/types/coachProfile';
 import { isCoachMatchable } from '@gabby/lib/coachProfile/matchingReadiness';
 import { updateMyAcceptingStudents } from '@/actions/coachProfileAction';
+import { SAVE_NETWORK_ERROR_MESSAGE } from '@/constants/network';
 
 const ITEM_LABELS: Record<CoachMatchingRequiredItem, string> = {
   icon: 'Profile photo',
@@ -19,8 +20,6 @@ const ITEM_LABELS: Record<CoachMatchingRequiredItem, string> = {
   introduction: 'Personal introduction',
   availability: 'Weekly availability',
 };
-
-const SAVE_FAILED_MESSAGE = 'Could not save your setting. Please check your connection and try again.';
 
 /** Where each missing item is filled in */
 function ItemHint({ item }: { item: CoachMatchingRequiredItem }) {
@@ -56,7 +55,7 @@ export function MatchingStatusCard({ missingItems, initialAcceptingStudents, isS
     setIsSaving(true);
     // A failed request (e.g. network error) throws instead of returning a result, so treat it as a failure too
     const result = await updateMyAcceptingStudents(next)
-      .catch((): { success: false; message: string } => ({ success: false, message: SAVE_FAILED_MESSAGE }))
+      .catch((): { success: false; message: string } => ({ success: false, message: SAVE_NETWORK_ERROR_MESSAGE }))
       .finally(() => setIsSaving(false));
     if (!result.success) {
       setAcceptingStudents(!next);

@@ -24,6 +24,7 @@ import { linkifyText } from '@gabby/lib/chat/linkifyText';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
 import { updateHomeworkChecklistItemStatus } from '@/actions/sessionHomeworkAction';
+import { SAVE_NETWORK_ERROR_MESSAGE } from '@/constants/network';
 import { Progress } from '@/components/ui/progress';
 import { SectionHeading, SessionResultPageHeader } from './SessionResultParts';
 import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
@@ -56,7 +57,10 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
     // 楽観的更新。失敗時は元の状態に戻す。
     setChecklist((prev) => prev.map((item) => (item.checklist_item_id === checklistItemId ? { ...item, is_done: isDone } : item)));
 
-    const res = await updateHomeworkChecklistItemStatus(checklistItemId, isDone);
+    // 通信の失敗等は戻り値ではなく例外になるため、失敗の結果に変えて同じく元に戻す
+    const res = await updateHomeworkChecklistItemStatus(checklistItemId, isDone).catch(
+      (): { success: false; message: string } => ({ success: false, message: SAVE_NETWORK_ERROR_MESSAGE })
+    );
     if (!res.success) {
       showToast(res.message, 'error');
       setChecklist((prev) => prev.map((item) => (item.checklist_item_id === checklistItemId ? { ...item, is_done: !isDone } : item)));

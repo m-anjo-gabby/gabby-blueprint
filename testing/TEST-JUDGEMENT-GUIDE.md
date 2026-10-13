@@ -1120,4 +1120,5 @@
 - **事象**: 保存の通信を失敗させると、スイッチは OFF の表示のまま押せなくなり、エラーも出なかった（DB は ON のまま）。
 - **原因**: 部品は「失敗したら元に戻す」を `{ success: false }` の戻り値でだけ処理していた。サーバーアクションの通信そのものが失敗した場合は戻り値ではなく例外になるため、元に戻す処理と処理中の解除が実行されなかった。
 - **対処**: 呼び出しに `.catch()`（失敗の結果に変える）と `.finally()`（処理中の解除）を付けた。お気に入りの☆（`FAVORITE_TOGGLE_NETWORK_ERROR`）と同じ形。
+  同じ形の部品を洗い出して直した（2026-10-13）: コーチ・生徒のメール通知のスイッチ（`MailSettingsCard` / `MailSettingsSection`）、生徒の宿題のチェックリスト（`StudentSessionResult`）、アドミンのマッチング対象の保存（`CoachMatchingPanel`。表示は先に切り替えないが、例外のままだと画面全体のエラー表示になる）。文言は各アプリの `constants/network.ts` の `SAVE_NETWORK_ERROR_MESSAGE`（アドミンは `common.networkError`）。E2E は受付スイッチ（`tests/coach/profile-matching-card.spec.ts`）とチェックリスト（`tests/homework/homework-checklist.spec.ts`）で確かめている。
 - **判断基準への反映**: 楽観的に表示を切り替えてからサーバーアクションを呼ぶ部品は、戻り値の失敗と例外の両方で元に戻ることを確かめる。E2E では `page.route` で `next-action` ヘッダー付きの POST を `abort` すると通信の失敗を再現できる。

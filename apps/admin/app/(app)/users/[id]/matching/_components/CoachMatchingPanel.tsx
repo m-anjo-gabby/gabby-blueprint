@@ -33,7 +33,12 @@ export function CoachMatchingPanel({ coachId, status }: Props) {
 
   const handleSave = () => {
     startSave(async () => {
-      const result = await setCoachMatchingSuspension(coachId, suspended, suspended ? note.trim() || null : null);
+      // 通信の失敗等は戻り値ではなく例外になる（そのままでは画面全体のエラー表示になる）ため、失敗として扱う
+      const result = await setCoachMatchingSuspension(coachId, suspended, suspended ? note.trim() || null : null).catch(() => null);
+      if (!result) {
+        showToast(tCommon('networkError'), 'error');
+        return;
+      }
       if (!result.success) {
         showToast(t('errorSave'), 'error');
         return;

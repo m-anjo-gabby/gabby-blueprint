@@ -204,3 +204,31 @@ test("結果画面で投稿した宿題が次回のセッションのハブの L
     await context.close();
   }
 });
+
+test("チェックリストの保存の通信に失敗すると、チェックを元に戻してエラーを出す", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "使い捨てデータを作るため desktop だけで実行する");
+  const f = await createAuthFixture("hwfail");
+  fixture = f;
+  const p = await createPendingMatchingRequest(f, PASSWORD);
+  pair = p;
+  const scheduleId = await approveMatchingRequest(f, p);
+  const homework = await createCompletedSessionWithHomework(f, p, scheduleId, { daysAgo: 1, checklist: CHECKLIST });
+
+  await loginAsNewStudent(page, p.studentEmail, PASSWORD);
+  await page.goto(`/live-room/sessions/${homework.sessionId}/result`);
+  const main = page.getByRole("main");
+  const item = main.getByRole("button", { name: CHECKLIST[0] });
+  await expect(item).toHaveAttribute("aria-pressed", "false");
+  await page.waitForLoadState("networkidle");
+
+  // 保存（サーバーアクション）の通信を失敗させる（KJ-2026-1013-02）
+  await page.route("**/live-room/sessions/**", async (route) => {
+    if (route.request().method() === "POST" && route.request().headers()["next-action"]) await route.abort("failed");
+    else await route.continue();
+  });
+  await item.click();
+
+  await expect(page.getByText("保存できませんでした。通信環境を確認してから、もう一度お試しください")).toBeVisible();
+  await expect(item).toHaveAttribute("aria-pressed", "false");
+  await expect(main.getByText("0/2 完了")).toBeVisible();
+});
