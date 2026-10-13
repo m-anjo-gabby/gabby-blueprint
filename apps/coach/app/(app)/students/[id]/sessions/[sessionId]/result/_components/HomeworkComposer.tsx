@@ -206,7 +206,7 @@ function HomeworkCreateForm({
 
       <div className="flex items-center justify-between gap-2">
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-        <Button pending={isUploading} icon={<Paperclip size={16} />} type="button" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()} />
+        <Button pending={isUploading} icon={<Paperclip size={16} />} type="button" aria-label="Attach files" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()} />
 
         <Button pending={isPosting} icon={<Send size={16} />} type="button" disabled={!text.trim() || busy} onClick={handlePost} className="gap-1.5">
           Post Homework
@@ -389,7 +389,7 @@ function PostedHomework({
 
         <div className="flex items-center gap-2">
           <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-          <Button pending={isUploading} icon={<Paperclip size={16} />} type="button" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()} />
+          <Button pending={isUploading} icon={<Paperclip size={16} />} type="button" aria-label="Attach files" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()} />
 
           <Textarea
             value={commentText}
@@ -399,7 +399,7 @@ function PostedHomework({
             disabled={busy}
           />
 
-          <Button pending={isSendingComment} icon={<Send size={16} />} type="button" size="icon" disabled={(!commentText.trim() && pendingAttachments.length === 0) || busy} onClick={handleSendComment} />
+          <Button pending={isSendingComment} icon={<Send size={16} />} type="button" aria-label="Send comment" size="icon" disabled={(!commentText.trim() && pendingAttachments.length === 0) || busy} onClick={handleSendComment} />
         </div>
       </div>
 
