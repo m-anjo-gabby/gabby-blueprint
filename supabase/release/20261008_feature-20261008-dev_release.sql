@@ -3926,3 +3926,196 @@ ALTER TABLE public.com_t_notice_read ADD COLUMN IF NOT EXISTS cta_clicked_at TIM
 COMMENT ON COLUMN public.com_t_notice_read.cta_clicked_at IS '行動ボタンを最初に押した日時';
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】正式な氏名（書面に載せる氏名）の管理
+-- 追加日: 2026-10-13
+--
+-- 【内容】
+--   1. com_m_user_legal を新規作成（生徒・コーチ共通。姓・名とローマ字表記。参照・登録はアドミン、本人は参照のみ）
+--   2. get_training_report_data: 生徒の氏名を正式な氏名（「姓 名」）にし、未登録の場合は画面の名前（user_name）にする
+--      （シグネチャ・返す項目の変更は無い）
+-- 対応ファイル: DDL/table/com_m_user_legal.sql, DDL/function/get_training_report_data.sql
+-- 【注意】コーチの支払通知書・請求書のアプリ側が com_m_user_legal を読むため、アプリのデプロイより先に適用すること。
+--   既存のユーザーの行は作らない（未登録の間は書面に画面の名前が載る。現行システムのコーチのフルネームは移行時に登録する）。
+-- =========================================================================
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS public.com_m_user_legal (
+    user_id uuid PRIMARY KEY REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    last_name text,
+    first_name text NOT NULL,
+    last_name_latin text,
+    first_name_latin text,
+    updated_by uuid REFERENCES public.com_m_user(id) ON DELETE SET NULL,
+    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    update_date timestamp with time zone NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_user_legal_first_name CHECK (char_length(btrim(first_name)) BETWEEN 1 AND 100),
+    CONSTRAINT chk_user_legal_last_name CHECK (last_name IS NULL OR char_length(btrim(last_name)) BETWEEN 1 AND 100),
+    CONSTRAINT chk_user_legal_latin CHECK (
+        (first_name_latin IS NULL OR char_length(btrim(first_name_latin)) BETWEEN 1 AND 100)
+        AND (last_name_latin IS NULL OR char_length(btrim(last_name_latin)) BETWEEN 1 AND 100)
+        AND (last_name_latin IS NULL OR first_name_latin IS NOT NULL)
+    )
+);
+
+COMMENT ON TABLE public.com_m_user_legal IS 'ユーザーの正式な情報（書面に載せる正式な氏名等。生徒・コーチ共通、com_m_userと1対1。アドミンが登録）';
+COMMENT ON COLUMN public.com_m_user_legal.user_id IS 'ユーザーID (com_m_user.id)';
+COMMENT ON COLUMN public.com_m_user_legal.last_name IS '姓（family name。書く順番ではなく意味で持つ。姓の無い名前の人はNULL）';
+COMMENT ON COLUMN public.com_m_user_legal.first_name IS '名（given name。ミドルネームを含む）';
+COMMENT ON COLUMN public.com_m_user_legal.last_name_latin IS '姓のローマ字表記（任意）';
+COMMENT ON COLUMN public.com_m_user_legal.first_name_latin IS '名のローマ字表記（任意。姓のローマ字表記を入れる場合は必須）';
+COMMENT ON COLUMN public.com_m_user_legal.updated_by IS '最後に登録・変更したアドミン (com_m_user.id)';
+COMMENT ON COLUMN public.com_m_user_legal.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_user_legal.update_date IS '更新日時';
+
+---------------------------------------------
+-- 行レベルセキュリティ (RLS)
+---------------------------------------------
+ALTER TABLE public.com_m_user_legal ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage user legal info" ON public.com_m_user_legal;
+DROP POLICY IF EXISTS "Users can view their own legal info" ON public.com_m_user_legal;
+
+-- [参照・登録・変更・削除] アドミンのみ
+CREATE POLICY "Admins can manage user legal info" ON public.com_m_user_legal
+FOR ALL TO authenticated
+USING (COALESCE(public.get_jwt_user_type(), '') = '0')
+WITH CHECK (COALESCE(public.get_jwt_user_type(), '') = '0');
+
+-- [参照] 本人は自分の行だけ読める（変更は運営に依頼する）
+CREATE POLICY "Users can view their own legal info" ON public.com_m_user_legal
+FOR SELECT TO authenticated USING (user_id = auth.uid());
+
+DROP FUNCTION IF EXISTS public.get_training_report_data(uuid[]);
+
+CREATE OR REPLACE FUNCTION public.get_training_report_data(p_license_ids uuid[])
+RETURNS jsonb AS $$
+    WITH lic AS (
+        SELECT
+            l.license_id, l.user_id, l.status, l.start_date, l.end_date,
+            (l.start_date AT TIME ZONE public.reporting_timezone())::date AS from_date,
+            (l.end_date AT TIME ZONE public.reporting_timezone())::date AS to_date,
+            LEAST(l.end_date, NOW()) AS level_end_at,
+            COALESCE(NULLIF(concat_ws(' ', btrim(ul.last_name), btrim(ul.first_name)), ''), u.user_name) AS student_name,
+            COALESCE(u.timezone, 'Asia/Tokyo') AS timezone,
+            c.contract_id, c.contract_name, c.plan_name, cl.client_name,
+            t.ticket_id, t.total_sessions
+        FROM public.com_t_user_license l
+        JOIN public.com_m_user u ON u.id = l.user_id
+        LEFT JOIN public.com_m_user_legal ul ON ul.user_id = l.user_id
+        JOIN public.com_m_contract c ON c.contract_id = l.contract_id
+        JOIN public.com_m_client cl ON cl.client_id = c.client_id
+        LEFT JOIN public.com_t_user_session_ticket t ON t.license_id = l.license_id
+        WHERE l.license_id = ANY(p_license_ids)
+    ),
+    daily AS (
+        SELECT
+            lic.license_id,
+            d.training_date,
+            SUM(d.words)::integer AS words,
+            SUM(d.phrases)::integer AS phrases,
+            SUM(d.sprint_questions)::integer AS sprint_questions,
+            SUM(d.assessments)::integer AS assessments
+        FROM lic
+        CROSS JOIN LATERAL (
+            SELECT w.training_date, w.word_count AS words, w.phrase_count AS phrases,
+                   0 AS sprint_questions, w.assessment_count AS assessments
+            FROM public.self_t_word_summary w
+            WHERE w.user_id = lic.user_id AND w.training_date BETWEEN lic.from_date AND lic.to_date
+            UNION ALL
+            SELECT s.training_date, 0, 0, s.question_count, s.assessment_count
+            FROM public.self_t_sprint_summary s
+            WHERE s.user_id = lic.user_id AND s.training_date BETWEEN lic.from_date AND lic.to_date
+            UNION ALL
+            SELECT (ss.insert_date AT TIME ZONE lic.timezone)::date, 0, 0, ss.total_answered, ss.total_assessments
+            FROM public.self_t_sprint ss
+            WHERE ss.user_id = lic.user_id
+              AND (ss.insert_date AT TIME ZONE lic.timezone)::date BETWEEN lic.from_date AND lic.to_date
+        ) d
+        GROUP BY lic.license_id, d.training_date
+    )
+    SELECT COALESCE(jsonb_agg(
+        jsonb_build_object(
+            'license_id', lic.license_id,
+            'license_status', lic.status,
+            'start_date', lic.start_date,
+            'end_date', lic.end_date,
+            'student_id', lic.user_id,
+            'student_name', lic.student_name,
+            'contract_id', lic.contract_id,
+            'contract_name', lic.contract_name,
+            'plan_name', lic.plan_name,
+            'client_name', lic.client_name,
+            'levels_start', jsonb_build_object(
+                '0', public.get_sprint_level_as_of(lic.user_id, 0::smallint, lic.start_date),
+                '4', public.get_sprint_level_as_of(lic.user_id, 4::smallint, lic.start_date),
+                '5', public.get_sprint_level_as_of(lic.user_id, 5::smallint, lic.start_date),
+                '6', public.get_sprint_level_as_of(lic.user_id, 6::smallint, lic.start_date)
+            ),
+            'levels_end', jsonb_build_object(
+                '0', public.get_sprint_level_as_of(lic.user_id, 0::smallint, lic.level_end_at),
+                '4', public.get_sprint_level_as_of(lic.user_id, 4::smallint, lic.level_end_at),
+                '5', public.get_sprint_level_as_of(lic.user_id, 5::smallint, lic.level_end_at),
+                '6', public.get_sprint_level_as_of(lic.user_id, 6::smallint, lic.level_end_at)
+            ),
+            'activity', (
+                SELECT jsonb_build_object(
+                    'active_days', COUNT(*)::integer,
+                    'words', COALESCE(SUM(daily.words), 0)::integer,
+                    'phrases', COALESCE(SUM(daily.phrases), 0)::integer,
+                    'sprint_questions', COALESCE(SUM(daily.sprint_questions), 0)::integer,
+                    'assessments', COALESCE(SUM(daily.assessments), 0)::integer
+                )
+                FROM daily WHERE daily.license_id = lic.license_id
+            ),
+            'monthly', (
+                SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                    'month', m.month,
+                    'active_days', m.active_days,
+                    'words', m.words,
+                    'phrases', m.phrases,
+                    'sprint_questions', m.sprint_questions
+                ) ORDER BY m.month), '[]'::jsonb)
+                FROM (
+                    SELECT to_char(daily.training_date, 'YYYY-MM') AS month,
+                           COUNT(*)::integer AS active_days,
+                           SUM(daily.words)::integer AS words,
+                           SUM(daily.phrases)::integer AS phrases,
+                           SUM(daily.sprint_questions)::integer AS sprint_questions
+                    FROM daily WHERE daily.license_id = lic.license_id
+                    GROUP BY 1
+                ) m
+            ),
+            'live', CASE WHEN lic.ticket_id IS NULL THEN NULL ELSE (
+                SELECT jsonb_build_object(
+                    'total_sessions', lic.total_sessions,
+                    'completed', COUNT(*) FILTER (WHERE s.status = 2 AND s.completion_result IN (1, 2))::integer,
+                    'no_show', COUNT(*) FILTER (WHERE s.status = 2 AND s.completion_result = 3)::integer,
+                    'late_cancel', COUNT(*) FILTER (WHERE s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded IS FALSE)::integer
+                )
+                FROM public.com_t_session s
+                WHERE s.ticket_id = lic.ticket_id
+            ) END,
+            'comments', (
+                SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                    'coach_name', cu.user_name,
+                    'status', r.status,
+                    'comment_text', r.comment_text,
+                    'finalized_at', r.finalized_at
+                ) ORDER BY r.insert_date), '[]'::jsonb)
+                FROM public.com_t_contract_training_report r
+                JOIN public.com_m_user cu ON cu.id = r.coach_id
+                WHERE r.ticket_id = lic.ticket_id
+            )
+        )
+        ORDER BY lic.student_name
+    ), '[]'::jsonb)
+    FROM lic;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.get_training_report_data(uuid[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_training_report_data(uuid[]) TO service_role;
+
+COMMIT;

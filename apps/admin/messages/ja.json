@@ -230,7 +230,8 @@
       "actions": "操作",
       "searchPlaceholder": "検索語句を入力...",
       "noData": "データが見つかりませんでした。",
-      "allUserTypes": "すべての区分"
+      "allUserTypes": "すべての区分",
+      "legalButton": "正式氏名"
     },
     "form": {
       "createButton": "新規登録",
@@ -439,6 +440,28 @@
         "introduction": "自己紹介",
         "availability": "空き時間（1件以上）"
       }
+    },
+    "legal": {
+      "title": "正式氏名",
+      "description": "支払通知書・請求書・トレーニングレポート等の書面に載せる氏名です。画面に表示される名前とは別に管理します。未登録の場合、書面には画面の名前が載ります。",
+      "lastName": "姓",
+      "firstName": "名",
+      "lastNamePlaceholder": "山田",
+      "firstNamePlaceholder": "太郎",
+      "latinDescription": "ローマ字表記（任意）。英語の書面で使います。日本語以外の氏名の場合は空欄にしてください。",
+      "lastNameLatin": "姓（ローマ字）",
+      "firstNameLatin": "名（ローマ字）",
+      "lastNameLatinPlaceholder": "Yamada",
+      "firstNameLatinPlaceholder": "Taro",
+      "previewJa": "日本語の書面",
+      "previewEn": "英語の書面",
+      "previewNotSet": "未登録（画面の名前）",
+      "loadFailed": "正式氏名を読み込めませんでした。",
+      "toastSaved": "正式氏名を保存しました",
+      "toastCleared": "正式氏名の登録を削除しました",
+      "errorSave": "正式氏名を保存できませんでした",
+      "errorFirstNameRequired": "名を入力してください",
+      "errorTooLong": "{max}文字以内で入力してください"
     },
     "ratingsPage": {
       "backToList": "ユーザー管理へ戻る",

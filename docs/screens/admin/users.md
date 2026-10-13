@@ -25,7 +25,8 @@
 7. **専門の設定ダイアログ**（コーチのみ、一覧の「専門」ボタンから開く）
 8. **マッチング対象の設定ダイアログ**（コーチのみ、一覧の「マッチング」ボタンから開く）
 9. **コーチの評価画面**（コーチのみ、一覧の「評価」ボタンから `/users/[id]/ratings` へ遷移）
-9. **CSV一括登録ダイアログ**（生徒のみ対象）
+10. **正式氏名ダイアログ**（本登録済みの生徒・コーチのみ、一覧の「正式氏名」ボタンから開く）
+11. **CSV一括登録ダイアログ**（生徒のみ対象）
 
 ## 表示要素・操作
 
@@ -46,6 +47,7 @@
 | 一覧の「専門」ボタン | コーチのみ表示 | 専門の設定ダイアログを開く |
 | 一覧の「マッチング」ボタン | コーチのみ表示 | マッチング対象の設定ダイアログを開く |
 | 一覧の「評価」ボタン | コーチのみ表示 | コーチの評価画面（`/users/[id]/ratings`）へ遷移する |
+| 一覧の「正式氏名」ボタン | 本登録済み（招待中でない）の生徒・コーチのみ表示 | 正式氏名ダイアログを開く |
 | 一覧の「編集」ボタン | 全ユーザーに表示 | ユーザー編集ダイアログを開く |
 | 「一括登録」ボタン | 常時表示 | CSV一括登録ダイアログを開く（生徒のみ対象） |
 | 「新規登録」ボタン | 常時表示 | ユーザー登録ダイアログを開く |
@@ -125,6 +127,17 @@
 - 「保存」で休止・解除を反映する（成功で「マッチングを休止しました」／「マッチングの休止を解除しました」と表示して閉じる）。
   解除するとメモも消える。
 
+## 正式氏名ダイアログ（生徒・コーチ）
+
+- 書面（コーチの支払通知書・請求書、生徒のトレーニングレポート）に載せる正式な氏名を登録する。画面に表示される
+  名前（「氏名」＝ `com_m_user.user_name`）とは別に持ち、コーチ・生徒の画面には表示しない（DBでもアドミンと本人しか参照できない）。
+- 入力項目: 「姓」「名」と、「姓（ローマ字）」「名（ローマ字）」（任意。英語の書面で使う）。各100文字まで。
+  姓は任意（姓の無い名前の人のため）、姓を入れる場合は名が必須。ローマ字も姓を入れる場合は名が必須。
+- 入力欄の下に、書面での表示を「日本語の書面」（姓 名）・「英語の書面」（名 姓。ローマ字があればローマ字）で表示する。
+- 「保存」で登録・変更する（成功で「正式氏名を保存しました」と表示して閉じる）。すべて空欄で保存すると登録を削除し
+  （「正式氏名の登録を削除しました」）、書面には画面の名前が載る。
+- CSV一括登録では正式な氏名を扱わない。
+
 ## 代理ログインダイアログ
 
 - 実行理由（チケット番号・問合せ内容等）の入力が必須
@@ -187,6 +200,8 @@
   （`getCoachSpecialtySettings`, `setCoachSpecialties`。RPC `admin_set_coach_specialties`：アドミン以外・分野5つ以上・マスタに無いコードを拒否）
 - `apps/admin/app/(app)/users/_components/CoachMatchingFormDialog.tsx`, `apps/admin/actions/adminCoachMatchingAction.ts`
   （`getCoachMatchingStatus`, `setCoachMatchingSuspension`。RPC `get_coach_matching_status`・`admin_set_coach_matching_suspension`、休止は `com_m_coach_matching_suspension`）
+- `apps/admin/app/(app)/users/_components/LegalNameFormDialog.tsx`, `apps/admin/actions/adminUserLegalAction.ts`
+  （`getUserLegalName`, `saveUserLegalName`。テーブル `com_m_user_legal`、書面での並べ方は `packages/lib/userLegal/formatLegalName.ts`）
 - `apps/admin/app/(app)/users/[id]/ratings/page.tsx`（コーチの評価画面。`_components/CoachRatingSummary.tsx`・`CoachRatingTable.tsx`）, `apps/admin/actions/adminCoachRatingAction.ts`（`getCoachRatings`）
 - `apps/admin/actions/adminUserAction.ts`（`getUsers`, `createUser`, `createUserDirect`,
   `updateUser`, `resendInvite`, `getRoles`, `bulkCreateUsers`）
@@ -197,6 +212,6 @@
   `updateStudentSprintLevel`, `setStudentSprintStage`, `setStudentSprintLevelManaged`）
 - `apps/admin/actions/adminImpersonationAction.ts`（`startImpersonation`。監査ログ:
   `com_t_admin_impersonation_log`）
-- 対象テーブル: `com_m_user`
+- 対象テーブル: `com_m_user`, `com_m_user_legal`
 - ライセンス発行に付随する記録（割当履歴・ライブのチケット）: `packages/lib/license/issue.ts`（全経路で共通）
 - `apps/admin/actions/adminClientAction.ts`（`getClientsFilter`。顧客フィルタの選択肢取得）

@@ -230,7 +230,8 @@
       "actions": "Actions",
       "searchPlaceholder": "Enter search term...",
       "noData": "No data found.",
-      "allUserTypes": "All types"
+      "allUserTypes": "All types",
+      "legalButton": "Legal name"
     },
     "form": {
       "createButton": "Add user",
@@ -439,6 +440,28 @@
         "introduction": "Personal introduction",
         "availability": "Availability (at least one slot)"
       }
+    },
+    "legal": {
+      "title": "Legal name",
+      "description": "The name printed on documents such as pay notices, invoices and training reports. Managed separately from the display name. If not set, documents use the display name.",
+      "lastName": "Last name",
+      "firstName": "First name",
+      "lastNamePlaceholder": "Smith",
+      "firstNamePlaceholder": "John",
+      "latinDescription": "Romanized name (optional), used on English documents. Leave blank unless the name is written in Japanese.",
+      "lastNameLatin": "Last name (romanized)",
+      "firstNameLatin": "First name (romanized)",
+      "lastNameLatinPlaceholder": "Yamada",
+      "firstNameLatinPlaceholder": "Taro",
+      "previewJa": "Japanese documents",
+      "previewEn": "English documents",
+      "previewNotSet": "Not set (display name)",
+      "loadFailed": "Failed to load the legal name.",
+      "toastSaved": "Legal name saved",
+      "toastCleared": "Legal name cleared",
+      "errorSave": "Failed to save the legal name",
+      "errorFirstNameRequired": "Enter the first name",
+      "errorTooLong": "Enter up to {max} characters"
     },
     "ratingsPage": {
       "backToList": "Back to users",

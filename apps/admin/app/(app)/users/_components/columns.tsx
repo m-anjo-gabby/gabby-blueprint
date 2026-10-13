@@ -10,7 +10,8 @@ import { ImpersonateButton } from "./ImpersonateButton";
 import { SprintProgressFormDialog } from "./SprintProgressFormDialog";
 import { CoachSpecialtyFormDialog } from "./CoachSpecialtyFormDialog";
 import { CoachMatchingFormDialog } from "./CoachMatchingFormDialog";
-import { Calendar, Building2, ShieldAlert, Pencil, Rocket, Star, Sparkles, UserSearch } from "lucide-react";
+import { LegalNameFormDialog } from "./LegalNameFormDialog";
+import { Calendar, Building2, ShieldAlert, Pencil, Rocket, Star, Sparkles, UserSearch, IdCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserTypeLabel, UserRecord, USER_TYPES } from "@gabby/types/user";
 
@@ -224,6 +225,15 @@ export function createColumns(t: TableT): ColumnDef<UserRecord>[] {
                 <Star size={14} /> {t('ratingsButton')}
               </Link>
             </Button>
+          )}
+
+          {/* 正式な氏名（書面に載せる氏名。本登録済みの生徒・コーチのみ） */}
+          {isImpersonatableType && isRegistered && (
+            <LegalNameFormDialog user={user}>
+              <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
+                <IdCard size={14} /> {t('legalButton')}
+              </Button>
+            </LegalNameFormDialog>
           )}
 
           {/* ユーザー基本情報の編集 */}
