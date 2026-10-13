@@ -11,6 +11,7 @@ import {
   prepareWordContent,
   type AuthFixture,
 } from "../../support/authFixtures.ts";
+import { clickUntilVisible } from "../../support/hydration.ts";
 
 /**
  * お気に入り（仕様: e2e/specs/favorites/student-favorites.md）
@@ -31,6 +32,54 @@ const libraryTab = (page: Page, label: string): Locator =>
   page.getByRole("tablist", { name: "教材種別" }).getByRole("tab", { name: new RegExp(`^${label}\\s*\\d+$`) });
 
 const favoriteOnlyToggle = (page: Page): Locator => page.getByRole("button", { name: "お気に入り", exact: true });
+
+/** お気に入りの一覧のカード */
+const favoriteCards = (page: Page): Locator => page.locator("article");
+
+/** ピル・選択肢の末尾の件数 */
+async function trailingCount(locator: Locator): Promise<number> {
+  const text = (await locator.textContent()) ?? "";
+  const match = text.match(/(\d+)\s*$/);
+  if (!match) throw new Error(`件数が読めません: ${text}`);
+  return Number(match[1]);
+}
+
+/**
+ * 絞り込みの項目で、先頭（「すべて」）の次の選択肢を選び、その選択肢の件数を返す。
+ * PC はセレクト、mobile は「絞り込み」シートのチップで選ぶ。
+ */
+async function chooseFirstOption(page: Page, isMobile: boolean, label: string): Promise<number> {
+  if (isMobile) {
+    const sheet = page.getByRole("dialog", { name: "絞り込み" });
+    await clickUntilVisible(page.getByRole("button", { name: /^絞り込み/ }), sheet);
+    const option = sheet.getByRole("region", { name: label }).getByRole("button").nth(1);
+    const count = await trailingCount(option);
+    await option.click();
+    await expect(option).toHaveAttribute("aria-pressed", "true");
+    await sheet.getByRole("button", { name: /件を表示$/ }).click();
+    await expect(sheet).toBeHidden();
+    return count;
+  }
+  const option = page.getByRole("option").nth(1);
+  await clickUntilVisible(page.getByRole("combobox", { name: label }), option);
+  const count = await trailingCount(option);
+  await option.click();
+  await expect(option).toBeHidden();
+  return count;
+}
+
+/** 絞り込みの項目が出ているか（mobile はシートを開いて確かめて閉じる） */
+async function expectFilterShown(page: Page, isMobile: boolean, label: string, shown: boolean): Promise<void> {
+  if (!isMobile) {
+    await expect(page.getByRole("combobox", { name: label })).toHaveCount(shown ? 1 : 0);
+    return;
+  }
+  const sheet = page.getByRole("dialog", { name: "絞り込み" });
+  await clickUntilVisible(page.getByRole("button", { name: /^絞り込み/ }), sheet);
+  await expect(sheet.getByRole("region", { name: label })).toHaveCount(shown ? 1 : 0);
+  await sheet.getByRole("button", { name: /件を表示$/ }).click();
+  await expect(sheet).toBeHidden();
+}
 
 test.describe("使い捨てのアプリのみ契約の生徒", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
@@ -216,6 +265,95 @@ test.describe("使い捨てのアプリのみ契約の生徒", () => {
   });
 });
 
+test.describe("使い捨ての生徒（お気に入りの上限）", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  let fixture: AuthFixture | undefined;
+
+  test.afterEach(async () => {
+    await cleanupAuthFixture(fixture);
+    fixture = undefined;
+  });
+
+  test("上限（1,000件）のフレーズがあると、☆で登録できずトーストが出て☆が戻り、お気に入りに上限の案内が出る", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "使い捨てデータを作るため desktop だけで実行する");
+    test.setTimeout(180_000);
+
+    const f = await createAuthFixture("favlim");
+    fixture = f;
+    const email = `${f.tag}-student@${DISPOSABLE_EMAIL_DOMAIN}`;
+    const userId = await createDisposableStudent(f, { email, password: PASSWORD });
+    await grantAppLicense(f, userId);
+
+    // 単語帳の教材ごとの公開中のフレーズ。最も少ない教材をトレーニングに使い、ほかの教材のフレーズで1,000件を埋める
+    // （お気に入り画面は見える教材のフレーズだけを数えるため、限定公開の教材は使い捨ての顧客に公開する。公開先は後始末で消える）
+    const { data: contents, error: contentsError } = await f.admin
+      .from("com_m_contents")
+      .select("content_id, content_scope")
+      .eq("content_type", 0)
+      .in("content_scope", [0, 1])
+      .eq("delete_flg", "0")
+      .not("content_name", "like", "[%");
+    if (contentsError || !contents) throw new Error(`単語帳の教材の取得に失敗しました: ${contentsError?.message}`);
+    const phrasesByContent = await Promise.all(
+      contents.map(async (c) => {
+        const ids: string[] = [];
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await f.admin
+            .from("com_m_phrase")
+            .select("phrase_id, com_m_word!inner(content_id, status)")
+            .eq("status", "live")
+            .eq("com_m_word.content_id", c.content_id)
+            .eq("com_m_word.status", "live")
+            .order("phrase_id")
+            .range(from, from + 999);
+          if (error) throw new Error(`フレーズの取得に失敗しました: ${error.message}`);
+          ids.push(...data.map((p) => p.phrase_id));
+          if (data.length < 1000) break;
+        }
+        return { ...c, ids };
+      })
+    );
+    const usable = phrasesByContent.filter((c) => c.ids.length > 0).sort((a, b) => a.ids.length - b.ids.length);
+    const [training, ...others] = usable;
+    const fillIds = others.flatMap((c) => c.ids).slice(0, 1000);
+    test.skip(!training || fillIds.length < 1000, "この環境には上限まで埋めるだけのフレーズがない");
+
+    const restricted = [training, ...others].filter((c) => c.content_scope === 1).map((c) => ({ client_id: f.clientId, content_id: c.content_id }));
+    if (restricted.length > 0) {
+      const { error } = await f.admin.from("com_m_contents_access").insert(restricted);
+      if (error) throw new Error(`教材の公開先の追加に失敗しました: ${error.message}`);
+    }
+    for (let i = 0; i < fillIds.length; i += 500) {
+      const { error } = await f.admin
+        .from("com_t_favorite_phrase")
+        .insert(fillIds.slice(i, i + 500).map((phrase_id) => ({ user_id: userId, phrase_id })));
+      if (error) throw new Error(`お気に入りの投入に失敗しました: ${error.message}`);
+    }
+
+    await loginAsNewStudent(page, email, PASSWORD);
+
+    await test.step("単語帳トレーニングの☆で登録すると、上限のトーストが出て☆が戻る", async () => {
+      await page.goto(`/training/word/${training.content_id}`);
+      const star = page.getByRole("button", { name: "お気に入りに追加" });
+      await expect(star).toBeVisible({ timeout: 30_000 });
+      await page.waitForLoadState("networkidle");
+      await star.click();
+      await expect(page.getByText(/お気に入りは1,000件まで登録できます/)).toBeVisible();
+      await expect(star).toBeVisible();
+      await expect(page.getByRole("button", { name: "お気に入りを解除" })).toHaveCount(0);
+      const { count } = await f.admin.from("com_t_favorite_phrase").select("phrase_id", { count: "exact", head: true }).eq("user_id", userId);
+      expect(count).toBe(1000);
+    });
+
+    await test.step("お気に入り（フレーズ）に上限の案内が出る", async () => {
+      await page.goto("/favorites");
+      await expect(kindPill(page, "フレーズ")).toHaveAccessibleName(/1000$/);
+      await expect(page.getByRole("status").filter({ hasText: "お気に入りのフレーズが上限（1,000件）に達しています" })).toBeVisible();
+    });
+  });
+});
+
 test.describe("固定アカウントの生徒（閲覧のみ）", () => {
   test.use({ storageState: storageStatePath("liveStudent") });
 
@@ -243,5 +381,85 @@ test.describe("固定アカウントの生徒（閲覧のみ）", () => {
       await page.waitForURL(/\/library\?favorite=1/);
       await expect(favoriteOnlyToggle(page)).toHaveAttribute("aria-pressed", "true");
     });
+  });
+
+  // 件数・選択肢は固定アカウントのデータに依存させず、選んだ選択肢の件数と一覧の件数が合うことで確かめる
+  // （コーパスでレベルが出ないことは、dev にレベル分けの無いコーパスが無いため単体テスト unit/favorite-filters.test.ts で確かめる）
+  test("スプリント問題の絞り込みは教材→問題種別→レベルの順に連動し、条件は URL に残り、前の条件を外すと後ろも外れる", async ({ page, isMobile }) => {
+    await page.goto("/favorites?kind=sprintQuestions");
+    const pill = kindPill(page, "スプリント問題");
+    await expect(pill).toHaveAttribute("aria-selected", "true");
+    const total = await trailingCount(pill);
+    await expect(favoriteCards(page)).toHaveCount(Math.min(total, 50));
+
+    await test.step("レベルは問題種別を選ぶまで出ない", async () => {
+      await expectFilterShown(page, isMobile, "教材", true);
+      await expectFilterShown(page, isMobile, "レベル", false);
+    });
+
+    await test.step("教材 → 問題種別 → レベルの順に選ぶと、URL に載り、一覧が選択肢の件数になる", async () => {
+      const byContent = await chooseFirstOption(page, isMobile, "教材");
+      await expect(page).toHaveURL(/[?&]content=/);
+      await expect(favoriteCards(page)).toHaveCount(byContent);
+
+      const byType = await chooseFirstOption(page, isMobile, "問題種別");
+      await expect(page).toHaveURL(/[?&]type=/);
+      await expect(favoriteCards(page)).toHaveCount(byType);
+      expect(byType).toBeLessThanOrEqual(byContent);
+
+      const byLevel = await chooseFirstOption(page, isMobile, "レベル");
+      await expect(page).toHaveURL(/[?&]level=/);
+      await expect(favoriteCards(page)).toHaveCount(byLevel);
+      expect(byLevel).toBeLessThanOrEqual(byType);
+
+      await page.reload();
+      await expect(page).toHaveURL(/content=.*type=.*level=|level=.*type=.*content=/);
+      await expect(favoriteCards(page)).toHaveCount(byLevel);
+    });
+
+    await test.step("教材の条件を外すと、問題種別・レベルの条件も外れる", async () => {
+      if (isMobile) {
+        await expect(page.getByRole("button", { name: /の条件を外す$/ })).toHaveCount(3);
+        await page.waitForLoadState("networkidle");
+        await page.getByRole("button", { name: /^教材「.+」の条件を外す$/ }).click();
+      } else {
+        const allOption = page.getByRole("option", { name: "すべての教材" });
+        await clickUntilVisible(page.getByRole("combobox", { name: "教材" }), allOption);
+        await allOption.click();
+      }
+      await expect(page).not.toHaveURL(/[?&](content|type|level)=/);
+      await expect(favoriteCards(page)).toHaveCount(Math.min(total, 50));
+    });
+  });
+
+  test("検索・絞り込みで該当なしになると「条件をクリア」が出て、押すと検索語と絞り込みが外れる", async ({ page, isMobile }) => {
+    await page.goto("/favorites?kind=sprintQuestions");
+    const total = await trailingCount(kindPill(page, "スプリント問題"));
+    await expect(favoriteCards(page)).toHaveCount(Math.min(total, 50));
+
+    await chooseFirstOption(page, isMobile, "教材");
+    await expect(page).toHaveURL(/[?&]content=/);
+    const search = page.getByRole("searchbox", { name: "問題を検索" });
+    await search.fill("zzzz-e2e-no-match");
+    await expect(page.getByText("条件に合う問題が見つかりません")).toBeVisible();
+    await expect(favoriteCards(page)).toHaveCount(0);
+
+    await page.getByRole("button", { name: "条件をクリア" }).click();
+    await expect(search).toHaveValue("");
+    await expect(page).not.toHaveURL(/[?&]content=/);
+    await expect(favoriteCards(page)).toHaveCount(Math.min(total, 50));
+  });
+
+  test("50件を超える種別は50件ずつ表示し、「さらに表示」で続きを出す", async ({ page }) => {
+    await page.goto("/favorites");
+    const total = await trailingCount(kindPill(page, "フレーズ"));
+    expect(total, "固定アカウントのフレーズのお気に入りが50件を超えていること（FIXTURES.md）").toBeGreaterThan(50);
+    await expect(favoriteCards(page)).toHaveCount(50);
+
+    const more = page.getByRole("button", { name: `さらに表示（残り${total - 50}件）` });
+    await page.waitForLoadState("networkidle");
+    await more.click();
+    await expect(favoriteCards(page)).toHaveCount(Math.min(total, 100));
+    if (total <= 100) await expect(page.getByRole("button", { name: /^さらに表示/ })).toHaveCount(0);
   });
 });
