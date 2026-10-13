@@ -76,7 +76,7 @@
 
 ## E2Eテストケース候補
 
-優先度「高」は `e2e/tests/rating/coach-rating.spec.ts` で実装済み（コーチ・生徒は使い捨て。担当枠とセッションは `e2e/support/coachRatingFixtures.ts` で直接入れて受付の条件を作り分ける）。
+優先度「高」「中」は `e2e/tests/rating/coach-rating.spec.ts` で実装済み（コーチ・生徒は使い捨て。担当枠とセッションは `e2e/support/coachRatingFixtures.ts` で直接入れて受付の条件を作り分ける）。
 
 | 優先度 | シナリオ | 概要 |
 |---|---|---|
