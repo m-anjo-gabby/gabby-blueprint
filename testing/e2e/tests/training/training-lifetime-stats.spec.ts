@@ -13,7 +13,7 @@ import {
 } from "../../support/authFixtures.ts";
 
 /**
- * 自主トレーニングの通算値・連続日数（仕様: e2e/specs/training/training-stats.md 異常系 #1〜#5・#8）
+ * 自主トレーニングの通算値・連続日数・達成の通知（仕様: e2e/specs/training/training-stats.md 異常系 #1〜#6・#8）
  *
  * - 通算値（データ主体テスト）: 使い捨ての生徒（タイムゾーンは既定の日本時間）の本人のJWTで、
  *   単語帳・ドリルの記録（`increment_word_summary`・`increment_sprint_summary`）とタイムアタックの記録（`self_t_sprint`）を作り、
@@ -185,6 +185,66 @@ test.describe("使い捨てのアプリのみ契約の生徒", () => {
         .select("training_date, question_count, assessment_count, speed_count")
         .eq("user_id", userId);
       expect(drillRows).toEqual([{ training_date: today, question_count: 5, assessment_count: 1, speed_count: 5 }]);
+    });
+  });
+
+  test("#6: 達成の通知は初回トレーニングと連続5日の初回到達で1回ずつ作られ、途切れて再び5日続いても作られない", async () => {
+    const { f, userId, email } = await createStudent("milest");
+    const sprint = await prepareContent(f, 2);
+    const student = await signInAsRole(email, PASSWORD);
+    studentClient = student;
+
+    /** 日本時間 offset 日の正午に、タイムアタック1回分の記録を本人のJWTで作る */
+    const trainOn = async (offset: number) => {
+      const { error } = await student.from("self_t_sprint").insert({
+        user_id: userId, sprint_type: "0", content_id: sprint.content_id, question_type: "0", answer_type: "0",
+        difficulty_level: 1, time_limit_sec: 60, total_answered: 1, total_assessments: 0,
+        insert_date: new Date(`${jstDate(offset)}T12:00:00+09:00`).toISOString(),
+      });
+      if (error) throw new Error(`タイムアタックの記録の作成に失敗しました: ${error.message}`);
+    };
+    const notifications = async () => {
+      const { data, error } = await f.admin
+        .from("com_t_notification")
+        .select("notification_type, dedup_key, payload, link_path")
+        .eq("user_id", userId)
+        .in("notification_type", ["TRAINING_FIRST", "TRAINING_STREAK"])
+        .order("notification_type");
+      if (error) throw new Error(`通知の取得に失敗しました: ${error.message}`);
+      return data;
+    };
+    const streak = async () => {
+      const { data } = await f.admin.from("student_m_training_lifetime_stats").select("current_streak_days").eq("user_id", userId).single();
+      return data?.current_streak_days;
+    };
+    const first = { notification_type: "TRAINING_FIRST", dedup_key: "FIRST_TRAINING", payload: { days: 1 }, link_path: "/dashboard" };
+    const streak5 = { notification_type: "TRAINING_STREAK", dedup_key: "STREAK_5", payload: { days: 5 }, link_path: "/dashboard" };
+
+    await test.step("初回トレーニングで「初回」の通知が作られる", async () => {
+      await trainOn(-15);
+      expect(await notifications()).toEqual([first]);
+    });
+
+    await test.step("4日連続では連続の通知は作られず、5日目に1回作られる", async () => {
+      for (const offset of [-14, -13, -12]) await trainOn(offset);
+      expect(await streak()).toBe(4);
+      expect(await notifications()).toEqual([first]);
+
+      await trainOn(-11);
+      expect(await streak()).toBe(5);
+      expect(await notifications()).toEqual([first, streak5]);
+
+      // 同じ日の2回目（連続日数が変わらない）でも増えない
+      await trainOn(-11);
+      expect(await notifications()).toEqual([first, streak5]);
+    });
+
+    await test.step("途切れた後に再び5日続いても、通知は増えない", async () => {
+      await trainOn(-9);
+      expect(await streak()).toBe(1);
+      for (const offset of [-8, -7, -6, -5]) await trainOn(offset);
+      expect(await streak()).toBe(5);
+      expect(await notifications()).toEqual([first, streak5]);
     });
   });
 
