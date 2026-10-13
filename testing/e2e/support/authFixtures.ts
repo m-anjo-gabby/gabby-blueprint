@@ -296,7 +296,11 @@ export async function cleanupAuthFixture(fixture: AuthFixture | undefined): Prom
     // （com_t_session.ticket_id は削除で連動しないため、残るとチケット以降を消せない。KJ-2026-1006-01）
     const { data: tickets } = await admin.from("com_t_user_session_ticket").select("ticket_id").in("contract_id", contractIds);
     const ticketIds = (tickets ?? []).map((t) => t.ticket_id);
-    if (ticketIds.length > 0) await admin.from("com_m_lesson_schedule").delete().in("ticket_id", ticketIds);
+    if (ticketIds.length > 0) {
+      await admin.from("com_m_lesson_schedule").delete().in("ticket_id", ticketIds);
+      // 生徒のコーチ評価はチケットを参照する
+      await admin.from("com_t_coach_rating").delete().in("ticket_id", ticketIds);
+    }
     await admin.from("com_t_user_session_ticket_history").delete().in("contract_id", contractIds);
     await admin.from("com_t_user_session_ticket").delete().in("contract_id", contractIds);
     await admin.from("com_t_user_license_history").delete().in("contract_id", contractIds);
@@ -313,8 +317,10 @@ async function deleteUsers(fixture: AuthFixture): Promise<void> {
   for (const id of fixture.userIds) {
     // コーチが割り当てたダイアログ教材（進捗・セッションでの教材オープンの記録も連動して消える）
     await admin.from("com_t_dialogue_assignment").delete().eq("student_id", id);
-    // 担当枠を作ったテストでは、トリガーで担当関係が作られる（固定コーチとの関係も残さない）
-    await admin.from("com_m_coach_student_relationship").delete().eq("student_id", id);
+    // 担当枠を作ったテストでは、トリガーで担当関係が作られる（固定コーチとの関係も残さない。コーチを生徒より先に消す場合もあるため両側で消す）
+    await admin.from("com_m_coach_student_relationship").delete().or(`student_id.eq.${id},coach_id.eq.${id}`);
+    // コーチ評価（コーチの作成時にトリガーで入る初期値の評価を含む）。com_m_user を参照し、残るとユーザーを消せない
+    await admin.from("com_t_coach_rating").delete().or(`coach_id.eq.${id},student_id.eq.${id}`);
     await admin.from("com_t_user_role").delete().eq("user_id", id);
     await admin.from("com_m_user").delete().eq("id", id);
     const { error } = await admin.auth.admin.deleteUser(id);

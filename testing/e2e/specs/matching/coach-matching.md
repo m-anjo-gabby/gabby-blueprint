@@ -115,6 +115,7 @@ status 値の意味: [_GLOSSARY.md](../_GLOSSARY.md#com_t_matching_requeststatus
 | 高 | 予約できる回数の割合での申請・承認、取り下げ | 実装済み: `e2e/tests/matching/matching-bookable-rate.spec.ts`（〇△×の表示、△の了承、送信直後の取り下げとコーチへの通知、申請後に予定が埋まると承認不可（#6）、重なる回を飛ばした成立と通知の回数、他の生徒の承認待ちと重なる枠は×（#14）、アドミンの直接マッチングは割合の基準なし・0回なら不可。コーチの予定は休みで作る） |
 | 中 | コーチの空き時間の保存・確認・削除 | 実装済み: `e2e/tests/coach/availability.spec.ts`（手順1・5。現地時刻で選んだ枠が UTC で保存され、保存・「No changes needed」で確認日時が更新される） |
 | 低 | コーチの空き時間の見直し通知 | 対象・14日の間隔・保存で既読（pg_cron の処理は RPC・データで確認し、保存・「No changes needed」はコーチの画面で確認） |
-| 高 | 一覧に出るコーチの出し分け（必須項目・本人の受付・アドミンの休止） | 未実装（2026-10-11 時点。DB の判定と権限は `testing/features/branches/feature-20261008-dev/coach-matching-visibility-check.ts` で確認済み）。生徒の「専属コーチを探す」で、必須項目が欠けたコーチ・受付OFFのコーチ・休止中のコーチが出ず、そろう・ONに戻す・解除すると出ること。休止・OFFの前に届いた申請はコーチが承認できること（#2b） |
-| 中 | コーチのプロフィールの Student matching カード | 未実装（2026-10-11 時点）。状態バッジ、受付スイッチの保存と失敗時の巻き戻し、未設定の項目の案内（空き時間は `/availability` へ）、保存・アイコンの変更での即時反映、休止中の注記（メモは出さない）、必須項目のバッジ「n / 6 required fields」 |
-| 中 | アドミンのマッチング対象の設定ダイアログ | 未実装（2026-10-11 時点）。内訳（必須項目・本人の受付・デモコーチの注記）の表示、休止と理由のメモの保存・解除（ja/en の文言） |
+| 高 | 一覧に出るコーチの出し分け（必須項目・本人の受付・アドミンの休止） | 実装済み: `e2e/tests/matching/coach-visibility.spec.ts`（受付OFF・休止・自己紹介の未設定で「専属コーチを探す」から外れ、ONに戻す・解除する・そろえると出る。受付OFFと休止はコーチ・アドミンの画面で操作し、未設定はDBで作る。外れる前に届いた申請をコーチが承認できる〔#2b〕） |
+| 中 | コーチのプロフィールの Student matching カード | 一部実装済み: `e2e/tests/matching/coach-visibility.spec.ts`（状態バッジ、受付スイッチの保存、未設定の項目の案内、休止中の注記〔メモは出さない〕）。未実装: 保存失敗時の巻き戻し、空き時間の案内の `/availability` へのリンク、保存・アイコンの変更での即時反映、必須項目のバッジ「n / 6 required fields」 |
+| 中 | アドミンのマッチング対象の設定 | 一部実装済み: `e2e/tests/matching/coach-visibility.spec.ts`（休止と理由のメモの保存・解除、表示中／非表示の表示〔ja〕）。未実装: 内訳（必須項目・本人の受付・デモコーチの注記）の表示、en の文言 |
+| 中 | コーチの専門 | 実装済み: `e2e/tests/matching/coach-specialty.spec.ts`（アドミンのユーザー詳細「専門」で分野は4つまで・得意分野〔発音プロ〕は上限に数えない、コーチのプロフィールに参照のみで出る、生徒の絞り込みは分野が「または」・得意分野が「かつ」。画面仕様: docs/screens/admin/users.md, docs/screens/coach/profile.md, docs/screens/student/coach-matching.md） |

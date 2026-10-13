@@ -19,6 +19,12 @@
 -- ズレてしまう。そのため本テーブルは承認時点のcom_m_user.timezoneをcoach_timezoneとして
 -- 固定保持し、以降のSession生成（fn_generate_sessions_for_schedule）は必ずこの値を使う。
 -- 生徒側のタイムゾーンは保持しない（表示変換は常に閲覧者の"現在の"timezoneで行うため不要）。
+-- ※ 2026-10-06 以降は coach_timezone を schedule_timezone に改名し、生徒の申請時のタイムゾーンを持つ（末尾の追加パッチ）。
+--
+-- 【現在の列（下の CREATE TABLE に末尾の追加パッチを適用した後の形）】
+-- 下の CREATE TABLE は作成時の形のまま。新しい環境ではこのファイルを上から順に実行すると、次の形になる。
+--   - schedule_timezone text NOT NULL（旧 coach_timezone。2026-08-17 追加・2026-10-06 改名）
+--   - target_sessions smallint NOT NULL CHECK (target_sessions >= 1)（2026-09-14 追加）
 ---------------------------------------------
 CREATE TABLE public.com_m_lesson_schedule (
     schedule_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
