@@ -61,7 +61,7 @@ node .claude/skills/release-summary/scripts/to-pdf.mjs <スクラッチパッド
 ### 7. 公開して記録する
 
 - Artifact で公開する（`icon`: `document`、`description` は柱を1文で）。
-- PDFのパスをユーザーに伝える（配布用）。
+- PDFのパスをユーザーに伝える（配布用）。共有ドライブ（50_リリース情報）へは、ユーザーに頼まれたときだけ置き、その場合は`shared-drive` スキルの [place-document.md](../shared-drive/procedures/place-document.md) に従う。
 - [HISTORY.md](HISTORY.md) の一覧に、日付・ブランチ・URL・柱を1行足す。
 - 報告では、資料の読み手（「運用担当・ステークホルダー向け」）、柱、推測や未確認の点（あれば）を短く伝え、気になる点があれば指摘してほしいと添える。
 

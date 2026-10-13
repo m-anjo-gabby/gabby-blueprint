@@ -42,4 +42,4 @@ node .claude/skills/release-summary/scripts/to-pdf.mjs <スクラッチパッド
 ### 4. 公開・配置
 
 - Artifact で公開する（`icon`: `mail`）。前回のカタログを更新する場合は同じURLへ（`HISTORY` は持たないため、URLはユーザーに確かめる）。
-- PDF は、ユーザーが指定したフォルダへコピーする（同名のファイルがあれば上書きせずに確かめる）。
+- PDF は、ユーザーが指定したフォルダへコピーする（同名のファイルがあれば上書きせずに確かめる）。共有ドライブ（60_メール文面）へは、ユーザーに頼まれたときだけ置き、その場合は`shared-drive` スキルの [place-document.md](../shared-drive/procedures/place-document.md) に従う。
