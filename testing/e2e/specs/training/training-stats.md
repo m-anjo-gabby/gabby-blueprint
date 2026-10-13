@@ -93,8 +93,8 @@
 
 | 優先度 | シナリオ | 概要 |
 |---|---|---|
-| 高 | 通算値・連続日数の更新（データ主体テスト） | 使い捨ての生徒のJWTで `increment_word_summary`・`increment_sprint_summary` を呼び、`self_t_sprint` を作り、異常系 #1〜#4・#8 の通算値を確かめる |
-| 高 | ホームの連続日数の表示 | 使い捨ての生徒に通算値（最終実施日=昨日／一昨日）を直接作り、「n日連続」の有無を確かめる（異常系 #5） |
+| 高 | 通算値・連続日数の更新（データ主体テスト） | 使い捨ての生徒のJWTで `increment_word_summary`・`increment_sprint_summary` を呼び、`self_t_sprint` を作り、異常系 #1〜#4・#8 の通算値を確かめる（実装済み: [tests/training/training-lifetime-stats.spec.ts](../../tests/training/training-lifetime-stats.spec.ts)。過去の日付・日付の境界は実施日時を指定したタイムアタックの記録で作る） |
+| 高 | ホームの連続日数の表示 | 使い捨ての生徒に通算値（最終実施日=昨日／一昨日）を直接作り、「n日連続」の有無を確かめる（異常系 #5。実装済み: 同上） |
 | 高 | トレーニングレポートの集計（データ主体テスト、実装済み） | `testing/features/branches/feature-20261001-dev/training-report-sessions-verify.ts`（#12。セッションだけの日・期間の境界・西のタイムゾーン） |
 | 中 | 達成の通知 | 通算値を4日連続の状態にしてから実施相当の更新をし、通知が1回だけ作られることを確かめる（#6） |
 | 中 | 月の境界・タイムゾーン | 月初の日本時間早朝のセッション、西のタイムゾーンの生徒の単語帳の記録を作り、トレーニング記録・各履歴の当月に正しい日付で出ることを確かめる（#10・#11。実装済み: [tests/training/training-dates.spec.ts](../../tests/training/training-dates.spec.ts)、日付関数は `unit/training-dates.test.ts`） |
