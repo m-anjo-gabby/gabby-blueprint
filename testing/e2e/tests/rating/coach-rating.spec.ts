@@ -1,6 +1,14 @@
 import type { Page } from "@playwright/test";
 import { openAdminContext } from "../../support/adminApp.ts";
-import { cleanupAuthFixture, createAuthFixture, type AuthFixture } from "../../support/authFixtures.ts";
+import {
+  DISPOSABLE_EMAIL_DOMAIN,
+  cleanupAuthFixture,
+  createAuthFixture,
+  createDisposableCoach,
+  createDisposableStudent,
+  grantLiveLicense,
+  type AuthFixture,
+} from "../../support/authFixtures.ts";
 import { openCoachContext } from "../../support/coachApp.ts";
 import { addRatingStudent, createRatingCoach, insertCoachRating, type RatingStudent } from "../../support/coachRatingFixtures.ts";
 import { clickUntilVisible } from "../../support/hydration.ts";
@@ -8,9 +16,11 @@ import { openLiveRoom } from "../../support/liveRoomView.ts";
 import { expect, loginAsNewStudent, test } from "../../support/studentApp.ts";
 
 /**
- * コーチ評価（仕様書: e2e/specs/rating/coach-rating.md の優先度「高」の2件）。
+ * コーチ評価（仕様書: e2e/specs/rating/coach-rating.md の優先度「高」「中」）。
  * - 評価の登録と反映: 生徒の評価ダイアログ → 評価のお願いが消える → コーチの My Rating → アドミンの評価画面
  * - 受付の条件: 終了まで14日以内／予定なし／受付期間前／評価済み／実施済みなし の各生徒で、評価のお願いの有無を確かめる
+ * - 同じコーチの複数コマ・「あとで」: 週2回で2コマとも同じコーチでも評価のお願いは1行・評価は1件。「あとで」で閉じても残る
+ * - コーチ選択の表示: 評価のあるコーチのカード・プロフィールに総合評価と件数が出て、評価0件のコーチには出ない
  *
  * コーチ・生徒は使い捨て（support/coachRatingFixtures.ts）。コーチは作成時に初期値の評価（4/4/4）を1件持つ。
  * coach・admin は PC 表示の別コンテキストで開くため desktop だけで実行する。
@@ -153,4 +163,101 @@ test("評価のお願いは、終了14日以内または予定が残っていな
       }
     });
   }
+});
+
+test("週2回で2コマとも同じコーチでも評価のお願いは1行だけで、「あとで」で閉じても残り、評価は1件になる", async ({ page }) => {
+  test.setTimeout(180_000);
+  const f = await createAuthFixture("ratingtwoslot");
+  fixture = f;
+  const coach = await createRatingCoach(f, PASSWORD);
+  // 週2回・2コマとも同じコーチ・各コマで実施済み1回と予定1回・終了まで10日 → 受付期間中
+  const student = await addRatingStudent(f, coach, PASSWORD, { key: "two", slotNo: 1, endInDays: 10, completed: 1, scheduled: 1, weeklySlots: 2 });
+  const ratingCount = async () => {
+    const { count } = await f.admin.from("com_t_coach_rating").select("rating_id", { count: "exact", head: true }).eq("ticket_id", student.ticketId);
+    return count;
+  };
+
+  await loginAsNewStudent(page, student.studentEmail, PASSWORD);
+
+  await test.step("ホームとライブセッション管理に、評価のお願いが1件（1行）だけ出る", async () => {
+    await expect(page.getByRole("link", { name: /専属コーチの評価をお願いします（1件）/ })).toBeVisible();
+    await openLiveRoom(page);
+    await expect(ratingNotice(page, coach.coachName)).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "評価する" })).toHaveCount(1);
+  });
+
+  const dialog = page.getByRole("dialog", { name: "コーチの評価にご協力ください" });
+
+  await test.step("「あとで」で閉じると何も登録されず、開き直しても評価のお願いが残る", async () => {
+    await clickUntilVisible(page.getByRole("button", { name: "評価する" }), dialog);
+    await dialog.getByRole("radiogroup", { name: "コーチング" }).getByRole("radio", { name: "3点" }).click();
+    await dialog.getByRole("button", { name: "あとで" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(ratingNotice(page, coach.coachName)).toBeVisible();
+    expect(await ratingCount()).toBe(0);
+
+    await openLiveRoom(page);
+    await expect(ratingNotice(page, coach.coachName)).toHaveCount(1);
+  });
+
+  await test.step("送信すると評価は1件だけ登録され、評価のお願いが消える", async () => {
+    await clickUntilVisible(page.getByRole("button", { name: "評価する" }), dialog);
+    const submit = dialog.getByRole("button", { name: "送信する" });
+    // 閉じる前の選択は残らない（3項目そろうまで送信できない）
+    await expect(submit).toBeDisabled();
+    for (const item of ["コーチング", "親近感", "おすすめ度"]) {
+      await dialog.getByRole("radiogroup", { name: item }).getByRole("radio", { name: "4点" }).click();
+    }
+    await submit.click();
+    await expect(page.getByText("評価を送信しました。ご協力ありがとうございます。")).toBeVisible();
+    await expect(ratingNotice(page, coach.coachName)).toHaveCount(0);
+    expect(await ratingCount()).toBe(1);
+  });
+});
+
+test("コーチ選択のカード・プロフィールに総合評価と件数が出て、評価0件のコーチには出ない", async ({ page }) => {
+  test.setTimeout(180_000);
+  const f = await createAuthFixture("ratingcard");
+  fixture = f;
+  const studentEmail = `${f.tag}-student@${DISPOSABLE_EMAIL_DOMAIN}`;
+  const studentId = await createDisposableStudent(f, { email: studentEmail, password: PASSWORD });
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  await grantLiveLicense(f, studentId, { planCode: "LIVE_WEEKLY1_3M", label: "live", start: new Date(Date.now() - DAY_MS), end: new Date(Date.now() + 90 * DAY_MS) });
+
+  // 一覧に出るコーチ（必須項目・空き時間あり）を2人。作成時に初期値の評価（4/4/4）が1件ずつ入る
+  const availability = [{ dayOfWeek: 5, startTime: "10:00:00", endTime: "13:00:00" }];
+  const ratedName = `E2E Coach Rated ${f.tag}`;
+  const unratedName = `E2E Coach Unrated ${f.tag}`;
+  const ratedId = await createDisposableCoach(f, { email: `${f.tag}-coach-r@${DISPOSABLE_EMAIL_DOMAIN}`, password: PASSWORD, userName: ratedName, timezone: "Asia/Tokyo", availability });
+  const unratedId = await createDisposableCoach(f, { email: `${f.tag}-coach-u@${DISPOSABLE_EMAIL_DOMAIN}`, password: PASSWORD, userName: unratedName, timezone: "Asia/Tokyo", availability });
+  // 評価あり: 移行元の評価（5/5/5）を足して「4.5・2件」。評価なし: 初期値の評価を消して0件にする（集計はトリガーで作り直される）
+  const { error: insertError } = await f.admin
+    .from("com_t_coach_rating")
+    .insert({ coach_id: ratedId, coaching_score: 5, friendliness_score: 5, recommendation_score: 5, source: 2 });
+  if (insertError) throw new Error(`評価の登録に失敗しました: ${insertError.message}`);
+  const { error: deleteError } = await f.admin.from("com_t_coach_rating").delete().eq("coach_id", unratedId);
+  if (deleteError) throw new Error(`評価の削除に失敗しました: ${deleteError.message}`);
+
+  await loginAsNewStudent(page, studentEmail, PASSWORD);
+  await page.goto("/coach-matching");
+  await page.getByPlaceholder("コーチ名で検索").fill(f.tag);
+
+  const card = (name: string) => page.locator("article").filter({ has: page.getByLabel(`${name}のプロフィールを見る`) });
+
+  await test.step("評価のあるコーチのカードに総合評価と件数が出る", async () => {
+    await expect(card(ratedName)).toBeVisible();
+    await expect(card(ratedName).getByText("4.5", { exact: true })).toBeVisible();
+    await expect(card(ratedName).getByText("（2件の評価）")).toBeVisible();
+  });
+
+  await test.step("評価0件のコーチのカードには出ない", async () => {
+    await expect(card(unratedName)).toBeVisible();
+    await expect(card(unratedName).getByText(/件の評価/)).toHaveCount(0);
+  });
+
+  await test.step("プロフィールにも総合評価と件数が出る", async () => {
+    const profile = page.getByRole("dialog", { name: ratedName });
+    await clickUntilVisible(page.getByLabel(`${ratedName}のプロフィールを見る`), profile);
+    await expect(profile.getByText(/2件の評価/)).toBeVisible();
+  });
 });
