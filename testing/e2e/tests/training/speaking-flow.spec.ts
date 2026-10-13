@@ -13,9 +13,9 @@ import { USES_LOCAL_SERVER } from "../../support/targets.ts";
 
 /**
  * 発話の流れ（仕様: e2e/specs/training/speaking-flow.md）
- * - 単語帳: 発話ボタン → チャイム → 認識 → 評価（表示中のフレーズ）。停止でその時点の評価で確定
+ * - 単語帳: 発話ボタン → チャイム → 認識 → 評価（表示中のフレーズ）。停止でその時点の評価で確定、カードの切り替えでは評価しない
  * - スプリント: 問題種別ごとの再生順（Speed: 質問文 / Builders・Structure: 基本文→指示文 / Mastery: 基本文→質問文）
- *   → 発話評価。発話評価OFFでは発話しない。ドリルは発話ボタンで発話する
+ *   → 発話評価（Speed は開始時に選んだ YES/NO の解答文）。発話評価OFFでは発話しない。ドリルは発話ボタンで発話する
  * - 結果画面: スプリントの終了後は「全て再生」が自動で始まる。文の個別再生では問題ごとの再生ボタンが「再生中」にならない
  * - 中断と復旧: 発話中に画面が隠れると発話を止め、戻ると同じ問題を頭からやり直す（表示・非表示は擬似的に切り替える。
  *   iOS 固有の中断（AudioContext が running のまま無音になる等）は再現できないため実機で確認する）
@@ -81,6 +81,8 @@ async function useFakeSpeech(page: Page, config: FakeSpeechConfig = {}): Promise
   }, config);
 }
 
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const readSpeechLog = (page: Page): Promise<SpeechLogEntry[]> =>
   page.evaluate(() => (window as FakeSpeechWindow).__gabbyFakeSpeech?.log ?? []);
 
@@ -106,11 +108,12 @@ async function startAsStudent(page: Page): Promise<AuthFixture> {
 
 test.describe("単語帳の発話", () => {
   /** 使い捨ての生徒で単語帳を開く */
-  async function openWordDrill(page: Page): Promise<void> {
+  async function openWordDrill(page: Page): Promise<{ f: AuthFixture; contentId: string; contentName: string }> {
     const f = await startAsStudent(page);
     const word = await prepareWordContent(f);
     await page.goto(`/training/word/${word.content_id}`);
     await expect(page.getByRole("button", { name: "発話練習" })).toBeEnabled({ timeout: 30_000 });
+    return { f, contentId: word.content_id, contentName: word.content_name };
   }
 
   test("発話ボタンを押すと、表示中のフレーズをチャイムの後に発話評価し、評価が表示される", async ({ page }) => {
@@ -146,6 +149,50 @@ test.describe("単語帳の発話", () => {
     await expect(page.getByText("スコア", { exact: true })).toBeVisible();
     await expect(page.getByText("Excellent", { exact: true })).toHaveCount(0);
   });
+
+  test("発話中にカードを切り替えると、その発話の評価は出ず、切り替え先のカードで発話し直せる", async ({ page }) => {
+    test.setTimeout(120_000);
+    // 発話中に切り替えられるよう、文字起こしを返すまでの時間を長くする
+    await useFakeSpeech(page, { delayMs: 60_000 });
+    const { f, contentId, contentName } = await openWordDrill(page);
+
+    await page.getByRole("button", { name: "発話練習" }).click();
+    const stop = page.getByRole("button", { name: "発話を止める" });
+    await expect(stop).toBeVisible({ timeout: 20_000 });
+
+    // 発話中は「前へ」「次へ」は押せないため、見出しの単語名から単語の一覧を開いて別の単語へ移る
+    // （発話中にカードを切り替えられる経路。発話は中断され、止めるボタンと違いその時点の評価で確定しない）
+    await expect(page.getByRole("button", { name: "次へ" })).toBeDisabled();
+    const { data: words } = await f.admin
+      .from("com_m_word").select("word_en").eq("content_id", contentId).eq("status", "live").order("word_en");
+    const header = page.getByRole("button", { name: new RegExp(escapeRegExp(contentName)) });
+    const headerText = (await header.textContent()) ?? "";
+    const target = (words ?? []).map((w) => w.word_en as string).find((w) => !headerText.includes(w));
+    if (!target) throw new Error("切り替え先の単語が見つかりません");
+
+    const index = page.getByRole("dialog");
+    await header.click();
+    await expect(index).toBeVisible();
+    await index.getByRole("button", { name: new RegExp(`(^|\\s)${escapeRegExp(target)}(\\s|$)`) }).first().click();
+    await expect(index).toBeHidden();
+    await expect(header).toContainText(target);
+
+    await expect(stop).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "発話練習" })).toBeEnabled();
+    await expect(page.getByText("スコア", { exact: true })).toHaveCount(0);
+
+    // 切り替え先のカードでは発話評価できる（すぐに文字起こしを返す設定に戻す）
+    await page.evaluate(() => {
+      const fake = (window as FakeSpeechWindow).__gabbyFakeSpeech;
+      if (fake) fake.delayMs = 400;
+    });
+    await page.getByRole("button", { name: "発話練習" }).click();
+    await expect(page.getByText("Excellent", { exact: true })).toBeVisible({ timeout: 20_000 });
+
+    const listen = (await readSpeechLog(page)).filter((e) => e.type === "listen");
+    expect(listen).toHaveLength(2);
+    expect(listen[1].text, "切り替え先のカードのフレーズで発話評価されていない").not.toBe(listen[0].text);
+  });
 });
 
 test.describe("スプリントの発話", () => {
@@ -156,6 +203,7 @@ test.describe("スプリントの発話", () => {
     statement_voice: string | null;
     question_voice: string | null;
     answer_sentence_yes_en: string;
+    answer_sentence_no_en: string | null;
   }
 
   const QUESTION_TYPES: QuestionType[] = ["0", "4", "5", "6"];
@@ -176,7 +224,7 @@ test.describe("スプリントの発話", () => {
     for (const contentId of [...new Set((mastery ?? []).map((r) => r.content_id as string))]) {
       const { data: questions } = await f.admin
         .from("com_m_sprint_questions")
-        .select("question_type, statement_voice, question_voice, answer_sentence_yes_en")
+        .select("question_type, statement_voice, question_voice, answer_sentence_yes_en, answer_sentence_no_en")
         .eq("content_id", contentId)
         .not("question_voice", "is", null);
       const rows = (questions ?? []) as SprintQuestionRow[];
@@ -259,6 +307,26 @@ test.describe("スプリントの発話", () => {
       await expect(page.getByText("Excellent", { exact: true })).toBeVisible({ timeout: 20_000 });
     });
   }
+
+  test("スプリント（Speed の NO 回答）: NO で開始すると、NO の解答文で発話評価される", async ({ page }) => {
+    test.setTimeout(150_000);
+    await useFakeSpeech(page);
+    const f = await startAsStudent(page);
+    const sprint = await prepareSprintContent(f);
+
+    await openSprintSelect(page, { mode: "sprint", type: "0", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
+    const start = page.getByRole("button", { name: "NOで回答開始" });
+    await expect(start).toBeEnabled();
+    await start.click();
+
+    const log = await waitForFirstListen(page);
+    const listen = log[log.length - 1];
+    const speed = sprint.questions.filter((q) => q.question_type === "0");
+    expect(speed.some((q) => q.answer_sentence_no_en === listen.text), `発話評価の参照文が Speed の NO の解答文ではない: ${listen.text}`).toBe(true);
+    expect(speed.some((q) => q.answer_sentence_yes_en === listen.text), "NO で開始したのに YES の解答文で発話評価された").toBe(false);
+
+    await expect(page.getByText("Excellent", { exact: true })).toBeVisible({ timeout: 20_000 });
+  });
 
   test("スプリント（発話評価OFF）: 問題を再生した後は発話せず、脳内回答で次の問題へ進める", async ({ page }) => {
     test.setTimeout(150_000);
