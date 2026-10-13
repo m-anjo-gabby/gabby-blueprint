@@ -17,17 +17,21 @@ export const QA_ADMIN_EMAIL = "qa-admin@gabby-qa-test.example";
 
 /**
  * アドミンとしてログインしたコンテキストを作る。
- * admin は表示言語の Cookie が無いと英語で表示するため、日本語（NEXT_LOCALE=ja）に固定する。
+ * admin は表示言語の Cookie が無いと英語で表示するため、既定は日本語（NEXT_LOCALE=ja）に固定する。英語の文言を確かめる場合は `locale: "en"`。
  */
-export async function openAdminContext(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
+export async function openAdminContext(
+  browser: Browser,
+  options: { locale?: "ja" | "en" } = {}
+): Promise<{ context: BrowserContext; page: Page }> {
+  const locale = options.locale ?? "ja";
   const context = await browser.newContext({
     baseURL: ADMIN_BASE_URL,
     ignoreHTTPSErrors: true,
-    locale: "ja-JP",
+    locale: locale === "ja" ? "ja-JP" : "en-US",
     timezoneId: "Asia/Tokyo",
     viewport: { width: 1440, height: 900 },
   });
-  await context.addCookies([{ name: "NEXT_LOCALE", value: "ja", url: ADMIN_BASE_URL }]);
+  await context.addCookies([{ name: "NEXT_LOCALE", value: locale, url: ADMIN_BASE_URL }]);
 
   const page = await context.newPage();
   await page.goto("/login");
