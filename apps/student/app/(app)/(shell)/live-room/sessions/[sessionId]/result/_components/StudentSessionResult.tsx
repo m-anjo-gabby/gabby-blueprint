@@ -4,12 +4,9 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   BookOpen,
-  Check,
-  CheckCircle2,
   ChevronDown,
   FileText,
   GraduationCap,
-  ListTodo,
   Loader2,
   LogIn,
   LogOut,
@@ -18,55 +15,31 @@ import {
 } from 'lucide-react';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { useToast } from '@gabby/lib/hooks/useToast';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
-import { updateHomeworkChecklistItemStatus } from '@/actions/sessionHomeworkAction';
-import { SAVE_NETWORK_ERROR_MESSAGE } from '@/constants/network';
-import { Progress } from '@/components/ui/progress';
 import { SectionHeading, SessionResultPageHeader } from './SessionResultParts';
 import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
 import type { SessionResultSummary } from '@gabby/types/session';
-import type { SessionHomeworkAttachment, SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import type { SessionHomeworkAttachment, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 
 interface Props {
   session: SessionResultSummary;
   homework: SessionHomeworkEntry | null;
-  checklist: SessionHomeworkChecklistItem[];
 }
 
 /**
  * 生徒向けセッション結果画面。コーチ向け(apps/coach/.../sessions/[sessionId]/result)と異なり
  * 宿題本体・フォローアップコメント・添付ファイルの投稿は不可（RLSでもコーチのみに制限されている）。
- * ただし宿題チェックリストの完了状態（ON/OFF）のみ生徒本人が更新できる。
+ * 画面を開くと、宿題を開いたことがサーバー側で記録される（page.tsx。コーチの画面の「見たか」に使う）。
  * セクションは優先度順（サマリー→宿題→トレーニング→チャット履歴）に並べる。
  */
-export function StudentSessionResult({ session, homework, checklist: initialChecklist }: Props) {
+export function StudentSessionResult({ session, homework }: Props) {
   const timezone = useTimezone();
-  const { showToast } = useToast();
-  const [checklist, setChecklist] = useState(initialChecklist);
   const [showCallLog, setShowCallLog] = useState(false);
   const coachIconUrl = getProfileIconUrl(session.counterpart_icon_path);
   const sprintMetric = getTrainingMetricConfig('sprint');
-  const doneCount = checklist.filter((item) => item.is_done).length;
-  const progressPercent = checklist.length > 0 ? (doneCount / checklist.length) * 100 : 0;
-
-  const handleToggleChecklistItem = async (checklistItemId: string, isDone: boolean) => {
-    // 楽観的更新。失敗時は元の状態に戻す。
-    setChecklist((prev) => prev.map((item) => (item.checklist_item_id === checklistItemId ? { ...item, is_done: isDone } : item)));
-
-    // 通信の失敗等は戻り値ではなく例外になるため、失敗の結果に変えて同じく元に戻す
-    const res = await updateHomeworkChecklistItemStatus(checklistItemId, isDone).catch(
-      (): { success: false; message: string } => ({ success: false, message: SAVE_NETWORK_ERROR_MESSAGE })
-    );
-    if (!res.success) {
-      showToast(res.message, 'error');
-      setChecklist((prev) => prev.map((item) => (item.checklist_item_id === checklistItemId ? { ...item, is_done: !isDone } : item)));
-    }
-  };
-
   return (
     <>
       <SessionResultPageHeader />
@@ -139,7 +112,7 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
           </div>
         </section>
 
-        {/* 宿題（指示・チェックリスト・フォローアップコメントを1セクションに集約） */}
+        {/* 宿題（指示・フォローアップコメントを1セクションに集約） */}
         <section className="rounded-card border border-line bg-surface p-4 space-y-4">
           <SectionHeading icon={BookOpen} iconClassName="bg-brand-soft text-brand" title="宿題" />
 
@@ -158,76 +131,6 @@ export function StudentSessionResult({ session, homework, checklist: initialChec
                   </div>
                 )}
               </div>
-
-              {checklist.length > 0 && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-1.5 text-ink-muted">
-                      <ListTodo size={13} />
-                      <p className="text-xs font-bold">チェックリスト</p>
-                    </div>
-                    <span className="text-[11px] font-bold text-brand tabular-nums shrink-0">
-                      {doneCount}/{checklist.length} 完了
-                    </span>
-                  </div>
-
-                  <Progress value={progressPercent} className="h-1.5" />
-
-                  <ul className="space-y-2">
-                    <AnimatePresence initial={false}>
-                      {checklist.map((item) => (
-                        <motion.li
-                          key={item.checklist_item_id}
-                          layout
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => handleToggleChecklistItem(item.checklist_item_id, !item.is_done)}
-                            aria-pressed={item.is_done}
-                            className={`w-full flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors active:scale-[0.99] ${
-                              item.is_done
-                                ? 'bg-emerald-50/60 border-emerald-100'
-                                : 'bg-surface border-line hover:bg-canvas'
-                            }`}
-                          >
-                            <span
-                              className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                item.is_done ? 'bg-emerald-500 border-emerald-500' : 'border-ink-subtle bg-surface'
-                              }`}
-                            >
-                              <AnimatePresence>
-                                {item.is_done && (
-                                  <motion.span
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    exit={{ scale: 0 }}
-                                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                                  >
-                                    <Check size={12} className="text-white" strokeWidth={3} />
-                                  </motion.span>
-                                )}
-                              </AnimatePresence>
-                            </span>
-                            <span className={`text-sm flex-1 ${item.is_done ? 'text-ink-subtle line-through' : 'text-ink-soft font-medium'}`}>
-                              {item.item_text}
-                            </span>
-                          </button>
-                        </motion.li>
-                      ))}
-                    </AnimatePresence>
-                  </ul>
-
-                  {doneCount === checklist.length && (
-                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3.5 py-2.5">
-                      <CheckCircle2 size={15} className="shrink-0" />
-                      宿題を全て完了しました！お疲れ様でした。
-                    </div>
-                  )}
-                </div>
-              )}
 
               <div className="space-y-2.5 pt-1 border-t border-line">
                 <div className="flex items-center gap-1.5 text-ink-muted pt-2">

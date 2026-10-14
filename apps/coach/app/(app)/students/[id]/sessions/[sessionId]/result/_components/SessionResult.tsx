@@ -7,8 +7,8 @@ import { Section } from '@/components/common/Section';
 import { getSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { CONDUCTED_VIA, type SessionResultSummary } from '@gabby/types/session';
-import type { SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import { CONDUCTED_VIA, SESSION_STATUS, type SessionResultSummary } from '@gabby/types/session';
+import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import { HomeworkComposer } from './HomeworkComposer';
 import { LessonSprintHistoryRow } from '../../../../_components/LessonSprintHistoryRow';
 
@@ -16,10 +16,9 @@ interface Props {
   studentId: string;
   session: SessionResultSummary;
   homework: SessionHomeworkEntry | null;
-  checklist: SessionHomeworkChecklistItem[];
 }
 
-export function SessionResult({ studentId, session, homework, checklist }: Props) {
+export function SessionResult({ studentId, session, homework }: Props) {
   const timezone = useTimezone();
   const badge = getSessionStatusBadge(session);
 
@@ -91,7 +90,12 @@ export function SessionResult({ studentId, session, homework, checklist }: Props
       </Section>
 
       <Section label="Homework" icon={BookOpen}>
-        <HomeworkComposer sessionId={session.session_id} initialHomework={homework} initialChecklist={checklist} />
+        <HomeworkComposer
+          sessionId={session.session_id}
+          initialHomework={homework}
+          isCompleted={session.status === SESSION_STATUS.COMPLETED}
+          initialNotNeeded={session.homework_not_needed}
+        />
       </Section>
 
       <Section label="Training">

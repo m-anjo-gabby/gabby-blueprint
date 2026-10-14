@@ -171,13 +171,12 @@ export async function prepareLiveSessionDay(
 
 /**
  * 実施済み（正常終了）のセッションと、その宿題を作る（宿題の登録で生徒へ HOMEWORK_POSTED が通知される）。
- * `checklist` を渡すとチェックリストの項目も作る（コーチの投稿と同じく、本体と同時に作る）。
  */
 export async function createCompletedSessionWithHomework(
   f: AuthFixture,
   pair: LivePair,
   scheduleId: string,
-  options: { daysAgo: number; checklist?: string[] }
+  options: { daysAgo: number }
 ): Promise<{ sessionId: string; homeworkText: string }> {
   const { admin } = f;
   const start = Date.now() - options.daysAgo * DAY_MS;
@@ -203,12 +202,6 @@ export async function createCompletedSessionWithHomework(
     .select("homework_id")
     .single();
   if (homeworkError || !homework) throw new Error(`宿題の作成に失敗しました: ${homeworkError?.message}`);
-  if (options.checklist && options.checklist.length > 0) {
-    const { error: checklistError } = await admin.from("com_t_session_homework_checklist_item").insert(
-      options.checklist.map((itemText, index) => ({ homework_id: homework.homework_id, item_no: index + 1, item_text: itemText }))
-    );
-    if (checklistError) throw new Error(`チェックリストの作成に失敗しました: ${checklistError.message}`);
-  }
   return { sessionId: session.session_id, homeworkText };
 }
 

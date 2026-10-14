@@ -983,7 +983,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
 
     const { data: session, error: sessionError } = await supabase
       .from('com_t_session')
-      .select('session_id, student_id, coach_id, start_datetime, end_datetime, status, completion_result, conducted_via, status_note')
+      .select('session_id, student_id, coach_id, start_datetime, end_datetime, status, completion_result, conducted_via, status_note, homework_not_needed')
       .eq('session_id', sessionId)
       .maybeSingle();
 
@@ -1106,6 +1106,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
         completion_result: session.completion_result,
         conducted_via: session.conducted_via,
         status_note: session.status_note,
+        homework_not_needed: session.homework_not_needed,
         counterpart_name: counterpart?.user_name ?? '(Unknown)',
         counterpart_icon_path: counterpart?.icon_path ?? null,
         call_log: callLog,

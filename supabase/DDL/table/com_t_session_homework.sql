@@ -17,7 +17,7 @@
 -- 「宿題の指示・説明（必須）＋チェックリスト（任意）を1セットで発信し、以降の連絡は
 -- フォローアップコメントとして明確に区別したい」という要望のため、本テーブルを
 -- 「1セッションにつき1件の宿題本体」に再定義する（UNIQUE(session_id)を追加）。
--- チェックリスト(com_t_session_homework_checklist_item)は本体のhomework_idに、
+-- チェックリスト(com_t_session_homework_checklist_item。2026-10-14廃止)は本体のhomework_idに、
 -- 以降のフォローアップコメントは新設のcom_t_session_homework_commentのhomework_idに、
 -- それぞれ子として紐づく。宿題管理機能はdev環境のみへの反映でステージング/本番は
 -- 未反映のため、既存データ互換は考慮せず正規化を優先する。
@@ -73,3 +73,20 @@ FOR INSERT TO authenticated WITH CHECK (
 );
 
 -- 更新・削除は許可しない（コーチ評価に使うため投稿後は編集不可。追記専用として履歴保持する）。
+
+---------------------------------------------
+-- 追加パッチ: チェックリストの廃止と、生徒の閲覧日時 (2026-10-14)
+-- 既存環境に対しては、このブロックのみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- チェックリスト（com_t_session_homework_checklist_item）は「コーチが宿題の進捗を把握したい」という
+-- 要望で作ったが、コーチは投稿のたびに項目を作る手間があり、生徒は自己申告のチェックを付けるだけで
+-- 進捗の材料として弱かったため廃止する（テーブルを削除）。宿題は本文・添付・コーチの追記コメントだけにする。
+-- 代わりに、生徒が宿題を開いたこと（生徒のセッション結果画面を開いた時刻）を student_viewed_at に記録し、
+-- コーチの画面に「見たか・最新の追記を見たか」を出す（生徒の操作は不要）。
+-- 更新は mark_session_homework_viewed() からのみ行う（生徒に本テーブルの更新権限は与えない）。
+---------------------------------------------
+ALTER TABLE public.com_t_session_homework ADD COLUMN IF NOT EXISTS student_viewed_at timestamp with time zone;
+COMMENT ON COLUMN public.com_t_session_homework.student_viewed_at IS '生徒が宿題を最後に開いた日時（生徒のセッション結果画面を開いた時刻。未閲覧はNULL）';
+
+DROP TABLE IF EXISTS public.com_t_session_homework_checklist_item;

@@ -72,7 +72,7 @@
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | Last Live Sprint | このセッション自身の実施分を除く直近3件。無ければ「No previous Live Sprint on record.」 | 行をクリックするとLive Sprint結果画面へ、このハブへ戻る文脈を引き継いだ状態（没入表示）で遷移する |
-| Last Homework | このセッション自身の投稿を除く直近の宿題。無ければ「No homework posted yet.」 | 操作なし（閲覧のみ） |
+| Last Homework | このセッション自身の投稿を除く直近の宿題と、生徒が見たか（「Not viewed by the student yet」／「Viewed by the student · 日時」）。無ければ「No homework posted yet.」 | 操作なし（閲覧のみ） |
 | Self-Training（直近n日間） | 自主トレ活動が無い場合は「No self-training activity in the last n days.」、あれば活動日数・総回答数・スピーキング評価回数を表示 | 操作なし |
 
 ## 状態

@@ -178,15 +178,11 @@ test("ダッシュボードで今日のセッションと未読を確認し、�
     });
 
     const instructions = `Practice the dialogue from Session 1 twice (${f.tag}).`;
-    const checklistItem = "Record yourself reading Session 1";
-    await test.step("8. 宿題: 指示文とチェックリストを付けて投稿する", async () => {
+    await test.step("8. 宿題: 指示文を投稿すると、生徒がまだ見ていない旨が出る", async () => {
       await page.getByPlaceholder("Instructions for the student (required)...").fill(instructions);
-      const checklistInput = page.getByPlaceholder(/^Add a checklist item/);
-      await checklistInput.fill(checklistItem);
-      await checklistInput.press("Enter");
       await page.getByRole("button", { name: "Post Homework" }).click();
       await expect(page.getByText(instructions)).toBeVisible();
-      await expect(page.getByText(checklistItem)).toBeVisible();
+      await expect(page.getByTestId("homework-viewed-status")).toHaveText("Not viewed by the student yet");
       await expect(page.getByRole("button", { name: "Post Homework" })).toHaveCount(0);
     });
 

@@ -342,6 +342,8 @@ export interface SessionResultSummary {
   completion_result: CompletionResult | null;
   conducted_via: ConductedVia | null;
   status_note: string | null;
+  /** コーチが「今回は宿題なし」にした回か */
+  homework_not_needed: boolean;
   counterpart_name: string;
   counterpart_icon_path: string | null;
   call_log: SessionCallLogEntry[];
@@ -371,7 +373,7 @@ export interface UnfinalizedSessionTask {
   end_datetime: string;
 }
 
-/** 確定済み(completed、内訳問わず)だが宿題が未投稿のセッション（直近の実施分に限定） */
+/** 確定済み(completed。生徒の欠席・「今回は宿題なし」の回を除く)だが宿題が未投稿のセッション（直近の実施分に限定） */
 export interface MissingHomeworkTask {
   session_id: string;
   student_id: string;

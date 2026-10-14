@@ -4772,3 +4772,87 @@ REVOKE EXECUTE ON FUNCTION public.admin_get_session_records(timestamptz, timesta
 GRANT EXECUTE ON FUNCTION public.admin_get_session_records(timestamptz, timestamptz, uuid, text, text, boolean, text, integer, integer) TO authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】ライブセッションの宿題: チェックリストの廃止・生徒の閲覧日時・「今回は宿題なし」
+-- 追加日: 2026-10-14
+--
+-- 【内容】
+--   1. com_t_session_homework に student_viewed_at（生徒が宿題を最後に開いた日時）を追加し、
+--      com_t_session_homework_checklist_item（宿題のチェックリスト）を削除する（登録済みの項目も消える）
+--   2. com_t_session に homework_not_needed（コーチが「今回は宿題なし」にした）を追加
+--   3. mark_session_homework_viewed（生徒の結果画面を開いた時に記録）・set_session_homework_not_needed を新規作成
+-- 対応ファイル: DDL/table/com_t_session_homework.sql, DDL/table/com_t_session.sql,
+--   DDL/function/mark_session_homework_viewed.sql, DDL/function/set_session_homework_not_needed.sql
+--   （削除: DDL/table/com_t_session_homework_checklist_item.sql）
+-- 【注意】チェックリストのテーブルを削除するため、適用からアプリのデプロイまでの間は、旧アプリの宿題の投稿・
+--   チェックリストの表示が失敗する。アプリのデプロイの直前に適用すること。
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- DDL/table/com_t_session_homework.sql（2026-10-14パッチ）
+---------------------------------------------
+ALTER TABLE public.com_t_session_homework ADD COLUMN IF NOT EXISTS student_viewed_at timestamp with time zone;
+COMMENT ON COLUMN public.com_t_session_homework.student_viewed_at IS '生徒が宿題を最後に開いた日時（生徒のセッション結果画面を開いた時刻。未閲覧はNULL）';
+
+DROP TABLE IF EXISTS public.com_t_session_homework_checklist_item;
+
+---------------------------------------------
+-- DDL/table/com_t_session.sql（2026-10-14パッチ「宿題の要否」）
+---------------------------------------------
+ALTER TABLE public.com_t_session ADD COLUMN IF NOT EXISTS homework_not_needed boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.com_t_session.homework_not_needed IS 'コーチが「今回は宿題なし」にした（Session Tasks の Homework not posted に出さない）';
+
+---------------------------------------------
+-- DDL/function/mark_session_homework_viewed.sql
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.mark_session_homework_viewed(p_session_id uuid)
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    UPDATE public.com_t_session_homework
+    SET student_viewed_at = NOW()
+    WHERE session_id = p_session_id
+      AND student_id = auth.uid();
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.mark_session_homework_viewed(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.mark_session_homework_viewed(uuid) TO authenticated;
+
+---------------------------------------------
+-- DDL/function/set_session_homework_not_needed.sql
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.set_session_homework_not_needed(p_session_id uuid, p_not_needed boolean)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+BEGIN
+    SELECT coach_id, status INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+    IF v_session.coach_id IS DISTINCT FROM auth.uid() THEN
+        RAISE EXCEPTION 'not authorized to update this session';
+    END IF;
+    IF v_session.status <> 2 THEN
+        RAISE EXCEPTION 'session % is not completed (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    UPDATE public.com_t_session
+    SET homework_not_needed = COALESCE(p_not_needed, false), update_date = NOW()
+    WHERE session_id = p_session_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.set_session_homework_not_needed(uuid, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.set_session_homework_not_needed(uuid, boolean) TO authenticated;
+
+COMMIT;

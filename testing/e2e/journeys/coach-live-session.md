@@ -5,7 +5,7 @@
 - 対象ロール: コーチ（生徒は通話の相手として関与し、終了後に宿題を受け取る）
 - なぜ重要か: ライブ付き契約の価値そのものにあたる、コーチの毎回の基本動作。終了処理（End Session）が実施結果とチケットの消化を決め、宿題が生徒の次の自主トレにつながるため、ここが止まると契約の回数・月次の稼働実績・生徒の学習が連動して崩れる。
 - 前後のジャーニー: [生徒の初日](./student-first-day.md) の手順8（担当の申請・承認）の後、契約期間中の毎回のセッションで繰り返す。
-- E2E: [tests/journeys/coach-live-session.spec.ts](../tests/journeys/coach-live-session.spec.ts)（手順1〜4・6〜11。手順5のビデオ通話は対象外で、通話ルームが記録する入退室ログを直接入れて「通話した」状態にする。手順8の早期終了・無断欠席・Resolve Manually は [tests/session/session-completion.spec.ts](../tests/session/session-completion.spec.ts)、生徒側の宿題は [tests/homework/homework-checklist.spec.ts](../tests/homework/homework-checklist.spec.ts)）
+- E2E: [tests/journeys/coach-live-session.spec.ts](../tests/journeys/coach-live-session.spec.ts)（手順1〜4・6〜11。手順5のビデオ通話は対象外で、通話ルームが記録する入退室ログを直接入れて「通話した」状態にする。手順8の早期終了・欠席・外部のZoom・実施できなかった場合は [tests/session/session-completion.spec.ts](../tests/session/session-completion.spec.ts)、生徒の宿題の閲覧・今回は宿題なしは [tests/homework/session-homework.spec.ts](../tests/homework/session-homework.spec.ts)）
 
 ## 前提データ
 
@@ -28,5 +28,5 @@
 | 7 | コーチ | ダイアログプラクティスを行う生徒のみ: ハブで教材を割り当て（または割当済みのセットを開き）、教材のスライドを開いて進め、終わったセッションを Complete にする | 教材を開いた事実が今回のセッションに記録され、セットの進捗が進む | [docs/screens/coach/students/dialogue-practice.md](../../../docs/screens/coach/students/dialogue-practice.md) | スライドは Google Slides を別タブで開く。「開いた」記録と「完了」は別に管理される |
 | 8 | コーチ | 通話を終えて End Session を押す | 入退室の重なりで実施結果が決まり、結果画面へ移る。20分以上は実施完了（チケットを1回消化）、20分未満は理由を入力して早期終了（消化しない）、生徒の入室が無ければ無断欠席 | [docs/screens/coach/students/session-detail.md](../../../docs/screens/coach/students/session-detail.md)、[specs/session-lifecycle/session-completion.md](../specs/session-lifecycle/session-completion.md) | 終了予定を過ぎても通話の記録が無い場合は「Resolve Manually」で手動で確定する |
 | 9 | コーチ | 結果画面で今回の記録を確認する | 入退室のタイムライン、今回の Live Sprint、開いたダイアログ教材、通話中のチャットが見える | [docs/screens/coach/students/session-result.md](../../../docs/screens/coach/students/session-result.md) | |
-| 10 | コーチ | 宿題（指示文・チェックリスト・添付）を投稿する | 宿題が登録されて生徒に通知され、以後は追記のコメントだけを送れる | [docs/screens/coach/students/session-result.md](../../../docs/screens/coach/students/session-result.md)、[specs/homework/session-homework.md](../specs/homework/session-homework.md) | 生徒は [docs/screens/student/live-room/session-result.md](../../../docs/screens/student/live-room/session-result.md) で宿題を見てチェックリストを進める |
+| 10 | コーチ | 宿題（指示文・添付）を投稿する（宿題を出さない回は「今回は宿題なし」） | 宿題が登録されて生徒に通知され、以後は追記のコメントだけを送れる。生徒が開くと「見た」と出る | [docs/screens/coach/students/session-result.md](../../../docs/screens/coach/students/session-result.md)、[specs/homework/session-homework.md](../specs/homework/session-homework.md) | 生徒は [docs/screens/student/live-room/session-result.md](../../../docs/screens/student/live-room/session-result.md) で宿題を見る |
 | 11 | コーチ | ダッシュボードへ戻る | 実施したセッションは「Next 24 Hours」から消え、宿題を出していれば Session Tasks にも残らない | [docs/screens/coach/dashboard.md](../../../docs/screens/coach/dashboard.md) | |

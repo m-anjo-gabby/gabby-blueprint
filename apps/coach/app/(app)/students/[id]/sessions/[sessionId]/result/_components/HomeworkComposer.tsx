@@ -1,46 +1,47 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpen, Check, FileText, ListTodo, Loader2, MessageSquareText, Paperclip, Plus, Send, X } from 'lucide-react';
+import { useEffect, useRef, useState, useTransition } from 'react';
+import { BookOpen, CircleSlash, FileText, Loader2, MessageSquareText, Paperclip, Send, Undo2, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { HomeworkViewedStatus } from '@/components/session/HomeworkViewedStatus';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
-import { createSessionHomework, addHomeworkComment, uploadSessionHomeworkAttachment } from '@/actions/sessionHomeworkAction';
+import { createSessionHomework, addHomeworkComment, setSessionHomeworkNotNeeded, uploadSessionHomeworkAttachment } from '@/actions/sessionHomeworkAction';
 import { getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
 import {
   HOMEWORK_ATTACHMENT_MAX_SIZE,
-  HOMEWORK_CHECKLIST_MAX_ITEMS,
   PendingHomeworkAttachment,
   SessionHomeworkAttachment,
-  SessionHomeworkChecklistItem,
   SessionHomeworkEntry,
 } from '@gabby/types/sessionHomework';
 
 interface Props {
   sessionId: string;
   initialHomework: SessionHomeworkEntry | null;
-  initialChecklist: SessionHomeworkChecklistItem[];
+  /** 実施済み(status=COMPLETED)の回か。「今回は宿題なし」はこの場合だけ選べる */
+  isCompleted: boolean;
+  /** コーチが「今回は宿題なし」にした回か */
+  initialNotNeeded: boolean;
 }
 
-export function HomeworkComposer({ sessionId, initialHomework, initialChecklist }: Props) {
+export function HomeworkComposer({ sessionId, initialHomework, isCompleted, initialNotNeeded }: Props) {
   const [homework, setHomework] = useState(initialHomework);
-  const [checklist, setChecklist] = useState(initialChecklist);
+  const [notNeeded, setNotNeeded] = useState(initialNotNeeded);
 
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardContent className="pt-4">
         {homework ? (
-          <PostedHomework sessionId={sessionId} homework={homework} setHomework={setHomework} checklist={checklist} />
+          <PostedHomework sessionId={sessionId} homework={homework} setHomework={setHomework} />
+        ) : notNeeded ? (
+          <HomeworkNotNeededNotice sessionId={sessionId} onUndone={() => setNotNeeded(false)} />
         ) : (
-          <HomeworkCreateForm sessionId={sessionId} onCreated={(entry, items) => { setHomework(entry); setChecklist(items); }} />
+          <HomeworkCreateForm sessionId={sessionId} canSkip={isCompleted} onCreated={setHomework} onSkipped={() => setNotNeeded(true)} />
         )}
       </CardContent>
     </Card>
@@ -48,27 +49,61 @@ export function HomeworkComposer({ sessionId, initialHomework, initialChecklist 
 }
 
 /**
- * 宿題本体が未投稿の状態。「指示・説明（必須）＋チェックリスト（任意）」を1セットで作成する。
- * チェックリスト項目は送信前はローカルの下書きリストとして保持し、送信ボタン押下時に
- * createSessionHomework 1回の呼び出しで本体・チェックリスト・添付をまとめて登録する。
+ * 「今回は宿題なし」にした回。ダッシュボードの Session Tasks の「Homework not posted」に出なくなる。
+ * 取り消すと投稿のフォームに戻る。
+ */
+function HomeworkNotNeededNotice({ sessionId, onUndone }: { sessionId: string; onUndone: () => void }) {
+  const { showToast } = useToast();
+  const [isPending, startTransition] = useTransition();
+
+  const handleUndo = () => {
+    startTransition(async () => {
+      const res = await setSessionHomeworkNotNeeded(sessionId, false);
+      if (!res.success) {
+        showToast(res.message, 'error');
+        return;
+      }
+      onUndone();
+    });
+  };
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="flex items-center gap-2 text-xs text-slate-500">
+        <CircleSlash size={14} className="shrink-0 text-slate-400" />
+        No homework for this session.
+      </p>
+      <Button type="button" variant="outline" size="sm" pending={isPending} icon={<Undo2 />} onClick={handleUndo}>
+        Post homework instead
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * 宿題本体が未投稿の状態。指示・説明（必須）と添付を、createSessionHomework 1回の呼び出しでまとめて登録する。
+ * 実施済みの回では「今回は宿題なし」も選べる（Session Tasks の「Homework not posted」から外す）。
  */
 function HomeworkCreateForm({
   sessionId,
+  canSkip,
   onCreated,
+  onSkipped,
 }: {
   sessionId: string;
-  onCreated: (entry: SessionHomeworkEntry, checklistItems: SessionHomeworkChecklistItem[]) => void;
+  canSkip: boolean;
+  onCreated: (entry: SessionHomeworkEntry) => void;
+  onSkipped: () => void;
 }) {
   const { showToast } = useToast();
   const [text, setText] = useState('');
   const [pendingAttachments, setPendingAttachments] = useState<PendingHomeworkAttachment[]>([]);
-  const [draftChecklistItems, setDraftChecklistItems] = useState<string[]>([]);
-  const [draftChecklistText, setDraftChecklistText] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
+  const [isSkipping, startSkip] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const busy = isUploading || isPosting;
+  const busy = isUploading || isPosting || isSkipping;
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -102,15 +137,15 @@ function HomeworkCreateForm({
     setPendingAttachments((prev) => prev.filter((a) => a.file_path !== filePath));
   };
 
-  const handleAddDraftChecklistItem = () => {
-    const trimmed = draftChecklistText.trim();
-    if (!trimmed || draftChecklistItems.length >= HOMEWORK_CHECKLIST_MAX_ITEMS) return;
-    setDraftChecklistItems((prev) => [...prev, trimmed]);
-    setDraftChecklistText('');
-  };
-
-  const handleRemoveDraftChecklistItem = (index: number) => {
-    setDraftChecklistItems((prev) => prev.filter((_, i) => i !== index));
+  const handleSkip = () => {
+    startSkip(async () => {
+      const res = await setSessionHomeworkNotNeeded(sessionId, true);
+      if (!res.success) {
+        showToast(res.message, 'error');
+        return;
+      }
+      onSkipped();
+    });
   };
 
   const handlePost = async () => {
@@ -119,12 +154,12 @@ function HomeworkCreateForm({
 
     setIsPosting(true);
     try {
-      const res = await createSessionHomework(sessionId, trimmed, pendingAttachments, draftChecklistItems);
+      const res = await createSessionHomework(sessionId, trimmed, pendingAttachments);
       if (!res.success) {
         showToast(res.message, 'error');
         return;
       }
-      onCreated(res.entry, res.checklistItems);
+      onCreated(res.entry);
       showToast('Homework posted. The student has been notified.', 'success');
     } finally {
       setIsPosting(false);
@@ -163,73 +198,45 @@ function HomeworkCreateForm({
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5 space-y-2.5">
-        <div className="flex items-center gap-2">
-          <ListTodo size={13} className="text-slate-400 shrink-0" />
-          <p className="text-xs font-bold text-slate-700">Checklist (optional)</p>
-        </div>
-
-        {draftChecklistItems.length > 0 && (
-          <ul className="space-y-1.5">
-            {draftChecklistItems.map((itemText, index) => (
-              <li key={index} className="flex items-center gap-2 rounded-xl border border-slate-100 bg-white px-3 py-2 text-sm text-slate-700">
-                <span className="flex-1">{itemText}</span>
-                <button type="button" onClick={() => handleRemoveDraftChecklistItem(index)} className="text-slate-400 hover:text-rose-500 shrink-0 p-0.5" title="Remove">
-                  <X size={13} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {draftChecklistItems.length < HOMEWORK_CHECKLIST_MAX_ITEMS && (
-          <div className="flex items-center gap-2">
-            <Input
-              value={draftChecklistText}
-              onChange={(e) => setDraftChecklistText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddDraftChecklistItem();
-                }
-              }}
-              placeholder={`Add a checklist item (${draftChecklistItems.length}/${HOMEWORK_CHECKLIST_MAX_ITEMS})`}
-              disabled={busy}
-              className="h-8 text-xs bg-white"
-            />
-            <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0" disabled={!draftChecklistText.trim() || busy} onClick={handleAddDraftChecklistItem}>
-              <Plus size={14} />
-            </Button>
-          </div>
-        )}
-      </div>
-
       <div className="flex items-center justify-between gap-2">
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
         <Button pending={isUploading} icon={<Paperclip size={16} />} type="button" aria-label="Attach files" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()} />
 
-        <Button pending={isPosting} icon={<Send size={16} />} type="button" disabled={!text.trim() || busy} onClick={handlePost} className="gap-1.5">
-          Post Homework
-        </Button>
+        <div className="flex items-center gap-2">
+          {canSkip && (
+            <Button
+              type="button"
+              variant="ghost"
+              pending={isSkipping}
+              disabled={busy}
+              onClick={handleSkip}
+              title="Removes this session from “Homework not posted” in Session Tasks"
+              className="text-xs text-slate-500"
+            >
+              No homework this time
+            </Button>
+          )}
+          <Button pending={isPosting} icon={<Send size={16} />} type="button" disabled={!text.trim() || busy} onClick={handlePost} className="gap-1.5">
+            Post Homework
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
 /**
- * 宿題本体が投稿済みの状態。本体（指示・説明＋添付、編集不可）→チェックリスト（本体作成時に
- * 確定済み、以後の追加不可）→フォローアップコメント（追記専用）の順に表示する。
+ * 宿題本体が投稿済みの状態。本体（指示・説明＋添付、編集不可）と生徒が見たか → フォローアップコメント
+ * （追記専用）の順に表示する。
  */
 function PostedHomework({
   sessionId,
   homework,
   setHomework,
-  checklist,
 }: {
   sessionId: string;
   homework: SessionHomeworkEntry;
   setHomework: React.Dispatch<React.SetStateAction<SessionHomeworkEntry | null>>;
-  checklist: SessionHomeworkChecklistItem[];
 }) {
   const { showToast } = useToast();
   const timezone = useTimezone();
@@ -240,8 +247,6 @@ function PostedHomework({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const busy = isUploading || isSendingComment;
-  const doneCount = checklist.filter((item) => item.is_done).length;
-  const progressPercent = checklist.length > 0 ? (doneCount / checklist.length) * 100 : 0;
 
   const handleSendComment = async () => {
     const trimmed = commentText.trim();
@@ -315,53 +320,7 @@ function PostedHomework({
             ))}
           </div>
         )}
-      </div>
-
-      <div className="space-y-3 pt-3 border-t border-slate-100">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-brand-50 text-brand shrink-0">
-              <ListTodo size={13} />
-            </span>
-            <p className="text-xs font-bold text-slate-700">Checklist</p>
-          </div>
-          {checklist.length > 0 && (
-            <span className="text-[11px] font-black text-brand tabular-nums shrink-0">
-              {doneCount}/{checklist.length} done
-            </span>
-          )}
-        </div>
-
-        {checklist.length > 0 && (
-          <>
-            <Progress value={progressPercent} className="h-1.5" />
-            <ul className="space-y-1.5">
-              <AnimatePresence initial={false}>
-                {checklist.map((item) => (
-                  <motion.li
-                    key={item.checklist_item_id}
-                    layout
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 text-sm ${
-                      item.is_done ? 'bg-emerald-50/60 border-emerald-100' : 'bg-white border-slate-100'
-                    }`}
-                  >
-                    <span
-                      className={`shrink-0 w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center ${
-                        item.is_done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 bg-white'
-                      }`}
-                    >
-                      {item.is_done && <Check size={11} className="text-white" strokeWidth={3} />}
-                    </span>
-                    <span className={item.is_done ? 'text-slate-400 line-through' : 'text-slate-700'}>{item.item_text}</span>
-                  </motion.li>
-                ))}
-              </AnimatePresence>
-            </ul>
-          </>
-        )}
+        <HomeworkViewedStatus homework={homework} timezone={timezone} />
       </div>
 
       <div className="space-y-2 pt-1 border-t border-slate-100">

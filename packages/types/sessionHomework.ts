@@ -2,9 +2,9 @@
  * ----------------------------------------------
  * レッスンセッション単位の宿題 (com_t_session_homework) 型定義
  * ----------------------------------------------
- * 宿題は「指示・説明（必須）＋チェックリスト（任意）」を1セットとして1セッションに
- * つき1件（SessionHomeworkEntry）持つ。以降の連絡はフォローアップコメント
- * （SessionHomeworkComment、複数可・追記専用）として区別する。
+ * 宿題は「指示・説明（必須）＋添付」を1セッションにつき1件（SessionHomeworkEntry）持つ。
+ * 以降の連絡はフォローアップコメント（SessionHomeworkComment、複数可・追記専用）として区別する。
+ * 2026-10-14: チェックリストは廃止し、生徒が宿題を開いた日時（student_viewed_at）で進捗を見る。
  */
 
 export const HOMEWORK_ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024;
@@ -66,6 +66,8 @@ export interface SessionHomeworkEntry {
   student_id: string;
   homework_text: string;
   insert_date: string;
+  /** 生徒が宿題を最後に開いた日時（生徒のセッション結果画面を開いた時刻。未閲覧は null） */
+  student_viewed_at: string | null;
   attachments: SessionHomeworkAttachment[];
   comments: SessionHomeworkComment[];
 }
@@ -81,37 +83,14 @@ export type GetRecentSessionHomeworkResult =
   | { success: false; errorCode: SessionHomeworkErrorCode };
 
 export type CreateSessionHomeworkResult =
-  | { success: true; entry: SessionHomeworkEntry; checklistItems: SessionHomeworkChecklistItem[] }
+  | { success: true; entry: SessionHomeworkEntry }
   | { success: false; errorCode: SessionHomeworkErrorCode };
 
 export type AddHomeworkCommentResult =
   | { success: true; comment: SessionHomeworkComment }
   | { success: false; errorCode: SessionHomeworkErrorCode };
 
-/**
- * ----------------------------------------------
- * 宿題チェックリスト (com_t_session_homework_checklist_item) 型定義
- * 宿題本体(SessionHomeworkEntry)の子。生徒の進捗管理の基準がぶれないよう、本体と
- * 同時に作成した時点で確定し、以後の追加はできない（修正・補足はフォローアップ
- * コメントで行う）。
- * ----------------------------------------------
- */
-
-export const HOMEWORK_CHECKLIST_MAX_ITEMS = 5;
-
-export interface SessionHomeworkChecklistItem {
-  checklist_item_id: string;
-  homework_id: string;
-  item_no: number;
-  item_text: string;
-  is_done: boolean;
-  done_at: string | null;
-}
-
-export type GetHomeworkChecklistResult =
-  | { success: true; items: SessionHomeworkChecklistItem[] }
-  | { success: false; errorCode: SessionHomeworkErrorCode };
-
-export type UpdateHomeworkChecklistItemResult =
-  | { success: true; item: SessionHomeworkChecklistItem }
+/** 「今回は宿題なし」の設定（set_session_homework_not_needed RPC）の結果 */
+export type SetHomeworkNotNeededResult =
+  | { success: true }
   | { success: false; errorCode: SessionHomeworkErrorCode };

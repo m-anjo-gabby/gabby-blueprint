@@ -6,16 +6,13 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import {
   AddHomeworkCommentResult,
   CreateSessionHomeworkResult,
-  GetHomeworkChecklistResult,
   GetRecentSessionHomeworkResult,
   GetSessionHomeworkResult,
-  HOMEWORK_CHECKLIST_MAX_ITEMS,
   PendingHomeworkAttachment,
   SessionHomeworkAttachment,
-  SessionHomeworkChecklistItem,
   SessionHomeworkComment,
   SessionHomeworkEntry,
-  UpdateHomeworkChecklistItemResult,
+  SetHomeworkNotNeededResult,
 } from '@gabby/types/sessionHomework';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
@@ -44,7 +41,7 @@ function normalizeHomeworkRow(row: RawHomeworkRow): SessionHomeworkEntry {
 }
 
 /**
- * 指定session_idの宿題本体（チェックリストの親、フォローアップコメントの親）を取得する
+ * 指定session_idの宿題本体（フォローアップコメントの親）を取得する
  * （コーチ本人・対象生徒本人・管理者のみRLSにより閲覧可能）。1セッション1件のため、
  * 未投稿の場合はhomework: nullを返す。
  */
@@ -76,8 +73,8 @@ export async function getSessionHomeworkCore(sessionId: string): Promise<GetSess
 
 /**
  * セッション準備/実施ハブ向け。指定セッションを除く、直近の宿題本体を新しい順に取得する
- * （「前回の宿題」を通話前に振り返れるようにするため）。この一覧では本文プレビューと添付のみ
- * 使うため、フォローアップコメントは取得しない（一覧表示を軽量に保つため、comments: []固定）。
+ * （「前回の宿題」を通話前に振り返れるようにするため）。生徒が最新の追記を見たかを出すため、
+ * フォローアップコメントも取得する（件数は直近の数件に限るため軽い）。
  */
 export async function getRecentSessionHomeworkCore(
   studentId: string,
@@ -93,7 +90,7 @@ export async function getRecentSessionHomeworkCore(
 
     const { data, error } = await supabase
       .from('com_t_session_homework')
-      .select(`*, ${ATTACHMENT_SELECT}`)
+      .select(HOMEWORK_SELECT_WITH_COMMENTS)
       .eq('coach_id', user.id)
       .eq('student_id', studentId)
       .neq('session_id', excludeSessionId)
@@ -105,10 +102,7 @@ export async function getRecentSessionHomeworkCore(
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    const entries: SessionHomeworkEntry[] = (data ?? []).map((row) => {
-      const { com_t_session_homework_attachment, ...rest } = row as RawHomeworkRow;
-      return { ...rest, attachments: com_t_session_homework_attachment ?? [], comments: [] };
-    });
+    const entries: SessionHomeworkEntry[] = (data ?? []).map((row) => normalizeHomeworkRow(row as unknown as RawHomeworkRow));
 
     return { success: true, entries };
   } catch (err) {
@@ -121,15 +115,14 @@ export async function getRecentSessionHomeworkCore(
  * 宿題本体を新規作成する（コーチのみ、1セッション1件）。session_idからcoach_id/student_idを
  * サーバー側で解決し、ログイン中コーチが対象セッションの担当コーチであることを検証してから
  * 投稿する（RLSのINSERT WITH CHECKでも同等の検証が行われるが、ここでも明示的にチェックして
- * わかりやすいエラーを返す）。本体テキストと同時に、任意でチェックリスト初期項目・添付ファイル
+ * わかりやすいエラーを返す）。本体テキストと同時に、添付ファイル
  * （事前にuploadSessionHomeworkAttachmentでアップロード済み）をまとめて登録する。
  * 既に本体が存在する場合（UNIQUE制約違反）はerrorCode: 'already_exists'を返す。
  */
 export async function createSessionHomeworkCore(
   sessionId: string,
   homeworkText: string,
-  attachments: PendingHomeworkAttachment[] = [],
-  initialChecklistItemTexts: string[] = []
+  attachments: PendingHomeworkAttachment[] = []
 ): Promise<CreateSessionHomeworkResult> {
   const ctx = await getLogContext();
 
@@ -140,11 +133,6 @@ export async function createSessionHomeworkCore(
 
     const trimmedText = homeworkText.trim();
     if (!trimmedText) {
-      return { success: false, errorCode: 'invalid_input' };
-    }
-
-    const trimmedChecklistTexts = initialChecklistItemTexts.map((t) => t.trim()).filter((t) => t.length > 0);
-    if (trimmedChecklistTexts.length > HOMEWORK_CHECKLIST_MAX_ITEMS) {
       return { success: false, errorCode: 'invalid_input' };
     }
 
@@ -179,31 +167,6 @@ export async function createSessionHomeworkCore(
       return { success: false, errorCode };
     }
 
-    let checklistItems: SessionHomeworkChecklistItem[] = [];
-    if (trimmedChecklistTexts.length > 0) {
-      const { data: insertedChecklistItems, error: checklistError } = await supabase
-        .from('com_t_session_homework_checklist_item')
-        .insert(
-          trimmedChecklistTexts.map((itemText, index) => ({
-            homework_id: homeworkRow.homework_id,
-            item_no: index + 1,
-            item_text: itemText,
-          }))
-        )
-        .select('*');
-
-      if (checklistError) {
-        logger.error('sessionHomework:create_homework_checklist_failed', checklistError.message, {
-          ...ctx,
-          err: checklistError,
-          userId: user.id,
-          payload: { sessionId, homeworkId: homeworkRow.homework_id },
-        });
-      } else {
-        checklistItems = insertedChecklistItems ?? [];
-      }
-    }
-
     let attachmentRows: SessionHomeworkAttachment[] = [];
     if (attachments.length > 0) {
       const { data, error: attachmentError } = await supabase
@@ -231,11 +194,10 @@ export async function createSessionHomeworkCore(
       }
     }
 
-    logger.info('sessionHomework:create_homework_success', 'Homework posted', { ...ctx, userId: user.id, payload: { sessionId, checklistCreated: checklistItems.length } });
+    logger.info('sessionHomework:create_homework_success', 'Homework posted', { ...ctx, userId: user.id, payload: { sessionId } });
     return {
       success: true,
       entry: { ...homeworkRow, attachments: attachmentRows, comments: [] } as SessionHomeworkEntry,
-      checklistItems,
     };
   } catch (err) {
     logger.error('sessionHomework:create_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
@@ -333,86 +295,51 @@ export async function addHomeworkCommentCore(
 }
 
 /**
- * 指定session_idの宿題チェックリスト項目一覧を取得する（コーチ本人・対象生徒本人・
- * 管理者のみRLSにより閲覧可能）。宿題本体が未投稿の場合はitems: []を返す。
+ * 生徒が宿題を開いたことを記録する（mark_session_homework_viewed RPC。対象の生徒本人の行だけを更新し、
+ * 本人以外・宿題が無い場合は何もしない）。生徒のセッション結果画面をサーバーで描く時に呼ぶ。
+ * 記録に失敗しても画面の表示は止めない（ログだけ残す）。
  */
-export async function getHomeworkChecklistCore(sessionId: string): Promise<GetHomeworkChecklistResult> {
+export async function markSessionHomeworkViewedCore(sessionId: string): Promise<void> {
   const ctx = await getLogContext();
-
   try {
     const supabase = await createServerClient();
-    const user = await getAuthUser();
-    if (!user) return { success: false, errorCode: 'unauthorized' };
-
-    const { data: homework, error: homeworkError } = await supabase
-      .from('com_t_session_homework')
-      .select('homework_id')
-      .eq('session_id', sessionId)
-      .maybeSingle();
-
-    if (homeworkError) {
-      logger.error('sessionHomework:get_checklist_homework_lookup_failed', homeworkError.message, { ...ctx, err: homeworkError, userId: user.id, payload: { sessionId } });
-      return { success: false, errorCode: 'unexpected_error' };
-    }
-    if (!homework) {
-      return { success: true, items: [] };
-    }
-
-    const { data, error } = await supabase
-      .from('com_t_session_homework_checklist_item')
-      .select('*')
-      .eq('homework_id', homework.homework_id)
-      .order('item_no', { ascending: true });
-
+    const { error } = await supabase.rpc('mark_session_homework_viewed', { p_session_id: sessionId });
     if (error) {
-      logger.error('sessionHomework:get_checklist_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionId } });
-      return { success: false, errorCode: 'unexpected_error' };
+      logger.error('sessionHomework:mark_viewed_failed', error.message, { ...ctx, err: error, payload: { sessionId } });
     }
-
-    return { success: true, items: data ?? [] };
   } catch (err) {
-    logger.error('sessionHomework:get_checklist_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
-    return { success: false, errorCode: 'unexpected_error' };
+    logger.error('sessionHomework:mark_viewed_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { sessionId } });
   }
 }
 
 /**
- * 宿題チェックリスト項目の完了状態(is_done)を更新する（対象生徒本人のみ）。
- * RLSのUPDATE行ポリシー（対象宿題のstudent_id=auth.uid()）と列単位GRANT
- * （is_done/done_at/update_dateのみ更新可）により、項目本文の改ざんや他生徒の
- * 項目の更新は不可能。0件更新（対象なし、またはRLSで弾かれた）はforbiddenとして扱い、
- * 存在有無を区別する情報は返さない。
+ * 「今回は宿題なし」を設定・解除する（set_session_homework_not_needed RPC。担当コーチ本人・実施済みの回のみ）。
+ * 設定した回はコーチのダッシュボードの Session Tasks の「Homework not posted」に出なくなる。
  */
-export async function updateHomeworkChecklistItemStatusCore(
-  checklistItemId: string,
-  isDone: boolean
-): Promise<UpdateHomeworkChecklistItemResult> {
+export async function setSessionHomeworkNotNeededCore(sessionId: string, notNeeded: boolean): Promise<SetHomeworkNotNeededResult> {
   const ctx = await getLogContext();
-
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data: item, error } = await supabase
-      .from('com_t_session_homework_checklist_item')
-      .update({ is_done: isDone, done_at: isDone ? new Date().toISOString() : null, update_date: new Date().toISOString() })
-      .eq('checklist_item_id', checklistItemId)
-      .select('*')
-      .maybeSingle();
-
+    const { error } = await supabase.rpc('set_session_homework_not_needed', { p_session_id: sessionId, p_not_needed: notNeeded });
     if (error) {
-      logger.error('sessionHomework:update_checklist_item_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { checklistItemId } });
-      return { success: false, errorCode: 'unexpected_error' };
-    }
-    if (!item) {
-      return { success: false, errorCode: 'forbidden' };
+      logger.error('sessionHomework:set_not_needed_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionId, notNeeded } });
+      const errorCode = error.message.includes('not authorized')
+        ? 'forbidden'
+        : error.message.includes('not found')
+          ? 'not_found'
+          : error.message.includes('not completed')
+            ? 'invalid_input'
+            : 'unexpected_error';
+      return { success: false, errorCode };
     }
 
-    logger.info('sessionHomework:update_checklist_item_success', 'Checklist item updated', { ...ctx, userId: user.id, payload: { checklistItemId, isDone } });
-    return { success: true, item };
+    logger.info('sessionHomework:set_not_needed_success', 'Homework not-needed flag updated', { ...ctx, userId: user.id, payload: { sessionId, notNeeded } });
+    return { success: true };
   } catch (err) {
-    logger.error('sessionHomework:update_checklist_item_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('sessionHomework:set_not_needed_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { sessionId } });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

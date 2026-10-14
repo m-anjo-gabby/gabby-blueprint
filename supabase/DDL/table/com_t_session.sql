@@ -350,3 +350,15 @@ COMMENT ON COLUMN public.com_t_session.conducted_via IS '実施方法 1:アプ�
 COMMENT ON COLUMN public.com_t_session.suggested_outcome IS '確定時点の入退室ログから推定した結果 1:実施完了(重なり20分以上) 2:早期終了(20分未満・生徒の入室あり) 3:生徒の欠席。コーチの入室記録が無ければNULL';
 COMMENT ON COLUMN public.com_t_session.outcome_mismatch IS 'アプリ内の通話で実施したと申告した結果が推定(suggested_outcome)と違う。アドミンが結果を修正するとfalseに戻る';
 COMMENT ON COLUMN public.com_t_session.ticket_consumed IS 'このセッションでチケットを1回消化したか（used_sessionsに加算済みか）。アドミンの修正で消化・返還の差分を出すために使う';
+
+---------------------------------------------
+-- 追加パッチ: 宿題の要否 (2026-10-14)
+-- 既存環境に対しては、このブロックのみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- コーチのダッシュボードの Session Tasks は、実施済みで宿題の無いセッションを「Homework not posted」として出す。
+-- 生徒の欠席(completion_result=3)は対象から外し（取得側で除く）、それ以外でも宿題を出さない回は
+-- コーチが「今回は宿題なし」にできるようにする（set_session_homework_not_needed()）。
+---------------------------------------------
+ALTER TABLE public.com_t_session ADD COLUMN IF NOT EXISTS homework_not_needed boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.com_t_session.homework_not_needed IS 'コーチが「今回は宿題なし」にした（Session Tasks の Homework not posted に出さない）';

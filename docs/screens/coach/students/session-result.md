@@ -23,7 +23,7 @@
 1. **ヘッダー** — 「← Back to Overview」リンクと「Session Result」という見出し
 2. **Summaryセクション** — Session Info（ステータス・日時・相手名・ステータス注記）、
    Join / Leave Timeline（入退室ログ）
-3. **Homeworkセクション** — 宿題の投稿・チェックリスト・フォローアップコメント
+3. **Homeworkセクション** — 宿題の投稿（または「今回は宿題なし」）・生徒が見たか・フォローアップコメント
 4. **Trainingセクション** — このセッション中に実施したLive Sprintの一覧と、セッションハブで開いた
    ダイアログ教材の履歴（Dialog Practice History）
 5. **Otherセクション** — In-call Chat History（通話中のチャット履歴）
@@ -39,15 +39,15 @@
 
 ## Homework：表示要素・操作
 
-宿題は「本体（Instructions、必須・添付可）＋チェックリスト（任意、最大件数あり）」を1セット
-として一度だけ作成し、以後は本体・チェックリストとも編集不可（追記専用のフォローアップ
+宿題は「本体（Instructions、必須・添付可）」を一度だけ作成し、以後は本体は編集不可（追記専用のフォローアップ
 コメントのみ追加できる）という設計になっている。
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| New Homework フォーム | まだ宿題が投稿されていない場合のみ表示。指示文（必須）、添付ファイル（複数可、1ファイル10MBまで）、チェックリスト項目（任意、追加時にドラフトへ蓄積） | 「Post Homework」で本体・チェックリスト・添付をまとめて1回で登録する。登録すると生徒に通知が送られる |
+| New Homework フォーム | まだ宿題が投稿されておらず「今回は宿題なし」にもしていない場合に表示。指示文（必須）、添付ファイル（複数可、1ファイル10MBまで） | 「Post Homework」で本体・添付をまとめて1回で登録する。登録すると生徒に通知が送られる |
+| 「No homework this time」ボタン | New Homework フォーム内。実施済み（Completed / Ended early / No-show）の回のみ | 「No homework for this session.」の表示に切り替わり、ダッシュボードの Session Tasks の「Homework not posted」に出なくなる（`set_session_homework_not_needed`）。「Post homework instead」で取り消すとフォームに戻る |
 | Instructions（投稿済み） | 投稿済みの指示文＋添付ファイル | 表示のみ（編集不可） |
-| Checklist（投稿済み） | 本体作成時に確定した項目一覧と進捗（n/m done、プログレスバー） | このコーチ画面からは項目の追加・完了チェックはできない（チェックは生徒側の操作） |
+| 生徒が見たか（投稿済み） | 生徒がセッション結果画面を開く前は「Not viewed by the student yet」、開いた後は「Viewed by the student · 最後に開いた日時」。最新の追記コメントより後に開いていなければ「· your latest comment isn’t viewed yet」を添える | 表示のみ（生徒の操作は不要。生徒が画面を開いた時に記録される） |
 | Follow-up Comments | 過去のコメント一覧（新しい順）＋新規コメント入力欄（テキスト・添付ファイル） | 送信すると一覧の先頭に追加され、生徒に表示される。宿題本体と異なり、コメントは何度でも追加できる |
 | 添付ファイルのプレビュー | 画像は縮小プレビュー＋タップで別タブ表示、それ以外はファイル名リンク | クリック/タップで別タブに開く |
 
@@ -73,7 +73,7 @@ Dialogue Practiceカード側の進捗（`com_t_dialogue_session_progress`）が
 |---|---|---|
 | 読み込み中（画面遷移直後・再読み込み） | 戻るリンク・見出し・区分・各カードの見出しは本物、各カードの中身を骨組みで表示 | 同上 |
 | 宿題未投稿 | New Homeworkフォームのみ表示 | このセッションに宿題がまだ1件も投稿されていない場合 |
-| 宿題投稿済み | Instructions/Checklist/Follow-up Commentsの表示に切り替わる | 宿題本体が既に投稿されている場合。以後この画面を再訪しても常にこちらの表示になる（本体フォームには戻れない） |
+| 宿題投稿済み | Instructions（生徒が見たかを含む）/Follow-up Commentsの表示に切り替わる | 宿題本体が既に投稿されている場合。以後この画面を再訪しても常にこちらの表示になる（本体フォームには戻れない） |
 | 該当データが無い | 404ページ | 指定した`sessionId`が存在しない、または生徒との担当関係が無い場合 |
 
 ## セッション確定処理そのものについて（参考）
@@ -86,7 +86,7 @@ Dialogue Practiceカード側の進捗（`com_t_dialogue_session_progress`）が
 ## 関連する業務フロー仕様書
 
 - [ライブセッションの宿題](../../../../testing/e2e/specs/homework/session-homework.md)
-  — 宿題の投稿・チェックリスト・追記のコメント・生徒への通知・異常系の一覧
+  — 宿題の投稿・生徒の閲覧の記録・追記のコメント・今回は宿題なし・生徒への通知・異常系の一覧
 - [ライブセッションの実施・終了処理](../../../../testing/e2e/specs/session-lifecycle/session-completion.md)
   — 結果（Summary）の元になる確定処理
 
@@ -97,7 +97,7 @@ Dialogue Practiceカード側の進捗（`com_t_dialogue_session_progress`）が
 - `apps/coach/app/(app)/students/[id]/sessions/[sessionId]/result/_components/HomeworkComposer.tsx`
 - 関連RPC（確定処理自体。本画面からは呼ばれないが結果表示の前提となる）: `record_session_outcome`
 - サーバーアクション: `getSessionResultSummary`（`apps/coach/actions/sessionAction.ts`）,
-  `getSessionHomework`, `getSessionHomeworkChecklist`, `createSessionHomework`,
+  `getSessionHomework`, `createSessionHomework`, `setSessionHomeworkNotNeeded`,
   `addHomeworkComment`, `uploadSessionHomeworkAttachment`（`apps/coach/actions/sessionHomeworkAction.ts`。
   添付の失敗は理由のコードを受け取り英語の文言で表示）, `getSessionHomeworkAttachmentUrl`
   （`packages/lib/sessionHomework/actions/homeworkAttachmentActions.ts`）

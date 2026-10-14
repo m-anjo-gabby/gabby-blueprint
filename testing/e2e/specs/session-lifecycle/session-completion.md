@@ -61,7 +61,7 @@
    - アプリ内の通話で実施したと申告し、結果が推定と違う（コーチの入室記録が無い場合を含む）。この場合は `outcome_mismatch` = true になる
 4. 記録の時点の推定を `suggested_outcome` に残し、チケットを消化する結果なら `fn_consume_session_ticket` で1回消化して `ticket_consumed` = true にする。記録は `com_t_session_outcome_history` に `recorded` として残る。
 5. 実施した結果（実施完了・早期終了・欠席）はセッション結果画面へ移り、宿題を投稿する（[homework/session-homework.md](../homework/session-homework.md)）。コーチの欠席・通信トラブル等は生徒概要へ戻る。
-6. 終了予定を過ぎても実施予定のままのセッションは、コーチのダッシュボードの Session Tasks に「End Session needed」として出る。確定から14日以内で宿題の無い実施済みセッションは「Homework not posted」として出る（実施結果の内訳を問わない）。
+6. 終了予定を過ぎても実施予定のままのセッションは、コーチのダッシュボードの Session Tasks に「End Session needed」として出る。確定から14日以内で宿題の無い実施済みセッションは「Homework not posted」として出る（生徒の欠席の回と「今回は宿題なし」にした回は除く。[homework/session-homework.md](../homework/session-homework.md) 6）。
 7. 月次の稼働実績では、`status=2` のセッションは内訳を問わず件数に入り、早期終了・欠席・外部のZoomでの実施・推定と違う結果は要確認として印が付く（`get_coach_monthly_sessions`）。
 
 ### アドミンの修正

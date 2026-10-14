@@ -33,7 +33,7 @@
 | 「Next 24 Hours」内のセッション行 | 実施予定（scheduled）のセッションのうち、今から24時間以内に開始または実施中のものを開始時刻順に表示（暦日ではなく「今から24時間」のローリングウィンドウで絞り込むため、日付が変わる直前の時間帯でも見え方が狭くならない） | クリックで該当生徒のセッション詳細（`/students/[id]/sessions/[sessionId]`）へ遷移。最も近い1件には「Up next」ラベルが付く |
 | 「View calendar」リンク | 常時表示 | `/calendar`へ遷移 |
 | Session Tasksの「… — End Session needed」行 | 終了予定時刻を過ぎてもまだ結果が確定していない（scheduledのままの）セッションがある場合 | クリックでそのセッションの詳細画面へ遷移し、そこで終了処理を行う |
-| Session Tasksの「… — Homework not posted」行 | 結果確定済み（completed）だが宿題が未投稿のセッションがある場合 | クリックでセッション結果画面（`/students/[id]/sessions/[sessionId]/result`）へ遷移 |
+| Session Tasksの「… — Homework not posted」行 | 結果確定済み（completed）だが宿題が未投稿のセッションがある場合（確定から14日以内。生徒の欠席の回と、結果画面で「No homework this time」にした回は除く） | クリックでセッション結果画面（`/students/[id]/sessions/[sessionId]/result`）へ遷移 |
 | Session Tasksの「… — Makeup session available」行 | 担当する生徒の定期コマで、本来の実施回数に対して実際の予定回数が不足している（未消化枠がある）場合 | クリックで生徒概要（`/students/[id]`）へ遷移 |
 | Session Tasksの件数バッジ「N open」 | 上記3種のタスク合計が1件以上の場合のみ表示 | — |
 | 「Next 24 Hours」「Session Tasks」の行の一覧 | それぞれ約5件分の高さで止まり、それより多い場合は一覧の中だけスクロールする（6件目が半分見える高さにして続きがあることを示す） | スクロールで残りの行を表示 |

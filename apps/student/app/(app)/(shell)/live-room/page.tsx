@@ -7,7 +7,7 @@ import {
 } from '@/actions/sessionAction';
 import { getMyBookableTickets, getMyLiveSessionOverview } from '@/actions/matchingAction';
 import { getMyLiveSessionContractsCached, getNextContractMatching, pickLiveSessionContract } from '@/lib/liveSessionContracts';
-import { getSessionHomework, getSessionHomeworkChecklist } from '@/actions/sessionHomeworkAction';
+import { getSessionHomework } from '@/actions/sessionHomeworkAction';
 import { getMyPendingCoachRatings } from '@/actions/coachRatingAction';
 import { COMPLETION_RESULT, SESSION_STATUS, type SessionListItem } from '@gabby/types/session';
 import type { LiveSessionOverview } from '@gabby/types/matching';
@@ -20,7 +20,7 @@ const HOMEWORK_PREVIEW_LENGTH = 60;
 
 /**
  * 前回のセッション（実施済みのうち最新の1件。未参加は内容・宿題が無いため除く）と、その宿題の状況を取得する。
- * 宿題は未登録・本文のみ・チェックリストありの3通りがあるため、それぞれ区別して返す
+ * 宿題は未登録・登録ありの2通り（登録ありは本文の1行目を添える）
  */
 async function fetchPreviousSession(pastSessions: SessionListItem[]): Promise<PreviousSessionSummary | null> {
   const session = pastSessions.find(
@@ -28,16 +28,11 @@ async function fetchPreviousSession(pastSessions: SessionListItem[]): Promise<Pr
   );
   if (!session) return null;
 
-  const [homework, checklist] = await Promise.all([
-    getSessionHomework(session.session_id),
-    getSessionHomeworkChecklist(session.session_id),
-  ]);
+  const homework = await getSessionHomework(session.session_id);
 
   let status: PreviousHomeworkStatus;
   if (!homework) {
     status = { kind: 'none' };
-  } else if (checklist.length > 0) {
-    status = { kind: 'checklist', done: checklist.filter((item) => item.is_done).length, total: checklist.length };
   } else {
     const firstLine = homework.homework_text.trim().split(/\r?\n/)[0] ?? '';
     status = { kind: 'text', preview: firstLine.slice(0, HOMEWORK_PREVIEW_LENGTH) };
