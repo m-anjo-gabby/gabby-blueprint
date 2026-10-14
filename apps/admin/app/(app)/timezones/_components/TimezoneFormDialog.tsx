@@ -27,11 +27,26 @@ function createTimezoneSchema(t: FormT) {
     timezone: z.string().min(1, t('errors.ianaRequired')),
     display_name_ja: z.string().min(1, t('errors.nameJaRequired')),
     display_name_en: z.string().min(1, t('errors.nameEnRequired')),
+    short_name_ja: z.string().min(1, t('errors.shortNameJaRequired')),
+    short_name_en: z.string().min(1, t('errors.shortNameEnRequired')),
     sort_no: z.string().min(1, t('errors.sortNoRequired')),
   });
 }
 
 type TimezoneFormValues = z.infer<ReturnType<typeof createTimezoneSchema>>;
+
+/** 名称の入力欄（表示名称は選択肢・プロフィール用、短い名前はメール等で日時に添える用） */
+const NAME_FIELDS = [
+  { name: 'display_name_ja', labelKey: 'nameJaLabel', placeholderKey: 'nameJaPlaceholder', hintKey: null },
+  { name: 'display_name_en', labelKey: 'nameEnLabel', placeholderKey: 'nameEnPlaceholder', hintKey: null },
+  { name: 'short_name_ja', labelKey: 'shortNameJaLabel', placeholderKey: 'shortNameJaPlaceholder', hintKey: 'shortNameHint' },
+  { name: 'short_name_en', labelKey: 'shortNameEnLabel', placeholderKey: 'shortNameEnPlaceholder', hintKey: null },
+] as const satisfies ReadonlyArray<{
+  name: Exclude<keyof TimezoneFormValues, 'timezone' | 'sort_no'>;
+  labelKey: Parameters<FormT>[0];
+  placeholderKey: Parameters<FormT>[0];
+  hintKey: Parameters<FormT>[0] | null;
+}>;
 
 interface TimezoneFormDialogProps {
   mode?: 'create' | 'edit';
@@ -42,6 +57,8 @@ const DEFAULT_VALUES: TimezoneFormValues = {
   timezone: '',
   display_name_ja: '',
   display_name_en: '',
+  short_name_ja: '',
+  short_name_en: '',
   sort_no: '1',
 };
 
@@ -64,6 +81,8 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
       timezone: data.timezone,
       display_name_ja: data.display_name_ja,
       display_name_en: data.display_name_en,
+      short_name_ja: data.short_name_ja,
+      short_name_en: data.short_name_en,
       sort_no: String(data.sort_no),
     };
   };
@@ -85,6 +104,8 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
         timezone: values.timezone,
         display_name_ja: values.display_name_ja,
         display_name_en: values.display_name_en,
+        short_name_ja: values.short_name_ja,
+        short_name_en: values.short_name_en,
         sort_no: Number(values.sort_no),
         delete_flg: '0',
       };
@@ -98,7 +119,7 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
       } else {
         setServerError(result.message || t('toastGenericFailed'));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('toastSystemError'));
     }
   };
@@ -168,39 +189,27 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
               </FormItem>
             )} />
 
-            {/* --- 表示名称（日本語） --- */}
-            <FormField control={form.control} name="display_name_ja" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameJaLabel')}</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                    {field.value}
-                  </div>
-                ) : (
-                  <FormControl>
-                    <Input {...field} placeholder={t('nameJaPlaceholder')} className="bg-white rounded-xl border-slate-200" />
-                  </FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            {/* --- 表示名称（英語） --- */}
-            <FormField control={form.control} name="display_name_en" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameEnLabel')}</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                    {field.value}
-                  </div>
-                ) : (
-                  <FormControl>
-                    <Input {...field} placeholder={t('nameEnPlaceholder')} className="bg-white rounded-xl border-slate-200" />
-                  </FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
+            {/* --- 表示名称・短い名前（日本語 / 英語） --- */}
+            {NAME_FIELDS.map(({ name, labelKey, placeholderKey, hintKey }) => (
+              <FormField key={name} control={form.control} name={name} render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t(labelKey)}</FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                      {field.value}
+                    </div>
+                  ) : (
+                    <FormControl>
+                      <Input {...field} placeholder={t(placeholderKey)} className="bg-white rounded-xl border-slate-200" />
+                    </FormControl>
+                  )}
+                  {!isConfirming && hintKey && (
+                    <FormDescription className="text-[11px] text-slate-400">{t(hintKey)}</FormDescription>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )} />
+            ))}
 
             {/* --- 表示順 --- */}
             <FormField control={form.control} name="sort_no" render={({ field }) => (

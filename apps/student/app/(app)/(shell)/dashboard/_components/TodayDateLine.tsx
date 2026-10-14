@@ -5,12 +5,8 @@ import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import {
-  formatTimeInZone,
-  formatUtcOffset,
-  getDeviceTimezone,
-  hasTimezoneMismatch,
-} from '../_lib/timezoneMismatch';
+import { formatUtcOffset } from '@gabby/lib/date/timezone';
+import { formatTimeInZone, getDeviceTimezone, hasTimezoneMismatch } from '../_lib/timezoneMismatch';
 
 /** 「このままにする」を選んだ「設定|端末」の組み合わせ（端末ごとの表示設定） */
 const DISMISSED_KEY = 'gabby.student.timezoneMismatchDismissed';

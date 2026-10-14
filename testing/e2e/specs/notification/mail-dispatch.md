@@ -98,6 +98,7 @@
      件名「【Gabby Blueprint】<タイトル>」／「[Gabby Blueprint] <タイトル>」。
    - 通知の対象の情報（予約・キャンセル・マッチング。メールだけに載せ、アプリ内の通知の文面は変えない）: 送る直前に、通知の payload の ID から業務データを読み、
      本文（タイトルの下の項目一覧）と件名の末尾（「（10月8日(木) 19:00）」／「(Thu, Oct 8, 3:00 AM)」）に載せる。日時はすべて実際の日時（UTC）を受信者のタイムゾーンで表す。
+     本文の日時には、受信者のタイムゾーンの短い名前（`com_m_timezone.short_name_*`）とその日時点の時差を添える（例: 「（日本時間・UTC+9）」／「(US Eastern Time, UTC−4)」。件名の末尾の日時には添えない）。
      組み立て `packages/lib/mail/templates/notificationDetails.ts`、読み込み `dispatch/handlers/notificationFacts.ts`。
 
      | 通知 | 本文に載せる項目 | 件名の日時 |

@@ -625,6 +625,7 @@
     "table": {
       "seqHeader": "SEQ",
       "nameHeader": "表示名称（日本語 / 英語）",
+      "shortNameHeader": "短い名前",
       "ianaHeader": "IANAタイムゾーン名",
       "currentTimeHeader": "現地の現在日時",
       "actionsHeader": "操作",
@@ -649,6 +650,11 @@
       "nameJaPlaceholder": "例: 日本（東京）",
       "nameEnLabel": "表示名称（英語）",
       "nameEnPlaceholder": "例: Japan (Tokyo)",
+      "shortNameJaLabel": "短い名前（日本語）",
+      "shortNameJaPlaceholder": "例: 日本時間",
+      "shortNameEnLabel": "短い名前（英語）",
+      "shortNameEnPlaceholder": "例: Japan Time",
+      "shortNameHint": "メールなどで日時に時差と並べて添える名前です（例: 日本時間・UTC+9）。夏時間で変わらない名前にしてください（EST/EDT のような略称は使わない）。",
       "sortNoLabel": "表示順",
       "confirmQuestion": "この内容で{action}してもよろしいですか？",
       "actionCreate": "登録",
@@ -662,6 +668,8 @@
         "ianaRequired": "IANAタイムゾーン名は必須です",
         "nameJaRequired": "表示名称（日本語）は必須です",
         "nameEnRequired": "表示名称（英語）は必須です",
+        "shortNameJaRequired": "短い名前（日本語）は必須です",
+        "shortNameEnRequired": "短い名前（英語）は必須です",
         "sortNoRequired": "表示順を入力してください"
       },
       "toastCreated": "タイムゾーンを登録しました",

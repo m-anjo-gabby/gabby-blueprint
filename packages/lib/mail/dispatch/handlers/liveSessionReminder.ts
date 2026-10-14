@@ -47,6 +47,7 @@ export const liveSessionReminderHandler: MailHandler = async ({ admin, row, reci
         startIso: session.start_datetime,
         endIso: session.end_datetime,
         timeZone: recipient.timezone,
+        zoneName: recipient.timezoneName,
         language,
       }),
       actionUrl: links.portal(isStudent ? '/live-room' : coachHubPath),

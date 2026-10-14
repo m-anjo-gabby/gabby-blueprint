@@ -625,6 +625,7 @@
     "table": {
       "seqHeader": "SEQ",
       "nameHeader": "Display Name (English / Japanese)",
+      "shortNameHeader": "Short name",
       "ianaHeader": "IANA Timezone Name",
       "currentTimeHeader": "Current Local Time",
       "actionsHeader": "Actions",
@@ -649,6 +650,11 @@
       "nameJaPlaceholder": "e.g. 日本（東京）",
       "nameEnLabel": "Display name (English)",
       "nameEnPlaceholder": "e.g. Japan (Tokyo)",
+      "shortNameJaLabel": "Short name (Japanese)",
+      "shortNameJaPlaceholder": "e.g. 日本時間",
+      "shortNameEnLabel": "Short name (English)",
+      "shortNameEnPlaceholder": "e.g. Japan Time",
+      "shortNameHint": "Shown next to dates and times with the UTC offset, e.g. in emails (Japan Time, UTC+9). Use a name that does not change with daylight saving time (no abbreviations like EST/EDT).",
       "sortNoLabel": "Sort order",
       "confirmQuestion": "Are you sure you want to {action} with this content?",
       "actionCreate": "register",
@@ -662,6 +668,8 @@
         "ianaRequired": "IANA timezone name is required",
         "nameJaRequired": "Display name (Japanese) is required",
         "nameEnRequired": "Display name (English) is required",
+        "shortNameJaRequired": "Short name (Japanese) is required",
+        "shortNameEnRequired": "Short name (English) is required",
         "sortNoRequired": "Please enter a sort order"
       },
       "toastCreated": "Timezone registered",

@@ -14,17 +14,27 @@ import { formatReminderSchedule } from "@gabby/lib/mail/templates/reminder";
 const START = "2026-10-12T11:00:00.000Z"; // 日本時間 20:00
 const END = "2026-10-12T12:00:00.000Z";
 
-test("開催日時は受信者のタイムゾーンで表す（日本語・英語）", () => {
+test("開催日時は受信者のタイムゾーンで表す（短い名前＋その時点の時差。日本語・英語）", () => {
   assert.equal(
-    formatReminderSchedule({ startIso: START, endIso: END, timeZone: "Asia/Tokyo", language: "ja" }),
-    "10月12日(月) 20:00〜21:00（日本時間）"
+    formatReminderSchedule({ startIso: START, endIso: END, timeZone: "Asia/Tokyo", zoneName: "日本時間", language: "ja" }),
+    "10月12日(月) 20:00〜21:00（日本時間・UTC+9）"
   );
   assert.equal(
-    formatReminderSchedule({ startIso: START, endIso: null, timeZone: "Asia/Tokyo", language: "ja" }),
-    "10月12日(月) 20:00〜（日本時間）"
+    formatReminderSchedule({ startIso: START, endIso: null, timeZone: "Asia/Tokyo", zoneName: "日本時間", language: "ja" }),
+    "10月12日(月) 20:00〜（日本時間・UTC+9）"
   );
-  const en = formatReminderSchedule({ startIso: START, endIso: END, timeZone: "America/New_York", language: "en" });
-  assert.match(en, /^Mon, Oct 12, 7:00\s?AM – 8:00\s?AM \(EDT\)$/);
+  // 日本語の文面でも東京以外は名前で表す（IANA 名をそのまま出さない）
+  assert.equal(
+    formatReminderSchedule({ startIso: START, endIso: END, timeZone: "America/New_York", zoneName: "アメリカ東部時間", language: "ja" }),
+    "10月12日(月) 07:00〜08:00（アメリカ東部時間・UTC−4）"
+  );
+  const en = formatReminderSchedule({ startIso: START, endIso: END, timeZone: "America/New_York", zoneName: "US Eastern Time", language: "en" });
+  assert.match(en, /^Mon, Oct 12, 7:00\s?AM – 8:00\s?AM \(US Eastern Time, UTC−4\)$/);
+  // 名前が無い場合（マスタに無いタイムゾーン）は時差だけ
+  assert.equal(
+    formatReminderSchedule({ startIso: START, endIso: null, timeZone: "Asia/Kolkata", language: "ja" }),
+    "10月12日(月) 16:30〜（UTC+5:30）"
+  );
 });
 
 const BASE = {

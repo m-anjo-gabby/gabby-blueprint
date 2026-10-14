@@ -88,17 +88,20 @@ export function buildNotificationDetails({
   type,
   facts,
   timeZone,
+  zoneName,
   language,
 }: {
   type: NotificationType;
   facts: NotificationMailFacts;
   timeZone: string;
+  /** 受信者のタイムゾーンの短い名前（マスタの short_name_*。受信者の言語のもの） */
+  zoneName?: string | null;
   language: MailLocale;
 }): NotificationMailDetails {
   const copy = COPY[language];
-  const full = (time: ScheduleTime) => formatReminderSchedule({ ...time, timeZone, language });
+  const full = (time: ScheduleTime) => formatReminderSchedule({ ...time, timeZone, zoneName, language });
   const short = (time: ScheduleTime) => formatShortSchedule({ startIso: time.startIso, timeZone, language });
-  const weekly = (time: ScheduleTime, withZone = true) => formatWeeklySlot({ ...time, timeZone, language, withZone });
+  const weekly = (time: ScheduleTime, withZone = true) => formatWeeklySlot({ ...time, timeZone, zoneName, language, withZone });
   const textRow = (label: string, value: string | null | undefined): Row[] => (value?.trim() ? [{ label, value: value.trim() }] : []);
   const result = (rows: Row[], subjectSuffix: string | null, extra?: Partial<NotificationMailDetails>, note?: string | null) => ({
     subjectSuffix,

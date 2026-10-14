@@ -12,8 +12,9 @@ import { paginateLocally } from '@/lib/list';
 import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
 import { createColumns } from './columns';
 
-/** 検索の対象（日英の表示名・IANA名） */
-const toSearchText = (row: TimezoneMaster) => `${row.display_name_ja} ${row.display_name_en} ${row.timezone}`;
+/** 検索の対象（日英の表示名・短い名前・IANA名） */
+const toSearchText = (row: TimezoneMaster) =>
+  `${row.display_name_ja} ${row.display_name_en} ${row.short_name_ja} ${row.short_name_en} ${row.timezone}`;
 
 interface TimezoneDataTableProps {
   /** 全件（検索・ページ分けはブラウザ側で行う） */

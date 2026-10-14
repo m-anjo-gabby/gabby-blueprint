@@ -31,6 +31,13 @@ import { buildUnsubscribeUrl, unsubscribeHeaders } from "@gabby/lib/mail/unsubsc
 import { NOTIFICATION_MESSAGE_BUILDERS, type NotificationType } from "@gabby/types/notification";
 import { NOTIFICATION_MESSAGE_BUILDERS_EN } from "@gabby/types/notificationEn";
 
+/** 送信処理がマスタ（com_m_timezone の short_name_*）から渡す、タイムゾーンの短い名前 */
+const SAMPLE_ZONE_NAMES: Record<string, { ja: string; en: string }> = {
+  "Asia/Tokyo": { ja: "日本時間", en: "Japan Time" },
+  "America/Vancouver": { ja: "カナダ太平洋時間", en: "Canada Pacific Time" },
+};
+const zoneName = (timeZone: string, language: "ja" | "en") => SAMPLE_ZONE_NAMES[timeZone]?.[language] ?? null;
+
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const adminEnv = dotenv.parse(readFileSync(path.join(REPO_ROOT, "apps/admin/.env.local")));
 const API_KEY = adminEnv.RESEND_API_KEY;
@@ -101,7 +108,7 @@ for (const [type, payload, linkPath, facts] of STUDENT_TYPES) {
       title: text.title,
       body: text.body,
       actionUrl: `${STUDENT_URL}${linkPath}`,
-      details: buildNotificationDetails({ type, facts, timeZone: "Asia/Tokyo", language: "ja" }),
+      details: buildNotificationDetails({ type, facts, timeZone: "Asia/Tokyo", zoneName: zoneName("Asia/Tokyo", "ja"), language: "ja" }),
       links: { settingsUrl: `${STUDENT_URL}/profile`, unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION },
     })),
     unsubscribeUrl: STUDENT_UNSUB.NOTIFICATION,
@@ -117,7 +124,7 @@ for (const [type, payload, linkPath, facts] of COACH_TYPES) {
       title: text.title,
       body: text.body,
       actionUrl: `${COACH_URL}${linkPath}`,
-      details: buildNotificationDetails({ type, facts, timeZone: "America/Vancouver", language: "en" }),
+      details: buildNotificationDetails({ type, facts, timeZone: "America/Vancouver", zoneName: zoneName("America/Vancouver", "en"), language: "en" }),
       links: { settingsUrl: `${COACH_URL}/profile`, unsubscribeUrl: COACH_UNSUB.NOTIFICATION },
     })),
     unsubscribeUrl: COACH_UNSUB.NOTIFICATION,
@@ -173,7 +180,7 @@ const reminder = (
       title: "Week 2: Final /n/ in connected speech",
       seriesTitle: options.seriesTitle ?? null,
       description: "つながる話し方の中での語尾 /n/：次の単語へなめらかにつなぐリンキング（英語での講義です）",
-      scheduleLabel: formatReminderSchedule({ startIso: start.toISOString(), endIso: end.toISOString(), timeZone: options.timeZone, language }),
+      scheduleLabel: formatReminderSchedule({ startIso: start.toISOString(), endIso: end.toISOString(), timeZone: options.timeZone, zoneName: zoneName(options.timeZone, language), language }),
       joinUrl: options.joinUrl === undefined ? "https://zoom.us/j/0000000000" : options.joinUrl,
       detailUrl: `${portal}${language === "ja" ? "/group-sessions" : "/calendar"}`,
       links: { settingsUrl: `${portal}/profile`, unsubscribeUrl },
@@ -199,7 +206,7 @@ const liveReminder = (label: string, language: "ja" | "en", lead: "24h" | "1h", 
       lead,
       recipientName: isStudent ? "山田 太郎" : "Suzanne",
       counterpartName: isStudent ? "Suzanne" : "Taro Yamada",
-      scheduleLabel: formatReminderSchedule({ startIso: start.toISOString(), endIso: liveEnd.toISOString(), timeZone, language }),
+      scheduleLabel: formatReminderSchedule({ startIso: start.toISOString(), endIso: liveEnd.toISOString(), timeZone, zoneName: zoneName(timeZone, language), language }),
       actionUrl: `${isStudent ? STUDENT_URL : COACH_URL}${actionPath}`,
       links: { settingsUrl: `${isStudent ? STUDENT_URL : COACH_URL}/profile`, unsubscribeUrl },
     })),

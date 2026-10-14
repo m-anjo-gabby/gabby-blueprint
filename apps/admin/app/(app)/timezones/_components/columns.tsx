@@ -40,6 +40,22 @@ export function createColumns(t: TableT, { locale, onDelete }: ColumnOptions): C
       },
     },
     {
+      id: 'short_name',
+      header: t('shortNameHeader'),
+      cell: ({ row }) => {
+        const [primary, secondary] =
+          locale === 'en'
+            ? [row.original.short_name_en, row.original.short_name_ja]
+            : [row.original.short_name_ja, row.original.short_name_en];
+        return (
+          <div className="flex flex-col">
+            <span className="text-slate-700">{primary}</span>
+            <span className="text-xs text-slate-500">{secondary}</span>
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: 'timezone',
       header: t('ianaHeader'),
       cell: ({ row }) => <span className="font-mono text-xs text-slate-500">{row.original.timezone}</span>,

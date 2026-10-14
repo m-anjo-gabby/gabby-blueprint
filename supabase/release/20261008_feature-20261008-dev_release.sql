@@ -4973,3 +4973,90 @@ CREATE INDEX IF NOT EXISTS idx_contract_client_id ON public.com_m_contract (clie
 CREATE INDEX IF NOT EXISTS idx_license_contract_stats ON public.com_t_user_license (contract_id, status, start_date, end_date);
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】タイムゾーンマスタ: 短い名前（メール等で日時に添える表記）の追加
+-- 追加日: 2026-10-14
+--
+-- 【内容】
+--   com_m_timezone に short_name_ja / short_name_en（例: 日本時間 / Japan Time）を追加する。
+--   メールの日時は「短い名前＋その時点の時差」（例: 日本時間・UTC+9）で表すようになる
+--   （従来は日本語メールで東京以外のタイムゾーンだと IANA 名をそのまま出していた）。
+--   夏時間で変わらない名前にし、時差はアプリが表示の時点ごとに求める（EST/EDT 等の略称は持たない）。
+--   登録済みの50件に値を入れ、それ以外（画面から追加した行）は表示名称で仮に埋めてから NOT NULL にする。
+-- 対応ファイル: DDL/table/com_m_timezone.sql, DML/com_m_timezone.sql
+-- 【注意】アプリ（メール送信・アドミンのタイムゾーン管理）が新しい列を読むため、アプリのデプロイより先に適用すること。
+-- =========================================================================
+
+BEGIN;
+
+ALTER TABLE public.com_m_timezone ADD COLUMN IF NOT EXISTS short_name_ja text;
+ALTER TABLE public.com_m_timezone ADD COLUMN IF NOT EXISTS short_name_en text;
+
+UPDATE public.com_m_timezone t
+SET short_name_ja = v.short_name_ja, short_name_en = v.short_name_en, update_date = now()
+FROM (VALUES
+  ('Asia/Tokyo', '日本時間', 'Japan Time'),
+  ('America/Toronto', 'カナダ東部時間', 'Canada Eastern Time'),
+  ('America/Winnipeg', 'カナダ中部時間', 'Canada Central Time'),
+  ('America/Edmonton', 'カナダ山岳部時間', 'Canada Mountain Time'),
+  ('America/Vancouver', 'カナダ太平洋時間', 'Canada Pacific Time'),
+  ('America/Halifax', 'カナダ大西洋時間', 'Canada Atlantic Time'),
+  ('America/St_Johns', 'ニューファンドランド時間', 'Newfoundland Time'),
+  ('America/New_York', 'アメリカ東部時間', 'US Eastern Time'),
+  ('America/Chicago', 'アメリカ中部時間', 'US Central Time'),
+  ('America/Denver', 'アメリカ山岳部時間', 'US Mountain Time'),
+  ('America/Los_Angeles', 'アメリカ太平洋時間', 'US Pacific Time'),
+  ('America/Phoenix', 'アリゾナ時間', 'Arizona Time'),
+  ('America/Anchorage', 'アラスカ時間', 'Alaska Time'),
+  ('Pacific/Honolulu', 'ハワイ時間', 'Hawaii Time'),
+  ('America/Puerto_Rico', 'プエルトリコ時間', 'Puerto Rico Time'),
+  ('America/Jamaica', 'ジャマイカ時間', 'Jamaica Time'),
+  ('America/Sao_Paulo', 'ブラジル時間', 'Brazil Time'),
+  ('America/Argentina/Buenos_Aires', 'アルゼンチン時間', 'Argentina Time'),
+  ('America/Bogota', 'コロンビア時間', 'Colombia Time'),
+  ('Europe/London', 'イギリス時間', 'UK Time'),
+  ('Europe/Lisbon', 'ポルトガル時間', 'Portugal Time'),
+  ('Atlantic/Reykjavik', 'アイスランド時間', 'Iceland Time'),
+  ('Europe/Berlin', '中央ヨーロッパ時間', 'Central European Time'),
+  ('Europe/Athens', '東ヨーロッパ時間', 'Eastern European Time'),
+  ('Africa/Cairo', 'エジプト時間', 'Egypt Time'),
+  ('Africa/Harare', '中央アフリカ時間', 'Central Africa Time'),
+  ('Africa/Nairobi', '東アフリカ時間', 'East Africa Time'),
+  ('Asia/Riyadh', 'サウジアラビア時間', 'Saudi Arabia Time'),
+  ('Asia/Dubai', 'UAE時間', 'UAE Time'),
+  ('Asia/Tehran', 'イラン時間', 'Iran Time'),
+  ('Asia/Yerevan', 'アルメニア時間', 'Armenia Time'),
+  ('Asia/Kolkata', 'インド時間', 'India Time'),
+  ('Asia/Dhaka', 'バングラデシュ時間', 'Bangladesh Time'),
+  ('Asia/Karachi', 'パキスタン時間', 'Pakistan Time'),
+  ('Asia/Taipei', '台湾時間', 'Taiwan Time'),
+  ('Asia/Seoul', '韓国時間', 'Korea Time'),
+  ('Asia/Singapore', 'シンガポール時間', 'Singapore Time'),
+  ('Asia/Jakarta', 'インドネシア西部時間', 'Western Indonesia Time'),
+  ('Asia/Makassar', 'インドネシア中部時間', 'Central Indonesia Time'),
+  ('Asia/Jayapura', 'インドネシア東部時間', 'Eastern Indonesia Time'),
+  ('Asia/Phnom_Penh', 'カンボジア時間', 'Cambodia Time'),
+  ('Asia/Ho_Chi_Minh', 'ベトナム時間', 'Vietnam Time'),
+  ('Australia/Perth', 'オーストラリア西部時間', 'Australia Western Time'),
+  ('Australia/Adelaide', '南オーストラリア時間', 'South Australia Time'),
+  ('Australia/Darwin', 'ノーザンテリトリー時間', 'Northern Territory Time'),
+  ('Australia/Brisbane', 'クイーンズランド時間', 'Queensland Time'),
+  ('Australia/Sydney', 'オーストラリア東部時間', 'Australia Eastern Time'),
+  ('Pacific/Auckland', 'ニュージーランド時間', 'New Zealand Time'),
+  ('Pacific/Guadalcanal', 'ソロモン諸島時間', 'Solomon Islands Time'),
+  ('Pacific/Midway', 'ミッドウェー時間', 'Midway Time')
+) AS v(timezone, short_name_ja, short_name_en)
+WHERE t.timezone = v.timezone;
+
+UPDATE public.com_m_timezone
+SET short_name_ja = COALESCE(short_name_ja, display_name_ja), short_name_en = COALESCE(short_name_en, display_name_en), update_date = now()
+WHERE short_name_ja IS NULL OR short_name_en IS NULL;
+
+ALTER TABLE public.com_m_timezone ALTER COLUMN short_name_ja SET NOT NULL;
+ALTER TABLE public.com_m_timezone ALTER COLUMN short_name_en SET NOT NULL;
+
+COMMENT ON COLUMN public.com_m_timezone.short_name_ja IS '短い名前（日本語）。夏時間で変わらない名前（例: 日本時間）。メール等で日時に時差と並べて添える';
+COMMENT ON COLUMN public.com_m_timezone.short_name_en IS '短い名前（英語）。夏時間で変わらない名前（例: Japan Time）。メール等で日時に時差と並べて添える';
+
+COMMIT;
