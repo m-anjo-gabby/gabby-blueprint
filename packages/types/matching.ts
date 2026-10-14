@@ -85,6 +85,8 @@ export interface IncomingMatchingRequestItem extends MatchingRequestRecord {
   license_end_date: string | null;
   /** 承認待ちの申請を今承認した場合に予約できる回数（承認待ち以外・取得できない場合はnull） */
   availability: MatchingSlotAvailability | null;
+  /** requested_timezone の短い名前（com_m_timezone.short_name_en。コーチの画面は英語。マスタに無い場合は IANA 名） */
+  requested_timezone_name: string;
 }
 
 /** 生徒側の自分のリクエスト一覧表示用（コーチ名を結合） */

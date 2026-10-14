@@ -31,6 +31,8 @@ import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getFirstLiveSessionOccurrence, getLessonEndTime } from '../../date/date';
 import { getCoachRatingStatsCore } from '../../coachRating/actions/coachRatingActions';
 import { getCoachSpecialtyCodesCore } from '../../coachSpecialty/actions/coachSpecialtyActions';
+import { getTimezoneNameMap } from '../../timezone/timezoneNames';
+import { pickTimezoneName } from '../../date/timezone';
 
 const logger = createLogger('common');
 
@@ -847,13 +849,16 @@ export async function withdrawMatchingRequestCore(requestId: string): Promise<Wi
  */
 async function attachRequestDetails(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
-  requests: Omit<IncomingMatchingRequestItem, 'student_name' | 'license_start_date' | 'license_end_date' | 'availability'>[]
+  requests: Omit<
+    IncomingMatchingRequestItem,
+    'student_name' | 'license_start_date' | 'license_end_date' | 'availability' | 'requested_timezone_name'
+  >[]
 ): Promise<IncomingMatchingRequestItem[]> {
   if (requests.length === 0) return [];
   const studentIds = Array.from(new Set(requests.map((r) => r.student_id)));
   const ticketIds = Array.from(new Set(requests.map((r) => r.ticket_id)));
   const pendingIds = requests.filter((r) => r.status === MATCHING_REQUEST_STATUS.PENDING).map((r) => r.request_id);
-  const [{ data: students }, { data: tickets }, { data: availabilityRows }] = await Promise.all([
+  const [{ data: students }, { data: tickets }, { data: availabilityRows }, timezoneNames] = await Promise.all([
     supabase.from('com_m_user').select('id, user_name').in('id', studentIds),
     createAdminClient()
       .from('com_t_user_session_ticket')
@@ -862,6 +867,7 @@ async function attachRequestDetails(
     pendingIds.length > 0
       ? supabase.rpc('get_matching_request_availability', { p_request_ids: pendingIds })
       : Promise.resolve({ data: [] }),
+    getTimezoneNameMap(),
   ]);
   const availabilityByRequestId = new Map(
     ((availabilityRows ?? []) as (MatchingSlotAvailability & { request_id: string })[]).map(({ request_id, ...availability }) => [
@@ -882,6 +888,7 @@ async function attachRequestDetails(
     license_start_date: periodByTicketId.get(r.ticket_id)?.start_date ?? null,
     license_end_date: periodByTicketId.get(r.ticket_id)?.end_date ?? null,
     availability: availabilityByRequestId.get(r.request_id) ?? null,
+    requested_timezone_name: pickTimezoneName(r.requested_timezone, timezoneNames.get(r.requested_timezone), 'short', 'en'),
   }));
 }
 

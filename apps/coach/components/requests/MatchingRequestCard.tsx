@@ -169,7 +169,7 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
           </p>
           {request.requested_timezone !== timezone && (
             <p className="text-[10px] text-slate-400 mt-0.5">
-              Student&apos;s time: {studentSlotLabel} ({request.requested_timezone})
+              Student&apos;s time: {studentSlotLabel} ({request.requested_timezone_name})
             </p>
           )}
           <p className="text-[10px] text-slate-400 mt-1">Requested {formatDateEn(request.insert_date, timezone)}</p>

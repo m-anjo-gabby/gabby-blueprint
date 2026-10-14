@@ -1,9 +1,23 @@
+import type { TimezoneNames } from '@gabby/types/timezone';
+
 /*
  * タイムゾーンの表示（全アプリ・メール共通）。
  * 名称はマスタ（com_m_timezone の display_name_* / short_name_*）を使い、Intl の地域名は使わない
  * （実行環境の ICU によって名称が変わり、地域を区別できない名称もあるため）。
  * 時差は夏時間で変わるため保存せず、ここで表示する時点ごとに求める。
+ * 使い分け: タイムゾーンそのものを示す所（選択肢・プロフィール・「〜のタイムゾーンで集計」等）は表示名称（display）、
+ * 日時・時刻に添える所は短い名前（short。日時が1つに決まる場合は formatZoneLabel で時差も添える）。
  */
+
+/** マスタの名称を選ぶ（マスタに無い場合は IANA 名） */
+export function pickTimezoneName(
+  timeZone: string,
+  names: TimezoneNames | null | undefined,
+  kind: 'display' | 'short',
+  language: 'ja' | 'en'
+): string {
+  return names?.[`${kind === 'display' ? 'display_name' : 'short_name'}_${language}`] || timeZone;
+}
 
 /**
  * 指定時点の UTC からの時差（例: UTC+9、UTC−4、UTC+5:30、UTC±0）。

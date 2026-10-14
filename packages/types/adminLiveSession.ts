@@ -1,5 +1,6 @@
 import type { CoachSessionListItem, StudentLiveSessionContractSummary } from './coachStudent';
 import type { CancelCategory, CompletionResult, ConductedVia, SessionOutcome, SessionStatus } from './session';
+import type { TimezoneNames } from './timezone';
 
 /**
  * ----------------------------------------------
@@ -34,6 +35,8 @@ export interface AdminScheduleSlotSummary {
   end_time: string;
   /** 曜日・時刻の解釈基準のタイムゾーン（2026-10-06以降の成立分は生徒の申請時のタイムゾーン） */
   schedule_timezone: string;
+  /** schedule_timezone の名称（マスタに無い場合は null。表示は短い名前を使う） */
+  schedule_timezone_names: TimezoneNames | null;
   coach_id: string;
   coach_name: string;
   status: number; // com_m_lesson_schedule.status (1:active 0:paused 9:terminated)

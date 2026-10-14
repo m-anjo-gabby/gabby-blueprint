@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { ja, enUS } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
+import { pickTimezoneName } from '@gabby/lib/date/timezone';
 import { Loader2, RefreshCcw, Users, Video, UserPlus, CalendarClock, ListPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -424,7 +425,7 @@ export function LiveSessionManagementView({ clients }: Props) {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-xs font-bold text-slate-700">
-                                    {t('slotLabel', { slotNo: slot.slot_no, day: tDay(DAY_KEYS[slot.day_of_week]), start: slot.start_time.slice(0, 5), end: slot.end_time.slice(0, 5), timezone: slot.schedule_timezone })}
+                                    {t('slotLabel', { slotNo: slot.slot_no, day: tDay(DAY_KEYS[slot.day_of_week]), start: slot.start_time.slice(0, 5), end: slot.end_time.slice(0, 5), timezone: pickTimezoneName(slot.schedule_timezone, slot.schedule_timezone_names, 'short', locale === 'en' ? 'en' : 'ja') })}
                                   </span>
                                   <Badge variant="outline" className={`${statusInfo.className} text-[10px] font-bold`}>
                                     {statusInfo.label}

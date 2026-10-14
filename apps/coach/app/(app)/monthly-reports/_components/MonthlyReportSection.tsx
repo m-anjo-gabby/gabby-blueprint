@@ -1,4 +1,6 @@
 import { getMyMonthlyReport } from '@/actions/monthlyReportAction';
+import { getTimezoneNameMap } from '@gabby/lib/timezone/timezoneNames';
+import { pickTimezoneName } from '@gabby/lib/date/timezone';
 import { SummaryCard } from './SummaryCard';
 import { MonthlyReportGrid } from './MonthlyReportGrid';
 
@@ -7,7 +9,7 @@ import { MonthlyReportGrid } from './MonthlyReportGrid';
  * page.tsx wraps it in a <Suspense> keyed by month so a skeleton shows while switching months.
  */
 export async function MonthlyReportSection({ yearMonth }: { yearMonth: string }) {
-  const result = await getMyMonthlyReport(yearMonth);
+  const [result, timezoneNames] = await Promise.all([getMyMonthlyReport(yearMonth), getTimezoneNameMap()]);
 
   if (!result.success) {
     return (
@@ -19,7 +21,10 @@ export async function MonthlyReportSection({ yearMonth }: { yearMonth: string })
 
   return (
     <>
-      <SummaryCard report={result.report} />
+      <SummaryCard
+        report={result.report}
+        timezoneName={pickTimezoneName(result.report.coach_timezone, timezoneNames.get(result.report.coach_timezone), 'display', 'en')}
+      />
       <MonthlyReportGrid report={result.report} />
     </>
   );

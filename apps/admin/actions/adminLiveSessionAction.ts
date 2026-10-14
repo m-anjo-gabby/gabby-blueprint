@@ -9,6 +9,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { containsPattern } from '@gabby/lib/supabase/ilike';
 import { reportingMonthRange } from '@gabby/lib/date/reporting';
 import { getSessionOutcomeEvidenceCore } from '@gabby/lib/session/actions/sessionActions';
+import { getTimezoneNameMap } from '@gabby/lib/timezone/timezoneNames';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import {
   AdminStudentSummary,
@@ -162,14 +163,18 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
 
     // 稼働中の枠のみ、未割当チケット枠数(fn_schedule_shortfall)を合わせて取得する
     // （「セッションを予約」ボタンの表示可否に使用）
-    const shortfallResults = await Promise.all(
-      rows.map((s) => (s.status === 1 ? supabase.rpc('fn_schedule_shortfall', { p_schedule_id: s.schedule_id }).single() : Promise.resolve(null)))
-    );
+    const [shortfallResults, timezoneNames] = await Promise.all([
+      Promise.all(
+        rows.map((s) => (s.status === 1 ? supabase.rpc('fn_schedule_shortfall', { p_schedule_id: s.schedule_id }).single() : Promise.resolve(null)))
+      ),
+      getTimezoneNameMap(),
+    ]);
 
     const slots: AdminScheduleSlotSummary[] = rows.map((s, i) => {
       const shortfallRow = shortfallResults[i]?.data as { shortfall: number } | null | undefined;
       return {
         ...s,
+        schedule_timezone_names: timezoneNames.get(s.schedule_timezone) ?? null,
         coach_name: nameById.get(s.coach_id) ?? '(Unknown)',
         shortfall: shortfallRow?.shortfall ?? 0,
       };
