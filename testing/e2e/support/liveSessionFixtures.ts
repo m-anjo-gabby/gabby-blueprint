@@ -14,7 +14,7 @@ import {
  * - 生徒（日本時間・週1回のライブ付き契約90日）とコーチ（日本時間。空き時間は UTC の金曜 10:00〜13:00＝日本時間 19:00〜22:00）を作り、
  *   生徒本人のログインで「金曜 20:00〜20:25」の申請を登録する（生徒の画面からの申請は e2e/tests/matching/ で確認済み）。
  * - 実施当日の状態は、ビデオ通話（Zoom Video SDK）を使わずに作る。通話ルームが記録する入退室ログ（`com_t_session_call_log`）を
- *   直接入れることで、セッションハブの End Session（`finalize_session`。入退室の重なりで実施結果を判定する）を通常どおり動かす。
+ *   直接入れることで、セッションハブの End Session（`record_session_outcome`。入退室の重なりから推定した結果が初期選択になる）を通常どおり動かす。
  * - 後始末は authFixtures の cleanupAuthFixture（担当枠→セッション・宿題・入退室ログ・教材オープンの記録が連動して消える）と、
  *   成立時に作られるチャットルームの deleteFixtureChatRooms で行う。ログインしたクライアントは signOutLivePair で閉じる。
  */
@@ -114,8 +114,8 @@ export interface LiveSessionDay {
  * ライブセッション当日の状態を作る（担当成立後に呼ぶ）。
  * - 前回（7日前）のセッション: 実施済み（正常終了）で、宿題が投稿済み
  * - 今回のセッション: 開始から21分経過・残り4分。コーチは開始時から通話に入っている（入退室ログ。退室は未記録）。
- *   生徒も開始時から入っている（既定。End Session で重なりが20分以上となり「実施完了」）。`studentMinutesInCall` を20未満にすると
- *   生徒はその分だけ前に入ったことになり、End Session で理由の入力が必要な「早期終了」になる。0 は生徒が入室していない（「無断欠席」）
+ *   生徒も開始時から入っている（既定。重なりが20分以上となり、End Session の推定は「実施完了」）。`studentMinutesInCall` を20未満にすると
+ *   生徒はその分だけ前に入ったことになり、推定は「早期終了」（理由が必須）になる。0 は生徒が入室していない（推定は「生徒の欠席」）
  * - 生徒の自主トレーニング: 今日と昨日の実績（スプリントの日次集計）
  * - 生徒からコーチへの未読のチャット1件（成立時のルーム）
  */
@@ -213,7 +213,7 @@ export async function createCompletedSessionWithHomework(
 }
 
 /**
- * 終了予定を過ぎても実施予定のまま残ったセッション（通話の記録なし）を作る。Resolve Manually の対象になる。
+ * 終了予定を過ぎても実施予定のまま残ったセッション（通話の記録なし）を作る。外部のZoomで実施した場合等の End Session の対象になる。
  * 複数作る場合は2時間ずつずらす（1件目は45分前に終了予定）。
  */
 export async function createStaleSessions(f: AuthFixture, pair: LivePair, scheduleId: string, count: number): Promise<string[]> {

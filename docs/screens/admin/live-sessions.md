@@ -3,11 +3,13 @@
 ## 概要
 
 - アプリ: `admin`
-- パス: `/live-sessions`
+- パス: `/live-sessions`（子画面: 実施記録 `/live-sessions/records`）
 - 対象ロール: 管理者
 - 目的: 顧客・生徒・契約を選択して、その生徒のライブセッション（コーチとの個別レッスン）の
   予約状況・担当コーチ割当状況を確認し、生徒・コーチに代わって「セッションのキャンセル」
   「未消化チケットでの予約」「担当コーチの交代」「コーチとの直接マッチング」を行う。
+  あわせて、開始済みのセッションの実施結果（コーチの End Session の記録）を記録・修正する
+  （生徒・契約単位はこの画面の実施済みタブ、全生徒・全コーチ横断は子画面の実施記録）。
 
 生徒・コーチ自身が行う予約リクエスト／承認フロー（[個別予約リクエスト・振替候補フロー](../../../testing/e2e/specs/booking/individual-booking-and-reschedule.md)）とは異なり、
 この画面での操作はいずれも承認ステップを挟まず即座に確定する管理者専用の代理操作である。
@@ -15,6 +17,7 @@
 ## この画面に来る経路
 
 - サイドバーの「ライブセッション管理」から遷移する。ダッシュボードにはこの画面へのカードはない。
+- 実施記録へは、この画面の見出しの右の「実施記録」ボタンから遷移する（実施記録の戻るリンクでこの画面へ戻る）。
 
 ## 画面の構成
 
@@ -25,6 +28,7 @@
 4. **セッション予約ダイアログ**（代理操作）
 5. **コーチ直接マッチングダイアログ**（代理操作）
 6. **セッション数個別調整ダイアログ**
+7. **実施結果の記録・修正ダイアログ**（実施記録の一覧と共用）
 
 ## 表示要素・操作
 
@@ -38,7 +42,9 @@
 | 「セッション数を調整」ボタン | 稼働中の枠に表示（過去契約では非表示） | セッション数個別調整ダイアログを開く |
 | 「コーチ交代」ボタン | 稼働中の枠に表示（過去契約では非表示） | 確認ダイアログの上で、その枠の担当を終了する |
 | 未割当枠（週n回契約でまだマッチングが成立していない枠番号）の「直接マッチング」ボタン | 過去契約では非表示 | コーチ直接マッチングダイアログを、対象の枠番号で開く |
-| セッション一覧タブ（今後の予定／実施済み／変更履歴） | 契約を選択している場合に表示 | 各タブでそのカテゴリのセッションを一覧表示。「変更履歴」タブは、原因を問わず全てのキャンセル済みセッションを表示する（監査目的のため、本人操作のキャンセルのみに絞る生徒・コーチ側の一覧より広い） |
+| セッション一覧タブ（今後の予定／実施済み／変更履歴） | 契約を選択している場合に表示 | 各タブでそのカテゴリのセッションを一覧表示。「実施済み」タブには、確定済みに加えて、終了予定を過ぎても記録されていないセッション（「未記録」バッジ）も並ぶ。「変更履歴」タブは、原因を問わず全てのキャンセル済みセッションを表示する（監査目的のため、本人操作のキャンセルのみに絞る生徒・コーチ側の一覧より広い） |
+| セッション一覧の「外部のZoom」「通話の記録と違う」の印 | 外部のZoomで実施と記録された行、アプリ内の通話で実施と申告した結果が入退室ログからの推定と違う行 | 操作なし |
+| セッション一覧の「結果を記録」「結果を修正」ボタン | 開始済みで、未記録（終了予定超過）・確定済み・コーチの欠席・通信トラブル等で実施できなかった行のみ。過去契約では非表示（実施記録から修正する） | 実施結果の記録・修正ダイアログを開く |
 | セッション一覧の「キャンセル」ボタン | 実施予定（scheduled）のセッションのみ、かつ過去契約でない場合に表示 | セッションキャンセルダイアログを開く |
 
 ## 生徒・コーチへの通知
@@ -97,6 +103,35 @@
   「直接マッチング」から管理者が個別に日時を指定して追加予約する
 - 変更理由の履歴はDBには保持されない（アプリケーションログにのみ記録）
 
+## 実施結果の記録・修正ダイアログ
+
+- 対象: 開始済みのセッションのうち、未記録のまま終了予定を過ぎたもの・確定済み・コーチの欠席・通信トラブル等で実施できなかったもの
+  （開始前のコーチのキャンセル・生徒のキャンセル・代理キャンセル・自動キャンセルは対象外）
+- 開いた時に、入退室ログの根拠（同時に在室した時間等）と記録・修正の履歴（誰がいつどの結果にしたか・チケットの消化/返還・理由）を取得して表示する
+- 入力項目: 実施結果（実施完了／生徒の都合で早く終了／生徒の欠席／コーチの欠席／通信トラブル等で実施できなかった）、
+  実施方法（結果が実施完了・早期終了・欠席の場合のみ。アプリ内の通話／外部のZoom）、理由（必須・社内メモ）。初期値は現在の記録
+  （未記録の場合は入退室ログからの推定）
+- 保存すると `admin_correct_session_outcome` で確定する。チケットは結果に合わせて消化・返還の差分を自動で調整する
+  （実施完了・早期終了・欠席は消化、コーチの欠席・通信トラブル等は返還して振替の対象にする）
+- 生徒・コーチへの通知は送らない。返還済みの回を実施完了等へ直しても、その回で予約済みの振替はそのまま残る
+- 同じ結果のまま保存し直すと「アドミン確認済み」になり、実施記録の「要確認」から外れる（理由に確認した内容を書く）
+- 承認済みの月次レポートの件数は変わらない（承認時の件数を固定保存しているため）
+
+## 実施記録（`/live-sessions/records`）
+
+開始済みのライブセッションの実施結果を、全生徒・全コーチを横断して確認・修正する一覧（アドミンの一覧部品 `components/list/`）。
+
+| 要素 | 表示条件・内容 | 操作した時の挙動 |
+|---|---|---|
+| 検索欄 | 生徒名・コーチ名の部分一致 | URLの `q` を変えて取り直す |
+| 絞り込み | 要確認（すべて／要確認のみ）・月（今月から12か月、日本時間）・コーチ・結果（未記録／実施完了／早期終了／欠席／コーチの欠席／通信トラブル等）・実施方法 | URLのクエリ（`review` / `month` / `coach` / `result` / `via`）を変え、1ページ目に戻る。「条件をクリア」で全条件を外す |
+| 一覧の列 | 開始日時（日本時間）・生徒・コーチ・結果（バッジ＋「外部のZoom」「通話の記録と違う」「アドミン確認済み」の印）・メモ（コーチの理由） | — |
+| 「要確認」バッジ | 未記録・早期終了・欠席・外部のZoom・推定と違う・コーチの欠席・通信トラブル等のうち、アドミンがまだ修正・確認していない行 | — |
+| 「記録」「修正」ボタン | 全行 | 実施結果の記録・修正ダイアログを開く。保存後は一覧を取り直す |
+
+対象は、開始済みで「未記録（終了予定超過）・確定済み・開始後に記録したコーチの欠席・通信トラブル等」のセッション
+（開始前のコーチのキャンセルは、上の画面の変更履歴タブで確認する）。
+
 ## 担当コーチ交代（確認ダイアログ）
 
 - 対象の枠を終了させる操作。実行すると、まだ実施されていない今後のセッションはキャンセルされるが、
@@ -113,7 +148,8 @@
 | スケジュール枠・セッション読み込み中 | スピナー表示 | 契約選択直後のデータ取得中 |
 | 枠なし | 「まだマッチングが成立していません」 | 定期スケジュール枠・未割当枠のいずれも0件の場合 |
 | セッションなし | 各タブに「該当するセッションはありません」、または一覧全体で「セッションはまだありません」 | 該当カテゴリのセッションが0件の場合 |
-| 過去契約選択時 | 「過去契約（参照のみ）」バッジを表示し、キャンセル・予約・コーチ交代・直接マッチングの操作ボタンを一切表示しない | 選択した契約が現在有効でない場合（参照専用） |
+| 過去契約選択時 | 「過去契約（参照のみ）」バッジを表示し、キャンセル・予約・コーチ交代・直接マッチング・結果の記録/修正の操作ボタンを一切表示しない | 選択した契約が現在有効でない場合（参照専用） |
+| 読み込み中（画面遷移直後） | 汎用の骨組み（実施記録は表の骨組み） | `live-sessions/loading.tsx`・`live-sessions/records/loading.tsx` |
 
 ## 実装参照（エンジニア向け）
 
@@ -123,13 +159,19 @@
 - `apps/admin/app/(app)/live-sessions/_components/dialogs/BookSessionDialog.tsx`
 - `apps/admin/app/(app)/live-sessions/_components/dialogs/MatchCoachDialog.tsx`
 - `apps/admin/app/(app)/live-sessions/_components/dialogs/AdjustTargetSessionsDialog.tsx`
+- `apps/admin/app/(app)/live-sessions/_components/dialogs/CorrectOutcomeDialog.tsx`（入力欄は `packages/lib/components/common/SessionOutcomeFields.tsx`）、
+  `apps/admin/app/(app)/live-sessions/_components/SessionOutcomeFlags.tsx`
+- 実施記録: `apps/admin/app/(app)/live-sessions/records/page.tsx`・`_components/SessionRecordDataTable.tsx`・`_components/columns.tsx`・`_lib/list.ts`
 - `apps/admin/actions/adminLiveSessionAction.ts`（`getClientStudents`,
   `getStudentLiveSessionContractsForAdmin`, `getScheduleSlotsForTicket`, `getSessionsForTicket`,
   `releaseLessonScheduleSlot`, `getCoachesForMatching`, `cancelSessionAsAdmin`,
-  `bookMakeupSessionAsAdmin`, `matchStudentWithCoachAsAdmin`, `adjustTargetSessionsAsAdmin`）
+  `bookMakeupSessionAsAdmin`, `matchStudentWithCoachAsAdmin`, `adjustTargetSessionsAsAdmin`,
+  `getSessionOutcomeEvidenceAsAdmin`, `getSessionOutcomeHistory`, `correctSessionOutcomeAsAdmin`, `getSessionRecordList`）
 - 関連RPC: `cancel_session`（`p_as_admin: true`, `p_admin_refund_ticket`で返還可否を明示指定）,
   `admin_book_session_direct`, `admin_match_student_with_coach`, `release_lesson_schedule_slot`,
-  `fn_schedule_shortfall`, `admin_adjust_schedule_target_sessions`
+  `fn_schedule_shortfall`, `admin_adjust_schedule_target_sessions`, `admin_correct_session_outcome`,
+  `get_session_outcome_evidence`, `admin_get_session_records`
+- 業務フロー（結果の種類・チケットの扱い・要確認の条件）: [session-completion.md](../../../testing/e2e/specs/session-lifecycle/session-completion.md)
 - 実装上の注意（コード中コメントより）: これらの代理操作RPCは`auth.uid()`/`get_jwt_user_type()`で
   認可判定するため、`service_role`（`createAdminClient`）ではなく管理者自身の認証済みセッション
   （`createServerClient`）で呼び出す必要がある

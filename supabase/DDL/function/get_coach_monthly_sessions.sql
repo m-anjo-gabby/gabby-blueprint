@@ -48,6 +48,13 @@
 --
 -- 【権限チェックの共通化 (2026-09-15追加)】
 -- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
+--
+-- 【要確認の追加 (2026-10-14追加)】
+-- is_attention に「外部のZoomで実施した(conducted_via=2)」「アプリ内の通話で実施したと申告した結果が
+-- 入退室ログからの推定と違う(outcome_mismatch)」を加える（いずれも status=2 の行のため、
+-- is_attention が counts_toward_total の部分集合である関係は変わらない）。
+-- コーチの欠席(cancel_category=2)・通信トラブル等で実施できなかった(cancel_category=6)は、従来どおり稼働に数えない。
+-- 返す列の変更は無い（前提: table/com_t_session.sql の2026-10-14パッチ）。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.get_coach_monthly_sessions(uuid, date);
 
@@ -98,7 +105,8 @@ BEGIN
         s.ticket_refunded,
         (s.status = 2 OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS counts_toward_total,
         (s.status = 1 AND s.end_datetime < NOW()) AS is_unresolved,
-        ((s.status = 2 AND s.completion_result IN (2, 3)) OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS is_attention
+        ((s.status = 2 AND (s.completion_result IN (2, 3) OR s.conducted_via = 2 OR s.outcome_mismatch))
+          OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS is_attention
     FROM public.com_t_session s
     WHERE s.coach_id = p_coach_id
       AND s.start_datetime >= v_month_start_utc

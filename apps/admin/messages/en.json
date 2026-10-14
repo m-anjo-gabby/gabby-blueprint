@@ -761,7 +761,8 @@
   "liveSessions": {
     "page": {
       "title": "Live Session Management",
-      "subtitle": "Select a client and student to review bookings and reassign the coach if needed"
+      "subtitle": "Select a client and student to review bookings and reassign the coach if needed",
+      "recordsLink": "Session records"
     },
     "status": {
       "scheduled": "Scheduled",
@@ -772,7 +773,9 @@
       "cancelledByCoach": "Cancelled (coach)",
       "cancelledLicenseEnded": "Cancelled (contract ended)",
       "cancelledCoachReassigned": "Cancelled (coach reassigned)",
-      "cancelledOther": "Cancelled (admin)"
+      "cancelledOther": "Cancelled (admin)",
+      "unrecorded": "Not recorded",
+      "cancelledTechnical": "Cancelled (technical issues)"
     },
     "scheduleStatus": {
       "active": "Active",
@@ -839,7 +842,9 @@
       "toastStudentsFetchFailed": "Failed to fetch the student list",
       "toastSlotsFetchFailed": "Failed to fetch schedule slots",
       "toastReleaseSuccess": "The coach's slot has ended. The student can request a new coach again",
-      "toastReleaseFailed": "The operation failed"
+      "toastReleaseFailed": "The operation failed",
+      "recordOutcomeButton": "Record outcome",
+      "correctOutcomeButton": "Correct outcome"
     },
     "cancelDialog": {
       "title": "Cancel Session (Admin Action)",
@@ -889,6 +894,101 @@
       "close": "Close",
       "confirmButton": "Apply",
       "toastSuccess": "Total session count updated"
+    },
+    "outcome": {
+      "outcomeLegend": "Outcome",
+      "outcomes": {
+        "completed": {
+          "label": "Completed",
+          "hint": "Uses one ticket session"
+        },
+        "leftEarly": {
+          "label": "Ended early (student’s reason)",
+          "hint": "Uses one ticket session"
+        },
+        "noShow": {
+          "label": "Student no-show",
+          "hint": "Uses one ticket session (shown to the student as “did not attend”)"
+        },
+        "coachAbsent": {
+          "label": "Coach absent",
+          "hint": "Returns the ticket session for a makeup (not counted in monthly totals)"
+        },
+        "technical": {
+          "label": "Not held (technical issues)",
+          "hint": "Returns the ticket session for a makeup (not counted in monthly totals)"
+        }
+      },
+      "suggestedBadge": "Suggested by call log",
+      "conductedViaLegend": "How it was held",
+      "viaApp": "In-app call",
+      "viaExternal": "External Zoom",
+      "evidenceTitle": "In-app call record",
+      "evidenceLoading": "Loading...",
+      "evidenceFailed": "The call record could not be loaded",
+      "evidenceNoCoach": "No record of the coach joining the in-app call",
+      "evidenceTogether": "Coach and student connected together: {minutes} min",
+      "evidenceStudentAbsent": "The coach joined, but there is no record of the student joining",
+      "reasonLabel": "Reason (internal note)",
+      "reasonPlaceholder": "e.g. The student reported they attended; confirmed with the coach and corrected to Completed",
+      "externalBadge": "External Zoom",
+      "mismatchBadge": "Differs from call log",
+      "correctedBadge": "Reviewed by admin"
+    },
+    "outcomeDialog": {
+      "title": "Correct Session Outcome",
+      "titleRecord": "Record Session Outcome",
+      "description": "Session with {student} (coach: {coach}) on {datetime}",
+      "ticketNote": "Ticket usage is adjusted automatically to match the outcome. No notifications are sent to the student or coach. If you change a refunded session to Completed (etc.), any makeup already booked with that session stays booked.",
+      "reasonHint": "A reason is required (if you keep the outcome as is, note what you checked)",
+      "historyTitle": "Record history",
+      "historyEmpty": "No history (finalized before this feature, or not recorded yet)",
+      "historyRecorded": "Recorded by {name}",
+      "historyCorrected": "Corrected by {name}",
+      "ticketConsumed": "ticket used",
+      "ticketRestored": "ticket returned",
+      "close": "Close",
+      "submit": "Save correction",
+      "submitRecord": "Record",
+      "toastSuccess": "Session outcome saved"
+    },
+    "records": {
+      "title": "Session Records",
+      "subtitle": "Review the outcomes of started live sessions across all students and coaches, and correct them if needed",
+      "back": "Back to Live Session Management",
+      "searchPlaceholder": "Search by student or coach name...",
+      "reviewFilter": "Needs review",
+      "reviewAll": "All records",
+      "reviewOnly": "Needs review only",
+      "monthFilter": "Month",
+      "allMonths": "All months",
+      "coachFilter": "Coach",
+      "allCoaches": "All coaches",
+      "resultFilter": "Outcome",
+      "allResults": "All outcomes",
+      "results": {
+        "unrecorded": "Not recorded",
+        "completed": "Completed",
+        "left_early": "Ended early (student)",
+        "no_show": "Student no-show",
+        "coach_absent": "Coach absent",
+        "technical": "Technical issues"
+      },
+      "viaFilter": "How it was held",
+      "allVias": "All methods",
+      "vias": {
+        "app": "In-app call",
+        "external": "External Zoom"
+      },
+      "startHeader": "Start (JST)",
+      "studentHeader": "Student",
+      "coachHeader": "Coach",
+      "resultHeader": "Outcome",
+      "noteHeader": "Note",
+      "reviewBadge": "Needs review",
+      "recordButton": "Record",
+      "correctButton": "Correct",
+      "noData": "No matching records"
     }
   },
   "monthlyReports": {

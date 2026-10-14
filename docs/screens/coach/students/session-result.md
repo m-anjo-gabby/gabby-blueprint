@@ -5,16 +5,15 @@
 - アプリ: `coach`
 - パス: `/students/[id]/sessions/[sessionId]/result`
 - 対象ロール: コーチ
-- 目的: 確定済み（実施完了・早期終了・無断欠席・コーチ無断欠席によるキャンセル等）の
+- 目的: 確定済み（実施完了・早期終了・生徒の欠席等）の
   ライブセッション1件について、実施記録（入退室ログ・チャット履歴・Live Sprint実施履歴）を
   確認し、生徒への宿題を投稿・追記する。**この画面自体にセッションを確定させる操作は無い**
-  （確定はセッションハブの「End Session」/「Resolve Manually」で行う。本画面はその後の記録
+  （確定はセッションハブの「End Session」で行う。本画面はその後の記録
   閲覧と宿題投稿に特化している）。
 
 ## この画面に来る経路
 
-- セッションハブで「End Session」を押して`finalize_session`が成功した直後
-- セッションハブで「Resolve Manually」を選び、結果がコーチ無断欠席以外だった場合
+- セッションハブの End Session で、実施した結果（Completed / Ended early / Student didn’t show up）を記録した直後
 - 生徒概要画面のLive Sessionsカードで、確定済み（実施予定以外）のセッション行をクリック
 - セッションハブの「This lesson has already been finalized.」に添えられた「View Session
   Result」リンクから
@@ -34,7 +33,8 @@
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | ステータスバッジ | Completed / Ended early / No-show / Cancelled by student / Cancelled by you 等、確定結果に応じた表示 | 操作なし |
-| Note | `resolve_stale_session`で入力した理由や、20分未満での早期終了時に入力した理由がある場合に表示 | 操作なし |
+| 実施方法 | 外部のZoomで実施と記録した場合のみ「Held on an external Zoom (the in-app call wasn’t used)」 | 操作なし |
+| Note | End Session で入力した理由（早期終了・外部のZoom・推定と違う結果の理由等）がある場合に表示 | 操作なし |
 | Join / Leave Timeline | コーチ・生徒それぞれの入室/退室ログを時系列で表示。通話が記録されなかった場合は「No call activity was recorded for this session.」 | 操作なし |
 
 ## Homework：表示要素・操作
@@ -78,17 +78,10 @@ Dialogue Practiceカード側の進捗（`com_t_dialogue_session_progress`）が
 
 ## セッション確定処理そのものについて（参考）
 
-この結果画面自体には確定操作は無いが、確定結果（Summaryの内容）を理解するための背景として、
-確定はセッションハブ側の以下いずれかの操作で行われる。
-
-- **End Session（`finalize_session`）**: コーチ・生徒双方の入退室ログの重複時間から、
-  実施完了/早期終了/無断欠席を自動判定する。重複時間が20分未満の場合は理由入力が必須になる
-- **Resolve Manually（`resolve_stale_session`）**: 終了予定時刻を過ぎても`scheduled`のまま
-  残ったセッションを、コーチが理由付きで手動解決する。選べる結果は「Completed (conducted
-  outside the app)」「No-show」「I missed this session」（コーチ無断欠席。この場合のみ完了
-  ではなくコーチ起因のキャンセル扱いになり、生徒のチケットが返還される）の3つ
-
-詳細な操作画面（ボタン・ダイアログ）は[セッションハブ](session-detail.md)を参照。
+この結果画面自体には確定操作は無い。確定はセッションハブの End Session（`record_session_outcome`）で、
+コーチが結果・実施方法を申告して行う（入退室ログからの推定は初期選択と確認の材料）。確定後の修正はアドミンが行う。
+結果の種類・理由が必須の条件は [session-completion.md](../../../../testing/e2e/specs/session-lifecycle/session-completion.md)、
+操作画面は[セッションハブ](session-detail.md)を参照。
 
 ## 関連する業務フロー仕様書
 
@@ -102,8 +95,7 @@ Dialogue Practiceカード側の進捗（`com_t_dialogue_session_progress`）が
 - `apps/coach/app/(app)/students/[id]/sessions/[sessionId]/result/page.tsx`
 - `apps/coach/app/(app)/students/[id]/sessions/[sessionId]/result/_components/SessionResult.tsx`
 - `apps/coach/app/(app)/students/[id]/sessions/[sessionId]/result/_components/HomeworkComposer.tsx`
-- 関連RPC（確定処理自体。本画面からは呼ばれないが結果表示の前提となる）: `finalize_session`,
-  `resolve_stale_session`
+- 関連RPC（確定処理自体。本画面からは呼ばれないが結果表示の前提となる）: `record_session_outcome`
 - サーバーアクション: `getSessionResultSummary`（`apps/coach/actions/sessionAction.ts`）,
   `getSessionHomework`, `getSessionHomeworkChecklist`, `createSessionHomework`,
   `addHomeworkComment`, `uploadSessionHomeworkAttachment`（`apps/coach/actions/sessionHomeworkAction.ts`。

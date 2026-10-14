@@ -6,7 +6,7 @@ import {
   prepareContent,
   type AuthFixture,
 } from "../../support/authFixtures.ts";
-import { confirmModal, coachNav, openCoachContext } from "../../support/coachApp.ts";
+import { coachNav, openCoachContext } from "../../support/coachApp.ts";
 import { clickUntilVisible } from "../../support/hydration.ts";
 import {
   approveMatchingRequest,
@@ -164,11 +164,12 @@ test("ダッシュボードで今日のセッションと未読を確認し、�
       await expect(sessionsDialog).toHaveCount(0);
     });
 
-    await test.step("7. 終了: End Session で実施完了として記録され、結果画面にスプリントとダイアログの記録が出る", async () => {
-      const modal = confirmModal(page);
-      await clickUntilVisible(section(page, "Session Info").getByRole("button", { name: "End Session" }), modal);
-      await expect(modal).toContainText("End session?");
-      await modal.getByRole("button", { name: "End Session", exact: true }).click();
+    await test.step("7. 終了: End Session の初期選択（通話の記録からの推定）のまま記録すると実施完了になり、結果画面にスプリントとダイアログの記録が出る", async () => {
+      const dialog = page.getByRole("dialog", { name: "End Session" });
+      await clickUntilVisible(section(page, "Session Info").getByRole("button", { name: "End Session" }), dialog);
+      await expect(dialog.getByRole("radio", { name: /^Completed/ })).toBeChecked();
+      await expect(dialog.getByRole("radio", { name: "In the app" })).toBeChecked();
+      await dialog.getByRole("button", { name: "Record Outcome" }).click();
       await expect(page).toHaveURL(new RegExp(`${hubPath(p, day)}/result$`));
       await expect(page.getByRole("heading", { level: 1, name: "Session Result" })).toBeVisible();
       await expect(page.getByText("Completed", { exact: true }).first()).toBeVisible();
@@ -191,8 +192,9 @@ test("ダッシュボードで今日のセッションと未読を確認し、�
 
     await test.step("記録: セッション・チケット・スプリント・ダイアログ・宿題", async () => {
       const { admin } = f;
-      const { data: session } = await admin.from("com_t_session").select("status, completion_result").eq("session_id", day.sessionId).single();
-      expect(session).toMatchObject({ status: 2, completion_result: 1 });
+      const { data: session } = await admin
+        .from("com_t_session").select("status, completion_result, conducted_via, suggested_outcome, outcome_mismatch").eq("session_id", day.sessionId).single();
+      expect(session).toMatchObject({ status: 2, completion_result: 1, conducted_via: 1, suggested_outcome: 1, outcome_mismatch: false });
       const { data: ticket } = await admin.from("com_t_user_session_ticket").select("used_sessions").eq("ticket_id", p.ticketId).single();
       expect(ticket?.used_sessions).toBe(1);
       const { count: sprintCount } = await admin

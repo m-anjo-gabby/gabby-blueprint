@@ -761,7 +761,8 @@
   "liveSessions": {
     "page": {
       "title": "ライブセッション管理",
-      "subtitle": "顧客・生徒を選択して予約状況を確認し、必要に応じて担当コーチの交代を行います"
+      "subtitle": "顧客・生徒を選択して予約状況を確認し、必要に応じて担当コーチの交代を行います",
+      "recordsLink": "実施記録"
     },
     "status": {
       "scheduled": "予定",
@@ -772,7 +773,9 @@
       "cancelledByCoach": "キャンセル（コーチ）",
       "cancelledLicenseEnded": "キャンセル（契約終了）",
       "cancelledCoachReassigned": "キャンセル（コーチ交代）",
-      "cancelledOther": "キャンセル（アドミン代理）"
+      "cancelledOther": "キャンセル（アドミン代理）",
+      "unrecorded": "未記録",
+      "cancelledTechnical": "キャンセル（通信トラブル等）"
     },
     "scheduleStatus": {
       "active": "稼働中",
@@ -839,7 +842,9 @@
       "toastStudentsFetchFailed": "生徒一覧の取得に失敗しました",
       "toastSlotsFetchFailed": "スケジュール枠の取得に失敗しました",
       "toastReleaseSuccess": "担当コーチの枠を終了しました。生徒は新しいコーチへ再度リクエストできます",
-      "toastReleaseFailed": "処理に失敗しました"
+      "toastReleaseFailed": "処理に失敗しました",
+      "recordOutcomeButton": "結果を記録",
+      "correctOutcomeButton": "結果を修正"
     },
     "cancelDialog": {
       "title": "セッションのキャンセル（代理操作）",
@@ -889,6 +894,101 @@
       "close": "閉じる",
       "confirmButton": "変更する",
       "toastSuccess": "総セッション数を変更しました"
+    },
+    "outcome": {
+      "outcomeLegend": "実施結果",
+      "outcomes": {
+        "completed": {
+          "label": "実施完了",
+          "hint": "チケットを1回消化します"
+        },
+        "leftEarly": {
+          "label": "生徒の都合で早く終了",
+          "hint": "チケットを1回消化します"
+        },
+        "noShow": {
+          "label": "生徒の欠席",
+          "hint": "チケットを1回消化します（生徒の画面では「未参加」と表示）"
+        },
+        "coachAbsent": {
+          "label": "コーチの欠席",
+          "hint": "チケットを返還し、振替の対象にします（月次の稼働に数えません）"
+        },
+        "technical": {
+          "label": "通信トラブル等で実施できなかった",
+          "hint": "チケットを返還し、振替の対象にします（月次の稼働に数えません）"
+        }
+      },
+      "suggestedBadge": "通話の記録からの推定",
+      "conductedViaLegend": "実施方法",
+      "viaApp": "アプリ内の通話",
+      "viaExternal": "外部のZoom",
+      "evidenceTitle": "アプリ内の通話の記録",
+      "evidenceLoading": "読み込み中...",
+      "evidenceFailed": "通話の記録を読み込めませんでした",
+      "evidenceNoCoach": "コーチがアプリ内の通話に入った記録はありません",
+      "evidenceTogether": "コーチと生徒が同時に在室した時間: {minutes}分",
+      "evidenceStudentAbsent": "コーチは入室しましたが、生徒が入室した記録はありません",
+      "reasonLabel": "修正の理由（社内メモ）",
+      "reasonPlaceholder": "例: 生徒から「参加していた」と問い合わせがあり、コーチに確認のうえ実施完了に修正",
+      "externalBadge": "外部のZoom",
+      "mismatchBadge": "通話の記録と違う",
+      "correctedBadge": "アドミン確認済み"
+    },
+    "outcomeDialog": {
+      "title": "実施結果の修正",
+      "titleRecord": "実施結果の記録",
+      "description": "{datetime} の {student} さん（担当: {coach}）のセッション",
+      "ticketNote": "チケットの消化・返還は、結果に合わせて自動で調整します。生徒・コーチへの通知は送りません。返還済みの回を実施完了等へ直した場合、その回で予約した振替はそのまま残ります。",
+      "reasonHint": "理由は必須です（変更しない場合も、確認した内容を書いてください）",
+      "historyTitle": "記録・修正の履歴",
+      "historyEmpty": "履歴はありません（この機能の導入前に確定したセッション、または未記録）",
+      "historyRecorded": "{name} が記録",
+      "historyCorrected": "{name} が修正",
+      "ticketConsumed": "チケットを消化",
+      "ticketRestored": "チケットを返還",
+      "close": "閉じる",
+      "submit": "修正する",
+      "submitRecord": "記録する",
+      "toastSuccess": "実施結果を保存しました"
+    },
+    "records": {
+      "title": "実施記録",
+      "subtitle": "開始済みのライブセッションの実施結果を、生徒・コーチを横断して確認し、必要に応じて修正します",
+      "back": "ライブセッション管理へ戻る",
+      "searchPlaceholder": "生徒名・コーチ名で検索...",
+      "reviewFilter": "要確認",
+      "reviewAll": "すべての記録",
+      "reviewOnly": "要確認のみ",
+      "monthFilter": "月",
+      "allMonths": "すべての月",
+      "coachFilter": "コーチ",
+      "allCoaches": "すべてのコーチ",
+      "resultFilter": "結果",
+      "allResults": "すべての結果",
+      "results": {
+        "unrecorded": "未記録",
+        "completed": "実施完了",
+        "left_early": "生徒の都合で早く終了",
+        "no_show": "生徒の欠席",
+        "coach_absent": "コーチの欠席",
+        "technical": "通信トラブル等"
+      },
+      "viaFilter": "実施方法",
+      "allVias": "すべての実施方法",
+      "vias": {
+        "app": "アプリ内の通話",
+        "external": "外部のZoom"
+      },
+      "startHeader": "開始日時（日本時間）",
+      "studentHeader": "生徒",
+      "coachHeader": "コーチ",
+      "resultHeader": "結果",
+      "noteHeader": "メモ",
+      "reviewBadge": "要確認",
+      "recordButton": "記録",
+      "correctButton": "修正",
+      "noData": "該当する記録はありません"
     }
   },
   "monthlyReports": {

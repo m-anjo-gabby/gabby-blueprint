@@ -24,18 +24,33 @@ export const COMPLETION_RESULT = {
 export type CompletionResult = typeof COMPLETION_RESULT[keyof typeof COMPLETION_RESULT];
 
 /**
- * resolve_stale_session RPCへ渡す「期限超過セッションの解決方法」。1〜3はCOMPLETION_RESULTと
- * 値を共有し、そのままcompletion_resultカラムに入る。COACH_NO_SHOW(4)のみ例外で、コーチ自身の
- * 無断欠席を意味し、DB上はcompletion_resultではなくstatus=CANCELLED/cancel_category=COACH
- * （コーチキャンセルと同義。チケットは常に返還される）として記録される。
+ * ライブセッションの実施結果（コーチの End Session = record_session_outcome RPC、アドミンの修正 =
+ * admin_correct_session_outcome RPC に渡す値。2026-10-14）。DB上の記録との対応:
+ *   1〜3 → status=COMPLETED、completion_result=1〜3（いずれもチケットを消化する）
+ *   COACH_ABSENT(4)    → status=CANCELLED、cancel_category=COACH（チケットは返還）
+ *   TECHNICAL_ISSUE(5) → status=CANCELLED、cancel_category=TECHNICAL（チケットは返還）
+ * 4・5 はチケットの扱いが同じだが、コーチへの支払いの判断が変わりうるため区別して記録する。
  */
-export const STALE_SESSION_RESOLUTION = {
-  NORMAL: COMPLETION_RESULT.NORMAL,
-  EARLY_ENDED: COMPLETION_RESULT.EARLY_ENDED,
-  NO_SHOW: COMPLETION_RESULT.NO_SHOW,
-  COACH_NO_SHOW: 4,
+export const SESSION_OUTCOME = {
+  COMPLETED: 1,
+  STUDENT_LEFT_EARLY: 2,
+  STUDENT_NO_SHOW: 3,
+  COACH_ABSENT: 4,
+  TECHNICAL_ISSUE: 5,
 } as const;
-export type StaleSessionResolution = typeof STALE_SESSION_RESOLUTION[keyof typeof STALE_SESSION_RESOLUTION];
+export type SessionOutcome = typeof SESSION_OUTCOME[keyof typeof SESSION_OUTCOME];
+
+/** 結果を実施済み（status=COMPLETED）として記録する結果か（実施方法の入力が要り、チケットを消化する） */
+export function isConductedOutcome(outcome: SessionOutcome): outcome is CompletionResult {
+  return outcome === SESSION_OUTCOME.COMPLETED || outcome === SESSION_OUTCOME.STUDENT_LEFT_EARLY || outcome === SESSION_OUTCOME.STUDENT_NO_SHOW;
+}
+
+// com_t_session.conducted_via（status=COMPLETEDの行のみ。NULLは不明＝旧経路で確定しコーチの入室記録が無い行）
+export const CONDUCTED_VIA = {
+  APP: 1,
+  EXTERNAL_ZOOM: 2,
+} as const;
+export type ConductedVia = typeof CONDUCTED_VIA[keyof typeof CONDUCTED_VIA];
 
 // com_t_session.cancel_category（status=CANCELLEDの起因。status<>CANCELLEDの行では常にNULL）
 export const CANCEL_CATEGORY = {
@@ -44,6 +59,8 @@ export const CANCEL_CATEGORY = {
   ADMIN: 3,
   LICENSE_ENDED: 4,
   COACH_REASSIGNED: 5,
+  /** 通信トラブル等、こちら側の都合で実施できなかった（開始後にコーチが記録。チケットは返還） */
+  TECHNICAL: 6,
 } as const;
 export type CancelCategory = typeof CANCEL_CATEGORY[keyof typeof CANCEL_CATEGORY];
 
@@ -254,14 +271,24 @@ export type CheckSessionConflictResult =
   | { success: true; coachConflict: boolean; studentConflict: boolean }
   | { success: false; errorCode: SessionActionErrorCode };
 
-/** レッスン終了ボタン(finalize_session RPC)の結果。statusは常にCOMPLETEDが返る（内訳はcompletionResult） */
-export type FinalizeSessionResult =
-  | { success: true; status: SessionStatus; completionResult: CompletionResult; overlapSeconds: number }
+/** 実施結果の記録(record_session_outcome RPC)・修正(admin_correct_session_outcome RPC)の結果 */
+export type RecordSessionOutcomeResult =
+  | { success: true }
   | { success: false; errorCode: SessionActionErrorCode };
 
-/** 期限超過scheduledセッションの手動解決(resolve_stale_session RPC)の結果 */
-export type ResolveStaleSessionResult =
-  | { success: true }
+/**
+ * 入退室ログからの実施結果の推定と根拠（get_session_outcome_evidence RPC）。
+ * suggestedOutcome はコーチの入室記録が無い場合 null（外部のZoom等、アプリの記録が無い）。
+ */
+export interface SessionOutcomeEvidence {
+  suggestedOutcome: CompletionResult | null;
+  overlapSeconds: number;
+  coachJoined: boolean;
+  studentJoined: boolean;
+}
+
+export type GetSessionOutcomeEvidenceResult =
+  | { success: true; evidence: SessionOutcomeEvidence }
   | { success: false; errorCode: SessionActionErrorCode };
 
 /** com_t_session_call_log 1行分（レッスン結果画面の入退室タイムライン表示用） */
@@ -313,6 +340,7 @@ export interface SessionResultSummary {
   end_datetime: string;
   status: SessionStatus;
   completion_result: CompletionResult | null;
+  conducted_via: ConductedVia | null;
   status_note: string | null;
   counterpart_name: string;
   counterpart_icon_path: string | null;
@@ -324,11 +352,6 @@ export interface SessionResultSummary {
 
 export type GetSessionResultSummaryResult =
   | { success: true; session: SessionResultSummary }
-  | { success: false; errorCode: SessionActionErrorCode };
-
-/** 対象session_idに、指定ロールの入退室ログが1件でも存在するか（コーチのダッシュボード/生徒詳細でEnd Lessonボタンの活性判定に使用） */
-export type GetSessionCallLogPresenceResult =
-  | { success: true; joinedBySessionId: Record<string, boolean> }
   | { success: false; errorCode: SessionActionErrorCode };
 
 /**

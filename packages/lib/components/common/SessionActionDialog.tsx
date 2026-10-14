@@ -13,10 +13,7 @@ import { CounterpartLocalTime } from './CounterpartLocalTime';
 import {
   SESSION_STATUS,
   CANCEL_CATEGORY,
-  STALE_SESSION_RESOLUTION,
   SessionListItem,
-  CompletionResult,
-  StaleSessionResolution,
   ProposedSlotInput,
 } from '@gabby/types/session';
 
@@ -142,7 +139,7 @@ const MAX_PROPOSED_SLOTS = 3;
 
 export interface SessionActionTarget {
   session: SessionListItem;
-  mode: 'cancel' | 'resolve';
+  mode: 'cancel';
 }
 
 interface ProposedSlotDraft {
@@ -177,12 +174,6 @@ export interface SessionActionDialogActions {
     endIso: string,
     excludeSessionId?: string
   ) => Promise<{ success: true; coachConflict: boolean; studentConflict: boolean } | { success: false; message: string }>;
-  /** 期限超過セッションの手動解決（コーチのみ使用。生徒側では渡さない） */
-  resolveStaleSession?: (
-    sessionId: string,
-    resolution: StaleSessionResolution,
-    reason: string
-  ) => Promise<{ success: true } | { success: false; message: string }>;
 }
 
 export interface SessionActionDialogCancelLabels {
@@ -208,22 +199,8 @@ export interface SessionActionDialogCancelLabels {
   counterpartTimeCaution: string;
 }
 
-export interface SessionActionDialogResolveLabels {
-  title: string;
-  description: (counterpartName: string) => string;
-  outcomeLabel: string;
-  statusOptions: { value: StaleSessionResolution; label: string }[];
-  reasonLabel: string;
-  reasonPlaceholder: string;
-  backButton: string;
-  submitButton: string;
-  successToast: string;
-}
-
 export interface SessionActionDialogLabels {
   cancel: SessionActionDialogCancelLabels;
-  /** 期限超過セッションの手動解決モード。コーチのみ使用するため、生徒側では省略してよい */
-  resolve?: SessionActionDialogResolveLabels;
 }
 
 export interface SessionActionDialogProps {
@@ -237,7 +214,8 @@ export interface SessionActionDialogProps {
 }
 
 /**
- * セッションのキャンセル・期限超過セッションの手動解決を行う共通ダイアログ（ポータル共通）。
+ * セッションのキャンセルを行う共通ダイアログ（ポータル共通）。
+ * （開始後の実施結果の記録は、コーチの End Session ダイアログ（apps/coach/components/session/EndSessionDialog.tsx）で行う）
  * apps/student・apps/coach双方の同名コンポーネントを統合したもので、文言・サーバーアクションは
  * すべて呼び出し側からprops経由で注入する（本コンポーネント自体は日本語・英語のどちらの
  * 文字列も一切ハードコードしない）。
@@ -248,16 +226,12 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
   const currentUserId = useUserStore((state) => state.user?.id);
   const [reason, setReason] = useState('');
   const [proposedSlots, setProposedSlots] = useState<ProposedSlotDraft[]>([]);
-  const [resolvedResolution, setResolvedResolution] = useState<StaleSessionResolution>(STALE_SESSION_RESOLUTION.NORMAL);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
     setReason('');
     setProposedSlots([]);
-    if (target?.mode === 'resolve') {
-      setResolvedResolution(STALE_SESSION_RESOLUTION.NORMAL);
-    }
   }, [target]);
 
   const isCoachViewer = target?.session.viewer_role === 'coach';
@@ -345,28 +319,6 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     }
   };
 
-  const handleResolve = async () => {
-    if (!target || !reason.trim() || !actions.resolveStaleSession || !labels.resolve) return;
-    setIsSubmitting(true);
-    try {
-      const result = await actions.resolveStaleSession(target.session.session_id, resolvedResolution, reason);
-      if (!result.success) {
-        showToast(result.message, 'error');
-        return;
-      }
-      // COACH_NO_SHOW(4)はRPC側で「完了」ではなくコーチキャンセル相当（チケット返還）として
-      // 記録されるため、completion_resultではなくstatus=CANCELLED/cancel_category=COACHを反映する
-      const patch =
-        resolvedResolution === STALE_SESSION_RESOLUTION.COACH_NO_SHOW
-          ? { status: SESSION_STATUS.CANCELLED, cancel_category: CANCEL_CATEGORY.COACH, completion_result: null }
-          : { status: SESSION_STATUS.COMPLETED, completion_result: resolvedResolution as CompletionResult };
-      onResolved(target.session.session_id, patch);
-      showToast(labels.resolve.successToast, 'success');
-      onClose();
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const policyNote = target?.mode === 'cancel' ? labels.cancel.policyNote(isWithin12Hours(target.session.start_datetime)) : null;
 
@@ -477,43 +429,6 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
           </>
         )}
 
-        {target?.mode === 'resolve' && labels.resolve && (
-          <>
-            <DialogHeader>
-              <DialogTitle>{labels.resolve.title}</DialogTitle>
-              <DialogDescription>{labels.resolve.description(target.session.counterpart_name)}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>{labels.resolve.outcomeLabel}</Label>
-                <select
-                  value={resolvedResolution}
-                  onChange={(e) => setResolvedResolution(Number(e.target.value) as StaleSessionResolution)}
-                  className={cn(INPUT_CLASS, 'w-full')}
-                >
-                  {labels.resolve.statusOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>{labels.resolve.reasonLabel}</Label>
-                <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={labels.resolve.reasonPlaceholder} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-                {labels.resolve.backButton}
-              </Button>
-              <Button type="button" onClick={handleResolve} disabled={isSubmitting || !reason.trim()}>
-                {isSubmitting && <Loader2 size={14} className="animate-spin" />}
-                {labels.resolve.submitButton}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
       </DialogContent>
     </DialogPrimitive.Root>
   );

@@ -342,7 +342,7 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
                           className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-600 transition-colors"
                         >
                           <CheckCircle2 size={13} />
-                          Go to Session Hub to resolve
+                          Go to Session Hub to record the outcome
                         </Link>
                       </div>
                     )}

@@ -10,10 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { cancelSessionAsAdmin } from '@/actions/adminLiveSessionAction';
 import { formatSessionDateTime } from './formatSessionDateTime';
-import type { CoachSessionListItem } from '@gabby/types/coachStudent';
+import type { AdminSessionListItem } from '@gabby/types/adminLiveSession';
 
 interface Props {
-  target: CoachSessionListItem | null;
+  target: AdminSessionListItem | null;
   onClose: () => void;
   onCancelled: () => Promise<void> | void;
 }

@@ -80,7 +80,7 @@
 | [clients.md](admin/clients.md) | `/clients` | 顧客（テナント）マスタ管理（要確認事項あり） | ✅ |
 | [contracts/list.md](admin/contracts/list.md) | `/contracts` | 契約管理（プラン紐付け・ライセンス割当） | ✅ |
 | [contracts/plans.md](admin/contracts/plans.md) | `/contracts/plans` | 契約プランマスタ管理 | ✅ |
-| [live-sessions.md](admin/live-sessions.md) | `/live-sessions` | セッションの代理キャンセル/予約/マッチング/コーチ交代 | ✅ |
+| [live-sessions.md](admin/live-sessions.md) | `/live-sessions`, `/live-sessions/records` | セッションの代理キャンセル/予約/マッチング/コーチ交代、実施結果の記録・修正と実施記録の一覧 | ✅ |
 | [monthly-reports.md](admin/monthly-reports.md) | `/monthly-reports` | コーチ稼働実績の承認・承認取消 | ✅ |
 | [notification.md](admin/notification.md) | `/notification` | 通知一覧 | ✅ |
 | [training-reports.md](admin/training-reports.md) | `/training-reports` | トレーニングレポート（満了月ごとのライセンス一覧・生徒ごとのPDF・契約の全員分のZIP。ドラフト版） | ✅ |

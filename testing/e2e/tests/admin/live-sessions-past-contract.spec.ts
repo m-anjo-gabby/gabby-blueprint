@@ -13,7 +13,7 @@ import { expect, test } from "../../support/studentApp.ts";
 
 const PASSWORD = "PastContract2026a";
 const DAY_MS = 24 * 60 * 60 * 1000;
-const OPERATION_BUTTONS = /^(セッションを予約|セッション数を調整|コーチ交代|直接マッチング|キャンセル)$/;
+const OPERATION_BUTTONS = /^(セッションを予約|セッション数を調整|コーチ交代|直接マッチング|キャンセル|結果を記録|結果を修正)$/;
 
 let fixture: AuthFixture | undefined;
 let pair: LivePair | undefined;

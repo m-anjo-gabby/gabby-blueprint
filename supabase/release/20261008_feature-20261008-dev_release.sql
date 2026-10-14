@@ -4119,3 +4119,656 @@ REVOKE EXECUTE ON FUNCTION public.get_training_report_data(uuid[]) FROM PUBLIC, 
 GRANT EXECUTE ON FUNCTION public.get_training_report_data(uuid[]) TO service_role;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】ライブセッションの実施結果の記録の見直し（End Session の一本化・外部のZoomの記録・アドミンの修正）
+-- 追加日: 2026-10-14
+--
+-- 【内容】
+--   1. com_t_session に conducted_via（実施方法）・suggested_outcome（入退室ログからの推定）・
+--      outcome_mismatch（推定と違う結果）・ticket_consumed（チケットを消化したか）を追加し、
+--      cancel_category に 6:technical（通信トラブル等で実施できなかった）を追加する。
+--      既存の行: ticket_consumed は実施完了の行だけ true、conducted_via はコーチの入室記録がある確定済みの行だけ 1
+--   2. com_t_session_outcome_history（実施結果の記録・修正の履歴。参照はアドミンのみ）を新規作成
+--   3. fn_session_outcome_evidence / fn_restore_session_ticket / fn_apply_session_outcome（内部の共通関数）を新規作成
+--   4. record_session_outcome（コーチの End Session）・get_session_outcome_evidence（推定の取得）・
+--      admin_correct_session_outcome（アドミンの修正）を新規作成
+--   5. get_coach_monthly_sessions: 要確認(is_attention)に外部のZoomでの実施・推定と違う結果を加える（返す列の変更は無い）
+--   6. finalize_session / resolve_stale_session を削除（4 に置き換え）
+--   チケットの消化: 実施完了に加え、生徒の都合による早期終了・生徒の欠席でも消化する（既存の行は遡らない）。
+-- 対応ファイル: DDL/table/com_t_session.sql, DDL/table/com_t_session_outcome_history.sql,
+--   DDL/function/fn_session_outcome_evidence.sql, DDL/function/fn_restore_session_ticket.sql,
+--   DDL/function/fn_apply_session_outcome.sql, DDL/function/record_session_outcome.sql,
+--   DDL/function/get_session_outcome_evidence.sql, DDL/function/admin_correct_session_outcome.sql,
+--   DDL/function/get_coach_monthly_sessions.sql（削除: DDL/function/finalize_session.sql, DDL/function/resolve_stale_session.sql）
+-- 【注意】6 で旧関数を削除するため、適用からアプリのデプロイまでの間はコーチの End Session が失敗する。
+--   アプリのデプロイの直前に適用すること。
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- DDL/table/com_t_session.sql（2026-10-14パッチ）
+---------------------------------------------
+ALTER TABLE public.com_t_session
+  ADD COLUMN IF NOT EXISTS conducted_via smallint,
+  ADD COLUMN IF NOT EXISTS suggested_outcome smallint,
+  ADD COLUMN IF NOT EXISTS outcome_mismatch boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS ticket_consumed boolean NOT NULL DEFAULT false;
+
+UPDATE public.com_t_session SET ticket_consumed = true
+WHERE status = 2 AND completion_result = 1 AND ticket_consumed = false;
+
+UPDATE public.com_t_session s SET conducted_via = 1
+WHERE s.status = 2 AND s.conducted_via IS NULL
+  AND EXISTS (SELECT 1 FROM public.com_t_session_call_log l WHERE l.session_id = s.session_id AND l.role = 'coach');
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_cancel_category;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_cancel_category CHECK (
+    (status = 3 AND cancel_category IN (1, 2, 3, 4, 5, 6)) OR (status <> 3 AND cancel_category IS NULL)
+);
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_conducted_via;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_conducted_via CHECK (
+    conducted_via IS NULL OR (status = 2 AND conducted_via IN (1, 2))
+);
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_suggested_outcome;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_suggested_outcome CHECK (
+    suggested_outcome IS NULL OR suggested_outcome IN (1, 2, 3)
+);
+
+COMMENT ON COLUMN public.com_t_session.completion_result IS 'status=2(completed)の内訳。1:normal(実施完了) 2:early_ended(生徒の都合で早く終了。理由はstatus_note) 3:no_show(生徒の欠席)。いずれもチケットを消化する（2026-10-14以前に確定した2・3は消化していない。ticket_consumed参照）。status<>2の行では常にNULL。';
+COMMENT ON COLUMN public.com_t_session.cancel_category IS 'status=3(cancelled)の起因。1:student(生徒本人) 2:coach(コーチ本人。開始後に記録したコーチの欠席を含む) 3:admin(アドミン代理操作・旧reschedule含む) 4:license_ended(ライセンス無効化による自動キャンセル) 5:coach_reassigned(コーチ交代による自動キャンセル) 6:technical(通信トラブル等、こちら側の都合で実施できなかった)。status<>3の行では常にNULL。返還有無はticket_refundedを別途参照。';
+COMMENT ON COLUMN public.com_t_session.status_note IS '実施結果の理由（早期終了・外部のZoomで実施・推定と違う結果にした理由、旧Resolve Manuallyの理由）。cancel_reasonとは意味的に分離';
+COMMENT ON COLUMN public.com_t_session.conducted_via IS '実施方法 1:アプリ内の通話 2:外部のZoom（代替措置。理由はstatus_note）。status=2の行のみ。NULLは不明（旧経路で確定し、コーチの入室記録が無い行）';
+COMMENT ON COLUMN public.com_t_session.suggested_outcome IS '確定時点の入退室ログから推定した結果 1:実施完了(重なり20分以上) 2:早期終了(20分未満・生徒の入室あり) 3:生徒の欠席。コーチの入室記録が無ければNULL';
+COMMENT ON COLUMN public.com_t_session.outcome_mismatch IS 'アプリ内の通話で実施したと申告した結果が推定(suggested_outcome)と違う。アドミンが結果を修正するとfalseに戻る';
+COMMENT ON COLUMN public.com_t_session.ticket_consumed IS 'このセッションでチケットを1回消化したか（used_sessionsに加算済みか）。アドミンの修正で消化・返還の差分を出すために使う';
+
+---------------------------------------------
+-- DDL/table/com_t_session_outcome_history.sql
+---------------------------------------------
+CREATE TABLE IF NOT EXISTS public.com_t_session_outcome_history (
+    history_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id uuid NOT NULL REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
+    action text NOT NULL CHECK (action IN ('recorded', 'corrected')),
+    outcome smallint NOT NULL CHECK (outcome BETWEEN 1 AND 5),
+    conducted_via smallint CHECK (conducted_via IN (1, 2)),
+    suggested_outcome smallint CHECK (suggested_outcome IN (1, 2, 3)),
+    previous_status smallint NOT NULL,
+    previous_completion_result smallint,
+    previous_cancel_category smallint,
+    previous_conducted_via smallint,
+    ticket_action text CHECK (ticket_action IN ('consumed', 'restored')),
+    reason text,
+    performed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+    performed_at timestamp with time zone NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.com_t_session_outcome_history IS 'ライブセッションの実施結果の記録・修正の履歴（追記専用）';
+COMMENT ON COLUMN public.com_t_session_outcome_history.action IS 'recorded:コーチが記録 corrected:アドミンが修正';
+COMMENT ON COLUMN public.com_t_session_outcome_history.outcome IS '記録・修正後の結果 1:実施完了 2:生徒の都合で早く終了 3:生徒の欠席 4:コーチの欠席 5:通信トラブル等で実施できなかった';
+COMMENT ON COLUMN public.com_t_session_outcome_history.conducted_via IS '記録・修正後の実施方法 1:アプリ内の通話 2:外部のZoom（結果が4・5の場合はNULL）';
+COMMENT ON COLUMN public.com_t_session_outcome_history.suggested_outcome IS 'その時点の入退室ログから推定した結果（コーチの入室記録が無ければNULL）';
+COMMENT ON COLUMN public.com_t_session_outcome_history.previous_status IS '変更前のstatus（1:未確定 2:completed 3:cancelled）';
+COMMENT ON COLUMN public.com_t_session_outcome_history.ticket_action IS 'この操作でのチケットの変化 consumed:消化 restored:返還 NULL:変化なし';
+COMMENT ON COLUMN public.com_t_session_outcome_history.reason IS 'コーチ・アドミンが入力した理由';
+COMMENT ON COLUMN public.com_t_session_outcome_history.performed_by IS '操作したユーザー（コーチまたはアドミン）';
+
+CREATE INDEX IF NOT EXISTS idx_session_outcome_history_session ON public.com_t_session_outcome_history (session_id, performed_at DESC);
+
+ALTER TABLE public.com_t_session_outcome_history ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can view session outcome history" ON public.com_t_session_outcome_history;
+CREATE POLICY "Admins can view session outcome history" ON public.com_t_session_outcome_history
+FOR SELECT TO authenticated USING (COALESCE(public.get_jwt_user_type(), '') = '0');
+
+---------------------------------------------
+-- DDL/function/fn_session_outcome_evidence.sql
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_session_outcome_evidence(p_session_id uuid)
+RETURNS TABLE(suggested_outcome smallint, overlap_seconds integer, coach_joined boolean, student_joined boolean)
+LANGUAGE plpgsql
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+    v_overlap numeric;
+    v_coach_joined boolean;
+    v_student_joined boolean;
+BEGIN
+    SELECT COALESCE(SUM(GREATEST(0,
+             EXTRACT(EPOCH FROM (LEAST(c.left_end, s.left_end) - GREATEST(c.joined_at, s.joined_at)))
+           )), 0)
+      INTO v_overlap
+      FROM (SELECT joined_at, COALESCE(left_at, NOW()) AS left_end
+              FROM public.com_t_session_call_log
+              WHERE session_id = p_session_id AND role = 'coach') c
+      CROSS JOIN (SELECT joined_at, COALESCE(left_at, NOW()) AS left_end
+                    FROM public.com_t_session_call_log
+                    WHERE session_id = p_session_id AND role = 'student') s;
+
+    SELECT
+        bool_or(l.role = 'coach') IS TRUE,
+        bool_or(l.role = 'student') IS TRUE
+      INTO v_coach_joined, v_student_joined
+      FROM public.com_t_session_call_log l
+      WHERE l.session_id = p_session_id;
+
+    RETURN QUERY SELECT
+        (CASE
+            WHEN NOT v_coach_joined THEN NULL
+            WHEN v_overlap >= 1200 THEN 1 -- 20分
+            WHEN v_student_joined THEN 2
+            ELSE 3
+        END)::smallint,
+        v_overlap::integer,
+        v_coach_joined,
+        v_student_joined;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_session_outcome_evidence(uuid) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- DDL/function/fn_restore_session_ticket.sql
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_restore_session_ticket(
+    p_ticket_id uuid,
+    p_note text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_ticket RECORD;
+BEGIN
+    UPDATE public.com_t_user_session_ticket
+    SET used_sessions = GREATEST(used_sessions - 1, 0), update_date = NOW()
+    WHERE ticket_id = p_ticket_id
+    RETURNING used_sessions, total_sessions, contract_id, user_id INTO v_ticket;
+
+    IF FOUND THEN
+        INSERT INTO public.com_t_user_session_ticket_history
+            (ticket_id, contract_id, user_id, action, sessions_delta, used_sessions_after, total_sessions, note, performed_by)
+        VALUES
+            (p_ticket_id, v_ticket.contract_id, v_ticket.user_id, 'restored', 1, v_ticket.used_sessions, v_ticket.total_sessions, p_note, auth.uid());
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_restore_session_ticket(uuid, text) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- DDL/function/fn_apply_session_outcome.sql
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_apply_session_outcome(
+    p_session_id uuid,
+    p_outcome smallint,
+    p_conducted_via smallint,
+    p_reason text,
+    p_action text,
+    p_suggested_outcome smallint,
+    p_outcome_mismatch boolean
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_reason text := NULLIF(btrim(COALESCE(p_reason, '')), '');
+    v_consumes boolean := p_outcome IN (1, 2, 3);
+    v_ticket_action text := NULL;
+BEGIN
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    IF v_consumes THEN
+        UPDATE public.com_t_session
+        SET status = 2,
+            completion_result = p_outcome,
+            conducted_via = p_conducted_via,
+            status_note = CASE
+                WHEN p_action = 'recorded' THEN v_reason
+                WHEN v_session.status = 2 THEN v_session.status_note
+                ELSE COALESCE(v_session.status_note, v_reason)
+            END,
+            cancel_category = NULL,
+            cancel_reason = NULL,
+            cancelled_by = NULL,
+            ticket_refunded = NULL,
+            suggested_outcome = p_suggested_outcome,
+            outcome_mismatch = p_outcome_mismatch,
+            ticket_consumed = true,
+            update_date = NOW()
+        WHERE session_id = p_session_id;
+    ELSE
+        UPDATE public.com_t_session
+        SET status = 3,
+            completion_result = NULL,
+            conducted_via = NULL,
+            cancel_category = CASE WHEN p_outcome = 4 THEN 2 ELSE 6 END,
+            cancel_reason = CASE
+                WHEN p_action = 'recorded' THEN v_reason
+                WHEN v_session.status = 3 THEN COALESCE(v_session.cancel_reason, v_reason)
+                ELSE v_reason
+            END,
+            cancelled_by = CASE WHEN v_session.status = 3 THEN v_session.cancelled_by ELSE auth.uid() END,
+            ticket_refunded = true,
+            suggested_outcome = p_suggested_outcome,
+            outcome_mismatch = false,
+            ticket_consumed = false,
+            update_date = NOW()
+        WHERE session_id = p_session_id;
+    END IF;
+
+    IF v_consumes AND NOT v_session.ticket_consumed THEN
+        PERFORM public.fn_consume_session_ticket(v_session.ticket_id, v_reason);
+        v_ticket_action := 'consumed';
+    ELSIF NOT v_consumes AND v_session.ticket_consumed THEN
+        PERFORM public.fn_restore_session_ticket(v_session.ticket_id, v_reason);
+        v_ticket_action := 'restored';
+    END IF;
+
+    INSERT INTO public.com_t_session_outcome_history
+        (session_id, action, outcome, conducted_via, suggested_outcome,
+         previous_status, previous_completion_result, previous_cancel_category, previous_conducted_via,
+         ticket_action, reason, performed_by)
+    VALUES
+        (p_session_id, p_action, p_outcome, CASE WHEN v_consumes THEN p_conducted_via END, p_suggested_outcome,
+         v_session.status, v_session.completion_result, v_session.cancel_category, v_session.conducted_via,
+         v_ticket_action, v_reason, auth.uid());
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_apply_session_outcome(uuid, smallint, smallint, text, text, smallint, boolean) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- DDL/function/record_session_outcome.sql
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.record_session_outcome(
+    p_session_id uuid,
+    p_outcome smallint,
+    p_conducted_via smallint DEFAULT NULL,
+    p_reason text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_evidence RECORD;
+    v_via smallint;
+    v_mismatch boolean;
+    v_has_reason boolean := btrim(COALESCE(p_reason, '')) <> '';
+    v_coach_name text;
+BEGIN
+    IF p_outcome IS NULL OR p_outcome NOT BETWEEN 1 AND 5 THEN
+        RAISE EXCEPTION 'invalid outcome %', p_outcome;
+    END IF;
+
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    IF v_session.coach_id IS DISTINCT FROM auth.uid() THEN
+        RAISE EXCEPTION 'not authorized to record this session';
+    END IF;
+
+    IF v_session.status <> 1 THEN
+        RAISE EXCEPTION 'session % is not scheduled (status=%)', p_session_id, v_session.status;
+    END IF;
+
+    IF v_session.start_datetime > NOW() THEN
+        RAISE EXCEPTION 'session has not started yet';
+    END IF;
+
+    IF p_outcome IN (1, 2, 3) THEN
+        IF p_conducted_via IS NULL OR p_conducted_via NOT IN (1, 2) THEN
+            RAISE EXCEPTION 'invalid conducted_via %', p_conducted_via;
+        END IF;
+        v_via := p_conducted_via;
+    END IF;
+
+    SELECT * INTO v_evidence FROM public.fn_session_outcome_evidence(p_session_id);
+    v_mismatch := v_via = 1 AND v_evidence.suggested_outcome IS DISTINCT FROM p_outcome;
+
+    IF NOT v_has_reason AND (p_outcome IN (2, 4, 5) OR v_via = 2 OR v_mismatch) THEN
+        RAISE EXCEPTION 'reason required for this outcome';
+    END IF;
+
+    PERFORM public.fn_apply_session_outcome(
+        p_session_id, p_outcome, v_via, p_reason, 'recorded', v_evidence.suggested_outcome, COALESCE(v_mismatch, false)
+    );
+
+    IF p_outcome = 4 THEN
+        SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_session.coach_id;
+        PERFORM public.fn_notify(
+            v_session.student_id,
+            'SESSION_CANCELLED_BY_COACH',
+            jsonb_build_object(
+                'session_id', p_session_id,
+                'coach_name', v_coach_name,
+                'session_start_datetime', v_session.start_datetime,
+                'proposal_count', 0
+            ),
+            '/live-room'
+        );
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.record_session_outcome(uuid, smallint, smallint, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.record_session_outcome(uuid, smallint, smallint, text) TO authenticated;
+
+---------------------------------------------
+-- DDL/function/get_session_outcome_evidence.sql
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_session_outcome_evidence(p_session_id uuid)
+RETURNS TABLE(suggested_outcome smallint, overlap_seconds integer, coach_joined boolean, student_joined boolean)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_coach_id uuid;
+BEGIN
+    SELECT s.coach_id INTO v_coach_id FROM public.com_t_session s WHERE s.session_id = p_session_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    PERFORM public.fn_assert_actor_or_admin(v_coach_id, 'not authorized to view this session');
+
+    RETURN QUERY SELECT * FROM public.fn_session_outcome_evidence(p_session_id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_session_outcome_evidence(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_session_outcome_evidence(uuid) TO authenticated;
+
+---------------------------------------------
+-- DDL/function/admin_correct_session_outcome.sql
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_correct_session_outcome(
+    p_session_id uuid,
+    p_outcome smallint,
+    p_conducted_via smallint,
+    p_reason text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_session RECORD;
+    v_evidence RECORD;
+    v_via smallint;
+BEGIN
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to correct session outcomes');
+
+    IF p_outcome IS NULL OR p_outcome NOT BETWEEN 1 AND 5 THEN
+        RAISE EXCEPTION 'invalid outcome %', p_outcome;
+    END IF;
+    IF btrim(COALESCE(p_reason, '')) = '' THEN
+        RAISE EXCEPTION 'reason required to correct a session outcome';
+    END IF;
+
+    SELECT * INTO v_session FROM public.com_t_session WHERE session_id = p_session_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'session % not found', p_session_id;
+    END IF;
+
+    IF v_session.start_datetime > NOW() THEN
+        RAISE EXCEPTION 'session has not started yet';
+    END IF;
+
+    IF NOT (
+        v_session.status IN (1, 2)
+        OR (v_session.status = 3 AND v_session.cancel_category IN (2, 6))
+    ) THEN
+        RAISE EXCEPTION 'session outcome cannot be corrected (status=%, cancel_category=%)', v_session.status, v_session.cancel_category;
+    END IF;
+
+    IF p_outcome IN (1, 2, 3) THEN
+        IF p_conducted_via IS NULL OR p_conducted_via NOT IN (1, 2) THEN
+            RAISE EXCEPTION 'invalid conducted_via %', p_conducted_via;
+        END IF;
+        v_via := p_conducted_via;
+    END IF;
+
+    SELECT * INTO v_evidence FROM public.fn_session_outcome_evidence(p_session_id);
+
+    PERFORM public.fn_apply_session_outcome(
+        p_session_id, p_outcome, v_via, p_reason, 'corrected', v_evidence.suggested_outcome, false
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_correct_session_outcome(uuid, smallint, smallint, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_correct_session_outcome(uuid, smallint, smallint, text) TO authenticated;
+
+---------------------------------------------
+-- DDL/function/get_coach_monthly_sessions.sql
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_coach_monthly_sessions(p_coach_id uuid, p_report_month date)
+RETURNS TABLE(
+    session_id uuid,
+    student_id uuid,
+    start_datetime timestamptz,
+    end_datetime timestamptz,
+    status smallint,
+    completion_result smallint,
+    cancel_category smallint,
+    status_note text,
+    ticket_refunded boolean,
+    counts_toward_total boolean,
+    is_unresolved boolean,
+    is_attention boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_coach_timezone text;
+    v_month_start_utc timestamptz;
+    v_month_end_utc timestamptz;
+BEGIN
+    PERFORM public.fn_assert_actor_or_admin(p_coach_id, 'not authorized to view this coach''s monthly report');
+
+    SELECT COALESCE(u.timezone, 'Asia/Tokyo') INTO v_coach_timezone FROM public.com_m_user u WHERE u.id = p_coach_id;
+    IF v_coach_timezone IS NULL THEN
+        v_coach_timezone := 'Asia/Tokyo'; -- 対象コーチが存在しない場合のフォールバック（結果は0件になる）
+    END IF;
+
+    v_month_start_utc := date_trunc('month', p_report_month::timestamp) AT TIME ZONE v_coach_timezone;
+    v_month_end_utc := (date_trunc('month', p_report_month::timestamp) + interval '1 month') AT TIME ZONE v_coach_timezone;
+
+    RETURN QUERY
+    SELECT
+        s.session_id,
+        s.student_id,
+        s.start_datetime,
+        s.end_datetime,
+        s.status,
+        s.completion_result,
+        s.cancel_category,
+        s.status_note,
+        s.ticket_refunded,
+        (s.status = 2 OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS counts_toward_total,
+        (s.status = 1 AND s.end_datetime < NOW()) AS is_unresolved,
+        ((s.status = 2 AND (s.completion_result IN (2, 3) OR s.conducted_via = 2 OR s.outcome_mismatch))
+          OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS is_attention
+    FROM public.com_t_session s
+    WHERE s.coach_id = p_coach_id
+      AND s.start_datetime >= v_month_start_utc
+      AND s.start_datetime < v_month_end_utc
+      AND (
+          (s.status = 2 OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) -- counts_toward_total
+          OR (s.status = 1 AND s.end_datetime < NOW()) -- is_unresolved
+      )
+    ORDER BY s.student_id, s.start_datetime;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coach_monthly_sessions(uuid, date) TO authenticated;
+
+---------------------------------------------
+-- 旧関数の削除（record_session_outcome に置き換え）
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.finalize_session(uuid, text);
+DROP FUNCTION IF EXISTS public.resolve_stale_session(uuid, smallint, text);
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】ライブセッションの実施結果: アドミンの「実施記録」一覧
+-- 追加日: 2026-10-14
+--
+-- 【内容】
+--   1. admin_get_session_records を新規作成（開始済みのセッションの実施結果を、全生徒・全コーチを横断して
+--      期間・コーチ・結果・実施方法・要確認で絞って取得する。アドミンのみ）
+-- 対応ファイル: DDL/function/admin_get_session_records.sql
+-- 【注意】前のセクション（ライブセッションの実施結果の記録の見直し）を先に適用すること。
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- DDL/function/admin_get_session_records.sql
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_get_session_records(
+    p_from timestamptz DEFAULT NULL,
+    p_to timestamptz DEFAULT NULL,
+    p_coach_id uuid DEFAULT NULL,
+    p_result text DEFAULT NULL,
+    p_via text DEFAULT NULL,
+    p_review_only boolean DEFAULT false,
+    p_name_pattern text DEFAULT NULL,
+    p_limit integer DEFAULT 10,
+    p_offset integer DEFAULT 0
+)
+RETURNS TABLE(
+    session_id uuid,
+    student_id uuid,
+    student_name text,
+    coach_id uuid,
+    coach_name text,
+    start_datetime timestamptz,
+    end_datetime timestamptz,
+    status smallint,
+    completion_result smallint,
+    cancel_category smallint,
+    conducted_via smallint,
+    suggested_outcome smallint,
+    outcome_mismatch boolean,
+    status_note text,
+    cancel_reason text,
+    is_corrected boolean,
+    needs_review boolean,
+    total_count bigint
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    PERFORM public.fn_assert_actor_or_admin(NULL, 'not authorized to view session records');
+
+    RETURN QUERY
+    WITH base AS (
+        SELECT
+            s.session_id,
+            s.student_id,
+            st.user_name AS student_name,
+            s.coach_id,
+            co.user_name AS coach_name,
+            s.start_datetime,
+            s.end_datetime,
+            s.status,
+            s.completion_result,
+            s.cancel_category,
+            s.conducted_via,
+            s.suggested_outcome,
+            s.outcome_mismatch,
+            s.status_note,
+            s.cancel_reason,
+            EXISTS (
+                SELECT 1 FROM public.com_t_session_outcome_history h
+                WHERE h.session_id = s.session_id AND h.action = 'corrected'
+            ) AS is_corrected,
+            (s.status = 1) AS is_unrecorded
+        FROM public.com_t_session s
+        JOIN public.com_m_user st ON st.id = s.student_id
+        JOIN public.com_m_user co ON co.id = s.coach_id
+        WHERE s.start_datetime <= NOW()
+          AND (
+              (s.status = 1 AND s.end_datetime < NOW())
+              OR s.status = 2
+              OR (s.status = 3 AND s.cancel_category = 6)
+              OR (s.status = 3 AND s.cancel_category = 2 AND EXISTS (
+                  SELECT 1 FROM public.com_t_session_outcome_history h
+                  WHERE h.session_id = s.session_id AND h.outcome = 4
+              ))
+          )
+          AND (p_from IS NULL OR s.start_datetime >= p_from)
+          AND (p_to IS NULL OR s.start_datetime < p_to)
+          AND (p_coach_id IS NULL OR s.coach_id = p_coach_id)
+          AND (p_name_pattern IS NULL OR st.user_name ILIKE p_name_pattern OR co.user_name ILIKE p_name_pattern)
+          AND (
+              p_result IS NULL
+              OR (p_result = 'unrecorded' AND s.status = 1)
+              OR (p_result = 'completed' AND s.status = 2 AND s.completion_result = 1)
+              OR (p_result = 'left_early' AND s.status = 2 AND s.completion_result = 2)
+              OR (p_result = 'no_show' AND s.status = 2 AND s.completion_result = 3)
+              OR (p_result = 'coach_absent' AND s.status = 3 AND s.cancel_category = 2)
+              OR (p_result = 'technical' AND s.status = 3 AND s.cancel_category = 6)
+          )
+          AND (
+              p_via IS NULL
+              OR (p_via = 'app' AND s.conducted_via = 1)
+              OR (p_via = 'external' AND s.conducted_via = 2)
+          )
+    ),
+    flagged AS (
+        SELECT b.*,
+            (NOT b.is_corrected AND (
+                b.is_unrecorded
+                OR b.status = 3
+                OR (b.status = 2 AND (b.completion_result IN (2, 3) OR b.conducted_via = 2 OR b.outcome_mismatch))
+            )) AS needs_review
+        FROM base b
+    )
+    SELECT
+        f.session_id, f.student_id, f.student_name, f.coach_id, f.coach_name,
+        f.start_datetime, f.end_datetime, f.status, f.completion_result, f.cancel_category,
+        f.conducted_via, f.suggested_outcome, f.outcome_mismatch, f.status_note, f.cancel_reason,
+        f.is_corrected, f.needs_review,
+        COUNT(*) OVER () AS total_count
+    FROM flagged f
+    WHERE NOT p_review_only OR f.needs_review
+    ORDER BY f.start_datetime DESC, f.session_id -- 同じ開始日時の並びを固定し、ページ間の重複・欠落を防ぐ
+    LIMIT LEAST(GREATEST(p_limit, 1), 100)
+    OFFSET GREATEST(p_offset, 0);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_get_session_records(timestamptz, timestamptz, uuid, text, text, boolean, text, integer, integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_get_session_records(timestamptz, timestamptz, uuid, text, text, boolean, text, integer, integer) TO authenticated;
+
+COMMIT;

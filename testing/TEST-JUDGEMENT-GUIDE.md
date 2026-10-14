@@ -44,10 +44,10 @@
 - **該当シナリオ**: `testing/features/branches/feature-20260904-dev/seed.ts`（②の自動再投入スクリプト実装時）
 - **事象**: `admin_match_student_with_coach` で生徒とコーチを直接マッチングさせても、生成される`com_t_session`は必ず「今日以降」の日付になり、過去に完了済みのセッション（QA生徒1の「完了6件」等）を再現できなかった。
 - **原因**: `admin_match_student_with_coach.sql` の `v_start_date := GREATEST(v_license_start, CURRENT_DATE);` が、ライセンスの開始日がどれだけ過去でも、スケジュールの生成起点を常に「今日」にクランプしている。これは意図的な設計（アドミンが過去に遡ってセッションを捏造できないようにする安全策）であり、バグではない。
-- **対処**: 「過去に完了した実績」が必要なテストデータは、`com_m_lesson_schedule`・`com_t_session`を`service_role`で直接INSERTして再現し（status=1で仮生成）、その後 `resolve_stale_session` RPC（実際にサインインしたコーチ or アドミンのJWT）を1件ずつ呼んで`completed`に遷移させる、というハイブリッド方式を採用した。`resolve_stale_session`はRPC内で`used_sessions`加算と`com_t_user_session_ticket_history`への記録を自動で行うため、手動でのused_sessions調整は不要だった。一方、「今日以降の予定で足りる」データ（コーチ交代後の新規予定等）は素直に本物のRPC（`admin_match_student_with_coach`等）で生成する方が安全・簡単。
+- **対処**: 「過去に完了した実績」が必要なテストデータは、`com_m_lesson_schedule`・`com_t_session`を`service_role`で直接INSERTして再現し（status=1で仮生成）、その後 `resolve_stale_session` RPC（実際にサインインしたコーチ or アドミンのJWT）を1件ずつ呼んで`completed`に遷移させる、というハイブリッド方式を採用した（2026-10-14以降は `record_session_outcome`（コーチ）/ `admin_correct_session_outcome`（アドミン）。通話の記録が無い回は実施方法=外部のZoom・理由付きで記録する）。`resolve_stale_session`はRPC内で`used_sessions`加算と`com_t_user_session_ticket_history`への記録を自動で行うため、手動でのused_sessions調整は不要だった。一方、「今日以降の予定で足りる」データ（コーチ交代後の新規予定等）は素直に本物のRPC（`admin_match_student_with_coach`等）で生成する方が安全・簡単。
 - **判断基準への反映**:
   - **「過去の実績」と「現在〜未来の予定」を明確に分けて設計する。** 前者はservice_role直接INSERT＋RPCでの状態遷移（resolve_stale_session等）のハイブリッド、後者は素直に本物のRPCを使う。全部をRPC経由で作ろうとすると、このようなクランプ制約に阻まれることがある。
-  - `cancel_session`・`reschedule_session`・`book_makeup_session`はいずれも「対象セッションが未来（`start_datetime > NOW()`）であること」が前提条件。過去セッションの状態を変えたい場合はこれらのRPCの対象にならない（`resolve_stale_session`または`finalize_session`のみが対象）。
+  - `cancel_session`・`reschedule_session`・`book_makeup_session`はいずれも「対象セッションが未来（`start_datetime > NOW()`）であること」が前提条件。過去セッションの状態を変えたい場合はこれらのRPCの対象にならない（2026-10-14以降は`record_session_outcome`・`admin_correct_session_outcome`のみが対象。旧: `resolve_stale_session`・`finalize_session`）。
   - 生徒本人によるセルフサービス操作（`reschedule_session`を生徒自身が呼ぶ等）は、`com_m_coach_availability`（コーチの空き時間設定）のチェックを通る必要がある。アドミン代理操作はこのチェックをスキップするため気づきにくいが、**新規に作成したコーチアカウントは空き時間が一件も無い状態**なので、生徒セルフサービスのテストシナリオでは事前に空き時間を作成しておく必要がある（`testing/features/branches/feature-20260904-dev/seed.ts`の`ensureCoachAvailability`を参照）。
 
 ---
@@ -1055,7 +1055,7 @@
 - **該当シナリオ**: E2E `tests/journeys/coach-live-session.spec.ts`（ジャーニー: `e2e/journeys/coach-live-session.md`）（dev, 2026-10-07）
 - **事象**: セッションハブの End Session は「コーチが一度でも通話に入った記録」があるまで押せず、実施結果は入退室の重なりで決まる。通話は Zoom Video SDK のため E2E では入れない。
 - **対処**: 通話ルームが記録する入退室ログ（`com_t_session_call_log`）を、実施中のセッション（開始から21分）に対して直接入れる（`support/liveSessionFixtures.ts` の `prepareLiveSessionDay`）。
-  生徒の入室時刻を変えると、実施完了（重なり20分以上）と早期終了（理由が必要）を作り分けられる。終了処理（`finalize_session`）は画面から通常どおり呼ぶ。
+  生徒の入室時刻を変えると、実施完了（重なり20分以上）と早期終了（理由が必要）を作り分けられる。終了処理（End Session = `record_session_outcome`。重なりからの推定が初期選択になる）は画面から通常どおり呼ぶ。
 - **判断基準への反映**: 通話そのもの（入室・退室の操作、映像・音声）は E2E の対象外とし、通話の前後の業務フローは入退室ログで状態を作って画面から検証する（CONVENTIONS.md 2章）。
 
 ### KJ-2026-1007-03 楽観的更新の操作は、画面の切り替わりで保存の完了を判定できない

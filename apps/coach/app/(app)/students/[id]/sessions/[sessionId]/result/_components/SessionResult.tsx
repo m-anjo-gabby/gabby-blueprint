@@ -7,7 +7,7 @@ import { Section } from '@/components/common/Section';
 import { getSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import type { SessionResultSummary } from '@gabby/types/session';
+import { CONDUCTED_VIA, type SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import { HomeworkComposer } from './HomeworkComposer';
 import { LessonSprintHistoryRow } from '../../../../_components/LessonSprintHistoryRow';
@@ -50,6 +50,9 @@ export function SessionResult({ studentId, session, homework, checklist }: Props
                 {formatDateTimeEn(session.start_datetime, timezone)} – {formatDateTimeEn(session.end_datetime, timezone)}
               </p>
               <p className="text-xs font-semibold text-slate-400">with {session.counterpart_name}</p>
+              {session.conducted_via === CONDUCTED_VIA.EXTERNAL_ZOOM && (
+                <p className="text-xs font-semibold text-sky-700">Held on an external Zoom (the in-app call wasn’t used)</p>
+              )}
               {session.status_note && (
                 <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5">
                   <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Note</p>

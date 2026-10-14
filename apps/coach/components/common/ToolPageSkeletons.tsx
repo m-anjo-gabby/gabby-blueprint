@@ -89,7 +89,7 @@ export function MonthlyReportsPageHeader() {
   return (
     <PageHeader
       title="Monthly Report"
-      description="Your live session counts by student and day. Cells in amber need a lesson to be finalized; cells in rose contain a late cancellation, no-show, or early-ended session."
+      description="Your live session counts by student and day. Cells in amber need End Session to record the outcome; cells in rose contain a late cancellation, no-show, early-ended session, a session held on an external Zoom, or an outcome that differs from the call log."
     />
   );
 }

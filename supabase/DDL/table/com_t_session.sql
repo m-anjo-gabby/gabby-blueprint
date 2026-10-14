@@ -286,3 +286,67 @@ ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_cancel_category CHEC
 COMMENT ON COLUMN public.com_t_session.status IS 'ステータス 1:scheduled 2:completed(内訳はcompletion_result参照) 3:cancelled(起因はcancel_category、返還有無はticket_refundedを参照)';
 COMMENT ON COLUMN public.com_t_session.completion_result IS 'status=2(completed)の内訳。1:normal(正常終了、20分以上) 2:early_ended(早期終了、20分未満だが生徒入室あり。理由はstatus_note) 3:no_show(生徒欠席、入室記録なし)。status<>2の行では常にNULL。';
 COMMENT ON COLUMN public.com_t_session.cancel_category IS 'status=3(cancelled)の起因。1:student(生徒本人) 2:coach(コーチ本人) 3:admin(アドミン代理操作・旧reschedule含む) 4:license_ended(ライセンス無効化による自動キャンセル) 5:coach_reassigned(コーチ交代による自動キャンセル)。status<>3の行では常にNULL。返還有無はticket_refundedを別途参照。';
+
+---------------------------------------------
+-- 追加パッチ: ライブセッションの実施結果の記録の見直し (2026-10-14)
+-- 既存環境に対しては、このブロックのみをSupabase SQL Editor等で実行してください。
+---------------------------------------------
+-- 【背景】
+-- 従来は「End Session（入退室ログの重なりで自動判定、finalize_session）」と「Resolve Manually
+-- （コーチの申告、resolve_stale_session）」の2経路があり、コーチがアプリ内の通話に一度でも入ると
+-- 後者が使えなかった。そのため、途中で外部のZoomに切り替えて最後まで実施した場合も「早期終了」に
+-- なりチケットが消化されない等、実態と記録がずれていた。
+-- 結果はコーチの申告を正とし（record_session_outcome）、入退室ログは推定（suggested_outcome）と
+-- 確認の材料として残す。確定後の修正はアドミンが行う（admin_correct_session_outcome）。
+--
+-- 【追加する列】
+--   conducted_via    : 実施方法。1:アプリ内の通話 2:外部のZoom（アプリの通話が使えなかった場合の代替。理由はstatus_note）。
+--                      status=2(completed)の行のみ。旧経路で確定した行は、コーチの入退室ログがあれば1、無ければNULL（不明）。
+--   suggested_outcome: 確定時点の入退室ログから推定した結果（1:実施完了 2:早期終了 3:生徒の欠席。コーチの入室記録が無ければNULL）。
+--   outcome_mismatch : アプリ内の通話で実施したと申告した結果が推定と違う（コーチが理由を付けて確定した）。アドミンが修正すると false に戻る。
+--   ticket_consumed  : このセッションでチケットを1回消化したか（com_t_user_session_ticket.used_sessions に加算済みか）。
+--                      アドミンの修正で消化・返還の差分を出すために持つ。
+--
+-- 【チケットの消化 (2026-10-14変更)】
+-- 実施完了に加え、生徒の都合による早期終了・生徒の欠席もチケットを消化する（従来は実施完了のみ）。
+-- 既存の行は遡って消化しない（ticket_consumed は従来どおり実施完了の行だけ true にする）。
+--
+-- 【cancel_category の追加】
+-- 6:technical（通信トラブル等、こちら側の都合で実施できなかった。チケットは返還）。コーチの欠席(2)とは
+-- チケットの扱いは同じだが、コーチへの支払いの判断が変わりうるため区別して記録する。どちらも月次の稼働には数えない。
+---------------------------------------------
+ALTER TABLE public.com_t_session
+  ADD COLUMN IF NOT EXISTS conducted_via smallint,
+  ADD COLUMN IF NOT EXISTS suggested_outcome smallint,
+  ADD COLUMN IF NOT EXISTS outcome_mismatch boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS ticket_consumed boolean NOT NULL DEFAULT false;
+
+UPDATE public.com_t_session SET ticket_consumed = true
+WHERE status = 2 AND completion_result = 1 AND ticket_consumed = false;
+
+UPDATE public.com_t_session s SET conducted_via = 1
+WHERE s.status = 2 AND s.conducted_via IS NULL
+  AND EXISTS (SELECT 1 FROM public.com_t_session_call_log l WHERE l.session_id = s.session_id AND l.role = 'coach');
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_cancel_category;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_cancel_category CHECK (
+    (status = 3 AND cancel_category IN (1, 2, 3, 4, 5, 6)) OR (status <> 3 AND cancel_category IS NULL)
+);
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_conducted_via;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_conducted_via CHECK (
+    conducted_via IS NULL OR (status = 2 AND conducted_via IN (1, 2))
+);
+
+ALTER TABLE public.com_t_session DROP CONSTRAINT IF EXISTS chk_session_suggested_outcome;
+ALTER TABLE public.com_t_session ADD CONSTRAINT chk_session_suggested_outcome CHECK (
+    suggested_outcome IS NULL OR suggested_outcome IN (1, 2, 3)
+);
+
+COMMENT ON COLUMN public.com_t_session.completion_result IS 'status=2(completed)の内訳。1:normal(実施完了) 2:early_ended(生徒の都合で早く終了。理由はstatus_note) 3:no_show(生徒の欠席)。いずれもチケットを消化する（2026-10-14以前に確定した2・3は消化していない。ticket_consumed参照）。status<>2の行では常にNULL。';
+COMMENT ON COLUMN public.com_t_session.cancel_category IS 'status=3(cancelled)の起因。1:student(生徒本人) 2:coach(コーチ本人。開始後に記録したコーチの欠席を含む) 3:admin(アドミン代理操作・旧reschedule含む) 4:license_ended(ライセンス無効化による自動キャンセル) 5:coach_reassigned(コーチ交代による自動キャンセル) 6:technical(通信トラブル等、こちら側の都合で実施できなかった)。status<>3の行では常にNULL。返還有無はticket_refundedを別途参照。';
+COMMENT ON COLUMN public.com_t_session.status_note IS '実施結果の理由（早期終了・外部のZoomで実施・推定と違う結果にした理由、旧Resolve Manuallyの理由）。cancel_reasonとは意味的に分離';
+COMMENT ON COLUMN public.com_t_session.conducted_via IS '実施方法 1:アプリ内の通話 2:外部のZoom（代替措置。理由はstatus_note）。status=2の行のみ。NULLは不明（旧経路で確定し、コーチの入室記録が無い行）';
+COMMENT ON COLUMN public.com_t_session.suggested_outcome IS '確定時点の入退室ログから推定した結果 1:実施完了(重なり20分以上) 2:早期終了(20分未満・生徒の入室あり) 3:生徒の欠席。コーチの入室記録が無ければNULL';
+COMMENT ON COLUMN public.com_t_session.outcome_mismatch IS 'アプリ内の通話で実施したと申告した結果が推定(suggested_outcome)と違う。アドミンが結果を修正するとfalseに戻る';
+COMMENT ON COLUMN public.com_t_session.ticket_consumed IS 'このセッションでチケットを1回消化したか（used_sessionsに加算済みか）。アドミンの修正で消化・返還の差分を出すために使う';

@@ -18,12 +18,13 @@ const COACH_SESSION_STATUS_LABELS: SessionStatusBadgeLabels<SessionStatusBadge> 
   cancelledByCoach: { label: 'Cancelled by you', className: 'bg-rose-50 text-rose-700 border-rose-200', dotClassName: 'bg-rose-400' },
   cancelledLicenseEnded: { label: 'Cancelled (license ended)', ...SLATE_BADGE },
   cancelledCoachReassigned: { label: 'Cancelled (coach reassigned)', ...SLATE_BADGE },
+  cancelledTechnical: { label: 'Not held (technical issues)', ...SLATE_BADGE },
   cancelledOther: { label: 'Cancelled', ...SLATE_BADGE },
 };
 
-/** SCHEDULEDのまま終了予定時刻を過ぎた（End Session/Resolveがまだ済んでいない）セッション用の
+/** SCHEDULEDのまま終了予定時刻を過ぎた（End Sessionでまだ記録されていない）セッション用の
  * 特別バッジ。通常のstatus/completion_result/cancel_categoryのみで決まるbuildSessionStatusBadge
- * （admin/coach/student共通の純粋関数）には時刻の概念を持ち込まず、コーチだけがEnd Session/Resolve
+ * （admin/coach/student共通の純粋関数）には時刻の概念を持ち込まず、コーチだけがEnd Session
  * を行える＝この状態に対応が必要なのはコーチのみという理由から、コーチ専用ラッパーの側でのみ上書きする。 */
 const ACTION_NEEDED_BADGE: SessionStatusBadge = { label: 'Action Needed', className: 'bg-red-50 text-red-700 border-red-200', dotClassName: 'bg-red-500' };
 
