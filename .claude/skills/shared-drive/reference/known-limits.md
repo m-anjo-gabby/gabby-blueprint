@@ -16,6 +16,11 @@
 - **管理用の列の見出しの色が見えにくい** → 回答のシートは「表」（`Form_Responses`）で、文字色が白に決まっている → 管理用の列の見出しは濃い色（濃いオレンジ `#b45f06`）にする。薄い色にしない。
 - **プルダウン・日付チェック・色分けは1000行目まで** → 行を区切らずに設定しても、Google 側で今の行数（1000）までとして保存される → 回答が1000件に近づいたら、行を足して同じ設定を広げる（request-ledger.md の手順）。
 
+## Drive へのPDFのアップロード
+
+- **約1MBを超えるPDFを置けない** → `create_file` はファイルの中身（base64）を呼び出しの中に書く必要があり、図の入った Claude Docs の書き出し（例: 8ページで約1.3MB、base64で約170万字）は1回の呼び出しに収まらない → PDFをローカル（`C:\Users\iwata\Documents\社内ワーク\04_App開発\40_Blueprint\01_打合せ\<日付>` 等）に保存し、Drive のフォルダだけ作って、ユーザーに画面でドラッグして置いてもらう。
+- **HTMLアーティファクトにPDFの書き出しが無い** → Claude Docs と違い export が無い → Artifact の read（`path: index.html`）でHTMLを保存し、印刷用の `<style>`（`@page{size:A4 landscape}`、横長の図の `overflow:visible`、`zoom`、見出しと図・枠の `break-*`）を足して、Edge のヘッドレス印刷（`msedge.exe --headless=new --no-pdf-header-footer --virtual-time-budget=8000 --print-to-pdf=…`）でPDFにする。全ページを画像にして、図の切れ・改ページを確かめてから置く。
+
 ## Googleドキュメント
 
 - **フォルダのリンクの色** → 既存のリンクは文字色 `rgb(0.067, 0.333, 0.8)`・下線付き。新しく付けるリンクも同じにする。
