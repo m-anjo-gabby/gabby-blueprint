@@ -1,23 +1,21 @@
----------------------------------------------
--- DDL: com_t_admin_impersonation_log (管理者代理ログイン監査ログ) (2026-08-13 追加)
--- 既存環境に対しては、このDDLをSupabase SQL Editor等で実行してください。
----------------------------------------------
--- 【背景】
--- 障害対応・問合せ調査のため、管理者が対象の生徒としてマジックリンク経由で
--- 生徒ポータルにログインできる「代理ログイン」機能の監査ログ。
--- 生徒側UIには代理ログイン中である旨を一切表示しない運用のため、
--- 「いつ・どの管理者が・どの生徒に・どんな理由で」実行したかを本テーブルにのみ記録する。
--- 書き込みは常にservice_role経由（apps/admin の Server Action、および
--- apps/student の /auth/impersonate ルートによる redeemed_at 更新）。
----------------------------------------------
+-- =========================================================================
+-- com_t_admin_impersonation_log: 管理者の代理ログインの監査ログ
+-- =========================================================================
+-- 障害対応・問い合わせの調査で、管理者が生徒としてマジックリンクで生徒ポータルにログインする「代理ログイン」の記録。
+-- 生徒の画面には代理ログイン中であることを出さないため、いつ・どの管理者が・どの生徒に・どんな理由で行ったかをここだけに残す。
+-- 読み書きとも service_role だけ（apps/admin のサーバーアクションと、apps/student の /auth/impersonate による redeemed_at の更新）。
+-- authenticated には参照の権限も与えない。
+-- =========================================================================
+
+-- @schema public.com_t_admin_impersonation_log
 CREATE TABLE public.com_t_admin_impersonation_log (
-    impersonation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- 代理ログインを実行した管理者
-    target_user_id UUID REFERENCES public.com_m_user(id),        -- 代理ログイン対象の生徒
-    reason TEXT NOT NULL,                                        -- 実行理由（チケット番号等、入力必須）
-    requested_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- マジックリンク発行日時
-    redeemed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,            -- 生徒ポータル側でリンクが実際に消費された日時（未消費ならNULL）
-    expires_at TIMESTAMP WITH TIME ZONE DEFAULT NULL              -- 代理セッションの失効予定日時（redeemed_at確定時に設定）
+    impersonation_id         uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    admin_id                 uuid         REFERENCES auth.users(id) ON DELETE SET NULL,
+    target_user_id           uuid         REFERENCES public.com_m_user(id),
+    reason                   text         NOT NULL,
+    requested_at             timestamp with time zone NOT NULL DEFAULT now(),
+    redeemed_at              timestamp with time zone,
+    expires_at               timestamp with time zone
 );
 
 COMMENT ON TABLE public.com_t_admin_impersonation_log IS '管理者代理ログイン（対象生徒としてのログイン）監査ログ';
@@ -31,10 +29,5 @@ COMMENT ON COLUMN public.com_t_admin_impersonation_log.expires_at IS '代理セ�
 CREATE INDEX idx_impersonation_log_admin ON public.com_t_admin_impersonation_log (admin_id, requested_at DESC);
 CREATE INDEX idx_impersonation_log_target ON public.com_t_admin_impersonation_log (target_user_id, requested_at DESC);
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
 ALTER TABLE public.com_t_admin_impersonation_log ENABLE ROW LEVEL SECURITY;
-
--- 機微な監査情報のため、authenticated ロールへの参照権限は一切付与しない
--- （読み書きともに service_role 経由の管理者アクションからのみ許可する）
+-- @end-schema

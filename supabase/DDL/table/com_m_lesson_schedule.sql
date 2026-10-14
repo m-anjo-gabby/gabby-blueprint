@@ -1,53 +1,53 @@
----------------------------------------------
--- DDL: com_m_lesson_schedule (定期レッスンスケジュール) (2026-08-15 追加)
--- 既存環境に対しては、このDDLをSupabase SQL Editor等で実行してください。
--- 前提: table/com_t_matching_request.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- マッチングリクエストがコーチに承認され、「毎週◯曜◯時」の専属レッスン枠として
--- 成立した状態を表すマスタ（フロー図の②Matching/Lesson Scheduleに相当）。
--- 生成・更新は常に approve_matching_request()（SECURITY DEFINER）経由。
--- 個々の実施回（③Session）は本レコード確定時に契約期間分まとめて自動生成され、
--- 以降のキャンセル・振替・日時変更はcom_t_session側の個別行を操作することで行い、
--- 本テーブル（基本の曜日・時刻パターン）は変更しないのが原則
--- （＝「定期スケジュールは基本的に維持」）。
+-- =========================================================================
+-- com_m_lesson_schedule: 定期スケジュール（専属コーチの「毎週◯曜◯時」の枠）
+-- =========================================================================
+-- 【役割】
+-- マッチング申請（com_t_matching_request）が承認されて成立した枠。成立時に契約期間分の
+-- com_t_session（個々の回）を作る。以後のキャンセル・予約は com_t_session の行に対して行い、
+-- 本テーブルの曜日・時刻は変えない。同じチケット・同じ枠で稼働中（status=1）の行は1件だけ。
 --
--- 【coach_timezoneについて】
--- day_of_week/start_time/end_timeはcom_m_coach_availabilityと同様「コーチのローカル時刻」
--- だが、com_m_user.timezoneはコーチ本人がプロフィールから随時変更できるため、ライブ参照だと
--- 承認後にコーチがタイムゾーンを変更した場合、生徒が合意した曜日・時刻の意味が事後的に
--- ズレてしまう。そのため本テーブルは承認時点のcom_m_user.timezoneをcoach_timezoneとして
--- 固定保持し、以降のSession生成（fn_generate_sessions_for_schedule）は必ずこの値を使う。
--- 生徒側のタイムゾーンは保持しない（表示変換は常に閲覧者の"現在の"timezoneで行うため不要）。
--- ※ 2026-10-06 以降は coach_timezone を schedule_timezone に改名し、生徒の申請時のタイムゾーンを持つ（末尾の追加パッチ）。
+-- 【書き込み】
+-- RLS は参照（生徒本人・担当コーチ・管理者）のみ許可し、作成・一時停止・終了は
+-- approve_matching_request() 等の SECURITY DEFINER の関数で行う。
+-- 変更時はトリガーが com_m_coach_student_relationship を同期する。
 --
--- 【現在の列（下の CREATE TABLE に末尾の追加パッチを適用した後の形）】
--- 下の CREATE TABLE は作成時の形のまま。新しい環境ではこのファイルを上から順に実行すると、次の形になる。
---   - schedule_timezone text NOT NULL（旧 coach_timezone。2026-08-17 追加・2026-10-06 改名）
---   - target_sessions smallint NOT NULL CHECK (target_sessions >= 1)（2026-09-14 追加）
----------------------------------------------
-CREATE TABLE public.com_m_lesson_schedule (
-    schedule_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    ticket_id uuid NOT NULL REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE CASCADE,
-    student_id uuid NOT NULL REFERENCES public.com_m_user(id),
-    coach_id uuid NOT NULL REFERENCES public.com_m_user(id),
-    slot_no smallint NOT NULL, -- 週n回契約のうち何枠目か（1始まり）
-    day_of_week smallint NOT NULL, -- 0:日 ... 6:土（coach_idのローカル時刻基準）
-    start_time time NOT NULL,
-    end_time time NOT NULL,
-    coach_timezone text NOT NULL REFERENCES public.com_m_timezone(timezone), -- day_of_week/start_time/end_timeの解釈基準（マッチング承認時点のcom_m_user.timezoneを固定）
-    status smallint NOT NULL DEFAULT 1, -- 1:active 0:paused 9:terminated
-    start_date date NOT NULL, -- Session自動生成の起点日（コーチのローカル日付）
-    end_date date NOT NULL,   -- Session自動生成の終点日（通常はライセンス終了日、コーチのローカル日付）
-    source_request_id uuid REFERENCES public.com_t_matching_request(request_id),
-    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
-    update_date timestamp with time zone NOT NULL DEFAULT NOW(),
+-- 【時刻】
+-- day_of_week / start_time / end_time / start_date / end_date は schedule_timezone での値。
+-- 新しい行は成立元の申請の requested_timezone（生徒の申請時のタイムゾーン）を引き継ぐため、
+-- 夏時間の切り替えの前後でも生徒側の時刻は変わらない。コーチのタイムゾーンで成立した古い行も、
+-- schedule_timezone で解釈すれば正しく動く（変換はしていない）。
+-- セッションの生成（fn_generate_sessions_for_schedule）は必ず schedule_timezone を使う。
+--
+-- 【回数の目標（target_sessions）】
+-- 枠ごとの契約上の回数。成立時に total_sessions / weekly_frequency で決め、余りは slot_no の小さい枠から
+-- 1つずつ多く配る（例: 週3回25回なら 9・8・8）。セッションの生成の上限と不足の判定（fn_schedule_shortfall）は
+-- この値を基準にする。契約終了日までに満たなくても自動では延長せず、不足として見せて運用で判断する。
+-- =========================================================================
 
-    CONSTRAINT chk_lesson_schedule_slot_no CHECK (slot_no >= 1),
-    CONSTRAINT chk_lesson_schedule_day CHECK (day_of_week BETWEEN 0 AND 6),
-    CONSTRAINT chk_lesson_schedule_time_range CHECK (end_time > start_time),
+-- @schema public.com_m_lesson_schedule
+CREATE TABLE public.com_m_lesson_schedule (
+    schedule_id              uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    ticket_id                uuid         NOT NULL REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE CASCADE,
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id),
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id),
+    slot_no                  smallint     NOT NULL,
+    day_of_week              smallint     NOT NULL,
+    start_time               time without time zone NOT NULL,
+    end_time                 time without time zone NOT NULL,
+    status                   smallint     NOT NULL DEFAULT 1,
+    start_date               date         NOT NULL,
+    end_date                 date         NOT NULL,
+    source_request_id        uuid         REFERENCES public.com_t_matching_request(request_id),
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    schedule_timezone        text         NOT NULL REFERENCES public.com_m_timezone(timezone),
+    target_sessions          smallint     NOT NULL,
     CONSTRAINT chk_lesson_schedule_date_range CHECK (end_date >= start_date),
-    CONSTRAINT chk_lesson_schedule_status CHECK (status IN (0, 1, 9))
+    CONSTRAINT chk_lesson_schedule_day CHECK (day_of_week >= 0 AND day_of_week <= 6),
+    CONSTRAINT chk_lesson_schedule_slot_no CHECK (slot_no >= 1),
+    CONSTRAINT chk_lesson_schedule_status CHECK (status = ANY (ARRAY[0, 1, 9])),
+    CONSTRAINT chk_lesson_schedule_target_sessions CHECK (target_sessions >= 1),
+    CONSTRAINT chk_lesson_schedule_time_range CHECK (end_time > start_time)
 );
 
 COMMENT ON TABLE public.com_m_lesson_schedule IS '定期レッスンスケジュール（承認済みマッチング。毎週◯曜◯時の専属レッスン枠）';
@@ -56,140 +56,28 @@ COMMENT ON COLUMN public.com_m_lesson_schedule.ticket_id IS '対象のライブ�
 COMMENT ON COLUMN public.com_m_lesson_schedule.student_id IS '生徒のユーザID';
 COMMENT ON COLUMN public.com_m_lesson_schedule.coach_id IS '専属コーチのユーザID';
 COMMENT ON COLUMN public.com_m_lesson_schedule.slot_no IS '週n回契約のうち何枠目か（1始まり）';
-COMMENT ON COLUMN public.com_m_lesson_schedule.day_of_week IS '曜日 0:日 ... 6:土（コーチのローカル時刻基準）';
-COMMENT ON COLUMN public.com_m_lesson_schedule.start_time IS 'レッスン開始時刻（コーチのローカル時刻）';
-COMMENT ON COLUMN public.com_m_lesson_schedule.end_time IS 'レッスン終了時刻（コーチのローカル時刻、通常25分）';
-COMMENT ON COLUMN public.com_m_lesson_schedule.coach_timezone IS 'day_of_week/start_time/end_timeの解釈に使うIANAタイムゾーン（承認時点のcom_m_user.timezoneをスナップショットし、以後のコーチ側timezone変更の影響を受けない）';
-COMMENT ON COLUMN public.com_m_lesson_schedule.status IS 'ステータス 1:active(稼働中) 0:paused(一時停止) 9:terminated(終了)';
-COMMENT ON COLUMN public.com_m_lesson_schedule.start_date IS 'Session自動生成の起点日（コーチのローカル日付）';
-COMMENT ON COLUMN public.com_m_lesson_schedule.end_date IS 'Session自動生成の終点日（通常はライセンス終了日、コーチのローカル日付）';
-COMMENT ON COLUMN public.com_m_lesson_schedule.source_request_id IS '成立元のマッチングリクエスト';
-COMMENT ON COLUMN public.com_m_lesson_schedule.insert_date IS '登録日時';
-COMMENT ON COLUMN public.com_m_lesson_schedule.update_date IS '更新日時';
-
--- 同一チケット・同一枠についてactiveなスケジュールは同時に1件のみ
-CREATE UNIQUE INDEX uq_lesson_schedule_active_slot ON public.com_m_lesson_schedule (ticket_id, slot_no)
-    WHERE status = 1;
-
-CREATE INDEX idx_lesson_schedule_student ON public.com_m_lesson_schedule (student_id, status);
-CREATE INDEX idx_lesson_schedule_coach ON public.com_m_lesson_schedule (coach_id, status);
-
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
-ALTER TABLE public.com_m_lesson_schedule ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Involved users can view lesson schedules" ON public.com_m_lesson_schedule;
-
--- [参照] 生徒本人・担当コーチ・管理者のみ閲覧可能。
--- 登録・更新（承認処理での作成、一時停止・終了）は approve_matching_request() 等の
--- SECURITY DEFINER関数経由のみとし、authenticatedロールへのINSERT/UPDATE権限は付与しない。
-CREATE POLICY "Involved users can view lesson schedules" ON public.com_m_lesson_schedule
-FOR SELECT TO authenticated USING (
-    student_id = auth.uid()
-    OR coach_id = auth.uid()
-    OR public.get_jwt_user_type() = '0'
-);
-
----------------------------------------------
--- 追加パッチ: coach_timezoneスナップショット対応 (2026-08-17)
--- 既存環境に対しては、このブロックのみをSupabase SQL Editor等で実行してください。
--- 【背景】上記コメント【coach_timezoneについて】を参照。
----------------------------------------------
-ALTER TABLE public.com_m_lesson_schedule
-  ADD COLUMN IF NOT EXISTS coach_timezone text;
-
--- 既存行は承認時点のタイムゾーンが記録されていないため、現在のコーチtimezoneで暫定バックフィルする
-UPDATE public.com_m_lesson_schedule s
-SET coach_timezone = COALESCE(u.timezone, 'Asia/Tokyo')
-FROM public.com_m_user u
-WHERE u.id = s.coach_id AND s.coach_timezone IS NULL;
-
-ALTER TABLE public.com_m_lesson_schedule
-  ALTER COLUMN coach_timezone SET NOT NULL;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'com_m_lesson_schedule_coach_timezone_fkey'
-  ) THEN
-    ALTER TABLE public.com_m_lesson_schedule
-      ADD CONSTRAINT com_m_lesson_schedule_coach_timezone_fkey FOREIGN KEY (coach_timezone)
-      REFERENCES public.com_m_timezone(timezone);
-  END IF;
-END $$;
-
-COMMENT ON COLUMN public.com_m_lesson_schedule.coach_timezone IS 'day_of_week/start_time/end_timeの解釈に使うIANAタイムゾーン（承認時点のcom_m_user.timezoneをスナップショットし、以後のコーチ側timezone変更の影響を受けない）';
-
----------------------------------------------
--- 追加パッチ: コマ別セッション目標数(target_sessions)の追加 (2026-09-14)
--- 既存環境に対しては、このブロックのみをSupabase SQL Editor等で実行してください。
----------------------------------------------
--- 【背景】
--- fn_generate_sessions_for_schedule()は承認日時(GREATEST(license_start, CURRENT_DATE))から
--- ライセンス終了日までの間に対象曜日が出現する回数だけセッションを生成しており、
--- 契約上のtotal_sessions/weekly_frequency（例: 週2回24セッションなら1コマ12）を
--- 目標値として意識していなかった。そのため、マッチング承認が契約開始から遅れるほど
--- そのコマの生成本数が恒久的に目標を下回り、かつfn_schedule_shortfall()の期待値も
--- 同じ暦週計算で導出していたため乖離自体を検知できなかった。契約上のエンタイトルメントを
--- 本カラムとして承認時に確定・保持し、以後の生成上限・不足判定の唯一の真実源とする。
---
--- 【端数の配分】
--- total_sessions / weekly_frequency の商をbaseとし、余りはslot_no昇順(1コマ目から順)に
--- 1つずつ多く配分する（例: 週3回25セッションなら1コマ目9・2コマ目8・3コマ目8）。
---
--- 【契約終了日を超える不足の扱い】
--- end_date到達時点でtarget_sessionsに満たない場合でも自動延長はしない。不足は
--- fn_schedule_shortfall()のshortfallとして可視化するのみとし、埋めるかどうかは
--- コーチ・アドミンの運用判断（既存のcreate_session_booking_request等）に委ねる。
----------------------------------------------
-ALTER TABLE public.com_m_lesson_schedule
-  ADD COLUMN IF NOT EXISTS target_sessions smallint;
-
--- 既存行を、対象チケットのtotal_sessions/weekly_frequencyから同じ端数配分ルールで一括バックフィルする
-UPDATE public.com_m_lesson_schedule s
-SET target_sessions = (t.total_sessions / t.weekly_frequency)
-    + CASE WHEN s.slot_no <= (t.total_sessions % t.weekly_frequency) THEN 1 ELSE 0 END
-FROM public.com_t_user_session_ticket t
-WHERE s.ticket_id = t.ticket_id AND s.target_sessions IS NULL;
-
-ALTER TABLE public.com_m_lesson_schedule ALTER COLUMN target_sessions SET NOT NULL;
-
-ALTER TABLE public.com_m_lesson_schedule DROP CONSTRAINT IF EXISTS chk_lesson_schedule_target_sessions;
-ALTER TABLE public.com_m_lesson_schedule ADD CONSTRAINT chk_lesson_schedule_target_sessions CHECK (target_sessions >= 1);
-
-COMMENT ON COLUMN public.com_m_lesson_schedule.target_sessions IS 'このコマ(slot_no)が契約上持つべき目標セッション数。承認時にtotal_sessions/weekly_frequencyの均等割り(余りはslot_no昇順に配分)で確定し、以後は不変。fn_generate_sessions_for_schedule()の生成上限、fn_schedule_shortfall()の期待値として使う唯一の真実源。正当な理由がある追加予約の例外措置として、admin_adjust_schedule_target_sessions()経由でtotal_sessionsを変更せずに個別枠のみ引き上げ可能（詳細は同関数のコメント参照）。';
-
----------------------------------------------
--- 追加パッチ: 曜日・時刻の基準を生徒の申請時のタイムゾーンに変更 (2026-10-06)
--- 既存環境に対しては、このブロックのみを実行してください（何度実行しても安全）。
----------------------------------------------
--- 【背景】
--- day_of_week/start_time/end_time をコーチの現地時刻で持っていたため、コーチ側の夏時間の
--- 切り替えで、生徒（日本時間）から見たセッションの時刻が1時間ずれていた。
--- 以後は、成立元の申請（com_t_matching_request.requested_timezone = 生徒の申請時のタイムゾーン）の
--- 曜日・時刻をそのまま引き継ぎ、セッションもそのタイムゾーンで作る（夏時間をまたいでも生徒側の時刻は変わらない）。
--- 列は「曜日・時刻を解釈するタイムゾーン」のまま意味を変えないため、名前だけ schedule_timezone に変える。
--- 既存の行（コーチのタイムゾーンで成立した分）は変換しない（そのタイムゾーンで解釈すれば従来どおり動く）。
--- start_date/end_date も schedule_timezone での日付として扱う。
----------------------------------------------
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'com_m_lesson_schedule' AND column_name = 'coach_timezone'
-    ) THEN
-        ALTER TABLE public.com_m_lesson_schedule RENAME COLUMN coach_timezone TO schedule_timezone;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'com_m_lesson_schedule_coach_timezone_fkey') THEN
-        ALTER TABLE public.com_m_lesson_schedule
-            RENAME CONSTRAINT com_m_lesson_schedule_coach_timezone_fkey TO com_m_lesson_schedule_schedule_timezone_fkey;
-    END IF;
-END $$;
-
 COMMENT ON COLUMN public.com_m_lesson_schedule.day_of_week IS '曜日 0:日 ... 6:土（schedule_timezone基準）';
 COMMENT ON COLUMN public.com_m_lesson_schedule.start_time IS 'レッスン開始時刻（schedule_timezoneの現地時刻）';
 COMMENT ON COLUMN public.com_m_lesson_schedule.end_time IS 'レッスン終了時刻（schedule_timezoneの現地時刻、通常25分）';
-COMMENT ON COLUMN public.com_m_lesson_schedule.schedule_timezone IS 'day_of_week/start_time/end_time/start_date/end_dateの解釈に使うIANAタイムゾーン。2026-10-06以降の成立分は生徒の申請時のタイムゾーン（com_t_matching_request.requested_timezone）、それ以前の成立分はコーチの承認時のタイムゾーン。以後のプロフィールのtimezone変更の影響を受けない';
+COMMENT ON COLUMN public.com_m_lesson_schedule.status IS 'ステータス 1:active(稼働中) 0:paused(一時停止) 9:terminated(終了)';
 COMMENT ON COLUMN public.com_m_lesson_schedule.start_date IS 'Session自動生成の起点日（schedule_timezoneの日付）';
 COMMENT ON COLUMN public.com_m_lesson_schedule.end_date IS 'Session自動生成の終点日（通常はライセンス終了日、schedule_timezoneの日付）';
+COMMENT ON COLUMN public.com_m_lesson_schedule.source_request_id IS '成立元のマッチングリクエスト';
+COMMENT ON COLUMN public.com_m_lesson_schedule.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_lesson_schedule.update_date IS '更新日時';
+COMMENT ON COLUMN public.com_m_lesson_schedule.schedule_timezone IS 'day_of_week/start_time/end_time/start_date/end_dateの解釈に使うIANAタイムゾーン。2026-10-06以降の成立分は生徒の申請時のタイムゾーン（com_t_matching_request.requested_timezone）、それ以前の成立分はコーチの承認時のタイムゾーン。以後のプロフィールのtimezone変更の影響を受けない';
+COMMENT ON COLUMN public.com_m_lesson_schedule.target_sessions IS 'このコマ(slot_no)が契約上持つべき目標セッション数。承認時にtotal_sessions/weekly_frequencyの均等割り(余りはslot_no昇順に配分)で確定し、以後は不変。fn_generate_sessions_for_schedule()の生成上限、fn_schedule_shortfall()の期待値として使う唯一の真実源。正当な理由がある追加予約の例外措置として、admin_adjust_schedule_target_sessions()経由でtotal_sessionsを変更せずに個別枠のみ引き上げ可能（詳細は同関数のコメント参照）。';
+
+CREATE INDEX idx_lesson_schedule_coach ON public.com_m_lesson_schedule (coach_id, status);
+CREATE INDEX idx_lesson_schedule_student ON public.com_m_lesson_schedule (student_id, status);
+CREATE UNIQUE INDEX uq_lesson_schedule_active_slot ON public.com_m_lesson_schedule (ticket_id, slot_no) WHERE status = 1;
+
+CREATE TRIGGER on_lesson_schedule_change_sync_relationship AFTER INSERT OR DELETE OR UPDATE ON public.com_m_lesson_schedule FOR EACH ROW EXECUTE FUNCTION public.sync_coach_student_relationship();
+
+ALTER TABLE public.com_m_lesson_schedule ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Involved users can view lesson schedules" ON public.com_m_lesson_schedule FOR SELECT TO authenticated
+USING (
+    student_id = auth.uid() OR coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+);
+-- @end-schema

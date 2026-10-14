@@ -1,16 +1,19 @@
----------------------------------------------
--- DDL: com_m_contents_access (コンテンツアクセス制御マスタ)
----------------------------------------------
+-- =========================================================================
+-- com_m_contents_access: 教材の顧客ごとのアクセス権
+-- =========================================================================
+-- 顧客限定（content_scope=1）の教材を、どの顧客に見せるかを持つ。
+-- =========================================================================
+
+-- @schema public.com_m_contents_access
 CREATE TABLE public.com_m_contents_access (
-  access_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id uuid REFERENCES public.com_m_client(client_id) NOT NULL,
-  content_id uuid REFERENCES public.com_m_contents(content_id) NOT NULL,
-  notes TEXT, -- 「2026年キャンペーンで付与」などのメモ
-  delete_flg TEXT NOT NULL DEFAULT '0',
-  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  
-  UNIQUE(client_id, content_id)
+    access_id                uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    client_id                uuid         NOT NULL REFERENCES public.com_m_client(client_id),
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id),
+    notes                    text,
+    delete_flg               text         NOT NULL DEFAULT '0'::text,
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT com_m_contents_access_client_id_content_id_key UNIQUE (client_id, content_id)
 );
 
 COMMENT ON TABLE public.com_m_contents_access IS 'コンテンツアクセス制御マスタ';
@@ -22,16 +25,12 @@ COMMENT ON COLUMN public.com_m_contents_access.delete_flg IS '論理削除フラ
 COMMENT ON COLUMN public.com_m_contents_access.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_contents_access.update_date IS '更新日時';
 
-CREATE INDEX idx_contents_access_client ON public.com_m_contents_access(client_id);
+CREATE INDEX idx_contents_access_client ON public.com_m_contents_access (client_id);
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
 ALTER TABLE public.com_m_contents_access ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users can view their own client contents access" ON public.com_m_contents_access;
-
-CREATE POLICY "Users can view their own client contents access" ON public.com_m_contents_access
-FOR SELECT TO authenticated USING (
+CREATE POLICY "Users can view their own client contents access" ON public.com_m_contents_access FOR SELECT TO authenticated
+USING (
     client_id = public.get_jwt_client_id()
 );
+-- @end-schema

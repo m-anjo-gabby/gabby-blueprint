@@ -4856,3 +4856,120 @@ REVOKE EXECUTE ON FUNCTION public.set_session_homework_not_needed(uuid, boolean)
 GRANT EXECUTE ON FUNCTION public.set_session_homework_not_needed(uuid, boolean) TO authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】DDLの正本の整理: 列のコメントの補完（com_t_session）
+-- 追加日: 2026-10-14
+--
+-- 【内容】
+--   DDLの正本を「今の形」に整理し、テーブル定義を実DBから生成する方式に変えた（supabase/DDL/README.md）。
+--   その確認で、作成時の正本にあった列のコメントがどの環境にも反映されていなかったため補う。
+--   あわせて、ステータスの3値化（2026-09-14）で古くなった ticket_refunded のコメントを直す。
+--   コメントのみの変更で、データ・動作への影響は無い。
+-- 対応ファイル: DDL/table/com_t_session.sql
+-- =========================================================================
+
+BEGIN;
+
+COMMENT ON COLUMN public.com_t_session.session_id IS 'セッションID';
+COMMENT ON COLUMN public.com_t_session.schedule_id IS '生成元の定期スケジュール (com_m_lesson_schedule)';
+COMMENT ON COLUMN public.com_t_session.ticket_id IS '対象のライブセッションチケット（集計用の非正規化参照）';
+COMMENT ON COLUMN public.com_t_session.student_id IS '生徒のユーザID';
+COMMENT ON COLUMN public.com_t_session.coach_id IS 'コーチのユーザID';
+COMMENT ON COLUMN public.com_t_session.start_datetime IS '実施開始日時（絶対時刻、UTC格納）';
+COMMENT ON COLUMN public.com_t_session.end_datetime IS '実施終了日時（絶対時刻、UTC格納）';
+COMMENT ON COLUMN public.com_t_session.cancel_reason IS 'キャンセルの理由';
+COMMENT ON COLUMN public.com_t_session.cancelled_by IS 'キャンセルを行ったユーザID（自動キャンセル・アドミンの代理操作では操作した運用者）';
+COMMENT ON COLUMN public.com_t_session.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_t_session.update_date IS '更新日時';
+COMMENT ON COLUMN public.com_t_session.ticket_refunded IS 'キャンセル(status=3)の行のみ。true:チケット返還(未割当に戻り再予約可能) false:返還なし(消化扱い)。生徒は開始12時間以上前ならtrue、コーチ・通信トラブル等は常にtrue、アドミンは操作時に指定。NULLの行(自動キャンセル等)は返還扱い';
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】DDLの正本の整理: 列のコメントの補完（全テーブル）
+-- 追加日: 2026-10-14
+--
+-- 【内容】
+--   DDLの正本を実DBから生成する方式にしたため、正本にだけ書かれていて実DBに反映されていなかった
+--   列の説明（COMMENT ON と、列定義の行末のコメント）を実DBのコメントとして反映する。
+--   対象: com_m_coach_availability, com_m_lesson_schedule, com_t_coach_availability_exception,
+--   com_t_matching_request, self_t_sprint, self_t_sprint_summary, self_t_word_summary
+--   コメントのみの変更で、データ・動作への影響は無い。
+-- 対応ファイル: DDL/table/ の上記テーブル
+-- =========================================================================
+
+BEGIN;
+
+COMMENT ON COLUMN public.com_m_coach_availability.availability_id IS '空き時間ID';
+COMMENT ON COLUMN public.com_m_coach_availability.coach_id IS 'コーチのユーザID (com_m_user.id)';
+COMMENT ON COLUMN public.com_m_coach_availability.delete_flg IS '論理削除フラグ';
+COMMENT ON COLUMN public.com_m_coach_availability.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_coach_availability.update_date IS '更新日時';
+COMMENT ON COLUMN public.com_m_lesson_schedule.coach_id IS '専属コーチのユーザID';
+COMMENT ON COLUMN public.com_m_lesson_schedule.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_m_lesson_schedule.schedule_id IS 'スケジュールID';
+COMMENT ON COLUMN public.com_m_lesson_schedule.slot_no IS '週n回契約のうち何枠目か（1始まり）';
+COMMENT ON COLUMN public.com_m_lesson_schedule.source_request_id IS '成立元のマッチングリクエスト';
+COMMENT ON COLUMN public.com_m_lesson_schedule.student_id IS '生徒のユーザID';
+COMMENT ON COLUMN public.com_m_lesson_schedule.ticket_id IS '対象のライブセッションチケット (com_t_user_session_ticket)';
+COMMENT ON COLUMN public.com_m_lesson_schedule.update_date IS '更新日時';
+COMMENT ON COLUMN public.com_t_coach_availability_exception.coach_id IS 'コーチのユーザID (com_m_user.id)';
+COMMENT ON COLUMN public.com_t_coach_availability_exception.end_time IS '対象終了時刻（コーチのローカル時刻）';
+COMMENT ON COLUMN public.com_t_coach_availability_exception.exception_date IS '対象日（コーチのローカル日付）';
+COMMENT ON COLUMN public.com_t_coach_availability_exception.exception_id IS '例外ID';
+COMMENT ON COLUMN public.com_t_coach_availability_exception.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_t_coach_availability_exception.note IS '理由等のメモ';
+COMMENT ON COLUMN public.com_t_coach_availability_exception.start_time IS '対象開始時刻（コーチのローカル時刻）';
+COMMENT ON COLUMN public.com_t_coach_availability_exception.update_date IS '更新日時';
+COMMENT ON COLUMN public.com_t_matching_request.coach_id IS '希望コーチのユーザID';
+COMMENT ON COLUMN public.com_t_matching_request.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_t_matching_request.reject_reason IS '否認理由（コーチ入力必須）';
+COMMENT ON COLUMN public.com_t_matching_request.request_id IS 'リクエストID';
+COMMENT ON COLUMN public.com_t_matching_request.responded_at IS '承認/否認日時';
+COMMENT ON COLUMN public.com_t_matching_request.responded_by IS '承認/否認を行ったコーチのユーザID';
+COMMENT ON COLUMN public.com_t_matching_request.student_id IS '生徒のユーザID';
+COMMENT ON COLUMN public.com_t_matching_request.ticket_id IS '対象のライブセッションチケット (com_t_user_session_ticket)';
+COMMENT ON COLUMN public.com_t_matching_request.update_date IS '更新日時';
+COMMENT ON COLUMN public.self_t_sprint_summary.assessment_count IS 'その日に発話評価した回数';
+COMMENT ON COLUMN public.self_t_sprint_summary.builders_count IS 'その日に学習した「延べ」Builders問題数';
+COMMENT ON COLUMN public.self_t_sprint_summary.mastery_count IS 'その日に学習した「延べ」Mastery問題数';
+COMMENT ON COLUMN public.self_t_sprint_summary.question_count IS 'その日に学習した「延べ」問題数';
+COMMENT ON COLUMN public.self_t_sprint_summary.speed_count IS 'その日に学習した「延べ」Speed問題数';
+COMMENT ON COLUMN public.self_t_sprint_summary.structure_count IS 'その日に学習した「延べ」Structure問題数';
+COMMENT ON COLUMN public.self_t_sprint.answer_type IS '解答種別（''0'': YES回答, ''1'': NO回答）';
+COMMENT ON COLUMN public.self_t_sprint.content_id IS 'コンテンツID';
+COMMENT ON COLUMN public.self_t_sprint.difficulty_level IS '難易度レベル (0: Basic 〜 10)';
+COMMENT ON COLUMN public.self_t_sprint.insert_date IS '登録日時';
+COMMENT ON COLUMN public.self_t_sprint.question_type IS 'スプリント問題種別 (''0'': Speed, ''4'': Structure, ''5'': Builders, ''6'': Mastery)';
+COMMENT ON COLUMN public.self_t_sprint.self_sprint_id IS 'スプリント結果ユニークID (UUID)';
+COMMENT ON COLUMN public.self_t_sprint.sprint_type IS 'スプリント種別（''0'': 汎用スプリント, ''1'': コーパススプリント）';
+COMMENT ON COLUMN public.self_t_sprint.time_limit_sec IS '制限時間（秒。タイムアタックは 60・90・120・150）';
+COMMENT ON COLUMN public.self_t_sprint.total_answered IS 'タイムアップまでに答えた総問題数';
+COMMENT ON COLUMN public.self_t_sprint.update_date IS '更新日時';
+COMMENT ON COLUMN public.self_t_sprint.user_id IS 'ユーザーID (com_m_user.id)';
+COMMENT ON COLUMN public.self_t_word_summary.assessment_count IS 'その日に発話評価した回数';
+COMMENT ON COLUMN public.self_t_word_summary.phrase_count IS 'その日に学習した「延べ」フレーズ数';
+COMMENT ON COLUMN public.self_t_word_summary.word_count IS 'その日に学習した「延べ」単語数';
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】DDLの正本の整理: staging・本番に無い索引の追加
+-- 追加日: 2026-10-14
+--
+-- 【内容】
+--   DDLの正本と各環境の定義を比べたところ、正本と dev にある次の2つの索引が staging・本番に無かったため作る。
+--   idx_contract_client_id     : 顧客ごとの契約の検索（com_m_contract）
+--   idx_license_contract_stats : 契約ごとのライセンスの集計（com_t_user_license。vw_contract_details 等）
+--   IF NOT EXISTS のため dev では何も起きない。データ・動作への影響は無い（索引の作成中は対象テーブルへの書き込みを待たせるが、
+--   どちらも行数が少なく一瞬で終わる）。
+-- 対応ファイル: DDL/table/com_m_contract.sql, DDL/table/com_t_user_license.sql
+-- =========================================================================
+
+BEGIN;
+
+CREATE INDEX IF NOT EXISTS idx_contract_client_id ON public.com_m_contract (client_id, status);
+CREATE INDEX IF NOT EXISTS idx_license_contract_stats ON public.com_t_user_license (contract_id, status, start_date, end_date);
+
+COMMIT;

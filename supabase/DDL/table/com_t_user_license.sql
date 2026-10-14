@@ -1,19 +1,36 @@
----------------------------------------------
--- DDL: com_t_user_license (ライセンス割当実体)
----------------------------------------------
+-- =========================================================================
+-- com_t_user_license: ライセンス（生徒への契約の割当）
+-- =========================================================================
+-- 【有効なライセンスは同時に1件】
+-- 有効（status=1）なライセンスの期間が重ならないことを排他制約（excl_user_license_active_overlap）で保証する。
+-- 契約更新に備えた次のタームの前倒し登録（期間が重ならない複数のライセンス）はできる。
+-- アプリ側（findOverlappingLicense）でも事前に判定しているが、同時操作の競合はこの制約で防ぐ。
+--
+-- 【ダイアログプラクティス】
+-- has_dialogue_practice はライセンス発行時に com_m_contract からコピーする。ライセンス期間中ずっと有効な
+-- 利用可否で、自主トレ（生徒本人）とライブセッション中の教材（担当コーチ）の両方の判定に使う
+-- （消化型の com_t_user_session_ticket とは性質が違うため、そちらには持たない）。
+--
+-- 【参照できる範囲】
+-- 本人・契約先の顧客に加えて、担当関係（com_m_coach_student_relationship。交代後も含む）にあるコーチが
+-- 参照できる。変更時はトリガー（sync_user_license_metadata）がユーザーのライセンス情報を同期する。
+-- =========================================================================
+
+-- @schema public.com_t_user_license
 CREATE TABLE public.com_t_user_license (
-    license_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    contract_id uuid REFERENCES public.com_m_contract(contract_id) NOT NULL,
-    user_id uuid REFERENCES public.com_m_user(id) NOT NULL,
-    status SMALLINT NOT NULL DEFAULT 1, -- 1:有効, 0:停止, 9:満了
-    start_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    note TEXT DEFAULT NULL,           -- 個別対応の理由等のメモ
-    insert_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    update_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    CONSTRAINT unique_user_contract UNIQUE(user_id, contract_id),
-    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES public.com_m_user(id)
+    license_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    contract_id              uuid         NOT NULL REFERENCES public.com_m_contract(contract_id),
+    user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id),
+    status                   smallint     NOT NULL DEFAULT 1,
+    start_date               timestamp with time zone NOT NULL,
+    end_date                 timestamp with time zone NOT NULL,
+    note                     text,
+    insert_date              timestamp with time zone DEFAULT now(),
+    update_date              timestamp with time zone DEFAULT now(),
+    has_dialogue_practice    boolean      NOT NULL DEFAULT false,
+    CONSTRAINT excl_user_license_active_overlap EXCLUDE USING gist (user_id WITH =, tstzrange(start_date, end_date, '[]'::text) WITH &&) WHERE (status = 1),
+    CONSTRAINT unique_user_contract UNIQUE (user_id, contract_id),
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES public.com_m_user(id)
 );
 
 COMMENT ON TABLE public.com_t_user_license IS 'ユーザーライセンス割当情報';
@@ -26,113 +43,26 @@ COMMENT ON COLUMN public.com_t_user_license.end_date IS '終了日';
 COMMENT ON COLUMN public.com_t_user_license.note IS '個別対応時のメモ';
 COMMENT ON COLUMN public.com_t_user_license.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_t_user_license.update_date IS '更新日時';
+COMMENT ON COLUMN public.com_t_user_license.has_dialogue_practice IS 'ダイアログプラクティス（自主トレコンテンツ）の利用可否。ライセンス発行時にcom_m_contractの値をコピーする';
 
-CREATE INDEX idx_user_license_auth ON public.com_t_user_license (user_id, status, start_date, end_date);
 CREATE INDEX idx_license_contract_stats ON public.com_t_user_license (contract_id, status, start_date, end_date);
+CREATE INDEX idx_user_license_auth ON public.com_t_user_license (user_id, status, start_date, end_date);
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
+CREATE TRIGGER on_license_change AFTER INSERT OR DELETE OR UPDATE ON public.com_t_user_license FOR EACH ROW EXECUTE FUNCTION public.sync_user_license_metadata();
+
 ALTER TABLE public.com_t_user_license ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users can view relevant licenses" ON public.com_t_user_license;
-
-CREATE POLICY "Users can view relevant licenses" ON public.com_t_user_license
-FOR SELECT TO authenticated USING (
-    user_id = auth.uid()
-    OR
-    contract_id IN (
-        SELECT contract_id FROM public.com_m_contract
-        WHERE client_id = public.get_jwt_client_id()
-    )
+CREATE POLICY "Coaches can view licenses of their students" ON public.com_t_user_license FOR SELECT TO authenticated
+USING (
+    (EXISTS ( SELECT 1
+       FROM public.com_m_coach_student_relationship r
+      WHERE r.student_id = com_t_user_license.user_id AND r.coach_id = auth.uid()))
 );
 
----------------------------------------------
--- 追加パッチ: Student Overview画面 契約情報表示対応 (2026-08-29)
--- 既存環境に対しては、このCREATE POLICY文のみをSupabase SQL Editor等で実行してください。
----------------------------------------------
--- [参照] 担当関係にあるコーチ(status不問。コーチ交代後の引き継ぎ閲覧を想定)が、
--- 生徒のライセンス（契約期間の判定）を参照できるようにする。既存ポリシーはそのまま残るため、
--- 本人・契約先クライアントのアクセスは変わらない（追加の許可のみ）。
---
--- 2026-09-03: 担当関係の判定元をcom_m_lesson_schedule（スケジューリング用データ）から
--- 判定専用の派生マスタcom_m_coach_student_relationshipに変更（意味論・挙動は変更なし。
--- 詳細はtable/com_m_coach_student_relationship.sqlを参照）。
-DROP POLICY IF EXISTS "Coaches can view licenses of their students" ON public.com_t_user_license;
-CREATE POLICY "Coaches can view licenses of their students" ON public.com_t_user_license
-FOR SELECT TO authenticated USING (
-    EXISTS (
-        SELECT 1 FROM public.com_m_coach_student_relationship r
-        WHERE r.student_id = com_t_user_license.user_id AND r.coach_id = auth.uid()
-    )
+CREATE POLICY "Users can view relevant licenses" ON public.com_t_user_license FOR SELECT TO authenticated
+USING (
+    user_id = auth.uid() OR (contract_id IN ( SELECT com_m_contract.contract_id
+       FROM public.com_m_contract
+      WHERE com_m_contract.client_id = public.get_jwt_client_id()))
 );
-
----------------------------------------------
--- 追加パッチ: ダイアログプラクティス利用可否のライセンス単位管理 (2026-09-08)
--- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
--- 前提: table/com_m_contract.sql の同日パッチ（has_dialogue_practice追加）が適用済みであること。
----------------------------------------------
--- 【背景】
--- ダイアログプラクティスはライブセッションのチケット消化状況とは無関係に、ライセンス
--- 期間中ずっと有効な利用可否である（自主トレ画面だけでなく、コーチとのライブセッション中に
--- ダイアログ教材を使えるかどうかの判定にも使う）
--- （com_t_user_session_ticketは消化型のライブセッション予約枠であり、性質が異なるため
--- 同居させない）。ライセンス発行時にcom_m_contract.has_dialogue_practiceをコピーし、
--- 自主トレ画面（生徒本人）・ライブセッション中の可否判定（担当コーチ）の両方が、
--- 既存のRLS（本人／契約先クライアント／担当コーチ）のままこの列を参照できるようにする。
-ALTER TABLE public.com_t_user_license
-  ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
-
-COMMENT ON COLUMN public.com_t_user_license.has_dialogue_practice IS 'ダイアログプラクティスの利用可否（自主トレ・コーチとのセッション両方での利用可否に使う）。ライセンス発行時にcom_m_contractの値をコピーする';
-
----------------------------------------------
--- 追加パッチ: 同一ユーザーへの重複した有効ライセンス防止（DB制約化） (2026-09-23)
--- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
----------------------------------------------
--- 【背景】
--- 「有効なライセンスは生徒に対して1件のみ」は、これまで
--- apps/admin/actions/adminContractAction.ts の findOverlappingLicense() による
--- 事前チェック（check-then-insert）のみで担保していた。契約更新に伴う次タームライセンスの
--- 前倒し登録（期間が重ならない複数ライセンスの事前登録）自体は引き続き許容する運用の
--- ため、アプリ側の重複判定ロジックは変更しない。一方、複数管理者による同時操作等の
--- レースコンディションでは、チェックと書き込みの間に別トランザクションがコミットされ、
--- 期間の重なる有効(status=1)ライセンスが二重に登録され得る隙間があったため、DB側の
--- 排他制約(EXCLUDE constraint)で最終防衛線を張る。
--- status=1のライセンスのみを対象とするのは、無効化済み(status=0)のライセンスは
--- 「有効」ではなく対象外とするため（アプリ側のfindOverlappingLicenseはstatusを問わず
--- 既存全件を見ているため、こちらの方がやや広めに防止しているが、業務ルール上必要な
--- 範囲はstatus=1のみで十分）。
----------------------------------------------
-CREATE EXTENSION IF NOT EXISTS btree_gist;
-
--- 適用前に、既に重複が存在しないかを確認する（通常はアプリ側の検証により存在しないはず）
-DO $$
-DECLARE
-  v_conflict_count integer;
-BEGIN
-  SELECT COUNT(*) INTO v_conflict_count
-  FROM public.com_t_user_license a
-  JOIN public.com_t_user_license b
-    ON a.user_id = b.user_id
-   AND a.license_id < b.license_id
-   AND a.status = 1 AND b.status = 1
-   AND tstzrange(a.start_date, a.end_date, '[]') && tstzrange(b.start_date, b.end_date, '[]');
-
-  IF v_conflict_count > 0 THEN
-    RAISE EXCEPTION '期間が重なる有効ライセンスが%組見つかりました。制約追加前に解消してください。', v_conflict_count;
-  END IF;
-END $$;
-
-ALTER TABLE public.com_t_user_license
-  DROP CONSTRAINT IF EXISTS excl_user_license_active_overlap;
-
-ALTER TABLE public.com_t_user_license
-  ADD CONSTRAINT excl_user_license_active_overlap
-  EXCLUDE USING gist (
-    user_id WITH =,
-    tstzrange(start_date, end_date, '[]') WITH &&
-  )
-  WHERE (status = 1);
-
-COMMENT ON CONSTRAINT excl_user_license_active_overlap ON public.com_t_user_license IS
-  '同一ユーザーに対し、期間が重なる有効(status=1)ライセンスを同時に複数登録できないようにするDB側の最終防衛線（アプリ側のfindOverlappingLicenseと二重の防御。無効化済み(status=0)は対象外）';
+-- @end-schema

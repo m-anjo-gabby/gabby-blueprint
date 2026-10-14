@@ -1,26 +1,28 @@
----------------------------------------------
--- コーチの指標の集計 (2026-10-10 追加)
--- 前提: table/com_m_user.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- コーチ1人につき1行の、画面表示用の集計値。評価の記録（com_t_coach_rating）とは分け、
--- 一覧・プロフィールでは本テーブルを読むだけにする（評価の行や運営向けコメントを見せないため）。
--- 評価の項目は com_t_coach_rating のトリガー（fn_refresh_coach_rating_stats）が登録と同時に作り直す。
--- 宿題の提供率・コーチのキャンセル率などの指標を増やす場合も、列を足して本テーブルに集める。
+-- =========================================================================
+-- com_t_coach_stats: コーチの指標の集計（画面表示用）
+-- =========================================================================
+-- 【役割】
+-- コーチ1人につき1行。評価の記録（com_t_coach_rating）とは分け、一覧・プロフィールは本テーブルだけを読む（評価の行や運営向けの
+-- コメントを見せないため）。評価の項目は com_t_coach_rating のトリガー（fn_refresh_coach_rating_stats）が登録と同時に作り直す。
+-- 宿題の提供率・コーチのキャンセル率などの指標を増やす場合も、列を足してここに集める。
 --
--- 総合評価（overall_avg）は移行元システムの「All Over Ratings」と同じく、3項目（コーチング・親近感・
--- おすすめ度）の平均。コーチ画面では総合・コーチング・親近感を見せ、おすすめ度は単独では見せない。
----------------------------------------------
+-- 【総合評価】
+-- overall_avg は3項目（コーチング・親近感・おすすめ度）の平均（移行元システムの All Over Ratings と同じ）。
+-- コーチの画面では総合・コーチング・親近感を見せ、おすすめ度は単独では見せない。
+-- 生徒もコーチを選ぶ画面で見るため、ログイン済みなら誰でも参照できる（更新はトリガーだけ）。
+-- =========================================================================
+
+-- @schema public.com_t_coach_stats
 CREATE TABLE public.com_t_coach_stats (
-    coach_id uuid PRIMARY KEY REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    rating_count integer NOT NULL DEFAULT 0,
-    rating_overall_avg numeric(3,2) DEFAULT NULL,
-    rating_coaching_avg numeric(3,2) DEFAULT NULL,
-    rating_friendliness_avg numeric(3,2) DEFAULT NULL,
-    rating_recommendation_avg numeric(3,2) DEFAULT NULL,
-    rating_updated_at timestamp with time zone DEFAULT NULL,
-    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
-    update_date timestamp with time zone NOT NULL DEFAULT NOW()
+    coach_id                 uuid         PRIMARY KEY REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    rating_count             integer      NOT NULL DEFAULT 0,
+    rating_overall_avg       numeric(3,2) DEFAULT NULL::numeric,
+    rating_coaching_avg      numeric(3,2) DEFAULT NULL::numeric,
+    rating_friendliness_avg  numeric(3,2) DEFAULT NULL::numeric,
+    rating_recommendation_avg numeric(3,2) DEFAULT NULL::numeric,
+    rating_updated_at        timestamp with time zone,
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    update_date              timestamp with time zone NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE public.com_t_coach_stats IS 'コーチの指標の集計（コーチ1人1行。画面表示用。評価はcom_t_coach_ratingのトリガーで更新）';
@@ -36,7 +38,8 @@ COMMENT ON COLUMN public.com_t_coach_stats.update_date IS '更新日時';
 
 ALTER TABLE public.com_t_coach_stats ENABLE ROW LEVEL SECURITY;
 
--- 集計値はコーチ選択画面で生徒にも見せるため、ログイン済みなら誰でも参照できる（更新はトリガーのみ）
-DROP POLICY IF EXISTS "Authenticated users can view coach stats" ON public.com_t_coach_stats;
-CREATE POLICY "Authenticated users can view coach stats" ON public.com_t_coach_stats
-FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Authenticated users can view coach stats" ON public.com_t_coach_stats FOR SELECT TO authenticated
+USING (
+    true
+);
+-- @end-schema

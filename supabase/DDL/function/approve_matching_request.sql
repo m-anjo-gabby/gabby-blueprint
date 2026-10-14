@@ -1,72 +1,25 @@
----------------------------------------------
--- マッチングリクエスト承認RPC (2026-08-15 追加)
--- 前提: table/com_t_matching_request.sql, table/com_m_lesson_schedule.sql,
---       table/com_t_user_session_ticket.sql, table/com_t_user_license.sql,
---       function/fn_generate_sessions_for_schedule.sql,
---       function/fn_matching_slot_availability.sql,
---       function/fn_assert_actor_or_admin.sql, function/fn_notify.sql,
---       function/fn_commit_matching_schedule.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- コーチがマッチングリクエストを承認する唯一の入口。
--- com_t_matching_request への直接UPDATEはRLSで許可していないため、
--- 承認処理（ステータス更新 + com_m_lesson_schedule作成 + com_t_session一括生成）は
--- 必ず本関数を通す。SECURITY DEFINERにより、内部のテーブル操作はRLSをバイパスするが、
--- 呼び出し元が宛先コーチ本人（またはadmin）であることは関数内で明示的に検証する。
+-- =========================================================================
+-- approve_matching_request: マッチング申請の承認
+-- =========================================================================
+-- 【役割】
+-- コーチ（またはアドミンの代理）が承認待ちの申請を承認する唯一の入口（com_t_matching_request の直接の更新は RLS で
+-- 許可していない）。本関数は申請を承認済みにすることだけを受け持ち、定期スケジュールの作成・空きの再確認・
+-- セッションの生成は fn_commit_matching_schedule() に任せる（アドミンの直接マッチングと共通）。
+-- 呼び出し者が宛先のコーチ本人かアドミンであることは fn_assert_actor_or_admin() で確かめる。
 --
--- 【二重予約防止 (2026-09-03 追加)】
--- 申請時(createMatchingRequestCore)にも同一の判定（2026-10-09から fn_matching_slot_availability()）でチェックを
--- 行うが、申請〜承認の間に別の申請が先に承認される競合（TOCTOU）は申請時チェックだけでは
--- 防げない。そのため承認時にも必ず同じ関数で再チェックする。
--- 加えて、ほぼ同時に別々の承認処理（異なるrequest_id、同一コーチ×同一曜日）が走った場合、
--- どちらも重複チェック時点ではまだ相手のcom_m_lesson_schedule行が存在せず、チェックを
--- すり抜けてしまうレース条件が起こり得る。これを防ぐため、重複チェックの前に対象
--- (coach_id, day_of_week)単位のトランザクションアドバイザリロックを取得し、同一コーチ×
--- 同一曜日への承認処理を直列化する（コミット/ロールバックで自動解放。本関数内で取得する
--- ロックは常にこの1本のみのため、デッドロックの起こりようがない）。
+-- 【主なルール】
+-- - 回答期限（expires_at。申請から24時間）を過ぎた申請は EXPIRED で拒否する。
+-- - 申請時と同じ判定（fn_matching_slot_availability）で承認時にも空きを確かめ直す（申請から承認までの間に
+--   他の申請が先に承認される競合を防ぐ。同時に走る承認の直列化は fn_commit_matching_schedule のロック）。
+-- - 申請の曜日・時刻は生徒の申請時のタイムゾーン（requested_timezone）の値のため、それを渡して生徒側の時刻で作る。
+-- - コーチ本人の承認では、開始まで24時間未満の回を作らない（欠番として未予約の回に数える）。アドミンの代理は対象外。
+-- - 予約できる回数が割合以上なら、他の予定と重なる回を飛ばして成立する。
 --
--- 【通知 (2026-09-09追加)】
--- 承認完了時、生徒へマッチング成立を通知する(MATCHING_APPROVED)。コーチは自ら承認操作を
--- 行っているため通知不要。
---
--- 【target_sessionsの確定 (2026-09-14追加)】
--- com_m_lesson_schedule.target_sessions（このコマが契約上持つべき目標セッション数）を、
--- 対象チケットのtotal_sessions/weekly_frequencyから算出しここで確定する（table/
--- com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）。承認が契約開始から遅れても
--- 目標値自体は変わらないため、fn_generate_sessions_for_schedule()の生成上限、
--- fn_schedule_shortfall()の期待値が正しく契約のエンタイトルメントを反映するようになる。
---
--- 【権限チェック・通知の共通化 (2026-09-15追加)】
--- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()にそれぞれ集約する
--- （複数のRPCに渡ってコピー&ペーストされていたパターンの共通化。詳細は各関数の
--- ファイル自身のコメント参照）。
---
--- 【マッチング成立処理の共通化 (2026-09-15追加)】
--- target_sessions算出〜アドバイザリロック〜空き状況チェック〜com_m_lesson_schedule作成〜
--- com_t_session一括生成は、admin_match_student_with_coach()とほぼ丸ごと重複していたため
--- fn_commit_matching_schedule()に切り出した。本関数は「pendingなリクエストを承認済みに
--- 更新する」責務のみを担い、成立処理そのものは同ヘルパーに委譲する
--- （詳細はfunction/fn_commit_matching_schedule.sql参照）。
---
--- 【24時間ルールの適用 (2026-09-15追加)】
--- 生徒の個別予約・振替候補と同様、コーチ自身の承認によるマッチング成立でも、承認した
--- その日のうちに開始してしまう初回セッションが生成され得る（曜日パターンの都合）。
--- コーチ本人の承認には24時間ルールを適用し、下限を下回る回はfn_generate_sessions_for_schedule()側で
--- 欠番としてスキップさせる。アドミンが本関数を代理承認する場合（get_jwt_user_type()='0'）は、
--- admin_match_student_with_coach()と同様このルールの対象外とする。
---
--- 【基準のタイムゾーン (2026-10-06追加)】
--- 申請の曜日・時刻は生徒の申請時のタイムゾーン（requested_timezone）の現地時刻のため、そのタイムゾーンを
--- fn_commit_matching_schedule() に渡し、定期スケジュール・セッションを生徒側の時刻で作る。
---
--- 【予約できた回数の通知 (2026-10-09追加)】
--- 予約できる回数が割合以上なら、他の予定と重なる回を飛ばして成立する（fn_commit_matching_schedule 参照）。
--- 生徒への成立通知に、予約できた回数（booked_sessions）とコマの回数（target_sessions）を入れ、
--- 未予約の回が残る場合は個別の調整を案内する。
---
--- 【回答期限 (2026-10-09追加)】
--- 回答期限（expires_at。申請から24時間）を過ぎた申請は EXPIRED で拒否する（期限切れの処理は expire_matching_requests.sql）。
----------------------------------------------
+-- 【通知】
+-- 生徒へ成立を通知する（MATCHING_APPROVED。予約できた回数 booked_sessions とコマの回数 target_sessions を入れ、
+-- 未予約の回が残る場合は個別の調整を案内する）。コーチは自分で承認しているため通知しない。
+-- =========================================================================
+
 CREATE OR REPLACE FUNCTION public.approve_matching_request(p_request_id uuid)
 RETURNS uuid
 LANGUAGE plpgsql

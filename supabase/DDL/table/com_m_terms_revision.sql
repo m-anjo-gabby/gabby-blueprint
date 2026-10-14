@@ -1,38 +1,31 @@
----------------------------------------------
--- DDL: com_m_terms_revision (規約本文リビジョン) (2026-09-24 追加)
--- 前提: table/com_m_terms.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- 従来、規約本文はSupabase Storage（termsバケット）のMarkdownファイルで管理し、
--- 編集のたびに同じterm_idのまま本文ファイルを差し替え・旧ファイルを削除していた。
--- このため「ユーザーが同意した時点の文面」を後から証明できなかった。
+-- =========================================================================
+-- com_m_terms_revision: 規約の本文（リビジョン）
+-- =========================================================================
+-- 【バージョンとリビジョン】
+--   com_m_terms（バージョン）: 同意の単位。料金改定・免責事項・個人情報の取扱いの変更など、再同意が必要な変更は
+--     新しいバージョンにする。
+--   com_m_terms_revision（リビジョン）: 同じバージョンの中の文言の修正。誤字の修正等はリビジョンの追加で行う
+--     （再同意は不要）。
+-- 表示・同意の対象は、そのバージョンの最新のリビジョン（revision_no が最大）。
+-- 同意の履歴（com_t_user_terms_agreement.revision_id）がリビジョンを指すため、同意した時点の文面を後から確かめられる。
 --
--- 【バージョンとリビジョンの役割分担】
---   - com_m_terms（バージョン）: 同意の単位。料金改定・免責事項・個人情報の取扱変更など
---     再同意が必要な変更は、新しいバージョンとして作成する。
---   - com_m_terms_revision（リビジョン）: 同一バージョン内の文言修正履歴。誤字修正等の
---     軽微な修正はリビジョン追加（サイレント更新、再同意不要）で行う。
--- 表示・同意対象の本文は「そのバージョンの最新リビジョン（revision_no最大）」とする。
---
--- 【不変性】
--- リビジョンは追記専用とし、UPDATEはトリガーで拒否する（過去の文面を改変させないため）。
--- DELETEは親バージョン削除時（公開前のみ許可）のON DELETE CASCADEでのみ発生する想定。
--- なお同意履歴(com_t_user_terms_agreement.revision_id)から参照されているリビジョンは
--- FK制約により削除できない。
---
--- 登録は RPC create_term / add_term_revision 経由でのみ行う。
----------------------------------------------
-CREATE TABLE IF NOT EXISTS public.com_m_terms_revision (
-  revision_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  term_id uuid NOT NULL REFERENCES public.com_m_terms(term_id) ON DELETE CASCADE,
-  revision_no integer NOT NULL,
-  content text NOT NULL,
-  change_note text,
-  insert_user uuid DEFAULT auth.uid() REFERENCES public.com_m_user(id) ON DELETE SET NULL,
-  insert_date timestamp with time zone DEFAULT now() NOT NULL,
+-- 【書き換えない】
+-- リビジョンは追記のみで、UPDATE はトリガーで拒否する。削除は公開前のバージョンを削除した時の
+-- ON DELETE CASCADE だけで起き、同意の履歴から参照されているリビジョンは外部キーで削除できない。
+-- 登録は create_term / add_term_revision だけで行う。本文は公開情報のため誰でも参照できる。
+-- =========================================================================
 
-  CONSTRAINT uq_com_m_terms_revision_no UNIQUE (term_id, revision_no),
-  CONSTRAINT chk_com_m_terms_revision_no CHECK (revision_no >= 1)
+-- @schema public.com_m_terms_revision
+CREATE TABLE public.com_m_terms_revision (
+    revision_id              uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    term_id                  uuid         NOT NULL REFERENCES public.com_m_terms(term_id) ON DELETE CASCADE,
+    revision_no              integer      NOT NULL,
+    content                  text         NOT NULL,
+    change_note              text,
+    insert_user              uuid         DEFAULT auth.uid() REFERENCES public.com_m_user(id) ON DELETE SET NULL,
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT uq_com_m_terms_revision_no UNIQUE (term_id, revision_no),
+    CONSTRAINT chk_com_m_terms_revision_no CHECK (revision_no >= 1)
 );
 
 COMMENT ON TABLE public.com_m_terms_revision IS '規約本文リビジョン：同一バージョン内の文言修正履歴（追記専用、最新revision_noが現行本文）';
@@ -44,36 +37,17 @@ COMMENT ON COLUMN public.com_m_terms_revision.change_note IS '修正内容・理
 COMMENT ON COLUMN public.com_m_terms_revision.insert_user IS '登録者（com_m_user.id）。データ移行分はNULL';
 COMMENT ON COLUMN public.com_m_terms_revision.insert_date IS '登録日時';
 
----------------------------------------------
--- 不変性の担保: UPDATEを拒否するトリガー
----------------------------------------------
-CREATE OR REPLACE FUNCTION public.fn_reject_terms_revision_update()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = public
-AS $$
-BEGIN
-    RAISE EXCEPTION 'com_m_terms_revision is append-only (revision_id=%)', OLD.revision_id;
-END;
-$$;
+CREATE TRIGGER trg_reject_terms_revision_update BEFORE UPDATE ON public.com_m_terms_revision FOR EACH ROW EXECUTE FUNCTION public.fn_reject_terms_revision_update();
 
-DROP TRIGGER IF EXISTS trg_reject_terms_revision_update ON public.com_m_terms_revision;
-CREATE TRIGGER trg_reject_terms_revision_update
-BEFORE UPDATE ON public.com_m_terms_revision
-FOR EACH ROW EXECUTE FUNCTION public.fn_reject_terms_revision_update();
-
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
 ALTER TABLE public.com_m_terms_revision ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Terms revisions are viewable by everyone" ON public.com_m_terms_revision;
-DROP POLICY IF EXISTS "Admins can insert terms revisions" ON public.com_m_terms_revision;
+CREATE POLICY "Admins can insert terms revisions" ON public.com_m_terms_revision FOR INSERT TO authenticated
+WITH CHECK (
+    public.get_jwt_user_type() = '0'::text
+);
 
--- com_m_terms と同様、規約本文は公開情報のため誰でも参照可能
-CREATE POLICY "Terms revisions are viewable by everyone" ON public.com_m_terms_revision
-FOR SELECT USING (true);
-
-CREATE POLICY "Admins can insert terms revisions" ON public.com_m_terms_revision
-FOR INSERT TO authenticated
-WITH CHECK (public.get_jwt_user_type() = '0');
+CREATE POLICY "Terms revisions are viewable by everyone" ON public.com_m_terms_revision FOR SELECT TO public
+USING (
+    true
+);
+-- @end-schema

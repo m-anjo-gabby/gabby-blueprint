@@ -152,3 +152,8 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
   これはSupabase CLIの`supabase/migrations/`によるmigration機能とは連動させておらず、
   実質的にmigrationファイルと同義のものとして扱う。新規のタイムスタンプ付きmigrationファイルは
   作成しないこと。
+- **正本は「今の形」だけを持つ**（詳細は `supabase/DDL/README.md`）。正本に「追加パッチ」等の変更の差分や
+  日付付きの経緯を追記しない（差分と理由はリリーススクリプト、経緯は git の履歴）。テーブルの定義
+  （`-- @schema` 〜 `-- @end-schema` の間）は手で書かず、リリーススクリプトを dev に適用した後に
+  `node supabase/release/schema.mjs --env=dev --write <table>` で実DBから生成する。マーカーの外の設計メモには
+  今有効なルールだけを書き、テーブルの変更でルールが変わった場合は同じタスクで設計メモも更新する（古くなった記述は消す）。関数は `CREATE OR REPLACE` の全体を書き直す。

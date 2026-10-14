@@ -1,57 +1,29 @@
----------------------------------------------
--- マッチング成立処理 共通ヘルパー関数 (2026-09-15 追加)
----------------------------------------------
--- 【背景】
--- approve_matching_request()（生徒申請→コーチ承認の通常フロー）と
--- admin_match_student_with_coach()（アドミンによる代理即時マッチング）は、
--- 「承認済みのcom_t_matching_requestが既に存在する前提で、target_sessionsを算出し、
--- コーチの空き状況をロック付きで再チェックし、com_m_lesson_scheduleを作成し、
--- com_t_sessionを一括生成する」という承認後ロジックがほぼ丸ごと重複していた
--- （admin_match_student_with_coachのファイル冒頭コメントで「approve_matching_requestの
--- 承認後ロジックをそのまま踏襲」と明記されていた通り）。本関数にその共通部分を集約し、
--- 両者はそれぞれ「com_t_matching_requestの確定方法（既存pending行をUPDATE／新規に
--- approved行をINSERT）」と「通知内容（コーチへの通知要否）」だけを担当する薄いラッパーとする。
+-- =========================================================================
+-- fn_commit_matching_schedule: マッチングの成立の処理（内部用）
+-- =========================================================================
+-- 【役割】
+-- approve_matching_request()（申請の承認）と admin_match_student_with_coach()（アドミンの直接マッチング）が共通で使う
+-- 成立の処理: 目標の回数の算出 → コーチ単位のロック → 予約できる回数の確認 → com_m_lesson_schedule の作成 →
+-- セッションの生成 → チャットのルームの用意と挨拶のメッセージ。
+-- 申請の行（p_request_id）は読み書きせず source_request_id として参照するだけで、申請の行の確定は呼び出し元が行う。
+-- 24時間のルール（p_min_start_datetime）と割合の基準（p_enforce_rate）を適用するかも呼び出し元が決める。
 --
--- 【呼び出し元の責務分担】
--- 本関数は対象のcom_t_matching_request行(p_request_id)を一切読み書きしない
--- （既に存在する前提で、source_request_idとしてFK参照するのみ）。呼び出し元が
--- 承認フロー(UPDATE status=2)・代理作成フロー(INSERT status=2)いずれの場合も、
--- 本関数を呼ぶ前後で自身の責務としてリクエスト行を確定させること。
+-- 【時刻】
+-- 曜日・時刻は p_timezone（生徒の申請時のタイムゾーン）の現地時刻で受け取り、schedule_timezone にそのまま保存する。
+-- start_date / end_date もそのタイムゾーンの日付。基準のタイムゾーンが申請ごとに違い、曜日をまたいで重なりうるため、
+-- 同時の承認を防ぐロックはコーチ単位にしている。
 --
--- 【24時間ルールとの関係】
--- p_min_start_datetimeはfn_generate_sessions_for_schedule()にそのまま渡すのみで、
--- 「アドミンかどうかで下限を変えるか」の判断自体は呼び出し元(approve_matching_request/
--- admin_match_student_with_coach)の責務のままとする。
+-- 【予約できる回数】
+-- fn_matching_slot_availability() で数え、割合（matching_min_bookable_rate()）に満たなければ INSUFFICIENT_BOOKABLE で中止する
+-- （p_enforce_rate = false でも、予約できる回が1回も無ければ NO_BOOKABLE_SESSION）。満たせば成立させ、重なる回は
+-- fn_generate_sessions_for_schedule() が飛ばす（未予約として残り、生徒とコーチが個別に調整する）。
+-- 他の生徒の承認待ちの申請は数えない（fn_matching_occurrence_busy 参照）。
 --
--- 【チャットルーム開設・挨拶メッセージ (2026-09-28追加)】
--- 成立のたびにfn_send_matching_greeting()で生徒×コーチの1対1チャットルームを用意し（開設済みなら
--- それを使う）、コーチから生徒へ挨拶メッセージを送る。成立処理と同じトランザクションで行う。
---
--- 【基準のタイムゾーン (2026-10-06変更)】
--- p_day_of_week/p_start_time/p_end_time は p_timezone（申請の requested_timezone = 生徒の申請時のタイムゾーン）の
--- 現地時刻として受け取り、com_m_lesson_schedule.schedule_timezone にそのまま保存する（従来は承認時のコーチの
--- タイムゾーンを保存していたため、コーチ側の夏時間の切り替えで生徒側の時刻がずれていた）。
--- start_date/end_date もこのタイムゾーンの日付にする。重複チェックは実際の日時で比べる
--- check_coach_schedule_conflict()（2026-10-09 削除。以後は fn_matching_slot_availability()）を使い、基準のタイムゾーンが申請ごとに異なっても曜日をまたいで
--- 重なり得るため、同時承認を防ぐロックは「コーチ単位」にする（旧: コーチ×曜日）。
--- シグネチャが変わるため、旧シグネチャを削除してから作り直す。
---
--- 【予約できる回数の割合で判定 (2026-10-09変更)】
--- 従来は他の定期スケジュールと1回でも重なれば成立させなかった（SCHEDULE_CONFLICT）。以後は
--- fn_matching_slot_availability() で予約できる回数を数え、割合（matching_min_bookable_rate()）に満たなければ
--- INSUFFICIENT_BOOKABLE で中止する。満たせば成立させ、重なる回は fn_generate_sessions_for_schedule() が飛ばす
--- （未予約として残り、生徒とコーチが個別に調整する）。目標回数の算出は fn_matching_slot_target_sessions() に移した。
--- アドミンの直接マッチング（admin_match_student_with_coach）はイレギュラーな対応のため割合の基準を適用しない
--- （p_enforce_rate = false）。ただし予約できる回が1回も無い場合は、セッションの無い定期スケジュールになるため成立させない
--- （NO_BOOKABLE_SESSION）。どちらも他の生徒の承認待ちの申請は数えない（fn_matching_occurrence_busy 参照）。
--- シグネチャが変わるため、旧シグネチャを削除してから作り直す。
---
--- 【コーチ交代後の目標回数 (2026-10-09変更)】
--- 従来はコーチ交代の後に別のコーチで成立させても、目標回数を契約上の回数のまま入れていたため、交代前に実施した分と
--- 合わせて契約の回数を超えて作る・未予約を多く数える（生徒が個別予約で超過して予約できる）ことがあった。
--- fn_matching_slot_target_sessions() が終了した同じコマの定期スケジュールで使った回を差し引くようにし、
--- 残りが0回なら NO_REMAINING_SESSIONS で成立させない。
----------------------------------------------
+-- 【目標の回数】
+-- fn_matching_slot_target_sessions() で決める。コーチ交代の後は、終了した同じ枠の定期スケジュールで使った回を差し引く
+-- （契約の回数を超えて作らないため）。残りが0回なら NO_REMAINING_SESSIONS で成立させない。
+-- =========================================================================
+
 DROP FUNCTION IF EXISTS public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, timestamptz);
 DROP FUNCTION IF EXISTS public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, text, timestamptz);
 

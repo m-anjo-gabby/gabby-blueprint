@@ -1,28 +1,25 @@
----------------------------------------------
--- DDL: com_t_calendar_event_message (カレンダーイベント アナウンス) (2026-08-25 追加)
----------------------------------------------
--- 【背景】
--- com_m_calendar_event（グループセッション・メンテナンス告知等）に対して、
--- 管理者がその参加者（com_t_calendar_event_participant）・担当コーチ
--- （com_t_calendar_event_coach）向けに送るアナウンス（一方向のメッセージ配信）。
+-- =========================================================================
+-- com_t_calendar_event_message: カレンダーのイベントのアナウンス
+-- =========================================================================
+-- 【役割】
+-- 管理者がイベント（com_m_calendar_event）の参加者・担当コーチに送る一方向のメッセージ。返信は無い。
+-- 1つのイベントに何回でも送れるよう履歴として別のテーブルに持つ。添付は JSONB に埋め込む（com_m_notice と同じ）。
+-- 既読の管理は持たない。
 --
--- チャット（com_t_chat、双方向・スレッド）とは異なり、返信機能は持たない。
--- 1イベントに対して複数回配信できるよう、com_m_calendar_eventへの直接カラム
--- 追加ではなく別テーブルの履歴ログとして持つ（com_m_notice.attachmentsと同様、
--- 添付ファイルはJSONB埋め込みで管理。画像プレビュー等は不要なため
--- com_t_chat_attachmentのような正規化テーブルへの分離は行わない）。
---
--- 既読管理（お知らせのcom_t_notice_read相当）は、参加/キャンセルが自由な
--- カレンダーイベントの性質上、運用が煩雑になるためPhase1では持たない。
----------------------------------------------
+-- 【参照できる範囲】
+-- 管理者はすべて操作できる。参加者（com_t_calendar_event_participant）または担当コーチ（com_t_calendar_event_coach）
+-- として紐づくユーザーが参照できる（配信対象・参加確認の設定ではなく、紐づけの行の有無で判定する）。
+-- =========================================================================
+
+-- @schema public.com_t_calendar_event_message
 CREATE TABLE public.com_t_calendar_event_message (
-    calendar_event_message_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    calendar_event_id UUID NOT NULL REFERENCES public.com_m_calendar_event(calendar_event_id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    attachments JSONB NOT NULL DEFAULT '[]'::jsonb, -- Supabase Storage添付情報 [{id, name, path, size, mime_type}]
-    insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    calendar_event_message_id uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    calendar_event_id        uuid         NOT NULL REFERENCES public.com_m_calendar_event(calendar_event_id) ON DELETE CASCADE,
+    title                    text         NOT NULL,
+    content                  text         NOT NULL,
+    attachments              jsonb        NOT NULL DEFAULT '[]'::jsonb,
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    update_date              timestamp with time zone NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE public.com_t_calendar_event_message IS 'カレンダーイベントのアナウンス（管理者から参加者/担当コーチへの一方向メッセージ配信履歴）';
@@ -36,32 +33,22 @@ COMMENT ON COLUMN public.com_t_calendar_event_message.update_date IS '更新日�
 
 CREATE INDEX idx_calendar_event_message_event ON public.com_t_calendar_event_message (calendar_event_id, insert_date DESC);
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
 ALTER TABLE public.com_t_calendar_event_message ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Admin can manage calendar event messages" ON public.com_t_calendar_event_message;
-DROP POLICY IF EXISTS "Recipients can view their calendar event messages" ON public.com_t_calendar_event_message;
-
--- 管理者はフル操作可
-CREATE POLICY "Admin can manage calendar event messages" ON public.com_t_calendar_event_message
-FOR ALL TO authenticated
-USING (public.get_jwt_user_type() = '0')
-WITH CHECK (public.get_jwt_user_type() = '0');
-
--- 参加者または担当コーチとして紐づくユーザーのみ閲覧可
--- （target_type/rsvp_enabledの状態に関わらず、実際の紐付け行の有無で判定する）
-CREATE POLICY "Recipients can view their calendar event messages" ON public.com_t_calendar_event_message
-FOR SELECT TO authenticated USING (
-    EXISTS (
-        SELECT 1 FROM public.com_t_calendar_event_participant p
-        WHERE p.calendar_event_id = com_t_calendar_event_message.calendar_event_id
-          AND p.user_id = auth.uid()
-    )
-    OR EXISTS (
-        SELECT 1 FROM public.com_t_calendar_event_coach c
-        WHERE c.calendar_event_id = com_t_calendar_event_message.calendar_event_id
-          AND c.coach_id = auth.uid()
-    )
+CREATE POLICY "Admin can manage calendar event messages" ON public.com_t_calendar_event_message FOR ALL TO authenticated
+USING (
+    public.get_jwt_user_type() = '0'::text
+)
+WITH CHECK (
+    public.get_jwt_user_type() = '0'::text
 );
+
+CREATE POLICY "Recipients can view their calendar event messages" ON public.com_t_calendar_event_message FOR SELECT TO authenticated
+USING (
+    (EXISTS ( SELECT 1
+       FROM public.com_t_calendar_event_participant p
+      WHERE p.calendar_event_id = com_t_calendar_event_message.calendar_event_id AND p.user_id = auth.uid())) OR (EXISTS ( SELECT 1
+       FROM public.com_t_calendar_event_coach c
+      WHERE c.calendar_event_id = com_t_calendar_event_message.calendar_event_id AND c.coach_id = auth.uid()))
+);
+-- @end-schema

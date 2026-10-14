@@ -1,32 +1,36 @@
----------------------------------------------
--- DDL: com_t_session_outcome_history (ライブセッションの実施結果の記録・修正の履歴) (2026-10-14 追加)
--- 前提: table/com_t_session.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- 実施結果はコーチの申告で確定し（record_session_outcome）、アドミンが後から修正できる
--- （admin_correct_session_outcome）。誰がいつ、どの結果からどの結果へ変えたか・チケットを
--- 消化・返還したかを残す追記専用の履歴（監査の履歴はログではなくDBに残す）。
--- 書き込みは fn_apply_session_outcome() からのみ行う。参照はアドミンのみ。
+-- =========================================================================
+-- com_t_session_outcome_history: ライブセッションの実施結果の記録・修正の履歴
+-- =========================================================================
+-- 実施結果はコーチの申告で確定し（record_session_outcome）、アドミンが後から修正できる（admin_correct_session_outcome）。
+-- 誰がいつ、どの結果からどの結果に変えたか・チケットを消化・返還したかを追記して残す（監査の履歴はログではなく DB に残す）。
+-- 書き込みは fn_apply_session_outcome() だけ。参照はアドミンだけ。
 --
--- 【outcome の値】（SESSION_OUTCOME。packages/types/session.ts）
+-- outcome の値（SESSION_OUTCOME。packages/types/session.ts）:
 --   1:実施完了 2:生徒の都合で早く終了 3:生徒の欠席 4:コーチの欠席 5:通信トラブル等で実施できなかった
--- 変更前の状態は status / completion_result / cancel_category の組で持つ（未確定(status=1)からの記録もあるため）。
----------------------------------------------
-CREATE TABLE IF NOT EXISTS public.com_t_session_outcome_history (
-    history_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id uuid NOT NULL REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
-    action text NOT NULL CHECK (action IN ('recorded', 'corrected')),
-    outcome smallint NOT NULL CHECK (outcome BETWEEN 1 AND 5),
-    conducted_via smallint CHECK (conducted_via IN (1, 2)),
-    suggested_outcome smallint CHECK (suggested_outcome IN (1, 2, 3)),
-    previous_status smallint NOT NULL,
+-- 変更前の状態は status / completion_result / cancel_category の組で持つ（未確定（status=1）からの記録もあるため）。
+-- =========================================================================
+
+-- @schema public.com_t_session_outcome_history
+CREATE TABLE public.com_t_session_outcome_history (
+    history_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    session_id               uuid         NOT NULL REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
+    action                   text         NOT NULL,
+    outcome                  smallint     NOT NULL,
+    conducted_via            smallint,
+    suggested_outcome        smallint,
+    previous_status          smallint     NOT NULL,
     previous_completion_result smallint,
     previous_cancel_category smallint,
-    previous_conducted_via smallint,
-    ticket_action text CHECK (ticket_action IN ('consumed', 'restored')),
-    reason text,
-    performed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
-    performed_at timestamp with time zone NOT NULL DEFAULT NOW()
+    previous_conducted_via   smallint,
+    ticket_action            text,
+    reason                   text,
+    performed_by             uuid         REFERENCES auth.users(id) ON DELETE SET NULL,
+    performed_at             timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT com_t_session_outcome_history_action_check CHECK (action = ANY (ARRAY['recorded'::text, 'corrected'::text])),
+    CONSTRAINT com_t_session_outcome_history_conducted_via_check CHECK (conducted_via = ANY (ARRAY[1, 2])),
+    CONSTRAINT com_t_session_outcome_history_outcome_check CHECK (outcome >= 1 AND outcome <= 5),
+    CONSTRAINT com_t_session_outcome_history_suggested_outcome_check CHECK (suggested_outcome = ANY (ARRAY[1, 2, 3])),
+    CONSTRAINT com_t_session_outcome_history_ticket_action_check CHECK (ticket_action = ANY (ARRAY['consumed'::text, 'restored'::text]))
 );
 
 COMMENT ON TABLE public.com_t_session_outcome_history IS 'ライブセッションの実施結果の記録・修正の履歴（追記専用）';
@@ -39,10 +43,12 @@ COMMENT ON COLUMN public.com_t_session_outcome_history.ticket_action IS 'この�
 COMMENT ON COLUMN public.com_t_session_outcome_history.reason IS 'コーチ・アドミンが入力した理由';
 COMMENT ON COLUMN public.com_t_session_outcome_history.performed_by IS '操作したユーザー（コーチまたはアドミン）';
 
-CREATE INDEX IF NOT EXISTS idx_session_outcome_history_session ON public.com_t_session_outcome_history (session_id, performed_at DESC);
+CREATE INDEX idx_session_outcome_history_session ON public.com_t_session_outcome_history (session_id, performed_at DESC);
 
 ALTER TABLE public.com_t_session_outcome_history ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Admins can view session outcome history" ON public.com_t_session_outcome_history;
-CREATE POLICY "Admins can view session outcome history" ON public.com_t_session_outcome_history
-FOR SELECT TO authenticated USING (COALESCE(public.get_jwt_user_type(), '') = '0');
+CREATE POLICY "Admins can view session outcome history" ON public.com_t_session_outcome_history FOR SELECT TO authenticated
+USING (
+    COALESCE(public.get_jwt_user_type(), ''::text) = '0'::text
+);
+-- @end-schema

@@ -1,37 +1,17 @@
----------------------------------------------
--- ライセンス無効化RPC (2026-09-08 追加)
--- 前提: table/com_t_user_license.sql, table/com_m_lesson_schedule.sql,
---       table/com_t_session.sql, table/com_t_user_session_ticket.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- 従来の「ライセンス解除」（com_t_user_licenseの物理DELETE）は、外部キーのON DELETE
--- CASCADEにより com_t_user_session_ticket → com_m_lesson_schedule → com_t_session →
--- com_t_session_call_log/chat/homework まで連鎖して完全に削除してしまい、実施済みの
--- セッション結果・チャット・宿題まで復元不能に失われる問題があった。
--- 本関数はDELETEを一切行わず、以下の3点をUPDATEするだけに留める。
---   1. com_t_user_license.status を 0(停止) にする（チケット消化数はそのまま。
---      返還・復元は行わない。契約のライセンス上限が必要なら別途契約編集で増やす運用とする）
---   2. 紐づく稼働中の com_m_lesson_schedule を 9(terminated) にする
---      （sync_coach_student_relationshipトリガーが自動的に反応し、
---        com_m_coach_student_relationship.is_active も追従してfalseになる）
---   3. まだ実施されていない未来の scheduled セッションのみをキャンセル扱いにする
---      （実施済み・不参加・早期終了等の過去の記録は一切変更しない）
--- 契約自体（com_m_contract）や生徒アカウント自体には触れない。生徒に他の有効ライセンスが
--- あれば、そちらへの影響もない（本関数は指定されたライセンス1件のみを対象にする）。
---
--- 【ステータス簡素化 (2026-09-14変更)】
--- 対象セッションは旧status=8(cancelled_license_ended)ではなくstatus=3(cancelled)、
--- cancel_category=4(license_ended)として記録する（table/com_t_session.sqlの
--- ステータス簡素化パッチ参照）。
---
--- 【権限チェックの共通化 (2026-09-15追加)】
--- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
---
--- 【一括キャンセル処理の共通化 (2026-09-15追加)】
--- 「未実施の未来のscheduledセッションのみをキャンセルする」部分は、release_lesson_schedule_slot()と
--- 同一のUPDATE文だったため、fn_cancel_future_sessions()に切り出した
--- （前提: function/fn_cancel_future_sessions.sql）。
----------------------------------------------
+-- =========================================================================
+-- invalidate_user_license: ライセンスの無効化
+-- =========================================================================
+-- 【役割】
+-- ライセンスの行を削除すると外部キーの ON DELETE CASCADE でチケット → 定期スケジュール → セッション → 通話の記録・チャット・
+-- 宿題まで消えてしまうため、無効化は削除せず次の3つを更新する。
+--   1. com_t_user_license.status を 0（停止）にする（チケットの消化数はそのまま。返還はしない。
+--      契約のライセンスの上限が必要なら契約の編集で増やす）
+--   2. 紐づく稼働中の定期スケジュールを終了（status=9）にする（トリガーで com_m_coach_student_relationship.is_active も追従する）
+--   3. 未実施の未来の予定だけを status=3・cancel_category=4（ライセンス無効化）でキャンセルする（fn_cancel_future_sessions()。
+--      実施済み等の過去の記録は変えない）
+-- 契約・生徒のアカウント・その生徒の他のライセンスには触れない。権限は fn_assert_actor_or_admin() で確かめる。
+-- =========================================================================
+
 CREATE OR REPLACE FUNCTION public.invalidate_user_license(p_license_id uuid)
 RETURNS void
 LANGUAGE plpgsql

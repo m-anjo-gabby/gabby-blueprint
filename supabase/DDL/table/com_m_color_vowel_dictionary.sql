@@ -1,28 +1,36 @@
----------------------------------------------
--- DDL: com_m_color_vowel_dictionary (Color Vowel辞書マスタ)
----------------------------------------------
-CREATE TABLE public.com_m_color_vowel_dictionary (
-    dic_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    word_en TEXT NOT NULL,
-    part_of_speech VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN',
-    word_ja TEXT,
-    syllables VARCHAR(100) NOT NULL,                       -- 例: 'tai-lor', 'made', 'rec-ord'
-    primary_stress_syllable SMALLINT NOT NULL DEFAULT 1,
-    stress_vowel_spelling VARCHAR(20) NOT NULL,            -- 例:ストレス母音の綴り（例: 'ai', 'a', 'ord'）
-    cv_id VARCHAR(50) NOT NULL REFERENCES public.com_m_color_vowel(cv_id) ON DELETE CASCADE,
-    phonetic_spelling TEXT,
-    audio_path TEXT,
-    tts_ssml TEXT,
-    tts_ssml_mode TEXT NOT NULL DEFAULT 'auto',
-    tts_adjustments JSONB,
-    tts_status SMALLINT NOT NULL DEFAULT 0,
-    last_tts_date TIMESTAMP WITH TIME ZONE,
-    status TEXT NOT NULL DEFAULT 'live',
-    delete_flg SMALLINT NOT NULL DEFAULT 0,
-    insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+-- =========================================================================
+-- com_m_color_vowel_dictionary: Color Vowel の辞書
+-- =========================================================================
+-- 【見出し語と原形】
+-- 生徒が文中でタップした出現形（offers, launched 等）で検索するため、見出し語は出現形のまま1行ずつ持つ。
+-- 語形変化した行は lemma に原形を持ち、辞書のポップアップに「原形: launch」と出す。辞書データの作成時に、
+-- 同じ原形の行どうしで Color Vowel の判断が食い違っていないかの検証にも使う。
+-- 原形そのものの行は lemma を NULL にする。原形の行が辞書にあることは必須にしない（外部キーは張らない）。
+-- =========================================================================
 
-    CONSTRAINT unique_word_and_pos UNIQUE(word_en, part_of_speech)
+-- @schema public.com_m_color_vowel_dictionary
+CREATE TABLE public.com_m_color_vowel_dictionary (
+    dic_id                   uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    word_en                  text         NOT NULL,
+    part_of_speech           character varying(20) NOT NULL DEFAULT 'UNKNOWN'::character varying,
+    word_ja                  text,
+    syllables                character varying(100) NOT NULL,
+    primary_stress_syllable  smallint     NOT NULL DEFAULT 1,
+    stress_vowel_spelling    character varying(20) NOT NULL,
+    cv_id                    character varying(50) NOT NULL REFERENCES public.com_m_color_vowel(cv_id) ON DELETE CASCADE,
+    phonetic_spelling        text,
+    audio_path               text,
+    tts_ssml                 text,
+    tts_ssml_mode            text         NOT NULL DEFAULT 'auto'::text,
+    tts_adjustments          jsonb,
+    tts_status               smallint     NOT NULL DEFAULT 0,
+    last_tts_date            timestamp with time zone,
+    status                   text         NOT NULL DEFAULT 'live'::text,
+    delete_flg               smallint     NOT NULL DEFAULT 0,
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    lemma                    text,
+    CONSTRAINT unique_word_and_pos UNIQUE (word_en, part_of_speech)
 );
 
 COMMENT ON TABLE public.com_m_color_vowel_dictionary IS 'Color Vowel辞書マスタ';
@@ -45,35 +53,14 @@ COMMENT ON COLUMN public.com_m_color_vowel_dictionary.status IS '公開ステー
 COMMENT ON COLUMN public.com_m_color_vowel_dictionary.delete_flg IS '削除フラグ（0:有効, 1:削除）';
 COMMENT ON COLUMN public.com_m_color_vowel_dictionary.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_color_vowel_dictionary.update_date IS '更新日時';
+COMMENT ON COLUMN public.com_m_color_vowel_dictionary.lemma IS '原形（例: launched → launch）。見出し語が原形そのものの場合はNULL';
 
-CREATE INDEX IF NOT EXISTS idx_com_m_cv_dictionary_lookup
-ON public.com_m_color_vowel_dictionary (LOWER(word_en), part_of_speech, status)
-WHERE delete_flg = 0;
+CREATE INDEX idx_com_m_cv_dictionary_lookup ON public.com_m_color_vowel_dictionary (lower(word_en), part_of_speech, status) WHERE delete_flg = 0;
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
 ALTER TABLE public.com_m_color_vowel_dictionary ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users can view active dictionary records" ON public.com_m_color_vowel_dictionary;
-
-CREATE POLICY "Users can view active dictionary records" ON public.com_m_color_vowel_dictionary
-FOR SELECT TO authenticated 
-USING (status = 'live' AND delete_flg = 0);
-
----------------------------------------------
--- 追加パッチ: 原形列(lemma)の追加 (2026-09-25 追加)
----------------------------------------------
--- 【背景】
--- 辞書は生徒がタップした文中の出現形（offers, launched 等）で検索するため、見出し語は
--- 出現形のまま1行ずつ持つ。その上で、語形変化した行に原形を持たせ、生徒の辞書ポップアップで
--- 「原形: launch」と表示できるようにする。あわせて、同じ原形を持つ行どうしでColor Vowelの
--- 判断が食い違っていないかを辞書データ作成時に機械的に検証できるようにする。
---
--- 原形と見出し語が同じ行（原形そのもの）はNULLとする。原形の行が辞書に登録されている
--- ことは必須としない（外部キーは張らない）。
----------------------------------------------
-ALTER TABLE public.com_m_color_vowel_dictionary
-  ADD COLUMN IF NOT EXISTS lemma TEXT DEFAULT NULL;
-
-COMMENT ON COLUMN public.com_m_color_vowel_dictionary.lemma IS '原形（例: launched → launch）。見出し語が原形そのものの場合はNULL';
+CREATE POLICY "Users can view active dictionary records" ON public.com_m_color_vowel_dictionary FOR SELECT TO authenticated
+USING (
+    status = 'live'::text AND delete_flg = 0
+);
+-- @end-schema

@@ -1,36 +1,31 @@
----------------------------------------------
--- DDL: com_t_session_homework (レッスンセッション単位の宿題) (2026-09-04 追加)
--- 更新: 2026-09-12（宿題を「指示・説明＋チェックリスト」の1セットとして扱う親エンティティに
---       再定義。詳細は下記【背景】を参照。既存環境に対しては、このDDLをSupabase SQL Editor等で
---       実行してください。
--- 前提: table/com_t_session.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- レッスン終了後にコーチが生徒へ出す宿題を、実施回(com_t_session)に直接
--- 紐づけて記録する。コーチの人事評価（宿題を適切に提供しているか）の
--- チェック材料になるため、com_t_coach_student_note（コーチ担当生徒メモ）と
--- 同様に投稿後の編集・削除は許可しない追記専用とする。ただし対象生徒本人も
--- 閲覧できる点がnoteとの違い（noteはコーチ本人のみ閲覧可）。
--- 添付ファイルはcom_t_chat/com_t_chat_attachmentと同様に別テーブルへ分離する。
+-- =========================================================================
+-- com_t_session_homework: ライブセッションの宿題（1セッションに1件）
+-- =========================================================================
+-- 【役割】
+-- セッション後にコーチが出す宿題の本文。以降の連絡はフォローアップのコメント（com_t_session_homework_comment）、
+-- 添付は com_t_session_homework_attachment に分ける。
 --
--- 当初は1セッションに複数回投稿できる自由メッセージの時系列ログとして設計していたが、
--- 「宿題の指示・説明（必須）＋チェックリスト（任意）を1セットで発信し、以降の連絡は
--- フォローアップコメントとして明確に区別したい」という要望のため、本テーブルを
--- 「1セッションにつき1件の宿題本体」に再定義する（UNIQUE(session_id)を追加）。
--- チェックリスト(com_t_session_homework_checklist_item。2026-10-14廃止)は本体のhomework_idに、
--- 以降のフォローアップコメントは新設のcom_t_session_homework_commentのhomework_idに、
--- それぞれ子として紐づく。宿題管理機能はdev環境のみへの反映でステージング/本番は
--- 未反映のため、既存データ互換は考慮せず正規化を優先する。
----------------------------------------------
-CREATE TABLE public.com_t_session_homework (
-    homework_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id uuid NOT NULL UNIQUE REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
-    coach_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    student_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    homework_text text NOT NULL,
-    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
+-- 【書き込み】
+-- 宿題の提供はコーチの評価の材料になるため、投稿後の編集・削除はできない（追記のみ）。
+-- 登録はコーチ本人が、担当するセッションの担当コーチ・生徒と一致する場合だけ。
+-- student_viewed_at（生徒が宿題を最後に開いた日時。生徒のセッション結果画面を開いた時刻）は
+-- mark_session_homework_viewed() だけが更新する（生徒に本テーブルの更新権限は与えない）。
+-- コーチの画面に、生徒が宿題・最新の追記を見たかを出すのに使う。
+--
+-- 【参照できる範囲】
+-- コーチ本人・対象の生徒本人・管理者（コーチのメモと違い、生徒も参照できる）。
+-- =========================================================================
 
-    CONSTRAINT chk_session_homework_text_not_blank CHECK (btrim(homework_text) <> '')
+-- @schema public.com_t_session_homework
+CREATE TABLE public.com_t_session_homework (
+    homework_id              uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    session_id               uuid         NOT NULL UNIQUE REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    homework_text            text         NOT NULL,
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    student_viewed_at        timestamp with time zone,
+    CONSTRAINT chk_session_homework_text_not_blank CHECK (btrim(homework_text) <> ''::text)
 );
 
 COMMENT ON TABLE public.com_t_session_homework IS 'セッション単位の宿題本体（1セッション1件、コーチのみ投稿、追記専用・生徒も閲覧可）。チェックリスト・フォローアップコメントの親';
@@ -40,53 +35,24 @@ COMMENT ON COLUMN public.com_t_session_homework.coach_id IS '投稿したコー�
 COMMENT ON COLUMN public.com_t_session_homework.student_id IS '対象の生徒のユーザID（非正規化。com_t_session.student_idと一致することをRLSで検証）';
 COMMENT ON COLUMN public.com_t_session_homework.homework_text IS '宿題本文（自由メッセージ）';
 COMMENT ON COLUMN public.com_t_session_homework.insert_date IS '登録日時';
+COMMENT ON COLUMN public.com_t_session_homework.student_viewed_at IS '生徒が宿題を最後に開いた日時（生徒のセッション結果画面を開いた時刻。未閲覧はNULL）';
 
 CREATE INDEX idx_session_homework_session ON public.com_t_session_homework (session_id, insert_date DESC);
 CREATE INDEX idx_session_homework_student ON public.com_t_session_homework (student_id, insert_date DESC);
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
+CREATE TRIGGER on_session_homework_insert_notify AFTER INSERT ON public.com_t_session_homework FOR EACH ROW EXECUTE FUNCTION public.notify_session_homework_posted();
+
 ALTER TABLE public.com_t_session_homework ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Coach and student can view session homework" ON public.com_t_session_homework;
-DROP POLICY IF EXISTS "Coaches can post homework for their own sessions" ON public.com_t_session_homework;
-
--- [参照] コーチ本人・対象生徒本人・管理者が閲覧可能（コーチメモと異なり生徒も閲覧できる）
-CREATE POLICY "Coach and student can view session homework" ON public.com_t_session_homework
-FOR SELECT TO authenticated USING (
-    coach_id = auth.uid()
-    OR student_id = auth.uid()
-    OR public.get_jwt_user_type() = '0'
+CREATE POLICY "Coach and student can view session homework" ON public.com_t_session_homework FOR SELECT TO authenticated
+USING (
+    coach_id = auth.uid() OR student_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
 );
 
--- [登録] コーチ自身のみ、かつ対象session_idの担当コーチ・生徒と一致する場合のみ作成可能（なりすまし・不整合防止）
-CREATE POLICY "Coaches can post homework for their own sessions" ON public.com_t_session_homework
-FOR INSERT TO authenticated WITH CHECK (
-    coach_id = auth.uid()
-    AND EXISTS (
-      SELECT 1 FROM public.com_t_session s
-      WHERE s.session_id = com_t_session_homework.session_id
-        AND s.coach_id = auth.uid()
-        AND s.student_id = com_t_session_homework.student_id
-    )
+CREATE POLICY "Coaches can post homework for their own sessions" ON public.com_t_session_homework FOR INSERT TO authenticated
+WITH CHECK (
+    coach_id = auth.uid() AND (EXISTS ( SELECT 1
+       FROM public.com_t_session s
+      WHERE s.session_id = com_t_session_homework.session_id AND s.coach_id = auth.uid() AND s.student_id = com_t_session_homework.student_id))
 );
-
--- 更新・削除は許可しない（コーチ評価に使うため投稿後は編集不可。追記専用として履歴保持する）。
-
----------------------------------------------
--- 追加パッチ: チェックリストの廃止と、生徒の閲覧日時 (2026-10-14)
--- 既存環境に対しては、このブロックのみをSupabase SQL Editor等で実行してください。
----------------------------------------------
--- 【背景】
--- チェックリスト（com_t_session_homework_checklist_item）は「コーチが宿題の進捗を把握したい」という
--- 要望で作ったが、コーチは投稿のたびに項目を作る手間があり、生徒は自己申告のチェックを付けるだけで
--- 進捗の材料として弱かったため廃止する（テーブルを削除）。宿題は本文・添付・コーチの追記コメントだけにする。
--- 代わりに、生徒が宿題を開いたこと（生徒のセッション結果画面を開いた時刻）を student_viewed_at に記録し、
--- コーチの画面に「見たか・最新の追記を見たか」を出す（生徒の操作は不要）。
--- 更新は mark_session_homework_viewed() からのみ行う（生徒に本テーブルの更新権限は与えない）。
----------------------------------------------
-ALTER TABLE public.com_t_session_homework ADD COLUMN IF NOT EXISTS student_viewed_at timestamp with time zone;
-COMMENT ON COLUMN public.com_t_session_homework.student_viewed_at IS '生徒が宿題を最後に開いた日時（生徒のセッション結果画面を開いた時刻。未閲覧はNULL）';
-
-DROP TABLE IF EXISTS public.com_t_session_homework_checklist_item;
+-- @end-schema
