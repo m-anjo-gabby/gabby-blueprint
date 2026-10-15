@@ -52,6 +52,8 @@ const coachCard = (page: Page, coachName: string) => page.getByLabel(`${coachNam
 /** 「専属コーチを探す」を開き直し、使い捨てのコーチだけに絞って、比較用のコーチが出るまで待つ */
 async function openCoachSearch(page: Page, tag: string, controlCoachName: string): Promise<void> {
   await page.goto("/coach-matching");
+  // 骨組みも本物の検索欄を描くため、本番の画面（見出しの説明文）に置き換わってから入力する
+  await expect(page.getByText(/回のセッション枠ごとにコーチをリクエストできます/)).toBeVisible();
   await page.getByPlaceholder("コーチ名で検索").fill(tag);
   await expect(coachCard(page, controlCoachName)).toBeVisible();
 }

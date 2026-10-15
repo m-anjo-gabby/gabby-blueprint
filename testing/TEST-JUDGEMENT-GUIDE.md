@@ -1122,3 +1122,11 @@
 - **対処**: 呼び出しに `.catch()`（失敗の結果に変える）と `.finally()`（処理中の解除）を付けた。お気に入りの☆（`FAVORITE_TOGGLE_NETWORK_ERROR`）と同じ形。
   同じ形の部品を洗い出して直した（2026-10-13）: コーチ・生徒のメール通知のスイッチ（`MailSettingsCard` / `MailSettingsSection`）、生徒の宿題のチェックリスト（`StudentSessionResult`）、アドミンのマッチング対象の保存（`CoachMatchingPanel`。表示は先に切り替えないが、例外のままだと画面全体のエラー表示になる）。文言は各アプリの `constants/network.ts` の `SAVE_NETWORK_ERROR_MESSAGE`（アドミンは `common.networkError`）。E2E は受付スイッチ（`tests/coach/profile-matching-card.spec.ts`）で確かめている（宿題のチェックリストは2026-10-14に廃止）。
 - **判断基準への反映**: 楽観的に表示を切り替えてからサーバーアクションを呼ぶ部品は、戻り値の失敗と例外の両方で元に戻ることを確かめる。E2E では `page.route` で `next-action` ヘッダー付きの POST を `abort` すると通信の失敗を再現できる。
+
+### KJ-2026-1015-01 骨組みが本物の部品（検索欄等）を描く画面では、読み込み中に同じ要素が2つになり strict mode で落ちる
+
+- **該当シナリオ**: 生徒の「専属コーチを探す」で開き直してすぐに検索欄へ入力する（`e2e/tests/matching/coach-visibility.spec.ts`。staging, 2026-10-15。dev では通っていた）
+- **事象**: `getByPlaceholder('コーチ名で検索')` が2つの要素に一致し、`locator.fill` が strict mode violation で失敗した。
+- **原因**: 骨組み（`CoachMatchingSkeleton`）は規約どおり本物の `CoachSearchFilters` を描く。ストリーミング中は、届いた本番の画面が隠れた状態で DOM に入り、骨組みと入れ替わるまでの短い間は検索欄が2つある（Playwright のロケーターは隠れた要素も数える）。staging の本番ビルドは届くのが速く、この瞬間に当たりやすい。
+- **対処**: 入力の前に、本番の画面にしか無い表示（見出しの説明文「週n回のセッション枠ごとに…」）が見えるまで待つようにした。
+- **判断基準への反映**: 骨組みと本番で共有している部品（見出し・タブ・検索欄等）を、`goto` の直後に操作しない。本番にしか無い表示が見えるまで待ってから操作する。骨組みの部品へ入力すると、入れ替わりの際に入力が消えることもある。
