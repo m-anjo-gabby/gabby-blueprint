@@ -43,8 +43,9 @@ supabase/release/logs/
 scripts/vercel-env/values/
 scripts/vercel-env/logs/
 
-# Github
-.github
+# Github（GitHub Actions のワークフローだけ管理する）
+.github/*
+!.github/workflows/
 
 # Vercel
 .vercel
@@ -75,8 +76,9 @@ temp_data/
 # バックアップやダンプのログ
 *.dump
 
-# Github
-.github
+# Github（GitHub Actions のワークフローだけ管理する）
+.github/*
+!.github/workflows/
 
 # Agents
 .agents

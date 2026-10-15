@@ -14,6 +14,7 @@ export const APPS = /** @type {const} */ (['admin', 'student', 'coach']);
  *   label: string,
  *   supabaseRef: string,
  *   urls: Record<'admin' | 'student' | 'coach', string>,
+ *   localUrls?: Record<'admin' | 'student' | 'coach', string>,
  *   vercel?: Record<'admin' | 'student' | 'coach', VercelTarget>,
  *   confirmWord?: string,
  * }} EnvironmentConfig
@@ -21,14 +22,26 @@ export const APPS = /** @type {const} */ (['admin', 'student', 'coach']);
 
 /** @type {Record<'dev' | 'staging' | 'prod', EnvironmentConfig>} */
 export const ENVIRONMENTS = {
-  // dev は Vercel に反映しない（apps/*/.env.local の確認だけ。--check）
+  // dev は手元の起動（apps/*/.env.local。--check で確認）と、Vercel の dev プロジェクト（Git 連携なし。
+  // .github/workflows/deploy-dev.yml で必要な時だけデプロイ）が同じ Supabase の dev を使う。
   dev: {
-    label: 'dev（ローカル）',
+    label: 'dev',
     supabaseRef: 'vihincuxiizavuxoctul',
     urls: {
+      admin: 'https://blueprint-admin-dev.vercel.app',
+      student: 'https://blueprint-student-dev.vercel.app',
+      coach: 'https://blueprint-coach-dev.vercel.app',
+    },
+    // 手元の起動の URL（--check で apps/*/.env.local と照合する）
+    localUrls: {
       admin: 'https://localhost:3001',
       student: 'https://localhost:3000',
       coach: 'https://localhost:3002',
+    },
+    vercel: {
+      admin: { project: 'blueprint-admin-dev', targets: ['production'] },
+      student: { project: 'blueprint-student-dev', targets: ['production'] },
+      coach: { project: 'blueprint-coach-dev', targets: ['production'] },
     },
   },
   staging: {
