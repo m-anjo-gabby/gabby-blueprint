@@ -14,7 +14,7 @@ URL は `https://drive.google.com/drive/folders/<ID>`（フォルダ）、`https
 | 00_案件台帳 | `1gsiyONaJAnL4SAFQcWZ6Psbv3TKeTBXt` | 案件の一覧 |
 | 10_案件 | `1CpPnhNj0zH3yqMJ-gCw8pjmysTOthpdH` | 案件ごとの資料（ヒアリング・Claude Docs の下書き等） |
 | 20_スプリントMTG | `12nVtJFxG4up8ky5RNzZKgh8mnMp9Tb5f` | スプリントMTGの資料・議事。回ごとに `YYYYMMDD`（MTGの日付）のフォルダを作って置く（地図には載せない） |
-| 30_リリース | `1k6_-RuRBYp7xrRaycpd_QMJO44xDN8pT` | リリースの開発側の資料 |
+| 30_リリース | `1k6_-RuRBYp7xrRaycpd_QMJO44xDN8pT` | リリースの開発側の資料。リリース日ごとのフォルダ（例: `20261019`）に変更概要資料のPDFを置く |
 | 40_テスト・UAT | `1ImYniUwHaqXntyXd9hHwrN78CU1juSB5` | テスト・受け入れテストの資料 |
 | 50_外部サービス | `1nnq-ZBW-Lesfanw5sTFwBgc97ZkTd7FL` | 外部サービスの契約・設定の控え |
 | 60_旧システム移行 | `19IBynMbxbuLYay2v6vSWWiKpNKt66TEP` | 旧システムからの移行の資料 |

@@ -11,6 +11,7 @@
 | 変更概要資料 | 50_リリース情報 | PDF `リリース情報_<ブランチの日付>_YYYYMMDD.pdf`（日付は対象期間の終わり） |
 | メール文面カタログ | 60_メール文面 | PDF `メール文面カタログ_YYYYMMDD.pdf`（日付は作った日） |
 | 判断をお願いする提案 | 40_検討中の提案 | PDF `<提案の名前>_YYYYMMDD.pdf` |
+| 変更概要資料（開発側の控え） | A_開発/30_リリース/`<リリース日>` | PDF `リリース情報_<ブランチの日付>_YYYYMMDD.pdf`（日付は対象期間の終わり） |
 | スプリントMTGの資料 | A_開発/20_スプリントMTG/`<MTGの日付>` | PDF `<資料の名前>_YYYYMMDD.pdf`（日付は資料の基準日） |
 | マニュアル・業務フロー・機能の説明 | 10 / 20 / 30 | Googleドキュメント、日付なし |
 
@@ -22,7 +23,8 @@ rules.md の「運営向けの資料に書かないもの」が入っていな�
 
 ## 3. 置く
 
-- **PDF**: フォルダに同じ名前のファイルが無いことを `search_files`（`parentId = '<フォルダID>' and title contains '<名前>'`）で確かめる。あれば上書きせずにユーザーに確かめる。
+- **PDF（PC版Googleドライブがある場合・優先）**: 共有ドライブは `G:\共有ドライブ\Gabby Blueprint` にマウントされている。フォルダを作ってファイルをコピーするだけで置ける（`ls` で同名のファイルが無いことを先に確かめる）。Drive の接続より速く、トークンも使わない。
+- **PDF（接続を使う場合）**: フォルダに同じ名前のファイルが無いことを `search_files`（`parentId = '<フォルダID>' and title contains '<名前>'`）で確かめる。あれば上書きせずにユーザーに確かめる。
   - Drive の `create_file` に `base64Content`・`contentMimeType: application/pdf`・`disableConversionToGoogleType: true`・`parentId` を渡す。
   - ファイルの中身を1回の呼び出しで送るため、大きいPDFは失敗しやすい。失敗したら、ローカルのパスと置き先フォルダのリンクをユーザーに伝え、画面でドラッグして置いてもらう。
 - **Googleドキュメント**: Drive の `create_file` に HTML（`contentMimeType: text/html`）を渡して作る。直すときは同じファイルを Docs の接続で編集し、作り直さない（リンクが変わるため）。

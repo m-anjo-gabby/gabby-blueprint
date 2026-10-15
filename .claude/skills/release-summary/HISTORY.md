@@ -6,6 +6,7 @@
 
 | 対象期間の終わり | ブランチ | 柱 | URL |
 |---|---|---|---|
+| 2026-10-14 | feature/20261008-dev | 専属コーチ選び（割合判定・回答期限・評価・専門・掲載条件）・ライブセッションの実施記録・お知らせの表示方法・Color Vowel 辞書（音素表記・改善サイクル）・品質（管理者アプリの自動テスト・DB正本） | https://claude.ai/artifact/9316FJDhZbekCiCpN3SFgJ（PDF: A_開発/30_リリース/20261019/リリース情報_20261008_20261014.pdf） |
 | 2026-10-08 | feature/20261004-dev | メール配信・グループセッション・品質（ログ・自動テスト） | https://claude.ai/artifact/Ts3YcDrxsM5yhkCpSwaFSk |
 | 2026-10-01 | feature/20260925-dev | 生徒アプリの見直し・3アプリ共通の見直し・トレーニングレポート・品質（Playwright） | https://claude.ai/artifact/E9o9b5hFkmeqXtnSdgkTwR |
 | 2026-09-24 | feature/20260918-dev | 管理画面の多言語化・ダイアログプラクティス・品質（仕様書の整備） | https://claude.ai/artifact/232yJZYkse5b5YhHdnosRG |
@@ -18,3 +19,4 @@
 
 - 2026-10-08: スキルを新設。20260918・20260925 の資料の構成と紙面を正本化（writing-rules.md・template.html）。材料の集計を collect.mjs に自動化。図の部品（matrix・mailmock）を追加。
 - 2026-10-08: 配布をブラウザの印刷からPDF出力（to-pdf.mjs、Playwright・A4）に変更。template.html に印刷用の CSS（改ページの規則・用紙は白・チェックリストは新しいページから）を追加。きっかけ: ブラウザの印刷で改ページ時に文字が見切れる。
+- 2026-10-15: 20261008 の資料で、運営要望のCV辞書の音素表記を「その他」からメインへ昇格。writing-rules.md の改善ルールに「要望を受けた変更はメインにする」を追加。
