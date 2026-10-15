@@ -1,6 +1,8 @@
 'use client';
 
-import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
+import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
+import { convertWeeklyTimeZone, formatDateTimeByZone } from '@gabby/lib/date/date';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { LiveSessionContractSummary, LiveSessionOverview, SlotStatusItem } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
@@ -11,7 +13,31 @@ function formatContractDate(iso: string, timezone: string): string {
   return new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: timezone }).format(new Date(iso));
 }
 
-function SlotRow({ slot, weeklyFrequency, timezone }: { slot: SlotStatusItem; weeklyFrequency: number; timezone: string }) {
+/** コマの行の操作（マッチング画面へ。承認待ちの申請の確認・取り下げ、未選択のコマのコーチ選び） */
+function SlotLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-control px-2 py-1.5 text-xs font-bold text-brand hover:bg-brand-soft"
+    >
+      {label}
+      <ChevronRight size={14} aria-hidden="true" />
+    </Link>
+  );
+}
+
+function SlotRow({
+  slot,
+  weeklyFrequency,
+  timezone,
+  matchingHref,
+}: {
+  slot: SlotStatusItem;
+  weeklyFrequency: number;
+  timezone: string;
+  /** マッチング画面（この契約）。有効な契約のときだけ渡し、承認待ち・未選択のコマに操作を出す */
+  matchingHref: string | null;
+}) {
   const schedule =
     slot.day_of_week !== null && slot.start_time && slot.end_time
       ? convertWeeklyTimeZone(
@@ -33,12 +59,18 @@ function SlotRow({ slot, weeklyFrequency, timezone }: { slot: SlotStatusItem; we
         ) : (
           <>
             <p className="truncate text-sm font-semibold text-ink tabular-nums">{scheduleLabel}</p>
-            <p className="truncate text-xs text-ink-muted">
-              {slot.coach_name} コーチ{slot.status === 'pending' && '（承認待ち）'}
-            </p>
+            <p className="truncate text-xs text-ink-muted">{slot.coach_name} コーチ</p>
+            {/* 回答待ちの状態は名前と別の行にし、狭い画面でも省略されないようにする */}
+            {slot.status === 'pending' && (
+              <p className="mt-0.5 text-[11px] font-bold text-amber-700">
+                回答待ち{slot.expires_at && `（期限 ${formatDateTimeByZone(slot.expires_at, timezone, false)}）`}
+              </p>
+            )}
           </>
         )}
       </div>
+      {matchingHref && slot.status === 'pending' && <SlotLink href={matchingHref} label="確認・取り下げ" />}
+      {matchingHref && slot.status === 'unmatched' && <SlotLink href={matchingHref} label="コーチを選ぶ" />}
     </li>
   );
 }
@@ -72,10 +104,17 @@ export function ContractOverviewCard({ contract, overview, timezone, adjustingCo
 
         <SessionBreakdown overview={overview} isCurrent={contract.is_current} adjustingCount={adjustingCount} className="mt-4" />
 
-        {contract.is_current && overview.slots.length > 0 && (
+        {/* 有効な契約（現在の契約・開始前の次の契約）は、コマごとの担当と、承認待ち・未選択のコマのマッチング画面への導線を出す */}
+        {contract.is_active && overview.slots.length > 0 && (
           <ul className="mt-4 divide-y divide-line border-t border-line">
             {overview.slots.map((slot) => (
-              <SlotRow key={slot.slot_no} slot={slot} weeklyFrequency={overview.weekly_frequency} timezone={timezone} />
+              <SlotRow
+                key={slot.slot_no}
+                slot={slot}
+                weeklyFrequency={overview.weekly_frequency}
+                timezone={timezone}
+                matchingHref={`/coach-matching?contract=${contract.ticket_id}`}
+              />
             ))}
           </ul>
         )}

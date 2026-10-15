@@ -1,24 +1,27 @@
----------------------------------------------
--- DDL: com_m_phrase (出題例文マスタ)
----------------------------------------------
-CREATE TABLE public.com_m_phrase (
-  phrase_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  word_id uuid NOT NULL REFERENCES public.com_m_word(word_id) ON DELETE CASCADE,
-  seq_no SMALLINT NOT NULL DEFAULT 1,
-  phrase_type SMALLINT NOT NULL,
-  phrase_en TEXT NOT NULL,
-  phrase_ja TEXT NOT NULL,
-  audio_path TEXT,
-  tts_ssml TEXT,
-  tts_ssml_mode TEXT NOT NULL DEFAULT 'auto', -- 'auto': UI生成, 'manual': 手動編集
-  tts_adjustments JSONB,                      -- ワード単位の調整パラメータ
-  tts_status SMALLINT NOT NULL DEFAULT 0, -- 0:未生成, 1:生成済, 2:要再生成, 9:エラー
-  last_tts_date TIMESTAMP WITH TIME ZONE,
-  status TEXT NOT NULL DEFAULT 'live', -- 'live' (公開), 'pending' (非公開)
-  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+-- =========================================================================
+-- com_m_phrase: フレーズ（出題の例文）
+-- =========================================================================
+-- 認証済みユーザーは公開中（status='live'）のフレーズだけを参照できる。
+-- =========================================================================
 
-  CONSTRAINT unique_word_phrase_seq UNIQUE(word_id, seq_no)
+-- @schema public.com_m_phrase
+CREATE TABLE public.com_m_phrase (
+    phrase_id                uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    word_id                  uuid         NOT NULL REFERENCES public.com_m_word(word_id) ON DELETE CASCADE,
+    seq_no                   smallint     NOT NULL DEFAULT 1,
+    phrase_type              smallint     NOT NULL,
+    phrase_en                text         NOT NULL,
+    phrase_ja                text         NOT NULL,
+    audio_path               text,
+    tts_ssml                 text,
+    tts_ssml_mode            text         NOT NULL DEFAULT 'auto'::text,
+    tts_adjustments          jsonb,
+    tts_status               smallint     NOT NULL DEFAULT 0,
+    last_tts_date            timestamp with time zone,
+    status                   text         NOT NULL DEFAULT 'live'::text,
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT unique_word_phrase_seq UNIQUE (word_id, seq_no)
 );
 
 COMMENT ON TABLE public.com_m_phrase IS '出題例文マスタ';
@@ -38,22 +41,15 @@ COMMENT ON COLUMN public.com_m_phrase.status IS '公開ステータス';
 COMMENT ON COLUMN public.com_m_phrase.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_phrase.update_date IS '更新日時';
 
-CREATE INDEX idx_com_m_phrase_word_id ON public.com_m_phrase(word_id);
-CREATE INDEX IF NOT EXISTS idx_com_m_phrase_word_status_seq
-ON public.com_m_phrase (word_id, status, seq_no ASC);
+CREATE INDEX idx_com_m_phrase_word_id ON public.com_m_phrase (word_id);
+CREATE INDEX idx_com_m_phrase_word_status_seq ON public.com_m_phrase (word_id, status, seq_no);
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
 ALTER TABLE public.com_m_phrase ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users can view phrases of accessible words" ON public.com_m_phrase;
-
-CREATE POLICY "Users can view phrases of accessible words" ON public.com_m_phrase
-FOR SELECT TO authenticated USING (
-    status = 'live' -- 公開中のフレーズのみ
-    AND EXISTS (
-        SELECT 1 FROM public.com_m_word w
-        WHERE w.word_id = public.com_m_phrase.word_id
-    )
+CREATE POLICY "Users can view phrases of accessible words" ON public.com_m_phrase FOR SELECT TO authenticated
+USING (
+    status = 'live'::text AND (EXISTS ( SELECT 1
+       FROM public.com_m_word w
+      WHERE w.word_id = com_m_phrase.word_id))
 );
+-- @end-schema

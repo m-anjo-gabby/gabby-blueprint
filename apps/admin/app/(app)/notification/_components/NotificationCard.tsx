@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
@@ -20,9 +19,8 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
   const Icon = display.icon ?? Bell;
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
+    // 骨組みからその場で置き換えるため、表示時のアニメーションは付けない
+    <article
       className={cn(
         'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all',
         !notification.is_read
@@ -68,6 +66,6 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
           </p>
         </div>
       </button>
-    </motion.article>
+    </article>
   );
 }

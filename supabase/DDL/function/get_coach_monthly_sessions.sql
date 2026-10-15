@@ -1,54 +1,29 @@
----------------------------------------------
--- 月次コーチングレポート: 対象月セッション一覧RPC (2026-09-13 追加)
--- 前提: table/com_t_session.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- 月次コーチングレポートのグリッド描画・要注意セル判定・詳細モーダル表示の唯一のデータ源。
--- カウント規則(counts_toward_total)・注意色判定(is_unresolved/is_attention)は、このRPCが
--- 単一の実装箇所となる（呼び出し側TypeScript・承認RPCのいずれもここで計算済みの値をそのまま使う）。
+-- =========================================================================
+-- get_coach_monthly_sessions: 月次コーチングレポートの対象月のセッション一覧
+-- =========================================================================
+-- 【役割】
+-- 月次コーチングレポートの表・要確認のセル・詳細の唯一のデータ源。実績に数えるか（counts_toward_total）と
+-- 注意の色（is_unresolved / is_attention）はここだけで計算し、画面・承認の関数はその値をそのまま使う。
 --
--- 【カウント規則】
--- completed(status=2、内訳(completion_result)問わず) / 生徒都合12h以内キャンセル
--- (status=3かつcancel_category=1(student)かつticket_refunded=false) をコーチの
--- 稼働実績としてカウントする。コーチキャンセル(cancel_category=2)・生徒都合12h以上前
--- キャンセル(ticket_refunded=true)・アドミン代理キャンセル(cancel_category=3)・
--- ライセンス無効化(cancel_category=4)・コーチ交代(cancel_category=5)はカウントしない。
+-- 【実績に数える回（counts_toward_total）】
+-- 実施済み（status=2。内訳は問わない）と、生徒による開始12時間未満のキャンセル
+-- （status=3・cancel_category=1・ticket_refunded=false）。コーチのキャンセル・欠席、生徒の12時間以上前のキャンセル、
+-- アドミンの代理・ライセンス無効化・コーチ交代・通信トラブル等によるキャンセルは数えない。
 --
--- 【注意色】
--- is_unresolved: 終了処理が行われていない枠（status=1かつ終了予定時刻を過ぎている）
--- is_attention: 12h以内キャンセル・No show・早期終了を含む枠（is_unresolvedとは別の注意色）
+-- 【注意の色】
+-- is_unresolved: 終了予定を過ぎても結果が確定していない回（status=1）。
+-- is_attention: 12時間未満のキャンセル・生徒の欠席・早期終了・外部のZoomでの実施（conducted_via=2）・
+--   申告と推定の違い（outcome_mismatch）。いずれも counts_toward_total の行の一部。
 --
--- 【ステータス簡素化 (2026-09-14変更)】
--- 旧status値(6,7,8,9,10)を撤廃しstatus=2(completed)/3(cancelled)に統合したことに伴い、
--- completion_result/cancel_categoryを新設の出力列として追加する（呼び出し側TypeScriptが
--- No Show/Early Ended等の内訳ラベルを表示するために必要。table/com_t_session.sqlの
--- ステータス簡素化パッチ参照）。RETURNS TABLEの列追加のため、CREATE OR REPLACEの前に
--- DROP FUNCTIONで旧シグネチャを明示的に削除する。
+-- 【返す行】
+-- counts_toward_total または is_unresolved の行だけを返す（対象外の行が件数として出て紛らわしくならないよう）。
 --
--- 【対象行の絞り込み (2026-09-13 追加、同日中に一般化)】
--- 本レポートは「今月のコーチ稼働実績」を見る画面であり、実績・要対応のいずれでもない行
--- （例: 12h以上前の通常キャンセル(ticket_refunded=true)・コーチキャンセル・アドミン代理
--- キャンセル・振替済みの旧セッション・ライセンス無効化/コーチ交代による自動キャンセル・
--- まだ終了予定時刻を過ぎていない通常の予定）は、counts_toward_total/is_attentionには
--- 元々影響しないものの、一覧に件数として表示されると「実施していない/対象外のはずの日に
--- 数字が出ている」ように見え紛らわしい（実コーチアカウントでの確認により判明）。
--- そのため、返却対象は「counts_toward_total=true（実績としてカウントする） または
--- is_unresolved=true（終了処理未実施、要対応）」の行のみに絞り込む。
--- is_attention=trueの行は必ずcounts_toward_total=trueの部分集合であるため、この条件のみで
--- 完了・12h以内キャンセル・No show（＝要対応）・終了処理未実施のいずれも含まれる。
---
--- 【月範囲判定 (2026-09-13 コーチのタイムゾーン基準に修正)】
--- 「当月の稼働実績」を測る指標であるため、月の境界はUTCではなくコーチ自身の暦日
--- (com_m_user.timezone)を基準に判定する。タイムゾーンはクライアントからパラメータで
--- 受け取らず、本関数が呼び出しの都度com_m_userから直接参照する。呼び出し側が任意の値を
--- 詐称して境界を操作することを防ぎ、境界の変動は「実際にプロフィールのタイムゾーンを
--- 変更した場合」のみに限定するため。承認済み月はcom_t_coach_monthly_report_approval.
--- session_count_snapshotに固定保存されるため、承認後のタイムゾーン変更は既に承認済みの
--- 集計を遡って変えない（影響があるとしても未承認の月の月境界付近のみ）。
---
--- 【権限チェックの共通化 (2026-09-15追加)】
--- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
----------------------------------------------
+-- 【月の境目】
+-- コーチ自身の暦日（com_m_user.timezone）で判定する。タイムゾーンは引数で受け取らず関数内で読む
+-- （呼び出し側が境目を操作できないようにするため）。承認済みの月は承認時のスナップショットを使うため、
+-- 後からタイムゾーンを変えても承認済みの集計は変わらない。権限は fn_assert_actor_or_admin() で確かめる。
+-- =========================================================================
+
 DROP FUNCTION IF EXISTS public.get_coach_monthly_sessions(uuid, date);
 
 CREATE OR REPLACE FUNCTION public.get_coach_monthly_sessions(p_coach_id uuid, p_report_month date)
@@ -98,7 +73,8 @@ BEGIN
         s.ticket_refunded,
         (s.status = 2 OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS counts_toward_total,
         (s.status = 1 AND s.end_datetime < NOW()) AS is_unresolved,
-        ((s.status = 2 AND s.completion_result IN (2, 3)) OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS is_attention
+        ((s.status = 2 AND (s.completion_result IN (2, 3) OR s.conducted_via = 2 OR s.outcome_mismatch))
+          OR (s.status = 3 AND s.cancel_category = 1 AND s.ticket_refunded = false)) AS is_attention
     FROM public.com_t_session s
     WHERE s.coach_id = p_coach_id
       AND s.start_datetime >= v_month_start_utc

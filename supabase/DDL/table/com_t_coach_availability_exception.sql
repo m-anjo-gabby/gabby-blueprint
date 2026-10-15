@@ -1,28 +1,25 @@
----------------------------------------------
--- DDL: com_t_coach_availability_exception (コーチ空き時間の例外) (2026-08-15 追加)
--- 既存環境に対しては、このDDLをSupabase SQL Editor等で実行してください。
--- 前提: table/com_m_coach_availability.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- com_m_coach_availability は「毎週火曜18:00〜22:00」のような週次の定常パターンを
--- 表すが、祝日休み・臨時休講・単発の追加対応など、特定の日付だけ定常パターンから
--- 外れるケースを表現するための例外テーブル。
--- Session自動生成（fn_generate_sessions_for_schedule）は、対象日が本テーブルの
--- BLOCK対象時間帯と重なる場合はその回をスキップする想定（Phase2以降で対応）。
----------------------------------------------
-CREATE TABLE public.com_t_coach_availability_exception (
-    exception_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    coach_id uuid NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    exception_date date NOT NULL,
-    start_time time NOT NULL,
-    end_time time NOT NULL,
-    exception_type text NOT NULL, -- 'BLOCK': 休み, 'ADD': 臨時追加
-    note text DEFAULT NULL,
-    insert_date timestamp with time zone NOT NULL DEFAULT NOW(),
-    update_date timestamp with time zone NOT NULL DEFAULT NOW(),
+-- =========================================================================
+-- com_t_coach_availability_exception: コーチの空き時間の例外（特定の日の休み等）
+-- =========================================================================
+-- 毎週の空き時間（com_m_coach_availability）から外れる特定の日付（祝日の休み・臨時の休み等）を持つ。
+-- 日付・時刻はコーチの現地の値。マッチングの空きの判定とセッションの生成（fn_matching_occurrence_busy）は、
+-- BLOCK の時間帯と重なる回を予約できないものとして扱う（作らずに未予約の回に数える）。
+-- コーチ本人が自分の例外を管理し、認証済みユーザーなら誰でも参照できる（生徒がコーチの空きを確かめるため）。
+-- =========================================================================
 
-    CONSTRAINT chk_availability_exception_type CHECK (exception_type IN ('BLOCK', 'ADD')),
-    CONSTRAINT chk_availability_exception_time_range CHECK (end_time > start_time)
+-- @schema public.com_t_coach_availability_exception
+CREATE TABLE public.com_t_coach_availability_exception (
+    exception_id             uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    exception_date           date         NOT NULL,
+    start_time               time without time zone NOT NULL,
+    end_time                 time without time zone NOT NULL,
+    exception_type           text         NOT NULL,
+    note                     text,
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT chk_availability_exception_time_range CHECK (end_time > start_time),
+    CONSTRAINT chk_availability_exception_type CHECK (exception_type = ANY (ARRAY['BLOCK'::text, 'ADD'::text]))
 );
 
 COMMENT ON TABLE public.com_t_coach_availability_exception IS 'コーチ空き時間の例外（特定日の休み・臨時追加。コーチのローカル時刻basis）';
@@ -38,20 +35,18 @@ COMMENT ON COLUMN public.com_t_coach_availability_exception.update_date IS '更�
 
 CREATE INDEX idx_availability_exception_coach_date ON public.com_t_coach_availability_exception (coach_id, exception_date);
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
 ALTER TABLE public.com_t_coach_availability_exception ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Relevant users can view availability exceptions" ON public.com_t_coach_availability_exception;
-DROP POLICY IF EXISTS "Coaches can manage their own availability exceptions" ON public.com_t_coach_availability_exception;
+CREATE POLICY "Coaches can manage their own availability exceptions" ON public.com_t_coach_availability_exception FOR ALL TO authenticated
+USING (
+    coach_id = auth.uid()
+)
+WITH CHECK (
+    coach_id = auth.uid()
+);
 
--- [参照] com_m_coach_availabilityと同様、生徒がコーチの空き状況を確認できるよう認証済みユーザーなら誰でも閲覧可能とする。
-CREATE POLICY "Relevant users can view availability exceptions" ON public.com_t_coach_availability_exception
-FOR SELECT TO authenticated USING (true);
-
--- [登録・更新・削除] コーチ本人のみ自身の例外を管理可能
-CREATE POLICY "Coaches can manage their own availability exceptions" ON public.com_t_coach_availability_exception
-FOR ALL TO authenticated
-USING (coach_id = auth.uid())
-WITH CHECK (coach_id = auth.uid());
+CREATE POLICY "Relevant users can view availability exceptions" ON public.com_t_coach_availability_exception FOR SELECT TO authenticated
+USING (
+    true
+);
+-- @end-schema

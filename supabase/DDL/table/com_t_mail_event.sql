@@ -1,33 +1,33 @@
----------------------------------------------
--- DDL: com_t_mail_event (メールの到達状況の出来事) (2026-10-06 追加)
----------------------------------------------
--- 【背景】
+-- =========================================================================
+-- com_t_mail_event: メールの到達状況の出来事
+-- =========================================================================
+-- 【役割】
 -- Resend の Webhook（admin の /api/webhooks/resend）で届く出来事（送信・到達・遅延・不達・迷惑メールの報告等）を記録する。
--- 送信待ち（com_t_mail_outbox）を通らない招待・パスワード再設定のメールも記録するため、
--- 「メールが届かない」という問い合わせを、宛先のアドレスで調べられる。
--- 送信待ちを通ったメールは、mail_id（送信時に Resend のタグで付けた送信待ちの行）で送信待ちの行と結び付き、
--- record_mail_event が送信待ちの行の到達状況（delivery_status）も更新する。
+-- 送信待ち（com_t_mail_outbox）を通らない招待・パスワード再設定のメールも記録するため、「メールが届かない」という
+-- 問い合わせを宛先のアドレスで調べられる。送信待ちを通ったメールは mail_id（送信時に Resend のタグで付けた送信待ちの行）で
+-- 結びつき、record_mail_event が送信待ちの行の delivery_status も更新する。
 --
--- 【重複】
--- Webhook は同じ出来事を再送しうるため、webhook_id（Resend の svix-id ヘッダー）で一意にする。
+-- 【重複・保管期限】
+-- Webhook は同じ出来事を再送することがあるため、webhook_id（Resend の svix-id ヘッダー）で一意にする。
+-- 一定期間を過ぎた行は purge_mail_history（pg_cron で毎日）が消す。
 --
--- 【保管期限】
--- 送信待ちと同じく、purge_mail_history（pg_cron の毎日のジョブ）が一定期間を過ぎた行を消す。
---
--- 生徒・コーチ・管理者の画面からは参照しない（RLSを有効にしてポリシーを作らない＝service_roleのみ）。
----------------------------------------------
+-- 【参照できる範囲】
+-- RLS を有効にしてポリシーを作らない（service_role の Webhook の受け口と SECURITY DEFINER の関数だけが読み書きする）。
+-- =========================================================================
+
+-- @schema public.com_t_mail_event
 CREATE TABLE public.com_t_mail_event (
-    event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    webhook_id VARCHAR(100) NOT NULL UNIQUE,
-    event_type VARCHAR(40) NOT NULL,
-    provider_message_id VARCHAR(100) NOT NULL,
-    mail_id UUID,
-    mail_kind VARCHAR(50),
-    recipient TEXT,
-    subject TEXT,
-    detail TEXT,
-    occurred_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    event_id                 uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    webhook_id               character varying(100) NOT NULL UNIQUE,
+    event_type               character varying(40) NOT NULL,
+    provider_message_id      character varying(100) NOT NULL,
+    mail_id                  uuid,
+    mail_kind                character varying(50),
+    recipient                text,
+    subject                  text,
+    detail                   text,
+    occurred_at              timestamp with time zone NOT NULL,
+    insert_date              timestamp with time zone NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE public.com_t_mail_event IS 'メールの到達状況の出来事（Resend の Webhook。招待・パスワード再設定を含むすべてのメール）';
@@ -44,11 +44,8 @@ COMMENT ON COLUMN public.com_t_mail_event.occurred_at IS '出来事の日時（R
 COMMENT ON COLUMN public.com_t_mail_event.insert_date IS '登録日時';
 
 CREATE INDEX idx_mail_event_message ON public.com_t_mail_event (provider_message_id);
-CREATE INDEX idx_mail_event_recipient ON public.com_t_mail_event (lower(recipient), occurred_at DESC);
 CREATE INDEX idx_mail_event_occurred ON public.com_t_mail_event (occurred_at DESC);
+CREATE INDEX idx_mail_event_recipient ON public.com_t_mail_event (lower(recipient), occurred_at DESC);
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
--- ポリシーを作らない（service_role の Webhook の受け口と SECURITY DEFINER 関数だけが読み書きする）
----------------------------------------------
 ALTER TABLE public.com_t_mail_event ENABLE ROW LEVEL SECURITY;
+-- @end-schema

@@ -4,7 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { LiveSessionContractSummary } from '@gabby/types/matching';
 
-function formatContractDate(iso: string, timezone: string): string {
+/** 契約の日付（例: 2026/10/1） */
+export function formatContractDate(iso: string, timezone: string): string {
   return new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: timezone }).format(new Date(iso));
 }
 

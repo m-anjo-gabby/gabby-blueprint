@@ -27,8 +27,10 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 検索ボックス | 常時表示 | 教材名・管理ラベルで検索し、Enterまたは「検索」ボタンで一覧を絞り込む（1ページ目に戻る） |
-| 種別フィルターセレクト | 常時表示（「すべての種別」がデフォルト） | 選択した種別で一覧をサーバーサイド絞り込みする（1ページ目に戻る） |
+| 検索ボックス | 常時表示 | 教材名・管理ラベルの部分一致で検索。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る）。入力した文字はそのまま文字として検索する（`%`・`,`等も特別な意味を持たない） |
+| 種別フィルターセレクト | 常時表示（「すべての種別」がデフォルト） | 選択した種別で一覧をサーバーサイド絞り込みする（URLの`type`。1ページ目に戻る） |
+| 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
+| 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | 教材名列 | 教材名称（日本語）、教材名称（英語、任意）、管理ラベルを併記 | エディタがある種別（単語帳/スプリント/ダイアログ）は教材名称がリンクになり、エディタボタンと同じく教材詳細画面へ遷移する（ビデオは表示のみ） |
 | 種別バッジ | 「単語帳」「ビデオ」「スプリント」「ダイアログ」のいずれか | 表示のみ |
 | 公開範囲表示（共通・非公開） | 公開範囲が「共通」または「非公開」の場合 | クリック不可の表示のみ |
@@ -66,12 +68,13 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/contents/page.tsx`
-- `apps/admin/app/(app)/contents/_components/ContentDataTable.tsx`
+- `apps/admin/app/(app)/contents/_components/ContentDataTable.tsx`, `_components/columns.tsx`（列の定義）, `_lib/listQuery.ts`（絞り込みのURLのクエリ名・戻る時の条件の記憶）
+- `apps/admin/components/list/`（一覧の共通部品: `useListQuery`・`ListToolbar`・`DataTable`・`ListSelectFilter`・`ClientFilter`）, `apps/admin/lib/list.ts`（URLの条件の読み取り・ページ範囲）
 - `apps/admin/app/(app)/contents/_components/ContentFormDialog.tsx`
 - `apps/admin/app/(app)/contents/_components/ContentTagDialog.tsx`
 - `apps/admin/app/(app)/contents/_components/ContentAccessDialog.tsx`
 - `apps/admin/actions/adminContentAction.ts`
-  （`getContents`（`contentType`引数で種別フィルターに対応）, `upsertContent`, `getTagAssignmentData`,
+  （`getContents`（`filters.type`で種別フィルターに対応。未知の値は「すべて」として扱う）, `upsertContent`, `getTagAssignmentData`,
   `assignTag`, `removeTag`, `getContentAccessData`, `assignAccess`, `removeAccess`。いずれもRPCでは
   なく`com_m_content`等への直接CRUD。`deleteContent`関数も定義されているが、この一覧画面のUIからは
   呼び出されていない）

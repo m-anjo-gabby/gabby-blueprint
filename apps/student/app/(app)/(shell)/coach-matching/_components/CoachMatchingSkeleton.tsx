@@ -12,6 +12,7 @@ const COACH_SKELETON_COUNT = 4;
 const noop = () => {};
 const NO_DAYS = new Set<DayOfWeek>();
 const NO_TIME_BUCKETS = new Set<string>();
+const NO_SPECIALTIES = new Set<string>();
 
 /**
  * 画面の見出し（CoachMatchingView・page.tsx・骨組みで共有する）。
@@ -87,6 +88,9 @@ export function CoachMatchingSkeleton() {
               onToggleDay={noop}
               selectedTimeBuckets={NO_TIME_BUCKETS}
               onToggleTimeBucket={noop}
+              specialties={null}
+              selectedSpecialties={NO_SPECIALTIES}
+              onToggleSpecialty={noop}
               nameQuery=""
               onChangeNameQuery={noop}
               onClear={noop}

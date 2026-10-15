@@ -25,7 +25,7 @@
 
 1. **Setup画面** — コンテンツ・種別・レベル・制限時間を選び、開始する
 2. **Player画面** — 制限時間内に問題へ回答し、コーチが1〜5点で評価する
-3. **右側パネル** — Setup中は「Student Snapshot」（生徒のSprint Progress要約と直近3件の実施
+3. **右側パネル** — Setup中は「Student Snapshot」（生徒のSprint Progress要約〈Builders/Masteryの0は「Not reached」〉と直近3件の実施
    履歴）、Player中は「Notes」（実施中に自由記述できるメモ欄。結果画面のSession Notesとして
    保存される）
 

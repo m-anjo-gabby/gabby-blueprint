@@ -5,7 +5,7 @@ import { CalendarDays, ChevronRight, ExternalLink, UsersRound } from 'lucide-rea
 import { useNow } from '@gabby/lib/hooks/useNow';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
-import { getCalendarEventPhase, type CalendarEventItem } from '@gabby/types/calendarEvent';
+import { getCalendarEventPhase, withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddToCalendarMenu } from '@/components/calendarEvent/AddToCalendarMenu';
@@ -60,12 +60,14 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
       <p className="mt-2 flex flex-wrap items-baseline gap-x-2 font-bold text-ink tabular-nums">
         <span className="text-lg">{slot.date}</span>
         <span className="text-base">{slot.time}</span>
+        {isJoined && (
+          <span className="self-center">
+            <JoinedBadge />
+          </span>
+        )}
       </p>
       <EventSeriesLabel event={event} className="mt-1" />
-      <div className="mt-0.5 flex items-start gap-2">
-        <p className="min-w-0 flex-1 text-sm font-bold text-ink">{event.title}</p>
-        {isJoined && <JoinedBadge />}
-      </div>
+      <p className="mt-0.5 text-sm font-bold text-ink">{event.title}</p>
       <EventCoachLine event={event} className="mt-1" />
       {event.description && <p className="mt-1 line-clamp-2 text-xs text-ink-soft whitespace-pre-line">{event.description}</p>}
 
@@ -124,13 +126,15 @@ function OtherEvents({ events, timezone, onOpenDetail }: { events: CalendarEvent
                 className="group flex w-full items-center gap-3 py-2.5 text-left"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-ink-muted tabular-nums">
-                    {slot.date} {slot.time}
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted tabular-nums">
+                    <span>
+                      {slot.date} {slot.time}
+                    </span>
+                    {event.rsvp_enabled && event.is_joined && <JoinedBadge />}
                   </p>
                   <p className="truncate text-sm font-semibold text-ink">{event.title}</p>
                   <EventSeriesLabel event={event} />
                 </div>
-                {event.rsvp_enabled && event.is_joined && <JoinedBadge />}
                 <ChevronRight size={16} className="shrink-0 text-ink-subtle transition-transform group-hover:translate-x-0.5" />
               </button>
             </li>
@@ -172,7 +176,7 @@ export function HomeEventCard({ events: serverEvents }: { events: CalendarEventI
   const detailEvent = events.find((e) => e.calendar_event_id === detailId) ?? null;
 
   const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) => {
-    setEvents((prev) => prev.map((e) => (e.calendar_event_id === calendarEventId ? { ...e, is_joined: isJoined } : e)));
+    setEvents((prev) => prev.map((e) => (e.calendar_event_id === calendarEventId ? withParticipation(e, isJoined) : e)));
   };
 
   return (

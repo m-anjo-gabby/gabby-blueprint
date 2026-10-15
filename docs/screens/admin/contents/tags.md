@@ -15,7 +15,7 @@
 ## 画面の構成
 
 1. **ヘッダー** — 「教材管理に戻る」リンク、画面タイトル、説明文、「新規登録」ボタン
-2. **一覧テーブル** — 登録済みタグの一覧（検索・ページング付き）
+2. **一覧テーブル** — 登録済みタグの一覧（検索・種別の絞り込み・ページング付き）
 3. **新規登録／編集ダイアログ**（一覧から開く）
 4. **削除確認ダイアログ**（一覧から開く）
 
@@ -23,7 +23,10 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 検索ボックス | 常時表示 | タグ名・タグIDで一覧を絞り込む |
+| 検索ボックス | 常時表示 | タグ名・タグIDの部分一致で絞り込む（全件を取得済みのため、ブラウザ側で絞る。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る。サーバーへの再取得はしない）） |
+| 種別フィルター | 「すべての種別」＋タグ種別 | 選択した種別で絞り込む（URLの`type`。1ページ目に戻る） |
+| 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
+| 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | SEQ列 | 表示順の数値 | 表示のみ |
 | タイプバッジ | 「業界」「シチュエーション」「スキル」「レベル」「その他」のいずれか | 表示のみ |
 | タグID列 | タグのUUID | 表示のみ |
@@ -48,7 +51,8 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/contents/tags/page.tsx`
-- `apps/admin/app/(app)/contents/tags/_components/TagDataTable.tsx`
+- `apps/admin/app/(app)/contents/tags/_components/TagDataTable.tsx`, `_components/columns.tsx`, `_lib/list.ts`（絞り込みのURLのクエリ名）
+- `apps/admin/components/list/`（一覧の共通部品）, `apps/admin/lib/list.ts`。E2E: `testing/e2e/tests/admin/list-filters.spec.ts`（仕様: `testing/e2e/specs/admin/list-filters.md`）
 - `apps/admin/app/(app)/contents/tags/_components/TagFormDialog.tsx`
 - `apps/admin/actions/adminTagAction.ts`（`getTags`, `upsertTag`, `deleteTag`。RPCではなく
   `com_m_content_tag`等への直接CRUD）

@@ -24,6 +24,8 @@ export interface MailRecipient {
   userType: string;
   userName: string | null;
   timezone: string;
+  /** タイムゾーンの短い名前（com_m_timezone の short_name_*。文面の言語のもの。メールの日時に添える） */
+  timezoneName: string | null;
   /** ライセンスの有無（auth.users の app_metadata.is_licensed。生徒だけが持つ） */
   isLicensed: boolean;
   /** 文面の言語（生徒: 日本語 / コーチ: 英語。管理者は送信処理が送らない。policy.ts の resolveRecipientLanguage） */

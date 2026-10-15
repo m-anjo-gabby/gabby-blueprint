@@ -80,15 +80,16 @@
 | [clients.md](admin/clients.md) | `/clients` | 顧客（テナント）マスタ管理（要確認事項あり） | ✅ |
 | [contracts/list.md](admin/contracts/list.md) | `/contracts` | 契約管理（プラン紐付け・ライセンス割当） | ✅ |
 | [contracts/plans.md](admin/contracts/plans.md) | `/contracts/plans` | 契約プランマスタ管理 | ✅ |
-| [live-sessions.md](admin/live-sessions.md) | `/live-sessions` | セッションの代理キャンセル/予約/マッチング/コーチ交代 | ✅ |
+| [live-sessions.md](admin/live-sessions.md) | `/live-sessions`, `/live-sessions/records` | セッションの代理キャンセル/予約/マッチング/コーチ交代、実施結果の記録・修正と実施記録の一覧 | ✅ |
 | [monthly-reports.md](admin/monthly-reports.md) | `/monthly-reports` | コーチ稼働実績の承認・承認取消 | ✅ |
 | [notification.md](admin/notification.md) | `/notification` | 通知一覧 | ✅ |
 | [training-reports.md](admin/training-reports.md) | `/training-reports` | トレーニングレポート（満了月ごとのライセンス一覧・生徒ごとのPDF・契約の全員分のZIP。ドラフト版） | ✅ |
-| [payment-settings.md](admin/payment-settings.md) | `/payment-settings` | セッション単価設定（会社情報は `/company-profiles` へ移設・未文書化） | ✅ |
+| [payment-settings.md](admin/payment-settings.md) | `/payment-settings` | セッション単価設定 | ✅ |
+| [company-profiles.md](admin/company-profiles.md) | `/company-profiles` | 書面（PDF）の発行元の会社情報（日本法人・バンクーバー法人の会社名・住所・税務登録番号・ロゴ） | ✅ |
 | [profile.md](admin/profile.md) | `/profile` | アイコン・タイムゾーン設定 | ✅ |
 | [profile-password.md](admin/profile-password.md) | `/profile/password` | パスワード変更 | ✅ |
 | [timezones.md](admin/timezones.md) | `/timezones` | タイムゾーンマスタ管理 | ✅ |
-| [users.md](admin/users.md) | `/users` | ユーザーCRUD・ライセンス・代理ログイン | ✅ |
+| [users.md](admin/users.md) | `/users`, `/users/[id]`（タブ: sprint・specialty・matching・ratings・legal） | ユーザー一覧・新規登録・ユーザー詳細（基本情報・ライセンス・スプリント・正式氏名・コーチの専門・マッチング・評価）・代理ログイン | ✅ |
 | [calendar-events/list.md](admin/calendar-events/list.md) | `/calendar-events` | 共有カレンダーイベントの登録・編集・削除 | ✅ |
 | [calendar-events/participants.md](admin/calendar-events/participants.md) | `/calendar-events/[id]/participants` | イベント参加者(RSVP)確認・アナウンス配信 | ✅ |
 | [calendar-events/series.md](admin/calendar-events/series.md) | `/calendar-events/series`、`/calendar-events/series/new`、`/calendar-events/series/[seriesId]` | グループセッションのシリーズ（企画×月）の作成（シリーズと回をまとめて登録）・管理・回をまとめて追加 | ✅ |

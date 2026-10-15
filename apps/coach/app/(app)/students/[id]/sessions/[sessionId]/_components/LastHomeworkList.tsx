@@ -3,8 +3,9 @@
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import { HomeworkViewedStatus } from '@/components/session/HomeworkViewedStatus';
 
-/** Session Hub「Last Homework」の一覧（投稿日時はコーチのタイムゾーンで表示する） */
+/** Session Hub「Last Homework」の一覧（投稿日時はコーチのタイムゾーンで表示する。生徒が見たかも出す） */
 export function LastHomeworkList({ entries }: { entries: SessionHomeworkEntry[] }) {
   const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
 
@@ -20,6 +21,9 @@ export function LastHomeworkList({ entries }: { entries: SessionHomeworkEntry[] 
           {entry.homework_text && (
             <p className="text-xs text-slate-700 mt-0.5 line-clamp-2 whitespace-pre-wrap wrap-break-word">{entry.homework_text}</p>
           )}
+          <div className="mt-1">
+            <HomeworkViewedStatus homework={entry} timezone={timezone} />
+          </div>
         </li>
       ))}
     </ul>

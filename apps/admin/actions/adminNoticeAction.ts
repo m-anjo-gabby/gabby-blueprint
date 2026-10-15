@@ -5,17 +5,22 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { NoticeItem, NoticeAttachment, NoticeType, NoticeTargetType } from '@gabby/types/notice';
+import {
+  NOTICE_CTA_LABEL_MAX,
+  NOTICE_DISPLAY_MODES,
+  NOTICE_TYPES,
+  NoticeAttachment,
+  NoticeType,
+  NoticeTargetType,
+  type AdminNoticeListItem,
+  type NoticeDisplayMode,
+} from '@gabby/types/notice';
+import { isValidNoticeCtaUrl } from '@gabby/lib/notice/links';
+import { containsPattern } from '@gabby/lib/supabase/ilike';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { USER_TYPES } from '@gabby/types/user';
 
 const logger = createLogger('admin');
-
-export interface AdminNoticeFilterParams {
-  page?: number;
-  pageSize?: number;
-  searchQuery?: string;
-  noticeType?: string;
-}
 
 export interface NoticeFormData {
   notice_id?: string;
@@ -23,13 +28,58 @@ export interface NoticeFormData {
   client_id?: string | null;
   notice_type: NoticeType;
   is_important: boolean;
-  show_dialog: boolean;
+  display_mode: NoticeDisplayMode;
   title: string;
   content: string;
   published_at: string; // JST文字列 (例: "2026-07-22T10:00")
   expired_at?: string | null; // JST文字列
   is_published: boolean;
   attachments?: NoticeAttachment[];
+  /** 見出し画像のStorageパス（生徒向けのみ） */
+  image_path?: string | null;
+  /** 行動ボタン（生徒向けのみ。文言とリンク先は両方そろえる） */
+  cta_label?: string | null;
+  cta_url?: string | null;
+}
+
+type DisplayFields = Pick<NoticeFormData, 'display_mode'> & {
+  image_path: string | null;
+  cta_label: string | null;
+  cta_url: string | null;
+};
+
+/**
+ * 表示方法・見出し画像・行動ボタンを検証して保存用の値にする。
+ * コーチ向けはコーチアプリが未対応のため、ホームのカード・見出し画像・行動ボタンを使わない（DB の chk_notice_coach_display と同じ）。
+ */
+function toDisplayFields(formData: NoticeFormData): { ok: true; fields: DisplayFields } | { ok: false; message: string } {
+  if (!NOTICE_DISPLAY_MODES.includes(formData.display_mode)) {
+    return { ok: false, message: '表示方法が正しくありません' };
+  }
+  const isCoach = formData.target_type === 'COACH';
+  if (isCoach && formData.display_mode === 'HOME') {
+    return { ok: false, message: 'コーチ向けのお知らせでは「ホームのカード」を選べません' };
+  }
+  const ctaLabel = isCoach ? '' : (formData.cta_label ?? '').trim();
+  const ctaUrl = isCoach ? '' : (formData.cta_url ?? '').trim();
+  if (Boolean(ctaLabel) !== Boolean(ctaUrl)) {
+    return { ok: false, message: '行動ボタンは文言とリンク先を両方入力してください' };
+  }
+  if (ctaLabel.length > NOTICE_CTA_LABEL_MAX) {
+    return { ok: false, message: `行動ボタンの文言は${NOTICE_CTA_LABEL_MAX}文字以内で入力してください` };
+  }
+  if (ctaUrl && !isValidNoticeCtaUrl(ctaUrl)) {
+    return { ok: false, message: '行動ボタンのリンク先は「/」で始まるアプリ内の画面か「https://」で始まるURLを入力してください' };
+  }
+  return {
+    ok: true,
+    fields: {
+      display_mode: formData.display_mode,
+      image_path: isCoach ? null : formData.image_path || null,
+      cta_label: ctaLabel || null,
+      cta_url: ctaUrl || null,
+    },
+  };
 }
 
 /**
@@ -66,19 +116,17 @@ export async function utcToJstInputStr(utcStr: string | null | undefined): Promi
 }
 
 /**
- * お知らせ一覧取得（ページネーション・検索・顧客名結合付き）
+ * お知らせ一覧取得（ページネーション・タイトルの部分一致検索・種別での絞り込み・顧客名結合付き）
  */
-export async function getNotices(params: AdminNoticeFilterParams = {}) {
+export async function getNotices(params: ListParams<'type'>): Promise<ListResult<AdminNoticeListItem>> {
   const ctx = await getLogContext();
-  const page = params.page || 1;
-  const pageSize = params.pageSize || 10;
-  const searchQuery = params.searchQuery || '';
-  const noticeType = params.noticeType || '';
+  const { q, filters } = params;
+  // 種別は既知の値だけを条件にする（旧URLの type=ALL・不正な値は「すべて」として扱う）
+  const noticeType = Object.hasOwn(NOTICE_TYPES, filters.type) ? filters.type : '';
 
   try {
     const supabase = createAdminClient();
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+    const [from, to] = toRange(params);
 
     let query = supabase
       .from('com_m_notice')
@@ -90,11 +138,11 @@ export async function getNotices(params: AdminNoticeFilterParams = {}) {
       `, { count: 'exact' })
       .eq('delete_flg', '0');
 
-    if (searchQuery) {
-      query = query.ilike('title', `%${searchQuery}%`);
+    if (q) {
+      query = query.ilike('title', containsPattern(q));
     }
 
-    if (noticeType && noticeType !== 'ALL') {
+    if (noticeType) {
       query = query.eq('notice_type', noticeType);
     }
 
@@ -104,21 +152,21 @@ export async function getNotices(params: AdminNoticeFilterParams = {}) {
       .range(from, to);
 
     if (error) {
-      logger.error('notice:get_notices_failed', error.message, { ...ctx, err: error, payload: params });
+      logger.error('notice:get_notices_failed', error.message, { ...ctx, err: error, payload: { from, to, noticeType } });
       throw error;
     }
 
-    const formattedNotices = (data || []).map((item: any) => ({
+    const rows = (data || []).map(({ com_m_client, ...item }) => ({
       ...item,
-      client_name: item.com_m_client?.client_name || null,
-    }));
+      client_name: (com_m_client as { client_name: string } | null)?.client_name ?? null,
+    })) as AdminNoticeListItem[];
 
     return {
-      notices: formattedNotices,
+      rows,
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('notice:get_notices_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: params });
+    logger.error('notice:get_notices_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeType } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -157,13 +205,6 @@ export async function getNoticeById(noticeId: string) {
   }
 }
 
-export interface NoticeReadStatusParams {
-  page?: number;
-  pageSize?: number;
-  clientId?: string;
-  userType?: string; // '1': 生徒, '2': コーチ
-}
-
 export interface NoticeReadStatusUser {
   id: string;
   user_id: number;
@@ -173,43 +214,43 @@ export interface NoticeReadStatusUser {
   client_name: string | null;
   is_read: boolean;
   read_at: string | null;
+  /** 行動ボタンを最初に押した日時（押していなければ null） */
+  cta_clicked_at: string | null;
 }
 
-export interface NoticeReadStatusResult {
-  notice: { notice_id: string; title: string; target_type: NoticeTargetType; client_id: string | null } | null;
-  users: NoticeReadStatusUser[];
-  totalCount: number;
+export interface NoticeReadStatusResult extends ListResult<NoticeReadStatusUser> {
+  notice: { notice_id: string; title: string; target_type: NoticeTargetType; client_id: string | null; has_cta: boolean } | null;
+  /** 絞り込み後の対象者のうち既読・未読の人数 */
   readCount: number;
   unreadCount: number;
-  pageCount: number;
+  /** 絞り込み後の対象者のうち行動ボタンを押した人数 */
+  ctaClickCount: number;
 }
 
 /**
  * お知らせ単位の既読/未読ユーザー一覧取得
- * (配信対象ユーザー全体をお知らせのtarget_typeに基づいて特定し、既読トランザクションと突合する)
+ * (配信対象ユーザー全体をお知らせのtarget_typeに基づいて特定し、既読トランザクションと突合する。
+ *  既読を先頭に並べるため、対象者を全件突合してからページ分けする。検索は氏名の部分一致)
  */
 export async function getNoticeReadStatus(
   noticeId: string,
-  params: NoticeReadStatusParams = {}
+  params: ListParams<'clientId' | 'userType'>
 ): Promise<NoticeReadStatusResult> {
   const ctx = await getLogContext();
-  const page = params.page || 1;
-  const pageSize = params.pageSize || 10;
-  const clientId = params.clientId || '';
-  const userType = params.userType || '';
+  const { q, filters: { clientId, userType } } = params;
 
   try {
     const supabase = createAdminClient();
 
     const { data: notice, error: noticeError } = await supabase
       .from('com_m_notice')
-      .select('notice_id, title, target_type, client_id')
+      .select('notice_id, title, target_type, client_id, cta_url')
       .eq('notice_id', noticeId)
       .single();
 
     if (noticeError || !notice) {
       logger.error('notice:read_status_notice_not_found', noticeError?.message || 'notice not found', { ...ctx, err: noticeError, payload: { noticeId } });
-      return { notice: null, users: [], totalCount: 0, readCount: 0, unreadCount: 0, pageCount: 0 };
+      return { notice: null, rows: [], totalCount: 0, readCount: 0, unreadCount: 0, ctaClickCount: 0 };
     }
 
     // 配信対象ユーザー母集団を、お知らせのtarget_typeに基づいて絞り込む
@@ -240,18 +281,21 @@ export async function getNoticeReadStatus(
     if (userType) {
       query = query.eq('user_type', userType);
     }
+    if (q) {
+      query = query.ilike('user_name', containsPattern(q));
+    }
 
     const { data: targetUsers, error: usersError } = await query.order('user_id', { ascending: true });
 
     if (usersError) {
-      logger.error('notice:read_status_users_failed', usersError.message, { ...ctx, err: usersError, payload: { noticeId, params } });
+      logger.error('notice:read_status_users_failed', usersError.message, { ...ctx, err: usersError, payload: { noticeId, clientId, userType } });
       throw usersError;
     }
 
     // このお知らせに対する既読トランザクションを取得し、user_id -> read_at のマップを作成
     const { data: reads, error: readsError } = await supabase
       .from('com_t_notice_read')
-      .select('user_id, read_at')
+      .select('user_id, read_at, cta_clicked_at')
       .eq('notice_id', noticeId);
 
     if (readsError) {
@@ -259,18 +303,20 @@ export async function getNoticeReadStatus(
       throw readsError;
     }
 
-    const readMap = new Map<string, string>();
-    (reads || []).forEach((r: any) => readMap.set(r.user_id, r.read_at));
+    const readMap = new Map<string, { read_at: string; cta_clicked_at: string | null }>();
+    (reads || []).forEach((r) => readMap.set(r.user_id, { read_at: r.read_at, cta_clicked_at: r.cta_clicked_at }));
 
-    const merged: NoticeReadStatusUser[] = (targetUsers || []).map((u: any) => ({
+    const merged: NoticeReadStatusUser[] = (targetUsers || []).map((u) => ({
       id: u.id,
       user_id: u.user_id,
       user_name: u.user_name,
       user_type: u.user_type,
       client_id: u.client_id,
-      client_name: u.com_m_client?.client_name || null,
+      // 多対一の埋め込みは型推論上は配列になるため、単一行として取り出す
+      client_name: [u.com_m_client].flat()[0]?.client_name || null,
       is_read: readMap.has(u.id),
-      read_at: readMap.get(u.id) || null,
+      read_at: readMap.get(u.id)?.read_at ?? null,
+      cta_clicked_at: readMap.get(u.id)?.cta_clicked_at ?? null,
     }));
 
     // 既読（既読日時の新しい順）を先頭に、未読（user_id昇順）を後続に並べる
@@ -285,8 +331,8 @@ export async function getNoticeReadStatus(
     const totalCount = merged.length;
     const readCount = merged.filter((u) => u.is_read).length;
     const unreadCount = totalCount - readCount;
-    const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
-    const from = (page - 1) * pageSize;
+    const ctaClickCount = merged.filter((u) => u.cta_clicked_at).length;
+    const [from, to] = toRange(params);
 
     return {
       notice: {
@@ -294,15 +340,16 @@ export async function getNoticeReadStatus(
         title: notice.title,
         target_type: notice.target_type,
         client_id: notice.client_id,
+        has_cta: notice.cta_url !== null,
       },
-      users: merged.slice(from, from + pageSize),
+      rows: merged.slice(from, to + 1),
       totalCount,
       readCount,
       unreadCount,
-      pageCount,
+      ctaClickCount,
     };
   } catch (error) {
-    logger.error('notice:read_status_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId, params } });
+    logger.error('notice:read_status_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -322,13 +369,18 @@ export async function createNotice(formData: NoticeFormData) {
 
     const expiredUtc = formData.expired_at ? jstToUtcIso(formData.expired_at) : null;
 
+    const display = toDisplayFields(formData);
+    if (!display.ok) {
+      return { success: false, message: display.message };
+    }
+
     const insertPayload = {
       ...(formData.notice_id ? { notice_id: formData.notice_id } : {}),
       target_type: formData.target_type,
       client_id: formData.target_type === 'CLIENT' ? formData.client_id : null,
       notice_type: formData.notice_type,
       is_important: formData.is_important,
-      show_dialog: formData.show_dialog,
+      ...display.fields,
       title: formData.title,
       content: formData.content,
       attachments: formData.attachments || [],
@@ -377,12 +429,17 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData) {
 
     const expiredUtc = formData.expired_at ? jstToUtcIso(formData.expired_at) : null;
 
+    const display = toDisplayFields(formData);
+    if (!display.ok) {
+      return { success: false, message: display.message };
+    }
+
     const updatePayload = {
       target_type: formData.target_type,
       client_id: formData.target_type === 'CLIENT' ? formData.client_id : null,
       notice_type: formData.notice_type,
       is_important: formData.is_important,
-      show_dialog: formData.show_dialog,
+      ...display.fields,
       title: formData.title,
       content: formData.content,
       attachments: formData.attachments || [],
@@ -446,6 +503,51 @@ export async function deleteNotice(noticeId: string) {
     return { success: true };
   } catch (error) {
     logger.error('notice:delete_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId } });
+    return { success: false, message: '予期せぬエラーが発生しました' };
+  }
+}
+
+/** 見出し画像として受け付ける形式と上限（2MB） */
+const NOTICE_IMAGE_TYPES: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+const NOTICE_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+
+/**
+ * 見出し画像のアップロード（FormData）
+ * Storageバケット "notices" に notices/{notice_id}/image/{uuid}.{拡張子} で保存し、パスを返す
+ */
+export async function uploadNoticeImage(
+  noticeId: string,
+  formData: FormData
+): Promise<{ success: boolean; path?: string; message?: string }> {
+  const ctx = await getLogContext();
+  try {
+    const file = formData.get('file');
+    if (!(file instanceof File)) {
+      return { success: false, message: '画像が選択されていません' };
+    }
+    const ext = NOTICE_IMAGE_TYPES[file.type];
+    if (!ext) {
+      return { success: false, message: '画像はPNG・JPEG・WebPのいずれかを選んでください' };
+    }
+    if (file.size > NOTICE_IMAGE_MAX_BYTES) {
+      return { success: false, message: '画像は2MB以下のファイルを選んでください' };
+    }
+
+    const supabase = createAdminClient();
+    const storagePath = `notices/${noticeId}/image/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from('notices')
+      .upload(storagePath, Buffer.from(await file.arrayBuffer()), { contentType: file.type });
+
+    if (error) {
+      logger.error('notice:upload_image_failed', error.message, { ...ctx, err: error, payload: { noticeId } });
+      return { success: false, message: `アップロードに失敗しました: ${error.message}` };
+    }
+
+    logger.info('notice:upload_image_success', `Notice image uploaded: ${storagePath}`, { ...ctx, payload: { noticeId, storagePath } });
+    return { success: true, path: storagePath };
+  } catch (error) {
+    logger.error('notice:upload_image_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

@@ -5,7 +5,7 @@
 - 対象ロール: 生徒（モニターロールを持つ法人の担当者）、アドミン
 - なぜ重要か: 法人の顧客がアプリのみ契約の価値を確かめる手段は、受講生の学習状況を見るモニターと、契約期間の終わりに渡すトレーニングレポートの2つだけ。数え方がホーム・トレーニング記録と食い違うと、受講生本人と担当者・運営の間で実績の説明が合わなくなる。
 - 前後のジャーニー: [新規顧客の受注](./new-customer-onboarding.md)（担当者のアカウント作成）、[自主トレーニングの継続](./self-training-week.md)（実績が作られる側）。トレーニングレポートの後は [既存顧客の契約継続](./license-renewal.md)。
-- E2E: [tests/monitoring/monitor-period.spec.ts](../tests/monitoring/monitor-period.spec.ts)（ステップ2〜5の期間の区切りと実績の日付）。レポートの集計値はデータ主体テスト `testing/features/branches/feature-20261001-dev/training-report-sessions-verify.ts`
+- E2E: [tests/journeys/customer-progress-review.spec.ts](../tests/journeys/customer-progress-review.spec.ts)（ステップ1〜3・6〜8。アドミンの画面でのモニターロールの付与と再ログインでの反映、受講生サマリーの対象者と「モニターを含める」、CSVの中身、レポートのPDF・ZIPの作成）、[tests/monitoring/monitor-period.spec.ts](../tests/monitoring/monitor-period.spec.ts)（ステップ2〜5の期間の区切りと実績の日付）。PDFの集計値はデータ主体テスト `testing/features/branches/feature-20261001-dev/training-report-sessions-verify.ts`（E2Eではファイルが作られることまで）
 
 ## 集計の基準（タイムゾーン）
 

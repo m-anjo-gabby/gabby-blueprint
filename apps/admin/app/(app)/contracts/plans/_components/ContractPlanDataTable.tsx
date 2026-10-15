@@ -1,266 +1,69 @@
 'use client';
 
-import * as React from 'react';
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Search, X, Trash2 } from 'lucide-react';
+import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { ContractPlan } from '@gabby/types/contract';
-import { ContractPlanFormDialog } from './ContractPlanFormDialog';
-import { deleteContractPlan } from '@/actions/adminContractAction';
+import type { ContractPlan } from '@gabby/types/contract';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import { deleteContractPlan } from '@/actions/adminContractAction';
+import { DataTable } from '@/components/list/DataTable';
+import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
+import { ListToolbar } from '@/components/list/ListToolbar';
+import { useListQuery } from '@/components/list/useListQuery';
+import { paginateLocally } from '@/lib/list';
+import { createColumns } from './columns';
+
+/** 検索の対象（プラン名（日英）・プランコード） */
+const toSearchText = (plan: ContractPlan) => `${plan.plan_name} ${plan.plan_name_en ?? ''} ${plan.plan_code}`;
 
 interface ContractPlanDataTableProps {
+  /** 全件（プランはマスタで件数が少ないため、検索・ページ分けはブラウザ側で行う） */
   data: ContractPlan[];
 }
 
 export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
   const t = useTranslations('contracts.plans.table');
   const { showToast } = useToast();
-  const [globalFilter, setGlobalFilter] = React.useState('');
+  const query = useListQuery([], { shallow: true });
+  const list = paginateLocally(data, query, toSearchText);
+  const [deleting, setDeleting] = useState<ContractPlan | null>(null);
+  const [isDeleting, startDelete] = useTransition();
 
-  const handleDelete = async (planId: string) => {
-    const result = await deleteContractPlan(planId);
-    if (result.success) {
-      showToast(t('toastDeleted'), 'success');
-    } else {
-      showToast(result.message || t('toastDeleteFailed'), 'error');
-    }
+  const handleDelete = (plan: ContractPlan) => {
+    startDelete(async () => {
+      const result = await deleteContractPlan(plan.plan_id);
+      if (result.success) {
+        showToast(t('toastDeleted'), 'success');
+      } else {
+        showToast(result.message || t('toastDeleteFailed'), 'error');
+      }
+    });
   };
 
-  const columns = React.useMemo<ColumnDef<ContractPlan>[]>(() => [
-    {
-      accessorKey: 'sort_no',
-      header: t('seqHeader'),
-      cell: ({ row }) => <span className="font-mono text-slate-500">{row.original.sort_no}</span>,
-    },
-    {
-      accessorKey: 'plan_name',
-      header: t('planNameHeader'),
-      cell: ({ row }) => (
-        <div className="flex flex-col">
-          <span className="font-bold text-slate-700">{row.original.plan_name}</span>
-          <span className="text-[11px] text-slate-400">{row.original.plan_name_en}</span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'contract_type',
-      header: t('structureHeader'),
-      cell: ({ row }) => {
-        const plan = row.original;
-        return (
-          <div className="flex flex-wrap gap-1.5">
-            {plan.contract_type === 1 ? (
-              <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200 text-[10px] font-bold">
-                {t('noCoachBadge')}
-              </Badge>
-            ) : (
-              <>
-                <Badge className="bg-brand-100 text-brand-strong border-brand-200 hover:bg-brand-100 text-[10px] font-bold">
-                  {t('liveBadge', { weekly: plan.weekly_frequency ?? 0, total: plan.total_sessions ?? 0 })}
-                </Badge>
-                {plan.has_dialogue_practice && (
-                  <Badge className="bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100 text-[10px] font-bold">
-                    {t('dialoguePracticeBadge')}
-                  </Badge>
-                )}
-              </>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'period_months',
-      header: t('periodHeader'),
-      cell: ({ row }) => <span className="text-slate-600">{t('periodUnit', { count: row.original.period_months })}</span>,
-    },
-    {
-      accessorKey: 'plan_code',
-      header: t('codeHeader'),
-      cell: ({ row }) => <span className="text-[10px] text-slate-400 font-mono">{row.original.plan_code}</span>,
-    },
-    {
-      id: 'actions',
-      header: () => <div className="text-right">{t('actionsHeader')}</div>,
-      cell: ({ row }) => (
-        <div className="flex justify-end gap-2">
-          <ContractPlanFormDialog mode="edit" initialData={row.original} />
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50">
-                <Trash2 size={14} />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="font-black">{t('deleteDialogTitle')}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t.rich('deleteDialogBody', {
-                    name: row.original.plan_name,
-                    bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
-                  })}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-xl font-bold">{t('cancel')}</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => handleDelete(row.original.plan_id)}
-                  className="bg-rose-600 hover:bg-rose-700 rounded-xl font-bold"
-                >
-                  {t('deleteConfirm')}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      ),
-    },
-  ], [t]);
-
-  const table = useReactTable({
-    data,
-    columns,
-    state: {
-      globalFilter,
-    },
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
-  });
-
   return (
-    <div className="space-y-0">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-slate-50/80 rounded-t-lg border-x border-t border-slate-200">
-        <div className="flex items-center gap-2 w-full max-w-md">
-          <div className="relative flex-1 group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
-            <Input
-              placeholder={t('searchPlaceholder')}
-              value={globalFilter ?? ''}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              className="pl-10 pr-10 h-9 bg-white border-slate-200 focus-visible:ring-1 focus-visible:ring-slate-400 shadow-sm"
-            />
-            {globalFilter && (
-              <button
-                onClick={() => setGlobalFilter('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                type="button"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </div>
+    <div>
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={list.totalCount}
+        pageCount={list.pageCount}
+        page={list.page}
+      />
+      <DataTable
+        columns={createColumns(t, { onDelete: setDeleting })}
+        data={list.rows}
+        getRowId={(row) => row.plan_id}
+        emptyMessage={t('noData')}
+        pending={isDeleting}
+      />
 
-        <div className="flex items-center gap-4">
-          <div className="hidden md:block text-[13px] text-slate-500 whitespace-nowrap font-medium">
-            {t.rich('totalCount', {
-              count: table.getFilteredRowModel().rows.length,
-              styled: (chunks) => <span className="text-slate-900">{chunks}</span>,
-            })}
-          </div>
-
-          <div className="flex items-center bg-white border border-slate-200 rounded-md p-0.5 shadow-sm">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="h-8 w-8 p-0 hover:bg-slate-100 disabled:opacity-30"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <div className="flex items-center px-3 text-[13px] font-medium border-x border-slate-100 min-w-[4rem] justify-center text-slate-600">
-              <span>{table.getState().pagination.pageIndex + 1}</span>
-              <span className="mx-1 text-slate-300">/</span>
-              <span>{table.getPageCount() || 1}</span>
-            </div>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="h-8 w-8 p-0 hover:bg-slate-100 disabled:opacity-30"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-b-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader className="bg-slate-50/50">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="text-slate-600 font-bold py-3 px-4 text-xs uppercase tracking-wider">
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="hover:bg-slate-50/40 transition-colors border-slate-100">
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3 px-4 text-slate-700">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                  {t('noData')}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DeleteConfirmDialog
+        target={deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={handleDelete}
+        title={t('deleteDialogTitle')}
+        description={(plan) => t.rich('deleteDialogBody', { name: plan.plan_name, bold: boldChunks })}
+        confirmLabel={t('deleteConfirm')}
+      />
     </div>
   );
 }

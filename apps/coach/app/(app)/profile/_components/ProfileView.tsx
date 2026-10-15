@@ -16,13 +16,18 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { CountryMaster } from '@gabby/types/country';
-import { CoachProfileFormValues, CoachProfileRecord } from '@gabby/types/coachProfile';
-import { getCoachProfileCompleteness } from '../_lib/profileCompleteness';
+import { CoachMatchingStatus, CoachProfileFormValues, CoachProfileRecord } from '@gabby/types/coachProfile';
+import { getCoachMatchingMissingItems } from '@gabby/lib/coachProfile/matchingReadiness';
+import { getCoachProfileFormProgress } from '../_lib/profileCompleteness';
+import { MatchingStatusCard } from './MatchingStatusCard';
 import { AccountSummaryCard } from './AccountSummaryCard';
 import { PublicProfileForm } from './PublicProfileForm';
 import { LivePreviewPanel } from './LivePreviewPanel';
 import { MailSettingsCard } from './MailSettingsCard';
 import type { MailSettings } from '@gabby/lib/mail/settingsActions';
+import type { CoachRatingStats } from '@gabby/types/coachRating';
+import type { CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { MyRatingCard, toCoachRatingDisplay } from '@/components/rating/MyRatingCard';
 
 interface ProfileViewProps {
   userName: string;
@@ -35,6 +40,12 @@ interface ProfileViewProps {
   countries: CountryMaster[];
   /** Email notification settings (null if they could not be loaded) */
   mailSettings: MailSettings | null;
+  /** Own rating summary (null if no ratings yet) */
+  ratingStats: CoachRatingStats | null;
+  /** Specialties set by admins (read-only here) */
+  specialties: CoachSpecialtyTag[];
+  /** Whether the coach appears in the students' coach search (null if it could not be loaded) */
+  matchingStatus: CoachMatchingStatus | null;
 }
 
 const EMPTY_COACH_PROFILE_FORM: CoachProfileFormValues = {
@@ -81,10 +92,17 @@ export function ProfileView({
   initialCoachProfile,
   countries,
   mailSettings,
+  ratingStats,
+  specialties,
+  matchingStatus,
 }: ProfileViewProps) {
   const [iconPath, setIconPath] = useState(initialIconPath);
   const [timezone, setTimezone] = useState(initialTimezone);
   const [coachProfileForm, setCoachProfileForm] = useState<CoachProfileFormValues>(
+    toCoachProfileFormValues(initialCoachProfile)
+  );
+  // 生徒の一覧に出るかは保存済みの値で決まるため、入力中のフォームとは別に保存済みの値を持つ
+  const [savedCoachProfile, setSavedCoachProfile] = useState<CoachProfileFormValues>(
     toCoachProfileFormValues(initialCoachProfile)
   );
   // Gabby Coach Since はアカウント作成日から自動設定される読み取り専用項目のため、フォームとは別に保持する
@@ -173,6 +191,7 @@ export function ProfileView({
         return;
       }
       setCoachProfileForm(toCoachProfileFormValues(result.profile));
+      setSavedCoachProfile(toCoachProfileFormValues(result.profile));
       setCoachSince(result.profile.coach_since);
       showToast('Public profile updated successfully', 'success');
     } finally {
@@ -180,10 +199,16 @@ export function ProfileView({
     }
   };
 
-  const completionPercent = useMemo(
-    () => getCoachProfileCompleteness(coachProfileForm, !!introVideoPath),
-    [coachProfileForm, introVideoPath]
-  );
+  const formProgress = useMemo(() => getCoachProfileFormProgress(coachProfileForm), [coachProfileForm]);
+
+  // 空き時間は別の画面で登録するため、読み込み時の状態を使う
+  const matchingMissingItems = matchingStatus
+    ? getCoachMatchingMissingItems({
+        iconPath,
+        profile: savedCoachProfile,
+        hasAvailability: !matchingStatus.missingItems.includes('availability'),
+      })
+    : null;
 
   const previewData = {
     userName,
@@ -197,10 +222,19 @@ export function ProfileView({
     jobExperience: coachProfileForm.job_experience,
     introduction: coachProfileForm.introduction,
     introVideoUrl: getCoachIntroVideoUrl(introVideoPath),
+    // 生徒のコーチ選択画面と同じく総合評価を出す
+    rating: toCoachRatingDisplay(ratingStats),
+    specialties,
   };
 
   return (
     <div className="flex flex-col gap-6">
+      <MatchingStatusCard
+        missingItems={matchingMissingItems}
+        initialAcceptingStudents={matchingStatus?.acceptingStudents ?? true}
+        isSuspended={matchingStatus?.isSuspended ?? false}
+      />
+
       <AccountSummaryCard
         userName={userName}
         clientName={clientName}
@@ -213,6 +247,8 @@ export function ProfileView({
         onTimezoneChange={handleTimezoneChange}
       />
 
+      <MyRatingCard stats={ratingStats} />
+
       <MailSettingsCard initialSettings={mailSettings} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
@@ -221,13 +257,14 @@ export function ProfileView({
           form={coachProfileForm}
           onFieldChange={handleCoachProfileFieldChange}
           coachSinceLabel={formatCoachSinceLabel(coachSince)}
+          specialties={specialties}
           introVideoUrl={getCoachIntroVideoUrl(introVideoPath)}
           introVideoPath={introVideoPath}
           onUploadIntroVideo={handleUploadIntroVideo}
           onRemoveIntroVideo={handleRemoveIntroVideo}
           onSave={handleSaveCoachProfile}
           isSaving={isSavingCoachProfile}
-          completionPercent={completionPercent}
+          formProgress={formProgress}
         />
 
         <div className="lg:sticky lg:top-6">

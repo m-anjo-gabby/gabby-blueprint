@@ -3,10 +3,10 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, Ticket, Users } from 'lucide-react';
+import { ChevronRight, Star, Ticket, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { LiveContractSelect, formatContractPeriod } from '@/components/session/LiveContractSelect';
+import { LiveContractSelect, formatContractDate, formatContractPeriod } from '@/components/session/LiveContractSelect';
 import { CountBadge, ShellSectionTitle } from '@/components/shell/ShellPage';
 import { LiveRoomPageHeader } from './LiveRoomSkeleton';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -20,6 +20,7 @@ import {
   isSelfInitiatedCancel,
 } from '@gabby/types/session';
 import { BookableTicketSlot, LiveSessionContractSummary, LiveSessionOverview, NextContractMatching } from '@gabby/types/matching';
+import type { PendingCoachRating } from '@gabby/types/coachRating';
 import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
 import { RescheduleProposalCard } from './RescheduleProposalCard';
@@ -27,6 +28,7 @@ import { NextSessionPanel } from './NextSessionPanel';
 import { ContractOverviewCard } from './ContractOverviewCard';
 import { UpcomingSessionList } from './UpcomingSessionList';
 import { SessionHistoryList } from './SessionHistoryList';
+import { CoachRatingDialog } from './CoachRatingDialog';
 import { PreviousSessionLink, PreviousSessionSummary } from './PreviousSessionLink';
 
 // 履歴に出すのは、結果画面へ進める実施済みと、生徒・コーチ本人起因のキャンセルのみ
@@ -71,13 +73,18 @@ interface Props {
   upcomingSessions: SessionListItem[];
   pastSessions: SessionListItem[];
   bookableSlots: BookableTicketSlot[];
+  /** コーチから届いた振替候補（生徒が応答する） */
   proposalGroups: MyRescheduleProposalGroup[];
+  /** 生徒がキャンセル時に提案し、コーチの回答待ちの振替候補 */
+  proposedGroups: MyRescheduleProposalGroup[];
   bookingRequests: MyBookingRequestItem[];
+  /** 評価を待っている専属コーチ（全契約分。表示中の契約の分だけを出す） */
+  pendingRatings: PendingCoachRating[];
 }
 
 /**
  * ライブセッション・ホーム。優先度の高い順に1本のスクロールで並べる:
- * ①対応が必要（振替候補・コーチ未選択・未予約） ②次回のセッション（＋前回の結果への導線） ③契約の状況 ④今後の予定 ⑤履歴。
+ * ①対応が必要（振替候補・コーチ未選択・未予約・コーチの評価） ②次回のセッション（＋前回の結果への導線） ③契約の状況 ④今後の予定 ⑤履歴。
  * データはすべてサーバーから受け取り、操作後は router.refresh() で取り直す（契約の切替はURLの ?contract=）。
  */
 export function LiveSessionHub({
@@ -90,7 +97,9 @@ export function LiveSessionHub({
   pastSessions,
   bookableSlots,
   proposalGroups,
+  proposedGroups,
   bookingRequests,
+  pendingRatings,
 }: Props) {
   const timezone = useTimezone();
   const router = useRouter();
@@ -98,7 +107,11 @@ export function LiveSessionHub({
   const [isRefreshing, startRefresh] = useTransition();
   const [actionTarget, setActionTarget] = useState<SessionActionTarget | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  // 振替候補を見送った後は、取り直した予約できるコマで予約リクエストダイアログを開く
+  // （見送るまでは候補の回答待ちがその回を使っているため、見送る前のデータでは予約できるコマが無い）
+  const [isBookingAfterDecline, setIsBookingAfterDecline] = useState(false);
   const [withdrawingRequestId, setWithdrawingRequestId] = useState<string | null>(null);
+  const [ratingTarget, setRatingTarget] = useState<PendingCoachRating | null>(null);
 
   const refresh = () => startRefresh(() => router.refresh());
 
@@ -106,16 +119,26 @@ export function LiveSessionHub({
   const historySessions = pastSessions.filter((s) => RESULT_LINKABLE_STATUSES.has(s.status) || isSelfInitiatedCancel(s));
   const [nextSession, ...laterSessions] = isCurrent ? upcomingSessions : [];
 
-  // 未予約の回のうち、予約リクエスト・振替候補の回答待ちになっている分は「調整中」として差し引く
-  const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length : 0;
+  // 未予約の回のうち、予約リクエスト・振替候補（届いた候補・自分が提案した候補）の回答待ちになっている分は「調整中」として差し引く
+  const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length + proposedGroups.length : 0;
   const unbookedCount = isCurrent && overview ? Math.max(overview.unbooked_count - adjustingCount, 0) : 0;
   // 専属コーチの未選択は、表示中の契約が有効（現在の契約、または開始前の契約）なら案内する
   const unmatchedSlotCount = selectedContract.is_active && overview ? overview.slots.filter((s) => s.status === 'unmatched').length : 0;
   // 現在の契約の選択が済んでいれば、次の契約（継続用）の選択を促す
   const nextUnmatched = isCurrent && unmatchedSlotCount === 0 && nextContractMatching && nextContractMatching.unmatchedCount > 0 ? nextContractMatching : null;
   const showBookingNotice = unbookedCount > 0 && bookableSlots.length > 0;
+  const bookingDialogOpen = isBookingOpen || (isBookingAfterDecline && !isRefreshing && bookableSlots.length > 0);
+  const closeBookingDialog = () => {
+    setIsBookingOpen(false);
+    setIsBookingAfterDecline(false);
+  };
+  // コーチの評価は受付期間中（現在の契約の終わりが近い・担当コーチとの予定が終わった）のコーチごとに1行出す
+  const contractRatings = pendingRatings.filter((r) => r.ticketId === selectedContract.ticket_id);
   const actionCount =
-    (isCurrent ? proposalGroups.length + (showBookingNotice ? 1 : 0) : 0) + (unmatchedSlotCount > 0 ? 1 : 0) + (nextUnmatched ? 1 : 0);
+    (isCurrent ? proposalGroups.length + (showBookingNotice ? 1 : 0) : 0) +
+    (unmatchedSlotCount > 0 ? 1 : 0) +
+    (nextUnmatched ? 1 : 0) +
+    contractRatings.length;
   const hasActions = actionCount > 0;
 
   const handleContractChange = (ticketId: string) => {
@@ -160,7 +183,7 @@ export function LiveSessionHub({
                   onAccepted={refresh}
                   onDeclined={() => {
                     refresh();
-                    if (bookableSlots.length > 0) setIsBookingOpen(true);
+                    setIsBookingAfterDecline(true);
                   }}
                 />
               ))}
@@ -214,6 +237,19 @@ export function LiveSessionHub({
                   }
                 />
               )}
+              {contractRatings.map((rating) => (
+                <ActionNotice
+                  key={rating.coachId}
+                  icon={Star}
+                  title={`${rating.coachName}コーチの評価をお願いします`}
+                  description={`これまでのセッションを星で評価してください（${formatContractDate(rating.licenseEndDate, timezone)}まで）。運営へのコメントはコーチには公開されません。`}
+                  action={
+                    <Button type="button" className="w-full sm:w-auto" onClick={() => setRatingTarget(rating)}>
+                      評価する
+                    </Button>
+                  }
+                />
+              ))}
             </div>
           </div>
         )}
@@ -238,12 +274,13 @@ export function LiveSessionHub({
           <ContractOverviewCard contract={selectedContract} overview={overview} timezone={timezone} adjustingCount={adjustingCount} />
         )}
 
-        {isCurrent && (laterSessions.length > 0 || bookingRequests.length > 0) && (
+        {isCurrent && (laterSessions.length > 0 || bookingRequests.length > 0 || proposedGroups.length > 0) && (
           <div>
             <ShellSectionTitle>今後の予定</ShellSectionTitle>
             <UpcomingSessionList
               sessions={laterSessions}
               requests={bookingRequests}
+              proposals={proposedGroups}
               timezone={timezone}
               withdrawingRequestId={withdrawingRequestId}
               onCancelSession={(session) => setActionTarget({ session, mode: 'cancel' })}
@@ -252,7 +289,7 @@ export function LiveSessionHub({
           </div>
         )}
 
-        {isCurrent && !nextSession && bookingRequests.length === 0 && !hasActions && (
+        {isCurrent && !nextSession && bookingRequests.length === 0 && proposedGroups.length === 0 && !hasActions && (
           <p className="rounded-card border border-dashed border-line px-4 py-8 text-center text-sm text-ink-muted">
             予定されているセッションはありません
           </p>
@@ -264,11 +301,20 @@ export function LiveSessionHub({
       <SessionActionDialog target={actionTarget} onClose={() => setActionTarget(null)} onResolved={refresh} />
 
       <BookMakeupSessionDialog
-        open={isBookingOpen}
+        open={bookingDialogOpen}
         slots={bookableSlots}
-        onClose={() => setIsBookingOpen(false)}
+        onClose={closeBookingDialog}
         onRequested={() => {
-          setIsBookingOpen(false);
+          closeBookingDialog();
+          refresh();
+        }}
+      />
+
+      <CoachRatingDialog
+        target={ratingTarget}
+        onClose={() => setRatingTarget(null)}
+        onSubmitted={() => {
+          setRatingTarget(null);
           refresh();
         }}
       />

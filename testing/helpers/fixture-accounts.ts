@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Term } from "./fixture-terms.ts";
 import { toUtcAvailabilityRows } from "./coach-availability.ts";
+import { fillCoachMatchingProfile } from "./coach-matching-profile.ts";
 
 export type PlanCode = "BLUEPRINT_ONLY" | "LIVE_WEEKLY1_3M" | "LIVE_WEEKLY2_3M";
 
@@ -69,11 +70,17 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
   }
 
   /** コーチプロフィール（生徒の「専属コーチを探す」の対象）。createUserにuser_typeを渡さないため handle_new_user では作られない */
-  async function ensureCoachProfile(coachId: string): Promise<void> {
+  /**
+   * コーチのプロフィール。アイコンと必須項目の未設定分も埋める（空き時間とあわせて生徒の「専属コーチを探す」に出る状態にする）。
+   * countryCode は com_m_country.country_code。
+   */
+  async function ensureCoachProfile(coachId: string, countryCode: string): Promise<void> {
     const { data } = await admin.from("com_m_coach_profile").select("user_id").eq("user_id", coachId).maybeSingle();
-    if (data) return;
-    const { error } = await admin.from("com_m_coach_profile").insert({ user_id: coachId, coach_since: new Date().toISOString().slice(0, 8) + "01" });
-    if (error) throw error;
+    if (!data) {
+      const { error } = await admin.from("com_m_coach_profile").insert({ user_id: coachId, coach_since: new Date().toISOString().slice(0, 8) + "01" });
+      if (error) throw error;
+    }
+    await fillCoachMatchingProfile(admin, coachId, { countryCode });
   }
 
   /** 週次の対応可能時間帯（未登録のときだけ作る）。days/start/end はコーチの現地時刻で書き、UTC に換算して保存する */

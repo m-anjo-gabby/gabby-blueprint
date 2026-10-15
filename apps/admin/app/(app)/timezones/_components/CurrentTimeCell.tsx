@@ -1,6 +1,7 @@
 'use client';
 
 import { useLocale } from 'next-intl';
+import { formatUtcOffset } from '@gabby/lib/date/timezone';
 import { useCurrentMinute } from './useCurrentMinute';
 
 interface CurrentTimeCellProps {
@@ -28,15 +29,7 @@ function formatZonedNow(now: number, timezone: string, locale: string): ZonedNow
       hourCycle: 'h23',
     }).format(now);
 
-    const offsetPart = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      timeZoneName: 'longOffset',
-    })
-      .formatToParts(now)
-      .find((part) => part.type === 'timeZoneName')?.value;
-
-    // 'GMT+09:00' → 'UTC+09:00'（UTC自体は 'GMT' のみが返る）
-    const offset = !offsetPart || offsetPart === 'GMT' ? 'UTC+00:00' : offsetPart.replace('GMT', 'UTC');
+    const offset = formatUtcOffset(timezone, now) ?? '';
 
     return { dateTime, offset };
   } catch {

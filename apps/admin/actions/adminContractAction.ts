@@ -6,6 +6,9 @@ import { formatToJstDate, getUtcRangeFromJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { ilikeAny } from '@gabby/lib/supabase/ilike';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
+import type { ContractDetail } from '@gabby/types/contract';
 import {
   ISSUED_LICENSE_COLUMNS,
   recordIssuedLicenses,
@@ -188,24 +191,21 @@ export async function deleteContractPlan(planId: string) {
 }
 
 /**
- * 契約情報の一覧取得（ページネーション・検索対応）
+ * 契約情報の一覧取得（ページネーション・顧客名/契約名の部分一致検索・顧客での絞り込み）
  */
-export async function getContracts(page: number = 1, limit: number = 10, searchQuery?: string, clientId?: string) {
+export async function getContracts(params: ListParams<'clientId'>): Promise<ListResult<ContractDetail>> {
   const ctx = await getLogContext();
+  const { q, filters: { clientId } } = params;
   try {
     const supabase = await createAdminClient();
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
+    const [from, to] = toRange(params);
 
     let query = supabase
       .from('vw_contract_details')
       .select('*', { count: 'exact' });
 
-    if (searchQuery) {
-      // 顧客名・契約名のどちらかに部分一致（PostgRESTのor条件は値をダブルクォートで囲み、
-      // 入力中の , ( ) " \ が条件の区切りとして解釈されないようにする）
-      const pattern = `"%${searchQuery.replace(/[\\"]/g, '\\$&')}%"`;
-      query = query.or(`client_name.ilike.${pattern},contract_name.ilike.${pattern}`);
+    if (q) {
+      query = query.or(ilikeAny(['client_name', 'contract_name'], q));
     }
 
     if (clientId) {
@@ -218,22 +218,22 @@ export async function getContracts(page: number = 1, limit: number = 10, searchQ
       .range(from, to);
 
     if (error) {
-      logger.error('contract:get_contracts_failed', error.message, { ...ctx, err: error, payload: { page, limit, searchQuery, clientId } });
+      logger.error('contract:get_contracts_failed', error.message, { ...ctx, err: error, payload: { from, to, clientId } });
       throw new Error(error.message);
     }
 
-    const formattedContracts = (contracts || []).map(contract => ({
+    const rows = (contracts || []).map(contract => ({
       ...contract,
       start_date: contract.start_date ? formatToJstDate(contract.start_date) : '',
       end_date: contract.end_date ? formatToJstDate(contract.end_date) : '',
-    }));
+    })) as ContractDetail[];
 
     return {
-      contracts: formattedContracts,
+      rows,
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('contract:get_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { page, limit, searchQuery, clientId } });
+    logger.error('contract:get_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -570,7 +570,7 @@ export async function purgeContractWithHistory(contractId: string) {
     logger.warn('contract:purge_contract_with_history_success', 'Contract purged including history', { ...ctx, payload: { contractId } });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:purge_contract_with_history_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId } });
@@ -729,7 +729,7 @@ export async function assignLicenseToUser(
     });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:assign_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId, userId } });
@@ -767,7 +767,7 @@ export async function invalidateUserLicense(licenseId: string) {
     });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:invalidate_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { licenseId } });
@@ -871,7 +871,7 @@ export async function updateUserLicense(
     });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:update_user_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { licenseId, updates } });
@@ -986,7 +986,7 @@ export async function bulkAssignLicenses(
       payload: { contractId, count: data?.length || 0 }
     });
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     revalidatePath('/contracts');
 
     return {

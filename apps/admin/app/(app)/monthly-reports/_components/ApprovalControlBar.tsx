@@ -28,7 +28,7 @@ export function ApprovalControlBar({
   lateCancelCount,
   noShowCount,
   unresolvedCount,
-  coachTimezone,
+  coachTimezoneName,
   approval,
 }: {
   coachId: string;
@@ -38,7 +38,8 @@ export function ApprovalControlBar({
   lateCancelCount: number;
   noShowCount: number;
   unresolvedCount: number;
-  coachTimezone: string;
+  /** コーチのタイムゾーンの表示名称（マスタの display_name_*。画面の言語のもの） */
+  coachTimezoneName: string;
   approval: MonthlyReportApproval | null;
 }) {
   const t = useTranslations('monthlyReports.approvalBar');
@@ -157,7 +158,7 @@ export function ApprovalControlBar({
       )}
 
       <p className="mt-2 text-[11px] text-slate-400">
-        {t('timezoneNote', { timezone: coachTimezone })}
+        {t('timezoneNote', { timezone: coachTimezoneName })}
       </p>
     </div>
   );

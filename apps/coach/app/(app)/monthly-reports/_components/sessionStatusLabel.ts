@@ -26,6 +26,8 @@ export function sessionStatusLabel(session: MonthlyReportSession): string {
       return 'Cancelled (license ended)';
     case CANCEL_CATEGORY.COACH_REASSIGNED:
       return 'Cancelled (coach reassigned)';
+    case CANCEL_CATEGORY.TECHNICAL:
+      return 'Not held (technical issues)';
     case CANCEL_CATEGORY.ADMIN:
       return 'Cancelled by admin';
     default:

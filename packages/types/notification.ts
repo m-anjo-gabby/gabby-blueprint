@@ -82,6 +82,21 @@ export const NOTIFICATION_TYPES = {
     icon: 'Users',
     badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   },
+  // コーチ宛て。生徒からマッチング申請が届いた（申請の登録時のトリガー）。回答期限は24時間。メールあり
+  MATCHING_REQUESTED: {
+    icon: 'UserPlus',
+    badgeClass: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+  },
+  // 生徒宛て。マッチング申請がコーチの回答期限（24時間）を過ぎて無効になった（fn_expire_matching_requests）。メールあり
+  MATCHING_EXPIRED: {
+    icon: 'CalendarX',
+    badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
+  // コーチ宛て。生徒が承認待ちのマッチング申請を取り下げた（withdraw_matching_request）。メールは送らない
+  MATCHING_WITHDRAWN: {
+    icon: 'UserX',
+    badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
   HOMEWORK_POSTED: {
     icon: 'ClipboardList',
     badgeClass: 'bg-indigo-50 text-indigo-600 border-indigo-100',
@@ -123,6 +138,23 @@ export interface NotificationItem {
 export interface NotificationText {
   title: string;
   body: string;
+}
+
+/**
+ * マッチング成立の通知（payload の booked_sessions / target_sessions）で、未予約の回が残る場合の案内。
+ * 他の予定と重なる回は予約されず、生徒とコーチが個別に日時を調整する（2026-10-09より前の通知は回数が無いため空）。
+ */
+export function getMatchingUnbookedCount(payload: Record<string, unknown>): number {
+  const booked = Number(payload.booked_sessions);
+  const target = Number(payload.target_sessions);
+  if (!Number.isFinite(booked) || !Number.isFinite(target)) return 0;
+  return Math.max(target - booked, 0);
+}
+
+function matchingUnbookedNoteJa(payload: Record<string, unknown>): string {
+  const unbooked = getMatchingUnbookedCount(payload);
+  if (unbooked === 0) return '';
+  return `${String(payload.target_sessions)}回のうち${String(payload.booked_sessions)}回を予約しました。残り${unbooked}回はライブセッションのページから日時をリクエストしてください。`;
 }
 
 /**
@@ -196,7 +228,7 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
   }),
   MATCHING_APPROVED: (payload) => ({
     title: 'マッチングが成立しました！',
-    body: `${String(payload.coach_name ?? 'コーチ')}とのライブセッションが予約されました。`,
+    body: `${String(payload.coach_name ?? 'コーチ')}とのライブセッションが予約されました。${matchingUnbookedNoteJa(payload)}`,
   }),
   MATCHING_REJECTED: (payload) => ({
     title: 'マッチングについて',
@@ -205,6 +237,18 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
   MATCHING_ASSIGNED_TO_COACH: (payload) => ({
     title: '新しい生徒とマッチングしました',
     body: `${String(payload.student_name ?? '生徒')}さんとのライブセッションが予約されました。`,
+  }),
+  MATCHING_REQUESTED: (payload) => ({
+    title: 'マッチングのリクエストが届いています',
+    body: `${String(payload.student_name ?? '生徒')}さんから専属コーチのマッチングのリクエストが届いています。24時間以内に承認または否認してください。`,
+  }),
+  MATCHING_EXPIRED: (payload) => ({
+    title: 'マッチングのリクエストが無効になりました',
+    body: `${String(payload.coach_name ?? 'コーチ')}への専属コーチのリクエストは、回答期限（24時間）までにコーチの回答が無かったため無効になりました。別のコーチや時間帯でリクエストしてください。`,
+  }),
+  MATCHING_WITHDRAWN: (payload) => ({
+    title: 'マッチングのリクエストが取り下げられました',
+    body: `${String(payload.student_name ?? '生徒')}さんがマッチングのリクエストを取り下げました。`,
   }),
   HOMEWORK_POSTED: (payload) => ({
     title: `${String(payload.coach_name ?? 'コーチ')}から宿題が届いています`,

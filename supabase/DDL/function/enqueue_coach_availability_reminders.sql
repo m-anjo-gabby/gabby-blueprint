@@ -18,6 +18,7 @@
 -- 【対象のコーチ】
 -- 有効なコーチ（com_m_user.user_type = '2' かつ delete_flg = '0'、プロフィールが有効）。デモコーチ
 -- （demo_user ロール）は除く（通常の生徒のマッチング対象外のため。get_matchable_coach_ids と同じ考え方）。
+-- 新規の生徒の受付をOFFにしたコーチ・アドミンが休止にしたコーチも除く（空き時間はマッチングにだけ使うため。2026-10-11 追加）。
 ---------------------------------------------
 
 -- 確認日時の更新と、見直しの通知の既読化（空き時間の保存・「変更なしで確認」の共通処理。内部処理専用）
@@ -102,6 +103,8 @@ BEGIN
         JOIN public.com_m_user u ON u.id = p.user_id AND u.user_type = '2' AND u.delete_flg = '0'
         LEFT JOIN public.com_m_coach_availability a ON a.coach_id = p.user_id AND a.delete_flg = '0'
         WHERE p.delete_flg = '0'
+          AND p.accepting_students
+          AND NOT EXISTS (SELECT 1 FROM public.com_m_coach_matching_suspension s WHERE s.coach_id = p.user_id)
           AND NOT EXISTS (
               SELECT 1 FROM public.com_t_user_role r
               WHERE r.user_id = p.user_id AND r.role_id = 'demo_user'

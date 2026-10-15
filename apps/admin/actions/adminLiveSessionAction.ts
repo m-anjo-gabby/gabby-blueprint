@@ -6,17 +6,25 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { containsPattern } from '@gabby/lib/supabase/ilike';
+import { reportingMonthRange } from '@gabby/lib/date/reporting';
+import { getSessionOutcomeEvidenceCore } from '@gabby/lib/session/actions/sessionActions';
+import { getTimezoneNameMap } from '@gabby/lib/timezone/timezoneNames';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import {
   AdminStudentSummary,
   AdminScheduleSlotSummary,
   AdminCoachSummary,
   AdminContractSummary,
   AdminSessionActionResult,
+  AdminSessionListItem,
+  AdminSessionOutcomeHistoryEntry,
+  AdminSessionRecord,
   GetClientStudentsResult,
   GetScheduleSlotsForTicketResult,
   ReleaseLessonScheduleSlotResult,
 } from '@gabby/types/adminLiveSession';
-import { CoachSessionListItem } from '@gabby/types/coachStudent';
+import type { ConductedVia, SessionOutcome, SessionOutcomeEvidence } from '@gabby/types/session';
 
 const logger = createLogger('admin');
 
@@ -155,14 +163,18 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
 
     // 稼働中の枠のみ、未割当チケット枠数(fn_schedule_shortfall)を合わせて取得する
     // （「セッションを予約」ボタンの表示可否に使用）
-    const shortfallResults = await Promise.all(
-      rows.map((s) => (s.status === 1 ? supabase.rpc('fn_schedule_shortfall', { p_schedule_id: s.schedule_id }).single() : Promise.resolve(null)))
-    );
+    const [shortfallResults, timezoneNames] = await Promise.all([
+      Promise.all(
+        rows.map((s) => (s.status === 1 ? supabase.rpc('fn_schedule_shortfall', { p_schedule_id: s.schedule_id }).single() : Promise.resolve(null)))
+      ),
+      getTimezoneNameMap(),
+    ]);
 
     const slots: AdminScheduleSlotSummary[] = rows.map((s, i) => {
       const shortfallRow = shortfallResults[i]?.data as { shortfall: number } | null | undefined;
       return {
         ...s,
+        schedule_timezone_names: timezoneNames.get(s.schedule_timezone) ?? null,
         coach_name: nameById.get(s.coach_id) ?? '(Unknown)',
         shortfall: shortfallRow?.shortfall ?? 0,
       };
@@ -178,14 +190,14 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
 /**
  * 指定契約(チケット)のセッション一覧を取得する（アドミン向け、担当コーチを問わず全件）。
  */
-export async function getSessionsForTicket(ticketId: string): Promise<CoachSessionListItem[]> {
+export async function getSessionsForTicket(ticketId: string): Promise<AdminSessionListItem[]> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
 
     const { data: sessions, error } = await supabase
       .from('com_t_session')
-      .select('session_id, schedule_id, start_datetime, end_datetime, status, completion_result, cancel_category, rescheduled_from, cancel_reason, status_note, coach_id')
+      .select('session_id, schedule_id, start_datetime, end_datetime, status, completion_result, cancel_category, rescheduled_from, cancel_reason, status_note, coach_id, conducted_via, outcome_mismatch')
       .eq('ticket_id', ticketId)
       .order('start_datetime', { ascending: false });
 
@@ -364,8 +376,12 @@ export async function matchStudentWithCoachAsAdmin(params: {
       if (error.code === '23505') {
         return { success: false, message: 'この枠には既にリクエストまたはマッチングが存在します' };
       }
-      if (error.message?.includes('SCHEDULE_CONFLICT')) {
-        return { success: false, message: 'このコーチは指定の時間帯に既に別の予定があります' };
+      // 直接マッチングは予約できる回数の割合の基準を適用しない（重なる回は飛ばして作る）。1回も予約できない場合だけ失敗する
+      if (error.message?.includes('NO_REMAINING_SESSIONS')) {
+        return { success: false, message: 'この枠は、コーチ交代前のセッションで契約の回数を使い切っているため、マッチングできません' };
+      }
+      if (error.message?.includes('NO_BOOKABLE_SESSION')) {
+        return { success: false, message: 'このコーチの指定の時間帯は、契約期間内に予約できる回がありません（全ての回が他の予定と重なっています）' };
       }
       return { success: false, message: error.message };
     }
@@ -416,4 +432,149 @@ export async function adjustTargetSessionsAsAdmin(
     logger.error('liveSession:adjust_target_sessions_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { scheduleId, newTargetSessions, reason } });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
+}
+
+/**
+ * 以下、ライブセッションの実施結果の確認・修正（2026-10-14）。
+ * 結果の修正（admin_correct_session_outcome）・推定の取得（get_session_outcome_evidence）・実施記録の一覧
+ * （admin_get_session_records）は fn_assert_actor_or_admin で管理者のJWTを見るため、上の代理操作と同じく
+ * createServerClient で呼ぶ。
+ */
+
+/** 入退室ログからの実施結果の推定と根拠（結果の修正ダイアログを開いた時に取得する） */
+export async function getSessionOutcomeEvidenceAsAdmin(
+  sessionId: string
+): Promise<{ success: true; evidence: SessionOutcomeEvidence } | { success: false; message: string }> {
+  const result = await getSessionOutcomeEvidenceCore(sessionId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('liveSession:get_outcome_evidence_failed', result.errorCode, { ...ctx, payload: { sessionId } });
+    return { success: false, message: result.errorCode };
+  }
+  return { success: true, evidence: result.evidence };
+}
+
+/** 実施結果の記録・修正の履歴（新しい順。結果の修正ダイアログを開いた時に取得する） */
+export async function getSessionOutcomeHistory(sessionId: string): Promise<AdminSessionOutcomeHistoryEntry[]> {
+  const ctx = await getLogContext();
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('com_t_session_outcome_history')
+      .select('history_id, action, outcome, conducted_via, ticket_action, reason, performed_by, performed_at')
+      .eq('session_id', sessionId)
+      .order('performed_at', { ascending: false });
+
+    if (error) {
+      logger.error('liveSession:get_outcome_history_failed', error.message, { ...ctx, err: error, payload: { sessionId } });
+      return [];
+    }
+
+    const rows = data ?? [];
+    const userIds = Array.from(new Set(rows.map((r) => r.performed_by).filter((id): id is string => !!id)));
+    let nameById = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: users } = await supabase.from('com_m_user').select('id, user_name').in('id', userIds);
+      nameById = new Map((users ?? []).map((u) => [u.id, u.user_name ?? '(Unknown)']));
+    }
+
+    return rows.map((r) => ({
+      history_id: r.history_id,
+      action: r.action,
+      outcome: r.outcome,
+      conducted_via: r.conducted_via,
+      ticket_action: r.ticket_action,
+      reason: r.reason,
+      performed_by_name: r.performed_by ? (nameById.get(r.performed_by) ?? null) : null,
+      performed_at: r.performed_at,
+    }));
+  } catch (err) {
+    logger.error('liveSession:get_outcome_history_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { sessionId } });
+    return [];
+  }
+}
+
+/**
+ * 実施結果の修正（アドミン）。チケットの消化・返還の差分はRPC側で反映し、履歴を残す。
+ * 生徒・コーチへの通知は送らない。
+ */
+export async function correctSessionOutcomeAsAdmin(
+  sessionId: string,
+  outcome: SessionOutcome,
+  conductedVia: ConductedVia | null,
+  reason: string
+): Promise<AdminSessionActionResult> {
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createServerClient();
+    const { error } = await supabase.rpc('admin_correct_session_outcome', {
+      p_session_id: sessionId,
+      p_outcome: outcome,
+      p_conducted_via: conductedVia,
+      p_reason: reason.trim(),
+    });
+
+    if (error) {
+      logger.error('liveSession:correct_outcome_failed', error.message, { ...ctx, err: error, payload: { sessionId, outcome, conductedVia } });
+      return { success: false, message: error.message };
+    }
+
+    logger.info('liveSession:correct_outcome_success', 'Session outcome corrected', { ...ctx, payload: { sessionId, outcome, conductedVia } });
+    revalidatePath('/live-sessions', 'layout');
+    return { success: true };
+  } catch (err) {
+    logger.error('liveSession:correct_outcome_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { sessionId } });
+    return { success: false, message: '予期せぬエラーが発生しました' };
+  }
+}
+
+const SESSION_RECORD_RESULTS = ['unrecorded', 'completed', 'left_early', 'no_show', 'coach_absent', 'technical'] as const;
+const SESSION_RECORD_VIAS = ['app', 'external'] as const;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+type SessionRecordRpcRow = AdminSessionRecord & { total_count: number };
+
+/**
+ * 「実施記録」一覧（/live-sessions/records）。絞り込みのクエリ名は records/_lib/list.ts の
+ * SESSION_RECORD_LIST_FILTERS（month = 開始月 YYYY-MM（日本時間）、coach = コーチID、result = 結果、
+ * via = 実施方法、review = '1' で要確認だけ）。不正な値は「すべて」として扱う。
+ */
+export async function getSessionRecordList(
+  params: ListParams<'month' | 'coach' | 'result' | 'via' | 'review'>
+): Promise<ListResult<AdminSessionRecord>> {
+  const ctx = await getLogContext();
+  const { q, filters } = params;
+  const range = MONTH_PATTERN.test(filters.month) ? reportingMonthRange(filters.month) : null;
+  const result = (SESSION_RECORD_RESULTS as readonly string[]).includes(filters.result) ? filters.result : null;
+  const via = (SESSION_RECORD_VIAS as readonly string[]).includes(filters.via) ? filters.via : null;
+  const [from, to] = toRange(params);
+
+  const supabase = await createServerClient();
+  const { data, error } = await supabase.rpc('admin_get_session_records', {
+    p_from: range?.from ?? null,
+    p_to: range?.to ?? null,
+    p_coach_id: UUID_PATTERN.test(filters.coach) ? filters.coach : null,
+    p_result: result,
+    p_via: via,
+    p_review_only: filters.review === '1',
+    p_name_pattern: q ? containsPattern(q) : null,
+    p_limit: to - from + 1,
+    p_offset: from,
+  });
+
+  if (error) {
+    logger.error('liveSession:get_session_records_failed', error.message, { ...ctx, err: error, payload: { filters, from } });
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as SessionRecordRpcRow[];
+  return {
+    rows: rows.map((row) => {
+      const { total_count, ...record } = row;
+      void total_count;
+      return record;
+    }),
+    totalCount: rows[0]?.total_count ?? 0,
+  };
 }

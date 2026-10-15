@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { focusDialogContent } from '@gabby/lib/components/common/dialogFocus';
 import * as Tabs from "@radix-ui/react-tabs";
 import { motion } from "framer-motion";
 import { Loader2, CheckCircle2, X, FileText, ShieldCheck } from "lucide-react";
@@ -90,7 +91,7 @@ export const TermsAgreementModal = ({
         <Dialog.Overlay className="fixed inset-0 bg-ink/40 backdrop-blur-md z-[100] animate-in fade-in duration-300" />
         
         <Dialog.Content 
-          onOpenAutoFocus={(e) => e.preventDefault()}
+          onOpenAutoFocus={focusDialogContent}
           className="fixed left-[50%] top-[50%] z-[101] w-[95vw] max-w-2xl translate-x-[-50%] translate-y-[-50%] outline-none"
         >
           <motion.div 

@@ -24,7 +24,9 @@
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | 「契約管理に戻る」リンク | 常時表示 | `/contracts` へ遷移 |
-| 検索欄 | 常時表示 | プラン名・コードで一覧をその場で絞り込む（サーバー再取得なし） |
+| 検索欄 | 常時表示 | プラン名（日英）・プランコードの部分一致で絞り込む（全件を取得済みのため、ブラウザ側で絞る。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る。サーバーへの再取得はしない）） |
+| 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
+| 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | 「新規登録」ボタン | 常時表示 | プラン登録ダイアログを開く |
 | 一覧の「SEQ」列 | 表示順（`sort_no`） | 表示のみ |
 | 一覧の「プラン名」列 | 日本語名・英語名 | 表示のみ |
@@ -57,7 +59,8 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/contracts/plans/page.tsx`
-- `apps/admin/app/(app)/contracts/plans/_components/ContractPlanDataTable.tsx`
+- `apps/admin/app/(app)/contracts/plans/_components/ContractPlanDataTable.tsx`, `_components/columns.tsx`
+- `apps/admin/components/list/`（一覧の共通部品）, `apps/admin/lib/list.ts`。E2E: `testing/e2e/tests/admin/list-filters.spec.ts`（仕様: `testing/e2e/specs/admin/list-filters.md`）
 - `apps/admin/app/(app)/contracts/plans/_components/ContractPlanFormDialog.tsx`
 - `apps/admin/actions/adminContractAction.ts`（`getContractPlans`, `upsertContractPlan`,
   `deleteContractPlan`）

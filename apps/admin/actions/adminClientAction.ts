@@ -11,6 +11,8 @@ import {
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { containsPattern } from '@gabby/lib/supabase/ilike';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 
 const logger = createLogger('admin');
 
@@ -43,14 +45,14 @@ export async function getClientsFilter(): Promise<ClientOption[]> {
 }
 
 /**
- * 顧客一覧取得（ページネーション・削除フラグ・検索対応）
+ * 顧客一覧取得（ページネーション・削除フラグ・顧客名の部分一致検索）
  */
-export async function getClients(page: number = 1, limit: number = 10, searchQuery?: string) {
+export async function getClients(params: ListParams): Promise<ListResult<ClientRecord>> {
   const ctx = await getLogContext();
+  const { q } = params;
   try {
     const supabase = createAdminClient();
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
+    const [from, to] = toRange(params);
 
     let query = supabase
       .from('com_m_client')
@@ -60,23 +62,23 @@ export async function getClients(page: number = 1, limit: number = 10, searchQue
       .order('client_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
       .range(from, to);
 
-    if (searchQuery) {
-      query = query.ilike('client_name', `%${searchQuery}%`);
+    if (q) {
+      query = query.ilike('client_name', containsPattern(q));
     }
 
     const { data, count, error } = await query;
 
     if (error) {
-      logger.error('client:get_clients_failed', error.message, { ...ctx, err: error, payload: { page, limit, searchQuery } });
+      logger.error('client:get_clients_failed', error.message, { ...ctx, err: error, payload: { from, to } });
       throw new Error(error.message);
     }
 
     return {
-      clients: data as ClientRecord[],
+      rows: data as ClientRecord[],
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('client:get_clients_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { page, limit, searchQuery } });
+    logger.error('client:get_clients_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     throw error;
   }
 }

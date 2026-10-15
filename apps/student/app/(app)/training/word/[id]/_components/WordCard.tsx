@@ -28,9 +28,11 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
       {/* 1. Favorite Button: 押しやすさを考慮しつつ右上に配置 */}
       <div className="absolute top-4 right-4 md:right-8 z-20">
         <button
-          onClick={(e) => { 
-            e.stopPropagation(); 
-            onToggleFavorite(phrase.phrase_id, phrase.is_favorite); 
+          type="button"
+          aria-label={phrase.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(phrase.phrase_id, phrase.is_favorite);
           }}
           className={cn(
             "transition-all active:scale-75 p-2.5 rounded-full flex items-center justify-center",

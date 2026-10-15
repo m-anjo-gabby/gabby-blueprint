@@ -5,7 +5,7 @@ import {
   type SessionActionTarget,
 } from '@gabby/lib/components/common/SessionActionDialog';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { cancelSession, checkSessionConflict, resolveStaleSession } from '@/actions/sessionAction';
+import { cancelSession, checkSessionConflict } from '@/actions/sessionAction';
 import { COACH_SESSION_ACTION_LABELS } from '@/constants/sessionActionDialog';
 import type { SessionListItem } from '@gabby/types/session';
 
@@ -18,7 +18,7 @@ interface SessionActionDialogProps {
 }
 
 /**
- * Session cancel/resolve dialog (thin Coach-portal adapter).
+ * Session cancel dialog (thin Coach-portal adapter).
  * The actual UI/logic lives in packages/lib/components/common/SessionActionDialog; this file
  * only injects the English copy (constants/sessionActionDialog) and the coach's server actions.
  */
@@ -28,7 +28,7 @@ export function SessionActionDialog({ target, onClose, onResolved }: SessionActi
       target={target}
       onClose={onClose}
       onResolved={onResolved}
-      actions={{ cancelSession, checkSessionConflict, resolveStaleSession }}
+      actions={{ cancelSession, checkSessionConflict }}
       labels={COACH_SESSION_ACTION_LABELS}
       formatCounterpartTime={(datetime, timezone) => formatDateTimeEn(datetime, timezone)}
     />

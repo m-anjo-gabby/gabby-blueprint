@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Fragment, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -29,6 +29,7 @@ import {
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
 import { getPartOfSpeechTailwindColor } from '@gabby/types/colorVowel';
+import { ipaToPhonemes } from '@gabby/lib/colorVowel/phonemes';
 
 // ============================================================
 // 定数
@@ -42,6 +43,22 @@ function createTtsStatusConfig(
     2: { label: t('statusNeedsUpdate'), className: 'bg-amber-50 text-amber-600 border-amber-100', icon: AlertCircle },
     9: { label: t('statusError'), className: 'bg-rose-50 text-rose-600 border-rose-100', icon: AlertCircle },
   };
+}
+
+/** 音素表記（強勢のある母音を太字）。変換できない場合は null */
+function phonemeText(ipa: string): React.ReactNode | null {
+  const phonemes = ipaToPhonemes(ipa);
+  if (!phonemes) return null;
+  return (
+    <span className="font-mono">
+      {phonemes.map((p, i) => (
+        <Fragment key={i}>
+          {i > 0 && ' '}
+          <span className={p.stressed ? 'font-bold text-slate-900 underline' : undefined}>{p.code}</span>
+        </Fragment>
+      ))}
+    </span>
+  );
 }
 
 // ============================================================
@@ -209,6 +226,15 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
                           <div className="flex items-center gap-1.5 text-slate-500">
                             <span className="text-slate-300 font-black uppercase text-[9px] w-16 shrink-0">Phonetic</span>
                             <span className="font-mono">{entry.phonetic_spelling}</span>
+                          </div>
+                        )}
+                        {entry.phonetic_spelling && (
+                          // 生徒アプリに表示する音素表記（IPA から自動変換）。変換できない記号があると生徒アプリでは表示されない
+                          <div className="flex items-center gap-1.5 text-slate-500">
+                            <span className="text-slate-300 font-black uppercase text-[9px] w-16 shrink-0">Phoneme</span>
+                            {phonemeText(entry.phonetic_spelling) ?? (
+                              <span className="font-bold text-amber-600">Unsupported IPA symbol</span>
+                            )}
                           </div>
                         )}
                         {entry.lemma && (

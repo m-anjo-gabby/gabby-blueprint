@@ -1,15 +1,19 @@
----------------------------------------------
--- DDL: com_t_chat_room_user (チャット参加者 & 未読管理)
----------------------------------------------
-CREATE TABLE public.com_t_chat_room_user (
-  room_id UUID NOT NULL REFERENCES public.com_t_chat_room(room_id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-  user_type TEXT NOT NULL, -- 'ADMIN', 'STUDENT', 'COACH'
-  last_read_chat_id UUID, -- 未読管理用 (com_t_chat.chat_id)
-  joined_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  left_at TIMESTAMP WITH TIME ZONE,
+-- =========================================================================
+-- com_t_chat_room_user: チャットのルームの参加者と既読の位置
+-- =========================================================================
+-- 本人は自分の行の既読の位置（last_read_chat_id）だけを更新できる。参照は同じルームの参加者。
+-- 1対1のチャットで相手の既読を表示するため、Realtime の配信対象にしている（受け取れる行は RLS の範囲だけ）。
+-- =========================================================================
 
-  PRIMARY KEY (room_id, user_id)
+-- @schema public.com_t_chat_room_user
+CREATE TABLE public.com_t_chat_room_user (
+    room_id                  uuid         NOT NULL REFERENCES public.com_t_chat_room(room_id) ON DELETE CASCADE,
+    user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    user_type                text         NOT NULL,
+    last_read_chat_id        uuid,
+    joined_at                timestamp with time zone NOT NULL DEFAULT now(),
+    left_at                  timestamp with time zone,
+    CONSTRAINT com_t_chat_room_user_pkey PRIMARY KEY (room_id, user_id)
 );
 
 COMMENT ON TABLE public.com_t_chat_room_user IS 'チャット参加者 & 未読管理';
@@ -20,37 +24,31 @@ COMMENT ON COLUMN public.com_t_chat_room_user.last_read_chat_id IS '最終既読
 COMMENT ON COLUMN public.com_t_chat_room_user.joined_at IS '参加日時';
 COMMENT ON COLUMN public.com_t_chat_room_user.left_at IS '退出日時 (NULL: 参加中)';
 
-CREATE INDEX idx_com_t_chat_room_user_user_id ON public.com_t_chat_room_user (user_id);
 CREATE INDEX idx_com_t_chat_room_user_room_id ON public.com_t_chat_room_user (room_id);
+CREATE INDEX idx_com_t_chat_room_user_user_id ON public.com_t_chat_room_user (user_id);
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
 ALTER TABLE public.com_t_chat_room_user ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Members can view their room participants" ON public.com_t_chat_room_user;
-DROP POLICY IF EXISTS "Admins can manage room participants" ON public.com_t_chat_room_user;
-DROP POLICY IF EXISTS "Users can update their own participation row" ON public.com_t_chat_room_user;
+CREATE POLICY "Admins can manage room participants" ON public.com_t_chat_room_user FOR ALL TO authenticated
+USING (
+    public.get_jwt_user_type() = '0'::text
+)
+WITH CHECK (
+    public.get_jwt_user_type() = '0'::text
+);
 
-CREATE POLICY "Members can view their room participants" ON public.com_t_chat_room_user
-FOR SELECT TO authenticated USING (
+CREATE POLICY "Members can view their room participants" ON public.com_t_chat_room_user FOR SELECT TO authenticated
+USING (
     public.is_chat_room_member(room_id)
 );
 
-CREATE POLICY "Admins can manage room participants" ON public.com_t_chat_room_user
-FOR ALL TO authenticated
-USING (public.get_jwt_user_type() = '0')
-WITH CHECK (public.get_jwt_user_type() = '0');
+CREATE POLICY "Users can update their own participation row" ON public.com_t_chat_room_user FOR UPDATE TO authenticated
+USING (
+    user_id = auth.uid()
+)
+WITH CHECK (
+    user_id = auth.uid()
+);
 
--- 未読管理 (last_read_chat_id) を自身の行に限り更新可能にする
-CREATE POLICY "Users can update their own participation row" ON public.com_t_chat_room_user
-FOR UPDATE TO authenticated
-USING (user_id = auth.uid())
-WITH CHECK (user_id = auth.uid());
-
----------------------------------------------
--- Realtime（2026-09-28 追加）
----------------------------------------------
--- 1対1チャットの「既読」表示で、相手の既読位置（last_read_chat_id）の更新を購読するため配信対象にする。
--- 受信できる行はRLS（同じルームの参加者のみ閲覧可）の範囲に限られる。
 ALTER PUBLICATION supabase_realtime ADD TABLE public.com_t_chat_room_user;
+-- @end-schema

@@ -21,6 +21,7 @@
 2. **Attentionタイル（3枚）** — Requests／Unread Messages／Updatesの件数タイル。クリックで
    それぞれの画面へ遷移する
 3. **Sessionsセクション** — 「Next 24 Hours」パネルと「Session Tasks」パネルを横並びに表示
+4. **Ratingセクション** — 自分の評価（My Rating）のカード。総合評価（Overall。コーチング・親近感・おすすめ度の3項目の平均）を大きく、星（0.5刻み）・件数とともに出し、横にコーチング（Coaching）・親近感（Friendliness）の平均を並べる。おすすめ度は単独では出さない。個々の評価・生徒のコメントは出さない。新しく作成したコーチは、初期値の評価1件（3項目とも4）から始まる（プロフィールの作成時に自動登録。件数・平均に含める）。評価が無い場合（初期値の導入前からいるコーチ）は「No ratings yet.」。区画単位で遅れて表示する（Suspense、取得中は同じ枠の骨組み）
 
 ## 表示要素・操作
 
@@ -32,9 +33,10 @@
 | 「Next 24 Hours」内のセッション行 | 実施予定（scheduled）のセッションのうち、今から24時間以内に開始または実施中のものを開始時刻順に表示（暦日ではなく「今から24時間」のローリングウィンドウで絞り込むため、日付が変わる直前の時間帯でも見え方が狭くならない） | クリックで該当生徒のセッション詳細（`/students/[id]/sessions/[sessionId]`）へ遷移。最も近い1件には「Up next」ラベルが付く |
 | 「View calendar」リンク | 常時表示 | `/calendar`へ遷移 |
 | Session Tasksの「… — End Session needed」行 | 終了予定時刻を過ぎてもまだ結果が確定していない（scheduledのままの）セッションがある場合 | クリックでそのセッションの詳細画面へ遷移し、そこで終了処理を行う |
-| Session Tasksの「… — Homework not posted」行 | 結果確定済み（completed）だが宿題が未投稿のセッションがある場合 | クリックでセッション結果画面（`/students/[id]/sessions/[sessionId]/result`）へ遷移 |
+| Session Tasksの「… — Homework not posted」行 | 結果確定済み（completed）だが宿題が未投稿のセッションがある場合（確定から14日以内。生徒の欠席の回と、結果画面で「No homework this time」にした回は除く） | クリックでセッション結果画面（`/students/[id]/sessions/[sessionId]/result`）へ遷移 |
 | Session Tasksの「… — Makeup session available」行 | 担当する生徒の定期コマで、本来の実施回数に対して実際の予定回数が不足している（未消化枠がある）場合 | クリックで生徒概要（`/students/[id]`）へ遷移 |
 | Session Tasksの件数バッジ「N open」 | 上記3種のタスク合計が1件以上の場合のみ表示 | — |
+| 「Next 24 Hours」「Session Tasks」の行の一覧 | それぞれ約5件分の高さで止まり、それより多い場合は一覧の中だけスクロールする（6件目が半分見える高さにして続きがあることを示す） | スクロールで残りの行を表示 |
 
 ## 状態
 
@@ -45,6 +47,21 @@
 | Next 24 Hours 空 | 「No sessions in the next 24 hours」 | 該当ウィンドウ内に実施予定のセッションが無い場合 |
 | Session Tasks 空 | 「You're all caught up」 | 3種のタスクがいずれも0件の場合 |
 
+## お知らせのポップアップ
+
+表示方法が「ポップアップ」かつ未読のお知らせがあれば、この画面を開いた時に先頭の1件（重要→公開日の新しい順）を表示する。
+生徒アプリと同じ部品（`packages/lib/components/notice/NoticePopup.tsx`）で、文言は英語。
+
+- 狭い画面（640px未満）は画面下から出るシート、それ以上は中央の小さなダイアログ。開いた時に×ボタンへフォーカスしない。
+- 種別アイコン・「種別 · 公開日」・Important の印・件名・本文の先頭3行。「Read more」でその場に全文と添付ファイルを広げる。
+- 「Got it」・×（Close）・枠の外のいずれで閉じても、表示した1件を既読にする。ほかにも対象があれば「n more new notices」（`/notice` へ）を添える。
+- 同じログイン中は一度閉じたら自動では再表示しない。通知センターから開いたお知らせも同じ見た目で表示する。
+- コーチ向けのお知らせは表示方法が「ポップアップ」か「一覧のみ」で、見出し画像・行動ボタンは使わない（アドミンで入力できず、DBの制約でも止める）。
+
+## 関連する業務フロー仕様書
+
+- [コーチ評価](../../../testing/e2e/specs/rating/coach-rating.md) — My Rating の集計（総合＝3項目の平均）と反映のタイミング、新人コーチの初期値
+
 ## 実装参照（エンジニア向け）
 
 - `apps/coach/app/(app)/dashboard/page.tsx`
@@ -52,6 +69,7 @@
 - `apps/coach/app/(app)/dashboard/_components/AttentionStrip.tsx`
 - `apps/coach/app/(app)/dashboard/_components/TodaysSessionsPanel.tsx`
 - `apps/coach/app/(app)/dashboard/_components/SessionTasksPanel.tsx`
+- `apps/coach/components/rating/MyRatingCard.tsx`（My Rating。プロフィールと共用）, `apps/coach/actions/coachRatingAction.ts`（`getMyCoachRatingStats`。`com_t_coach_stats` を読む）
 - サーバーアクション: `getMyProfile`, `getPendingIncomingRequestsForCoach`, `getMySessions`,
   `getMySessionTasks`（`apps/coach/actions/coachProfileAction.ts`,
   `apps/coach/actions/matchingRequestAction.ts`, `apps/coach/actions/sessionAction.ts`）

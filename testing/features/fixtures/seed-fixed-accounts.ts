@@ -181,14 +181,14 @@ await ensureRole(adminUserId, "admin");
 
 const coachCa = await ensureUser({ email: "qa-coach-ca-01@gabby-qa-test.example", userType: "2", userName: "QAコーチCA01", clientId, timezone: "America/Vancouver" });
 const coachUs = await ensureUser({ email: "qa-coach-us-01@gabby-qa-test.example", userType: "2", userName: "QAコーチUS01", clientId, timezone: "America/New_York" });
-await ensureCoachProfile(coachCa);
+await ensureCoachProfile(coachCa, "CA");
 await ensureCoachAvailability(coachCa, "America/Vancouver", [1, 3, 5], "18:00:00", "22:00:00");
-await ensureCoachProfile(coachUs);
+await ensureCoachProfile(coachUs, "US");
 await ensureCoachAvailability(coachUs, "America/New_York", [2, 4], "10:00:00", "16:00:00");
 // デモコーチ（通常の生徒の「専属コーチを探す」には出ず、デモの生徒にだけ出る）
 const coachDemo = await ensureUser({ email: "qa-coach-demo-01@gabby-qa-test.example", userType: "2", userName: "QAコーチDEMO01（デモ）", clientId, timezone: "Asia/Tokyo" });
 await ensureRole(coachDemo, "demo_user");
-await ensureCoachProfile(coachDemo);
+await ensureCoachProfile(coachDemo, "JP");
 await ensureCoachAvailability(coachDemo, "Asia/Tokyo", [6], "10:00:00", "12:00:00");
 
 const appContract = async (term: Term) => ensureContract(clientId, "BLUEPRINT_ONLY", term, 10);

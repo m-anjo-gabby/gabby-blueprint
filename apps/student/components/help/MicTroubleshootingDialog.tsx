@@ -39,7 +39,6 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        onOpenAutoFocus={(e) => e.preventDefault()}
         className="max-w-md rounded-panel p-6 bg-white border border-line/60 shadow-2xl text-ink"
       >
         <DialogHeader>

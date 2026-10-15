@@ -37,27 +37,6 @@ export const hasTimezoneMismatch = (settingZone: string, deviceZone: string, now
   }
 };
 
-/**
- * 指定時点のUTCからの時差（例: UTC+9:00、UTC−4:00、UTC±0:00）。
- * 端末のタイムゾーンはマスタに無い地域もあり得るため、名称ではなくこの固定表記で示す。取得できない場合は null。
- */
-export const formatUtcOffset = (timeZone: string, nowMs: number): string | null => {
-  try {
-    const name = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'longOffset' })
-      .formatToParts(new Date(nowMs))
-      .find((p) => p.type === 'timeZoneName')?.value;
-    if (!name) return null;
-    // "GMT+09:00" / "GMT-04:00" / "GMT"（時差なし）の形式で返る
-    const match = /^GMT(?:([+-])(\d{1,2}):?(\d{2}))?$/.exec(name);
-    if (!match) return null;
-    const [, sign, hours, minutes] = match;
-    if (!sign || (Number(hours) === 0 && minutes === '00')) return 'UTC±0:00';
-    return `UTC${sign === '-' ? '−' : '+'}${Number(hours)}:${minutes}`;
-  } catch {
-    return null;
-  }
-};
-
 /** 指定タイムゾーンでの日時（例: 9/26 21:00） */
 export const formatTimeInZone = (nowMs: number, timeZone: string): string =>
   new Intl.DateTimeFormat('ja-JP', {

@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { getMyProfile, getTimezoneList } from '@/actions/adminProfileAction';
 import { getUserTypeLabel } from '@gabby/types/user';
 import { ProfileView } from './_components/ProfileView';
+import { PageHeader } from '@/components/common/PageHeader';
 
 export default async function ProfilePage() {
   const t = await getTranslations('profile.page');
@@ -19,12 +20,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-800 tracking-tight">{t('title')}</h1>
-        <p className="text-[13px] text-slate-500 mt-1">
-          {t('subtitle')}
-        </p>
-      </div>
+      <PageHeader title={t('title')} description={t('subtitle')} />
 
       <ProfileView
         userName={profile.user_name ?? t('unnamed')}

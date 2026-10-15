@@ -44,10 +44,10 @@
 - **該当シナリオ**: `testing/features/branches/feature-20260904-dev/seed.ts`（②の自動再投入スクリプト実装時）
 - **事象**: `admin_match_student_with_coach` で生徒とコーチを直接マッチングさせても、生成される`com_t_session`は必ず「今日以降」の日付になり、過去に完了済みのセッション（QA生徒1の「完了6件」等）を再現できなかった。
 - **原因**: `admin_match_student_with_coach.sql` の `v_start_date := GREATEST(v_license_start, CURRENT_DATE);` が、ライセンスの開始日がどれだけ過去でも、スケジュールの生成起点を常に「今日」にクランプしている。これは意図的な設計（アドミンが過去に遡ってセッションを捏造できないようにする安全策）であり、バグではない。
-- **対処**: 「過去に完了した実績」が必要なテストデータは、`com_m_lesson_schedule`・`com_t_session`を`service_role`で直接INSERTして再現し（status=1で仮生成）、その後 `resolve_stale_session` RPC（実際にサインインしたコーチ or アドミンのJWT）を1件ずつ呼んで`completed`に遷移させる、というハイブリッド方式を採用した。`resolve_stale_session`はRPC内で`used_sessions`加算と`com_t_user_session_ticket_history`への記録を自動で行うため、手動でのused_sessions調整は不要だった。一方、「今日以降の予定で足りる」データ（コーチ交代後の新規予定等）は素直に本物のRPC（`admin_match_student_with_coach`等）で生成する方が安全・簡単。
+- **対処**: 「過去に完了した実績」が必要なテストデータは、`com_m_lesson_schedule`・`com_t_session`を`service_role`で直接INSERTして再現し（status=1で仮生成）、その後 `resolve_stale_session` RPC（実際にサインインしたコーチ or アドミンのJWT）を1件ずつ呼んで`completed`に遷移させる、というハイブリッド方式を採用した（2026-10-14以降は `record_session_outcome`（コーチ）/ `admin_correct_session_outcome`（アドミン）。通話の記録が無い回は実施方法=外部のZoom・理由付きで記録する）。`resolve_stale_session`はRPC内で`used_sessions`加算と`com_t_user_session_ticket_history`への記録を自動で行うため、手動でのused_sessions調整は不要だった。一方、「今日以降の予定で足りる」データ（コーチ交代後の新規予定等）は素直に本物のRPC（`admin_match_student_with_coach`等）で生成する方が安全・簡単。
 - **判断基準への反映**:
   - **「過去の実績」と「現在〜未来の予定」を明確に分けて設計する。** 前者はservice_role直接INSERT＋RPCでの状態遷移（resolve_stale_session等）のハイブリッド、後者は素直に本物のRPCを使う。全部をRPC経由で作ろうとすると、このようなクランプ制約に阻まれることがある。
-  - `cancel_session`・`reschedule_session`・`book_makeup_session`はいずれも「対象セッションが未来（`start_datetime > NOW()`）であること」が前提条件。過去セッションの状態を変えたい場合はこれらのRPCの対象にならない（`resolve_stale_session`または`finalize_session`のみが対象）。
+  - `cancel_session`・`reschedule_session`・`book_makeup_session`はいずれも「対象セッションが未来（`start_datetime > NOW()`）であること」が前提条件。過去セッションの状態を変えたい場合はこれらのRPCの対象にならない（2026-10-14以降は`record_session_outcome`・`admin_correct_session_outcome`のみが対象。旧: `resolve_stale_session`・`finalize_session`）。
   - 生徒本人によるセルフサービス操作（`reschedule_session`を生徒自身が呼ぶ等）は、`com_m_coach_availability`（コーチの空き時間設定）のチェックを通る必要がある。アドミン代理操作はこのチェックをスキップするため気づきにくいが、**新規に作成したコーチアカウントは空き時間が一件も無い状態**なので、生徒セルフサービスのテストシナリオでは事前に空き時間を作成しておく必要がある（`testing/features/branches/feature-20260904-dev/seed.ts`の`ensureCoachAvailability`を参照）。
 
 ---
@@ -1055,7 +1055,7 @@
 - **該当シナリオ**: E2E `tests/journeys/coach-live-session.spec.ts`（ジャーニー: `e2e/journeys/coach-live-session.md`）（dev, 2026-10-07）
 - **事象**: セッションハブの End Session は「コーチが一度でも通話に入った記録」があるまで押せず、実施結果は入退室の重なりで決まる。通話は Zoom Video SDK のため E2E では入れない。
 - **対処**: 通話ルームが記録する入退室ログ（`com_t_session_call_log`）を、実施中のセッション（開始から21分）に対して直接入れる（`support/liveSessionFixtures.ts` の `prepareLiveSessionDay`）。
-  生徒の入室時刻を変えると、実施完了（重なり20分以上）と早期終了（理由が必要）を作り分けられる。終了処理（`finalize_session`）は画面から通常どおり呼ぶ。
+  生徒の入室時刻を変えると、実施完了（重なり20分以上）と早期終了（理由が必要）を作り分けられる。終了処理（End Session = `record_session_outcome`。重なりからの推定が初期選択になる）は画面から通常どおり呼ぶ。
 - **判断基準への反映**: 通話そのもの（入室・退室の操作、映像・音声）は E2E の対象外とし、通話の前後の業務フローは入退室ログで状態を作って画面から検証する（CONVENTIONS.md 2章）。
 
 ### KJ-2026-1007-03 楽観的更新の操作は、画面の切り替わりで保存の完了を判定できない
@@ -1065,3 +1065,60 @@
 - **原因**: 生徒のチェックリストは保存の完了を待たずに画面を切り替える（楽観的更新。失敗したら元に戻す）。画面の表示は保存の完了を意味しない。
 - **対処**: DB の確認を `expect.poll` で保存が終わるまで待つ形にした。
 - **判断基準への反映**: 楽観的更新の操作（チェックリスト・お気に入り等）の後に DB を確かめるときは、画面の表示を待つだけでなく `expect.poll` で DB の値を待つ。
+
+### KJ-2026-1008-01 ジャーニーのE2Eを書くと、画面ごとのテストでは見えない回数の食い違いが見つかる
+
+- **該当シナリオ**: E2E `tests/journeys/live-session-reschedule.spec.ts`（ジャーニー: `e2e/journeys/live-session-reschedule.md`）（dev, 2026-10-08）
+- **事象**: 生徒がキャンセル時に振替候補を出すと、ライブセッションホームの内訳は「未予約1回」のままで予約リクエストの案内が出た。案内どおりに予約リクエストも送り、コーチが両方を承認すると、契約の回数（12回）を超えて13回目が予約された。
+- **原因**: 「調整中」と予約リクエストの空き回数が、生徒が出した振替候補を差し引いていなかった。振替候補の承諾も回数を確かめていなかった。どちらの画面も単独では正しく見えるため、画面ごとのテストでは見つからなかった。
+- **対処**: 予約できる回数を `fn_schedule_bookable_count` に一本化し（予約リクエストRPC・生徒の予約できるコマ）、承諾・承認でも未予約の回が残っていることを確かめるようにした。テストは各手順の後に回数の内訳（バーの読み上げ名）と DB のセッション数を確かめる。
+- **判断基準への反映**: 回数・残高を持つ業務（チケット・ライセンス数等）のジャーニーでは、手順ごとに合計の不変条件（例: 予約済み＋調整中＋未予約＝契約の回数）を判定点にする。
+
+### KJ-2026-1008-02 コーチの担当生徒の一覧で生徒名を押しても、並列実行の負荷が高いと生徒概要へ移らないことがある
+
+- **該当シナリオ**: E2E `tests/journeys/coach-live-session.spec.ts` 手順3、`tests/journeys/live-session-reschedule.spec.ts` の初版（dev, 2026-10-08）
+- **事象**: 多数のテストを並列で流すと、`/students` で生徒名を押した後も URL が `/students` のままで失敗した。1件ずつ流すと通る。
+- **原因（推定）**: dev サーバーの負荷で一覧の描画・ハイドレーションが遅れ、押した時点で行のリンクがまだ動いていない。
+- **対処**: 一覧からの遷移を確かめる必要が無いテスト（live-session-reschedule）は生徒概要を URL で直接開くようにした。coach-live-session は一覧からの遷移自体が手順のため、そのままにしている（再発するなら `clickUntilVisible` で遷移先の見出しを待って押し直す）。
+- **判断基準への反映**: 遷移の操作そのものを確かめないテストでは、別のテストで確認済みの画面へは URL で直接移る。
+
+### KJ-2026-1009-01 「管理者の操作は通知しない」には、直接マッチングの挨拶のチャットという例外がある
+
+- **該当シナリオ**: E2E `tests/journeys/admin-live-session-ops.spec.ts` 手順8（dev, 2026-10-09）
+- **事象**: アドミンの代理操作の後に生徒・コーチへの通知が0件であることを確かめたところ、生徒に `CHAT_NEW_MESSAGE` が1件登録されていた。
+- **原因**: 直接マッチングの成立時に、`fn_send_matching_greeting` が新しいコーチの名義で挨拶のチャットを送る（画面仕様書に記載済みの意図した動き）。チャットの新着はチャットの登録のトリガーで通知するため、`fn_notify` の「呼び出し元が管理者なら登録しない」の対象外になる。
+- **対処**: テストは「通知が0件」ではなく、届いた通知の種別と宛先の一覧（挨拶のチャットの新着だけ）を確かめるようにした。ドメイン仕様書（specs/admin）のフロー6に例外を書き足した。
+- **判断基準への反映**: 「通知しない」を確かめるときは件数ではなく宛先と種別の一覧で比べる（失敗時に何が届いたかがすぐ分かり、意図した例外を明記できる）。あわせて、同じ調査で代理予約・直接マッチングがコーチの空き時間を確かめていないこと（画面の注記・仕様書は「確かめる」と書いていた）が分かり、仕様書を実装に合わせて直した。アドミンの例外措置として縛らない方針とし、画面の注記を「空き時間の外でも予約できるため事前にコーチへ確認する」に改めた。
+
+### KJ-2026-1010-01 例外を返す直前の UPDATE は取り消されるため、「期限切れへ更新してから拒否」は状態が残らない
+
+- **該当シナリオ**: E2E `tests/booking/live-session-branches.spec.ts`「回答期限を過ぎた振替候補…」（dev, 2026-10-10）
+- **事象**: 仕様書は「期限切れの振替候補を承諾しようとするとエラー。裏で status が expired へ更新される」としていたが、承諾の拒否後も status は回答待ち（1）のままだった。
+- **原因**: `approve_slot_proposal` は `UPDATE … SET status = 5` の直後に `RAISE EXCEPTION` する。関数の中の処理は1つのトランザクションのため、例外で UPDATE も取り消される。却下（`reject_slot_proposal`）は期限を確かめない。
+- **対処**: 一覧・「調整中」の数え方はすべて `expires_at` で判定しているため、利用者への実害は無い。仕様書を実際の動き（判定は `expires_at`、status は残る）に直し、テストは現状を固定した。死んだ UPDATE の扱い（消す・期限切れの更新を別の処理で行う）は未定。
+- **判断基準への反映**: RPC の「状態を更新してからエラーにする」記述を見たら、例外で取り消されないか（別トランザクションか、エラーにせず戻り値で返すか）を確かめる。状態の列を業務の判定に使う箇所が増える前に直す。
+
+### KJ-2026-1012-01 サーバーで描いたホームのカードは、WebKit の dev では動き出すまで10秒を超えることがある
+
+- **該当シナリオ**: E2E `tests/popup/popup-control.spec.ts`「ホームのカード」の2件（mobile = WebKit、dev, 2026-10-12）
+- **事象**: カードの「このお知らせを閉じる」「詳しく見る」を押しても何も起きず、カードが消えない・ポップアップが開かない。desktop（Chromium）では再現しなかった。
+- **原因**: カードはサーバーで描いてから動き出す（ハイドレーション）ため、それより前の押下は無視される。調査のためコンソールを記録したところエラーは無く、8秒待てば必ず動き出したが、dev の WebKit では10秒（Playwright の既定の待ち時間）を超えることがあった。
+- **対処**: カード（共通の `NoticeHomeCard`）にハイドレーション後だけ付く `data-ready="true"` を付け、テストは押す前に30秒まで待つ。
+- **判断基準への反映**: KJ-2026-0928-02 の入力欄に加え、サーバーで描いた画面の「押すと状態が変わるだけ」のボタン（閉じる・開く等）も、`data-ready` を待ってから押す。待ち時間は既定の10秒では足りないことがあるため 30 秒（`clickUntilVisible` と同じ）にする。
+
+### KJ-2026-1013-01 使い捨てのコーチが後始末で消えず、dev に残っていた
+
+- **該当シナリオ**: E2E の後始末 `support/authFixtures.ts` の `cleanupAuthFixture`（dev, 2026-10-13。`tests/rating/coach-rating.spec.ts` の作成中に発見）
+- **事象**: 残骸の確認（`authFixtures.leftovers.ts`）で、2026-10-10 以降のコーチのテスト（`coach/`・`matching/` 等）の使い捨てのコーチが16件残っていた。テストは成功しており、後始末の失敗は `console.warn` だけで気づけなかった。
+- **原因**: 2つあった。(1) コーチ評価の導入で、コーチのプロフィールの作成時に初期値の評価（`com_t_coach_rating`、登録元3）がトリガーで入るようになり、評価が `com_m_user` を参照するためユーザーを消せない（生徒の評価はチケットも参照する）。(2) 担当関係（`com_m_coach_student_relationship`）を生徒のIDでだけ消していたため、コーチを生徒より先に作ったテスト（後始末も先に消す）では、担当関係がコーチを参照したまま残る。
+- **対処**: 後始末と残骸の確認で、評価（チケット・コーチ・生徒のどれかで）と担当関係（生徒・コーチの両側）を先に消すようにし、残っていた分を `--delete` で消した。1件はアドミンの代理ログインの記録（`com_t_admin_impersonation_log`、監査の記録）が参照しているため残している。
+- **判断基準への反映**: `com_m_user` を参照するテーブルやトリガーを追加したら、後始末（`deleteUsers`・`authFixtures.leftovers.ts`）で消せるかを同じタスクで確かめる。E2E を書き終えたら `pnpm exec tsx e2e/support/authFixtures.leftovers.ts` で残骸が増えていないことを確かめる。
+
+### KJ-2026-1013-02 サーバーアクションの通信の失敗は戻り値ではなく例外になり、楽観的に切り替えた表示が戻らない
+
+- **該当シナリオ**: コーチのプロフィールの受付スイッチ（`apps/coach/app/(app)/profile/_components/MatchingStatusCard.tsx`。dev, 2026-10-13。`e2e/tests/coach/profile-matching-card.spec.ts` の作成中に発見）
+- **事象**: 保存の通信を失敗させると、スイッチは OFF の表示のまま押せなくなり、エラーも出なかった（DB は ON のまま）。
+- **原因**: 部品は「失敗したら元に戻す」を `{ success: false }` の戻り値でだけ処理していた。サーバーアクションの通信そのものが失敗した場合は戻り値ではなく例外になるため、元に戻す処理と処理中の解除が実行されなかった。
+- **対処**: 呼び出しに `.catch()`（失敗の結果に変える）と `.finally()`（処理中の解除）を付けた。お気に入りの☆（`FAVORITE_TOGGLE_NETWORK_ERROR`）と同じ形。
+  同じ形の部品を洗い出して直した（2026-10-13）: コーチ・生徒のメール通知のスイッチ（`MailSettingsCard` / `MailSettingsSection`）、生徒の宿題のチェックリスト（`StudentSessionResult`）、アドミンのマッチング対象の保存（`CoachMatchingPanel`。表示は先に切り替えないが、例外のままだと画面全体のエラー表示になる）。文言は各アプリの `constants/network.ts` の `SAVE_NETWORK_ERROR_MESSAGE`（アドミンは `common.networkError`）。E2E は受付スイッチ（`tests/coach/profile-matching-card.spec.ts`）で確かめている（宿題のチェックリストは2026-10-14に廃止）。
+- **判断基準への反映**: 楽観的に表示を切り替えてからサーバーアクションを呼ぶ部品は、戻り値の失敗と例外の両方で元に戻ることを確かめる。E2E では `page.route` で `next-action` ヘッダー付きの POST を `abort` すると通信の失敗を再現できる。

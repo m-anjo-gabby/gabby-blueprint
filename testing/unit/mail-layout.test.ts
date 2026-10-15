@@ -64,7 +64,7 @@ test("全メール: ヘッダーは本番の生徒ポータルのロゴ画像（
   for (const [label, { html }] of ALL) {
     assert.ok(html.startsWith("<!DOCTYPE html><html"), label);
     assert.ok(html.includes(`src="${DEFAULT_MAIL_LOGO_URL}"`), label);
-    assert.ok(html.includes('alt="Gabby Blueprint English"'), label);
+    assert.ok(html.includes('alt="Gabby Blueprint"'), label);
     assert.ok(html.includes("https://gabbyacademy.com/"), label);
     assert.ok(html.includes('<meta name="color-scheme" content="light"/>'), label);
   }
@@ -75,7 +75,7 @@ test("全メール: テキスト版は HTML のタグを含まず、ボタンの
     assert.ok(text.length > 100, label);
     assert.doesNotMatch(text, /<[a-z/!][^>]*>/i, label);
     assert.doesNotMatch(text, /&amp;|&#x27;/, label);
-    assert.ok(text.startsWith("Gabby Blueprint English\n"), label);
+    assert.ok(text.startsWith("Gabby Blueprint\n"), label);
     // HTML のボタンの遷移先（属性値はエスケープされている）がテキスト版にもある
     const href = html.match(/<a href="([^"]+)" style="display:inline-block/)?.[1]?.replace(/&amp;/g, "&");
     assert.ok(href && text.includes(`\n${href}`), label);
@@ -86,7 +86,7 @@ test("日英併記: テキスト版も日本語→英語の順で、言語の間
   const { text } = renderMail(buildPasswordResetMail({ resetUrl: INVITE_URL, language: "bilingual" }));
   const divider = text.indexOf("------------------------------");
   assert.ok(divider > 0);
-  assert.ok(text.indexOf("いつも Gabby Blueprint English") < divider);
+  assert.ok(text.indexOf("いつも Gabby Blueprint") < divider);
   assert.ok(text.indexOf("Thank you for using") > divider);
   assert.ok(text.includes("▼ パスワードを再設定する / Reset password\n" + INVITE_URL));
 });

@@ -21,9 +21,9 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 検索欄 | 常時表示 | 顧客名称の部分一致で検索。Enterキーまたは「検索」ボタンで実行し、URLの`q`パラメータに反映。検索実行時は1ページ目に戻る |
-| 検索欄の×ボタン | 検索欄に入力がある場合のみ表示 | 検索条件をクリアして再検索する |
-| ページ送り（前へ・次へ） | 常時表示（先頭・末尾では該当ボタンが無効化） | 該当ページの顧客一覧を再取得する |
+| 検索欄 | 常時表示 | 顧客名称の部分一致で検索。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る）。入力した文字はそのまま文字として検索する（`%`・`,`等も特別な意味を持たない） |
+| 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
+| 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | 「新規登録」ボタン | 常時表示 | 新規登録ダイアログを開く |
 | 一覧テーブルの「編集」ボタン | 各行に表示 | その顧客の編集ダイアログを、既存値が入力された状態で開く |
 | 一覧の各列 | 顧客名称、種別（法人／個人）、業界（製薬／半導体／その他／未設定）、登録日 | 表示のみ |
@@ -50,7 +50,8 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/clients/page.tsx`
-- `apps/admin/app/(app)/clients/_components/client-data-table.tsx`
+- `apps/admin/app/(app)/clients/_components/ClientDataTable.tsx`
+- `apps/admin/components/list/`（一覧の共通部品: `useListQuery`・`ListToolbar`・`DataTable`・`ListSelectFilter`・`ClientFilter`）, `apps/admin/lib/list.ts`（URLの条件の読み取り・ページ範囲）
 - `apps/admin/app/(app)/clients/_components/ClientFormDialog.tsx`
 - `apps/admin/app/(app)/clients/_components/columns.tsx`
 - `apps/admin/actions/adminClientAction.ts`（`getClients`, `createClient`, `updateClient`）

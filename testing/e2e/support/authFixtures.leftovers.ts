@@ -31,6 +31,12 @@ if (doDelete) {
     const { data: contracts } = await admin.from("com_m_contract").select("contract_id").eq("client_id", c.client_id);
     const contractIds = (contracts ?? []).map((k) => k.contract_id);
     if (contractIds.length > 0) {
+      const { data: tickets } = await admin.from("com_t_user_session_ticket").select("ticket_id").in("contract_id", contractIds);
+      const ticketIds = (tickets ?? []).map((t) => t.ticket_id);
+      if (ticketIds.length > 0) {
+        await admin.from("com_m_lesson_schedule").delete().in("ticket_id", ticketIds);
+        await admin.from("com_t_coach_rating").delete().in("ticket_id", ticketIds);
+      }
       await admin.from("com_t_user_session_ticket_history").delete().in("contract_id", contractIds);
       await admin.from("com_t_user_session_ticket").delete().in("contract_id", contractIds);
       await admin.from("com_t_user_license_history").delete().in("contract_id", contractIds);
@@ -39,7 +45,8 @@ if (doDelete) {
     }
   }
   for (const u of users) {
-    await admin.from("com_m_coach_student_relationship").delete().eq("student_id", u.id);
+    await admin.from("com_m_coach_student_relationship").delete().or(`student_id.eq.${u.id},coach_id.eq.${u.id}`);
+    await admin.from("com_t_coach_rating").delete().or(`coach_id.eq.${u.id},student_id.eq.${u.id}`);
     await admin.from("com_t_user_role").delete().eq("user_id", u.id);
     await admin.from("com_m_user").delete().eq("id", u.id);
     const { error } = await admin.auth.admin.deleteUser(u.id);

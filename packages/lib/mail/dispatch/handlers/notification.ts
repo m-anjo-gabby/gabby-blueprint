@@ -60,7 +60,7 @@ export const notificationHandler: MailHandler = async ({ admin, row, recipient, 
       title: text.title,
       body: text.body,
       actionUrl,
-      details: buildNotificationDetails({ type, facts, timeZone: recipient.timezone, language }),
+      details: buildNotificationDetails({ type, facts, timeZone: recipient.timezone, zoneName: recipient.timezoneName, language }),
       links,
     })
   );

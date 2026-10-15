@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,8 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { upsertCalendarEvent, getCoachesFilter, CalendarEventFormData } from '@/actions/adminCalendarEventAction';
-import { getClientsFilter } from '@/actions/adminClientAction';
+import { upsertCalendarEvent, CalendarEventFormData } from '@/actions/adminCalendarEventAction';
 import Link from 'next/link';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
@@ -71,9 +70,16 @@ function createCalendarEventSchema(t: FormT) {
 
 type CalendarEventFormValues = z.infer<ReturnType<typeof createCalendarEventSchema>>;
 
+/** 配信対象の顧客・担当コーチの選択肢（画面のサーバー側で1回だけ取得し、各ダイアログへ渡す） */
+export interface CalendarEventFormOptions {
+  clients: ClientOption[];
+  coaches: CalendarEventCoachOption[];
+}
+
 interface CalendarEventFormDialogProps {
   mode?: 'create' | 'edit';
   initialData?: CalendarEventItem;
+  options: CalendarEventFormOptions;
 }
 
 const DEFAULT_VALUES: CalendarEventFormValues = {
@@ -97,7 +103,7 @@ const DEFAULT_VALUES: CalendarEventFormValues = {
 /**
  * カレンダーイベント（グループセッション・メンテナンス等）登録・編集用ダイアログ
  */
-export function CalendarEventFormDialog({ mode = 'create', initialData }: CalendarEventFormDialogProps) {
+export function CalendarEventFormDialog({ mode = 'create', initialData, options: { clients, coaches } }: CalendarEventFormDialogProps) {
   const t = useTranslations('calendarEvents.formDialog');
   const calendarEventSchema = useMemo(() => createCalendarEventSchema(t), [t]);
   const TARGET_TYPE_LABEL: Record<CalendarEventTargetType, string> = {
@@ -108,14 +114,8 @@ export function CalendarEventFormDialog({ mode = 'create', initialData }: Calend
   const [open, setOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [coaches, setCoaches] = useState<CalendarEventCoachOption[]>([]);
   const { showToast } = useToast();
 
-  useEffect(() => {
-    getClientsFilter().then(setClients);
-    getCoachesFilter().then(setCoaches);
-  }, []);
 
   const getInitialValues = (data?: CalendarEventItem): CalendarEventFormValues => {
     if (!data || mode === 'create') return DEFAULT_VALUES;

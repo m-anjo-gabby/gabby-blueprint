@@ -133,7 +133,7 @@ export function renderMailText(doc: MailDocument): string {
     return `${line.text}\n${line.link.label}: ${line.link.href}`;
   });
   return [
-    'Gabby Blueprint English',
+    'Gabby Blueprint',
     ...(doc.headerLabel ? [doc.headerLabel] : []),
     '',
     renderBlocksText(doc.blocks, lang).join('\n\n'),

@@ -1,92 +1,41 @@
----------------------------------------------
--- 個別セッションのキャンセルRPC (2026-08-15 追加, Phase3)
--- 前提: table/com_t_session.sql, table/com_t_session_slot_proposal.sql,
---       function/check_session_conflict.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- com_t_session への直接UPDATEはRLSで許可していない（SELECTのみ許可）ため、
--- 生徒・コーチいずれかによるセッションのキャンセルは必ず本関数を通す。
--- 定期スケジュール(com_m_lesson_schedule)には触れず、対象の個別回のみを
--- キャンセル済みにする（＝「定期スケジュールは基本的に維持」）。
--- チケットの消化(used_sessions)は実施完了時にのみ加算される想定のため、
--- 事前キャンセルではチケットを一切消費しない。
+-- =========================================================================
+-- cancel_session: ライブセッションの個々の回のキャンセル
+-- =========================================================================
+-- 【役割】
+-- com_t_session の直接の更新は RLS で許可していないため、生徒・コーチ・アドミンのキャンセルは必ず本関数を通す。
+-- 定期スケジュール（com_m_lesson_schedule）は変えず、対象の回だけを status=3 にし、起因を cancel_category
+-- （1:生徒 2:コーチ 3:アドミン）に入れる。実施前のキャンセルはチケットを消化しない。
 --
--- 【チケット返還ルール (2026-09-05追加)】
--- 生徒キャンセル: 開始12時間以上前ならticket_refunded=true（未割当扱いに戻り、
---   担当コーチ限定で再予約可能）、12時間未満ならfalse（返還なし、消化済み扱い）。
--- コーチキャンセル: 時間帯を問わず常にticket_refunded=true。
+-- 【チケットの返還（ticket_refunded）】
+-- 生徒: 開始12時間以上前なら返還（未予約の回に戻り再予約できる）、12時間未満は返還なし（消化扱い）。
+-- コーチ: 常に返還。アドミン: p_admin_refund_ticket で指定した値をそのまま使う（12時間のルールは適用しない）。
 --
--- 【振替候補の提案 (2026-09-07追加、2026-09-11双方向化)】
--- 「振替」という独立概念を廃止し、個別セッションは「キャンセル」「予約」の2パターンに
--- 単純化する方針のため、キャンセル時の候補提案はコーチ→生徒・生徒→コーチの双方向で
--- 使えるようにする。p_proposed_slots は [{"start_datetime":"...","end_datetime":"..."}] 形式の
--- JSONB配列で、最大3件まで（アドミン代理キャンセル時は指定不可）。
--- Availability(com_m_coach_availability)のチェックは行わない
--- （一回限りの特別な時間として明示的に提案するものであるため）。提案時点で
--- ダブルブッキングになっていないかはcheck_session_conflict()で事前チェックする
--- （承諾時の再チェックと合わせた二段構え）。提案者はcom_t_session_slot_proposal.
--- proposed_by_roleに記録し、approve_slot_proposal/reject_slot_proposalが
--- 「提案者と逆側のみ応答可」の判定に使う。
--- 回答期限(24時間、2026-09-11に48時間から短縮)は v_proposal_validity_hours で一元管理する。
--- 今後時間数を変更したい場合はこの1箇所を書き換えるだけでよい（発行済みの提案には
--- 遡って影響しない）。
+-- 【アドミンの代理操作】
+-- 呼び出し側がアドミンの代理として呼ぶ場合は p_as_admin=true を渡し、本関数は呼び出し者が本当にアドミンかを
+-- fn_assert_actor_or_admin() で確かめる。p_as_admin=false の場合は当事者本人（生徒またはコーチ）であることを厳密に要求する
+-- （「生徒でもコーチでもないからアドミン」と推測しない）。代理のキャンセルの通知は、生徒・コーチの両方へ
+-- どちらが原因かを特定しない文言で送る。
 --
--- 【スロット提案の統合 (2026-09-15追加)】
--- 書き込み先をcom_t_session_reschedule_proposalからcom_t_session_slot_proposalへ変更する
--- （生徒の自由予約リクエストと統合した単一テーブル。詳細はtable/com_t_session_slot_proposal.sqlの
--- コメント参照）。本関数が作成する行は「キャンセル起因の振替候補」を表すため、
--- schedule_id=v_session.schedule_id・source_session_id=p_session_idを設定する。
+-- 【振替候補の提案】
+-- 生徒・コーチ本人のキャンセルでは、相手への振替候補を最大3件添えられる（p_proposed_slots =
+-- [{"start_datetime":"...","end_datetime":"..."}]。アドミンの代理では不可）。候補は com_t_session_slot_proposal に
+-- schedule_id・source_session_id（キャンセルした回）を付けて作り、提案者を proposed_by_role に入れる
+-- （承諾・却下は提案者と逆の側だけができる）。
+--   - 返還なしのキャンセルでは候補を添えられない（承諾で回が増え、契約の回数を超えるため）。
+--   - 候補の開始は24時間以上先であること（提案時だけ確かめ、承諾時には確かめない）。
+--   - コーチの空き時間は確かめない（一度だけの特別な時間として明示的に提案するため）。ダブルブッキングは
+--     check_session_conflict() で提案時に確かめ、承諾時にも再度確かめる。
+--   - 回答期限は v_proposal_validity_hours（24時間）で一元管理する（変えても発行済みの提案には影響しない）。
 --
--- 【24時間ルール (2026-09-15追加)】
--- 提案する候補の開始時刻も、生徒の個別予約と同じ「開始24時間以上先」ルールの対象とする
--- （アドミン代理キャンセルではそもそも候補提案不可のため、本ルールは常に生徒・コーチ
--- 本人の提案にのみ適用される）。検証するのは提案時点のみで、承諾側
--- (approve_slot_proposal)では再検証しない。提案の有効期限(最大24時間)の
--- 間に猶予が24時間を切ることはあり得るが、承諾側で再検証すると相手が即応答しない限り
--- 成立しない不合理なルールになるため、意図的に行わない。
---
--- 【通知 (2026-09-07追加、2026-09-11双方向化)】
--- コーチキャンセル時は生徒へ、生徒キャンセル時はコーチへ、それぞれcom_t_notificationに
--- 通知を作成する。既存の通知(TRAINING_*/CHAT_NEW_MESSAGE)と異なりトリガーではなく、
--- 本関数(SECURITY DEFINER)内で直接INSERTする（本関数自身が状態変更の唯一の発生源のため）。
--- 通知INSERTはfn_notify()を使う（前提: function/fn_notify.sql）。
---
--- 【権限チェックの共通化 (2026-09-15追加)】
--- 権限チェック自体（実際に当事者本人か／実際にアドミンか）はfn_assert_actor_or_admin()に
--- 委ねる（前提: function/fn_assert_actor_or_admin.sql）。ただし「これはアドミン代理操作か」
--- という判定は、後述の【admin-proxy判定の明示化】の通りp_as_adminで明示する。
---
--- 【admin-proxy判定の明示化 (2026-09-15追加)】
--- 従来はv_is_admin_proxyを「auth.uid()が生徒ともコーチとも一致しない」という消去法で
--- 推測していた。通常はこれで問題ないが、将来的にアドミンアカウントが同一セッションの
--- 生徒/コーチ本人を兼ねるような想定外のデータ状態が生じた場合、消去法だと誤って
--- 自己申告フロー（12時間ルール等）に流れてしまう。呼び出し元（アドミン代理操作専用の
--- cancelSessionAsAdmin）は元々「今からアドミン代理として呼ぶ」ことを認識しているため、
--- その意図をp_as_adminという明示パラメータで渡してもらい、本関数側はその申告が
--- 実際にアドミンロールを持つ呼び出し者によるものかをfn_assert_actor_or_admin(NULL, ...)で
--- 検証する、という構成に変更する。p_as_admin=falseの場合は、消去法によるアドミン救済を
--- 一切行わず、当事者本人（生徒またはコーチ）であることを厳密に要求する
--- （他の管理者専用RPC群(admin_book_session_direct等)と同じ「呼び出し方自体で意図を示す」
--- 設計思想に揃える）。
----------------------------------------------
--- 旧シグネチャからの変更のため、先に古い関数を明示的に削除する
--- （デフォルト引数を持つ新シグネチャと共存させるとPostgres側でオーバーロードの曖昧性が生じるため）。
+-- 【通知】
+-- 相手側（コーチのキャンセルなら生徒、生徒のキャンセルならコーチ）へ fn_notify() で通知する
+-- （本関数が状態変更の唯一の発生源のため、トリガーではなく関数内で作る）。
+-- =========================================================================
+
 DROP FUNCTION IF EXISTS public.cancel_session(uuid, text);
 DROP FUNCTION IF EXISTS public.cancel_session(uuid, text, jsonb);
 DROP FUNCTION IF EXISTS public.cancel_session(uuid, text, jsonb, boolean);
 
--- 【アドミン代理キャンセル対応 (2026-09-09追加、2026-09-15にp_as_admin明示化)】
--- 生徒キャンセル(1)・コーチキャンセル(2)はいずれもauth.uid()が本人と一致することを
--- 前提に返還ルール・通知内容を決めているため、管理者自身のauth.uid()（どちらとも
--- 一致しない）で呼び出すと誤判定してしまう。p_as_admin=trueを明示した場合のみ、
--- アドミン代理操作とみなし、返還可否を管理者が明示的に指定した値(p_admin_refund_ticket)で
--- そのまま確定させる（12時間ルール等は適用しない）。起因はcancel_category=3(admin)を用い、
--- 通知は生徒・コーチ双方へ、どちらが原因かを特定しない中立的な文言で送る。
---
--- 【ステータス簡素化 (2026-09-14変更)】
--- statusは常に3(cancelled)を確定し、起因（生徒/コーチ/アドミン代理）はcancel_category
--- (1/2/3)に分離する（table/com_t_session.sqlのステータス簡素化パッチ参照）。
--- 返還有無(ticket_refunded)の算出ロジック自体は変更しない。
 CREATE OR REPLACE FUNCTION public.cancel_session(
     p_session_id uuid,
     p_reason text DEFAULT NULL,
@@ -173,6 +122,10 @@ BEGIN
         v_proposal_count := jsonb_array_length(p_proposed_slots);
         IF v_proposal_count > 3 THEN
             RAISE EXCEPTION 'cannot propose more than 3 alternative times';
+        END IF;
+        -- 返還なしのキャンセル（生徒による開始12時間未満）は消化済み扱いのため、振替の候補を出せない
+        IF v_proposal_count > 0 AND NOT v_refunded THEN
+            RAISE EXCEPTION 'cannot propose alternative times for a non-refunded cancellation';
         END IF;
 
         FOR v_slot IN SELECT * FROM jsonb_array_elements(p_proposed_slots) LOOP

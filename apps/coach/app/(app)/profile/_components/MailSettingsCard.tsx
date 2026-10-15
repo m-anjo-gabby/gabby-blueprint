@@ -6,6 +6,7 @@ import type { MailSettings } from '@gabby/lib/mail/settingsActions';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { Switch } from '@/components/ui/switch';
 import { updateMyMailSetting } from '@/actions/mailSettingAction';
+import { SAVE_NETWORK_ERROR_MESSAGE } from '@/constants/network';
 
 /**
  * Email notification settings (one switch per category that has at least one email type).
@@ -21,8 +22,10 @@ export function MailSettingsCard({ initialSettings }: { initialSettings: MailSet
   const handleChange = async (category: MailCategory, enabled: boolean) => {
     setSettings((prev) => ({ ...prev, [category]: enabled }));
     setSavingCategory(category);
-    const result = await updateMyMailSetting(category, enabled);
-    setSavingCategory(null);
+    // A failed request (e.g. network error) throws instead of returning a result, so treat it as a failure too
+    const result = await updateMyMailSetting(category, enabled)
+      .catch((): { success: false; message: string } => ({ success: false, message: SAVE_NETWORK_ERROR_MESSAGE }))
+      .finally(() => setSavingCategory(null));
     if (!result.success) {
       setSettings((prev) => ({ ...prev, [category]: !enabled }));
       showToast(result.message, 'error');

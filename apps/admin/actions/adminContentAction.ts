@@ -2,22 +2,26 @@
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
-import { Content, ContentRecord, ContentTagSummary } from '@gabby/types/content';
-// パスを index.ts 参照へ修正し、getLogContext を追加
+import { CONTENT_TYPES, Content, ContentRecord, ContentTagSummary } from '@gabby/types/content';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { ilikeAny } from '@gabby/lib/supabase/ilike';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 
 const logger = createLogger('admin');
 
 /**
- * 教材一覧取得（サーバーサイドページネーション）
+ * 教材一覧取得（ページネーション・教材名/ラベルの部分一致検索・種別での絞り込み）
+ * 種別順(content_type)・セット分類順(category_id)・表示順(seq_no)で並べる。
  */
-export async function getContents(page: number = 1, limit: number = 10, searchQuery?: string, contentType?: number) {
+export async function getContents(params: ListParams<'type'>): Promise<ListResult<Content>> {
   const ctx = await getLogContext();
+  const { q, filters } = params;
+  // 種別は既知の値だけを条件にする（不正な値は「すべて」として扱う）
+  const contentType = Object.hasOwn(CONTENT_TYPES, filters.type) ? Number(filters.type) : undefined;
   try {
     const supabase = await createAdminClient();
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
+    const [from, to] = toRange(params);
 
     let query = supabase
       .from('com_m_contents')
@@ -48,8 +52,8 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
       .order('seq_no', { referencedTable: 'com_t_contents_tag_rel.com_m_contents_tag', ascending: true })
       .range(from, to);
 
-    if (searchQuery) {
-      query = query.or(`content_name.ilike.%${searchQuery}%,content_label.ilike.%${searchQuery}%`);
+    if (q) {
+      query = query.or(ilikeAny(['content_name', 'content_label'], q));
     }
 
     if (contentType !== undefined) {
@@ -59,7 +63,7 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
     const { data, count, error } = await query;
 
     if (error) {
-      logger.error('content:get_contents_failed', error.message, { ...ctx, err: error, payload: { page, limit, searchQuery, contentType } });
+      logger.error('content:get_contents_failed', error.message, { ...ctx, err: error, payload: { from, to, contentType } });
       throw new Error(error.message);
     }
 
@@ -70,11 +74,11 @@ export async function getContents(page: number = 1, limit: number = 10, searchQu
     }));
 
     return {
-      contents,
+      rows: contents,
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('content:get_contents_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { page, limit, searchQuery, contentType } });
+    logger.error('content:get_contents_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentType } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }

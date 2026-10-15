@@ -10,7 +10,6 @@ import {
   LIVE_SESSION_ROOM_ROLE,
   RecordCallJoinResult,
 } from '@gabby/types/liveSessionRoom';
-import { GetSessionCallLogPresenceResult } from '@gabby/types/session';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
@@ -223,45 +222,6 @@ export async function checkStudentLiveSessionJoinableCore(sessionId: string): Pr
     return { success: true, joinable: true };
   } catch (err) {
     logger.error('liveSessionRoom:student_joinable_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
-    return { success: false, errorCode: 'unexpected_error' };
-  }
-}
-
-/**
- * 指定したsession_id群それぞれについて、コーチ自身の入室ログ(com_t_session_call_log, role='coach')が
- * 1件でも存在するかを一括取得する。ダッシュボード/生徒詳細画面の「レッスン終了」ボタンの活性判定に使用する
- * （1件ずつ問い合わせるN+1を避けるため、対象session_id配列をまとめて1クエリで取得する）。
- */
-export async function getSessionCallLogPresenceCore(sessionIds: string[]): Promise<GetSessionCallLogPresenceResult> {
-  const ctx = await getLogContext();
-
-  try {
-    if (sessionIds.length === 0) {
-      return { success: true, joinedBySessionId: {} };
-    }
-
-    const supabase = await createServerClient();
-    const user = await getAuthUser();
-    if (!user) return { success: false, errorCode: 'unauthorized' };
-
-    const { data: rows, error } = await supabase
-      .from('com_t_session_call_log')
-      .select('session_id')
-      .in('session_id', sessionIds)
-      .eq('role', 'coach');
-
-    if (error) {
-      logger.error('liveSessionRoom:call_log_presence_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionIds } });
-      return { success: false, errorCode: 'unexpected_error' };
-    }
-
-    const joinedBySessionId: Record<string, boolean> = {};
-    for (const id of sessionIds) joinedBySessionId[id] = false;
-    for (const row of rows ?? []) joinedBySessionId[row.session_id] = true;
-
-    return { success: true, joinedBySessionId };
-  } catch (err) {
-    logger.error('liveSessionRoom:call_log_presence_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

@@ -8,6 +8,8 @@ import { TodaysLessonPanel } from './TodaysLessonPanel';
 
 interface Props {
   profile: StudentOverviewProfile;
+  /** The student's timezone as its master display name (e.g. "Japan (Tokyo)") */
+  timezoneName: string;
   upcomingSession: StudentSessionHistoryItem | null;
 }
 
@@ -53,7 +55,7 @@ function ContractSessionSummaryStats({ summary }: { summary: StudentContractSess
   );
 }
 
-export function StudentOverviewHeader({ profile, upcomingSession }: Props) {
+export function StudentOverviewHeader({ profile, timezoneName, upcomingSession }: Props) {
   const { active_contract } = profile;
 
   return (
@@ -73,7 +75,7 @@ export function StudentOverviewHeader({ profile, upcomingSession }: Props) {
                 <UserAvatar userName={profile.user_name} iconPath={profile.icon_path} size={56} />
                 <div>
                   <h1 className="text-xl font-bold text-slate-800 tracking-tight">{profile.user_name}</h1>
-                  <p className="text-xs text-slate-400 mt-0.5">Timezone: {profile.timezone}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Timezone: {timezoneName}</p>
                 </div>
               </div>
               {active_contract ? (

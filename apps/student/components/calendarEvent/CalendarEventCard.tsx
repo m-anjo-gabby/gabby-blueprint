@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Check, CheckCircle2, ChevronRight, Copy, Download, ExternalLink, Megaphone, Paperclip, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useNow } from '@gabby/lib/hooks/useNow';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { useEventAnnouncements } from '@gabby/lib/calendarEvent/useEventAnnouncements';
 import {
   CalendarEventItem,
-  CalendarEventMessageItem,
   CALENDAR_EVENT_TYPES,
   getCalendarEventPhase,
 } from '@gabby/types/calendarEvent';
@@ -29,12 +29,8 @@ export function formatEventTimeInZone(iso: string, timezone: string): string {
   return new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: timezone }).format(new Date(iso));
 }
 
-function CalendarEventAnnouncements({ calendarEventId, timezone }: { calendarEventId: string; timezone: string }) {
-  const [messages, setMessages] = useState<CalendarEventMessageItem[]>([]);
-
-  useEffect(() => {
-    getCalendarEventMessages(calendarEventId).then(setMessages);
-  }, [calendarEventId]);
+function CalendarEventAnnouncements({ event, timezone }: { event: CalendarEventItem; timezone: string }) {
+  const messages = useEventAnnouncements(event, getCalendarEventMessages);
 
   const handleDownload = async (path: string) => {
     const { url } = await getCalendarEventMessageAttachmentUrl(path);
@@ -235,7 +231,7 @@ export function CalendarEventCard({ event, timezone, onParticipationChanged, sho
         </div>
       )}
 
-      <CalendarEventAnnouncements calendarEventId={event.calendar_event_id} timezone={timezone} />
+      <CalendarEventAnnouncements event={event} timezone={timezone} />
     </article>
   );
 }

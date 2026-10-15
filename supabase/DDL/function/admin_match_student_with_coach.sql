@@ -1,56 +1,25 @@
----------------------------------------------
--- アドミンによる直接マッチングRPC (2026-09-09 追加)
--- 前提: table/com_t_matching_request.sql, table/com_m_lesson_schedule.sql,
---       table/com_t_user_session_ticket.sql, table/com_t_user_license.sql,
---       function/fn_generate_sessions_for_schedule.sql,
---       function/check_coach_schedule_conflict.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- 通常のマッチングは「生徒がリクエスト→コーチが承認」の2段階を経るが、アドミンの
--- ライブセッション管理画面からは、この2段階を省略していきなり成立させたい
--- （契約途中のコーチ交代直後に、生徒・コーチの操作を待たずその場で新しい担当を
--- 割り当てたいケース等）。本関数はapprove_matching_request()の承認後ロジック
--- （アドバイザリロックによる直列化、コーチの空き時間衝突チェック、
--- com_m_lesson_schedule作成、com_t_session一括生成）をそのまま踏襲しつつ、
--- 事前にpendingなcom_t_matching_requestが存在しない状態から、承認済み(status=2)の
--- リクエストを直接作成する点のみが異なる。
+-- =========================================================================
+-- admin_match_student_with_coach: アドミンによる直接マッチング
+-- =========================================================================
+-- 【役割】
+-- 生徒の申請・コーチの承認を省いて、アドミンがその場で担当を成立させる（コーチ交代の直後に新しい担当を
+-- すぐ割り当てる場合等）。承認済み（status=2）の申請の行を直接作り、成立の処理（定期スケジュールの作成・
+-- 空きの確認・セッションの生成）は fn_commit_matching_schedule() に任せる。
+-- 同じ (ticket_id, slot_no) に承認待ち・承認済みの申請があると一意制約（uq_matching_request_active_slot）で失敗する
+-- （呼び出し側で 23505 を分かりやすいメッセージにする）。
 --
--- 同一(ticket_id, slot_no)に既にpending/approvedなリクエストが存在する場合は
--- 一意制約(uq_matching_request_active_slot)違反として失敗する
--- （呼び出し元のTypeScript側で23505を捕捉し、分かりやすいエラーメッセージに変換すること。
--- createMatchingRequestCoreの既存パターンを参照）。
+-- 【通常のマッチングとの違い】
+-- - 曜日・時刻は生徒の現在のタイムゾーン（com_m_user.timezone）の値として扱い、requested_timezone と
+--   schedule_timezone に保存する（生徒の申請と同じ）。
+-- - 24時間のルールは適用しない（人同士で調整済みの内容をすぐ反映するため。p_min_start_datetime を渡さない）。
+-- - 予約できる回数の割合の基準も適用しない（p_enforce_rate = false）。重なる回は飛ばして作り、
+--   予約できる回が1回も無い場合だけ成立させない（NO_BOOKABLE_SESSION）。
 --
 -- 【通知】
--- 生徒へMATCHING_APPROVED、コーチへMATCHING_ASSIGNED_TO_COACHをそれぞれ通知する
--- （どちらも自ら操作していないため、双方に通知が必要）。
---
--- 【target_sessionsの確定 (2026-09-14追加)】
--- approve_matching_requestと同様、com_m_lesson_schedule.target_sessionsをここで確定する
--- （table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）。
---
--- 【権限チェック・通知の共通化 (2026-09-15追加)】
--- 権限チェックはfn_assert_actor_or_admin()、通知INSERTはfn_notify()を使う
--- （前提: function/fn_assert_actor_or_admin.sql, function/fn_notify.sql）。
---
--- 【マッチング成立処理の共通化 (2026-09-15追加)】
--- target_sessions算出〜アドバイザリロック〜空き状況チェック〜com_m_lesson_schedule作成〜
--- com_t_session一括生成は、approve_matching_request()とほぼ丸ごと重複していたため
--- fn_commit_matching_schedule()に切り出した。本関数は「承認済みのリクエストを
--- 生徒の申請・コーチの承認を経ずに直接作成する」責務のみを担い、成立処理そのものは
--- 同ヘルパーに委譲する（詳細はfunction/fn_commit_matching_schedule.sql参照）。
---
--- 【24時間ルールの対象外 (2026-09-15追加)】
--- 生徒の個別予約・振替候補・通常のマッチング承認(approve_matching_request)には
--- 「開始24時間以内は不可」ルールを適用するが、本関数はアドミンが人間同士で既に
--- 調整済みの内容を即時反映するための専用ルートのため対象外とする。そのため
--- fn_commit_matching_schedule()呼び出し時にp_min_start_datetimeを渡さない
--- （デフォルトのNULL=下限なしのまま呼ぶ）。
---
--- 【曜日・時刻は生徒の時刻 (2026-10-06変更)】
--- 生徒の申請と同じく、p_day_of_week/p_start_time/p_end_time を生徒の現在のタイムゾーン
--- （com_m_user.timezone）の現地時刻として扱い、申請の requested_timezone と定期スケジュールの
--- schedule_timezone に保存する（従来はコーチの現地時刻）。シグネチャは変更しない。
----------------------------------------------
+-- どちらも自分で操作していないため、生徒へ MATCHING_APPROVED、コーチへ MATCHING_ASSIGNED_TO_COACH を通知する。
+-- 権限は fn_assert_actor_or_admin()、通知は fn_notify() を使う。
+-- =========================================================================
+
 CREATE OR REPLACE FUNCTION public.admin_match_student_with_coach(
     p_ticket_id uuid,
     p_coach_id uuid,
@@ -93,13 +62,18 @@ BEGIN
 
     v_schedule_id := public.fn_commit_matching_schedule(
         v_request_id, p_ticket_id, v_student_id, p_coach_id,
-        p_slot_no, p_day_of_week, p_start_time, p_end_time, v_student_timezone
+        p_slot_no, p_day_of_week, p_start_time, p_end_time, v_student_timezone,
+        NULL, false  -- 24時間ルール・予約できる回数の割合の基準は適用しない（イレギュラーな対応のため）
     );
 
     SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = p_coach_id;
     SELECT user_name INTO v_student_name FROM public.com_m_user WHERE id = v_student_id;
 
-    PERFORM public.fn_notify(v_student_id, 'MATCHING_APPROVED', jsonb_build_object('coach_name', v_coach_name, 'schedule_id', v_schedule_id), '/live-room');
+    PERFORM public.fn_notify(v_student_id, 'MATCHING_APPROVED', jsonb_build_object(
+        'coach_name', v_coach_name, 'schedule_id', v_schedule_id,
+        'booked_sessions', (SELECT COUNT(*) FROM public.com_t_session WHERE schedule_id = v_schedule_id AND status = 1),
+        'target_sessions', (SELECT target_sessions FROM public.com_m_lesson_schedule WHERE schedule_id = v_schedule_id)
+    ), '/live-room');
     PERFORM public.fn_notify(p_coach_id, 'MATCHING_ASSIGNED_TO_COACH', jsonb_build_object('student_name', v_student_name, 'schedule_id', v_schedule_id), '/students/' || v_student_id);
 
     RETURN v_schedule_id;

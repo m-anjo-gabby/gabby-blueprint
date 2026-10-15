@@ -10,13 +10,13 @@ export interface InviteEmailTemplateProps {
 
 export function buildStudentInviteMail({ userName, inviteUrl, expiresDays }: InviteEmailTemplateProps): MailContent {
   return {
-    subject: mailSubject('ja', 'コーパス単語帳利用開始のご案内'),
+    subject: mailSubject('ja', 'Blueprintアプリ利用開始のご案内'),
     doc: {
       language: 'ja',
-      preheader: 'Gabby Blueprint English へようこそ。パスワードを設定して利用を開始してください。',
+      preheader: 'Gabby Blueprint へようこそ。パスワードを設定して利用を開始してください。',
       blocks: [
         { kind: 'paragraph', text: userName ? `${userName} 様` : '会員様', strong: true },
-        { kind: 'paragraph', text: 'Gabby Blueprint English へようこそ！\nサポート窓口より、あなたのアカウントへの招待が届いています。' },
+        { kind: 'paragraph', text: 'Gabby Blueprint へようこそ！\nサポート窓口より、あなたのアカウントへの招待が届いています。' },
         {
           kind: 'paragraph',
           text: 'まだ本登録手続きは完了していません。以下のボタンをクリックしてメールアドレスを認証し、パスワードの設定へお進みください。',

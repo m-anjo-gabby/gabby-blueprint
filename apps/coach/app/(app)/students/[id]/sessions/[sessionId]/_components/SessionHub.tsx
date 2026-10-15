@@ -26,13 +26,10 @@ import { withLiveSessionParam } from '@/lib/liveSession/context';
 import { getSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { hasCoachJoinedSessions } from '@/actions/sessionAction';
-import { useEndLesson } from '@/hooks/useEndLesson';
-import { EndLessonReasonDialog } from '@/components/session/EndLessonReasonDialog';
-import { SessionActionDialog, type SessionActionTarget } from '../../../../../calendar/_components/SessionActionDialog';
+import { EndSessionDialog } from '@/components/session/EndSessionDialog';
 import { useLiveSessionEndSignal } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionEndSignal';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
-import { SESSION_STATUS, type SessionListItem, type SessionResultSummary } from '@gabby/types/session';
+import { SESSION_STATUS, isConductedOutcome, type SessionOutcome, type SessionResultSummary } from '@gabby/types/session';
 
 interface Props {
   studentId: string;
@@ -50,7 +47,7 @@ interface Props {
 }
 
 /**
- * セッション準備/実施ハブ。生徒概要画面から通話開始・Live Sprint開始・セッション終了を
+ * セッション準備/実施ハブ。生徒概要画面から通話開始・Live Sprint開始・セッション終了（実施結果の記録）を
  * 直接行う導線を廃止し、個別レッスンセッション単位でここに集約する。ビデオ通話自体は
  * 画面共有等でLive Sprint/教材画面と並行利用できるよう引き続き別タブで開く。
  *
@@ -91,40 +88,20 @@ export function SessionHub({
   // 実際のコーチのタイムゾーンに切り替わった瞬間にちらつくため、確定するまでは表示しない。
   const isTimezoneReady = !!user && user.user_id !== 0;
   const badge = getSessionStatusBadge(session);
-  const { endLesson, endingSessionId, reasonDialogOpen, closeReasonDialog, submitReason, notActionableSessionId } = useEndLesson();
   // 別タブ（通話ルーム）で通話が終了した瞬間にこのハブタブへ知らせてもらい、End Session忘れを防ぐ
   const { hasEnded: hasCallEndedElsewhere } = useLiveSessionEndSignal(session.session_id);
-  // 期限超過セッションの手動解決（アプリ外実施等、call_logが無いケースの唯一のセーフティネット）。
-  // カレンダー・生徒概要のどちらから来てもここに一本化し、解決後は宿題投稿へ自然に繋がる結果画面へ遷移させる。
-  const [resolveTarget, setResolveTarget] = useState<SessionActionTarget | null>(null);
-  // 別タブで先にEnd Session済みだった場合、このタブでのEnd SessionクリックはRPC側の
-  // 二重確定防止チェックで拒否される。そのエラーを検知したら、リフレッシュせずとも
-  // このタブも「既に確定済み」の読み取り専用表示へ切り替える。
-  const isActionable = session.status === SESSION_STATUS.SCHEDULED && notActionableSessionId !== session.session_id;
+  const [isEndDialogOpen, setIsEndDialogOpen] = useState(false);
+  // 別タブで先に記録済みだった場合、このタブでの記録はRPC側の二重確定防止チェックで拒否される。
+  // そのエラーを検知したら、リフレッシュせずともこのタブも「既に確定済み」の読み取り専用表示へ切り替える。
+  const [isRecordedElsewhere, setIsRecordedElsewhere] = useState(false);
+  const isActionable = session.status === SESSION_STATUS.SCHEDULED && !isRecordedElsewhere;
+  // 表示時点で自分がアプリ内の通話に入った記録があるか（入退室ログはページと一緒にサーバーで取得済み）
+  const hasCoachJoined = session.call_log.some((entry) => entry.role === 'coach');
 
-  const [hasCoachJoined, setHasCoachJoined] = useState(false);
-
-  useEffect(() => {
-    if (!isActionable) return;
-    let cancelled = false;
-    hasCoachJoinedSessions([session.session_id]).then((presence) => {
-      if (!cancelled) setHasCoachJoined(!!presence[session.session_id]);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [isActionable, session.session_id]);
-
-  const handleResolved = (_sessionId: string, patch: Partial<SessionListItem>) => {
-    // コーチ無断欠席(coach_no_show)はキャンセル扱いになり、実施されていないセッションのため
-    // 宿題投稿を促す結果画面に遷移するのは適切でない。それ以外（normal/early_ended/no_show）は
-    // 従来通り、解決直後の宿題投稿に自然に繋がるよう結果画面へ遷移する
-    // （このハブ画面はSCHEDULED専用のため、いずれの場合もこのハブには戻らない）。
-    if (patch.status === SESSION_STATUS.CANCELLED) {
-      router.push(`/students/${studentId}`);
-    } else {
-      router.push(`/students/${studentId}/sessions/${session.session_id}/result`);
-    }
+  const handleRecorded = (outcome: SessionOutcome) => {
+    // コーチの欠席・通信トラブル等はキャンセル扱いになり、実施されていないセッションのため
+    // 宿題投稿を促す結果画面には遷移しない（このハブ画面はSCHEDULED専用のため、いずれの場合もこのハブには戻らない）
+    router.push(isConductedOutcome(outcome) ? `/students/${studentId}/sessions/${session.session_id}/result` : `/students/${studentId}`);
   };
 
   // 終了予定時刻超過の警告は時間経過で状態が変わるため、画面を開いたまま放置されても
@@ -144,6 +121,7 @@ export function SessionHub({
   // 設定が変わった場合もここが自動的に追従する）。
   const isPastActionWindow = now.getTime() > new Date(session.end_datetime).getTime() + LIVE_SESSION_END_AFTER_MS;
   const [showEarlyJoinNotice, setShowEarlyJoinNotice] = useState(false);
+  const [showNotStartedNotice, setShowNotStartedNotice] = useState(false);
 
   // ボタンは常に活性状態のまま表示し、クリックされた瞬間にのみ判定する
   // （render時点の状態に基づく無効化はせず、画面を放置してもリフレッシュ不要で正しく動く）。
@@ -154,6 +132,16 @@ export function SessionHub({
       return;
     }
     setShowEarlyJoinNotice(false);
+  };
+
+  // 結果は開始予定時刻を過ぎてから記録できる（開始前の欠席・中止はキャンセルで扱う。record_session_outcome と同じ条件）
+  const handleEndSessionClick = () => {
+    if (Date.now() < new Date(session.start_datetime).getTime()) {
+      setShowNotStartedNotice(true);
+      return;
+    }
+    setShowNotStartedNotice(false);
+    setIsEndDialogOpen(true);
   };
 
   return (
@@ -222,8 +210,8 @@ export function SessionHub({
                   {isPastScheduledEnd && (
                     <div className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
                       <TriangleAlert size={13} className="shrink-0" />
-                      This session’s scheduled end time has passed. Please press End Session once you’re done
-                      {!hasCoachJoined && ' (or Resolve Manually below if the call didn’t happen through the app)'}.
+                      This session’s scheduled end time has passed. Please press End Session to record what happened
+                      (including if the lesson was held on an external Zoom, or didn’t take place).
                     </div>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
@@ -244,47 +232,20 @@ export function SessionHub({
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => endLesson(session.session_id, studentId)}
-                      disabled={!hasCoachJoined}
-                      pending={endingSessionId === session.session_id}
+                      onClick={handleEndSessionClick}
                       icon={<CheckCircle2 />}
-                      title={hasCoachJoined ? 'Record this session’s outcome' : 'Join the call at least once before ending the session'}
-                      className="h-auto gap-1.5 text-xs font-bold text-slate-600 bg-white border-slate-200 hover:bg-slate-50 disabled:opacity-40 px-4 py-2.5 rounded-full [&_svg]:size-3.5"
+                      title="Record this session’s outcome"
+                      className="h-auto gap-1.5 text-xs font-bold text-slate-600 bg-white border-slate-200 hover:bg-slate-50 px-4 py-2.5 rounded-full [&_svg]:size-3.5"
                     >
                       End Session
                     </Button>
-                    {!hasCoachJoined && isPastScheduledEnd && (
-                      <button
-                        onClick={() =>
-                          setResolveTarget({
-                            mode: 'resolve',
-                            session: {
-                              session_id: session.session_id,
-                              schedule_id: '',
-                              start_datetime: session.start_datetime,
-                              end_datetime: session.end_datetime,
-                              status: session.status,
-                              completion_result: session.completion_result,
-                              cancel_category: null,
-                              viewer_role: 'coach',
-                              counterpart_id: studentId,
-                              counterpart_name: session.counterpart_name,
-                              counterpart_icon_path: session.counterpart_icon_path,
-                              counterpart_timezone: timezone,
-                              rescheduled_from: null,
-                              cancel_reason: null,
-                              status_note: session.status_note,
-                            } satisfies SessionListItem,
-                          })
-                        }
-                        title="Use this if the lesson happened outside the app (e.g. a direct Zoom call), or if you crashed before pressing End Session"
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors px-4 py-2.5 rounded-full"
-                      >
-                        <TriangleAlert size={14} />
-                        Resolve Manually
-                      </button>
-                    )}
                   </div>
+                  {showNotStartedNotice && (
+                    <p className="flex items-center gap-1 text-[11px] text-amber-600 font-semibold">
+                      <TriangleAlert size={11} className="shrink-0" />
+                      You can record the outcome once the session has started ({isTimezoneReady ? formatDateTimeEn(session.start_datetime, timezone) : '…'}). To cancel before then, use Cancel on the student’s overview.
+                    </p>
+                  )}
                   {isPastActionWindow ? (
                     <p className="flex items-center gap-1 text-[11px] text-slate-400">
                       <Clock size={11} className="shrink-0" />
@@ -351,8 +312,14 @@ export function SessionHub({
       </div>
       </div>
 
-      <EndLessonReasonDialog open={reasonDialogOpen} onClose={closeReasonDialog} onSubmit={submitReason} />
-      <SessionActionDialog target={resolveTarget} onClose={() => setResolveTarget(null)} onResolved={handleResolved} />
+      <EndSessionDialog
+        open={isEndDialogOpen}
+        sessionId={session.session_id}
+        studentName={session.counterpart_name}
+        onClose={() => setIsEndDialogOpen(false)}
+        onRecorded={handleRecorded}
+        onNotActionable={() => setIsRecordedElsewhere(true)}
+      />
     </ImmersiveShell>
   );
 }

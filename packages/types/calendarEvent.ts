@@ -113,6 +113,21 @@ export interface CalendarEventItem {
   coaches?: CalendarEventCoachOption[];
   // 結合フィールド（シリーズ。シリーズに属する回のみ。com_m_calendar_event_seriesから結合）
   series?: CalendarEventSeriesSummary | null;
+  // 結合フィールド（アナウンス。生徒/コーチ向けの取得で付加する。com_t_calendar_event_messageから結合。新しい順）
+  // RLS により参加者本人・担当コーチにだけ返る。null は未取得（参加状態が変わった直後等。詳細を開いた時に取得する）
+  messages?: CalendarEventMessageItem[] | null;
+}
+
+/**
+ * 参加登録・取消を一覧の行に反映する。アナウンスは参加状態で見える範囲が変わる（RLS）ため未取得に戻す。
+ */
+export function withParticipation(event: CalendarEventItem, isJoined: boolean): CalendarEventItem {
+  return { ...event, is_joined: isJoined, messages: null };
+}
+
+/** アナウンスを新しい順に並べる */
+export function sortCalendarEventMessages(messages: CalendarEventMessageItem[]): CalendarEventMessageItem[] {
+  return messages.slice().sort((a, b) => b.insert_date.localeCompare(a.insert_date));
 }
 
 /**

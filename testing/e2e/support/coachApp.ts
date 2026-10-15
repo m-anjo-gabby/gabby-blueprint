@@ -49,7 +49,7 @@ export async function openCoachContext(
 async function autoCloseNoticePopup(page: Page): Promise<void> {
   const popup = page
     .getByRole("dialog")
-    .filter({ has: page.getByRole("button", { name: /^(Next notice →|Got it)$/ }) });
+    .filter({ has: page.getByRole("button", { name: "Got it", exact: true }) });
   await page.addLocatorHandler(popup, async (dialog) => {
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
   });

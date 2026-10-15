@@ -60,6 +60,7 @@ export const groupSessionReminderHandler: MailHandler = async ({ admin, row, rec
         startIso: event.start_datetime,
         endIso: event.end_datetime,
         timeZone: recipient.timezone,
+        zoneName: recipient.timezoneName,
         language,
       }),
       joinUrl: event.location_url,

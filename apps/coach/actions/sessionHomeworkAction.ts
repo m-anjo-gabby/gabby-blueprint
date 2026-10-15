@@ -5,7 +5,7 @@ import {
   getRecentSessionHomeworkCore,
   createSessionHomeworkCore,
   addHomeworkCommentCore,
-  getHomeworkChecklistCore,
+  setSessionHomeworkNotNeededCore,
 } from '@gabby/lib/sessionHomework/actions/sessionHomeworkActions';
 import { uploadSessionHomeworkAttachmentCore } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
 import { createLogger } from '@gabby/lib/logger';
@@ -13,7 +13,6 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import {
   HomeworkAttachmentErrorCode,
   PendingHomeworkAttachment,
-  SessionHomeworkChecklistItem,
   SessionHomeworkComment,
   SessionHomeworkEntry,
 } from '@gabby/types/sessionHomework';
@@ -76,22 +75,17 @@ export async function getRecentSessionHomework(studentId: string, excludeSession
 }
 
 /**
- * Creates the homework body (free text + already-uploaded attachments + optional initial
- * checklist items) for a session. Coach-only, one per session — there is no edit/delete
+ * Creates the homework body (free text + already-uploaded attachments) for a session. Coach-only, one per session — there is no edit/delete
  * action for posted homework. Fails with 'already_exists' if homework was already posted
  * for this session (use addHomeworkComment for follow-ups instead).
  */
 export async function createSessionHomework(
   sessionId: string,
   homeworkText: string,
-  attachments: PendingHomeworkAttachment[] = [],
-  initialChecklistItemTexts: string[] = []
-): Promise<
-  | { success: true; entry: SessionHomeworkEntry; checklistItems: SessionHomeworkChecklistItem[] }
-  | { success: false; message: string }
-> {
+  attachments: PendingHomeworkAttachment[] = []
+): Promise<{ success: true; entry: SessionHomeworkEntry } | { success: false; message: string }> {
   const ctx = await getLogContext();
-  const result = await createSessionHomeworkCore(sessionId, homeworkText, attachments, initialChecklistItemTexts);
+  const result = await createSessionHomeworkCore(sessionId, homeworkText, attachments);
 
   if (!result.success) {
     logger.error('coach:create_session_homework_failed', result.errorCode, ctx);
@@ -100,7 +94,7 @@ export async function createSessionHomework(
   }
 
   logger.info('coach:create_session_homework_success', 'Homework posted', ctx);
-  return { success: true, entry: result.entry, checklistItems: result.checklistItems };
+  return { success: true, entry: result.entry };
 }
 
 /**
@@ -126,15 +120,18 @@ export async function addHomeworkComment(
 }
 
 /**
- * Fetches the session's homework checklist (child of the homework body posted for this session).
+ * Marks (or unmarks) a completed session as "no homework this time", so it no longer shows up
+ * as "Homework not posted" in the dashboard's Session Tasks.
  */
-export async function getSessionHomeworkChecklist(sessionId: string): Promise<SessionHomeworkChecklistItem[]> {
-  const result = await getHomeworkChecklistCore(sessionId);
+export async function setSessionHomeworkNotNeeded(
+  sessionId: string,
+  notNeeded: boolean
+): Promise<{ success: true } | { success: false; message: string }> {
+  const ctx = await getLogContext();
+  const result = await setSessionHomeworkNotNeededCore(sessionId, notNeeded);
   if (!result.success) {
-    const ctx = await getLogContext();
-    logger.error('coach:get_session_homework_checklist_failed', result.errorCode, ctx);
-    return [];
+    logger.error('coach:set_session_homework_not_needed_failed', result.errorCode, ctx);
+    return { success: false, message: 'Failed to update. Please try again.' };
   }
-  return result.items;
+  return { success: true };
 }
-

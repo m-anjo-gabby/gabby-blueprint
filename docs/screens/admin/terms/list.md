@@ -22,7 +22,7 @@
 ## 画面の構成
 
 1. **ヘッダー** — 画面タイトルと「規約を新規作成」ボタン
-2. **検索・ページングバー** — バージョン名でのキーワード検索、全件数表示、ページ送り
+2. **検索・ページングバー** — バージョン名でのキーワード検索、条件のクリア、全件数表示、ページ送り
 3. **一覧テーブル** — 規約種別・バージョン・ステータス・公開開始日・操作（編集／削除）
 4. **新規作成ダイアログ**（ヘッダーの「規約を新規作成」から開く）
 5. **削除確認ダイアログ**（一覧の削除アイコンから開く）
@@ -31,8 +31,9 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 検索ボックス | 常時表示 | バージョン名で絞り込み、Enterまたは「検索」ボタンでURLの`q`パラメータを更新して再検索する |
-| ページ送り（前へ／次へ） | 常時表示（1ページ10件） | 前後のページへ遷移する |
+| 検索ボックス | 常時表示 | バージョン名の部分一致で検索。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る）。入力した文字はそのまま文字として検索する（`%`・`,`等も特別な意味を持たない） |
+| 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
+| 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | 規約種別バッジ | 常時表示 | `TERMS`は「利用規約」、`PRIVACY`は「プライバシーポリシー」と表示される |
 | ステータスバッジ「公開前」 | 公開開始日が未来の場合 | — |
 | ステータスバッジ「公開中」 | 公開開始日が過去、かつその種別の中で現在有効な最新版の場合（表示中のページ・検索条件に関係なく全件から判定） | — |
@@ -62,7 +63,8 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/terms/page.tsx`
-- `apps/admin/app/(app)/terms/_components/TermDataTable.tsx`
+- `apps/admin/app/(app)/terms/_components/TermDataTable.tsx`, `_components/columns.tsx`（列の定義）
+- `apps/admin/components/list/`（一覧の共通部品: `useListQuery`・`ListToolbar`・`DataTable`・`ListSelectFilter`・`ClientFilter`）, `apps/admin/lib/list.ts`（URLの条件の読み取り・ページ範囲）
 - `apps/admin/app/(app)/terms/_components/TermFormDialog.tsx`
 - `apps/admin/actions/adminTermAction.ts`（`getTerms`, `createTerm`, `deleteTerm`。新規作成はRPC
   `create_term`（`supabase/DDL/function/create_term.sql`）、削除は`com_m_terms`を直接DELETE）

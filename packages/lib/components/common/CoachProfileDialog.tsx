@@ -28,6 +28,9 @@ export function CoachProfileDialog({ data, labels, onClose }: CoachProfileDialog
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={data.userName}
         className="relative bg-white rounded-[32px] w-full max-w-[33rem] max-h-[calc(100vh-6.5rem)] shadow-2xl flex flex-col overflow-hidden"
       >
         <button

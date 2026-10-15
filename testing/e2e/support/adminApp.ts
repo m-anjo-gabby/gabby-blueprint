@@ -17,17 +17,21 @@ export const QA_ADMIN_EMAIL = "qa-admin@gabby-qa-test.example";
 
 /**
  * アドミンとしてログインしたコンテキストを作る。
- * admin は表示言語の Cookie が無いと英語で表示するため、日本語（NEXT_LOCALE=ja）に固定する。
+ * admin は表示言語の Cookie が無いと英語で表示するため、既定は日本語（NEXT_LOCALE=ja）に固定する。英語の文言を確かめる場合は `locale: "en"`。
  */
-export async function openAdminContext(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
+export async function openAdminContext(
+  browser: Browser,
+  options: { locale?: "ja" | "en" } = {}
+): Promise<{ context: BrowserContext; page: Page }> {
+  const locale = options.locale ?? "ja";
   const context = await browser.newContext({
     baseURL: ADMIN_BASE_URL,
     ignoreHTTPSErrors: true,
-    locale: "ja-JP",
+    locale: locale === "ja" ? "ja-JP" : "en-US",
     timezoneId: "Asia/Tokyo",
     viewport: { width: 1440, height: 900 },
   });
-  await context.addCookies([{ name: "NEXT_LOCALE", value: "ja", url: ADMIN_BASE_URL }]);
+  await context.addCookies([{ name: "NEXT_LOCALE", value: locale, url: ADMIN_BASE_URL }]);
 
   const page = await context.newPage();
   await page.goto("/login");
@@ -54,3 +58,26 @@ export async function confirmAndSubmit(page: Page, confirmLabel: RegExp, toast: 
   await dialog.getByRole("button", { name: "はい、確定します" }).click();
   await expect(page.getByText(toast)).toBeVisible();
 }
+
+/**
+ * ライブセッション管理（`/live-sessions`）を開き、顧客・生徒を選ぶ（現在の契約が自動で選ばれる）。
+ * 検索は使い捨てデータのタグで絞る（顧客名・生徒の表示はタグを含む前提）。
+ */
+export async function openLiveSessionsFor(
+  page: Page,
+  target: { tag: string; clientName: string; studentName: string; studentEmail: string }
+): Promise<void> {
+  await page.goto("/live-sessions");
+  await expect(page.getByRole("heading", { level: 1, name: "ライブセッション管理" })).toBeVisible();
+  const [clientSelect, studentSelect] = [page.getByRole("combobox").nth(0), page.getByRole("combobox").nth(1)];
+  await clickUntilVisible(clientSelect, page.getByPlaceholder("顧客名で検索..."));
+  await page.getByPlaceholder("顧客名で検索...").fill(target.tag);
+  await page.getByRole("option", { name: target.clientName }).click();
+  await expect(studentSelect).toBeEnabled();
+  await studentSelect.click();
+  await page.getByPlaceholder("生徒名・メールで検索...").fill(target.tag);
+  await page.getByRole("option", { name: `${target.studentName}（${target.studentEmail}）` }).click();
+}
+
+/** ライブセッション管理の定期スケジュール枠の行（稼働中・終了済みの枠は「第n枠: 曜日 時刻〜時刻（タイムゾーン）」、未割当の枠は案内文で絞る） */
+export const scheduleSlotRow = (page: Page, text: string): Locator => page.getByTestId("schedule-slot").filter({ hasText: text });

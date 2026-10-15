@@ -183,7 +183,7 @@ export function MailLayout({ doc }: { doc: MailDocument }) {
                       <td align="center" style={{ padding: '24px 32px 16px 32px', borderTop: `4px solid ${BRAND}`, borderRadius: '8px 8px 0 0' }}>
                         <img
                           src={getMailLogoUrl()}
-                          alt="Gabby Blueprint English"
+                          alt="Gabby Blueprint"
                           width={MAIL_LOGO_WIDTH}
                           height={MAIL_LOGO_HEIGHT}
                           style={{

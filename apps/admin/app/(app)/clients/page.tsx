@@ -1,45 +1,18 @@
-// apps/app/(app)/clients/page.tsx
 import { getTranslations } from 'next-intl/server';
 import { getClients } from '@/actions/adminClientAction';
+import { PageHeader } from '@/components/common/PageHeader';
+import { parseListParams, toPageCount, type RawSearchParams } from '@/lib/list';
 import { ClientFormDialog } from './_components/ClientFormDialog';
-import { ClientDataTable } from './_components/client-data-table';
+import { ClientDataTable } from './_components/ClientDataTable';
 
-export default async function AdminClientsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string; q?: string }>;
-}) {
-  const t = await getTranslations('clients.page');
-  const params = await searchParams;
-  const currentPage = Number(params.page) || 1;
-  const searchQuery = params.q || ""; // 検索クエリを取得
-  const pageSize = 10;
-
-  // 検索クエリも一緒にサーバーアクションへ渡す
-  const { clients, totalCount } = await getClients(currentPage, pageSize, searchQuery);
-
-  const pageCount = Math.ceil(totalCount / pageSize);
+export default async function AdminClientsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
+  const [t, params] = await Promise.all([getTranslations('clients.page'), searchParams]);
+  const { rows, totalCount } = await getClients(parseListParams(params));
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800">{t('title')}</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            {t('subtitle')}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <ClientFormDialog mode="create" />
-        </div>
-      </div>
-
-      <ClientDataTable
-        data={clients || []}
-        pageCount={pageCount}
-        totalCount={totalCount} // 件数表示のために追加
-      />
+      <PageHeader title={t('title')} description={t('subtitle')} actions={<ClientFormDialog mode="create" />} />
+      <ClientDataTable data={rows} totalCount={totalCount} pageCount={toPageCount(totalCount)} />
     </div>
   );
 }

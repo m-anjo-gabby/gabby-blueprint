@@ -4,6 +4,7 @@ import * as React from "react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
+import { focusDialogContent } from "@gabby/lib/components/common/dialogFocus"
 
 const Drawer = ({
   shouldScaleBackground = true,
@@ -37,13 +38,15 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, onOpenAutoFocus, ...props }, ref) => (
   <DrawerPortal>
     <DrawerOverlay />
     <DrawerPrimitive.Content
       ref={ref}
+      // 開いた時は中の要素（×ボタン等）にフォーカスせず枠にフォーカスする。特定の要素に当てる場合はその要素に autoFocus を付ける
+      onOpenAutoFocus={onOpenAutoFocus ?? focusDialogContent}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
+        "outline-none fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
         className
       )}
       {...props}

@@ -1,37 +1,42 @@
 import Link from 'next/link';
 import { Layers } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import { getCalendarEvents } from '@/actions/adminCalendarEventAction';
+import { getCalendarEventList, getCoachesFilter } from '@/actions/adminCalendarEventAction';
+import { getClientsFilter } from '@/actions/adminClientAction';
+import { PageHeader } from '@/components/common/PageHeader';
+import { Button } from '@/components/ui/button';
+import { parseListParams, toPageCount, type RawSearchParams } from '@/lib/list';
 import { CalendarEventDataTable } from './_components/CalendarEventDataTable';
 import { CalendarEventFormDialog } from './_components/CalendarEventFormDialog';
+import { CALENDAR_EVENT_LIST_FILTERS } from './_lib/list';
 
-export default async function CalendarEventsPage() {
-  const t = await getTranslations('calendarEvents.page');
-  const events = await getCalendarEvents();
+export default async function CalendarEventsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
+  const [t, params] = await Promise.all([getTranslations('calendarEvents.page'), searchParams]);
+  // 登録・編集ダイアログの選択肢は、ダイアログごとにブラウザから取らず、ここで1回だけ取得して渡す
+  const [{ rows, totalCount }, clients, coaches] = await Promise.all([
+    getCalendarEventList(parseListParams(params, CALENDAR_EVENT_LIST_FILTERS)),
+    getClientsFilter(),
+    getCoachesFilter(),
+  ]);
+  const formOptions = { clients, coaches };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* ヘッダー */}
-      <div className="flex justify-between items-center">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            {t('subtitle')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/calendar-events/series"
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-600 shadow-sm hover:bg-slate-50"
-          >
-            <Layers size={16} /> {t('seriesLink')}
-          </Link>
-          <CalendarEventFormDialog />
-        </div>
-      </div>
-
-      {/* 一覧テーブル */}
-      <CalendarEventDataTable data={events} />
+    <div className="space-y-6">
+      <PageHeader
+        title={t('title')}
+        description={t('subtitle')}
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/calendar-events/series">
+                <Layers /> {t('seriesLink')}
+              </Link>
+            </Button>
+            <CalendarEventFormDialog options={formOptions} />
+          </>
+        }
+      />
+      <CalendarEventDataTable data={rows} totalCount={totalCount} pageCount={toPageCount(totalCount)} formOptions={formOptions} />
     </div>
   );
 }
