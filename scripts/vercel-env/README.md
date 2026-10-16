@@ -94,36 +94,52 @@ pnpm vercel-env --write-examples                      # apps/*/.env.example を�
 pnpm test:vercel-env                                  # 単体テスト
 ```
 
-## Vercel の dev へのデプロイ
+## アプリのデプロイ
 
-開発中のブランチを、staging より前に固定の URL で確認するための環境です（代理ログイン・アプリ間のリンク・メールのリンク等、preview の一時的な URL では確かめられない機能の確認用）。
+dev・staging・本番とも、GitHub Actions の `Deploy`（`.github/workflows/deploy.yml`）を手動で実行した時だけデプロイします。
+Git 連携による自動デプロイは使いません（push・PR・マージでは動きません）。マージ直後に、DB のリリーススクリプトより先に新しいアプリが出てしまうのを防ぐためです。
 
-| アプリ | URL | プロジェクト |
-|---|---|---|
-| admin | https://blueprint-admin-dev.vercel.app | blueprint-admin-dev |
-| student | https://blueprint-student-dev.vercel.app | blueprint-student-dev |
-| coach | https://blueprint-coach-dev.vercel.app | blueprint-coach-dev |
-
-- Git 連携はしていません。push・PR・マージでは動かず、GitHub Actions の `Deploy to dev`（`.github/workflows/deploy-dev.yml`）を手動で実行した時だけデプロイします。
-- DB は Supabase の dev（手元の起動と同じ）です。メールは dev と同じく許可リストのドメインにだけ送ります。
-- dev の枠は1つです。後から実行した方が反映されるため、複数の開発が並行する場合は一声かけてから実行してください。
+| 環境 | デプロイするブランチ | プロジェクト | URL |
+|---|---|---|---|
+| dev | 実行時に入力（例 `feature/20261015-dev`） | blueprint-*-dev | https://blueprint-{admin,student,coach}-dev.vercel.app |
+| staging | `staging`（固定） | blueprint-*-stg | https://blueprint-{admin,student,coach}-stg.vercel.app |
+| 本番 | `main`（固定） | blueprint-*-prod | `environments.mjs` の prod の URL |
 
 ### 実行のしかた
 
-GitHub の **Actions → Deploy to dev → Run workflow** で、ブランチ（例 `feature/20261015-dev`）を入力し、アプリにチェックを付けて実行します。コマンドの場合:
+GitHub の **Actions → Deploy → Run workflow** で、「Use workflow from」は **main** のまま、デプロイ先とアプリを選んで実行します。コマンドの場合:
 
 ```bash
-gh workflow run deploy-dev.yml -f ref=feature/20261015-dev -f student=true -f admin=true
+gh workflow run deploy.yml -f environment=dev -f ref=feature/20261015-dev -f coach=false
+gh workflow run deploy.yml -f environment=staging
+gh workflow run deploy.yml -f environment=production -f confirm=prod
 ```
 
-- 指定したブランチは push 済みである必要があります（GitHub 上のコミットをデプロイします。手元の未コミットの変更・`.env.local` は含まれません）。
-- 実行結果の画面（Summary）に、アプリ・ブランチ・コミット・実行者が残ります。
-- 「Run workflow」のボタンは、ワークフローのファイルが main に入るまで GitHub の画面に出ません。
+- アプリは既定で3つとも選ばれています。リリースでは3つともデプロイします（`packages/*` の変更は全アプリに効くため、アプリを絞らない）。
+- staging・本番は、main のワークフロー定義でだけ実行できます（ブランチ側で書き換えた定義では動きません）。本番は `confirm` に `prod` の入力が必要です。
+- GitHub 上のコミットをデプロイします（手元の未コミットの変更・`.env.local` は含まれません）。
+- 実行結果の画面（Summary）に、環境・アプリ・ブランチ・コミット・実行者が残ります。リリース後は、コミットがマージ後の最新か確かめてください。
+- 同じ環境・アプリへの実行は1つずつ順に処理され、後から実行した方が反映されます。
+
+### リリースでの順番
+
+1. staging（本番は main）へマージする
+2. DB のリリーススクリプトを適用する（`supabase/release/README.md`）
+3. 環境変数を変えるリリースは `pnpm vercel-env --env=<staging|prod> --apply`
+4. このワークフローで3アプリをデプロイする
+
+### dev について
+
+開発中のブランチを、staging より前に固定の URL で確認するための環境です（代理ログイン・アプリ間のリンク・メールのリンク等、preview の一時的な URL では確かめられない機能の確認用）。
+
+- DB は Supabase の dev（手元の起動と同じ）です。メールは dev と同じく許可リストのドメインにだけ送ります。
+- dev の枠は1つです。後から実行した方が反映されるため、複数の開発が並行する場合は一声かけてから実行してください。
 
 ### 前提（初回のみ）
 
 1. dev の環境変数を反映する: `pnpm vercel-env --env=dev --init` → `pnpm vercel-env --env=dev --apply`。定義を変えた・`.env.local` の値を変えた時も同じく `--apply` してから、ワークフローでデプロイし直します。
 2. Vercel のトークンを発行し、リポジトリの Secrets に `VERCEL_BLUEPRINT_TOKEN` として登録する（`gh secret set VERCEL_BLUEPRINT_TOKEN`）。
+3. staging・本番のプロジェクト（blueprint-*-stg / -prod）は、Vercel の **Settings → Git** で Git の接続を外し（Disconnect）、**Settings → Build and Deployment → Ignored Build Step** を空（Automatic）にする。Ignored Build Step が残っていると、ワークフローからのデプロイもビルドが取り消されます。dev のプロジェクトは最初から Git に接続していません。
 - Supabase の Authentication の Redirect URLs への登録は不要です（招待・パスワード再設定・代理ログインは、アプリが自分の URL でリンクを作り、サーバー側の `verifyOtp` で確かめるため。staging・本番も未登録）。
 
 ## よくある作業

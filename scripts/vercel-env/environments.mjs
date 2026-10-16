@@ -23,7 +23,7 @@ export const APPS = /** @type {const} */ (['admin', 'student', 'coach']);
 /** @type {Record<'dev' | 'staging' | 'prod', EnvironmentConfig>} */
 export const ENVIRONMENTS = {
   // dev は手元の起動（apps/*/.env.local。--check で確認）と、Vercel の dev プロジェクト（Git 連携なし。
-  // .github/workflows/deploy-dev.yml で必要な時だけデプロイ）が同じ Supabase の dev を使う。
+  // .github/workflows/deploy.yml で必要な時だけデプロイ）が同じ Supabase の dev を使う。
   dev: {
     label: 'dev',
     supabaseRef: 'vihincuxiizavuxoctul',
