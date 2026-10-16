@@ -59,10 +59,8 @@ USING (
       WHERE r.student_id = com_t_user_license.user_id AND r.coach_id = auth.uid()))
 );
 
-CREATE POLICY "Users can view relevant licenses" ON public.com_t_user_license FOR SELECT TO authenticated
+CREATE POLICY "Users can view their own licenses" ON public.com_t_user_license FOR SELECT TO authenticated
 USING (
-    user_id = auth.uid() OR (contract_id IN ( SELECT com_m_contract.contract_id
-       FROM public.com_m_contract
-      WHERE com_m_contract.client_id = public.get_jwt_client_id()))
+    user_id = auth.uid()
 );
 -- @end-schema

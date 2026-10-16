@@ -35,8 +35,9 @@
   `apps/student/constants/navigation.ts`の表示条件で出し分ける）。仮にURLを直接
   入力してアクセスしようとしても、`apps/student/proxy.ts`のミドルウェアが`role_id='monitor'`
   を持たないユーザーを`/dashboard`へリダイレクトするため画面自体を開けない。`get_monitor_user_list`
-  等のRPCによるクライアント単位の絞り込みは、この画面に入れた後の「表示対象データ」の絞り込み
-  であり、画面へのアクセス可否そのものは制御していない。
+  等のRPCも、先頭の`private.get_monitor_client_id`で呼び出し元の`monitor`ロールを確かめ、持たない
+  場合はエラーにする（画面を通さずRPCを直接呼んでも他の受講生のデータは読めない）。受講生同士は
+  同じクライアントでも、テーブルを直接読んで互いの氏名・ライセンス・学習実績を参照できない（RLS）。
   詳細は[E2E仕様書](../../../testing/e2e/specs/monitoring/student-monitor-dashboard.md)を参照。
 
 ## 画面の構成

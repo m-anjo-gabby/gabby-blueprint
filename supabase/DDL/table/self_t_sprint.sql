@@ -47,13 +47,6 @@ CREATE TRIGGER on_sprint_session_insert AFTER INSERT ON public.self_t_sprint FOR
 
 ALTER TABLE public.self_t_sprint ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Managers can view client's sprint scores" ON public.self_t_sprint FOR SELECT TO authenticated
-USING (
-    (EXISTS ( SELECT 1
-       FROM public.com_m_user u
-      WHERE u.id = self_t_sprint.user_id AND u.client_id = public.get_jwt_client_id()))
-);
-
 CREATE POLICY "Users can manage their own sprint scores" ON public.self_t_sprint FOR ALL TO authenticated
 USING (
     user_id = auth.uid()

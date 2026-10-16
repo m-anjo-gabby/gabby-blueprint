@@ -43,13 +43,6 @@ USING (
       WHERE r.student_id = self_t_sprint_summary.user_id AND r.coach_id = auth.uid()))
 );
 
-CREATE POLICY "Managers can view client's sprint summaries" ON public.self_t_sprint_summary FOR SELECT TO authenticated
-USING (
-    (EXISTS ( SELECT 1
-       FROM public.com_m_user u
-      WHERE u.id = self_t_sprint_summary.user_id AND u.client_id = public.get_jwt_client_id()))
-);
-
 CREATE POLICY "Users can manage their own sprint summaries" ON public.self_t_sprint_summary FOR ALL TO authenticated
 USING (
     user_id = auth.uid()

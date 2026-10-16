@@ -11,6 +11,13 @@
 -- 行の条件だけのポリシーでは、本人が自分を管理者にしたりテナントを変えたりできてしまうため。
 --
 -- 【参照できる範囲】
+-- authenticated が読めるのは、本人・公開中のコーチ・担当関係（com_m_coach_student_relationship）の相手・
+-- マッチング申請の相手（コーチから受講生）・同じチャットルームの参加者（is_chat_room_peer）だけ。
+-- 同じクライアントというだけでは他の利用者を読めない（Webトライアル等、1つのテナントに互いに無関係な
+-- 受講生が集まるため）。クライアント内の受講生の一覧はモニター用RPC（get_monitor_*、モニターロール必須）で読む。
+-- ライセンス・チケット・学習実績のテーブルも同じ方針で、本人とコーチ（担当関係）の行だけを読める。
+--
+-- 【参照できる範囲】
 -- 自分と同じ顧客のユーザーに加えて、コーチの基本情報は誰でも参照できる（コーチ一覧・マッチング用）。
 -- コーチは、自分にマッチングを申請したことのある生徒の基本情報を参照できる。
 --
@@ -61,6 +68,11 @@ USING (
     user_type = '2'::text AND delete_flg = '0'::text
 );
 
+CREATE POLICY "Chat room members can view each other" ON public.com_m_user FOR SELECT TO authenticated
+USING (
+    public.is_chat_room_peer(id)
+);
+
 CREATE POLICY "Coaches can view names of their matching students" ON public.com_m_user FOR SELECT TO authenticated
 USING (
     user_type = '1'::text AND (EXISTS ( SELECT 1
@@ -76,9 +88,16 @@ WITH CHECK (
     id = auth.uid()
 );
 
-CREATE POLICY "Users can view themselves and colleagues" ON public.com_m_user FOR SELECT TO authenticated
+CREATE POLICY "Users can view their coach-student counterparts" ON public.com_m_user FOR SELECT TO authenticated
 USING (
-    id = auth.uid() OR client_id = public.get_jwt_client_id()
+    (EXISTS ( SELECT 1
+       FROM public.com_m_coach_student_relationship r
+      WHERE r.coach_id = auth.uid() AND r.student_id = com_m_user.id OR r.student_id = auth.uid() AND r.coach_id = com_m_user.id))
+);
+
+CREATE POLICY "Users can view themselves" ON public.com_m_user FOR SELECT TO authenticated
+USING (
+    id = auth.uid()
 );
 
 REVOKE ALL ON public.com_m_user FROM anon;

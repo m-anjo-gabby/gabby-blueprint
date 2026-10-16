@@ -38,10 +38,8 @@ CREATE INDEX idx_license_history_user ON public.com_t_user_license_history (user
 
 ALTER TABLE public.com_t_user_license_history ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view relevant license history" ON public.com_t_user_license_history FOR SELECT TO authenticated
+CREATE POLICY "Users can view their own license history" ON public.com_t_user_license_history FOR SELECT TO authenticated
 USING (
-    user_id = auth.uid() OR (contract_id IN ( SELECT com_m_contract.contract_id
-       FROM public.com_m_contract
-      WHERE com_m_contract.client_id = public.get_jwt_client_id()))
+    user_id = auth.uid()
 );
 -- @end-schema

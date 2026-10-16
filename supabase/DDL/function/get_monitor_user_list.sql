@@ -47,10 +47,8 @@ AS $$
 DECLARE
     _client_id UUID;
 BEGIN
-    _client_id := public.get_jwt_client_id();
-    IF _client_id IS NULL THEN
-        RAISE EXCEPTION 'Client ID not found in JWT.';
-    END IF;
+    -- モニターのロールを持つ利用者だけが、自分のクライアントの受講生を参照できる
+    _client_id := private.get_monitor_client_id();
 
     RETURN QUERY
     -- =============================================================

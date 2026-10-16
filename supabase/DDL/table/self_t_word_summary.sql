@@ -25,13 +25,6 @@ CREATE INDEX idx_daily_summary_perf ON public.self_t_word_summary (user_id, trai
 
 ALTER TABLE public.self_t_word_summary ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Managers can view client's word summaries" ON public.self_t_word_summary FOR SELECT TO authenticated
-USING (
-    (EXISTS ( SELECT 1
-       FROM public.com_m_user u
-      WHERE u.id = self_t_word_summary.user_id AND u.client_id = public.get_jwt_client_id()))
-);
-
 CREATE POLICY "Users can manage their own word summaries" ON public.self_t_word_summary FOR ALL TO authenticated
 USING (
     user_id = auth.uid()
