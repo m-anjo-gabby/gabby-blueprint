@@ -15,7 +15,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { ilikeAny } from '@gabby/lib/supabase/ilike';
+import { exactPattern, ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { issueInitialLicense, resolvePerformedBy } from '@gabby/lib/license/issue';
 import { INVITATION_EXPIRES_DAYS, sendInvitationEmail } from "@gabby/lib/mail/actions/sendAccountMail"; // 招待メール（ユーザー種別ごとのテンプレート・文言で送り分け）
@@ -47,6 +47,37 @@ function getInvitationExpiry(): Date {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRES_DAYS);
   return expiresAt;
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+const EMAIL_EXISTS_MESSAGE = '登録済みメールです。';
+const EMAIL_INVITING_MESSAGE = '招待中（本登録前）のメールアドレスです。招待メールを再送してください。';
+
+/**
+ * 招待・即時作成の前に、メールアドレスが使われていないかを確かめる（大文字小文字は区別しない）。
+ * - 認証のアカウントがある（削除済みのユーザーを含む）→ 登録済み
+ * - 本登録前の招待がある → 招待中（再送で対応する）
+ * - 本登録済みの招待が残っているがアカウントが無い（ユーザーを削除した）→ 古い招待を消して使えるようにする
+ * 戻り値はエラーの文言（使えるなら null）。
+ */
+async function checkEmailAvailable(supabase: AdminClient, email: string): Promise<string | null> {
+  const { data: authUserId, error: authError } = await supabase.rpc('fn_find_auth_user_id_by_email', { p_email: email });
+  if (authError) throw authError;
+  if (authUserId) return EMAIL_EXISTS_MESSAGE;
+
+  const { data: invitation, error: invitationError } = await supabase
+    .from('com_t_invitation')
+    .select('id, accepted_at')
+    .ilike('email', exactPattern(email.trim()))
+    .maybeSingle();
+  if (invitationError) throw invitationError;
+  if (!invitation) return null;
+  if (!invitation.accepted_at) return EMAIL_INVITING_MESSAGE;
+
+  const { error: deleteError } = await supabase.from('com_t_invitation').delete().eq('id', invitation.id);
+  if (deleteError) throw deleteError;
+  return null;
 }
 
 /**
@@ -143,15 +174,10 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え -> 共通ヘルパーを利用
     // const redirectBase = user_type === USER_TYPES.ADMIN ? process.env.NEXT_PUBLIC_SITE_URL : process.env.NEXT_PUBLIC_STUDENT_URL;
 
-    // 本登録用マスタ(com_m_user)にすでに存在していないか先に確認します
-    const { data: existingUser } = await supabase
-      .from('com_m_user')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (existingUser) {
-      return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
+    // 登録済み・招待中のアドレスでないか先に確認します
+    const conflict = await checkEmailAvailable(supabase, email);
+    if (conflict) {
+      return { success: false, user_id: null, errorType: 'email_exists', message: conflict };
     }
 
     // 有効期限を 3日間に設定（従来の24時間制限を突破） -> 共通ヘルパーを利用
@@ -178,8 +204,8 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       .single();
 
     if (error) {
-      if (error.code === '23505') { // Postgresの一意制約違反（既に同じメールアドレスが招待中）
-        return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
+      if (error.code === '23505') { // Postgresの一意制約違反（確認の直後に同じメールアドレスで招待された場合）
+        return { success: false, user_id: null, errorType: 'email_exists', message: EMAIL_INVITING_MESSAGE };
       }
       logger.error('user:create_user_invite_failed', error.message, { ...ctx, err: error, payload });
       return { success: false, user_id: null, errorType: 'unexpected_error', message: error.message };
@@ -262,15 +288,10 @@ export async function createUserDirect(
 
     const supabase = await createAdminClient();
 
-    // 本登録用マスタ(com_m_user)にすでに存在していないか先に確認します
-    const { data: existingUser } = await supabase
-      .from('com_m_user')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (existingUser) {
-      return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
+    // 登録済み・招待中のアドレスでないか先に確認します（招待中のアドレスに作ると、残った招待のリンクで本登録できなくなる）
+    const conflict = await checkEmailAvailable(supabase, email);
+    if (conflict) {
+      return { success: false, user_id: null, errorType: 'email_exists', message: conflict };
     }
 
     // Supabase Auth側へ確認済み(email_confirm: true)のユーザーとして即時作成
@@ -289,7 +310,7 @@ export async function createUserDirect(
 
     if (authError || !authData.user) {
       if (authError?.code === 'email_exists') {
-        return { success: false, user_id: null, errorType: 'email_exists', message: "登録済みメールです。" };
+        return { success: false, user_id: null, errorType: 'email_exists', message: EMAIL_EXISTS_MESSAGE };
       }
       logger.error('user:create_user_direct_auth_failed', authError?.message || 'User object null', { ...ctx, err: authError, payload: { email } });
       return { success: false, user_id: null, errorType: 'unexpected_error', message: authError?.message || "アカウントの作成に失敗しました。" };
