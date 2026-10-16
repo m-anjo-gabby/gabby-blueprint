@@ -67,6 +67,9 @@ node supabase/release/run.mjs 20260919_feature-20260918-dev_release.sql --env=pr
 node supabase/release/run.mjs 20260919_feature-20260918-dev_release.sql --env=dev --sections=pending
 ```
 
+アプリはマージしても自動ではデプロイされません。staging・本番とも「マージ → このスクリプトの適用 →
+GitHub Actions の `Deploy` でアプリをデプロイ」の順に行います（`scripts/vercel-env/README.md`「アプリのデプロイ」）。
+
 ### オプション
 
 | オプション | 内容 |

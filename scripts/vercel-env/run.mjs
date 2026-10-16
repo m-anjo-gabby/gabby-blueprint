@@ -6,9 +6,9 @@
 // 運用手順は同ディレクトリの README.md を参照。
 //
 // 使い方（リポジトリ直下で実行）:
-//   node scripts/vercel-env/run.mjs --env=staging --init       値ファイルを作成・不足分を追記（秘密の値の自動作成を含む）
+//   node scripts/vercel-env/run.mjs --env=staging --init       値ファイルを作成・不足分を追記（秘密の値の自動作成を含む。dev は apps/*/.env.local から写す）
 //   node scripts/vercel-env/run.mjs --env=staging --pull       Vercel の現在の値から値ファイルを作る（初回の移行用）
-//   node scripts/vercel-env/run.mjs --env=staging --check      値ファイルの検証のみ（Vercel に接続しない。dev は apps/*/.env.local を検証）
+//   node scripts/vercel-env/run.mjs --env=staging --check      値ファイルの検証のみ（Vercel に接続しない。dev は apps/*/.env.local も検証）
 //   node scripts/vercel-env/run.mjs --env=staging              差分の表示のみ（--plan と同じ）
 //   node scripts/vercel-env/run.mjs --env=staging --apply      差分を表示し、確認のうえ反映
 //   node scripts/vercel-env/run.mjs --env=staging --write-app-env  apps/*/.env.staging（テスト等が読む控え）を作り直す
@@ -58,7 +58,6 @@ function parseArgs(argv) {
   for (const app of opts.apps) if (!APPS.includes(app)) fail(`--apps には ${APPS.join(' / ')} を指定してください。`);
   if (opts.mode === 'write-examples') return opts;
   if (!ENVIRONMENTS[opts.env]) fail(`--env には ${Object.keys(ENVIRONMENTS).join(' / ')} のいずれかを指定してください。`);
-  if (opts.env === 'dev' && opts.mode !== 'check') fail('dev は Vercel に反映しません。--check（apps/*/.env.local の検証）だけ使えます。');
   if (opts.mode === 'write-app-env' && opts.env !== 'staging') fail('--write-app-env は staging だけで使えます（本番の秘密の値をアプリのフォルダに置かないため）。');
   return opts;
 }
@@ -216,6 +215,7 @@ function writeExamples() {
 // ---------------------------------------------------------------------------
 function init(env) {
   const values = readEnvFile(valuesPath(env)) ?? {};
+  if (env === 'dev') copyFromEnvLocal(values);
   const generated = [];
   for (const def of MANIFEST) {
     if (def.removed || !def.generate || specFor(def, env) !== LOCAL) continue;
@@ -232,11 +232,36 @@ function init(env) {
   else console.log('\n必須の値はすべて記入済みです。次は --check と、差分の確認（--plan）を行ってください。');
 }
 
+/**
+ * dev: 値ファイルの空欄の必須の値を apps/*\/.env.local から写す（手元と Vercel の dev は同じ Supabase・外部サービスを使うため）。
+ * 任意の値（検証用の上書き等）は手元の確認のためのものが多いため写さない。
+ */
+function copyFromEnvLocal(values) {
+  const locals = Object.fromEntries(APPS.map((a) => [a, readEnvFile(path.join(REPO_ROOT, 'apps', a, '.env.local')) ?? {}]));
+  const copied = [];
+  const conflicts = [];
+  for (const def of MANIFEST) {
+    if (def.removed || specFor(def, 'dev') !== LOCAL || values[def.key]) continue;
+    const found = [...new Set(def.apps.map((a) => locals[a][def.key]).filter(Boolean))];
+    if (found.length === 0) continue;
+    values[def.key] = found[0];
+    copied.push(def.key);
+    if (found.length > 1) conflicts.push(`${def.key}: アプリの .env.local ごとに値が異なります。先頭の値を写しました`);
+  }
+  if (copied.length > 0) console.log(`apps/*/.env.local から写した値: ${copied.join(', ')}`);
+  if (conflicts.length > 0) printErrors('確認が必要な変数:', conflicts);
+}
+
 // ---------------------------------------------------------------------------
 // --check
 // ---------------------------------------------------------------------------
 function check(env) {
-  if (env === 'dev') return checkDev();
+  if (env === 'dev') {
+    checkDev();
+    // Vercel の dev の値ファイルは、作ってある場合だけ確かめる（手元の開発だけなら不要）
+    if (!existsSync(valuesPath(env))) return;
+    console.log('');
+  }
   const config = ENVIRONMENTS[env];
   const { errors } = resolveDesired({ env, config, values: loadValues(env) });
   if (errors.length > 0) {
@@ -246,9 +271,9 @@ function check(env) {
   console.log(`${rel(valuesPath(env))}: 問題ありません。`);
 }
 
-/** dev: 各アプリの .env.local が定義どおりかを確かめる（手元の開発環境のため、値の違いは警告だけ） */
+/** dev: 各アプリの .env.local が定義どおりかを確かめる（手元の開発環境のため、値の違いは警告だけ。URL は手元の起動の URL と照合する） */
 function checkDev() {
-  const config = ENVIRONMENTS.dev;
+  const config = { ...ENVIRONMENTS.dev, urls: ENVIRONMENTS.dev.localUrls ?? ENVIRONMENTS.dev.urls };
   let hasError = false;
   for (const app of APPS) {
     const file = path.join(REPO_ROOT, 'apps', app, '.env.local');
