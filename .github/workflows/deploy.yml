@@ -1,0 +1,186 @@
+# admin / student / coach を Vercel の dev・staging・本番へデプロイする。
+# Git 連携による自動デプロイは使わず、必要な時だけ手動で実行する（push・PR・マージでは動かない）。
+# リリースでは「マージ → DB のリリーススクリプト → このワークフロー」の順に実行する。
+# 手順・前提は scripts/vercel-env/README.md「アプリのデプロイ」。
+#
+#   gh workflow run deploy.yml -f environment=dev -f ref=feature/20261015-dev -f coach=false
+#   gh workflow run deploy.yml -f environment=staging
+#   gh workflow run deploy.yml -f environment=production -f confirm=prod
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: デプロイ先
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+      ref:
+        description: デプロイするブランチ（dev のみ。staging は staging、本番は main に固定）
+        required: false
+        type: string
+      admin:
+        description: admin
+        type: boolean
+        default: true
+      student:
+        description: student
+        type: boolean
+        default: true
+      coach:
+        description: coach
+        type: boolean
+        default: true
+      confirm:
+        description: 本番の場合は prod と入力
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  # gabbys-projects（scripts/vercel-env/environments.mjs の VERCEL_TEAM_ID）
+  VERCEL_ORG_ID: team_GoIL7IhwYdKe0XLs4UVEZ4rh
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.check.outputs.apps }}
+      ref: ${{ steps.check.outputs.ref }}
+    steps:
+      - id: check
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          REF: ${{ inputs.ref }}
+          CONFIRM: ${{ inputs.confirm }}
+          ADMIN: ${{ inputs.admin }}
+          STUDENT: ${{ inputs.student }}
+          COACH: ${{ inputs.coach }}
+        run: |
+          # staging・本番は main のワークフロー定義でだけ実行する（ブランチ側で書き換えた定義で本番に出さない）
+          if [ "$ENVIRONMENT" != "dev" ] && [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::staging・本番へのデプロイは「Use workflow from」を main にして実行してください（現在: $GITHUB_REF_NAME）。"
+            exit 1
+          fi
+          case "$ENVIRONMENT" in
+            dev)
+              if [ -z "$REF" ]; then
+                echo "::error::dev へのデプロイはブランチ（ref）を入力してください。"
+                exit 1
+              fi
+              ref="$REF"
+              ;;
+            staging)
+              ref=staging
+              ;;
+            production)
+              if [ "$CONFIRM" != "prod" ]; then
+                echo "::error::本番へのデプロイは confirm に prod と入力してください。"
+                exit 1
+              fi
+              ref=main
+              ;;
+          esac
+          if [ "$ENVIRONMENT" != "dev" ] && [ -n "$REF" ] && [ "$REF" != "$ref" ]; then
+            echo "::error::$ENVIRONMENT へは $ref ブランチだけをデプロイします（入力: $REF）。ref は空欄にしてください。"
+            exit 1
+          fi
+          apps=()
+          [ "$ADMIN" = "true" ] && apps+=('"admin"')
+          [ "$STUDENT" = "true" ] && apps+=('"student"')
+          [ "$COACH" = "true" ] && apps+=('"coach"')
+          if [ ${#apps[@]} -eq 0 ]; then
+            echo "::error::デプロイするアプリを1つ以上選んでください。"
+            exit 1
+          fi
+          echo "apps=[$(IFS=,; echo "${apps[*]}")]" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.prepare.outputs.apps) }}
+    # 同じ環境・アプリへのデプロイは1つずつ（後から実行した方が最後に反映される）
+    concurrency:
+      group: deploy-${{ inputs.environment }}-${{ matrix.app }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      # プロジェクトは scripts/vercel-env/environments.mjs の vercel と対応する
+      - name: Resolve project
+        id: project
+        env:
+          TARGET: ${{ inputs.environment }}-${{ matrix.app }}
+          APP: ${{ matrix.app }}
+        run: |
+          case "$TARGET" in
+            dev-admin) id=prj_QsIkByBrgufMfDPpTc5XyPdGSPUV; site=https://blueprint-admin-dev.vercel.app ;;
+            dev-student) id=prj_JaDvlbZFH1k4YVg1EWC5ReB0Tcma; site=https://blueprint-student-dev.vercel.app ;;
+            dev-coach) id=prj_lYTSawX7FjeOvDD1oplbQE0TW3zJ; site=https://blueprint-coach-dev.vercel.app ;;
+            staging-admin) id=prj_DECTrxS8NBmwOVhmTMp1SjqV1bZ2; site=https://blueprint-admin-stg.vercel.app ;;
+            staging-student) id=prj_FoNKKVtXqEnzwVM0wVVqpNIOTFcI; site=https://blueprint-student-stg.vercel.app ;;
+            staging-coach) id=prj_rsJqGyVtvZuF2hvsqEt7EWpNTrow; site=https://blueprint-coach-stg.vercel.app ;;
+            production-admin) id=prj_cA9h7wnBqummrIhpuScSVzd8a4Ty; site=https://blueprint-admin.gabbyacademy.com ;;
+            production-student) id=prj_nF8Hn9zjtxV0bhq8nWNqbptMhWeL; site=https://blueprint.gabbyacademy.com ;;
+            production-coach) id=prj_uZ0lZfkJCMNCX7GJdzlEJ767o0aa; site=https://blueprint-coach.gabbyacademy.com ;;
+          esac
+          case "$id" in
+            prj_*) ;;
+            *) echo "::error::$TARGET のプロジェクトID が未設定です。"; exit 1 ;;
+          esac
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "site=$site" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "message=$(git log -1 --format=%s | head -c 200)" >> "$GITHUB_OUTPUT"
+
+      # リポジトリ直下からアップロードし、ビルドは Vercel 側で行う（Root Directory 等はプロジェクトの設定に従う）
+      - name: Deploy
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_BLUEPRINT_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ steps.project.outputs.id }}
+          REF: ${{ needs.prepare.outputs.ref }}
+          SHA: ${{ steps.project.outputs.sha }}
+          MESSAGE: ${{ steps.project.outputs.message }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::リポジトリの Secrets に VERCEL_BLUEPRINT_TOKEN がありません。"
+            exit 1
+          fi
+          url=$(npx --yes vercel@50.33.0 deploy --prod --yes --token "$VERCEL_TOKEN" \
+            -m githubCommitRef="$REF" -m githubCommitSha="$SHA" -m githubCommitMessage="$MESSAGE" \
+            -m githubDeployedBy="$GITHUB_ACTOR")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          APP: ${{ matrix.app }}
+          SITE: ${{ steps.project.outputs.site }}
+          REF: ${{ needs.prepare.outputs.ref }}
+          SHA: ${{ steps.project.outputs.sha }}
+          MESSAGE: ${{ steps.project.outputs.message }}
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          {
+            echo "### $ENVIRONMENT / $APP → $SITE"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|---|---|"
+            echo "| ブランチ | \`$REF\` |"
+            echo "| コミット | \`${SHA:0:8}\` $MESSAGE |"
+            echo "| デプロイ | $URL |"
+            echo "| 実行者 | $GITHUB_ACTOR |"
+          } >> "$GITHUB_STEP_SUMMARY"
