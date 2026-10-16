@@ -105,6 +105,8 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
   別コンテキストで開くテストは `desktop` プロジェクトだけで実行する（`mobile` で同じ操作を繰り返さない）。
   使い捨てのコーチは `support/authFixtures.ts` の `createDisposableCoach`（空き時間は UTC で渡す）で作る。
 - ステージングでの実行（リリース前の確認）: `pnpm --filter @gabby/testing e2e:staging`（`E2E_ENV=staging`）。Vercel のデプロイ済みサイトに接続し、
+  対象を絞る場合は `pnpm --filter @gabby/testing exec cross-env E2E_ENV=staging playwright test <ファイル名の一部> --project=desktop`
+  （`e2e:staging -- <ファイル名>` の形は全件が staging で走る。`KJ-2026-1005-01`）。
   ローカルの dev サーバーは起動しない。DB・固定アカウントは `apps/student/.env.staging`（ステージングの Supabase）を使う。
   接続先の定義は `e2e/support/targets.ts`（URL は `E2E_BASE_URL` / `E2E_ADMIN_BASE_URL` / `E2E_COACH_BASE_URL` で上書きできる）。
   - 生徒: https://blueprint-student-stg.vercel.app/

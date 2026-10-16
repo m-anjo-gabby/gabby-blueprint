@@ -1,5 +1,6 @@
 // 実行: node --test scripts/vercel-env/lib.test.mjs
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { parseEnv } from 'node:util';
 import { ENVIRONMENTS } from './environments.mjs';
@@ -122,4 +123,17 @@ test('値ファイルは書いた値をそのまま読み戻せる', () => {
   assert.equal(parsed.EXTRA, '1');
   assert.equal(parsed.SITE, undefined);
   assert.match(text, /# 注意: 確認/);
+});
+
+test('deploy.yml のプロジェクトID・URL が environments.mjs と一致する', () => {
+  const workflow = readFileSync(new URL('../../.github/workflows/deploy.yml', import.meta.url), 'utf8');
+  // ワークフローの environment の選択肢は dev / staging / production（environments.mjs の prod）
+  const WORKFLOW_ENV = { dev: 'dev', staging: 'staging', prod: 'production' };
+  for (const [env, c] of Object.entries(ENVIRONMENTS)) {
+    for (const [app, target] of Object.entries(c.vercel ?? {})) {
+      assert.match(target.projectId, /^prj_/, `${env}/${app} の projectId`);
+      const line = `${WORKFLOW_ENV[env]}-${app}) id=${target.projectId}; site=${c.urls[app]} ;;`;
+      assert.ok(workflow.includes(line), `deploy.yml に次の行がありません: ${line}`);
+    }
+  }
 });

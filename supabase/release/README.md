@@ -32,7 +32,8 @@ SQLエディタへの貼り付けではなく、実行ツール `run.mjs` を使
 | `SUPABASE_ACCESS_TOKEN` | 1で発行したトークン |
 | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | `apps/*/.env.local`（dev）/ `apps/*/.env.staging`（staging）と同じ値。prod はダッシュボードで確認 |
 
-- `.env.prod` の `SUPABASE_ACCESS_TOKEN` は**空欄を推奨**します。空欄の場合は実行時に入力を求められます。
+- `.env.prod` の `SUPABASE_ACCESS_TOKEN` は**空欄を推奨**します。空欄の場合は環境変数 `SUPABASE_ACCESS_TOKEN`、それも無ければ実行時に入力を求められます
+  （本番のリリースは一時トークンを発行して環境変数で渡し、終わったら削除します。`docs/RELEASE.md`）。
 
 ### 3. 既存の適用分を記録する（環境ごとに1回）
 
@@ -68,7 +69,8 @@ node supabase/release/run.mjs 20260919_feature-20260918-dev_release.sql --env=de
 ```
 
 アプリはマージしても自動ではデプロイされません。staging・本番とも「マージ → このスクリプトの適用 →
-GitHub Actions の `Deploy` でアプリをデプロイ」の順に行います（`scripts/vercel-env/README.md`「アプリのデプロイ」）。
+GitHub Actions の `Deploy` でアプリをデプロイ」の順に行います。リリース全体の手順と確認項目は `docs/RELEASE.md`、
+環境ごとの適用状況とデプロイ済みのコミットは `pnpm release:status --env=<dev|staging|prod>` で確かめられます。
 
 ### オプション
 

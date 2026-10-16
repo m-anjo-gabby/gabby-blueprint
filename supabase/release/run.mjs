@@ -22,13 +22,14 @@
 //   --reapply                適用済みセクションの再実行を許可する（冪等なセクションのみ）
 //   --skip-post              適用後作業（@post）を実行しない
 
-import { createHash } from 'node:crypto';
 import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 
 import { ENVS, RELEASE_DIR, REPO_ROOT, connect } from './lib/connection.mjs';
+import { askSecret } from './lib/prompt.mjs';
+import { fetchHistory, lit, sectionState, sha256, splitSections } from './lib/releaseFile.mjs';
 
 const LOG_DIR = path.join(RELEASE_DIR, 'logs');
 const HISTORY_DDL = path.join(REPO_ROOT, 'supabase/DDL/table/ops_release_history.sql');
@@ -101,59 +102,9 @@ function ask(question) {
   });
 }
 
-/** 入力内容を表示しない入力（トークン用）。確認プロンプトより前に1回だけ使う */
-function askSecret(question) {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    rl._writeToOutput = (s) => { if (s.includes(question)) rl.output.write(s); };
-    // close() は 'close' イベントを同期的に発火するため、回答を先に確定させてから閉じる
-    rl.on('close', () => resolve(''));
-    rl.question(question, (answer) => {
-      resolve(answer.trim());
-      process.stdout.write('\n');
-      rl.close();
-    });
-  });
-}
-
 // ---------------------------------------------------------------------------
 // リリーススクリプトの解析
 // ---------------------------------------------------------------------------
-function sha256(text) {
-  return createHash('sha256').update(text).digest('hex');
-}
-
-/**
- * 「-- ====」行の直後の行に【追加セクション】を含む位置でファイルを分割する。
- * 先頭（最初の追加セクションより前）をセクション1とする。
- */
-function splitSections(sql) {
-  const lines = sql.split(/\r?\n/);
-  const starts = [0];
-  for (let i = 1; i < lines.length; i++) {
-    if (/^--\s*={10,}/.test(lines[i]) && lines[i + 1]?.includes('【追加セクション】')) starts.push(i);
-  }
-  return starts.map((start, idx) => {
-    const end = starts[idx + 1] ?? lines.length;
-    const body = lines.slice(start, end);
-    const titleLine = idx === 0
-      ? body.find((l) => l.includes('対象ブランチ')) ?? body.find((l) => /^--\s*\S/.test(l) && !/={10,}/.test(l))
-      : body[1];
-    const title = (titleLine ?? '').replace(/^--\s*/, '').replace('【追加セクション】', '').trim();
-    const posts = body
-      .map((l) => l.match(/^--\s*@post:\s*(.+?)\s*$/)?.[1])
-      .filter(Boolean);
-    const sqlText = body.join('\n');
-    return {
-      no: idx + 1,
-      title: idx === 0 ? `ファイル先頭 (${title})` : title,
-      sql: sqlText,
-      sha256: sha256(sqlText.trim()),
-      posts,
-    };
-  });
-}
-
 function parseSectionNos(spec, sections) {
   if (spec === 'all') return sections.map((s) => s.no);
   const nos = spec.split(',').map((s) => Number(s.trim()));
@@ -165,33 +116,11 @@ function parseSectionNos(spec, sections) {
 // ---------------------------------------------------------------------------
 // 適用履歴（ops.release_history）
 // ---------------------------------------------------------------------------
-function lit(value) {
-  return value === null || value === undefined ? 'NULL' : `'${String(value).replace(/'/g, "''")}'`;
-}
-
 function historyInsertSql(record) {
   return `INSERT INTO ops.release_history
   (release_file, section_no, section_title, section_sha256, step_type, command, status, applied_by, git_commit, note)
 VALUES (${lit(record.file)}, ${record.section.no}, ${lit(record.section.title)}, ${lit(record.section.sha256)},
   ${lit(record.stepType)}, ${lit(record.command)}, ${lit(record.status)}, ${lit(record.appliedBy)}, ${lit(record.gitCommit)}, ${lit(record.note)});`;
-}
-
-/** 適用履歴を取得する（テーブル未作成＝run.mjs未使用の環境では空として扱う。読み取りのみ） */
-async function fetchHistory(query, file) {
-  const [exists] = await query(`SELECT to_regclass('ops.release_history') IS NOT NULL AS ok;`);
-  if (!exists?.ok) return [];
-  return query(`SELECT section_no, section_sha256, step_type, command, status, applied_by, applied_at
-FROM ops.release_history WHERE release_file = ${lit(file)} ORDER BY applied_at;`);
-}
-
-/** セクションごとの状態: pending / applied / changed（適用後に内容が変更された） */
-function sectionState(section, history) {
-  const applied = history.filter(
-    (h) => h.step_type === 'sql' && h.section_no === section.no && ['applied', 'marked'].includes(h.status)
-  );
-  if (applied.length === 0) return { state: 'pending' };
-  const last = applied[applied.length - 1];
-  return { state: last.section_sha256 === section.sha256 ? 'applied' : 'changed', last };
 }
 
 // ---------------------------------------------------------------------------

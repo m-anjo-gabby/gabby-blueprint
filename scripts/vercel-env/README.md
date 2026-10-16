@@ -123,10 +123,7 @@ gh workflow run deploy.yml -f environment=production -f confirm=prod
 
 ### リリースでの順番
 
-1. staging（本番は main）へマージする
-2. DB のリリーススクリプトを適用する（`supabase/release/README.md`）
-3. 環境変数を変えるリリースは `pnpm vercel-env --env=<staging|prod> --apply`
-4. このワークフローで3アプリをデプロイする
+マージ → DB のリリーススクリプト → 環境変数（変えるリリースのみ）→ このワークフローの順です。手順と確認項目は `docs/RELEASE.md`。
 
 ### dev について
 

@@ -20,6 +20,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { ENVS, REPO_ROOT, connect } from './lib/connection.mjs';
+import { askSecret } from './lib/prompt.mjs';
 
 const TABLE_DIR = path.join(REPO_ROOT, 'supabase/DDL/table');
 const SCHEMAS = ['public', 'ops'];
@@ -258,8 +259,8 @@ function readCanonicalFiles() {
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  // 環境ファイルのトークンが空欄（.env.prod の推奨設定）の場合は、環境変数 SUPABASE_ACCESS_TOKEN を使う（読み取りのみのため入力は求めない）
-  const { project, query } = await connect(opts.env, async () => process.env.SUPABASE_ACCESS_TOKEN ?? '').catch((e) => fail(e.message));
+  // 環境ファイルのトークンが空欄（.env.prod の推奨設定）の場合は、環境変数 SUPABASE_ACCESS_TOKEN、それも無ければ入力を求める
+  const { project, query } = await connect(opts.env, askSecret).catch((e) => fail(e.message));
   const catalog = await loadCatalog(query).catch((e) => fail(`カタログの取得に失敗しました: ${e.message}`));
   console.log(`\n接続先: ${project.name}（${catalog.size} テーブル）`);
 

@@ -142,6 +142,8 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
   通過済みのため、リクエスト内では `auth.getClaims()` による手元の JWT 検証＋`cache()` で1回にまとめる
   （処理ごとに Auth サーバーへ問い合わせると、順番待ちの1段目が毎回増える）。入口の `proxy-base.ts` と
   認証そのもの（ログイン・パスワード変更等の `packages/lib/auth/core.ts`）は `auth.getUser()` のままにする。
+- **リリース作業**: staging・本番へのリリース（マージ → DB のリリーススクリプト → 環境変数 → GitHub Actions の `Deploy`）は
+  `docs/RELEASE.md` が正本。Claude が進める場合は `.claude/skills/release` に従い、終わったら同スキルの `HISTORY.md` に記録とつまずきを残す。
 - RPCのシグネチャを変更する場合は、`DROP FUNCTION IF EXISTS`で旧シグネチャを明示的に削除してから
   `CREATE OR REPLACE FUNCTION`で新シグネチャを作成すること（Postgresの関数オーバーロードの
   曖昧性を避けるため）。

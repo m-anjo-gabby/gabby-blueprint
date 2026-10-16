@@ -49,7 +49,8 @@ export async function connect(envName, askToken) {
     throw new Error(`SUPABASE_URL (${envVars.SUPABASE_URL}) が SUPABASE_PROJECT_REF (${ref}) と一致しません。`);
   }
 
-  let token = envVars.SUPABASE_ACCESS_TOKEN;
+  // 環境ファイルが空欄の場合は環境変数（本番の一時トークン等。ファイルに書かずに渡す）、それも無ければ入力を求める
+  let token = envVars.SUPABASE_ACCESS_TOKEN || process.env.SUPABASE_ACCESS_TOKEN;
   if (!token) token = await askToken('SUPABASE_ACCESS_TOKEN を入力してください（入力内容は表示されません）: ');
   if (!token) throw new Error('アクセストークンが入力されませんでした。');
 

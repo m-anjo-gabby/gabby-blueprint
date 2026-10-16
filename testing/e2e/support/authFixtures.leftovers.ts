@@ -1,12 +1,13 @@
 /**
  * 認証E2Eの残骸（失敗で後始末できなかった使い捨てユーザー・顧客）を確認・削除する。
- * 実行: pnpm exec tsx e2e/support/authFixtures.leftovers.ts [--delete]
+ * 実行: pnpm exec tsx e2e/support/authFixtures.leftovers.ts [--env=staging] [--delete]（既定は dev）
  * 対象は authFixtures.ts が作る命名（メール `e2e<接頭辞><数字>-…`。接頭辞は createAuthFixture に渡す英小文字。顧客 `【QAテスト】認証E2E（…）`）に限る。
  */
-import { loadTestEnv } from "../../helpers/env.ts";
+import { loadTestEnv, resolveTestEnvFromArgs } from "../../helpers/env.ts";
 import { createAdminClient } from "../../helpers/auth.ts";
 
-loadTestEnv("dev");
+const env = resolveTestEnvFromArgs();
+loadTestEnv(env);
 const doDelete = process.argv.includes("--delete");
 const admin = await createAdminClient();
 const PATTERN = /^(delivered\+)?e2e[a-z]+\d+-/;
@@ -22,7 +23,7 @@ const { data: clients } = await admin.from("com_m_client").select("client_id, cl
 const { data: invitations } = await admin.from("com_t_invitation").select("email").like("email", "%e2e%");
 const leftoverInvitations = (invitations ?? []).filter((i) => PATTERN.test(i.email));
 
-console.log(`users=${users.length} clients=${clients?.length ?? 0} invitations=${leftoverInvitations.length}`);
+console.log(`env=${env} users=${users.length} clients=${clients?.length ?? 0} invitations=${leftoverInvitations.length}`);
 if (doDelete) {
   if (leftoverInvitations.length > 0) await admin.from("com_t_invitation").delete().in("email", leftoverInvitations.map((i) => i.email));
   // 契約・ライセンスはユーザーより先に消す（ライセンスが com_m_user を参照するため）

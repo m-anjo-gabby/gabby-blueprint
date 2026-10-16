@@ -1001,6 +1001,8 @@
 - **対処**: `pnpm --filter @gabby/testing exec playwright test <ファイル名の一部> --project=desktop` で実行する（`e2e/CONVENTIONS.md` 7章を修正）。
   途中で止めた場合は、Playwright の本体（`cli.js test`）とワーカーの node プロセスが残るため止め、使い捨てデータの残骸（`authFixtures.leftovers.ts`）を確認する。
 - **判断基準への反映**: 絞り込んで実行したつもりのテストは、最初の要約行の件数（「N passed」）が想定どおりかを確かめる。想定より長く終わらない場合は、全件が走っていないかを疑う。
+- **再発（staging, 2026-10-16）**: リリース後の確認で `pnpm --filter @gabby/testing e2e:staging -- tests/admin/license-inactive-overlap.spec.ts --project=desktop` を実行し、staging で全件が約12分走った（途中で停止し、使い捨てデータが1組残った）。
+  staging の実行の節に絞り込みの書き方が無かったため、`e2e/CONVENTIONS.md` の staging の節にも絞り込みのコマンドを追記した。出力を `tail` で絞ると最初の要約行（「Running N tests」）が見えないため、件数を先に確かめる。
 
 ### KJ-2026-1005-02 新しい画面の初回の遷移が dev のコンパイル待ちで10秒を超える／生徒アプリの proxy の許可リストに無い画面はホームへ戻される
 
