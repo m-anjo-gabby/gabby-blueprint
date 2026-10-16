@@ -7,7 +7,7 @@ import { WEB_TRIAL_LICENSE_DAYS } from '@gabby/types/trialApplication';
 import { TrialApplicationForm, type TrialTimezoneOption } from './_components/TrialApplicationForm';
 
 export const metadata: Metadata = {
-  title: 'Webトライアルのお申し込み | Gabby Blueprint',
+  title: '無料体験のお申し込み | Gabby Blueprint',
 };
 
 const logger = createLogger('student');
@@ -43,7 +43,7 @@ export default async function TrialPage() {
             <div className="flex justify-center">
               <Image src="/logo-01.png" alt="Gabby Blueprint" width={320} height={85} className="h-auto w-auto max-w-56 md:max-w-64" priority />
             </div>
-            <h1 className="text-2xl font-bold text-ink">Webトライアルのお申し込み</h1>
+            <h1 className="text-2xl font-bold text-ink">無料体験のお申し込み</h1>
             <p className="text-sm leading-relaxed text-ink-muted">
               {`お申し込み後、パスワードを設定した日から${WEB_TRIAL_LICENSE_DAYS}日間、アプリのトレーニングとコーチとのライブセッション1回をお試しいただけます。`}
             </p>

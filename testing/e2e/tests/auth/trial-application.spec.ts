@@ -68,7 +68,7 @@ test("申込フォームから申し込み、届いた案内からパスワー�
   const since = new Date();
 
   await page.goto("/trial");
-  await expect(page.getByRole("heading", { name: "Webトライアルのお申し込み" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "無料体験のお申し込み" })).toBeVisible();
   await page.getByLabel("メールアドレス").fill(email);
   await page.getByLabel("氏名").fill("E2Eトライアル");
   await page.getByLabel("姓（ローマ字）").fill("Shiken");
