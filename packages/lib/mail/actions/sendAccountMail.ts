@@ -22,7 +22,7 @@ export const INVITATION_EXPIRES_DAYS = 3;
 
 export type AccountMailResult = { success: boolean; error?: string };
 
-async function sendAccountMail({
+export async function sendAccountMail({
   to,
   kind,
   mail,

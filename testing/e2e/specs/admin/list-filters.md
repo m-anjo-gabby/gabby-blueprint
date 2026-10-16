@@ -14,6 +14,7 @@
 | アドミン | 契約管理 | `admin` `/contracts` | 顧客（`clientId`） | サーバー |
 | アドミン | プランマスタ管理 | `admin` `/contracts/plans` | なし | 全件・ブラウザ |
 | アドミン | ユーザー管理 | `admin` `/users` | 区分（`userType`）・顧客（`clientId`） | サーバー |
+| アドミン | Webトライアル申込 | `admin` `/trial-applications` | 状態（`status` = `invited` / `registered` / `expired`）・業種（`occupation`） | サーバー |
 | アドミン | 教材管理 | `admin` `/contents` | 種別（`type`） | サーバー |
 | アドミン | タグ管理 | `admin` `/contents/tags` | 種別（`type`） | 全件・ブラウザ |
 | アドミン | お知らせ管理 | `admin` `/notice` | 種別（`type`） | サーバー |

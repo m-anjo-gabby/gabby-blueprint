@@ -28,6 +28,7 @@
 | [favorites.md](student/favorites.md) | `/favorites` | お気に入り教材・フレーズ | ✅ |
 | [library.md](student/library.md) | `/library` | 教材一覧（検索・絞り込み） | ✅ |
 | [notice.md](student/notice.md) | `/notice` | お知らせ一覧 | ✅ |
+| [trial.md](student/trial.md) | `/trial` | Webトライアルの申込（ログイン不要の公開画面。CAPTCHA・個人情報保護方針への同意、申込の種類ごとのメール・管理者への通知、本登録で14日間のライセンス） | ✅ |
 | [group-sessions.md](student/group-sessions.md) | `/group-sessions` | グループセッション一覧（シリーズごとの回・すべての回に参加する・参加登録した過去のセッション） | ✅ |
 | [notification.md](student/notification.md) | `/notification` | 通知一覧 | ✅ |
 | [profile.md](student/profile.md) | `/profile` | アイコン・タイムゾーン設定 | ✅ |
@@ -90,6 +91,7 @@
 | [profile-password.md](admin/profile-password.md) | `/profile/password` | パスワード変更 | ✅ |
 | [timezones.md](admin/timezones.md) | `/timezones` | タイムゾーンマスタ管理 | ✅ |
 | [users.md](admin/users.md) | `/users`, `/users/[id]`（タブ: sprint・specialty・matching・ratings・legal） | ユーザー一覧・新規登録・ユーザー詳細（基本情報・ライセンス・スプリント・正式氏名・コーチの専門・マッチング・評価）・代理ログイン | ✅ |
+| [trial-applications.md](admin/trial-applications.md) | `/trial-applications` | Webトライアルの申込一覧（閲覧のみ。状態〔招待中・登録済み・期限切れ〕・業種での絞り込み） | ✅ |
 | [calendar-events/list.md](admin/calendar-events/list.md) | `/calendar-events` | 共有カレンダーイベントの登録・編集・削除 | ✅ |
 | [calendar-events/participants.md](admin/calendar-events/participants.md) | `/calendar-events/[id]/participants` | イベント参加者(RSVP)確認・アナウンス配信 | ✅ |
 | [calendar-events/series.md](admin/calendar-events/series.md) | `/calendar-events/series`、`/calendar-events/series/new`、`/calendar-events/series/[seriesId]` | グループセッションのシリーズ（企画×月）の作成（シリーズと回をまとめて登録）・管理・回をまとめて追加 | ✅ |

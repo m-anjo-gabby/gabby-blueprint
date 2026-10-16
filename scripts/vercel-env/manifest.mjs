@@ -88,6 +88,14 @@ export const MANIFEST = [
     value: { default: ({ config }) => config.urls.student },
   },
   {
+    key: 'NEXT_PUBLIC_ADMIN_URL',
+    apps: ['student'],
+    group: 'サイトURL',
+    description: '管理画面の URL（Webトライアルの申込をサポート窓口へ知らせるメールの、申込一覧へのリンク）',
+    validate: 'https-url',
+    value: { default: ({ config }) => config.urls.admin },
+  },
+  {
     key: 'NEXT_PUBLIC_COACH_URL',
     apps: ['admin'],
     group: 'サイトURL',
@@ -193,6 +201,32 @@ export const MANIFEST = [
       '運営向けのメール配信の日次の要約の宛先（カンマ区切り。毎日 09:00 JST に送る。問題が無い日も「異常なし」で送り、届くこと自体を送信処理の生存確認にする。未設定なら送らない）',
     validate: 'email-list',
     value: { default: LOCAL, dev: OPTIONAL, staging: OPTIONAL },
+  },
+  {
+    key: 'MAIL_TRIAL_APPLICATION_TO',
+    apps: ['student'],
+    group: 'Resend（メール送信）',
+    description:
+      'Webトライアルの申込を知らせるメールの宛先（カンマ区切り。本番はサポート窓口 support@gabbyacademy.com。dev・staging は書いた場合だけ送る。未設定なら送らない（管理者へのアプリ内の通知は送る））',
+    validate: 'email-list',
+    value: { default: OPTIONAL, prod: LOCAL },
+  },
+  // ---------------------------------------------------------------- Cloudflare Turnstile（CAPTCHA）
+  {
+    key: 'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
+    apps: ['student'],
+    group: 'Cloudflare Turnstile',
+    description:
+      'Webトライアルの申込フォーム（/trial）の CAPTCHA のサイトキー。dev・staging・手元は Cloudflare のテスト用キー（常に通る）。本番は Cloudflare の Turnstile で blueprint.gabbyacademy.com 用に作ったキー',
+    value: { default: '1x00000000000000000000AA', prod: LOCAL },
+  },
+  {
+    key: 'TURNSTILE_SECRET_KEY',
+    apps: ['student'],
+    group: 'Cloudflare Turnstile',
+    description: 'Turnstile の秘密鍵（サーバーでの検証用。未設定なら申込を受け付けない）。dev・staging・手元はテスト用の鍵（常に通る）',
+    secret: true,
+    value: { default: '1x0000000000000000000000000000000AA', prod: LOCAL },
   },
   {
     key: 'MAIL_UNSUBSCRIBE_SECRET',

@@ -2,7 +2,7 @@
 import {
   LayoutDashboard, Building2, FileSignature, Users, BookOpen,
   Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon, CalendarDays, CalendarRange, Video, DollarSign,
-  Settings, LifeBuoy, FileChartColumn, Landmark,
+  Settings, LifeBuoy, FileChartColumn, Landmark, UserPlus,
 } from 'lucide-react';
 
 // ============================================================
@@ -57,6 +57,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     label: 'users',
     href: '/users',
     icon: Users,
+    requiredRoles: ['admin'],
+  },
+  {
+    label: 'trialApplications',
+    href: '/trial-applications',
+    icon: UserPlus,
     requiredRoles: ['admin'],
   },
   {

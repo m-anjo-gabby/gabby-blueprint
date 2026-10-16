@@ -185,15 +185,22 @@ export async function recordIssuedLicenses(
 }
 
 /**
- * 契約期間いっぱいの初期ライセンスを発行する（ユーザーの即時作成・招待からの本登録で使う）。
- * 期間・上限の検証は行わない（招待・作成時にアドミンが契約を選んでいるため）。
+ * 初期ライセンスを発行する（ユーザーの即時作成・招待からの本登録で使う）。
+ * 期間は契約期間いっぱい。period を渡した場合はその期間（Webトライアルの「本登録の日から14日間」等）。
+ * 期間・上限の検証は行わない（招待・作成時にアドミンが契約を選んでいるため。Webトライアルは上限を超えても発行する）。
  */
 export async function issueInitialLicense(
   supabase: AdminClient,
-  params: { contractId: string; userId: string; performedBy: string | null },
+  params: {
+    contractId: string;
+    userId: string;
+    performedBy: string | null;
+    /** ライセンスの期間（UTC の ISO 文字列）。省略時は契約期間 */
+    period?: { startDate: string; endDate: string };
+  },
   ctx: LogContext
 ): Promise<{ success: true } | { success: false; message: string }> {
-  const { contractId, userId, performedBy } = params;
+  const { contractId, userId, performedBy, period } = params;
 
   const { data: contract, error: contractError } = await supabase
     .from('com_m_contract')
@@ -210,8 +217,8 @@ export async function issueInitialLicense(
     .insert({
       user_id: userId,
       contract_id: contractId,
-      start_date: contract.start_date,
-      end_date: contract.end_date,
+      start_date: period?.startDate ?? contract.start_date,
+      end_date: period?.endDate ?? contract.end_date,
       status: 1,
       has_dialogue_practice: contract.has_dialogue_practice,
     })

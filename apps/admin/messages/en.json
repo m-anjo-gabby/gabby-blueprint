@@ -63,6 +63,7 @@
     "contracts": "Contracts",
     "liveSessions": "Live Sessions",
     "users": "Users",
+    "trialApplications": "Web trial applications",
     "terms": "Terms",
     "timezones": "Timezones",
     "contents": "Contents",
@@ -2433,5 +2434,31 @@
     },
     "pdfButton": "PDF",
     "downloadFailed": "Failed to create the report. Please try again later."
+  },
+  "trialApplications": {
+    "page": {
+      "title": "Web trial applications",
+      "subtitle": "Review web trial applications and whether applicants have completed registration (password set)"
+    },
+    "dataTable": {
+      "searchPlaceholder": "Search by name, romaji, or email",
+      "appliedAtHeader": "Applied at",
+      "applyCount": "Application #{count}",
+      "nameHeader": "Name",
+      "occupationHeader": "Occupation",
+      "allOccupations": "All occupations",
+      "locationHeader": "Country, city / time zone",
+      "messageHeader": "Message",
+      "statusHeader": "Status",
+      "allStatuses": "All statuses",
+      "status": {
+        "invited": "Invited",
+        "registered": "Registered",
+        "expired": "Expired"
+      },
+      "acceptedAt": "Registered {date}",
+      "expiresAt": "Expires {date}",
+      "noData": "No applications"
+    }
   }
 }

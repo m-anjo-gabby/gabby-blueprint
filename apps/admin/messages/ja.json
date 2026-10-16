@@ -63,6 +63,7 @@
     "contracts": "契約管理",
     "liveSessions": "ライブセッション管理",
     "users": "ユーザー管理",
+    "trialApplications": "Webトライアル申込",
     "terms": "規約管理",
     "timezones": "タイムゾーン管理",
     "contents": "教材管理",
@@ -2433,5 +2434,31 @@
     },
     "pdfButton": "PDF",
     "downloadFailed": "レポートの作成に失敗しました。時間をおいて再度お試しください。"
+  },
+  "trialApplications": {
+    "page": {
+      "title": "Webトライアル申込",
+      "subtitle": "Webトライアルの申込と、本登録（パスワード設定）の状況を確認します"
+    },
+    "dataTable": {
+      "searchPlaceholder": "氏名・ローマ字・メールで検索",
+      "appliedAtHeader": "申込日時",
+      "applyCount": "{count}回目の申込",
+      "nameHeader": "氏名",
+      "occupationHeader": "業種・職業",
+      "allOccupations": "すべての業種",
+      "locationHeader": "国・都市 / タイムゾーン",
+      "messageHeader": "ご要望・ご質問",
+      "statusHeader": "状態",
+      "allStatuses": "すべての状態",
+      "status": {
+        "invited": "招待中",
+        "registered": "登録済み",
+        "expired": "期限切れ"
+      },
+      "acceptedAt": "本登録 {date}",
+      "expiresAt": "期限 {date}",
+      "noData": "申込はありません"
+    }
   }
 }

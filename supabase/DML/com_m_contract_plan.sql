@@ -9,7 +9,10 @@
 INSERT INTO public.com_m_contract_plan (plan_code, plan_name, plan_name_en, contract_type, weekly_frequency, period_months, total_sessions, has_dialogue_practice, sort_no) VALUES
   ('BLUEPRINT_ONLY',   'アプリのみ',       'App only',                 1, NULL, 3, NULL, false, 1),
   ('LIVE_WEEKLY1_3M',  'スピーキング強化', 'Standard',                 2, 1,    3, 12,   false, 2),
-  ('LIVE_WEEKLY2_3M',  'ビジネス英語プロ', 'Business Pro (Dialogue)',  2, 2,    3, 24,   true,  3)
+  ('LIVE_WEEKLY2_3M',  'ビジネス英語プロ', 'Business Pro (Dialogue)',  2, 2,    3, 24,   true,  3),
+  -- Webトライアル（ライブ1回）。期間はプランの period_months ではなく、本登録の日から14日間（acceptInvitationCore）。
+  -- 契約は本登録の月ごとに fn_resolve_web_trial_contract() が作る
+  ('WEB_TRIAL',        'Webトライアル',    'Web trial',                2, 1,    1, 1,    false, 99)
 ON CONFLICT (plan_code) DO UPDATE SET
   plan_name = EXCLUDED.plan_name,
   plan_name_en = EXCLUDED.plan_name_en,

@@ -69,7 +69,8 @@ export async function proxy(req: NextRequest) {
   // 公開ルートの判定
   const isPublicRoute = isDefaultPublicRoute(pathname, {
     // /mail/unsubscribe: メールのログイン不要の配信停止（署名で照合する）
-    extraExactPaths: ['/forgot-password', '/update-password', '/mail/unsubscribe'],
+    // /trial: Webトライアルの申込（コーポレートサイトからリンクする。CAPTCHA で守る）
+    extraExactPaths: ['/forgot-password', '/update-password', '/mail/unsubscribe', '/trial'],
     extraPrefixes: ['/auth'],
   });
 

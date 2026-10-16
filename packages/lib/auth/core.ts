@@ -13,6 +13,7 @@ import { UserBase, USER_TYPES } from '@gabby/types/user';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
 import { issueInitialLicense, resolvePerformedBy } from '../license/issue';
+import { completeTrialRegistration, findTrialApplicationByInvitation } from '../trial/registration';
 import { sendPasswordResetEmail } from '../mail/actions/sendAccountMail';
 import type { MailLanguage } from '../mail/layout/document';
 import { getPasswordStrengthErrorCode } from './validation';
@@ -601,8 +602,16 @@ export async function acceptInvitationCore(token: string, password: string): Pro
     }
 
     // 5. 招待時に指定されたライセンスがあれば有効化（契約期間いっぱい。契約管理からの割当と同じく
-    //    履歴・ライブのチケットも作る。履歴の実行者は招待したアドミン）
-    if (inviteRecord.contract_id) {
+    //    履歴・ライブのチケットも作る。履歴の実行者は招待したアドミン）。
+    //    Webトライアルの申込からの招待は、本登録の月の契約で本登録の日から14日間のライセンスを発行する
+    const trialApplication = await findTrialApplicationByInvitation(supabase, inviteRecord.id, ctx);
+    if (trialApplication) {
+      await completeTrialRegistration(supabase, {
+        applicationId: trialApplication.application_id,
+        timezone: trialApplication.timezone,
+        userId: newUserId,
+      }, ctx);
+    } else if (inviteRecord.contract_id) {
       const licenseResult = await issueInitialLicense(supabase, {
         contractId: inviteRecord.contract_id,
         userId: newUserId,
