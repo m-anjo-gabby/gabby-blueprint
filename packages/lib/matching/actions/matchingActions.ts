@@ -33,6 +33,7 @@ import { getCoachRatingStatsCore } from '../../coachRating/actions/coachRatingAc
 import { getCoachSpecialtyCodesCore } from '../../coachSpecialty/actions/coachSpecialtyActions';
 import { getTimezoneNameMap } from '../../timezone/timezoneNames';
 import { pickTimezoneName } from '../../date/timezone';
+import { WEB_TRIAL_PLAN_CODE } from '@gabby/types/trialApplication';
 
 const logger = createLogger('common');
 
@@ -529,11 +530,12 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
 }
 
 /**
- * マッチング可能なコーチの一覧を取得する（生徒向け。ポータル共通）
+ * 指定したチケット（契約）で申請できるコーチの一覧を取得する（生徒向け。ポータル共通）
  * zoom_meeting_url等の非公開項目は含めない。
- * 対象コーチはget_matchable_coach_ids()で決まる（通常の生徒にはデモコーチを含めない）。
+ * 対象コーチはget_matchable_coach_ids()で決まる（通常の生徒にはデモコーチを含めない。
+ * Webトライアルのチケットでは Webトライアル担当のコーチだけ）。
  */
-export async function getCoachBrowseListCore(): Promise<
+export async function getCoachBrowseListCore(ticketId: string): Promise<
   { success: true; coaches: CoachBrowseItem[] } | { success: false; errorCode: MatchingRequestErrorCode }
 > {
   const ctx = await getLogContext();
@@ -543,7 +545,7 @@ export async function getCoachBrowseListCore(): Promise<
     const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data: matchableCoaches, error: matchableError } = await supabase.rpc('get_matchable_coach_ids');
+    const { data: matchableCoaches, error: matchableError } = await supabase.rpc('get_matchable_coach_ids', { p_ticket_id: ticketId });
 
     if (matchableError) {
       logger.error('matching:get_coach_list_matchable_failed', matchableError.message, { ...ctx, err: matchableError });
@@ -670,9 +672,9 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
       return { success: false, errorCode: 'not_eligible' };
     }
 
-    // 申請先がこの生徒のマッチング対象コーチか確認（一覧に出ないデモコーチへの直接申請を防ぐ）
+    // 申請先がこのチケットのマッチング対象コーチか確認（一覧に出ないコーチへの直接申請を防ぐ）
     const { data: matchableCoach, error: matchableError } = await supabase
-      .rpc('get_matchable_coach_ids')
+      .rpc('get_matchable_coach_ids', { p_ticket_id: ticket.ticket_id })
       .eq('coach_id', input.coach_id)
       .maybeSingle();
 
@@ -840,10 +842,15 @@ export async function withdrawMatchingRequestCore(requestId: string): Promise<Wi
   }
 }
 
+/** 結合した行（supabase-js では配列・1行・null のいずれかになる）の先頭を取り出す */
+function firstOf<T>(value: T | T[] | null | undefined): T | undefined {
+  return (Array.isArray(value) ? value[0] : value) ?? undefined;
+}
+
 /**
- * insert_dateで取得した行に、生徒名と申請した契約の期間を結合する（コーチ宛マッチングリクエスト系クエリの共通処理）。
- * 契約の期間は、担当になる前のコーチはRLSで読めないため管理者権限で取得する。対象は、コーチがRLSで読めた
- * 自分宛のリクエストのチケットに限り、返すのは開始・終了日時だけ。
+ * insert_dateで取得した行に、生徒名と申請した契約の期間・Webトライアルかどうかを結合する（コーチ宛マッチングリクエスト系クエリの共通処理）。
+ * 契約の期間・プランは、担当になる前のコーチはRLSで読めないため管理者権限で取得する。対象は、コーチがRLSで読めた
+ * 自分宛のリクエストのチケットに限り、返すのは開始・終了日時とWebトライアルかどうかだけ。
  * 承認待ちの申請には、今承認した場合に予約できる回数（get_matching_request_availability）を付ける
  * （申請後にコーチの予定が埋まると、申請時より回数が減る・承認できなくなることがある）。
  */
@@ -851,7 +858,7 @@ async function attachRequestDetails(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   requests: Omit<
     IncomingMatchingRequestItem,
-    'student_name' | 'license_start_date' | 'license_end_date' | 'availability' | 'requested_timezone_name'
+    'student_name' | 'license_start_date' | 'license_end_date' | 'is_web_trial' | 'availability' | 'requested_timezone_name'
   >[]
 ): Promise<IncomingMatchingRequestItem[]> {
   if (requests.length === 0) return [];
@@ -862,7 +869,7 @@ async function attachRequestDetails(
     supabase.from('com_m_user').select('id, user_name').in('id', studentIds),
     createAdminClient()
       .from('com_t_user_session_ticket')
-      .select('ticket_id, com_t_user_license!inner(start_date, end_date)')
+      .select('ticket_id, com_t_user_license!inner(start_date, end_date, com_m_contract!inner(com_m_contract_plan!inner(plan_code)))')
       .in('ticket_id', ticketIds),
     pendingIds.length > 0
       ? supabase.rpc('get_matching_request_availability', { p_request_ids: pendingIds })
@@ -876,17 +883,22 @@ async function attachRequestDetails(
     ])
   );
   const studentNameById = new Map((students ?? []).map((s) => [s.id, s.user_name ?? '(Unknown)']));
-  const periodByTicketId = new Map(
+  const licenseByTicketId = new Map(
     (tickets ?? []).map((t) => {
-      const license = Array.isArray(t.com_t_user_license) ? t.com_t_user_license[0] : t.com_t_user_license;
-      return [t.ticket_id as string, license as { start_date: string; end_date: string } | undefined];
+      const license = firstOf(t.com_t_user_license);
+      const planCode = firstOf(firstOf(license?.com_m_contract)?.com_m_contract_plan)?.plan_code;
+      return [
+        t.ticket_id as string,
+        license ? { start_date: license.start_date, end_date: license.end_date, is_web_trial: planCode === WEB_TRIAL_PLAN_CODE } : undefined,
+      ];
     })
   );
   return requests.map((r) => ({
     ...r,
     student_name: studentNameById.get(r.student_id) ?? '(Unknown)',
-    license_start_date: periodByTicketId.get(r.ticket_id)?.start_date ?? null,
-    license_end_date: periodByTicketId.get(r.ticket_id)?.end_date ?? null,
+    license_start_date: licenseByTicketId.get(r.ticket_id)?.start_date ?? null,
+    license_end_date: licenseByTicketId.get(r.ticket_id)?.end_date ?? null,
+    is_web_trial: licenseByTicketId.get(r.ticket_id)?.is_web_trial ?? false,
     availability: availabilityByRequestId.get(r.request_id) ?? null,
     requested_timezone_name: pickTimezoneName(r.requested_timezone, timezoneNames.get(r.requested_timezone), 'short', 'en'),
   }));

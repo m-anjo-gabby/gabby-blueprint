@@ -9,7 +9,8 @@ export default async function CoachMatchingPage({ searchParams }: { searchParams
 
   // マッチングは契約（チケット）ごと。申請できるのは有効な契約（終了日前。開始前の次の契約を含む）で、
   // 現在の契約と次の契約を両方持つ場合は切り替えて申請する（既定は現在の契約）
-  // 枠の状況は選んだ契約に依存するため、契約の取得直後に開始し、コーチ一覧等の取得と並行させる
+  // 枠の状況・申請できるコーチ（Webトライアルは担当のコーチだけ）は選んだ契約に依存するため、契約の取得直後に開始し、
+  // 国・専門の取得と並行させる
   const selectionPromise = Promise.all([getMyLiveSessionContractsCached(), getMyLiveSessionTickets()]).then(([contracts, tickets]) => {
     const activeContracts = contracts.filter((c) => c.is_active);
     const selected = pickLiveSessionContract(activeContracts, requestedTicketId);
@@ -17,11 +18,12 @@ export default async function CoachMatchingPage({ searchParams }: { searchParams
     return { activeContracts, ticket };
   });
   const slotsPromise = selectionPromise.then(({ ticket }) => (ticket ? getMySlotStatus(ticket.ticket_id) : []));
+  const coachesPromise = selectionPromise.then(({ ticket }) => (ticket ? getCoachBrowseList(ticket.ticket_id) : []));
 
   const [{ activeContracts, ticket }, slots, coaches, countries, specialties] = await Promise.all([
     selectionPromise,
     slotsPromise,
-    getCoachBrowseList(),
+    coachesPromise,
     getCountryList(),
     getCoachSpecialtyList(),
   ]);

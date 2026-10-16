@@ -73,10 +73,10 @@ export async function getMySlotStatus(ticketId: string): Promise<SlotStatusItem[
 }
 
 /**
- * マッチング可能なコーチの一覧を取得
+ * 指定したチケット（契約）で申請できるコーチの一覧を取得
  */
-export async function getCoachBrowseList(): Promise<CoachBrowseItem[]> {
-  const result = await getCoachBrowseListCore();
+export async function getCoachBrowseList(ticketId: string): Promise<CoachBrowseItem[]> {
+  const result = await getCoachBrowseListCore(ticketId);
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('student:get_coach_list_failed', result.errorCode, ctx);

@@ -21,7 +21,7 @@ import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchin
 import { IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS, getMatchingUnbookedBreakdown } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
-import { RequestKindTag } from './RequestKindTag';
+import { RequestKindTag, WebTrialTag } from './RequestKindTag';
 
 const STATUS_BADGE: Record<number, { label: string; className: string }> = {
   [MATCHING_REQUEST_STATUS.PENDING]: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -162,7 +162,10 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <RequestKindTag kind="matching" />
+          <div className="flex flex-wrap items-center gap-1.5">
+            <RequestKindTag kind="matching" />
+            {request.is_web_trial && <WebTrialTag />}
+          </div>
           <p className="text-sm font-black text-slate-800 mt-1.5">{request.student_name}</p>
           <p className="text-xs text-slate-500 mt-0.5">
             Slot {request.slot_no} &middot; {coachSlotLabel}

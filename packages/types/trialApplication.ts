@@ -6,6 +6,9 @@
 /** 申込者が所属する固定の顧客「Webトライアル」の ID（DB の web_trial_client_id() と同じ値。変更する場合は両方を直す） */
 export const WEB_TRIAL_CLIENT_ID = 'a7e1a100-0000-4000-8000-000000000001';
 
+/** Webトライアルのプランのコード（com_m_contract_plan.plan_code。DB の関数も同じ値で判定する） */
+export const WEB_TRIAL_PLAN_CODE = 'WEB_TRIAL';
+
 /** トライアルの期間（本登録の日を含む日数。日本時間の暦日） */
 export const WEB_TRIAL_LICENSE_DAYS = 14;
 

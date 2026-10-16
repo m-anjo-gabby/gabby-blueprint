@@ -26,7 +26,10 @@
 --
 -- 【このリリースの全体】
 --   セクション1: 上記の RLS の締め直し / セクション2〜4: Webトライアルの申込（student の公開画面 /trial・
---   admin の申込一覧 /trial-applications・本登録時のトライアルのライセンス）。各セクションの説明を参照。
+--   admin の申込一覧 /trial-applications・本登録時のトライアルのライセンス）/
+--   セクション5: admin のユーザーの招待・即時作成のメールアドレスの重複確認 /
+--   セクション6: Webトライアルの生徒のコーチ検索を「Webトライアル担当」ロールのコーチに限る /
+--   セクション7: 使っていないロール（premium_member・chat_user）の削除。各セクションの説明を参照。
 --
 -- 【アプリの環境変数（このリリースで追加。student のみ）】
 --   値は scripts/vercel-env/values/.env.<env> に書き、`pnpm vercel-env --env=<staging|prod> --apply` で反映してから
@@ -871,5 +874,135 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.fn_find_auth_user_id_by_email(text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.fn_find_auth_user_id_by_email(text) TO service_role;
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】Webトライアルの生徒のコーチ検索を「Webトライアル担当」のコーチに限る
+--
+-- 【内容】
+--   1. com_m_role: コーチ用のロール「Webトライアル担当」（web_trial_coach）を追加する
+--      （admin のユーザー編集で、コーチに付与する）
+--   2. get_matchable_coach_ids(p_ticket_id): 対象を生徒のチケット（契約）ごとに求めるよう引数を追加し、
+--      プランが WEB_TRIAL のチケットでは Webトライアル担当のコーチだけを返す（担当のコーチは通常の生徒にも出る）
+--
+-- 対応ファイル: DML/com_m_role.sql, DDL/function/get_matchable_coach_ids.sql
+-- 【注意】引数が変わるため、適用後は student の「専属コーチを探す」が新しいアプリでないと動かない。
+--   適用と student のデプロイは続けて行うこと。
+-- 【リリース後の作業】運営が Webトライアル担当のコーチを決め、admin のユーザー編集でロールを付与する
+--   （付与するまで、Webトライアルの生徒の一覧にはコーチが出ない。担当のコーチもプロフィール・空き時間がそろい、
+--   受付 ON・休止でないことが必要）。
+-- =========================================================================
+
+BEGIN;
+
+---------------------------------------------
+-- 1. com_m_role: Webトライアル担当（コーチ用）
+---------------------------------------------
+INSERT INTO public.com_m_role (role_id, role_name, target_user_type, seq_no) VALUES
+  ('web_trial_coach', 'Webトライアル担当', '2', 3)
+ON CONFLICT (role_id) DO UPDATE SET
+  role_name = EXCLUDED.role_name,
+  target_user_type = EXCLUDED.target_user_type,
+  seq_no = EXCLUDED.seq_no;
+
+-- -------------------------------------------------------------------------
+-- 2. get_matchable_coach_ids(p_ticket_id)
+-- -------------------------------------------------------------------------
+---------------------------------------------
+-- マッチング対象コーチID取得関数
+---------------------------------------------
+-- 生徒向けの「専属コーチを探す」(apps/student /coach-matching) で、指定した生徒のチケット（契約）で
+-- 申請できるコーチのIDを返す。マッチングはチケットごとのため、対象もチケットで決まる。
+-- 呼び出した生徒（auth.uid()）のチケットでなければ何も返さない。
+--
+-- 【対象コーチの定義】有効なコーチプロフィール（com_m_coach_profile.delete_flg = '0'）のうち、次をすべて満たすコーチ
+--   - コーチ本人が新規の生徒を受け付けている（com_m_coach_profile.accepting_students）
+--   - アドミンが休止にしていない（com_m_coach_matching_suspension に行が無い）
+--   - プロフィールの必須項目と空き時間がそろっている（fn_coach_matching_missing_items() が空）
+--     （担当中・継続の生徒にも例外は設けない。内訳は get_coach_matching_status() でコーチ本人・アドミンが確認できる）
+--   - デモユーザー（com_t_user_role.role_id = 'demo_user'）のコーチは、呼び出した生徒もデモユーザーの場合だけ含める
+--     （本番のリリース検証・顧客向けプレゼン用のデモコーチが、通常の生徒から申請を受けないようにする）
+--   - チケットの契約のプランが Webトライアル（com_m_contract_plan.plan_code = 'WEB_TRIAL'）の場合は、
+--     Webトライアル担当（role_id = 'web_trial_coach'）のコーチだけ。担当のコーチは通常の生徒の一覧にも出る
+--     （ロールは「トライアルの生徒にも出す」ための追加の扱い）。プランはチケットのライセンスの契約（com_m_contract.plan_id）で判定する
+--
+-- com_t_user_role はRLSで本人・adminしか閲覧できず、生徒からはコーチのロールを判定できないため
+-- SECURITY DEFINER とする。戻り値はコーチIDのみで、ロール情報そのものは返さない。
+--
+-- 【呼び出し元】packages/lib/matching/actions/matchingActions.ts
+--   - getCoachBrowseListCore ... コーチ一覧の絞り込み
+--   - createMatchingRequestCore ... 申請先コーチの妥当性チェック（一覧外のコーチIDを直接送る申請を拒否）
+-- admin の直接マッチング（admin_match_student_with_coach）は運営の手動操作のため対象外。
+---------------------------------------------
+DROP FUNCTION IF EXISTS public.get_matchable_coach_ids();
+
+CREATE OR REPLACE FUNCTION public.get_matchable_coach_ids(p_ticket_id uuid)
+RETURNS TABLE (coach_id uuid) AS $$
+  WITH caller_ticket AS (
+    SELECT
+      EXISTS (
+        SELECT 1 FROM public.com_t_user_role r
+        WHERE r.user_id = auth.uid() AND r.role_id = 'demo_user'
+      ) AS is_demo,
+      pl.plan_code = 'WEB_TRIAL' AS is_web_trial
+    FROM public.com_t_user_session_ticket t
+    JOIN public.com_t_user_license l ON l.license_id = t.license_id
+    JOIN public.com_m_contract c ON c.contract_id = l.contract_id
+    JOIN public.com_m_contract_plan pl ON pl.plan_id = c.plan_id
+    WHERE t.ticket_id = p_ticket_id
+      AND t.user_id = auth.uid()
+  )
+  SELECT p.user_id
+  FROM caller_ticket ct
+  CROSS JOIN public.com_m_coach_profile p
+  WHERE p.delete_flg = '0'
+    AND p.accepting_students
+    AND NOT EXISTS (SELECT 1 FROM public.com_m_coach_matching_suspension s WHERE s.coach_id = p.user_id)
+    AND cardinality(public.fn_coach_matching_missing_items(p.user_id)) = 0
+    -- 呼び出した生徒がデモユーザーなら、デモコーチも対象に含める
+    AND (
+      ct.is_demo
+      OR NOT EXISTS (
+        SELECT 1 FROM public.com_t_user_role r
+        WHERE r.user_id = p.user_id AND r.role_id = 'demo_user'
+      )
+    )
+    -- Webトライアルのチケットは、Webトライアル担当のコーチだけ
+    AND (
+      NOT ct.is_web_trial
+      OR EXISTS (
+        SELECT 1 FROM public.com_t_user_role r
+        WHERE r.user_id = p.user_id AND r.role_id = 'web_trial_coach'
+      )
+    );
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.get_matchable_coach_ids(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_matchable_coach_ids(uuid) TO authenticated;
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】使っていないロール（premium_member・chat_user）を削除する
+--
+-- 【内容】
+--   開発初期に検証用に作ったロール「プレミアム会員」（premium_member）・「チャット利用可能」（chat_user）を、
+--   ユーザーへの付与（com_t_user_role）と本登録前の招待（com_t_invitation.roles）から外したうえで削除する。アプリ・DB の関数・ポリシーはどちらも参照していない。
+--   付与の削除で trg_sync_app_meta_roles が動き、各ユーザーの app_metadata.roles からも外れる
+--   （JWT のロールは次のトークンの更新から反映される）。
+--
+-- 対応ファイル: DML/com_m_role.sql
+-- =========================================================================
+
+BEGIN;
+
+-- 本登録前の招待に残っている分も外す（本登録時に付与するため、残すと存在しないロールの付与で失敗する）
+UPDATE public.com_t_invitation
+SET roles = array_remove(array_remove(roles, 'premium_member'), 'chat_user')
+WHERE roles && ARRAY['premium_member', 'chat_user']::text[];
+
+DELETE FROM public.com_t_user_role WHERE role_id IN ('premium_member', 'chat_user');
+DELETE FROM public.com_m_role WHERE role_id IN ('premium_member', 'chat_user');
 
 COMMIT;

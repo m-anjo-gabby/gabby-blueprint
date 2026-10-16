@@ -47,8 +47,15 @@ async function userId(client: SupabaseClient): Promise<string> {
   return data.user.id;
 }
 
+/** 生徒自身のライブセッションのチケット（get_matchable_coach_ids はチケットごとに対象を返す） */
+async function ownTicketId(client: SupabaseClient): Promise<string> {
+  const { data, error } = await client.from("com_t_user_session_ticket").select("ticket_id").limit(1).single();
+  if (error) throw new Error(`生徒のチケットが見つかりません: ${error.message}`);
+  return data.ticket_id as string;
+}
+
 async function isListed(student: SupabaseClient, coachId: string): Promise<boolean> {
-  const { data, error } = await student.rpc("get_matchable_coach_ids");
+  const { data, error } = await student.rpc("get_matchable_coach_ids", { p_ticket_id: await ownTicketId(student) });
   if (error) throw error;
   return ((data ?? []) as { coach_id: string }[]).some((r) => r.coach_id === coachId);
 }
