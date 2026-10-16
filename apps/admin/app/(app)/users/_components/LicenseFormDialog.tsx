@@ -108,13 +108,15 @@ export function LicenseFormDialog({ user, children }: Props) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      if (editingLicense) {
-        await updateUserLicense(editingLicense.license_id, { start_date: startDate, end_date: endDate, note });
-        showToast(t('toastUpdated'), "success");
-      } else {
-        await assignLicenseToUser(selectedContractId, user.id, startDate, endDate);
-        showToast(t('toastAssigned'), "success");
+      const res = editingLicense
+        ? await updateUserLicense(editingLicense.license_id, { start_date: startDate, end_date: endDate, note })
+        : await assignLicenseToUser(selectedContractId, user.id, startDate, endDate);
+      // 期間の重複・上限超過等はサーバー側で弾かれ、理由が message で返る
+      if (!res.success) {
+        showToast(res.message || t('toastFailed'), "error");
+        return;
       }
+      showToast(editingLicense ? t('toastUpdated') : t('toastAssigned'), "success");
       setActiveTab('list');
       await loadData();
       resetForm();
@@ -128,7 +130,11 @@ export function LicenseFormDialog({ user, children }: Props) {
   const handleInvalidate = async (licenseId: string) => {
     setLoading(true);
     try {
-      await invalidateUserLicense(licenseId);
+      const res = await invalidateUserLicense(licenseId);
+      if (!res.success) {
+        showToast(res.message || t('toastFailed'), "error");
+        return;
+      }
       showToast(t('toastInvalidated'), "success");
       await loadData();
     } finally {
