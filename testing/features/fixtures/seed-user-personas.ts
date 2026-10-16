@@ -137,6 +137,8 @@ interface CoachPersona {
   seq: string;
   name: string;
   timezone: string;
+  /** 国籍（com_m_country.country_code。生徒の「専属コーチを探す」に出すための必須項目） */
+  countryCode: string;
   /** 週次の対応可能時間帯（コーチのローカル時刻） */
   availability: { days: number[]; start: string; end: string }[];
 }
@@ -169,15 +171,15 @@ const ADVANCED: Levels = { speed: 7, structure: 6, builders: 4, mastery: 3 };
 
 const COACHES: Record<CoachKey, CoachPersona> = {
   C1: {
-    id: "COACH-01", seq: "01", name: "QAペルソナCOACH-01 Emily Carter（カナダ）", timezone: "America/Vancouver",
+    id: "COACH-01", seq: "01", name: "QAペルソナCOACH-01 Emily Carter（カナダ）", timezone: "America/Vancouver", countryCode: "CA",
     availability: [{ days: [1, 2], start: "15:00:00", end: "18:00:00" }],
   },
   C2: {
-    id: "COACH-02", seq: "02", name: "QAペルソナCOACH-02 Michael Brooks（アメリカ）", timezone: "America/New_York",
+    id: "COACH-02", seq: "02", name: "QAペルソナCOACH-02 Michael Brooks（アメリカ）", timezone: "America/New_York", countryCode: "US",
     availability: [{ days: [2], start: "18:00:00", end: "20:00:00" }, { days: [4], start: "08:00:00", end: "10:00:00" }],
   },
   C3: {
-    id: "COACH-03", seq: "03", name: "QAペルソナCOACH-03 佐藤 美咲（日本）", timezone: "Asia/Tokyo",
+    id: "COACH-03", seq: "03", name: "QAペルソナCOACH-03 佐藤 美咲（日本）", timezone: "Asia/Tokyo", countryCode: "JP",
     availability: [{ days: [4], start: "19:00:00", end: "21:00:00" }, { days: [6], start: "10:00:00", end: "12:00:00" }],
   },
 };
@@ -862,7 +864,7 @@ for (const key of Object.keys(COACHES) as CoachKey[]) {
   const c = COACHES[key];
   const email = `qa-p-coach-${c.seq}@gabby-qa-test.example`;
   const id = await kit.ensureUser({ email, userType: "2", userName: c.name, clientId: coachClientId, timezone: c.timezone });
-  await kit.ensureCoachProfile(id);
+  await kit.ensureCoachProfile(id, c.countryCode);
   await live.ensureAvailabilities(id, c.timezone, c.availability);
   coachUsers[key] = { id, email, timezone: c.timezone };
   console.log(`- ${email} ${c.name}`);

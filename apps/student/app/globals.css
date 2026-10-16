@@ -72,10 +72,7 @@
 
   /* Neutral（canvas / surface / ink-* / line）は packages/lib/styles/brand-theme.css で定義（全アプリ共通） */
 
-  /* Radius: 用途別に3段階へ集約 */
-  --radius-panel: 1.75rem;   /* 画面を占めるパネル */
-  --radius-card: 1.5rem;     /* カード */
-  --radius-control: 1rem;    /* ボタン・入力欄・アイコン下地 */
+  /* Radius（rounded-panel / rounded-card / rounded-control）は packages/lib/styles/brand-theme.css で定義（共通のお知らせ表示等をアドミン・コーチでも同じ形で描くため） */
 }
 
 /* Font: 欧文はGeist、和文はNoto Sans JP（未読込時はOS標準の和文ゴシック）。

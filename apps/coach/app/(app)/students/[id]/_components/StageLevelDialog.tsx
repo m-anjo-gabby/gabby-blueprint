@@ -18,6 +18,8 @@ import { updateStudentSprintLevel, forceStageUpStudent } from '@/actions/student
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
 import { getStageGaps } from '@gabby/lib/sprint/stageProgression';
+import { formatAcquiredSprintLevelLabel } from '@gabby/lib/sprint/utils';
+import { SPRINT_LEVEL_NOT_REACHED } from './sprintLevelLabels';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 
 interface Props {
@@ -39,8 +41,9 @@ function toStageLevels(progress: StudentSprintProgress): StageLevels {
   };
 }
 
+/** 習得済みのレベル。Lv.1から始まる種別の0は Lv.1 を習得していないため "Not reached" */
 function levelLabel(questionType: SprintQuestionType, level: number): string {
-  return level === 0 && QUESTION_TYPES[questionType].hasBasic ? 'Basic' : `Lv.${level}`;
+  return formatAcquiredSprintLevelLabel(questionType, level, SPRINT_LEVEL_NOT_REACHED);
 }
 
 export function StageLevelDialog({ studentId, progress, open, onOpenChange, onUpdated }: Props) {

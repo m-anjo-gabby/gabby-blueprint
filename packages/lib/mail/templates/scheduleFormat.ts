@@ -1,3 +1,4 @@
+import { formatZoneLabel } from '../../date/timezone';
 import type { MailLocale } from '../layout/document';
 
 /*
@@ -10,11 +11,6 @@ const JA_WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'] as const;
 function weekdayIndex(date: Date, timeZone: string): number {
   const name = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' }).format(date);
   return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(name);
-}
-
-function zoneLabel(date: Date, timeZone: string, language: MailLocale): string {
-  if (language === 'ja') return timeZone === 'Asia/Tokyo' ? '日本時間' : timeZone;
-  return new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' }).formatToParts(date).find((p) => p.type === 'timeZoneName')?.value ?? timeZone;
 }
 
 /** 件名に付ける日時（タイムゾーンは本文に載せるため省く）。例: ja「10月8日(木) 19:00」/ en「Thu, Oct 8, 7:00 PM」 */
@@ -31,24 +27,27 @@ export function formatShortSchedule({ startIso, timeZone, language }: { startIso
 /**
  * 毎週の枠（マッチング）。実際の回の日時（UTC）から、受信者のタイムゾーンでの曜日・時刻を求める
  * （枠はコーチの現地時刻で持つため、コーチの曜日・時刻をそのまま出すと時差で曜日がずれる）。
- * withZone=false は件名用。例: ja「毎週木曜 19:00〜19:25（日本時間）」/ en「Every Thu, 7:00 PM – 7:25 PM (GMT+9)」
+ * withZone=false は件名用。例: ja「毎週木曜 19:00〜19:25（日本時間・UTC+9）」/ en「Every Thu, 7:00 PM – 7:25 PM (Japan Time, UTC+9)」
+ * zoneName は受信者のタイムゾーンの短い名前（マスタの short_name_*。受信者の言語のもの）。
  */
 export function formatWeeklySlot({
   startIso,
   endIso,
   timeZone,
+  zoneName,
   language,
   withZone = true,
 }: {
   startIso: string;
   endIso: string | null;
   timeZone: string;
+  zoneName?: string | null;
   language: MailLocale;
   withZone?: boolean;
 }): string {
   const start = new Date(startIso);
   const end = endIso ? new Date(endIso) : null;
-  const zone = withZone ? zoneLabel(start, timeZone, language) : null;
+  const zone = withZone ? formatZoneLabel({ timeZone, name: zoneName, at: start, language }) : null;
   if (language === 'ja') {
     const time = new Intl.DateTimeFormat('ja-JP', { timeZone, hour: '2-digit', minute: '2-digit' });
     const range = withZone ? `${time.format(start)}〜${end ? time.format(end) : ''}` : time.format(start);

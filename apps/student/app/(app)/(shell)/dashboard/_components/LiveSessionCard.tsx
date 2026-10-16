@@ -1,22 +1,26 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight, CircleAlert } from 'lucide-react';
+import { ChevronRight, CircleAlert, Hourglass } from 'lucide-react';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { SessionListItem } from '@gabby/types/session';
 import type { LiveSessionOverview } from '@gabby/types/matching';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CoachAvatar } from '@/components/session/CoachAvatar';
+import { SessionCoachHeading, SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
 import { JoinSessionButton } from '@/components/session/JoinSessionButton';
-import { formatSessionSlot } from '@/lib/sessionFormat';
 import { SessionBreakdown } from '@/app/(app)/(shell)/live-room/_components/SessionBreakdown';
 import { HomeCard } from './HomeCard';
+import { cn } from '@/lib/utils';
 
-/** ライブセッションで生徒の対応が必要なこと（ホームではライブセッション管理等への導線だけを出す） */
+/**
+ * ライブセッションで生徒の対応が必要なこと（ホームではライブセッション管理等への導線だけを出す）。
+ * tone が 'waiting' の項目は、生徒の対応ではなく相手の回答待ち（専属コーチの申請の承認待ち等）の案内で、注意の見た目にしない。
+ */
 export interface LiveSessionAction {
   key: string;
   label: string;
   href: string;
+  tone?: 'action' | 'waiting';
 }
 
 interface LiveSessionCardProps {
@@ -52,19 +56,10 @@ function NextSessionBlock({ session }: { session: SessionListItem | null }) {
     );
   }
 
-  const slot = formatSessionSlot(session.start_datetime, session.end_datetime, timezone);
-
   return (
     <section className={LIVE_LAYOUT.block}>
       <h3 className={LIVE_LAYOUT.blockTitle}>次回のセッション</h3>
-      <p className="mt-2 flex flex-wrap items-baseline gap-x-2 font-bold text-ink tabular-nums">
-        <span className="text-lg">{slot.date}</span>
-        <span className="text-base">{slot.time}</span>
-      </p>
-      <div className="mt-2 flex items-center gap-2">
-        <CoachAvatar iconPath={session.counterpart_icon_path} size={28} />
-        <p className="truncate text-sm text-ink-muted">{session.counterpart_name} コーチ</p>
-      </div>
+      <SessionCoachHeading session={session} timezone={timezone} size="md" className="mt-3" />
       <JoinSessionButton sessionId={session.session_id} startDatetime={session.start_datetime} className="mt-4" />
     </section>
   );
@@ -84,9 +79,14 @@ export function LiveSessionCard({ nextSession, overview, isCurrent, adjustingCou
             <li key={action.key}>
               <Link
                 href={action.href}
-                className="group flex items-center gap-3 rounded-control border border-brand-100 bg-brand-soft px-3 py-2.5 text-sm font-semibold text-brand-strong transition-colors hover:border-brand-200"
+                className={cn(
+                  'group flex items-center gap-3 rounded-control border px-3 py-2.5 text-sm font-semibold transition-colors',
+                  action.tone === 'waiting'
+                    ? 'border-line bg-canvas text-ink-soft hover:border-ink-subtle/40'
+                    : 'border-brand-100 bg-brand-soft text-brand-strong hover:border-brand-200'
+                )}
               >
-                <CircleAlert size={16} className="shrink-0" />
+                {action.tone === 'waiting' ? <Hourglass size={16} className="shrink-0" /> : <CircleAlert size={16} className="shrink-0" />}
                 <span className="flex-1">{action.label}</span>
                 <ChevronRight size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
               </Link>
@@ -126,11 +126,7 @@ export function LiveSessionCardSkeleton() {
         <div className={LIVE_LAYOUT.grid}>
           <section className={LIVE_LAYOUT.block}>
             <h3 className={LIVE_LAYOUT.blockTitle}>次回のセッション</h3>
-            <Skeleton className="mt-2.5 h-5 w-48" />
-            <div className="mt-2.5 flex items-center gap-2">
-              <Skeleton className="size-7 rounded-full" />
-              <Skeleton className="h-3.5 w-28" />
-            </div>
+            <SessionCoachHeadingSkeleton size="md" className="mt-3" />
           </section>
           <section className={LIVE_LAYOUT.block}>
             <h3 className={LIVE_LAYOUT.blockTitle}>契約の状況</h3>

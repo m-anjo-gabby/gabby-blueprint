@@ -7,6 +7,8 @@ import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { PayNoticeDocument } from '@/lib/pdf/PayNoticeDocument';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { fetchLegalName } from '@gabby/lib/userLegal/fetchLegalName';
+import { formatLegalName } from '@gabby/lib/userLegal/formatLegalName';
 
 // このRoute Handlerはcookieベースの認証(createServerClient)に依存しているが、その呼び出しが
 // getCoachMonthlyReportCore内部に隠れているため、Next.jsの自動動的判定に検出されず
@@ -39,7 +41,10 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  const { data: coachUser } = await supabase.from('com_m_user').select('user_name').eq('id', user.id).maybeSingle();
+  const [{ data: coachUser }, legalName] = await Promise.all([
+    supabase.from('com_m_user').select('user_name').eq('id', user.id).maybeSingle(),
+    fetchLegalName(user.id),
+  ]);
 
   // com_m_company_profileはRLSで管理者のみ参照可能なため、fetchCompanyProfileがサーバー側で
   // service_role経由で読む（コーチ自身に直接SELECT権限は与えない）。発行元はバンクーバー法人。
@@ -66,7 +71,8 @@ export async function GET(request: NextRequest) {
     new Date(Date.UTC(year, month - 1, 1))
   );
 
-  const contractorName = coachUser?.user_name ?? 'Coach';
+  // 書面には正式な氏名（英語の書面のため「名 姓」）を載せ、未登録の場合は画面の名前にする
+  const contractorName = formatLegalName(legalName, 'en') ?? coachUser?.user_name ?? 'Coach';
   const fileNameBase = `MonthlyPayNotice_${contractorName.replace(/[\\/:*?"<>|]/g, '_').trim()}_${result.report.report_month.slice(0, 7)}`;
   // コーチ名に日本語等の非ASCII文字が含まれる場合に備え、ASCII版のfilenameとRFC5987準拠の
   // filename*(UTF-8)の両方を付与する（前者は非対応クライアント向けのフォールバック）。

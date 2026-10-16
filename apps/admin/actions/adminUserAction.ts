@@ -12,8 +12,11 @@ import {
 } from "@gabby/types/user";
 import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { ilikeAny } from '@gabby/lib/supabase/ilike';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { issueInitialLicense, resolvePerformedBy } from '@gabby/lib/license/issue';
 import { INVITATION_EXPIRES_DAYS, sendInvitationEmail } from "@gabby/lib/mail/actions/sendAccountMail"; // 招待メール（ユーザー種別ごとのテンプレート・文言で送り分け）
 import { validatePasswordStrength } from "@gabby/lib/auth/validation"; // パスワード強度の共通バリデーション
@@ -47,63 +50,84 @@ function getInvitationExpiry(): Date {
 }
 
 /**
- * ユーザ情報の一覧取得（ページネーション・検索対応）
+ * ユーザ情報の一覧取得（ページネーション・氏名/メール/顧客名の部分一致検索・顧客/区分での絞り込み）
  */
-export async function getUsers(
-  page: number = 1,
-  pageSize: number = 10,
-  searchQuery?: string,
-  clientId?: string,
-  userType?: string
-): Promise<{ users: UserRecord[]; totalCount: number }> {
+export async function getUsers(params: ListParams<'clientId' | 'userType'>): Promise<ListResult<UserRecord>> {
   const ctx = await getLogContext();
+  const { q, filters: { clientId, userType } } = params;
   try {
     const supabase = await createAdminClient();
-
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+    const [from, to] = toRange(params);
 
     let query = supabase
       .schema('private')
       .from('vw_user_list')
       .select('*', { count: 'exact' });
 
-    if (searchQuery) {
-      query = query.or(`user_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,client_name.ilike.%${searchQuery}%`);
-    };
+    if (q) {
+      query = query.or(ilikeAny(['user_name', 'email', 'client_name'], q));
+    }
 
     if (clientId) {
       query = query.eq('client_id', clientId);
-    };
+    }
 
     if (userType) {
       query = query.eq('user_type', userType);
-    };
+    }
 
     const { data, error, count } = await query
-      .order('insert_date', { ascending: false }) // 💡 改善: 統合されたビューの特性に合わせ、最新の招待・登録者が一番上に来るように降順に最適化
+      .order('insert_date', { ascending: false }) // 最新の招待・登録者が一番上に来るように降順
       .order('id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
       .range(from, to);
 
     if (error) {
-      logger.error('user:get_users_failed', error.message, { ...ctx, err: error, payload: { page, pageSize, searchQuery, clientId, userType } });
+      logger.error('user:get_users_failed', error.message, { ...ctx, err: error, payload: { from, to, clientId, userType } });
       throw error;
     }
 
-    const formattedUsers = (data || []).map((user: any) => ({
+    const rows = (data || []).map((user) => ({
       ...user,
       license_start_date: user.license_start_date ? formatToJstDate(user.license_start_date) : null,
       license_end_date: user.license_end_date ? formatToJstDate(user.license_end_date) : null,
-    }));
+    })) as UserRecord[];
 
     return {
-      users: formattedUsers as UserRecord[],
+      rows,
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('user:get_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { page, pageSize, searchQuery, clientId, userType } });
+    logger.error('user:get_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId, userType } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
+}
+
+/**
+ * ユーザー1件の取得（詳細画面用。一覧と同じ項目）。見つからない場合は null
+ */
+export async function getUserById(id: string): Promise<UserRecord | null> {
+  const ctx = await getLogContext();
+  if (!z.uuid().safeParse(id).success) return null;
+
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .schema('private')
+    .from('vw_user_list')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    logger.error('user:get_user_failed', error.message, { ...ctx, err: error, payload: { id } });
+    throw error;
+  }
+  if (!data) return null;
+
+  return {
+    ...data,
+    license_start_date: data.license_start_date ? formatToJstDate(data.license_start_date) : null,
+    license_end_date: data.license_end_date ? formatToJstDate(data.license_end_date) : null,
+  } as UserRecord;
 }
 
 /**
@@ -210,7 +234,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       payload: { userId, email, clientId: client_id } 
     });
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true, user_id: userId, errorType: null, message: mailResult.success ? null : (mailResult.error || "招待メールの送信に失敗しました") };
 
   } catch (err) {
@@ -331,7 +355,7 @@ export async function createUserDirect(
       });
     }
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true, user_id: userId, errorType: null, message: null };
 
   } catch (err) {
@@ -417,7 +441,7 @@ export async function resendInvite(email: string, userType?: string) {
       payload: { email } 
     });
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('user:resend_invite_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { email } });
@@ -497,7 +521,7 @@ export async function updateUser(
       payload: { userId: id, email, roles }
     });
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
 
   } catch (err) {
@@ -549,7 +573,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
     payload: { total: users.length, successCount, errorCount } 
   });
 
-  revalidatePath('/users');
+  revalidatePath('/users', 'layout');
   return { success: true, total: users.length, successCount, errorCount, details: results };
 }
 

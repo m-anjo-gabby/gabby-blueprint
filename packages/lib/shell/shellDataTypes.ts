@@ -16,4 +16,6 @@ export interface CommonShellData {
 export interface CommonShellDataOptions {
   /** チャットの未読数を取得・反映するか（チャットを使えない利用者では取得しない） */
   includeChat: boolean;
+  /** お知らせを取得・反映するか（省略時は true。お知らせを受け取らない admin では false） */
+  includeNotices?: boolean;
 }

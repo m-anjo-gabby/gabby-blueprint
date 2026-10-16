@@ -28,7 +28,7 @@ try {
   await assertReleaseApplied(admin, [
     { name: "approve_matching_request", dummyArgs: { p_request_id: DUMMY_ID } },
     { name: "reject_matching_request", dummyArgs: { p_request_id: DUMMY_ID, p_reason: "preflight" } },
-    { name: "finalize_session", dummyArgs: { p_session_id: DUMMY_ID } },
+    { name: "record_session_outcome", dummyArgs: { p_session_id: DUMMY_ID, p_outcome: 1 } },
     { name: "record_session_call_join", dummyArgs: { p_session_id: DUMMY_ID } },
   ]);
   check("RPC（承認・否認・終了処理・入退室）", true);

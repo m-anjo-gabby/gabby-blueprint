@@ -44,11 +44,11 @@ function page(language: PageLanguage, body: string, status = 200): Response {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>${copy.title} | Gabby Blueprint English</title>
+<title>${copy.title} | Gabby Blueprint</title>
 </head>
 <body style="margin:0;padding:48px 16px;background:#f4f5f7;font-family:'Helvetica Neue',Arial,'Hiragino Sans',Meiryo,sans-serif;color:#333333;">
 <main style="max-width:480px;margin:0 auto;background:#ffffff;border-top:4px solid #0e3196;border-radius:8px;padding:32px 24px;">
-<p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#0e3196;">Gabby Blueprint English</p>
+<p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#0e3196;">Gabby Blueprint</p>
 <h1 style="margin:0 0 20px 0;font-size:20px;">${copy.title}</h1>
 ${body}
 </main>

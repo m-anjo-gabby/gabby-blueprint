@@ -5,6 +5,7 @@ import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import {
   CoachLiveSessionShortfallItem,
+  COMPLETION_RESULT,
   CoachSessionTasksSummary,
   GetCoachSessionTasksResult,
   MissingHomeworkTask,
@@ -53,6 +54,9 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
         .select('session_id, student_id, start_datetime, status, com_t_session_homework(homework_id)')
         .eq('coach_id', user.id)
         .eq('status', SESSION_STATUS.COMPLETED)
+        // 生徒の欠席の回と、コーチが「今回は宿題なし」にした回は宿題を求めない
+        .neq('completion_result', COMPLETION_RESULT.NO_SHOW)
+        .eq('homework_not_needed', false)
         .gte('end_datetime', lookbackIso)
         .order('start_datetime', { ascending: false }),
       supabase

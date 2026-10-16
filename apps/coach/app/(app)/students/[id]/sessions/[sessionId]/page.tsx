@@ -7,7 +7,7 @@ import { HubDialoguePractice, HubPrep, HubSelfTraining } from './_components/Hub
 
 /**
  * セッション準備/実施ハブ。生徒概要画面から個別のライブセッションに入るとまずここに来る。
- * 通話開始・Live Sprint開始・セッション終了(finalize_session)の3操作をここに集約する
+ * 通話開始・Live Sprint開始・セッション終了（実施結果の記録、record_session_outcome）の3操作をここに集約する
  * （生徒概要画面から各機能へ直接飛ぶ導線は廃止し、必ずここを経由する）。
  * このセッション自体の実施記録（入退室ログ・チャット履歴・スプリント履歴）はセッション結果画面
  * （.../result）が担うため、ここでは重複させず、通話前後に確認したい「前回までの状況」

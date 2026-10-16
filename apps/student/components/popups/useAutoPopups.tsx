@@ -46,13 +46,16 @@ export function useAutoPopups(): AutoPopupCandidates {
 
   const popups: AutoPopup[] = [];
 
-  // お知らせ: show_dialog=TRUE かつ未読
-  if (dialogNotices.length > 0) {
+  // お知らせ: 表示方法がポップアップかつ未読。先頭の1件（重要→新しい順）だけを出し、残りは件数で一覧へ案内する
+  const [firstNotice] = dialogNotices;
+  if (firstNotice) {
     popups.push({
       id: 'notice',
       priority: 10,
       scope: 'dashboard',
-      render: (onDone) => <NoticePopupDialog notices={dialogNotices} onClose={onDone} />,
+      render: (onDone) => (
+        <NoticePopupDialog notice={firstNotice} moreCount={dialogNotices.length - 1} onClose={onDone} />
+      ),
     });
   }
 

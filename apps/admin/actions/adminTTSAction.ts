@@ -5,6 +5,8 @@ import { generateAzureAudioBuffer, generateTTSFileName } from '@gabby/lib/azure/
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { ilikeAny } from '@gabby/lib/supabase/ilike';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 
 const logger = createLogger('admin');
 
@@ -167,47 +169,90 @@ export async function saveTTSAssetAction(payload: {
   }
 }
 
+/** 汎用音声（TTS Designer の履歴）の一覧の行 */
+export interface TTSAssetListItem {
+  asset_id: string;
+  raw_text: string;
+  comment: string | null;
+  audio_path: string | null;
+  created_at: string;
+}
+
+/**
+ * 汎用音声の一覧取得（ページネーション・フレーズ/コメントの部分一致検索。新しい順）
+ */
+export async function getTTSAssets(params: ListParams): Promise<ListResult<TTSAssetListItem>> {
+  const ctx = await getLogContext();
+  const { q } = params;
+  try {
+    const supabase = createAdminClient();
+    const [from, to] = toRange(params);
+    let query = supabase
+      .from('com_t_tts_asset')
+      .select('asset_id, raw_text, comment, audio_path, created_at', { count: 'exact' });
+    if (q) {
+      query = query.or(ilikeAny(['raw_text', 'comment'], q));
+    }
+    const { data, count, error } = await query
+      .order('created_at', { ascending: false })
+      .order('asset_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
+      .range(from, to);
+
+    if (error) {
+      logger.error('tts:get_assets_failed', error.message, { ...ctx, err: error, payload: { from, to } });
+      throw error;
+    }
+    return { rows: data ?? [], totalCount: count || 0 };
+  } catch (error) {
+    logger.error('tts:get_assets_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
+  }
+}
+
 /**
  * 汎用音声ファイル削除
- * DBレコードの削除 + Storage上の物理ファイル削除
+ * DBレコードの削除 + Storage上の物理ファイル削除（削除するファイルは画面から受け取らず、削除したレコードのパスを使う）
  */
-export async function deleteTTSAssetAction(assetId: string, audioPath: string) {
+export async function deleteTTSAssetAction(assetId: string) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
 
-    // 1. DBレコード削除
-    const { error: dbError } = await supabase
+    // 1. DBレコード削除（物理ファイルのパスを受け取る）
+    const { data: deleted, error: dbError } = await supabase
       .from('com_t_tts_asset')
       .delete()
-      .eq('asset_id', assetId);
+      .eq('asset_id', assetId)
+      .select('audio_path')
+      .maybeSingle();
 
     if (dbError) {
-      logger.error('tts:asset_delete_failed', dbError.message, { ...ctx, err: dbError, payload: { assetId, audioPath } });
+      logger.error('tts:asset_delete_failed', dbError.message, { ...ctx, err: dbError, payload: { assetId } });
       throw dbError;
     }
+    const audioPath = deleted?.audio_path ?? null;
 
     // 2. Storage上の物理ファイルを削除
     if (audioPath) {
       const { error: storageError } = await supabase.storage
         .from('audio')
         .remove([audioPath]);
-      
+
       if (storageError) {
         logger.warn("tts:asset_storage_delete_failed", `Storage deletion failed, but DB record was removed: ${storageError.message}`, { ...ctx, payload: { assetId, audioPath } });
       }
     }
 
-    logger.info('tts:delete_asset_success', `TTS Asset deleted`, { 
+    logger.info('tts:delete_asset_success', `TTS Asset deleted`, {
       ...ctx,
-      payload: { assetId, audioPath } 
+      payload: { assetId, audioPath }
     });
 
     revalidatePath('/tools/tts-designer');
     return { success: true, message: "削除しました" };
 
   } catch (error) {
-    logger.error("tts:delete_asset_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { assetId, audioPath } });
+    logger.error("tts:delete_asset_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { assetId } });
     return { success: false, message: "予期せぬエラーが発生しました" };
   }
 }

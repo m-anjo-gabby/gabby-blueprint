@@ -6,6 +6,8 @@ import { formatToJstDate, formatToJstDateTime, getUtcRangeFromJstDate } from "@g
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import type { TermDetail, TermListItem, TermType } from '@gabby/types/term';
+import { containsPattern } from '@gabby/lib/supabase/ilike';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 
 const logger = createLogger('admin');
 
@@ -36,14 +38,14 @@ function pickOne<T>(value: T | T[] | null): T | null {
 }
 
 /**
- * 規約情報の一覧取得
+ * 規約情報の一覧取得（ページネーション・バージョン名の部分一致検索）
  */
-export async function getTerms(page: number = 1, pageSize: number = 10, searchQuery?: string) {
+export async function getTerms(params: ListParams): Promise<ListResult<TermListItem>> {
   const ctx = await getLogContext();
+  const { q } = params;
   try {
     const supabase = await createServerClient();
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+    const [from, to] = toRange(params);
     const now = new Date();
     const nowIso = now.toISOString();
 
@@ -51,8 +53,8 @@ export async function getTerms(page: number = 1, pageSize: number = 10, searchQu
       .from('com_m_terms')
       .select('term_id, term_type, version_name, is_required, published_date', { count: 'exact' });
 
-    if (searchQuery) {
-      query = query.ilike('version_name', `%${searchQuery}%`);
+    if (q) {
+      query = query.ilike('version_name', containsPattern(q));
     }
 
     // 「公開中」判定はページ・検索条件に依存させず、全件から種別ごとに現在有効な最新版を求める
@@ -71,7 +73,7 @@ export async function getTerms(page: number = 1, pageSize: number = 10, searchQu
 
     const error = listResult.error ?? publishedResult.error;
     if (error) {
-      logger.error('term:get_terms_failed', error.message, { ...ctx, err: error, payload: { page, pageSize, searchQuery } });
+      logger.error('term:get_terms_failed', error.message, { ...ctx, err: error, payload: { from, to } });
       throw error;
     }
 
@@ -84,7 +86,7 @@ export async function getTerms(page: number = 1, pageSize: number = 10, searchQu
       }
     }
 
-    const terms: TermListItem[] = (listResult.data ?? []).map((term) => ({
+    const rows: TermListItem[] = (listResult.data ?? []).map((term) => ({
       term_id: term.term_id,
       term_type: term.term_type as TermType,
       version_name: term.version_name,
@@ -95,11 +97,11 @@ export async function getTerms(page: number = 1, pageSize: number = 10, searchQu
     }));
 
     return {
-      terms,
+      rows,
       totalCount: listResult.count || 0,
     };
   } catch (error) {
-    logger.error('term:get_terms_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { page, pageSize, searchQuery } });
+    logger.error('term:get_terms_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }

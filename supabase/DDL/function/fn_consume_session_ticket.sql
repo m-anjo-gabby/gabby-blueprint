@@ -9,6 +9,11 @@
 -- 同一のペア処理を持っていた（noteに入れる値がNULL/理由テキストで違うだけ）。
 -- チケット消化という実際の対価が発生する唯一の箇所であるため、本関数に集約し、
 -- 「消費のたびに必ず履歴が対になって残る」ことを1箇所で保証する。
+--
+-- 【呼び出し元の変更 (2026-10-14)】
+-- finalize_session()・resolve_stale_session() は record_session_outcome()・admin_correct_session_outcome() に
+-- 置き換え、本関数は fn_apply_session_outcome() からのみ呼ぶ。実施完了に加え、生徒の都合による早期終了・
+-- 生徒の欠席でも消化する（逆の操作は fn_restore_session_ticket()）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_consume_session_ticket(
     p_ticket_id uuid,

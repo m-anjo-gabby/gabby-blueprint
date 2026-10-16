@@ -1,3 +1,4 @@
+import { formatZoneLabel } from '../../date/timezone';
 import type { MailLocale } from '../layout/document';
 
 /*
@@ -22,32 +23,32 @@ export function reminderSubject(language: MailLocale, lead: ReminderLead, noun: 
 
 /**
  * リマインダーに載せる開催日時を、受信者のタイムゾーンで組み立てる。
- * 例: ja「10月12日(日) 20:00〜21:00（日本時間）」/ en「Sun, Oct 12, 8:00 PM – 9:00 PM (GMT+9)」
+ * 例: ja「10月12日(日) 20:00〜21:00（日本時間・UTC+9）」/ en「Sun, Oct 12, 8:00 PM – 9:00 PM (Japan Time, UTC+9)」
+ * zoneName は受信者のタイムゾーンの短い名前（マスタの short_name_*。受信者の言語のもの）。
  * 終了時刻が無い場合は開始時刻だけ（「20:00〜」）。
  */
 export function formatReminderSchedule({
   startIso,
   endIso,
   timeZone,
+  zoneName,
   language,
 }: {
   startIso: string;
   endIso: string | null;
   timeZone: string;
+  zoneName?: string | null;
   language: MailLocale;
 }): string {
   const start = new Date(startIso);
   const end = endIso ? new Date(endIso) : null;
+  const zone = formatZoneLabel({ timeZone, name: zoneName, at: start, language });
   if (language === 'ja') {
     const date = new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(start);
     const time = new Intl.DateTimeFormat('ja-JP', { timeZone, hour: '2-digit', minute: '2-digit' });
-    const zone = timeZone === 'Asia/Tokyo' ? '日本時間' : timeZone;
     return `${date} ${time.format(start)}〜${end ? time.format(end) : ''}（${zone}）`;
   }
   const date = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' }).format(start);
   const time = new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', minute: '2-digit' });
-  const zone =
-    new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' }).formatToParts(start).find((p) => p.type === 'timeZoneName')
-      ?.value ?? timeZone;
   return `${date}, ${time.format(start)}${end ? ` – ${time.format(end)}` : ''} (${zone})`;
 }

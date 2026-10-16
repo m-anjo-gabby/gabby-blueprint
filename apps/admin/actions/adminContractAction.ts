@@ -6,6 +6,9 @@ import { formatToJstDate, getUtcRangeFromJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { ilikeAny } from '@gabby/lib/supabase/ilike';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
+import type { ContractDetail } from '@gabby/types/contract';
 import {
   ISSUED_LICENSE_COLUMNS,
   recordIssuedLicenses,
@@ -35,6 +38,8 @@ function isWithinContractPeriod(
  * 同一ユーザーに対して、指定期間と重複するライセンスが既に存在するかを確認する。
  * 生徒に複数ライセンスを付与する運用は「契約更新に伴う次タームへの切替」のみを想定しており、
  * 期間が重なるライセンスの重複付与（＝二重契約状態）を防止するための検証。
+ * 停止（status=0）したライセンスは比較対象に含めない（DBの排他制約 excl_user_license_active_overlap と同じ範囲。
+ * テナントの付け替え等で停止したライセンスの期間に、別の契約のライセンスを割り当てられるようにするため）。
  * 更新時は自分自身のライセンス（excludeLicenseId）を比較対象から除外する。
  */
 async function findOverlappingLicense(
@@ -48,6 +53,7 @@ async function findOverlappingLicense(
     .from('com_t_user_license')
     .select('license_id, start_date, end_date, com_m_contract(contract_name)')
     .eq('user_id', userId)
+    .eq('status', 1)
     .lte('start_date', endUtc)
     .gte('end_date', startUtc)
     .limit(1);
@@ -188,24 +194,21 @@ export async function deleteContractPlan(planId: string) {
 }
 
 /**
- * 契約情報の一覧取得（ページネーション・検索対応）
+ * 契約情報の一覧取得（ページネーション・顧客名/契約名の部分一致検索・顧客での絞り込み）
  */
-export async function getContracts(page: number = 1, limit: number = 10, searchQuery?: string, clientId?: string) {
+export async function getContracts(params: ListParams<'clientId'>): Promise<ListResult<ContractDetail>> {
   const ctx = await getLogContext();
+  const { q, filters: { clientId } } = params;
   try {
     const supabase = await createAdminClient();
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
+    const [from, to] = toRange(params);
 
     let query = supabase
       .from('vw_contract_details')
       .select('*', { count: 'exact' });
 
-    if (searchQuery) {
-      // 顧客名・契約名のどちらかに部分一致（PostgRESTのor条件は値をダブルクォートで囲み、
-      // 入力中の , ( ) " \ が条件の区切りとして解釈されないようにする）
-      const pattern = `"%${searchQuery.replace(/[\\"]/g, '\\$&')}%"`;
-      query = query.or(`client_name.ilike.${pattern},contract_name.ilike.${pattern}`);
+    if (q) {
+      query = query.or(ilikeAny(['client_name', 'contract_name'], q));
     }
 
     if (clientId) {
@@ -218,22 +221,22 @@ export async function getContracts(page: number = 1, limit: number = 10, searchQ
       .range(from, to);
 
     if (error) {
-      logger.error('contract:get_contracts_failed', error.message, { ...ctx, err: error, payload: { page, limit, searchQuery, clientId } });
+      logger.error('contract:get_contracts_failed', error.message, { ...ctx, err: error, payload: { from, to, clientId } });
       throw new Error(error.message);
     }
 
-    const formattedContracts = (contracts || []).map(contract => ({
+    const rows = (contracts || []).map(contract => ({
       ...contract,
       start_date: contract.start_date ? formatToJstDate(contract.start_date) : '',
       end_date: contract.end_date ? formatToJstDate(contract.end_date) : '',
-    }));
+    })) as ContractDetail[];
 
     return {
-      contracts: formattedContracts,
+      rows,
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('contract:get_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { page, limit, searchQuery, clientId } });
+    logger.error('contract:get_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId } });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -263,15 +266,16 @@ export async function getActiveContractsByClient(clientId: string, userId?: stri
     if (userId) {
       const { data: userLicenses } = await supabase
         .from('com_t_user_license')
-        .select('contract_id, start_date, end_date')
+        .select('contract_id, status, start_date, end_date')
         .eq('user_id', userId);
 
       const licenses = userLicenses || [];
-      // 既存ライセンスと契約IDが同じ、または期間が重複する契約は選択肢から除外する
-      // （生徒への複数ライセンス付与は契約更新に伴う次タームへの切替のみを想定しているため）
+      // 既存ライセンスと契約IDが同じ、または有効なライセンスと期間が重複する契約は選択肢から除外する
+      // （生徒への複数ライセンス付与は契約更新に伴う次タームへの切替のみを想定しているため）。
+      // 期間の重複は findOverlappingLicense と同じく停止（status=0）したライセンスを含めない。
       const available = contracts.filter(c => !licenses.some(l =>
         l.contract_id === c.contract_id ||
-        (new Date(l.start_date) <= new Date(c.end_date) && new Date(l.end_date) >= new Date(c.start_date))
+        (l.status === 1 && new Date(l.start_date) <= new Date(c.end_date) && new Date(l.end_date) >= new Date(c.start_date))
       ));
       return formatContracts(available);
     }
@@ -570,7 +574,7 @@ export async function purgeContractWithHistory(contractId: string) {
     logger.warn('contract:purge_contract_with_history_success', 'Contract purged including history', { ...ctx, payload: { contractId } });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:purge_contract_with_history_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId } });
@@ -729,7 +733,7 @@ export async function assignLicenseToUser(
     });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:assign_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId, userId } });
@@ -748,11 +752,24 @@ export async function assignLicenseToUser(
  *   2. 紐づく稼働中のスケジュールをterminatedにする
  *   3. まだ実施されていない未来のセッションのみキャンセル扱いにする
  * 実施済みのセッション結果・チャット・宿題は一切変更されない。
+ * 無効化前の状態を変更履歴（action = invalidated）に残す。
  */
 export async function invalidateUserLicense(licenseId: string) {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
+
+    // 無効化前スナップショット（履歴記録用）
+    const { data: existing, error: existingError } = await supabase
+      .from('com_t_user_license')
+      .select('license_id, contract_id, user_id, status, start_date, end_date, note, has_dialogue_practice')
+      .eq('license_id', licenseId)
+      .single();
+
+    if (existingError || !existing) {
+      logger.error('contract:invalidate_license_lookup_failed', existingError?.message || 'License not found', { ...ctx, err: existingError, payload: { licenseId } });
+      return { success: false, message: '対象のライセンスが見つかりませんでした' };
+    }
 
     const { error } = await supabase.rpc('invalidate_user_license', { p_license_id: licenseId });
 
@@ -761,13 +778,26 @@ export async function invalidateUserLicense(licenseId: string) {
       return { success: false, message: error.message };
     }
 
+    await recordLicenseHistory(supabase, {
+      license_id: existing.license_id,
+      contract_id: existing.contract_id,
+      user_id: existing.user_id,
+      action: 'invalidated',
+      status: existing.status,
+      start_date: existing.start_date,
+      end_date: existing.end_date,
+      has_dialogue_practice: existing.has_dialogue_practice,
+      note: existing.note,
+      performed_by: resolvePerformedBy(ctx.userId),
+    }, ctx);
+
     logger.info('contract:invalidate_license_success', `License invalidated`, {
       ...ctx,
       payload: { licenseId }
     });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:invalidate_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { licenseId } });
@@ -820,7 +850,11 @@ export async function updateUserLicense(
 
     // 期間が変更される場合の検証。契約期間内チェックはあえて行わない（上記コメント参照）。
     // 生徒間の期間重複防止のみ引き続き検証する。
-    if (payload.start_date || payload.end_date) {
+    const isPeriodChanged = !!(payload.start_date || payload.end_date);
+    const effectiveStatus = updates.status ?? existing.status;
+    // 停止中のライセンスは重複チェックの対象外のため、有効へ戻す場合も期間の重複を検証する
+    const isReactivated = existing.status !== 1 && effectiveStatus === 1;
+    if (isPeriodChanged || isReactivated) {
       const effectiveStart = payload.start_date || existing.start_date;
       const effectiveEnd = payload.end_date || existing.end_date;
 
@@ -828,9 +862,11 @@ export async function updateUserLicense(
         return { success: false, message: '開始日は終了日以前を指定してください' };
       }
 
-      const overlap = await findOverlappingLicense(supabase, existing.user_id, effectiveStart, effectiveEnd, licenseId);
-      if (overlap) {
-        return { success: false, message: buildOverlapMessage(overlap) };
+      if (effectiveStatus === 1) {
+        const overlap = await findOverlappingLicense(supabase, existing.user_id, effectiveStart, effectiveEnd, licenseId);
+        if (overlap) {
+          return { success: false, message: buildOverlapMessage(overlap) };
+        }
       }
     }
 
@@ -871,7 +907,7 @@ export async function updateUserLicense(
     });
 
     revalidatePath('/contracts');
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
     logger.error('contract:update_user_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { licenseId, updates } });
@@ -986,7 +1022,7 @@ export async function bulkAssignLicenses(
       payload: { contractId, count: data?.length || 0 }
     });
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     revalidatePath('/contracts');
 
     return {

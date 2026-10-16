@@ -7,6 +7,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { updateMyMailSetting } from '@/actions/mailSettingAction';
+import { SAVE_NETWORK_ERROR_MESSAGE } from '@/constants/network';
 import { ProfileSection } from './ProfileSection';
 
 const SECTION_TITLE = 'メール通知';
@@ -42,8 +43,10 @@ export function MailSettingsSection({ initialSettings }: { initialSettings: Mail
   const handleChange = async (category: MailCategory, enabled: boolean) => {
     setSettings((prev) => ({ ...prev, [category]: enabled }));
     setSavingCategory(category);
-    const result = await updateMyMailSetting(category, enabled);
-    setSavingCategory(null);
+    // 通信の失敗等は戻り値ではなく例外になるため、失敗の結果に変えて同じく元に戻す
+    const result = await updateMyMailSetting(category, enabled)
+      .catch((): { success: false; message: string } => ({ success: false, message: SAVE_NETWORK_ERROR_MESSAGE }))
+      .finally(() => setSavingCategory(null));
     if (!result.success) {
       setSettings((prev) => ({ ...prev, [category]: !enabled }));
       showToast(result.message, 'error');

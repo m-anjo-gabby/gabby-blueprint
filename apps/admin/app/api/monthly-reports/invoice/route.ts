@@ -9,6 +9,8 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { USER_TYPES } from '@gabby/types/user';
 import { InvoiceDocument } from '@/lib/pdf/InvoiceDocument';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { fetchLegalName } from '@gabby/lib/userLegal/fetchLegalName';
+import { formatLegalName } from '@gabby/lib/userLegal/formatLegalName';
 
 // apps/coach/app/api/monthly-reports/pay-notice/route.tsと同じ理由（cookieベース認証への
 // 依存がNext.jsの自動動的判定に検出されず静的キャッシュされる恐れがあるため）で、
@@ -46,9 +48,10 @@ export async function GET(request: NextRequest) {
   }
 
   const admin = createAdminClient();
-  const [companyProfile, { data: coachUser }] = await Promise.all([
+  const [companyProfile, { data: coachUser }, legalName] = await Promise.all([
     fetchCompanyProfile(DOCUMENT_ISSUER.coachInvoice),
     admin.from('com_m_user').select('user_name').eq('id', coachId).maybeSingle(),
+    fetchLegalName(coachId),
   ]);
 
   const approval = result.report.approval;
@@ -69,7 +72,8 @@ export async function GET(request: NextRequest) {
     new Date(Date.UTC(year, month - 1, 1))
   );
 
-  const contractorName = coachUser?.user_name ?? 'Coach';
+  // 支払通知書と同じく、正式な氏名（未登録の場合は画面の名前）を載せる
+  const contractorName = formatLegalName(legalName, 'en') ?? coachUser?.user_name ?? 'Coach';
   const invoiceNumber = buildInvoiceNumber(coachId, result.report.report_month);
   const fileNameBase = `Invoice_${contractorName.replace(/[\\/:*?"<>|]/g, '_').trim()}_${result.report.report_month.slice(0, 7)}`;
   const asciiFallbackFileName = fileNameBase.replace(/[^\x20-\x7E]/g, '_');

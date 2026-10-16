@@ -1,6 +1,7 @@
 'use client';
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { focusDialogContent } from '../common/dialogFocus';
 import { ExternalLink, X } from 'lucide-react';
 import { useChatUi } from './ChatUiContext';
 
@@ -28,6 +29,7 @@ export function ChatImageViewer({ url, fileName, children }: ChatImageViewerProp
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
+          onOpenAutoFocus={focusDialogContent}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 p-4 focus:outline-none sm:p-10"
         >
           <DialogPrimitive.Title className="sr-only">{fileName}</DialogPrimitive.Title>

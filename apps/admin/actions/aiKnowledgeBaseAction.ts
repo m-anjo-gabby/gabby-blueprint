@@ -5,6 +5,8 @@ import { upsertKnowledgeEntry, deleteKnowledgeEntry, type KnowledgeSourceType } 
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { ilikeAny } from '@gabby/lib/supabase/ilike';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 
 const logger = createLogger('admin');
 const TOOL_PATH = '/tools/ai-knowledge-base';
@@ -27,26 +29,16 @@ export interface KnowledgeEntry {
 // 取得系
 // ============================================================
 
-export interface GetKnowledgeEntriesResult {
-  entries: KnowledgeEntry[];
-  totalCount: number;
-}
-
 /**
  * ナレッジ一覧の取得（サーバーサイドページネーション）。
  * 本文全文を含むがembeddingベクトル自体は返さない。
  */
-export async function getKnowledgeEntries(
-  page: number = 1,
-  limit: number = 10,
-  sourceType?: string,
-  searchQuery?: string
-): Promise<GetKnowledgeEntriesResult> {
+export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<ListResult<KnowledgeEntry>> {
   const ctx = await getLogContext();
+  const { q, filters: { type: sourceType } } = params;
   try {
     const supabase = await createAdminClient();
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
+    const [from, to] = toRange(params);
 
     let query = supabase
       .from('com_m_ai_knowledge_base')
@@ -60,21 +52,21 @@ export async function getKnowledgeEntries(
       query = query.eq('source_type', sourceType);
     }
 
-    if (searchQuery) {
-      query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
+    if (q) {
+      query = query.or(ilikeAny(['title', 'body'], q));
     }
 
     const { data, count, error } = await query;
 
     if (error) {
-      logger.error('aiKb:list_failed', error.message, { ...ctx, err: error, payload: { page, limit, sourceType, searchQuery } });
-      return { entries: [], totalCount: 0 };
+      logger.error('aiKb:list_failed', error.message, { ...ctx, err: error, payload: { from, to, sourceType } });
+      return { rows: [], totalCount: 0 };
     }
 
-    return { entries: data as KnowledgeEntry[], totalCount: count || 0 };
+    return { rows: data as KnowledgeEntry[], totalCount: count || 0 };
   } catch (err) {
-    logger.error('aiKb:list_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { page, limit, sourceType, searchQuery } });
-    return { entries: [], totalCount: 0 };
+    logger.error('aiKb:list_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { sourceType } });
+    return { rows: [], totalCount: 0 };
   }
 }
 

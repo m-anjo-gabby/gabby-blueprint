@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
+import { SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
 import { useShellNavContext } from '@/components/shell/ShellNavContext';
 import { LiveSessionIntro } from './LiveSessionIntro';
 import { SectionHeading, SessionResultPageHeader } from '../sessions/[sessionId]/result/_components/SessionResultParts';
@@ -46,14 +47,7 @@ function LiveSessionHubSkeleton() {
         <div>
           <ShellSectionTitle>次回のセッション</ShellSectionTitle>
           <div aria-hidden className={CARD_CLASS}>
-            <div className="flex h-7 items-center gap-2.5 sm:h-8">
-              <Skeleton className="h-5 w-40 sm:h-6" />
-              <Skeleton className="h-4 w-24" />
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <Skeleton className="size-7 rounded-full" />
-              <Skeleton className="h-3.5 w-28" />
-            </div>
+            <SessionCoachHeadingSkeleton size="lg" />
             <Skeleton className="mt-5 h-10 w-full rounded-control sm:w-40" />
             <div className="mt-2 flex h-4 items-center">
               <Skeleton className="h-3 w-40" />

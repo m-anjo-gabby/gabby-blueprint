@@ -17,7 +17,7 @@ import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { SessionListItem } from '@gabby/types/session';
-import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
+import { CalendarEventItem, CALENDAR_EVENT_TYPES, withParticipation } from '@gabby/types/calendarEvent';
 import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import { getSessionStatusBadge } from '@/constants/session';
 import { SessionActionDialog, SessionActionTarget } from './SessionActionDialog';
@@ -105,7 +105,7 @@ export function CalendarBoard({ month, initialSessions, initialEvents }: Calenda
   };
 
   const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) => {
-    setEvents((prev) => prev.map((e) => (e.calendar_event_id === calendarEventId ? { ...e, is_joined: isJoined } : e)));
+    setEvents((prev) => prev.map((e) => (e.calendar_event_id === calendarEventId ? withParticipation(e, isJoined) : e)));
   };
 
   const selectedItems = selectedDate ? itemsByDate.get(selectedDate) ?? [] : [];

@@ -1,3 +1,5 @@
+import type { CoachSpecialtyTag } from './coachSpecialty';
+
 /**
  * ----------------------------------------------
  * 定数・区分値
@@ -14,6 +16,33 @@ export const COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES = [
 ] as const;
 
 export type CoachIntroVideoMimeType = typeof COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES[number];
+
+/**
+ * 生徒の「専属コーチを探す」に出るための必須項目（紹介ビデオは任意）。
+ * コードと順は DB の fn_coach_matching_missing_items()（supabase/DDL/function/fn_coach_matching_missing_items.sql）と揃える。
+ */
+export const COACH_MATCHING_REQUIRED_ITEMS = [
+  'icon',
+  'country',
+  'teaching_years',
+  'education',
+  'qualifications',
+  'job_experience',
+  'introduction',
+  'availability',
+] as const;
+
+export type CoachMatchingRequiredItem = (typeof COACH_MATCHING_REQUIRED_ITEMS)[number];
+
+/** 必須項目のうち、公開プロフィールのフォーム（CoachProfileFormValues）で入力するもの */
+export const COACH_PROFILE_FORM_REQUIRED_ITEMS = [
+  'country',
+  'teaching_years',
+  'education',
+  'qualifications',
+  'job_experience',
+  'introduction',
+] as const satisfies readonly CoachMatchingRequiredItem[];
 
 /**
  * ----------------------------------------------
@@ -38,6 +67,7 @@ export interface CoachProfileRecord {
   introduction: string | null;
   intro_video_path: string | null; // 紹介ビデオのStorageパス（profileバケット内）
   zoom_meeting_url: string | null; // ライブセッション用の固定ビデオ通話URL（生徒への公開範囲はUI側で制御。公開プロフィールの一部としては扱わない）
+  accepting_students: boolean; // 新規の生徒の受付（コーチ本人が切り替える。false の間は生徒のコーチ選択に出さない）
   delete_flg: string;
   insert_date: string;
   update_date: string;
@@ -68,6 +98,33 @@ export type GetMyCoachProfileResult =
 
 export type UpdateMyCoachProfileResult =
   | { success: true; profile: CoachProfileRecord }
+  | { success: false; errorCode: CoachProfileErrorCode };
+
+/**
+ * CoachMatchingStatus: 生徒の「専属コーチを探す」に出るかどうかの内訳（get_coach_matching_status RPC）。
+ * 一覧に出るのは、受付中・休止でない・足りない項目が無いコーチ（デモコーチはデモの生徒にだけ出る）。
+ */
+export interface CoachMatchingStatus {
+  /** 足りない必須項目（COACH_MATCHING_REQUIRED_ITEMS の順） */
+  missingItems: CoachMatchingRequiredItem[];
+  /** コーチ本人の新規の生徒の受付 */
+  acceptingStudents: boolean;
+  /** アドミンによる休止 */
+  isSuspended: boolean;
+  /** 休止の理由（運営の内部メモ。アドミンが取得した場合のみ。それ以外は null） */
+  suspendedNote: string | null;
+  /** 休止した日時（休止中でなければ null） */
+  suspendedAt: string | null;
+  /** デモコーチ（通常の生徒には出ず、デモの生徒にだけ出る） */
+  isDemo: boolean;
+}
+
+export type GetCoachMatchingStatusResult =
+  | { success: true; status: CoachMatchingStatus }
+  | { success: false; errorCode: 'unauthorized' | 'not_found' | 'unexpected_error' };
+
+export type UpdateMyAcceptingStudentsResult =
+  | { success: true; acceptingStudents: boolean }
   | { success: false; errorCode: CoachProfileErrorCode };
 
 /**
@@ -145,6 +202,22 @@ export interface CoachProfileCardData {
   jobExperience: string | null;
   introduction: string | null;
   introVideoUrl: string | null;
+  /** 評価の表示（総合評価。評価が無い・出さない場合は省略または null） */
+  rating?: CoachProfileRatingDisplay | null;
+  /** 専門（アドミンが設定。名称は各ポータルの言語。未設定・出さない場合は省略または空） */
+  specialties?: CoachSpecialtyTag[];
+}
+
+/** プロフィールカードの評価の表示（文言は各ポータルで整形して渡す） */
+export interface CoachProfileRatingDisplay {
+  /** 総合評価の平均（1〜5。星は0.5刻みに丸めて塗る） */
+  value: number;
+  /** 平均点の表示（例: "4.3"） */
+  valueLabel: string;
+  /** 件数の表示（例: "12件の評価" / "12 ratings"） */
+  countLabel: string;
+  /** 星の読み上げ用の文言 */
+  ariaLabel: string;
 }
 
 /** CoachProfileDialogData: CoachProfileDialog用のエイリアス（カードと表示内容は同一） */

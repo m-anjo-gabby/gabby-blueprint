@@ -74,14 +74,21 @@ async function updateRow(admin: SupabaseClient, mailId: string, values: Record<s
   if (error) logger.error('mail:dispatch_update_failed', error.message, { err: error, payload: { mailId } });
 }
 
-async function loadRecipient(admin: SupabaseClient, userId: string): Promise<Omit<MailRecipient, 'language'> | null> {
+type LoadedRecipient = Omit<MailRecipient, 'language' | 'timezoneName'> & {
+  timezoneNames: { ja: string; en: string } | null;
+};
+
+async function loadRecipient(admin: SupabaseClient, userId: string): Promise<LoadedRecipient | null> {
   const { data: user, error } = await admin
     .from('com_m_user')
-    .select('user_type, user_name, timezone, delete_flg')
+    .select('user_type, user_name, timezone, delete_flg, zone:com_m_timezone(short_name_ja, short_name_en)')
     .eq('id', userId)
     .maybeSingle();
   if (error) throw new Error(`recipient_fetch_failed: ${error.message}`);
   if (!user || user.delete_flg !== '0') return null;
+
+  // 多対1の結合は1件のオブジェクトで返る（型の推論は配列になるため両方を受ける）
+  const zone = Array.isArray(user.zone) ? user.zone[0] : user.zone;
 
   const { data: authUser, error: authError } = await admin.auth.admin.getUserById(userId);
   if (authError) throw new Error(`recipient_auth_fetch_failed: ${authError.message}`);
@@ -94,6 +101,7 @@ async function loadRecipient(admin: SupabaseClient, userId: string): Promise<Omi
     userType: user.user_type ?? '1',
     userName: user.user_name,
     timezone: user.timezone || 'Asia/Tokyo',
+    timezoneNames: zone ? { ja: zone.short_name_ja, en: zone.short_name_en } : null,
     isLicensed: authUser.user?.app_metadata?.is_licensed === true,
   };
 }
@@ -149,7 +157,8 @@ async function processRow(
     if (!language) return await skip('unsupported_recipient');
     if (!(await isCategoryEnabled(admin, row.user_id, typeConfig.category))) return await skip('opted_out');
 
-    const recipient: MailRecipient = { ...loaded, language };
+    const { timezoneNames, ...rest } = loaded;
+    const recipient: MailRecipient = { ...rest, timezoneName: timezoneNames?.[language] ?? null, language };
     const links = buildLinks(recipient, typeConfig.category);
     const built = await HANDLERS[mailType]({ admin, row, recipient, nowMs, links });
     if ('skip' in built) return await skip(built.skip);

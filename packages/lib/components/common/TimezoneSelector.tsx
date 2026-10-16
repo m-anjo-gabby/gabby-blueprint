@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Globe, Loader2, Clock } from 'lucide-react';
 import { TimezoneMaster } from '@gabby/types/timezone';
+import { formatUtcOffset } from '../../date/timezone';
 
 export interface TimezoneSelectorLabels {
   /** フィールドラベル */
@@ -23,21 +24,6 @@ export interface TimezoneSelectorProps {
   /** UI表示文言（言語はポータル側で決定するため、ここでは受け取るだけ） */
   labels: TimezoneSelectorLabels;
   disabled?: boolean;
-}
-
-/** IANAタイムゾーン名から "UTC+09:00" 形式のオフセット文字列を算出する（DSTも考慮） */
-function getUtcOffsetLabel(timezone: string, date: Date): string {
-  try {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      timeZoneName: 'longOffset',
-    }).formatToParts(date);
-    const raw = parts.find((p) => p.type === 'timeZoneName')?.value ?? '';
-    if (!raw) return '';
-    return raw === 'GMT' ? 'UTC+00:00' : raw.replace('GMT', 'UTC');
-  } catch {
-    return '';
-  }
 }
 
 /**
@@ -66,7 +52,7 @@ export function TimezoneSelector({
   const locale = displayField === 'display_name_en' ? 'en-US' : 'ja-JP';
 
   const options = useMemo(
-    () => timezones.map((tz) => ({ ...tz, offsetLabel: getUtcOffsetLabel(tz.timezone, now) })),
+    () => timezones.map((tz) => ({ ...tz, offsetLabel: formatUtcOffset(tz.timezone, now) ?? '' })),
     [timezones, now]
   );
 

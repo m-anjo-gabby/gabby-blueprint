@@ -1,64 +1,47 @@
----------------------------------------------
--- DDL: com_t_user_license_history (ライセンス変更履歴) (2026-08-06 追加)
--- 既存環境に対しては、このDDLをSupabase SQL Editor等で実行してください。
----------------------------------------------
--- 【背景】
--- com_t_user_license は解除時に物理削除(DELETE)される運用のため、「いつ・誰が・
--- どの期間のライセンスを・なぜ割当/変更/解除したか」という履歴が失われていた。
--- 本テーブルは変更のたびに追記専用でスナップショットを残すための監査ログであり、
--- com_t_user_license 自体の運用（割当・上限判定・解除でのDELETE）は一切変更しない。
--- そのため license_id には外部キー制約を設けていない（解除後は参照先が存在しなくなるため）。
----------------------------------------------
+-- =========================================================================
+-- com_t_user_license_history: ライセンスの変更履歴（監査ログ）
+-- =========================================================================
+-- com_t_user_license は解除時に行を削除するため、割り当て・変更・無効化・解除のたびにその時点の内容（ダイアログプラクティスの
+-- 利用可否を含む）をここに追記して残す。assigned は割当後、updated / invalidated / removed は操作前の内容を記録する。
+-- 書き込みはアプリ（packages/lib/license/issue.ts の recordLicenseHistory）が行い、無効化の RPC（invalidate_user_license）自体は書かない。
+-- 解除後は参照先が無くなるため license_id に外部キーは張らない。
+-- 書き込みは service_role だけ。参照の範囲は com_t_user_license と同じ。
+-- =========================================================================
+
+-- @schema public.com_t_user_license_history
 CREATE TABLE public.com_t_user_license_history (
-    history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    license_id UUID NOT NULL,             -- com_t_user_license.license_id（解除後は非存在になり得るためFKなし）
-    contract_id UUID REFERENCES public.com_m_contract(contract_id),
-    user_id UUID REFERENCES public.com_m_user(id),
-    action TEXT NOT NULL CHECK (action IN ('assigned', 'updated', 'removed')),
-    status SMALLINT NOT NULL,             -- 記録時点でのステータス
-    start_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    note TEXT DEFAULT NULL,
-    performed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- 操作を行った管理者
-    performed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    history_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    license_id               uuid         NOT NULL,
+    contract_id              uuid         REFERENCES public.com_m_contract(contract_id),
+    user_id                  uuid         REFERENCES public.com_m_user(id),
+    action                   text         NOT NULL,
+    status                   smallint     NOT NULL,
+    start_date               timestamp with time zone NOT NULL,
+    end_date                 timestamp with time zone NOT NULL,
+    note                     text,
+    performed_by             uuid         REFERENCES auth.users(id) ON DELETE SET NULL,
+    performed_at             timestamp with time zone NOT NULL DEFAULT now(),
+    has_dialogue_practice    boolean      NOT NULL DEFAULT false,
+    CONSTRAINT com_t_user_license_history_action_check CHECK (action = ANY (ARRAY['assigned'::text, 'updated'::text, 'invalidated'::text, 'removed'::text]))
 );
 
-COMMENT ON TABLE public.com_t_user_license_history IS 'ライセンス変更履歴（割当・更新・解除の追記専用ログ）';
+COMMENT ON TABLE public.com_t_user_license_history IS 'ライセンス変更履歴（割当・更新・無効化・解除の追記専用ログ）';
 COMMENT ON COLUMN public.com_t_user_license_history.license_id IS '対象のライセンスID（com_t_user_license, FKなし）';
-COMMENT ON COLUMN public.com_t_user_license_history.action IS '操作種別 assigned:割当 / updated:更新(更新前スナップショット) / removed:解除(解除前スナップショット)';
+COMMENT ON COLUMN public.com_t_user_license_history.action IS '操作種別 assigned:割当 / updated:更新(更新前スナップショット) / invalidated:無効化(無効化前スナップショット) / removed:解除(解除前スナップショット)';
 COMMENT ON COLUMN public.com_t_user_license_history.status IS '記録時点でのステータス';
 COMMENT ON COLUMN public.com_t_user_license_history.performed_by IS '操作を行った管理者のUUID（不明時はNULL）';
 COMMENT ON COLUMN public.com_t_user_license_history.performed_at IS '操作日時';
+COMMENT ON COLUMN public.com_t_user_license_history.has_dialogue_practice IS '記録時点でのダイアログプラクティス利用可否';
 
-CREATE INDEX idx_license_history_user ON public.com_t_user_license_history (user_id, performed_at DESC);
 CREATE INDEX idx_license_history_contract ON public.com_t_user_license_history (contract_id, performed_at DESC);
+CREATE INDEX idx_license_history_user ON public.com_t_user_license_history (user_id, performed_at DESC);
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
 ALTER TABLE public.com_t_user_license_history ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users can view relevant license history" ON public.com_t_user_license_history;
-
--- 参照権限のみ付与（既存の com_t_user_license と同じ範囲）。書き込みは常にservice_role経由。
-CREATE POLICY "Users can view relevant license history" ON public.com_t_user_license_history
-FOR SELECT TO authenticated USING (
-    user_id = auth.uid()
-    OR
-    contract_id IN (
-        SELECT contract_id FROM public.com_m_contract
-        WHERE client_id = public.get_jwt_client_id()
-    )
+CREATE POLICY "Users can view relevant license history" ON public.com_t_user_license_history FOR SELECT TO authenticated
+USING (
+    user_id = auth.uid() OR (contract_id IN ( SELECT com_m_contract.contract_id
+       FROM public.com_m_contract
+      WHERE com_m_contract.client_id = public.get_jwt_client_id()))
 );
-
----------------------------------------------
--- 追加パッチ: ダイアログプラクティス利用可否のスナップショット追加 (2026-09-08)
--- 既存環境に対しては、このALTER文のみをSupabase SQL Editor等で実行してください。
--- 前提: table/com_t_user_license.sql の同日パッチ（has_dialogue_practice追加）が適用済みであること。
----------------------------------------------
--- 「いつからこの生徒はダイアログプラクティスが利用可能になったか」を後から追跡できるよう、
--- 割当/更新/解除のたびにcom_t_user_license.has_dialogue_practiceの値をスナップショットする。
-ALTER TABLE public.com_t_user_license_history
-  ADD COLUMN IF NOT EXISTS has_dialogue_practice boolean NOT NULL DEFAULT false;
-
-COMMENT ON COLUMN public.com_t_user_license_history.has_dialogue_practice IS '記録時点でのダイアログプラクティス利用可否';
+-- @end-schema

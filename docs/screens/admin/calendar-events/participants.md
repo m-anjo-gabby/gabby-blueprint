@@ -27,7 +27,9 @@
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | 参加人数カード | 常時表示 | 参加登録済みの人数を表示（表示のみ） |
-| 検索ボックス | 常時表示 | 氏名の部分一致で一覧を絞り込む |
+| 検索ボックス | 常時表示 | 氏名の部分一致で絞り込む（全件を取得済みのため、ブラウザ側で絞る。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る。サーバーへの再取得はしない）） |
+| 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
+| 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | 参加者テーブル | 氏名、種別（生徒/コーチ等）、参加登録日時 | 表示のみ |
 
 このタブは「参加した人だけ」の一覧であり、配信対象母集団（生徒全体/顧客指定/コーチ全体）との
@@ -58,7 +60,8 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/calendar-events/[id]/participants/page.tsx`
-- `apps/admin/app/(app)/calendar-events/[id]/participants/_components/CalendarEventParticipantsTable.tsx`
+- `apps/admin/app/(app)/calendar-events/[id]/participants/_components/CalendarEventParticipantsTable.tsx`, `_components/columns.tsx`
+- `apps/admin/components/list/`（一覧の共通部品）, `apps/admin/lib/list.ts`。E2E: `testing/e2e/tests/admin/list-filters.spec.ts`（仕様: `testing/e2e/specs/admin/list-filters.md`）
 - `apps/admin/app/(app)/calendar-events/[id]/participants/_components/CalendarEventAnnouncementPanel.tsx`
 - `apps/admin/actions/adminCalendarEventAction.ts`
   （`getCalendarEventParticipants`, `getCalendarEventMessages`, `createCalendarEventMessage`,
@@ -66,3 +69,4 @@
   `deleteCalendarEventMessageFile`, `getCalendarEventMessageAttachmentUrl`。いずれもRPCではなく
   `com_t_calendar_event_participant` / `com_t_calendar_event_message`への直接CRUD）
 - `packages/types/calendarEvent.ts`（`CalendarEventMessageItem`, `CalendarEventMessageAttachment`の正本）
+- E2E: ジャーニー `testing/e2e/tests/journeys/group-session.spec.ts` 手順3（参加者一覧に参加登録した生徒が出る・アナウンスの送信）

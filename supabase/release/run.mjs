@@ -27,19 +27,11 @@ import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
-import { fileURLToPath } from 'node:url';
-import { parseEnv } from 'node:util';
 
-const RELEASE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(RELEASE_DIR, '../..');
-const ENV_DIR = path.join(RELEASE_DIR, 'env');
+import { ENVS, RELEASE_DIR, REPO_ROOT, connect } from './lib/connection.mjs';
+
 const LOG_DIR = path.join(RELEASE_DIR, 'logs');
 const HISTORY_DDL = path.join(REPO_ROOT, 'supabase/DDL/table/ops_release_history.sql');
-const API_BASE = 'https://api.supabase.com/v1';
-
-const ENVS = ['dev', 'staging', 'prod'];
-// 取り違え防止: プロジェクト名にこの文字列が含まれない場合は中止する（blueprint-dev/stg/prod）
-const PROJECT_NAME_HINT = { dev: 'dev', staging: 'stg', prod: 'prod' };
 
 // ---------------------------------------------------------------------------
 // 引数・入力
@@ -171,25 +163,6 @@ function parseSectionNos(spec, sections) {
 }
 
 // ---------------------------------------------------------------------------
-// Management API
-// ---------------------------------------------------------------------------
-async function api(token, method, pathname, body) {
-  const res = await fetch(`${API_BASE}${pathname}`, {
-    method,
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  let json;
-  try { json = text ? JSON.parse(text) : null; } catch { json = text; }
-  if (!res.ok) {
-    const message = typeof json === 'object' && json?.message ? json.message : text;
-    throw new Error(`HTTP ${res.status}: ${message}`);
-  }
-  return json;
-}
-
-// ---------------------------------------------------------------------------
 // 適用履歴（ops.release_history）
 // ---------------------------------------------------------------------------
 function lit(value) {
@@ -265,25 +238,7 @@ async function main() {
   }
 
   // --- 接続情報の読み込みと取り違えチェック ---
-  const envPath = path.join(ENV_DIR, `.env.${opts.env}`);
-  if (!existsSync(envPath)) fail(`環境ファイルがありません: ${path.relative(REPO_ROOT, envPath)}（.env.example を参考に作成してください）`);
-  const envVars = parseEnv(readFileSync(envPath, 'utf8'));
-  const ref = envVars.SUPABASE_PROJECT_REF;
-  if (!ref) fail('SUPABASE_PROJECT_REF が未設定です。');
-  if (envVars.SUPABASE_URL && new URL(envVars.SUPABASE_URL).host !== `${ref}.supabase.co`) {
-    fail(`SUPABASE_URL (${envVars.SUPABASE_URL}) が SUPABASE_PROJECT_REF (${ref}) と一致しません。`);
-  }
-
-  let token = envVars.SUPABASE_ACCESS_TOKEN;
-  if (!token) token = await askSecret('SUPABASE_ACCESS_TOKEN を入力してください（入力内容は表示されません）: ');
-  if (!token) fail('アクセストークンが入力されませんでした。');
-
-  const project = await api(token, 'GET', `/projects/${ref}`).catch((e) => fail(`プロジェクト情報の取得に失敗しました: ${e.message}`));
-  if (!project.name.includes(PROJECT_NAME_HINT[opts.env])) {
-    fail(`--env=${opts.env} に対し、プロジェクト名が「${project.name}」です。環境ファイルの取り違えがないか確認してください。`);
-  }
-
-  const query = (sql) => api(token, 'POST', `/projects/${ref}/database/query`, { query: sql });
+  const { envVars, ref, project, query } = await connect(opts.env, askSecret).catch((e) => fail(e.message));
   const history = await fetchHistory(query, fileName).catch((e) => fail(`適用履歴の取得に失敗しました: ${e.message}`));
   const states = new Map(sections.map((s) => [s.no, sectionState(s, history)]));
 

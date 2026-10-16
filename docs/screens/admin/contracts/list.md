@@ -32,8 +32,10 @@
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
-| 検索欄 | 常時表示 | 顧客名または契約名の部分一致で検索。Enterまたは「検索」ボタンで実行し、1ページ目に戻る |
-| 顧客フィルタ | 常時表示 | 検索式セレクトで顧客を選択して絞り込む（未選択時は「すべての顧客」で全件対象）。選択すると1ページ目に戻る |
+| 検索欄 | 常時表示 | 顧客名または契約名の部分一致で検索。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る）。入力した文字はそのまま文字として検索する（`%`・`,`等も特別な意味を持たない） |
+| 顧客フィルタ | 常時表示 | 検索式セレクトで顧客を選択して絞り込む（未選択時は「すべての顧客」で全件対象。URLの`clientId`）。選択すると1ページ目に戻る |
+| 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
+| 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | 「プランマスタ管理」リンク | 常時表示 | `/contracts/plans` へ遷移 |
 | 「新規登録」ボタン | 常時表示 | 契約登録ダイアログを開く |
 | 一覧の「顧客名」列 | 契約に紐づく顧客名。紐付けが取れない場合は「未紐付け」 | 表示のみ |
@@ -71,11 +73,12 @@
 - 一覧モード: 割当済みユーザーの一覧（氏名・メールアドレス、無効化済みは「無効化済み」バッジと
   グレー表示。ライブセッション付き契約の場合はチケット消化数も表示）
 - 「ユーザーを追加」ボタン（契約期間終了後は非表示）→ 追加モードに切り替わり、同じ顧客に属する
-  未割当ユーザーの一覧から選んで追加する。上限に達している場合は追加不可
+  未割当ユーザーの一覧から選んで追加する。上限に達している場合は追加不可。そのユーザーが他の有効な
+  ライセンスを期間の重なる形で持っている場合も追加不可（無効化済みのライセンスは重複の判定に含めない）
 - 各ユーザーの無効化ボタン（契約期間終了後、または既に無効化済みの場合は非表示）→ 確認ダイアログの
   上でライセンスを無効化する。無効化すると即座にシステムアクセス不可・未実施の今後のセッションは
   キャンセルされるが、実施済みのセッション履歴・チャット・宿題は削除されず、チケット消化数も戻らない
-- 無効化されたライセンスも「消化済み」として扱われ、枠（上限ライセンス数の消費）は戻らない
+- 無効化されたライセンスも「消化済み」として扱われ、枠（上限ライセンス数の消費）は戻らない。無効化前の内容は操作した管理者とともに変更履歴に残る
 
 ## 契約削除ダイアログ
 
@@ -98,12 +101,13 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/contracts/page.tsx`
-- `apps/admin/app/(app)/contracts/_components/contract-data-table.tsx`
+- `apps/admin/app/(app)/contracts/_components/ContractDataTable.tsx`, `apps/admin/app/(app)/contracts/_lib/list.ts`（絞り込みのURLのクエリ名）
+- `apps/admin/components/list/`（一覧の共通部品: `useListQuery`・`ListToolbar`・`DataTable`・`ListSelectFilter`・`ClientFilter`）, `apps/admin/lib/list.ts`（URLの条件の読み取り・ページ範囲）
 - `apps/admin/app/(app)/contracts/_components/columns.tsx`
 - `apps/admin/app/(app)/contracts/_components/ContractFormDialog.tsx`
 - `apps/admin/app/(app)/contracts/_components/ContractLicenseDialog.tsx`
 - `apps/admin/app/(app)/contracts/_components/DeleteContractDialog.tsx`
-- `apps/admin/components/common/ClientFilter.tsx`（顧客フィルタ。`users`一覧とも共用する共通
+- `apps/admin/components/list/ClientFilter.tsx`（顧客フィルタ。`users`一覧とも共用する共通
   コンポーネント。URLクエリパラメータ`clientId`と同期）
 - `apps/admin/actions/adminContractAction.ts`（`getContracts`（`clientId`引数で絞り込み対応）,
   `createContract`, `updateContract`, `deleteContract`, `purgeContractWithHistory`,

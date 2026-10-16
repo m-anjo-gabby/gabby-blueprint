@@ -65,7 +65,7 @@ export function AttentionCellDialog({
                       href={`/students/${detail.studentId}/sessions/${session.session_id}`}
                       className="inline-flex items-center gap-1 text-xs font-bold text-brand hover:text-brand-strong whitespace-nowrap"
                     >
-                      Resolve <ArrowRight size={12} />
+                      End Session <ArrowRight size={12} />
                     </Link>
                   )}
                 </div>

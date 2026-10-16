@@ -6,8 +6,8 @@
  *   # あわせて skipped.tsv の reason = proper_noun の語を固有名詞リストに追記する（次回の extract.ts で機械的に除外される）
  *   npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts sync --work <作業ディレクトリ> [--ledger <台帳TSV>] [--proper-nouns <固有名詞リスト>]
  *
- *   # 確定（confirmed）行を、CV辞書 一括登録用のTSVとして書き出す（取込画面で「既存も上書き」を選んで反映）
- *   # （word_ja・lemma は --dict で指定した生成済みの辞書TSVから引く。--since で確定日を絞り込める）
+ *   # 確定（confirmed）行を、CV辞書 一括登録用のTSVとして書き出す（取込画面で「データのみ上書き」を選んで反映）
+ *   # （--dict で指定した生成済みの辞書TSVに含まれる語だけを書き出し、word_ja・lemma もそこから引く。--since で確定日を絞り込める）
  *   npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts export --out <出力TSV> --dict <辞書TSV> [--since <YYYY-MM-DD>] [--ledger <台帳TSV>]
  *
  *   # 状態・分類ごとの件数を表示する
@@ -93,6 +93,7 @@ const sync = () => {
       cv_id: r.cv_id,
       phonetic_spelling: r.phonetic_spelling,
       question,
+      question_en: '',
       decision_note: '',
       decided_by: '',
       decided_date: '',
@@ -132,17 +133,20 @@ const exportConfirmed = () => {
     })
   );
 
-  const missing = rows.filter((r) => !dict.get(ledgerKey(r))?.wordJa);
+  // 台帳は複数の辞書TSVの語をまとめて持つため、指定した辞書TSVに含まれる語だけを書き出す
+  const targets = rows.filter((r) => dict.has(ledgerKey(r)));
+  const missing = targets.filter((r) => !dict.get(ledgerKey(r))?.wordJa);
   if (missing.length > 0) {
-    throw new Error(`辞書TSVに word_ja が見つからない行があります: ${missing.map((r) => `${r.id} ${r.word_en}`).join(', ')}`);
+    throw new Error(`辞書TSVに word_ja が空の行があります: ${missing.map((r) => `${r.id} ${r.word_en}`).join(', ')}`);
   }
+  if (targets.length < rows.length) console.log(`辞書TSVに含まれない確定行 ${rows.length - targets.length}件は書き出しません`);
 
-  const body = rows.map((r) => {
+  const body = targets.map((r) => {
     const d = dict.get(ledgerKey(r));
     return [r.word_en, r.part_of_speech, d?.wordJa, r.syllables, r.primary_stress_syllable, r.stress_vowel_spelling, r.cv_id, r.phonetic_spelling, d?.lemma].join('\t');
   });
   writeFileSync(outPath, [headers.join('\t'), ...body].join('\n') + '\n', 'utf-8');
-  console.log(`確定行 ${rows.length}件 → ${outPath}（取込画面で「既存も上書き」を選んで反映してください）`);
+  console.log(`確定行 ${targets.length}件 → ${outPath}（取込画面で「データのみ上書き」を選んで反映してください）`);
 };
 
 // ------------------------------------------------------------

@@ -20,6 +20,8 @@ export interface SessionStatusBadgeLabels<T extends SessionStatusBadgeStyle = Se
   cancelledByCoach: T;
   cancelledLicenseEnded: T;
   cancelledCoachReassigned: T;
+  /** 通信トラブル等、こちら側の都合で実施できなかった（cancel_category=TECHNICAL） */
+  cancelledTechnical: T;
   /** cancel_categoryがADMIN、またはnull/未知の値の場合のフォールバック */
   cancelledOther: T;
 }
@@ -55,6 +57,8 @@ export function buildSessionStatusBadge<T extends SessionStatusBadgeStyle>(
       return labels.cancelledLicenseEnded;
     case CANCEL_CATEGORY.COACH_REASSIGNED:
       return labels.cancelledCoachReassigned;
+    case CANCEL_CATEGORY.TECHNICAL:
+      return labels.cancelledTechnical;
     default:
       return labels.cancelledOther;
   }

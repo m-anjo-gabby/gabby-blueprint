@@ -19,6 +19,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import {
   MyBookingRequestItem,
   MyRescheduleProposalGroup,
+  PROPOSED_BY_ROLE,
   SessionActionErrorCode,
   SessionListItem,
   SessionResultSummary,
@@ -183,6 +184,19 @@ export async function getMyRescheduleProposalGroups(): Promise<MyReschedulePropo
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('student:get_reschedule_proposals_failed', result.errorCode, ctx);
+    return [];
+  }
+  return result.groups;
+}
+
+/**
+ * 生徒自身がキャンセル時に提案し、コーチの回答待ちになっている振替候補（キャンセル単位）を取得する
+ */
+export async function getMyProposedRescheduleGroups(): Promise<MyRescheduleProposalGroup[]> {
+  const result = await getMyRescheduleProposalGroupsCore(PROPOSED_BY_ROLE.STUDENT);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_proposed_reschedule_groups_failed', result.errorCode, ctx);
     return [];
   }
   return result.groups;

@@ -18,6 +18,7 @@ const STUDENT_SESSION_STATUS_LABELS: SessionStatusBadgeLabels<SessionStatusBadge
   cancelledByCoach: { label: 'キャンセル済み（コーチ都合）', className: 'bg-rose-50 text-rose-700 border-rose-100', dotClassName: 'bg-rose-400' },
   cancelledLicenseEnded: { label: 'キャンセル済み（契約終了）', ...SLATE_BADGE },
   cancelledCoachReassigned: { label: 'キャンセル済み（コーチ交代）', ...SLATE_BADGE },
+  cancelledTechnical: { label: 'キャンセル済み（通信トラブル）', ...SLATE_BADGE },
   cancelledOther: { label: 'キャンセル済み', ...SLATE_BADGE },
 };
 

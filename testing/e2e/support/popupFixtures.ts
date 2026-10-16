@@ -49,14 +49,14 @@ export async function clearPopupNotices({ admin, clientId }: PopupFixture): Prom
 }
 
 /**
- * テスト外のポップアップ対象お知らせ（全体配信など）を既読にし、テストで作成した分だけが表示されるようにする。
+ * テスト外のポップアップ・ホームのカードのお知らせ（全体配信など）を既読にし、テストで作成した分だけが表示されるようにする。
  * 変更するのはこのペルソナの既読状態のみ。
  */
 export async function markOtherNoticesRead({ admin, clientId, userId }: PopupFixture): Promise<void> {
   const { data, error } = await admin
     .from("com_m_notice")
     .select("notice_id")
-    .eq("show_dialog", true)
+    .in("display_mode", ["POPUP", "HOME"])
     .eq("delete_flg", "0")
     .or(`target_type.eq.ALL,and(target_type.eq.CLIENT,client_id.neq.${clientId})`);
   if (error) throw new Error(`お知らせの取得に失敗: ${error.message}`);
@@ -67,14 +67,27 @@ export async function markOtherNoticesRead({ admin, clientId, userId }: PopupFix
   if (upsertErr) throw new Error(`既読化に失敗: ${upsertErr.message}`);
 }
 
-/** ポップアップ表示指定のお知らせを作成し、タイトルを返す */
-export async function createPopupNotices({ admin, clientId }: PopupFixture, count: number): Promise<string[]> {
+export interface PopupNoticeOptions {
+  /** 表示方法（既定はポップアップ） */
+  displayMode?: "POPUP" | "HOME" | "LIST";
+  /** 行動ボタン（文言とリンク先） */
+  cta?: { label: string; url: string };
+}
+
+/** ポップアップ表示指定（または指定の表示方法）のお知らせを作成し、タイトルを返す */
+export async function createPopupNotices(
+  { admin, clientId }: PopupFixture,
+  count: number,
+  { displayMode = "POPUP", cta }: PopupNoticeOptions = {},
+): Promise<string[]> {
   const now = Date.now();
   const rows = Array.from({ length: count }, (_, i) => ({
     target_type: "CLIENT",
     client_id: clientId,
     notice_type: "INFO",
-    show_dialog: true,
+    display_mode: displayMode,
+    cta_label: cta?.label ?? null,
+    cta_url: cta?.url ?? null,
     is_published: true,
     title: `${NOTICE_TITLE_PREFIX} ${i + 1}`,
     content: `E2Eテスト用のお知らせ ${i + 1} です。`,
@@ -94,6 +107,23 @@ export async function readNoticeTitles({ admin, clientId, userId }: PopupFixture
     .eq("user_id", userId)
     .eq("com_m_notice.client_id", clientId);
   if (error) throw new Error(`既読状態の取得に失敗: ${error.message}`);
+  return (data ?? [])
+    .flatMap((row) => {
+      const notice = row.com_m_notice as { title: string } | { title: string }[];
+      return Array.isArray(notice) ? notice.map((n) => n.title) : [notice.title];
+    })
+    .sort();
+}
+
+/** 行動ボタンを押したお知らせのタイトル一覧 */
+export async function ctaClickedNoticeTitles({ admin, clientId, userId }: PopupFixture): Promise<string[]> {
+  const { data, error } = await admin
+    .from("com_t_notice_read")
+    .select("com_m_notice!inner(title, client_id)")
+    .eq("user_id", userId)
+    .eq("com_m_notice.client_id", clientId)
+    .not("cta_clicked_at", "is", null);
+  if (error) throw new Error(`行動ボタンの記録の取得に失敗: ${error.message}`);
   return (data ?? [])
     .flatMap((row) => {
       const notice = row.com_m_notice as { title: string } | { title: string }[];

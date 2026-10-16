@@ -5,6 +5,7 @@ import { X } from "lucide-react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
+import { focusDialogContent } from "@gabby/lib/components/common/dialogFocus"
 
 const Drawer = ({
   shouldScaleBackground = true,
@@ -51,12 +52,17 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, onPointerDownOutside, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content> & {
+    /** 背景の暗さを変える場合に指定する */
+    overlayClassName?: string
+  }
+>(({ className, overlayClassName, children, onPointerDownOutside, onOpenAutoFocus, ...props }, ref) => (
   <DrawerPortal>
-    <DrawerOverlay />
+    <DrawerOverlay className={overlayClassName} />
     <DrawerPrimitive.Content
       ref={ref}
+      // 開いた時は中の要素（×ボタン等）にフォーカスせず枠にフォーカスする。特定の要素に当てる場合はその要素に autoFocus を付ける
+      onOpenAutoFocus={onOpenAutoFocus ?? focusDialogContent}
       onPointerDownOutside={(event) => {
         // 共通確認ダイアログ(ConfirmModal)はRadix/vaulのポータル外に描画されるため、
         // それをクリックした際に背後のDrawer(ボトムシート)まで閉じてしまわないようにする
@@ -67,7 +73,7 @@ const DrawerContent = React.forwardRef<
         onPointerDownOutside?.(event);
       }}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
+        "outline-none fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
         className
       )}
       {...props}

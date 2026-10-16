@@ -1,6 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { cleanupAuthFixture, createAuthFixture, deleteFixtureChatRooms, type AuthFixture } from "../../support/authFixtures.ts";
-import { confirmModal, openCoachContext } from "../../support/coachApp.ts";
+import { openCoachContext } from "../../support/coachApp.ts";
 import { clickUntilVisible } from "../../support/hydration.ts";
 import {
   approveMatchingRequest,
@@ -13,8 +13,9 @@ import {
 
 /**
  * ライブセッションの終了処理（機能: e2e/specs/session-lifecycle/session-completion.md）。
- * End Session の実施結果の分岐（早期終了・無断欠席）と、終了予定を過ぎたセッションの Resolve Manually（3つの結果）を確かめる。
- * 正常な実施完了はジャーニー（tests/journeys/coach-live-session.spec.ts）で確かめている。
+ * End Session のダイアログで、通話の記録からの推定が初期選択になること、理由が必須になる条件（早期終了・外部のZoom・
+ * 推定と違う結果・実施できなかった）と、結果ごとの記録・チケットの消化/返還・通知を確かめる。
+ * 推定どおりの実施完了はジャーニー（tests/journeys/coach-live-session.spec.ts）で確かめている。
  * 通話は入退室ログを直接入れて代替する（support/liveSessionFixtures.ts）。coach は PC 表示の別コンテキストで開くため desktop だけで実行する。
  */
 
@@ -47,118 +48,181 @@ async function setUpPair(prefix: string): Promise<{ f: AuthFixture; p: LivePair;
 
 const hubPath = (p: LivePair, sessionId: string) => `/students/${p.studentId}/sessions/${sessionId}`;
 const sessionInfo = (page: Page) => page.locator("section").filter({ has: page.getByText("Session Info", { exact: true }) }).first();
+const outcomeRadio = (dialog: Locator, label: RegExp) => dialog.getByRole("radio", { name: label });
 
-/** ハブで End Session を押して確認する */
-async function endSession(page: Page): Promise<void> {
-  const modal = confirmModal(page);
-  await clickUntilVisible(sessionInfo(page).getByRole("button", { name: "End Session" }), modal);
-  await modal.getByRole("button", { name: "End Session", exact: true }).click();
+const COMPLETED = /^Completed/;
+const LEFT_EARLY = /^Ended early/;
+const NO_SHOW = /^Student didn’t show up/;
+const COACH_ABSENT = /^I missed this session/;
+const TECHNICAL = /^Couldn’t hold the lesson/;
+
+/** ハブを開いて End Session のダイアログを開き、推定の読み込みが終わるまで待つ */
+async function openEndSession(page: Page, p: LivePair, sessionId: string): Promise<Locator> {
+  await page.goto(hubPath(p, sessionId));
+  const dialog = page.getByRole("dialog", { name: "End Session" });
+  await clickUntilVisible(sessionInfo(page).getByRole("button", { name: "End Session" }), dialog);
+  await expect(outcomeRadio(dialog, COMPLETED)).toBeVisible();
+  return dialog;
 }
+
+const recordButton = (dialog: Locator) => dialog.getByRole("button", { name: "Record Outcome" });
 
 async function usedSessions(f: AuthFixture, p: LivePair): Promise<number | undefined> {
   const { data } = await f.admin.from("com_t_user_session_ticket").select("used_sessions").eq("ticket_id", p.ticketId).single();
   return data?.used_sessions;
 }
 
-test("通話の重なりが20分未満なら、理由を入力して早期終了として記録される（チケットは消化しない）", async ({ browser }) => {
+async function coachCancelNotices(f: AuthFixture, p: LivePair): Promise<number | null> {
+  const { count } = await f.admin
+    .from("com_t_notification").select("*", { count: "exact", head: true })
+    .eq("user_id", p.studentId).eq("notification_type", "SESSION_CANCELLED_BY_COACH");
+  return count;
+}
+
+test("通話の重なりが20分未満なら「早期終了」が初期選択になり、理由を入力して記録するとチケットを消化する", async ({ browser }) => {
   const { f, p, scheduleId } = await setUpPair("sessearly");
   const day = await prepareLiveSessionDay(f, p, scheduleId, { studentMinutesInCall: 10 });
-  const reason = `Student had connectivity issues (${f.tag}).`;
+  const reason = `The student had to leave for work (${f.tag}).`;
 
   const { context, page } = await openCoachContext(browser, { email: p.coachEmail, password: PASSWORD });
   try {
-    await page.goto(hubPath(p, day.sessionId));
-    await endSession(page);
-
-    const reasonDialog = page.getByRole("dialog", { name: "Session ended early" });
-    await expect(reasonDialog.getByRole("button", { name: "Submit" })).toBeDisabled();
-    await reasonDialog.getByRole("textbox").fill(reason);
-    await reasonDialog.getByRole("button", { name: "Submit" }).click();
+    const dialog = await openEndSession(page, p, day.sessionId);
+    await expect(dialog.getByTestId("session-outcome-evidence")).toContainText("connected together for 10 min");
+    await expect(outcomeRadio(dialog, LEFT_EARLY)).toBeChecked();
+    await expect(dialog.getByRole("radio", { name: "In the app" })).toBeChecked();
+    await expect(recordButton(dialog)).toBeDisabled();
+    await dialog.getByRole("textbox").fill(reason);
+    await recordButton(dialog).click();
 
     await expect(page).toHaveURL(new RegExp(`${hubPath(p, day.sessionId)}/result$`));
     await expect(page.getByText("Ended early", { exact: true }).first()).toBeVisible();
     await expect(page.getByText(reason)).toBeVisible();
 
-    const { data: session } = await f.admin.from("com_t_session").select("status, completion_result, status_note").eq("session_id", day.sessionId).single();
-    expect(session).toMatchObject({ status: 2, completion_result: 2, status_note: reason });
-    expect(await usedSessions(f, p)).toBe(0);
+    const { data: session } = await f.admin
+      .from("com_t_session").select("status, completion_result, status_note, conducted_via, suggested_outcome, outcome_mismatch, ticket_consumed")
+      .eq("session_id", day.sessionId).single();
+    expect(session).toMatchObject({
+      status: 2, completion_result: 2, status_note: reason, conducted_via: 1, suggested_outcome: 2, outcome_mismatch: false, ticket_consumed: true,
+    });
+    expect(await usedSessions(f, p)).toBe(1);
   } finally {
     await context.close();
   }
 });
 
-test("生徒が一度も入室していなければ、End Session で無断欠席として記録される（チケットは消化しない）", async ({ browser }) => {
+test("生徒が一度も入室していなければ「生徒の欠席」が初期選択になり、理由なしで記録でき、チケットを消化して生徒へは通知しない", async ({ browser }) => {
   const { f, p, scheduleId } = await setUpPair("sessnoshow");
   const day = await prepareLiveSessionDay(f, p, scheduleId, { studentMinutesInCall: 0 });
 
   const { context, page } = await openCoachContext(browser, { email: p.coachEmail, password: PASSWORD });
   try {
-    await page.goto(hubPath(p, day.sessionId));
-    await endSession(page);
+    const dialog = await openEndSession(page, p, day.sessionId);
+    await expect(dialog.getByTestId("session-outcome-evidence")).toContainText("the student never joined");
+    await expect(outcomeRadio(dialog, NO_SHOW)).toBeChecked();
+    await expect(recordButton(dialog)).toBeEnabled();
+    await recordButton(dialog).click();
 
     await expect(page).toHaveURL(new RegExp(`${hubPath(p, day.sessionId)}/result$`));
     await expect(page.getByText("No-show", { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole("dialog", { name: "Session ended early" })).toHaveCount(0);
 
     const { data: session } = await f.admin.from("com_t_session").select("status, completion_result").eq("session_id", day.sessionId).single();
     expect(session).toMatchObject({ status: 2, completion_result: 3 });
-    expect(await usedSessions(f, p)).toBe(0);
+    expect(await usedSessions(f, p)).toBe(1);
+    expect(await coachCancelNotices(f, p)).toBe(0);
   } finally {
     await context.close();
   }
 });
 
-test("終了予定を過ぎたセッションは Resolve Manually で、実施完了・無断欠席・コーチの欠席（キャンセル・返還）に確定できる", async ({ browser }) => {
-  test.setTimeout(150_000);
-  const { f, p, scheduleId } = await setUpPair("sessresolve");
-  const [completedId, noShowId, missedId] = await createStaleSessions(f, p, scheduleId, 3);
+test("通話の記録が無いセッションは外部のZoomでの実施を記録でき、コーチの欠席・通信トラブル等はキャンセル（返還）として区別して記録される", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const { f, p, scheduleId } = await setUpPair("sessoutcome");
+  const [externalId, mismatchId, absentId, technicalId] = await createStaleSessions(f, p, scheduleId, 4);
 
   const { context, page } = await openCoachContext(browser, { email: p.coachEmail, password: PASSWORD });
   try {
-    /** ハブを開き、Resolve Manually のダイアログで結果と理由を選んで確定する */
-    const resolve = async (sessionId: string, outcome: string, reason: string) => {
-      await page.goto(hubPath(p, sessionId));
-      await expect(sessionInfo(page)).toContainText("This session’s scheduled end time has passed");
-      await expect(sessionInfo(page).getByRole("button", { name: "End Session" })).toBeDisabled();
-      const dialog = page.getByRole("dialog", { name: "Resolve Session" });
-      await clickUntilVisible(sessionInfo(page).getByRole("button", { name: "Resolve Manually" }), dialog);
-      await dialog.getByRole("combobox").selectOption({ label: outcome });
-      await expect(dialog.getByRole("button", { name: "Resolve" })).toBeDisabled();
+    await test.step("外部のZoom: 実施方法の初期値が外部のZoomになり、理由が必須。実施完了としてチケットを消化する", async () => {
+      const reason = `The app call would not connect, so we used my Zoom (${f.tag}).`;
+      const dialog = await openEndSession(page, p, externalId);
+      await expect(dialog.getByTestId("session-outcome-evidence")).toContainText("You did not join the in-app call");
+      await expect(outcomeRadio(dialog, COMPLETED)).toBeChecked();
+      await expect(dialog.getByRole("radio", { name: /^External Zoom/ })).toBeChecked();
+      await expect(dialog).toContainText("Please note why the app call couldn’t be used.");
+      await expect(recordButton(dialog)).toBeDisabled();
       await dialog.getByRole("textbox").fill(reason);
-      await dialog.getByRole("button", { name: "Resolve" }).click();
-    };
-
-    await test.step("実施完了（アプリ外で実施）: 結果画面へ移り、チケットを1回消化する", async () => {
-      const reason = `Conducted over a direct Zoom call (${f.tag}).`;
-      await resolve(completedId, "Completed (conducted outside the app)", reason);
-      await expect(page).toHaveURL(new RegExp(`${hubPath(p, completedId)}/result$`));
-      await expect(page.getByText(reason)).toBeVisible();
-      const { data } = await f.admin.from("com_t_session").select("status, completion_result, status_note").eq("session_id", completedId).single();
-      expect(data).toMatchObject({ status: 2, completion_result: 1, status_note: reason });
+      await recordButton(dialog).click();
+      await expect(page).toHaveURL(new RegExp(`${hubPath(p, externalId)}/result$`));
+      await expect(page.getByText("Held on an external Zoom")).toBeVisible();
+      const { data } = await f.admin.from("com_t_session").select("status, completion_result, conducted_via, status_note").eq("session_id", externalId).single();
+      expect(data).toMatchObject({ status: 2, completion_result: 1, conducted_via: 2, status_note: reason });
       expect(await usedSessions(f, p)).toBe(1);
     });
 
-    await test.step("無断欠席: 結果画面へ移り、チケットは消化しない", async () => {
-      await resolve(noShowId, "No-show (the student never showed up)", `The student never showed up (${f.tag}).`);
-      await expect(page).toHaveURL(new RegExp(`${hubPath(p, noShowId)}/result$`));
-      await expect(page.getByText("No-show", { exact: true }).first()).toBeVisible();
-      const { data } = await f.admin.from("com_t_session").select("status, completion_result").eq("session_id", noShowId).single();
-      expect(data).toMatchObject({ status: 2, completion_result: 3 });
-      expect(await usedSessions(f, p)).toBe(1);
+    await test.step("推定と違う結果: 通話の記録が無いのにアプリ内で実施完了とすると理由が必須になり、推定と違う印が付く", async () => {
+      const dialog = await openEndSession(page, p, mismatchId);
+      await dialog.getByRole("radio", { name: "In the app" }).check();
+      await expect(dialog).toContainText("This is different from the in-app call record");
+      await expect(recordButton(dialog)).toBeDisabled();
+      await dialog.getByRole("textbox").fill(`My join was not recorded (${f.tag}).`);
+      await recordButton(dialog).click();
+      await expect(page).toHaveURL(new RegExp(`${hubPath(p, mismatchId)}/result$`));
+      const { data } = await f.admin.from("com_t_session").select("completion_result, conducted_via, outcome_mismatch").eq("session_id", mismatchId).single();
+      expect(data).toMatchObject({ completion_result: 1, conducted_via: 1, outcome_mismatch: true });
+      expect(await usedSessions(f, p)).toBe(2);
     });
 
-    await test.step("コーチの欠席: キャンセル（チケット返還）になり、生徒概要へ戻り、生徒へ通知する", async () => {
-      await resolve(missedId, "I missed this session (cancels it — the student's ticket is refunded)", `I was sick and missed the session (${f.tag}).`);
+    await test.step("コーチの欠席: キャンセル（返還）になり、生徒概要へ戻り、生徒へ通知する", async () => {
+      const dialog = await openEndSession(page, p, absentId);
+      await outcomeRadio(dialog, COACH_ABSENT).check();
+      await expect(dialog.getByRole("radio", { name: "In the app" })).toHaveCount(0);
+      await expect(recordButton(dialog)).toBeDisabled();
+      await dialog.getByRole("textbox").fill(`I was sick and missed the session (${f.tag}).`);
+      await recordButton(dialog).click();
       await expect(page).toHaveURL(new RegExp(`/students/${p.studentId}$`));
-      const { data } = await f.admin
-        .from("com_t_session").select("status, cancel_category, ticket_refunded").eq("session_id", missedId).single();
+      const { data } = await f.admin.from("com_t_session").select("status, cancel_category, ticket_refunded").eq("session_id", absentId).single();
       expect(data).toMatchObject({ status: 3, cancel_category: 2, ticket_refunded: true });
-      expect(await usedSessions(f, p)).toBe(1);
-      const { count } = await f.admin
-        .from("com_t_notification").select("*", { count: "exact", head: true })
-        .eq("user_id", p.studentId).eq("notification_type", "SESSION_CANCELLED_BY_COACH");
-      expect(count).toBe(1);
+      expect(await usedSessions(f, p)).toBe(2);
+      expect(await coachCancelNotices(f, p)).toBe(1);
     });
+
+    await test.step("通信トラブル等: コーチの欠席とは別の区分のキャンセル（返還）になり、生徒へは通知しない", async () => {
+      const dialog = await openEndSession(page, p, technicalId);
+      await outcomeRadio(dialog, TECHNICAL).check();
+      await dialog.getByRole("textbox").fill(`Neither the app call nor Zoom worked (${f.tag}).`);
+      await recordButton(dialog).click();
+      await expect(page).toHaveURL(new RegExp(`/students/${p.studentId}$`));
+      const { data } = await f.admin.from("com_t_session").select("status, cancel_category, ticket_refunded").eq("session_id", technicalId).single();
+      expect(data).toMatchObject({ status: 3, cancel_category: 6, ticket_refunded: true });
+      expect(await usedSessions(f, p)).toBe(2);
+      expect(await coachCancelNotices(f, p)).toBe(1);
+    });
+
+    await test.step("履歴: 4件ともコーチの記録として残る", async () => {
+      const { data } = await f.admin
+        .from("com_t_session_outcome_history").select("session_id, action, outcome, ticket_action")
+        .in("session_id", [externalId, mismatchId, absentId, technicalId]);
+      expect(data).toHaveLength(4);
+      expect(data?.every((row) => row.action === "recorded")).toBe(true);
+      expect(data?.filter((row) => row.ticket_action === "consumed")).toHaveLength(2);
+    });
+  } finally {
+    await context.close();
+  }
+});
+
+test("開始予定より前に End Session を押すと、記録できない旨を表示してダイアログを開かない", async ({ browser }) => {
+  const { f, p } = await setUpPair("sessbefore");
+  const { data: upcoming } = await f.admin
+    .from("com_t_session").select("session_id").eq("ticket_id", p.ticketId).eq("status", 1)
+    .gt("start_datetime", new Date().toISOString()).order("start_datetime").limit(1).single();
+  if (!upcoming) throw new Error("今後のセッションが作られていません");
+
+  const { context, page } = await openCoachContext(browser, { email: p.coachEmail, password: PASSWORD });
+  try {
+    await page.goto(hubPath(p, upcoming.session_id));
+    const notice = sessionInfo(page).getByText(/You can record the outcome once the session has started/);
+    await clickUntilVisible(sessionInfo(page).getByRole("button", { name: "End Session" }), notice);
+    await expect(page.getByRole("dialog", { name: "End Session" })).toHaveCount(0);
   } finally {
     await context.close();
   }

@@ -6,6 +6,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { focusDialogContent } from "@gabby/lib/components/common/dialogFocus"
 
 const Sheet = SheetPrimitive.Root
 
@@ -56,12 +57,14 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
+>(({ side = "right", className, children, onOpenAutoFocus, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <SheetPrimitive.Content
       ref={ref}
-      className={cn(sheetVariants({ side }), className)}
+      // 開いた時は中の要素（×ボタン等）にフォーカスせず枠にフォーカスする。特定の要素に当てる場合はその要素に autoFocus を付ける
+      onOpenAutoFocus={onOpenAutoFocus ?? focusDialogContent}
+      className={cn(sheetVariants({ side }), "outline-none", className)}
       {...props}
     >
       <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">

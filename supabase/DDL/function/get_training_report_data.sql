@@ -1,6 +1,6 @@
 ---------------------------------------------
 -- トレーニングレポート(PDF)の掲載データ取得 (2026-10-01 追加)
--- 前提: function/get_sprint_level_as_of.sql, table/self_t_word_summary.sql, table/self_t_sprint_summary.sql,
+-- 前提: function/get_sprint_level_as_of.sql, table/com_m_user_legal.sql, table/self_t_word_summary.sql, table/self_t_sprint_summary.sql,
 --       table/com_t_session.sql（ステータス簡素化パッチまで）, table/com_t_contract_training_report.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】
@@ -20,6 +20,8 @@
 --   live: ライブセッション付き契約の受講状況（Blueprintのみの契約はNULL）。
 --     completed: 実施（正常終了・早期終了）/ no_show: 生徒の欠席 / late_cancel: 生徒の直前キャンセル（返還なし）
 --   comments: コーチからのコメント（下書き・確定の両方。PDF側で下書きを区別して表示する）
+--   student_name: 正式な氏名（com_m_user_legal、日本語の書面のため「姓 名」。並べ方は
+--     packages/lib/userLegal/formatLegalName.ts と同じ）。未登録の場合は画面の名前（user_name）。(2026-10-13 変更)
 --
 -- 【呼び出し元】
 -- apps/admin から createAdminClient()（service_role）経由でのみ呼ぶ。
@@ -34,12 +36,13 @@ RETURNS jsonb AS $$
             (l.start_date AT TIME ZONE public.reporting_timezone())::date AS from_date,
             (l.end_date AT TIME ZONE public.reporting_timezone())::date AS to_date,
             LEAST(l.end_date, NOW()) AS level_end_at,
-            u.user_name,
+            COALESCE(NULLIF(concat_ws(' ', btrim(ul.last_name), btrim(ul.first_name)), ''), u.user_name) AS student_name,
             COALESCE(u.timezone, 'Asia/Tokyo') AS timezone,
             c.contract_id, c.contract_name, c.plan_name, cl.client_name,
             t.ticket_id, t.total_sessions
         FROM public.com_t_user_license l
         JOIN public.com_m_user u ON u.id = l.user_id
+        LEFT JOIN public.com_m_user_legal ul ON ul.user_id = l.user_id
         JOIN public.com_m_contract c ON c.contract_id = l.contract_id
         JOIN public.com_m_client cl ON cl.client_id = c.client_id
         LEFT JOIN public.com_t_user_session_ticket t ON t.license_id = l.license_id
@@ -78,7 +81,7 @@ RETURNS jsonb AS $$
             'start_date', lic.start_date,
             'end_date', lic.end_date,
             'student_id', lic.user_id,
-            'student_name', lic.user_name,
+            'student_name', lic.student_name,
             'contract_id', lic.contract_id,
             'contract_name', lic.contract_name,
             'plan_name', lic.plan_name,
@@ -145,7 +148,7 @@ RETURNS jsonb AS $$
                 WHERE r.ticket_id = lic.ticket_id
             )
         )
-        ORDER BY lic.user_name
+        ORDER BY lic.student_name
     ), '[]'::jsonb)
     FROM lic;
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;

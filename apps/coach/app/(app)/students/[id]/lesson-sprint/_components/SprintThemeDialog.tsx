@@ -39,7 +39,6 @@ export function SprintThemeDialog({ entry, open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        onOpenAutoFocus={(e) => e.preventDefault()}
         className="sm:max-w-md border-none bg-white p-6 shadow-2xl rounded-2xl text-slate-900 max-h-[85vh] overflow-y-auto"
       >
         {entry ? (

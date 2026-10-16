@@ -10,6 +10,7 @@ import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getUtcOffsetMinutes, shiftWeeklyMinute } from '@gabby/lib/date/date';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
+import { formatUtcOffset } from '@gabby/lib/date/timezone';
 import { CoachAvailabilitySlot, DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
@@ -115,18 +116,6 @@ function findUpcomingOffsetChange(timezone: string, withinDays: number): { date:
   return null;
 }
 
-/** Derives a "UTC+09:00" style offset label for an IANA timezone name (DST-aware). */
-function getUtcOffsetLabel(timezone: string): string {
-  try {
-    const parts = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'longOffset' }).formatToParts(new Date());
-    const raw = parts.find((p) => p.type === 'timeZoneName')?.value ?? '';
-    if (!raw) return '';
-    return raw === 'GMT' ? 'UTC+00:00' : raw.replace('GMT', 'UTC');
-  } catch {
-    return '';
-  }
-}
-
 export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }: AvailabilityViewProps) {
   const timezone = useTimezone();
   // Availability is stored in UTC so students always see the same times. The grid shows it in the coach's
@@ -145,7 +134,7 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
     () => timezones.find((tz) => tz.timezone === timezone)?.display_name_en ?? timezone,
     [timezones, timezone]
   );
-  const offsetLabel = useMemo(() => getUtcOffsetLabel(timezone), [timezone]);
+  const offsetLabel = useMemo(() => formatUtcOffset(timezone) ?? '', [timezone]);
 
   const isDirty = !setsEqual(selection, originalSelection);
   const previewRanges = useMemo(() => mergeSelectionToRanges(selection), [selection]);
@@ -265,10 +254,14 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-          <p className="text-xs text-slate-600">
+        <div
+          className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 ${
+            slots.length === 0 ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-slate-50'
+          }`}
+        >
+          <p className={`text-xs ${slots.length === 0 ? 'font-bold text-amber-800' : 'text-slate-600'}`}>
             {slots.length === 0
-              ? 'You have no availability yet. Students cannot send you matching requests until you add some.'
+              ? "You have no availability yet. You will not appear in the students' coach search until you add some."
               : `${confirmedAt ? `Last reviewed ${formatDateEn(confirmedAt, timezone)}.` : 'Not reviewed yet.'}${isReviewDue ? ' Please check that these times still work for you.' : ''}`}
           </p>
           {slots.length > 0 && (

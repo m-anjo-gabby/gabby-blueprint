@@ -7,16 +7,18 @@ import { RotateCcw, Users, X } from 'lucide-react';
 import { CoachCard, CoachSlotRelation } from './CoachCard';
 import { CoachSearchFilters } from './CoachSearchFilters';
 import { RequestDialog } from './RequestDialog';
-import { cancelMatchingRequest } from '@/actions/matchingAction';
+import { withdrawMatchingRequest } from '@/actions/matchingAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { CoachBrowseItem, SlotStatusItem } from '@gabby/types/matching';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { CountryMaster } from '@gabby/types/country';
+import { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { matchesCoachSpecialtyFilter } from '@gabby/lib/coachSpecialty/tags';
 import { LiveSessionContractSummary, LiveSessionTicketSummary } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
+import { convertWeeklyTimeZone, formatDateTimeByZone } from '@gabby/lib/date/date';
 import { ShellSectionTitle } from '@/components/shell/ShellPage';
 import { CoachMatchingPageHeader } from './CoachMatchingSkeleton';
 import { Button } from '@/components/ui/button';
@@ -30,6 +32,7 @@ interface CoachMatchingViewProps {
   initialSlots: SlotStatusItem[];
   coaches: CoachBrowseItem[];
   countries: CountryMaster[];
+  specialties: CoachSpecialtyMaster[];
 }
 
 const STATUS_BADGE: Record<SlotStatusItem['status'], { label: string; className: string }> = {
@@ -42,7 +45,7 @@ function formatTimeRange(startTime: string, endTime: string): string {
   return `${startTime.slice(0, 5)} - ${endTime.slice(0, 5)}`;
 }
 
-export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, countries }: CoachMatchingViewProps) {
+export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, countries, specialties }: CoachMatchingViewProps) {
   const studentTimezone = useTimezone();
   const router = useRouter();
   const [isSwitching, startSwitch] = useTransition();
@@ -59,6 +62,7 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
   // --- コーチ検索フィルター（コーチ名・曜日・大まかな時間帯） ---
   const [selectedDays, setSelectedDays] = useState<Set<DayOfWeek>>(new Set());
   const [selectedTimeBuckets, setSelectedTimeBuckets] = useState<Set<string>>(new Set());
+  const [selectedSpecialties, setSelectedSpecialties] = useState<Set<string>>(new Set());
   const [nameQuery, setNameQuery] = useState('');
 
   const { showToast } = useToast();
@@ -66,7 +70,8 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
 
   const unmatchedSlots = slots.filter((s) => s.status === 'unmatched');
 
-  const hasFilter = selectedDays.size > 0 || selectedTimeBuckets.size > 0 || nameQuery.trim() !== '';
+  const hasFilter =
+    selectedDays.size > 0 || selectedTimeBuckets.size > 0 || selectedSpecialties.size > 0 || nameQuery.trim() !== '';
 
   // 曜日・時間帯で絞り込み中は、条件に一致する枠が多いコーチを上に並べる（同数なら元の並び順を保つ）
   const filteredCoaches = useMemo(() => {
@@ -75,6 +80,7 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
 
     const matched = coaches.flatMap((coach) => {
       if (trimmedQuery && !coach.user_name.toLowerCase().includes(trimmedQuery)) return [];
+      if (!matchesCoachSpecialtyFilter(coach.specialty_codes, selectedSpecialties, specialties)) return [];
       if (!hasSlotFilter) return [{ coach, matchCount: 0 }];
 
       const matchCount = coach.availability.filter((slot) => {
@@ -92,7 +98,7 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
 
     if (hasSlotFilter) matched.sort((a, b) => b.matchCount - a.matchCount);
     return matched.map(({ coach }) => coach);
-  }, [coaches, selectedDays, selectedTimeBuckets, nameQuery, studentTimezone]);
+  }, [coaches, selectedDays, selectedTimeBuckets, selectedSpecialties, specialties, nameQuery, studentTimezone]);
 
   // コーチごとの自分の枠の状況（承認待ち・担当中）。カード上で重複リクエストに気付けるようにする
   const slotRelationsByCoach = useMemo(() => {
@@ -124,9 +130,19 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
     });
   };
 
+  const handleToggleSpecialty = (code: string) => {
+    setSelectedSpecialties((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  };
+
   const handleClearFilter = () => {
     setSelectedDays(new Set());
     setSelectedTimeBuckets(new Set());
+    setSelectedSpecialties(new Set());
     setNameQuery('');
   };
 
@@ -134,17 +150,19 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
     setSlots((prev) => prev.map((s) => (s.slot_no === slotNo ? { ...s, ...patch } : s)));
   };
 
-  const handleCancel = async (slot: SlotStatusItem) => {
+  const handleWithdraw = async (slot: SlotStatusItem) => {
     if (!slot.request_id) return;
-    const ok = await showConfirm('リクエストを取消しますか？', 'このリクエストを取消して、別のコーチに送り直すことができます。', {
-      variant: 'danger',
-    });
+    const ok = await showConfirm(
+      'リクエストを取り下げますか？',
+      `${slot.coach_name ?? 'コーチ'}へのリクエストを取り下げます。コーチに取り下げたことが通知されます。取り下げた後は、別のコーチや時間帯でリクエストし直せます。`,
+      { variant: 'danger', confirmText: '取り下げる', cancelText: 'やめる' }
+    );
     if (!ok) return;
 
     const requestId = slot.request_id;
     setCancellingSlotNo(slot.slot_no);
     startCancelTransition(async () => {
-      const result = await cancelMatchingRequest(requestId);
+      const result = await withdrawMatchingRequest(requestId);
       if (!result.success) {
         showToast(result.message, 'error');
         return;
@@ -157,9 +175,11 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
         start_time: null,
         end_time: null,
         request_id: null,
+        expires_at: null,
         reject_reason: null,
+        last_request_expired: false,
       });
-      showToast('リクエストを取消しました', 'success');
+      showToast('リクエストを取り下げました', 'success');
     });
   };
 
@@ -203,6 +223,19 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                     );
                   })()}
 
+                  {slot.status === 'pending' && slot.expires_at && (
+                    <p className="text-[11px] text-ink-muted">
+                      コーチの回答期限: {formatDateTimeByZone(slot.expires_at, studentTimezone, false)}
+                      （期限までに回答が無い場合、リクエストは無効になります）
+                    </p>
+                  )}
+
+                  {slot.status === 'unmatched' && slot.last_request_expired && (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-control px-2.5 py-1.5">
+                      前回のリクエストは、コーチの回答期限（24時間）を過ぎたため無効になりました。別のコーチや時間帯でもリクエストできます。
+                    </p>
+                  )}
+
                   {slot.status === 'unmatched' && slot.reject_reason && (
                     <p className="text-[11px] text-rose-600 bg-rose-50 border border-rose-100 rounded-control px-2.5 py-1.5">
                       前回否認理由: {slot.reject_reason}
@@ -214,13 +247,13 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleCancel(slot)}
+                      onClick={() => handleWithdraw(slot)}
                       pending={isCancelling && cancellingSlotNo === slot.slot_no}
                       disabled={isCancelling}
                       icon={<X />}
                       className="h-auto gap-1 px-0 py-0 text-[11px] font-bold text-ink-subtle hover:bg-transparent hover:text-rose-600 [&_svg]:size-3"
                     >
-                      リクエストを取消す
+                      リクエストを取り下げる
                     </Button>
                   )}
                 </div>
@@ -243,6 +276,9 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                 onToggleDay={handleToggleDay}
                 selectedTimeBuckets={selectedTimeBuckets}
                 onToggleTimeBucket={handleToggleTimeBucket}
+                specialties={specialties}
+                selectedSpecialties={selectedSpecialties}
+                onToggleSpecialty={handleToggleSpecialty}
                 nameQuery={nameQuery}
                 onChangeNameQuery={setNameQuery}
                 onClear={handleClearFilter}
@@ -287,10 +323,12 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                     </Button>
                   </motion.div>
                 ) : (
-                  <div className="grid gap-3 lg:grid-cols-2">
+                  // 列幅を画面幅に収める（列の指定が無いと、省略表示する長い名前の幅まで列が広がり、カードが枠からはみ出す）
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                     {filteredCoaches.map((coach) => (
                       <motion.div
                         key={coach.user_id}
+                        className="min-w-0"
                         layout
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -299,6 +337,8 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                         <CoachCard
                           coach={coach}
                           countries={countries}
+                          specialties={specialties}
+                          selectedSpecialties={selectedSpecialties}
                           onRequest={setRequestTarget}
                           selectedDays={selectedDays}
                           selectedTimeBuckets={selectedTimeBuckets}

@@ -102,7 +102,7 @@ export async function updateStudentSprintLevel(
       return { success: false, message: 'レベルの更新に失敗しました。' };
     }
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     logger.info('admin:update_student_level_success', 'Student sprint level updated', {
       ...ctx,
       payload: { userId, questionType, newLevel, newStage },
@@ -160,7 +160,7 @@ export async function setStudentSprintStage(
       return { success: false, message: 'ステージの更新に失敗しました。' };
     }
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     logger.info('admin:set_student_stage_success', 'Student stage set', {
       ...ctx,
       payload: { userId, targetStage, newStage },
@@ -200,7 +200,7 @@ export async function setStudentSprintLevelManaged(
       return { success: false, message: 'レベル管理の設定に失敗しました。' };
     }
 
-    revalidatePath('/users');
+    revalidatePath('/users', 'layout');
     logger.info('admin:set_student_level_managed_success', 'Student sprint level management updated', {
       ...ctx,
       payload: { userId, levelManaged },

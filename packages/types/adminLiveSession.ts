@@ -1,4 +1,6 @@
-import type { StudentLiveSessionContractSummary } from './coachStudent';
+import type { CoachSessionListItem, StudentLiveSessionContractSummary } from './coachStudent';
+import type { CancelCategory, CompletionResult, ConductedVia, SessionOutcome, SessionStatus } from './session';
+import type { TimezoneNames } from './timezone';
 
 /**
  * ----------------------------------------------
@@ -33,6 +35,8 @@ export interface AdminScheduleSlotSummary {
   end_time: string;
   /** 曜日・時刻の解釈基準のタイムゾーン（2026-10-06以降の成立分は生徒の申請時のタイムゾーン） */
   schedule_timezone: string;
+  /** schedule_timezone の名称（マスタに無い場合は null。表示は短い名前を使う） */
+  schedule_timezone_names: TimezoneNames | null;
   coach_id: string;
   coach_name: string;
   status: number; // com_m_lesson_schedule.status (1:active 0:paused 9:terminated)
@@ -78,3 +82,56 @@ export type ReleaseLessonScheduleSlotResult =
 export type AdminSessionActionResult =
   | { success: true }
   | { success: false; message: string };
+
+/** アドミンのライブセッション管理のセッション一覧1行（実施結果の確認・修正に使う項目を加えたもの） */
+export interface AdminSessionListItem extends CoachSessionListItem {
+  conducted_via: ConductedVia | null;
+  outcome_mismatch: boolean;
+}
+
+/** 「実施記録」一覧（/live-sessions/records、admin_get_session_records RPC）の1行 */
+export interface AdminSessionRecord {
+  session_id: string;
+  student_id: string;
+  student_name: string;
+  coach_id: string;
+  coach_name: string;
+  start_datetime: string;
+  end_datetime: string;
+  status: SessionStatus;
+  completion_result: CompletionResult | null;
+  cancel_category: CancelCategory | null;
+  conducted_via: ConductedVia | null;
+  suggested_outcome: CompletionResult | null;
+  outcome_mismatch: boolean;
+  status_note: string | null;
+  cancel_reason: string | null;
+  /** アドミンが一度でも修正・確認した */
+  is_corrected: boolean;
+  /** 要確認（未記録・早期終了・欠席・外部のZoom・推定と違う・実施できなかった、かつアドミンが未確認） */
+  needs_review: boolean;
+}
+
+/** 結果の修正ダイアログに渡す対象（管理画面の一覧・実施記録の一覧の両方から開く） */
+export interface AdminOutcomeTarget {
+  session_id: string;
+  student_name: string;
+  coach_name: string;
+  start_datetime: string;
+  status: SessionStatus;
+  completion_result: CompletionResult | null;
+  cancel_category: CancelCategory | null;
+  conducted_via: ConductedVia | null;
+}
+
+/** 実施結果の記録・修正の履歴1行（com_t_session_outcome_history） */
+export interface AdminSessionOutcomeHistoryEntry {
+  history_id: string;
+  action: 'recorded' | 'corrected';
+  outcome: SessionOutcome;
+  conducted_via: ConductedVia | null;
+  ticket_action: 'consumed' | 'restored' | null;
+  reason: string | null;
+  performed_by_name: string | null;
+  performed_at: string;
+}

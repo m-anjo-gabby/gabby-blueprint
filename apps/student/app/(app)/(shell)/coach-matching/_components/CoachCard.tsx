@@ -5,6 +5,9 @@ import { GraduationCap, IdCard, CalendarClock } from 'lucide-react';
 import { CoachBrowseItem, SlotMatchStatus } from '@gabby/types/matching';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { CountryMaster } from '@gabby/types/country';
+import { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
+import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyTags';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
@@ -12,6 +15,8 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getCoachIntroVideoUrl } from '@gabby/lib/coachProfile/getCoachIntroVideoUrl';
 import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
 import { CoachProfileDialog } from '@gabby/lib/components/common/CoachProfileDialog';
+import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
+import { toCoachRatingDisplay } from '@/constants/coachRating';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +36,9 @@ const RELATION_BADGE: Record<CoachSlotRelation['status'], { label: string; class
 interface CoachCardProps {
   coach: CoachBrowseItem;
   countries: CountryMaster[];
+  specialties: CoachSpecialtyMaster[];
+  /** 絞り込み中の専門（当てはまらない専門のタグを薄く表示する） */
+  selectedSpecialties: Set<string>;
   onRequest: (coach: CoachBrowseItem) => void;
   selectedDays: Set<DayOfWeek>;
   selectedTimeBuckets: Set<string>;
@@ -57,6 +65,8 @@ function formatCoachSinceLabel(dateStr: string | null): string | null {
 export function CoachCard({
   coach,
   countries,
+  specialties,
+  selectedSpecialties,
   onRequest,
   selectedDays,
   selectedTimeBuckets,
@@ -91,6 +101,13 @@ export function CoachCard({
 
   const visibleSlots = showAllSlots ? sortedSlots : sortedSlots.slice(0, VISIBLE_SLOT_COUNT);
   const hiddenSlotCount = sortedSlots.length - visibleSlots.length;
+
+  const rating = toCoachRatingDisplay(coach.rating);
+
+  const specialtyTags = useMemo(
+    () => toCoachSpecialtyTags(coach.specialty_codes, specialties, 'ja'),
+    [coach.specialty_codes, specialties]
+  );
 
   const country = useMemo(
     () => countries.find((c) => c.country_code === coach.country_code) ?? null,
@@ -133,6 +150,13 @@ export function CoachCard({
             {country && coach.teaching_years !== null && <span aria-hidden>・</span>}
             {coach.teaching_years !== null && <span className="shrink-0">指導歴 {coach.teaching_years}年</span>}
           </div>
+          {rating && (
+            <div className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-subtle">
+              <StarRatingDisplay value={rating.value} size={12} label={rating.ariaLabel} />
+              <span className="font-bold text-ink tabular-nums">{rating.valueLabel}</span>
+              <span>（{rating.countLabel}）</span>
+            </div>
+          )}
         </div>
         {/* プロフィール確認を促す目印。モバイルは名前・国名の幅を優先してアイコンのみ、sm以上は文言付き */}
         <span
@@ -159,6 +183,8 @@ export function CoachCard({
           })}
         </div>
       )}
+
+      <CoachSpecialtyTags tags={specialtyTags} highlightCodes={selectedSpecialties} />
 
       {coach.introduction && (
         <p className="text-xs text-ink-muted leading-relaxed line-clamp-2">{coach.introduction}</p>
@@ -227,6 +253,8 @@ export function CoachCard({
             jobExperience: coach.job_experience,
             introduction: coach.introduction,
             introVideoUrl: getCoachIntroVideoUrl(coach.intro_video_path),
+            rating,
+            specialties: specialtyTags,
           }}
           labels={{
             closeLabel: '閉じる',

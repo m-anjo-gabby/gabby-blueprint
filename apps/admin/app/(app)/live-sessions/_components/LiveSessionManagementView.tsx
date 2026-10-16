@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { ja, enUS } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
+import { pickTimezoneName } from '@gabby/lib/date/timezone';
 import { Loader2, RefreshCcw, Users, Video, UserPlus, CalendarClock, ListPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -36,14 +37,23 @@ import { CancelSessionDialog } from './dialogs/CancelSessionDialog';
 import { BookSessionDialog } from './dialogs/BookSessionDialog';
 import { MatchCoachDialog } from './dialogs/MatchCoachDialog';
 import { AdjustTargetSessionsDialog } from './dialogs/AdjustTargetSessionsDialog';
+import { CorrectOutcomeDialog } from './dialogs/CorrectOutcomeDialog';
+import { SessionOutcomeFlags } from './SessionOutcomeFlags';
 import {
+  CANCEL_CATEGORY,
   SESSION_STATUS,
   SESSION_NON_ACTIONABLE_STATUSES,
   SESSION_RESULT_STATUSES,
 } from '@gabby/types/session';
 import type { ClientOption } from '@gabby/types/client';
-import type { AdminStudentSummary, AdminScheduleSlotSummary, AdminCoachSummary, AdminContractSummary } from '@gabby/types/adminLiveSession';
-import type { CoachSessionListItem } from '@gabby/types/coachStudent';
+import type {
+  AdminStudentSummary,
+  AdminScheduleSlotSummary,
+  AdminCoachSummary,
+  AdminContractSummary,
+  AdminOutcomeTarget,
+  AdminSessionListItem,
+} from '@gabby/types/adminLiveSession';
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
@@ -53,6 +63,18 @@ function formatContractDate(iso: string, locale: string): string {
 
 function formatSessionDateTime(iso: string, locale: string): string {
   return format(new Date(iso), 'yyyy/MM/dd (E) HH:mm', { locale: locale === 'en' ? enUS : ja });
+}
+
+/**
+ * 実施結果を記録・修正できるセッションか（admin_correct_session_outcome の対象と同じ）。
+ * 開始済みで、未記録のまま終了予定を過ぎた・確定済み・コーチの欠席/通信トラブル等で実施できなかったもの。
+ * 開始前のコーチのキャンセルも cancel_category=COACH だが、開始前のものは start_datetime で除く。
+ */
+function canCorrectOutcome(session: AdminSessionListItem, now: Date): boolean {
+  if (new Date(session.start_datetime) > now) return false;
+  if (session.status === SESSION_STATUS.SCHEDULED) return new Date(session.end_datetime) < now;
+  if (session.status === SESSION_STATUS.COMPLETED) return true;
+  return session.cancel_category === CANCEL_CATEGORY.TECHNICAL || session.cancel_category === CANCEL_CATEGORY.COACH;
 }
 
 interface Props {
@@ -77,7 +99,7 @@ export function LiveSessionManagementView({ clients }: Props) {
 
   const [selectedTicketId, setSelectedTicketId] = useState('');
   const [slots, setSlots] = useState<AdminScheduleSlotSummary[]>([]);
-  const [sessions, setSessions] = useState<CoachSessionListItem[]>([]);
+  const [sessions, setSessions] = useState<AdminSessionListItem[]>([]);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [releasingScheduleId, setReleasingScheduleId] = useState<string | null>(null);
 
@@ -85,7 +107,8 @@ export function LiveSessionManagementView({ clients }: Props) {
   const [sessionTab, setSessionTab] = useState('upcoming');
 
   // 各ダイアログのトリガー状態（フォーム状態・送信処理は各ダイアログコンポーネント自身が持つ）
-  const [cancelTarget, setCancelTarget] = useState<CoachSessionListItem | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<AdminSessionListItem | null>(null);
+  const [outcomeTarget, setOutcomeTarget] = useState<AdminOutcomeTarget | null>(null);
   const [bookTarget, setBookTarget] = useState<AdminScheduleSlotSummary | null>(null);
   const [adjustTarget, setAdjustTarget] = useState<AdminScheduleSlotSummary | null>(null);
   const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
@@ -189,20 +212,40 @@ export function LiveSessionManagementView({ clients }: Props) {
 
   const now = new Date();
   const upcomingSessions = sessions.filter((s) => s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime) > now);
-  const completedSessions = sessions.filter((s) => SESSION_RESULT_STATUSES.includes(s.status));
+  // 終了予定を過ぎても記録されていないセッションも、結果を記録できるよう実施済みタブに並べる
+  const completedSessions = sessions.filter(
+    (s) => SESSION_RESULT_STATUSES.includes(s.status) || (s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime) <= now)
+  );
   // アドミンの変更履歴タブは監査目的のため、コーチ/生徒向けの狭い集合（本人操作の
   // キャンセルのみ）ではなく、起因(cancel_category)を問わず全てのキャンセル済みを見せる
   const changeHistorySessions = sessions.filter((s) => SESSION_NON_ACTIONABLE_STATUSES.includes(s.status));
 
-  const renderSessionList = (list: CoachSessionListItem[], disableActions: boolean) => {
+  const openOutcomeDialog = (session: AdminSessionListItem) => {
+    const student = students.find((s) => s.id === selectedStudentId);
+    setOutcomeTarget({
+      session_id: session.session_id,
+      student_name: student?.user_name ?? '',
+      coach_name: session.coach_name,
+      start_datetime: session.start_datetime,
+      status: session.status,
+      completion_result: session.completion_result,
+      cancel_category: session.cancel_category,
+      conducted_via: session.conducted_via,
+    });
+  };
+
+  const renderSessionList = (list: AdminSessionListItem[], disableActions: boolean) => {
     if (list.length === 0) {
       return <p className="text-xs text-slate-400 py-4">{t('noSessionsInList')}</p>;
     }
     return (
       <ul className="space-y-1.5 max-h-96 overflow-y-auto">
         {list.map((session) => {
-          const badge = getAdminSessionStatusBadge(session, tStatus);
-          const isScheduled = session.status === SESSION_STATUS.SCHEDULED;
+          const isUnrecorded = session.status === SESSION_STATUS.SCHEDULED && new Date(session.end_datetime) <= now;
+          const badge = isUnrecorded
+            ? { label: tStatus('unrecorded'), className: 'bg-amber-50 text-amber-700 border-amber-200' }
+            : getAdminSessionStatusBadge(session, tStatus);
+          const isScheduled = session.status === SESSION_STATUS.SCHEDULED && !isUnrecorded;
           return (
             <li
               key={session.session_id}
@@ -211,8 +254,21 @@ export function LiveSessionManagementView({ clients }: Props) {
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-slate-700">{formatSessionDateTime(session.start_datetime, locale)}</p>
                 <p className="text-[11px] text-slate-400">{t('assignedCoachInline', { name: session.coach_name })}</p>
+                <SessionOutcomeFlags conductedVia={session.conducted_via} outcomeMismatch={session.outcome_mismatch} className="mt-1" />
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {/* 過去の契約は参照のみ（結果の修正は実施記録の一覧から行う） */}
+                {canCorrectOutcome(session, now) && !disableActions && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-[11px] text-slate-500 hover:text-brand"
+                    onClick={() => openOutcomeDialog(session)}
+                  >
+                    {isUnrecorded ? t('recordOutcomeButton') : t('correctOutcomeButton')}
+                  </Button>
+                )}
                 {isScheduled && !disableActions && (
                   <Button
                     type="button"
@@ -363,12 +419,13 @@ export function LiveSessionManagementView({ clients }: Props) {
                           return (
                             <div
                               key={slot.schedule_id}
+                              data-testid="schedule-slot"
                               className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-slate-100 bg-slate-50/60"
                             >
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-xs font-bold text-slate-700">
-                                    {t('slotLabel', { slotNo: slot.slot_no, day: tDay(DAY_KEYS[slot.day_of_week]), start: slot.start_time.slice(0, 5), end: slot.end_time.slice(0, 5), timezone: slot.schedule_timezone })}
+                                    {t('slotLabel', { slotNo: slot.slot_no, day: tDay(DAY_KEYS[slot.day_of_week]), start: slot.start_time.slice(0, 5), end: slot.end_time.slice(0, 5), timezone: pickTimezoneName(slot.schedule_timezone, slot.schedule_timezone_names, 'short', locale === 'en' ? 'en' : 'ja') })}
                                   </span>
                                   <Badge variant="outline" className={`${statusInfo.className} text-[10px] font-bold`}>
                                     {statusInfo.label}
@@ -457,6 +514,7 @@ export function LiveSessionManagementView({ clients }: Props) {
                         {!isPastContract && unassignedSlotNos.map((slotNo) => (
                           <div
                             key={`unassigned-${slotNo}`}
+                            data-testid="schedule-slot"
                             className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-dashed border-slate-200 bg-white"
                           >
                             <div className="min-w-0">
@@ -517,6 +575,11 @@ export function LiveSessionManagementView({ clients }: Props) {
         </Card>
       )}
 
+      <CorrectOutcomeDialog
+        target={outcomeTarget}
+        onClose={() => setOutcomeTarget(null)}
+        onCorrected={() => loadTicketDetail(selectedTicketId)}
+      />
       <CancelSessionDialog
         target={cancelTarget}
         onClose={() => setCancelTarget(null)}

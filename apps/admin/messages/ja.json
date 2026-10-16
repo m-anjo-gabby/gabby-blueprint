@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Gabby Blueprint English",
+    "appName": "Gabby Blueprint",
     "confirm": "確認",
     "cancel": "キャンセル",
     "close": "閉じる",
@@ -27,14 +27,30 @@
       "searchPlaceholder": "顧客名で検索...",
       "emptyMessage": "見つかりませんでした。"
     },
+    "list": {
+      "search": "検索",
+      "clear": "条件をクリア",
+      "totalCount": "全 <styled>{count}</styled> 件",
+      "prevPage": "前のページ",
+      "nextPage": "次のページ"
+    },
     "monthPicker": {
       "prevYear": "前年",
       "nextYear": "翌年",
       "yearLabel": "{year}年",
       "months": {
-        "m1": "1月", "m2": "2月", "m3": "3月", "m4": "4月",
-        "m5": "5月", "m6": "6月", "m7": "7月", "m8": "8月",
-        "m9": "9月", "m10": "10月", "m11": "11月", "m12": "12月"
+        "m1": "1月",
+        "m2": "2月",
+        "m3": "3月",
+        "m4": "4月",
+        "m5": "5月",
+        "m6": "6月",
+        "m7": "7月",
+        "m8": "8月",
+        "m9": "9月",
+        "m10": "10月",
+        "m11": "11月",
+        "m12": "12月"
       }
     },
     "monthLabel": "{year}年{month}月",
@@ -153,18 +169,42 @@
     "noIssues": "問題なし",
     "alertBadge": "{label} {count}件",
     "modules": {
-      "clients": { "title": "顧客管理", "desc": "法人・団体アカウントの管理", "countLabel": "登録顧客数", "alertLabel": "有効契約なし" },
-      "contracts": { "title": "契約管理", "desc": "ライセンス発行・有効期限確認", "countLabel": "稼働中の契約", "alertLabel": "期限間近・超過契約" },
-      "users": { "title": "ユーザー管理", "desc": "受講生・講師の権限管理", "countLabel": "総ユーザー数", "alertLabel": "招待対応待ち" },
-      "contents": { "title": "教材管理", "desc": "カリキュラム・コンテンツ更新", "countLabel": "登録教材数", "alertLabel": "非公開教材" },
-      "notice": { "title": "お知らせ管理", "desc": "生徒・顧客への告知配信", "countLabel": "公開中のお知らせ", "alertLabel": "下書き・掲載期限切れ" }
+      "clients": {
+        "title": "顧客管理",
+        "desc": "法人・団体アカウントの管理",
+        "countLabel": "登録顧客数",
+        "alertLabel": "有効契約なし"
+      },
+      "contracts": {
+        "title": "契約管理",
+        "desc": "ライセンス発行・有効期限確認",
+        "countLabel": "稼働中の契約",
+        "alertLabel": "期限間近・超過契約"
+      },
+      "users": {
+        "title": "ユーザー管理",
+        "desc": "受講生・講師の権限管理",
+        "countLabel": "総ユーザー数",
+        "alertLabel": "招待対応待ち"
+      },
+      "contents": {
+        "title": "教材管理",
+        "desc": "カリキュラム・コンテンツ更新",
+        "countLabel": "登録教材数",
+        "alertLabel": "非公開教材"
+      },
+      "notice": {
+        "title": "お知らせ管理",
+        "desc": "生徒・顧客への告知配信",
+        "countLabel": "公開中のお知らせ",
+        "alertLabel": "下書き・掲載期限切れ"
+      }
     }
   },
   "users": {
     "page": {
       "title": "ユーザー管理",
-      "subtitle": "各テナントに所属するユーザーアカウントの作成・編集および権限管理を行います",
-      "loading": "ユーザーデータを読み込み中..."
+      "subtitle": "各テナントに所属するユーザーアカウントの作成・編集および権限管理を行います"
     },
     "table": {
       "user": "ユーザー",
@@ -182,24 +222,42 @@
       "licenseFuture": "[開始待ち]",
       "licenseExpired": "[期限切れ]",
       "notApplicable": "対象外",
-      "stageButton": "ステージ",
       "editButton": "編集",
       "actions": "操作",
       "searchPlaceholder": "検索語句を入力...",
-      "searchButton": "検索",
-      "totalCount": "全 <styled>{count}</styled> 件",
-      "noData": "データが見つかりませんでした。"
-    },
-    "filter": {
+      "noData": "データが見つかりませんでした。",
       "allUserTypes": "すべての区分"
+    },
+    "detail": {
+      "backToList": "ユーザー管理へ戻る",
+      "notFound": "ユーザーが見つかりませんでした。",
+      "tabs": {
+        "basic": "基本情報",
+        "sprint": "スプリント",
+        "specialty": "専門",
+        "matching": "マッチング",
+        "ratings": "評価",
+        "legal": "正式氏名"
+      },
+      "basic": {
+        "title": "基本情報",
+        "invitingNote": "招待中（本登録前）のため編集できません。必要に応じて招待メールを再送してください。",
+        "majorChangeTitle": "種別・所属顧客を変更しますか？",
+        "majorChangeBody": "種別や所属顧客を変えると、利用できる機能・ライセンス・表示される情報が変わります。内容を確認のうえ保存してください。",
+        "licenseTitle": "ライセンス",
+        "manageLicense": "管理",
+        "licenseAfterRegistration": "本登録の完了後に割り当てられます。",
+        "accountTitle": "アカウント",
+        "userId": "ユーザーID",
+        "copyId": "ユーザーIDをコピー",
+        "lastSignIn": "最終ログイン",
+        "neverSignedIn": "未ログイン"
+      }
     },
     "form": {
       "createButton": "新規登録",
-      "editButton": "編集",
       "confirmTitle": "内容の確認",
       "createTitle": "新規ユーザー登録",
-      "editTitle": "ユーザー基本情報編集",
-      "idLabel": "ユーザーID (UUID)",
       "idCopied": "IDをコピーしました",
       "creationModeLabel": "作成方法",
       "creationModeInvite": "招待メールを送信",
@@ -318,7 +376,8 @@
       "levelManagedOn": "生徒は到達レベルの次のレベルまで選択できます。",
       "levelManagedOff": "生徒はすべてのレベルを選択できます（コーチが付かない契約向け）。",
       "toastLevelManagedOn": "レベル管理をオンにしました",
-      "toastLevelManagedOff": "レベル管理をオフにしました"
+      "toastLevelManagedOff": "レベル管理をオフにしました",
+      "notReached": "未到達"
     },
     "bulkImport": {
       "button": "一括登録",
@@ -358,6 +417,96 @@
       "toastProcessError": "処理中にエラーが発生しました",
       "toastClientFetchFailed": "顧客リストの取得に失敗しました",
       "toastContractFetchFailed": "契約情報の取得に失敗しました"
+    },
+    "specialty": {
+      "title": "専門の設定",
+      "description": "生徒のコーチ選択画面とコーチのプロフィールに表示されます（コーチ本人は変更できません）。",
+      "fieldsLabel": "分野（{max}つまで）",
+      "fieldsCount": "{count} / {max}",
+      "skillsLabel": "得意分野（別バッジで表示・上限に数えません）",
+      "loadFailed": "専門を読み込めませんでした。",
+      "toastSaved": "専門を保存しました",
+      "errorTooMany": "分野は{max}つまで選択できます",
+      "errorSave": "専門を保存できませんでした"
+    },
+    "matching": {
+      "title": "マッチング対象",
+      "visible": "生徒のコーチ選択に表示中",
+      "hidden": "生徒のコーチ選択に非表示",
+      "demoNote": "デモコーチのため、デモの生徒にだけ表示されます",
+      "requiredItemsLabel": "プロフィールの必須項目",
+      "requiredItemsComplete": "すべて設定済み",
+      "requiredItemsMissing": "次の項目が未設定です（コーチ本人が設定します）",
+      "acceptingLabel": "コーチ本人の新規受付",
+      "acceptingOn": "受付中",
+      "acceptingOff": "停止中（コーチ本人がOFFにしています）",
+      "suspendLabel": "アドミンによる休止",
+      "suspendDescription": "休止中は生徒のコーチ選択に表示されず、コーチ本人は解除できません。担当中の生徒・確定済みのセッションはそのまま続きます。",
+      "suspendedSince": "{date} から休止中",
+      "noteLabel": "休止の理由（運営の内部メモ。コーチには表示されません）",
+      "notePlaceholder": "例: 10月末まで長期休暇",
+      "loadFailed": "マッチング対象の状態を読み込めませんでした。",
+      "toastSuspended": "マッチングを休止しました",
+      "toastResumed": "マッチングの休止を解除しました",
+      "errorSave": "マッチング対象の設定を保存できませんでした",
+      "items": {
+        "icon": "プロフィールアイコン",
+        "country": "国籍",
+        "teaching_years": "英語指導年数",
+        "education": "学歴",
+        "qualifications": "保有資格",
+        "job_experience": "職務経験",
+        "introduction": "自己紹介",
+        "availability": "空き時間（1件以上）"
+      }
+    },
+    "legal": {
+      "title": "正式氏名",
+      "description": "支払通知書・請求書・トレーニングレポート等の書面に載せる氏名です。画面に表示される名前とは別に管理します。未登録の場合、書面には画面の名前が載ります。",
+      "lastName": "姓",
+      "firstName": "名",
+      "lastNamePlaceholder": "山田",
+      "firstNamePlaceholder": "太郎",
+      "latinDescription": "ローマ字表記（任意）。英語の書面で使います。日本語以外の氏名の場合は空欄にしてください。",
+      "lastNameLatin": "姓（ローマ字）",
+      "firstNameLatin": "名（ローマ字）",
+      "lastNameLatinPlaceholder": "Yamada",
+      "firstNameLatinPlaceholder": "Taro",
+      "previewJa": "日本語の書面",
+      "previewEn": "英語の書面",
+      "previewNotSet": "未登録（画面の名前）",
+      "loadFailed": "正式氏名を読み込めませんでした。",
+      "toastSaved": "正式氏名を保存しました",
+      "toastCleared": "正式氏名の登録を削除しました",
+      "errorSave": "正式氏名を保存できませんでした",
+      "errorFirstNameRequired": "名を入力してください",
+      "errorTooLong": "{max}文字以内で入力してください"
+    },
+    "ratingsPage": {
+      "subtitle": "生徒からの評価と運営へのコメントです。コメントはコーチには公開されません。",
+      "notFound": "コーチが見つかりませんでした。",
+      "overall": "総合評価",
+      "overallNote": "3項目の平均（コーチ・生徒に表示）",
+      "coaching": "コーチング",
+      "friendliness": "親近感",
+      "recommendation": "おすすめ度",
+      "recommendationNote": "単独では表示しない",
+      "ratingCount": "{count}件の評価",
+      "starLabel": "5点満点中{value}点",
+      "noRatings": "評価はまだありません。",
+      "noFeedbackRatings": "コメントのある評価はありません。",
+      "filterAll": "すべて（{count}）",
+      "filterFeedback": "コメントあり（{count}）",
+      "ratedAt": "評価日時",
+      "student": "生徒",
+      "contract": "契約",
+      "average": "平均",
+      "feedback": "運営へのコメント",
+      "source": "登録元",
+      "sourceApp": "生徒アプリ",
+      "sourceLegacy": "移行データ",
+      "sourceInitial": "初期値",
+      "unknownStudent": "（不明）"
     }
   },
   "paymentSettings": {
@@ -433,9 +582,7 @@
       "industryOther": "その他",
       "industryNotSet": "未設定",
       "registeredDateHeader": "登録日",
-      "searchPlaceholder": "顧客名、コードで検索...",
-      "searchButton": "検索",
-      "totalCount": "全 <styled>{count}</styled> 件",
+      "searchPlaceholder": "顧客名で検索...",
       "noData": "顧客データが見つかりませんでした。"
     },
     "form": {
@@ -478,6 +625,7 @@
     "table": {
       "seqHeader": "SEQ",
       "nameHeader": "表示名称（日本語 / 英語）",
+      "shortNameHeader": "短い名前",
       "ianaHeader": "IANAタイムゾーン名",
       "currentTimeHeader": "現地の現在日時",
       "actionsHeader": "操作",
@@ -485,7 +633,6 @@
       "deleteDialogBody": "「<bold>{name}</bold>」を削除してもよろしいですか？ 既にこのタイムゾーンを設定しているユーザーには影響しませんが、選択肢からは表示されなくなります。",
       "deleteConfirm": "削除する",
       "searchPlaceholder": "タイムゾーン名、表示名称で検索...",
-      "totalCount": "全 <styled>{count}</styled> 件",
       "noData": "タイムゾーンデータが見つかりませんでした。",
       "toastDeleted": "タイムゾーンを削除しました",
       "toastDeleteFailed": "削除に失敗しました"
@@ -503,6 +650,11 @@
       "nameJaPlaceholder": "例: 日本（東京）",
       "nameEnLabel": "表示名称（英語）",
       "nameEnPlaceholder": "例: Japan (Tokyo)",
+      "shortNameJaLabel": "短い名前（日本語）",
+      "shortNameJaPlaceholder": "例: 日本時間",
+      "shortNameEnLabel": "短い名前（英語）",
+      "shortNameEnPlaceholder": "例: Japan Time",
+      "shortNameHint": "メールなどで日時に時差と並べて添える名前です（例: 日本時間・UTC+9）。夏時間で変わらない名前にしてください（EST/EDT のような略称は使わない）。",
       "sortNoLabel": "表示順",
       "confirmQuestion": "この内容で{action}してもよろしいですか？",
       "actionCreate": "登録",
@@ -516,6 +668,8 @@
         "ianaRequired": "IANAタイムゾーン名は必須です",
         "nameJaRequired": "表示名称（日本語）は必須です",
         "nameEnRequired": "表示名称（英語）は必須です",
+        "shortNameJaRequired": "短い名前（日本語）は必須です",
+        "shortNameEnRequired": "短い名前（英語）は必須です",
         "sortNoRequired": "表示順を入力してください"
       },
       "toastCreated": "タイムゾーンを登録しました",
@@ -545,13 +699,9 @@
       "editTooltip": "規約を編集",
       "deleteTooltip": "規約を削除",
       "searchPlaceholder": "バージョン名で検索...",
-      "searchButton": "検索",
-      "totalCount": "全 <styled>{count}</styled> 件",
-      "deletingOverlay": "削除しています...",
       "noData": "規約データが見つかりませんでした。",
       "deleteDialogTitle": "規約を削除しますか？",
       "deleteDialogBody": "{termType} のバージョン「<bold>{version}</bold>」を完全に削除します。この操作は取り消すことができません。",
-      "deleteConfirming": "削除中...",
       "deleteConfirm": "はい、削除します",
       "toastDeleted": "規約を削除しました",
       "toastUnexpectedError": "予期せぬエラーが発生しました"
@@ -619,7 +769,8 @@
   "liveSessions": {
     "page": {
       "title": "ライブセッション管理",
-      "subtitle": "顧客・生徒を選択して予約状況を確認し、必要に応じて担当コーチの交代を行います"
+      "subtitle": "顧客・生徒を選択して予約状況を確認し、必要に応じて担当コーチの交代を行います",
+      "recordsLink": "実施記録"
     },
     "status": {
       "scheduled": "予定",
@@ -630,7 +781,9 @@
       "cancelledByCoach": "キャンセル（コーチ）",
       "cancelledLicenseEnded": "キャンセル（契約終了）",
       "cancelledCoachReassigned": "キャンセル（コーチ交代）",
-      "cancelledOther": "キャンセル（アドミン代理）"
+      "cancelledOther": "キャンセル（アドミン代理）",
+      "unrecorded": "未記録",
+      "cancelledTechnical": "キャンセル（通信トラブル等）"
     },
     "scheduleStatus": {
       "active": "稼働中",
@@ -697,7 +850,9 @@
       "toastStudentsFetchFailed": "生徒一覧の取得に失敗しました",
       "toastSlotsFetchFailed": "スケジュール枠の取得に失敗しました",
       "toastReleaseSuccess": "担当コーチの枠を終了しました。生徒は新しいコーチへ再度リクエストできます",
-      "toastReleaseFailed": "処理に失敗しました"
+      "toastReleaseFailed": "処理に失敗しました",
+      "recordOutcomeButton": "結果を記録",
+      "correctOutcomeButton": "結果を修正"
     },
     "cancelDialog": {
       "title": "セッションのキャンセル（代理操作）",
@@ -715,7 +870,7 @@
       "dateLabel": "日付",
       "timeLabel": "開始時刻",
       "timePlaceholder": "時刻",
-      "hint": "※ コーチの空き時間内である必要があります",
+      "hint": "※ コーチ・生徒の既存の予定と重なる日時は予約できません。コーチの空き時間（Weekly Availability）の外でも予約できるため、事前にコーチへ確認してください",
       "close": "閉じる",
       "confirmButton": "予約する",
       "toastSuccess": "セッションを予約しました"
@@ -732,7 +887,7 @@
       "timePlaceholder": "時刻",
       "hint1": "※ 枠番号は週n回契約のうち何コマ目かを表します（既存の枠と重複する番号は使用できません）。",
       "timezoneNote": "※ 曜日・開始時刻は生徒のタイムゾーン（プロフィールの設定）で指定します。夏時間の切り替えをまたいでも、生徒側の時刻は変わりません。",
-      "hint2": "※ コーチの空き時間・既存の予定との重複は自動でチェックされます。",
+      "hint2": "※ コーチ・生徒の既存の予定と重なる回は予約されず、未予約として残ります。コーチの空き時間（Weekly Availability）の外でも成立するため、事前にコーチへ確認してください。",
       "close": "閉じる",
       "confirmButton": "マッチングを成立させる",
       "toastSuccess": "マッチングが成立しました。セッションが予約されました"
@@ -747,6 +902,101 @@
       "close": "閉じる",
       "confirmButton": "変更する",
       "toastSuccess": "総セッション数を変更しました"
+    },
+    "outcome": {
+      "outcomeLegend": "実施結果",
+      "outcomes": {
+        "completed": {
+          "label": "実施完了",
+          "hint": "チケットを1回消化します"
+        },
+        "leftEarly": {
+          "label": "生徒の都合で早く終了",
+          "hint": "チケットを1回消化します"
+        },
+        "noShow": {
+          "label": "生徒の欠席",
+          "hint": "チケットを1回消化します（生徒の画面では「未参加」と表示）"
+        },
+        "coachAbsent": {
+          "label": "コーチの欠席",
+          "hint": "チケットを返還し、振替の対象にします（月次の稼働に数えません）"
+        },
+        "technical": {
+          "label": "通信トラブル等で実施できなかった",
+          "hint": "チケットを返還し、振替の対象にします（月次の稼働に数えません）"
+        }
+      },
+      "suggestedBadge": "通話の記録からの推定",
+      "conductedViaLegend": "実施方法",
+      "viaApp": "アプリ内の通話",
+      "viaExternal": "外部のZoom",
+      "evidenceTitle": "アプリ内の通話の記録",
+      "evidenceLoading": "読み込み中...",
+      "evidenceFailed": "通話の記録を読み込めませんでした",
+      "evidenceNoCoach": "コーチがアプリ内の通話に入った記録はありません",
+      "evidenceTogether": "コーチと生徒が同時に在室した時間: {minutes}分",
+      "evidenceStudentAbsent": "コーチは入室しましたが、生徒が入室した記録はありません",
+      "reasonLabel": "修正の理由（社内メモ）",
+      "reasonPlaceholder": "例: 生徒から「参加していた」と問い合わせがあり、コーチに確認のうえ実施完了に修正",
+      "externalBadge": "外部のZoom",
+      "mismatchBadge": "通話の記録と違う",
+      "correctedBadge": "アドミン確認済み"
+    },
+    "outcomeDialog": {
+      "title": "実施結果の修正",
+      "titleRecord": "実施結果の記録",
+      "description": "{datetime} の {student} さん（担当: {coach}）のセッション",
+      "ticketNote": "チケットの消化・返還は、結果に合わせて自動で調整します。生徒・コーチへの通知は送りません。返還済みの回を実施完了等へ直した場合、その回で予約した振替はそのまま残ります。",
+      "reasonHint": "理由は必須です（変更しない場合も、確認した内容を書いてください）",
+      "historyTitle": "記録・修正の履歴",
+      "historyEmpty": "履歴はありません（この機能の導入前に確定したセッション、または未記録）",
+      "historyRecorded": "{name} が記録",
+      "historyCorrected": "{name} が修正",
+      "ticketConsumed": "チケットを消化",
+      "ticketRestored": "チケットを返還",
+      "close": "閉じる",
+      "submit": "修正する",
+      "submitRecord": "記録する",
+      "toastSuccess": "実施結果を保存しました"
+    },
+    "records": {
+      "title": "実施記録",
+      "subtitle": "開始済みのライブセッションの実施結果を、生徒・コーチを横断して確認し、必要に応じて修正します",
+      "back": "ライブセッション管理へ戻る",
+      "searchPlaceholder": "生徒名・コーチ名で検索...",
+      "reviewFilter": "要確認",
+      "reviewAll": "すべての記録",
+      "reviewOnly": "要確認のみ",
+      "monthFilter": "月",
+      "allMonths": "すべての月",
+      "coachFilter": "コーチ",
+      "allCoaches": "すべてのコーチ",
+      "resultFilter": "結果",
+      "allResults": "すべての結果",
+      "results": {
+        "unrecorded": "未記録",
+        "completed": "実施完了",
+        "left_early": "生徒の都合で早く終了",
+        "no_show": "生徒の欠席",
+        "coach_absent": "コーチの欠席",
+        "technical": "通信トラブル等"
+      },
+      "viaFilter": "実施方法",
+      "allVias": "すべての実施方法",
+      "vias": {
+        "app": "アプリ内の通話",
+        "external": "外部のZoom"
+      },
+      "startHeader": "開始日時（日本時間）",
+      "studentHeader": "生徒",
+      "coachHeader": "コーチ",
+      "resultHeader": "結果",
+      "noteHeader": "メモ",
+      "reviewBadge": "要確認",
+      "recordButton": "記録",
+      "correctButton": "修正",
+      "noData": "該当する記録はありません"
     }
   },
   "monthlyReports": {
@@ -809,12 +1059,12 @@
   "notice": {
     "page": {
       "title": "お知らせ管理",
-      "subtitle": "アプリ内でお知らせする通知・キャンペーン・メンテナンス情報の管理を行います。"
+      "subtitle": "アプリ内でお知らせする通知・キャンペーン・メンテナンス情報の管理を行います。",
+      "createButton": "新規お知らせ作成"
     },
     "table": {
       "searchPlaceholder": "タイトルで検索...",
       "allTypes": "すべての種別",
-      "createButton": "新規お知らせ作成",
       "titleHeader": "タイトル",
       "typeHeader": "種別",
       "targetHeader": "対象",
@@ -835,14 +1085,14 @@
       "editTooltip": "編集",
       "readsTooltip": "既読状況を確認",
       "deleteTooltip": "削除",
-      "paginationSummary": "全 {total} 件中 {shown} 件表示",
       "deleteDialogTitle": "お知らせを削除しますか？",
       "deleteDialogBody": "この操作を取り消すことはできません。このお知らせはユーザー画面から削除されます。",
-      "deleteConfirming": "削除中...",
       "deleteConfirm": "削除する",
       "toastDeleted": "お知らせを削除しました",
       "toastDeleteFailed": "削除に失敗しました",
-      "toastDeleteError": "削除中にエラーが発生しました"
+      "toastDeleteError": "削除中にエラーが発生しました",
+      "homeBadge": "ホーム",
+      "ctaBadge": "ボタン"
     },
     "editor": {
       "loadFailedTitle": "お知らせデータの読み込みに失敗しました。",
@@ -873,8 +1123,6 @@
       "publishedFlagHint": "ONで公開状態、OFFで下書き保存となります",
       "importantFlagLabel": "重要お知らせ (is_important)",
       "importantFlagHint": "「重要」バッジを赤色で強調表示します",
-      "dialogFlagLabel": "ポップアップ表示 (show_dialog)",
-      "dialogFlagHint": "ユーザーログイン時にダイアログで全画面自動ポップアップします",
       "attachmentsTitle": "添付ファイル",
       "addButton": "追加",
       "noAttachments": "添付ファイルはありません",
@@ -891,7 +1139,42 @@
       "toastUpdated": "お知らせを更新しました",
       "toastCreated": "お知らせを作成しました",
       "toastSaveFailed": "保存に失敗しました",
-      "toastSaveError": "保存中にエラーが発生しました"
+      "toastSaveError": "保存中にエラーが発生しました",
+      "displayModeTitle": "表示方法",
+      "displayModePopupLabel": "ポップアップ",
+      "displayModePopupHint": "生徒・コーチがホームを開いた時に1件ずつ表示します。緊急・重要な案内向けです",
+      "displayModeHomeLabel": "ホームのカード",
+      "displayModeHomeHint": "生徒のホームの上部にカードで表示します（閉じるまで表示）。キャンペーン・新機能の案内向けです",
+      "displayModeListLabel": "一覧のみ",
+      "displayModeListHint": "お知らせ一覧と通知センターにだけ表示します",
+      "displayModeCoachNote": "コーチ向けは「ポップアップ」か「一覧のみ」を選べます",
+      "studentExtrasTitle": "見出し画像・行動ボタン（生徒向けのみ）",
+      "imageLabel": "見出し画像（任意）",
+      "imageHint": "PNG・JPEG・WebP、2MBまで。横長（16:9）で表示します",
+      "imageSelect": "画像を選ぶ",
+      "imageRemove": "画像を外す",
+      "imageAlt": "見出し画像のプレビュー",
+      "ctaLabelLabel": "ボタンの文言（任意）",
+      "ctaLabelPlaceholder": "例: 詳しく見る",
+      "ctaUrlLabel": "リンク先",
+      "ctaUrlPlaceholder": "/library または https://...",
+      "ctaUrlHint": "「/」で始まるアプリ内の画面、または「https://」で始まる外部ページ（別タブで開きます）。文言とリンク先は両方入力してください",
+      "errorCtaIncomplete": "行動ボタンは文言とリンク先を両方入力してください",
+      "errorCtaUrl": "リンク先は「/」で始まるアプリ内の画面か「https://」で始まるURLを入力してください",
+      "errorCtaLabelTooLong": "ボタンの文言は{max}文字以内で入力してください",
+      "errorImageType": "画像はPNG・JPEG・WebPのいずれかを選んでください",
+      "errorImageTooLarge": "画像は2MB以下のファイルを選んでください",
+      "errorImageUploadFailed": "見出し画像のアップロードに失敗しました",
+      "previewMobile": "スマホ",
+      "previewDesktop": "PC",
+      "previewDeviceLabel": "表示する端末",
+      "previewCaptionPopup": "ホームを開いた時のポップアップ",
+      "previewCaptionHome": "ホームの上部のカード（「詳しく見る」でポップアップを開く）",
+      "previewCaptionList": "お知らせ一覧で開いた時の表示",
+      "previewStudentNote": "生徒アプリの表示です",
+      "previewCoachNote": "コーチアプリの表示です（英語）",
+      "previewNote": "プレビューではリンク・行動ボタン・添付ファイルは動きません。ポップアップは「ほかのお知らせ」がある状態で表示し、閉じるともう一度表示します。日付は公開開始日です。",
+      "previewNoTitle": "（タイトル未入力）"
     },
     "readsPage": {
       "backToList": "お知らせ一覧に戻る",
@@ -903,11 +1186,9 @@
       "targetUsers": "対象ユーザー",
       "read": "既読",
       "unread": "未読",
-      "allClients": "すべての顧客",
       "allTypes": "すべての区分",
       "studentType": "生徒",
       "coachType": "コーチ",
-      "totalCount": "全 <styled>{count}</styled> 件",
       "userHeader": "ユーザー",
       "clientHeader": "所属顧客",
       "typeHeader": "区分",
@@ -915,7 +1196,11 @@
       "readAtHeader": "既読日時 (JST)",
       "noUsers": "対象ユーザーが見つかりません",
       "unnamed": "名称未設定",
-      "noClient": "未所属"
+      "noClient": "未所属",
+      "searchPlaceholder": "氏名で検索...",
+      "ctaClicked": "ボタンを押した",
+      "ctaRateOfRead": "既読の{rate}%",
+      "ctaClickedAtHeader": "ボタンを押した日時 (JST)"
     }
   },
   "calendarEvents": {
@@ -942,7 +1227,6 @@
     "participantsTable": {
       "participantCount": "参加人数",
       "searchPlaceholder": "氏名で検索...",
-      "totalCount": "全 <styled>{count}</styled> 件",
       "noParticipants": "参加者がまだいません。",
       "unknown": "(不明)",
       "nameHeader": "氏名",
@@ -988,13 +1272,16 @@
       "actionsHeader": "操作",
       "participantsButton": "参加者",
       "manageParticipants": "参加者・アナウンスを管理",
-      "searchPlaceholder": "タイトルで検索...",
-      "totalCount": "全 <styled>{count}</styled> 件",
+      "searchPlaceholder": "タイトル・シリーズ名で検索...",
       "noData": "カレンダーイベントが見つかりませんでした。",
       "deleteDialogTitle": "カレンダーイベントの削除",
       "deleteDialogBody": "「<bold>{title}</bold>」を削除してもよろしいですか？削除後は生徒/コーチのカレンダーから表示されなくなります。",
       "deleteConfirm": "削除する",
-      "seriesPrefix": "シリーズ: {title}"
+      "seriesPrefix": "シリーズ: {title}",
+      "allTypes": "すべての種別",
+      "allStatuses": "すべての公開状態",
+      "toastDeleted": "カレンダーイベントを削除しました",
+      "toastDeleteFailed": "削除に失敗しました"
     },
     "formDialog": {
       "createButton": "新規登録",
@@ -1127,7 +1414,8 @@
         "timeRequired": "開始時刻を入力してください",
         "sessionTitleRequired": "内容を入力してください",
         "clientRequired": "対象の顧客を選択してください"
-      }
+      },
+      "searchPlaceholder": "シリーズ名で検索..."
     }
   },
   "chat": {
@@ -1276,12 +1564,8 @@
       "statusCancelled": "解約済",
       "statusEnded": "期間終了",
       "statusUpcoming": "開始待ち",
-      "statusActive": "稼働中"
-    },
-    "dataTable": {
+      "statusActive": "稼働中",
       "searchPlaceholder": "顧客名・契約名で契約を検索...",
-      "searchButton": "検索",
-      "totalCount": "全 <styled>{count}</styled> 件",
       "noData": "一致する契約情報が見つかりませんでした。"
     },
     "formDialog": {
@@ -1399,7 +1683,8 @@
       "toastDeleted": "契約を削除しました",
       "toastDeleteFailed": "削除に失敗しました",
       "toastNetworkError": "通信エラーが発生しました",
-      "toastPurged": "契約と関連する割当履歴を完全に削除しました"
+      "toastPurged": "契約と関連する割当履歴を完全に削除しました",
+      "back": "戻る"
     },
     "plans": {
       "table": {
@@ -1414,11 +1699,9 @@
         "codeHeader": "プランコード",
         "actionsHeader": "操作",
         "searchPlaceholder": "プラン名、コードで検索...",
-        "totalCount": "全 <styled>{count}</styled> 件",
         "noData": "プランデータが見つかりませんでした。",
         "deleteDialogTitle": "プランの削除",
         "deleteDialogBody": "プラン「<bold>{name}</bold>」を削除してもよろしいですか？既にこのプランを選択して作成された契約には影響しません（選択肢から消えるのみです）。",
-        "cancel": "キャンセル",
         "deleteConfirm": "削除する",
         "toastDeleted": "プランを削除しました",
         "toastDeleteFailed": "削除に失敗しました"
@@ -1508,18 +1791,19 @@
       },
       "list": {
         "searchPlaceholder": "タイトル・本文で検索...",
-        "filterPlaceholder": "区分で絞り込み",
         "allTypes": "すべての区分",
         "emptyRegistered": "ナレッジがまだ登録されていません",
         "emptyFiltered": "該当するナレッジが見つかりません",
         "notEmbeddedBadge": "未Embedding",
         "deleteDialogTitle": "ナレッジ削除の確認",
         "deleteDialogBody": "<bold>「{title}」</bold>を削除しますか？AIチャットの検索対象から除外されます。",
-        "cancel": "キャンセル",
         "deleteConfirm": "削除する",
-        "totalCount": "全 <styled>{count}</styled> 件",
         "toastDeleted": "ナレッジを削除しました",
-        "toastDeleteFailed": "削除に失敗しました"
+        "toastDeleteFailed": "削除に失敗しました",
+        "typeHeader": "区分",
+        "titleHeader": "タイトル / 本文",
+        "embeddingHeader": "Embedding",
+        "actionsHeader": "操作"
       },
       "formDialog": {
         "createButton": "新規ナレッジ登録",
@@ -1640,11 +1924,13 @@
         "duplicateHint": "ファイル内で同一内容の重複 {count}件は除外します。",
         "mode": {
           "insertOnly": "新規のみ登録",
+          "overwriteDataOnly": "データのみ上書き",
           "overwrite": "既存も上書き"
         },
         "modeHint": {
           "insertOnly": "新規 {newCount}件を登録します。登録済みの {existingCount}件はスキップされ、既存データは変更されません。",
-          "overwrite": "新規 {newCount}件を登録し、登録済みの {existingCount}件を上書きします。音声生成済みのエントリは「要更新」になります。"
+          "overwriteDataOnly": "新規 {newCount}件を登録し、登録済みの {existingCount}件のデータを上書きします。音声はそのままです（自動作成の音声は英単語から作るため、発音記号等の補正では変わりません）。発音を個別調整した {regenerateCount}件だけ「要更新」になります。",
+          "overwrite": "新規 {newCount}件を登録し、登録済みの {existingCount}件を上書きします。音声生成済みの {regenerateCount}件は「要更新」になります。"
         },
         "reset": "リセット",
         "close": "閉じる",
@@ -1675,9 +1961,7 @@
       "actionsHeader": "操作",
       "accessAlertHint": "公開先を設定してください",
       "searchPlaceholder": "教材名、ラベルで検索...",
-      "searchButton": "検索",
       "typeFilterAllOption": "すべての種別",
-      "totalCount": "全 <styled>{count}</styled> 件",
       "noData": "教材データが見つかりませんでした。",
       "editorButton": {
         "word": "単語を編集",
@@ -1791,11 +2075,10 @@
         "deleteDialogTitle": "タグの削除",
         "deleteDialogBody": "タグ「<bold>{name}</bold>」を削除してもよろしいですか？",
         "deleteDialogHint": "この操作は取り消せません。",
-        "cancelButton": "キャンセル",
         "deleteConfirmButton": "削除する",
         "searchPlaceholder": "タグ名、IDで検索...",
-        "totalCount": "全 <styled>{count}</styled> 件",
-        "noData": "タグデータが見つかりませんでした。"
+        "noData": "タグデータが見つかりませんでした。",
+        "allTypes": "すべての種別"
       },
       "formDialog": {
         "createButton": "新規登録",

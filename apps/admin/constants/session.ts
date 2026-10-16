@@ -29,6 +29,7 @@ export function getAdminSessionStatusBadge(
     cancelledByCoach: { label: t('cancelledByCoach'), className: 'bg-rose-50 text-rose-700 border-rose-100' },
     cancelledLicenseEnded: { label: t('cancelledLicenseEnded'), ...SLATE_BADGE },
     cancelledCoachReassigned: { label: t('cancelledCoachReassigned'), ...SLATE_BADGE },
+    cancelledTechnical: { label: t('cancelledTechnical'), ...SLATE_BADGE },
     cancelledOther: { label: t('cancelledOther'), ...SLATE_BADGE },
   };
   return buildSessionStatusBadge(session, labels);

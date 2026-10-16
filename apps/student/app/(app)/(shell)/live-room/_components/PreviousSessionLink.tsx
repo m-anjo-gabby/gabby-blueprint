@@ -4,14 +4,10 @@ import { cn } from '@/lib/utils';
 import { formatSessionSlot } from '@/lib/sessionFormat';
 import { SessionListItem } from '@gabby/types/session';
 
-/**
- * 前回セッションの宿題の状況。宿題は「未登録」「本文のみ（チェックリストなし）」「チェックリストあり」の
- * 3通りがあるため、表示を分ける（チェックリストの無い宿題を「0/0 完了」のように見せない）。
- */
+/** 前回セッションの宿題の状況（未登録／登録あり。登録ありは本文の1行目を添える） */
 export type PreviousHomeworkStatus =
   | { kind: 'none' }
-  | { kind: 'text'; preview: string }
-  | { kind: 'checklist'; done: number; total: number };
+  | { kind: 'text'; preview: string };
 
 export interface PreviousSessionSummary {
   session: SessionListItem;
@@ -27,14 +23,6 @@ function HomeworkLabel({ homework }: { homework: PreviousHomeworkStatus }) {
         <span className="text-ink-soft">
           <span className="font-semibold">宿題あり</span>
           {homework.preview && <span className="text-ink-muted">：{homework.preview}</span>}
-        </span>
-      );
-    case 'checklist':
-      return homework.done >= homework.total ? (
-        <span className="text-ink-muted">宿題はすべて完了しています</span>
-      ) : (
-        <span className="font-semibold text-brand-strong tabular-nums">
-          宿題 {homework.done}/{homework.total} 完了
         </span>
       );
   }

@@ -67,6 +67,9 @@ node supabase/release/run.mjs 20260919_feature-20260918-dev_release.sql --env=pr
 node supabase/release/run.mjs 20260919_feature-20260918-dev_release.sql --env=dev --sections=pending
 ```
 
+アプリはマージしても自動ではデプロイされません。staging・本番とも「マージ → このスクリプトの適用 →
+GitHub Actions の `Deploy` でアプリをデプロイ」の順に行います（`scripts/vercel-env/README.md`「アプリのデプロイ」）。
+
 ### オプション
 
 | オプション | 内容 |
@@ -119,3 +122,9 @@ node supabase/release/run.mjs 20260919_feature-20260918-dev_release.sql --env=de
   - dry-run と反映の2段階にできるスクリプトは、2行に分けて記載します
     （例: `20260919_feature-20260918-dev_release.sql` のセクション8）。
   - スクリプトは再実行しても安全（冪等）に作ってください。
+
+## DDLの正本との関係
+
+リリーススクリプトは変更の差分と理由、`supabase/DDL/` は今の形を持ちます。dev に適用した後、
+`node supabase/release/schema.mjs --env=dev --write <table>` でテーブルの正本の定義を取り込み、
+リリース前に `--check` で正本と dev にずれが無いことを確かめます（`supabase/DDL/README.md`）。

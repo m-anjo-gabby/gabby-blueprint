@@ -3,8 +3,8 @@
 import {
   getMySessionsCore,
   cancelSessionCore,
-  finalizeSessionCore,
-  resolveStaleSessionCore,
+  recordSessionOutcomeCore,
+  getSessionOutcomeEvidenceCore,
   getSessionResultSummaryCore,
   checkSessionConflictCore,
   approveSessionBookingRequestCore,
@@ -15,19 +15,18 @@ import {
   getRescheduleProposalHistoryPageForCoachCore,
 } from '@gabby/lib/session/actions/sessionActions';
 import { getCoachSessionTasksCore } from '@gabby/lib/session/actions/sessionTaskActions';
-import { getSessionCallLogPresenceCore } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
   CoachSessionTasksSummary,
-  CompletionResult,
-  StaleSessionResolution,
+  ConductedVia,
   IncomingRescheduleProposalGroup,
   ProposedSlotInput,
   SessionActionErrorCode,
   SessionListItem,
+  SessionOutcome,
+  SessionOutcomeEvidence,
   SessionResultSummary,
-  SessionStatus,
 } from '@gabby/types/session';
 import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
 
@@ -37,9 +36,9 @@ const SESSION_ERROR_MESSAGES_EN: Record<SessionActionErrorCode, string> = {
   unauthorized: 'Your session has expired. Please sign in again.',
   invalid_input: 'Please check the date and time you selected.',
   not_found: 'This could not be found.',
-  not_actionable: 'This can no longer be changed (it may have already started or been resolved).',
+  not_actionable: 'This can no longer be changed (it may not have started yet, or it was already recorded).',
   schedule_conflict: 'The selected time conflicts with another scheduled session.',
-  reason_required: 'Please provide a reason.',
+  reason_required: 'Please add a note explaining what happened.',
   no_ticket_available: 'No unassigned ticket is available to book.',
   unexpected_error: 'An unexpected error occurred.',
 };
@@ -80,52 +79,42 @@ export async function cancelSession(
 }
 
 /**
- * Ends a lesson and lets the server judge its outcome (completed/early-ended/no-show)
- * from the coach's and student's call-log overlap. Omit `reason` first; if the RPC
- * responds with errorCode 'reason_required' (early-ended, <20min overlap with the
- * student present), show a reason prompt and call this again with `reason` filled in.
+ * "End Session": records the outcome the coach reports. The call log is only used as a
+ * suggestion (see getSessionOutcomeEvidence) — the coach's choice is what gets recorded.
+ * `conductedVia` is required for completed / left-early / no-show outcomes and ignored otherwise.
  */
-export async function finalizeSession(
+export async function recordSessionOutcome(
   sessionId: string,
-  reason?: string
-): Promise<
-  | { success: true; status: SessionStatus; completionResult: CompletionResult; overlapSeconds: number }
-  | { success: false; errorCode: SessionActionErrorCode; message: string }
-> {
+  outcome: SessionOutcome,
+  conductedVia: ConductedVia | null,
+  reason: string
+): Promise<{ success: true } | { success: false; errorCode: SessionActionErrorCode; message: string }> {
   const ctx = await getLogContext();
-  const result = await finalizeSessionCore(sessionId, reason);
+  const result = await recordSessionOutcomeCore(sessionId, outcome, conductedVia, reason);
 
   if (!result.success) {
-    logger.error('coach:finalize_session_failed', result.errorCode, ctx);
+    logger.error('coach:record_session_outcome_failed', result.errorCode, ctx);
     return { success: false, errorCode: result.errorCode, message: SESSION_ERROR_MESSAGES_EN[result.errorCode] };
   }
 
-  logger.info('coach:finalize_session_success', 'Session finalized', ctx);
-  return { success: true, status: result.status, completionResult: result.completionResult, overlapSeconds: result.overlapSeconds };
+  logger.info('coach:record_session_outcome_success', 'Session outcome recorded', ctx);
+  return { success: true };
 }
 
 /**
- * Manually resolves a session stuck in "scheduled" past its end time (e.g. the coach
- * crashed before pressing End Lesson, or the lesson was conducted outside the app).
- * `resolution` must be one of normal(1)/early_ended(2)/no_show(3)/coach_no_show(4); a reason is
- * mandatory. coach_no_show(4) is handled specially by the RPC as a coach-initiated cancellation
- * (ticket always refunded, student notified) rather than a completed outcome.
+ * Suggested outcome and the evidence behind it (who joined the in-app call, and for how long
+ * the coach and student were connected together). Fetched when the End Session dialog opens.
  */
-export async function resolveStaleSession(
-  sessionId: string,
-  resolution: StaleSessionResolution,
-  reason: string
-): Promise<{ success: true } | { success: false; message: string }> {
-  const ctx = await getLogContext();
-  const result = await resolveStaleSessionCore(sessionId, resolution, reason);
-
+export async function getSessionOutcomeEvidence(
+  sessionId: string
+): Promise<{ success: true; evidence: SessionOutcomeEvidence } | { success: false; message: string }> {
+  const result = await getSessionOutcomeEvidenceCore(sessionId);
   if (!result.success) {
-    logger.error('coach:resolve_stale_session_failed', result.errorCode, ctx);
+    const ctx = await getLogContext();
+    logger.error('coach:get_session_outcome_evidence_failed', result.errorCode, ctx);
     return { success: false, message: SESSION_ERROR_MESSAGES_EN[result.errorCode] };
   }
-
-  logger.info('coach:resolve_stale_session_success', 'Stale session resolved', ctx);
-  return { success: true };
+  return { success: true, evidence: result.evidence };
 }
 
 /**
@@ -143,26 +132,11 @@ export async function getSessionResultSummary(
   return { success: true, session: result.session };
 }
 
-/**
- * For a batch of session IDs, reports whether the coach themself has at least one
- * call-log row (i.e. has actually joined the room at least once) — drives the "End
- * Lesson" button's enabled state on the dashboard / student detail panels.
- */
-export async function hasCoachJoinedSessions(sessionIds: string[]): Promise<Record<string, boolean>> {
-  const result = await getSessionCallLogPresenceCore(sessionIds);
-  if (!result.success) {
-    const ctx = await getLogContext();
-    logger.error('coach:has_coach_joined_sessions_failed', result.errorCode, ctx);
-    return {};
-  }
-  return result.joinedBySessionId;
-}
-
 const EMPTY_SESSION_TASKS: CoachSessionTasksSummary = { unfinalizedSessions: [], missingHomeworkSessions: [], shortfalls: [] };
 
 /**
  * Fetches the dashboard's "Session Tasks" data: sessions past their scheduled end time that
- * still need End Session/Resolve, recently finalized sessions missing homework, and live
+ * still need End Session, recently finalized sessions missing homework, and live
  * session shortfalls across all of this coach's students (makeup sessions to book).
  */
 export async function getMySessionTasks(): Promise<CoachSessionTasksSummary> {

@@ -1,72 +1,30 @@
----------------------------------------------
--- 定期スケジュールから個別セッションを一括生成するヘルパー関数 (2026-08-15 追加)
--- 前提: table/com_m_lesson_schedule.sql, table/com_t_session.sql,
---       table/com_t_coach_availability_exception.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- com_m_lesson_schedule（毎週◯曜◯時の定期パターン）確定時に、
--- start_date〜end_date（通常はライセンス期間）の範囲で対象曜日の
--- com_t_session行をまとめて生成する。approve_matching_request() から呼ばれる。
+-- =========================================================================
+-- fn_generate_sessions_for_schedule: 定期スケジュールから個々のセッションを作る（内部用）
+-- =========================================================================
+-- 【役割】
+-- 定期スケジュール（com_m_lesson_schedule）の曜日・時刻で、契約期間の com_t_session をまとめて作る。
+-- 呼び出し元は fn_commit_matching_schedule()（申請の承認・アドミンの直接マッチング）と目標の回数の調整。
 --
--- 【タイムゾーン変換】
--- スケジュールはコーチのローカル時刻（壁時計時刻）で保持しているため、
--- 各日付ごとに schedule.coach_timezone（承認時点でスナップショットされたコーチの
--- タイムゾーン）を用いて絶対時刻(timestamptz)へ変換する。com_m_user.timezoneを
--- ライブ参照しないのは、承認後にコーチがプロフィールのtimezoneを変更しても、
--- 既に生徒と合意済みの曜日・時刻の意味が事後的にズレないようにするため。
--- 同一の「毎週火曜18:00」でも、coach_timezone内でDSTが発生する期間をまたぐ場合、
--- UTC換算のオフセットは日付ごとに自動的に正しく計算される。
+-- 【時刻】
+-- 曜日・時刻は schedule_timezone の現地時刻で解釈し、日ごとに実際の日時（timestamptz）に直す
+-- （夏時間をまたいでも生徒側の時刻は全回同じ）。各回の開始・終了をライセンスの開始・終了日時と直接比べ、
+-- 開始前の回は飛ばし（数えない）、終了を過ぎる回に達したら打ち切る。
 --
--- 【例外日のスキップ】
--- com_t_coach_availability_exception に当該日・当該コーチのBLOCK（休み）が
--- 時間帯重複で存在する場合、その回はスキップする（欠番。振替は別途Phase3のUIで対応）。
+-- 【作らない回（欠番）】
+-- 次の回は作らずに飛ばし、未予約の回として fn_schedule_shortfall() の不足に数える。
+-- - コーチ・生徒の他の予定（予約済みのセッション・他の定期スケジュール・休みの例外）と重なる回
+--   （fn_matching_occurrence_busy()。申請時・承認時に数えた回数と同じ判定。休みの例外はコーチの現在の
+--   タイムゾーンで実際の日時に直して比べる）
+-- - 開始が現在より前の回、p_min_start_datetime より前の回（コーチ本人の承認での24時間のルール。アドミンの代理は NULL）
+--
+-- 【回数の上限】
+-- 作った回数が target_sessions に達したら打ち切る。契約終了日までに満たなくても延長しない（運用で判断する）。
 --
 -- 【冪等性】
--- com_t_session (schedule_id, start_datetime) にUNIQUE制約があるため、
--- 再実行しても重複は作成されない（ON CONFLICT DO NOTHING）。
---
--- 【生成上限 (2026-09-14追加)】
--- 生成件数がschedule.target_sessions（このコマが契約上持つべき目標セッション数）に
--- 達したら、end_dateに達していなくてもそこで打ち切る。end_date到達時点で
--- target_sessionsに満たない場合（マッチング承認が遅れた、BLOCK例外で欠番が出た等）でも
--- end_dateを超えて延長はしない。その不足はfn_schedule_shortfall()のshortfallとして
--- 可視化するのみとし、埋めるかどうかはコーチ・アドミンの運用判断に委ねる。
---
--- 【不具合修正: ON CONFLICT対象と一意インデックスの不一致 (2026-09-14)】
--- 2026-09-12の「Wブッキング防止の一意制約を有効な予約枠のみに限定」パッチで
--- uq_session_schedule_datetimeを「WHERE status = 1」の部分一意インデックスに変更した際、
--- 本関数のON CONFLICT (schedule_id, start_datetime)にも同じWHERE句を追記する必要が
--- あったが漏れていた。部分一意インデックスをON CONFLICTの推論対象にするには、
--- INSERT側のON CONFLICT節にも同一のWHERE句を明示する必要があり(Postgresの仕様)、
--- 一致しない場合は実際の重複有無に関わらず常にエラー(42P10: no unique or
--- exclusion constraint matching the ON CONFLICT specification)になる。これにより
--- 2026-09-12以降、本関数を経由するセッション生成(マッチング承認・アドミン直接
--- マッチングいずれも)が全件失敗する状態になっていた。
---
--- 【p_min_start_datetime追加: 24時間ルールのマッチング申請への適用 (2026-09-15)】
--- 生徒・コーチ向けの新規予約(create_session_booking_request)・振替候補
--- (cancel_session/accept_session_reschedule_proposal)には「開始24時間以内の予約不可」
--- ルールがあるが、マッチング承認時に自動生成される初回セッションにはこれが未適用だった
--- （曜日パターンの都合で、承認したその日のうちに開始してしまう回が生成され得る）。
--- 呼び出し元(approve_matching_request)が生成範囲の下限としてp_min_start_datetimeを
--- 渡せるようにし、これを下回る回はカウントせずスキップして次週に進める（BLOCK例外と
--- 同様、欠番として扱いfn_schedule_shortfall()のshortfallに反映させる。end_dateを超えた
--- 延長はしない、という既存方針を踏襲）。アドミン代理マッチング(admin_match_student_with_coach)
--- はこのルールの対象外のため、NULL（デフォルト、下限なし）のまま呼び出す。
---
--- 【ライセンス期間の境目 (2026-10-03)】
--- start_date/end_date はライセンスの開始・終了日時を日付にした値（DBはUTCのため、JSTの0:00開始は
--- UTCでは前日）で、各回の日付はコーチの現地日付として扱う。このため境目で「契約開始の直前の回」
--- 「契約終了の直後の回」が作られ得た（例: NYのコーチの火曜9:00は、水曜0:00 JST開始の契約の前）。
--- 各回の開始・終了日時をライセンスの開始・終了日時と直接比べ、開始前の回はスキップ（カウントしない）、
--- 終了を過ぎる回に達したら打ち切る。全ての呼び出し元（承認・アドミン代理・目標数の調整）に効く。
---
--- 【基準のタイムゾーン (2026-10-06変更)】
--- 曜日・時刻は schedule.schedule_timezone（旧 coach_timezone。2026-10-06以降の成立分は生徒の申請時の
--- タイムゾーン）の現地時刻で解釈する。コーチ側の夏時間の切り替えをまたいでも、生徒側の時刻は全回同じになる。
--- BLOCK（休み）の例外はコーチの現地の日付・時刻で持つため、コーチの現在のタイムゾーンで実際の日時に
--- 直してから、各回の日時と重なるかを比べる。
----------------------------------------------
+-- uq_session_schedule_datetime（status=1 の行だけの部分一意インデックス）で重複を防ぐ。部分一意インデックスを
+-- ON CONFLICT の対象にするため、ON CONFLICT 節にも同じ WHERE status = 1 を書く必要がある（無いと常に 42P10 のエラー）。
+-- =========================================================================
+
 DROP FUNCTION IF EXISTS public.fn_generate_sessions_for_schedule(uuid);
 
 CREATE OR REPLACE FUNCTION public.fn_generate_sessions_for_schedule(
@@ -81,7 +39,6 @@ AS $$
 DECLARE
     v_schedule RECORD;
     v_schedule_tz text;
-    v_coach_tz text;
     v_cursor_date date;
     v_start_ts timestamptz;
     v_end_ts timestamptz;
@@ -96,7 +53,6 @@ BEGIN
 
     -- com_m_user.timezoneはライブ参照しない（上記【タイムゾーン変換】コメント参照）
     v_schedule_tz := v_schedule.schedule_timezone;
-    SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_coach_tz FROM public.com_m_user WHERE id = v_schedule.coach_id;
 
     -- 予約できる範囲（ライセンスの開始・終了日時。上記【ライセンス期間の境目】参照）
     SELECT l.start_date, l.end_date INTO v_license_start, v_license_end
@@ -123,21 +79,16 @@ BEGIN
             CONTINUE;
         END IF;
 
-        -- 24時間ルールの下限を下回る回は欠番としてスキップする（上記コメント参照）
-        IF p_min_start_datetime IS NOT NULL AND v_start_ts < p_min_start_datetime THEN
+        -- 24時間ルールの下限（アドミンは現在）を下回る回は欠番としてスキップする（上記コメント参照）
+        IF v_start_ts < COALESCE(p_min_start_datetime, NOW()) THEN
             v_cursor_date := v_cursor_date + 7;
             CONTINUE;
         END IF;
 
-        -- この回と重なるBLOCK例外（コーチの現地の日付・時刻）が無いことを確認
-        -- （タイムゾーンの差で日付がずれるため、前後1日の例外を実際の日時に直して比べる）
-        IF NOT EXISTS (
-            SELECT 1 FROM public.com_t_coach_availability_exception e
-            WHERE e.coach_id = v_schedule.coach_id
-              AND e.exception_date BETWEEN v_cursor_date - 1 AND v_cursor_date + 1
-              AND e.exception_type = 'BLOCK'
-              AND (e.exception_date + e.start_time) AT TIME ZONE v_coach_tz < v_end_ts
-              AND (e.exception_date + e.end_time) AT TIME ZONE v_coach_tz > v_start_ts
+        -- この回がコーチ・生徒の他の予定（予約済みのセッション・他の定期スケジュール・休み）と重ならないことを確認
+        IF NOT public.fn_matching_occurrence_busy(
+            v_schedule.coach_id, v_schedule.student_id, v_start_ts, v_end_ts,
+            v_schedule.schedule_id, v_schedule.source_request_id
         ) THEN
             INSERT INTO public.com_t_session (
                 schedule_id, ticket_id, student_id, coach_id, start_datetime, end_datetime, status

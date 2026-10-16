@@ -1,17 +1,19 @@
----------------------------------------------
--- DDL: com_m_color_vowel (Color Vowelマスタ)
----------------------------------------------
+-- =========================================================================
+-- com_m_color_vowel: Color Vowel（母音の色の分類）
+-- =========================================================================
+
+-- @schema public.com_m_color_vowel
 CREATE TABLE public.com_m_color_vowel (
-    cv_id VARCHAR(50) PRIMARY KEY,
-    cv_name TEXT NOT NULL,
-    description TEXT NOT NULL,
-    icon_path TEXT NOT NULL,
-    audio_path TEXT NOT NULL,
-    video_title TEXT,
-    video_path TEXT,
-    delete_flg INT NOT NULL DEFAULT 0,
-    insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    cv_id                    character varying(50) PRIMARY KEY,
+    cv_name                  text         NOT NULL,
+    description              text         NOT NULL,
+    icon_path                text         NOT NULL,
+    audio_path               text         NOT NULL,
+    video_title              text,
+    video_path               text,
+    delete_flg               integer      NOT NULL DEFAULT 0,
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    update_date              timestamp with time zone NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE public.com_m_color_vowel IS 'Color Vowelマスタ';
@@ -26,16 +28,12 @@ COMMENT ON COLUMN public.com_m_color_vowel.delete_flg IS '削除フラグ (0: �
 COMMENT ON COLUMN public.com_m_color_vowel.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_color_vowel.update_date IS '更新日時';
 
-CREATE INDEX IF NOT EXISTS idx_com_m_color_vowel_lookup
-ON public.com_m_color_vowel (cv_id, delete_flg);
+CREATE INDEX idx_com_m_color_vowel_lookup ON public.com_m_color_vowel (cv_id, delete_flg);
 
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
 ALTER TABLE public.com_m_color_vowel ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users can view active color vowels" ON public.com_m_color_vowel;
-
-CREATE POLICY "Users can view active color vowels" ON public.com_m_color_vowel
-FOR SELECT TO authenticated 
-USING (delete_flg = 0);
+CREATE POLICY "Users can view active color vowels" ON public.com_m_color_vowel FOR SELECT TO authenticated
+USING (
+    delete_flg = 0
+);
+-- @end-schema

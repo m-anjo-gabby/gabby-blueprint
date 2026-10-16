@@ -89,10 +89,10 @@ word_en	part_of_speech	word_ja	syllables	primary_stress_syllable	stress_vowel_sp
 | `gray_day` | /eɪ/ | day, name, tailor |
 | `red_pepper` | /ɛ/ /e/ | bed, send, professional |
 | `black_cat` | /æ/ | cat, happy, family |
-| `purple_shirt` | /ɜːr/ /ɜr/ /ɝ/ | bird, her, turn |
-| `cup_of_mustard` | /ʌ/ /ə/（強勢のあるもの） | up, mother, love |
+| `purple_shirt` | /ɜːr/ /ɜr/ /ɝ/（機能語の弱形 /ər/ も） | bird, her, turn |
+| `cup_of_mustard` | /ʌ/ /ə/（強勢のあるもの・機能語の弱形） | up, mother, love |
 | `olive_sock` | /ɑː/ /ɑ/ /ɒ/ /ɑr/ | job, stop, father, car |
-| `auburn_dog` | /ɔː/ /ɔ/ | dog, law, water |
+| `auburn_dog` | /ɔː/ /ɔ/（原則使わない。下記） | dog, law, water |
 | `turquoise_toy` | /ɔɪ/ | boy, oil, choice |
 | `orange_door` | /ɔːr/ /ɔr/ | door, for, born, course |
 | `rose_boat` | /oʊ/ /əʊ/ | no, home, road |
@@ -101,13 +101,33 @@ word_en	part_of_speech	word_ja	syllables	primary_stress_syllable	stress_vowel_sp
 | `brown_cow` | /aʊ/ | cow, house, now |
 | `white_tie` | /aɪ/ | by, night, like |
 
+コンテンツチームが確定した方針（JUDGEMENT-GUIDE.md の CVJ-20261010-01〜03）:
+
+- R音化母音 /ɛr/（share, there）は `red_pepper`、/ɪr/（year, clear）は `green_tea`。
+- R音化母音 /ʊr/（during, secure, ensure, cure）は `purple_shirt`（invisible y）。IPAも `/ˈdɜːrɪŋ/`、`/sɪˈkjɜːr/` のように /ɜːr/ で書く。
+- 米国で /ɔ/ と /ɑ/ の2通りある語（offer, cost, launch, all, law, audit）は `olive_sock`（北米で一般的。AUBURN DOG は一部の話者）。
+  IPAも `/ˈɑːfər/` のように /ɑː/ で書き、`auburn_dog` は原則使わない（/ɔɪ/ `turquoise_toy`・/ɔːr/ `orange_door` はそのまま）。
+
 ## 8. phonetic_spelling
 
 - 米国英語（General American）のIPAを `/…/` で囲む（例: `/ˈteɪlər/`）。
 - 2音節以上は、第一アクセント音節の直前に `ˈ` を付ける。第二アクセント `ˌ` は任意。
 - R音は `r` で表記する（`ɹ` は使わない）。
-- 機能語（冠詞・前置詞・代名詞・助動詞など）は**辞書の見出し発音（強形）**で統一する
-  （例: `for` → `/fɔːr/` → `orange_door`、`you` → `/juː/` → `blue_moon`）。
+- 機能語（冠詞・前置詞・代名詞・接続詞）は、一般的な**弱形がある語は弱形**で登録する（CVJ-20260925-01）。
+  - /ə/ は `cup_of_mustard`、/ər/ は `purple_shirt`: `a` `/ə/`、`an` `/ən/`、`the` `/ðə/`、`and` `/ənd/`、`at` `/ət/`、
+    `from` `/frəm/`、`of` `/əv/`、`to` `/tə/`、`as` `/əz/`、`them` `/ðəm/`、`us` `/əs/`、`you` `/jə/`、
+    `that`（接続詞）`/ðət/`、`for` `/fər/`、`or` `/ər/`、`your` `/jər/`。助動詞は `can` `/kən/` のみ弱形。
+  - 弱形が無い語（`I`, `in`, `it`, `with`, `by`, `my`, `what`）、弱形でもアクセント母音が変わらない語（`he` `/hiː/`）、
+    2音節以上の語（`about`, `because`）、指示代名詞の `that`（`/ðæt/`）は強形のまま。
+  - 上記以外の助動詞・be動詞（`do`, `was`, `have`, `must`, `could` など）は確認していないため強形のまま。
+  - 台帳で確定済みの語は台帳の値を使う。新しい機能語で判断に迷う場合は `review_note` に書く。
+
+- 生徒アプリには IPA を表示せず、IPA から自動で変換した音素表記（`t ey l er`）を表示する（CVJ-20261010-09）。
+  変換は `packages/lib/colorVowel/phonemes.ts`。変換できない記号（`ɹ` `ɾ` `ʔ` `ɫ` など）を使うと生徒アプリに音素表記が出ないため、
+  使える記号は同ファイルの対応表のものに限る（たたき音の t・飲み込む t・暗い l は書き分けず `t` `l`）。
+- `validate.ts` は IPA を音素に分解して、次を要確認に出す: 変換できない記号／音節の数と母音の数の不一致／
+  第一アクセントの位置と `primary_stress_syllable` の不一致／アクセント母音と `cv_id` の不一致。
+  - 音節の数の不一致のうち、/aɪər/（hire）と縮めた発音（every /ˈɛvri/）は確認待ち（CVJ-20261010-07・08）。それまでは今のまま登録してよい。
 
 ## 9. lemma（原形）
 
@@ -143,6 +163,7 @@ word_en	part_of_speech	word_ja	syllables	primary_stress_syllable	stress_vowel_sp
   （`O` /oʊ/ → `rose_boat`、`G` /dʒiː/ → `green_tea`、`I` /aɪ/ → `white_tie`、`R` /ɑːr/ → `olive_sock`）。
   例: `CEO` → `/ˌsiːiːˈoʊ/`、`ESG` → `/ˌiːɛsˈdʒiː/`、`KPIs` → `/ˌkeɪpiːˈaɪz/`
 - 読み方が複数ある略語（1文字ずつ読むか単語として読むか）は、一般的な読み方を採り `review_note` に理由を書く。
+- この扱いはコンテンツチームが確定済み（CVJ-20260925-03）。ただし「例外あり」とのことなので、迷う略語は `review_note` に書いて確認に回す。
 
 ## review_note を書く目安
 

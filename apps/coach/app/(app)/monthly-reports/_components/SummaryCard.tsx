@@ -1,7 +1,8 @@
 import { CalendarCheck, Download, TriangleAlert } from 'lucide-react';
 import { CoachMonthlyReport } from '@gabby/types/monthlyReport';
 
-export function SummaryCard({ report }: { report: CoachMonthlyReport }) {
+/** timezoneName: the coach's timezone as its master display name (e.g. "Japan (Tokyo)") */
+export function SummaryCard({ report, timezoneName }: { report: CoachMonthlyReport; timezoneName: string }) {
   const isApproved = report.approval?.status === 2;
   const hasUnresolved = report.unresolved_count > 0;
 
@@ -52,7 +53,7 @@ export function SummaryCard({ report }: { report: CoachMonthlyReport }) {
       )}
 
       <p className="mt-2 text-[11px] text-slate-400">
-        Session counts are grouped by day using your timezone ({report.coach_timezone}).
+        Session counts are grouped by day using your timezone ({timezoneName}).
       </p>
     </div>
   );

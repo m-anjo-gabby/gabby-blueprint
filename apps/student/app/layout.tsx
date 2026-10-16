@@ -23,10 +23,10 @@ const notoSansJp = Noto_Sans_JP({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Gabby Blueprint English",
-    default: "Gabby Blueprint English", 
+    template: "%s | Gabby Blueprint",
+    default: "Gabby Blueprint", 
   },
-  description: "Gabby Blueprint English ポータルサイト",
+  description: "Gabby Blueprint ポータルサイト",
 };
 
 export default function RootLayout({

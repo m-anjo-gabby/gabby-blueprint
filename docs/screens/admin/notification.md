@@ -28,13 +28,15 @@
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
-| 読み込み中 | カード形状のスケルトンを4件表示 | 通知取得中 |
+| 読み込み中 | 見出しは本物のまま、件数バッジの数字と一覧（カード形の骨組み4件）だけを骨組みで表示する。取り直しが終わったら、その場で一覧に置き換える（フェードインはしない） | 画面への遷移中（`loading.tsx`）と、画面を開いてからの取り直しが終わるまで（ストアに残っていた古い一覧や、取得前の「0件」は出さない） |
 | 通知なし | 「現在通知はありません」 | 通知が1件も無い場合 |
 
 ## 実装参照（エンジニア向け）
 
-- `apps/admin/app/(app)/notification/page.tsx`
+- `apps/admin/app/(app)/notification/page.tsx`（`useFetchOnMount` で開くたびに取り直す）, `loading.tsx`
 - `apps/admin/app/(app)/notification/_components/NotificationCard.tsx`
+- `apps/admin/app/(app)/notification/_components/NotificationPageParts.tsx`（見出し・件数バッジ・一覧の骨組み。画面と `loading.tsx` で共有）
+- ヘッダーの通知ベルの件数は、レイアウトでサーバー取得して流し込む（`apps/admin/lib/shellData.ts`・`components/common/ShellDataLoader.tsx`・`packages/lib/shell/loadCommonShellData.ts`。サイドバーのチャット未読も同じ）
 - 状態管理: `packages/lib/stores/useNotificationStore.ts`（`fetchNotifications`, `markAsRead`。
   student/coach/adminの3アプリで共通利用）
 - 通知種別・表示テキストの定義: `packages/types/notification.ts`

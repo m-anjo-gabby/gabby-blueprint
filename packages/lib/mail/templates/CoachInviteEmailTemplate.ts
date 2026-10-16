@@ -13,13 +13,13 @@ export function buildCoachInviteMail({ userName, inviteUrl, expiresDays }: Coach
     subject: mailSubject('en', 'Coach Account Invitation'),
     doc: {
       language: 'en',
-      preheader: 'You have been invited to the Gabby Blueprint English Coach Portal.',
+      preheader: 'You have been invited to the Gabby Blueprint Coach Portal.',
       headerLabel: 'Coach Portal',
       blocks: [
         { kind: 'paragraph', text: userName ? `Dear ${userName},` : 'Dear Coach,', strong: true },
         {
           kind: 'paragraph',
-          text: 'You have been invited to join the Gabby Blueprint English Coach Portal.\nAs a coach, you will be able to support learners and manage your coaching activities here.',
+          text: 'You have been invited to join the Gabby Blueprint Coach Portal.\nAs a coach, you will be able to support learners and manage your coaching activities here.',
         },
         {
           kind: 'paragraph',

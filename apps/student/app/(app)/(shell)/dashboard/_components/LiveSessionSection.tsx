@@ -1,5 +1,6 @@
-import { getMyBookingRequests, getMyRescheduleProposalGroups, getMyUpcomingSessions } from '@/actions/sessionAction';
+import { getMyBookingRequests, getMyProposedRescheduleGroups, getMyRescheduleProposalGroups, getMyUpcomingSessions } from '@/actions/sessionAction';
 import { getMyBookableTickets, getMyLiveSessionOverview } from '@/actions/matchingAction';
+import { getMyPendingCoachRatings } from '@/actions/coachRatingAction';
 import type { LiveSessionContractSummary } from '@gabby/types/matching';
 import { getNextContractMatching } from '@/lib/liveSessionContracts';
 import { LiveSessionCard, type LiveSessionAction } from './LiveSessionCard';
@@ -11,16 +12,18 @@ import { LiveSessionCard, type LiveSessionAction } from './LiveSessionCard';
  */
 export async function LiveSessionSection({ contract, contracts }: { contract: LiveSessionContractSummary; contracts: LiveSessionContractSummary[] }) {
   const isCurrent = contract.is_current;
-  const [upcomingSessions, overview, bookableSlots, proposalGroups, bookingRequests, nextMatching] = await Promise.all([
+  const [upcomingSessions, overview, bookableSlots, proposalGroups, proposedGroups, bookingRequests, nextMatching, pendingRatings] = await Promise.all([
     getMyUpcomingSessions(1),
     getMyLiveSessionOverview(contract.ticket_id),
     getMyBookableTickets(),
     getMyRescheduleProposalGroups(),
+    getMyProposedRescheduleGroups(),
     getMyBookingRequests(),
     isCurrent ? getNextContractMatching(contracts) : Promise.resolve(null),
+    getMyPendingCoachRatings(),
   ]);
 
-  const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length : 0;
+  const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length + proposedGroups.length : 0;
   const actions: LiveSessionAction[] = [];
   // 専属コーチの未選択は、表示中の契約（現在の契約、または開始前の契約だけを持つ場合はその契約）を案内する
   const unmatchedSlotCount = overview?.slots.filter((s) => s.status === 'unmatched').length ?? 0;
@@ -46,6 +49,29 @@ export async function LiveSessionSection({ contract, contracts }: { contract: Li
     if (unbookedCount > 0 && bookableSlots.length > 0) {
       actions.push({ key: 'unbooked', label: `日時が決まっていないセッションが${unbookedCount}回あります`, href: '/live-room' });
     }
+  }
+  const ratingCount = pendingRatings.filter((r) => r.ticketId === contract.ticket_id).length;
+  if (ratingCount > 0) {
+    actions.push({ key: 'rating', label: `専属コーチの評価をお願いします（${ratingCount}件）`, href: `/live-room?contract=${contract.ticket_id}` });
+  }
+  // 専属コーチの申請の回答待ち（生徒の対応ではないため最後に、注意の見た目にせず出す）。
+  // ライブセッション管理の「契約の状況」のコマの一覧から、申請の確認・取り下げができる
+  const pendingSlotCount = overview?.slots.filter((s) => s.status === 'pending').length ?? 0;
+  if (pendingSlotCount > 0) {
+    actions.push({
+      key: 'pending',
+      label: `専属コーチの回答待ちのリクエストが${pendingSlotCount}件あります`,
+      href: `/live-room?contract=${contract.ticket_id}`,
+      tone: 'waiting',
+    });
+  }
+  if (nextMatching && nextMatching.pendingCount > 0) {
+    actions.push({
+      key: 'next-pending',
+      label: `次の契約で専属コーチの回答待ちのリクエストが${nextMatching.pendingCount}件あります`,
+      href: `/live-room?contract=${nextMatching.contract.ticket_id}`,
+      tone: 'waiting',
+    });
   }
 
   return (

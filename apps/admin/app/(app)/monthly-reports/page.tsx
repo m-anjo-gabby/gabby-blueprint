@@ -4,6 +4,7 @@ import { getCoachesForMonthlyReport } from '@/actions/adminMonthlyReportAction';
 import { PageSkeleton } from '@gabby/lib/components/common/PageSkeleton';
 import { CoachMonthSelector } from './_components/CoachMonthSelector';
 import { MonthlyReportSection } from './_components/MonthlyReportSection';
+import { PageHeader } from '@/components/common/PageHeader';
 
 function currentYearMonth(): string {
   const now = new Date();
@@ -27,12 +28,7 @@ export default async function AdminMonthlyReportsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-800">{t('title')}</h1>
-        <p className="text-xs text-slate-500 mt-1">
-          {t('subtitle')}
-        </p>
-      </div>
+      <PageHeader title={t('title')} description={t('subtitle')} />
 
       <CoachMonthSelector coaches={coaches} currentCoachId={coachId} currentMonth={yearMonth} />
 

@@ -1,24 +1,36 @@
----------------------------------------------
--- DDL: lesson_t_sprint (コーチ主導レッスンスプリント結果・履歴)
----------------------------------------------
+-- =========================================================================
+-- lesson_t_sprint: コーチが実施するスプリント（Lesson Sprint）の結果
+-- =========================================================================
+-- 【参照・書き込み】
+-- コーチは自分が実施した結果を作成・参照でき、生徒は自分が対象の結果を参照できる。
+--
+-- 【ライブセッションとの紐づけ】
+-- session_id でライブセッションの回（com_t_session）に紐づける（準備・実施画面からの起動、結果画面の表示に使う）。
+-- 外部のZoom等で実施した場合やセッションと関係なく実施する場合もあるため NULL を許す。
+-- session_id を入れる場合は、そのコーチが担当し、かつ student_id が一致するセッションであることを
+-- ポリシーで確かめる（他のコーチ・生徒のセッションへの誤った紐づけを防ぐ）。
+-- =========================================================================
+
+-- @schema public.lesson_t_sprint
 CREATE TABLE public.lesson_t_sprint (
-  lesson_sprint_id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  coach_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-  student_id UUID NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-  sprint_type TEXT NOT NULL,            -- '0': 汎用スプリント, '1': コーパススプリント
-  content_id UUID NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,  -- コンテンツID
-  question_type TEXT NOT NULL,          -- '0': Speed, '4': Structure, '5': Builders, '6': Mastery
-  answer_type TEXT NOT NULL,            -- '0': YES回答, '1': NO回答
-  difficulty_level SMALLINT NOT NULL,   -- 0 (Basic) 〜 10
-  time_limit_sec SMALLINT NOT NULL,     -- 60, 90, 120, 150
-  total_answered SMALLINT NOT NULL,     -- タイムアップまでに提示した総問題数
-  total_evaluated SMALLINT NOT NULL,    -- タイムアップまでにコーチが1-5評価した回数（スキップ除く）
-  paused_duration_sec SMALLINT NOT NULL DEFAULT 0, -- 一時停止していた合計秒数（参考値）
-  session_note TEXT,                    -- スプリント中に記録したコーチのメモ
-  answered_history JSONB NOT NULL DEFAULT '[]'::jsonb,
-  CONSTRAINT lesson_t_sprint_answered_history_is_array CHECK (jsonb_typeof(answered_history) = 'array'), -- 要素の形はアプリ（packages/lib/sprint/answeredHistory.ts）で検証
-  insert_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  update_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    lesson_sprint_id         uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    sprint_type              text         NOT NULL,
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+    question_type            text         NOT NULL,
+    answer_type              text         NOT NULL,
+    difficulty_level         smallint     NOT NULL,
+    time_limit_sec           smallint     NOT NULL,
+    total_answered           smallint     NOT NULL,
+    total_evaluated          smallint     NOT NULL,
+    paused_duration_sec      smallint     NOT NULL DEFAULT 0,
+    session_note             text,
+    answered_history         jsonb        NOT NULL DEFAULT '[]'::jsonb,
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    session_id               uuid         REFERENCES public.com_t_session(session_id) ON DELETE SET NULL,
+    CONSTRAINT lesson_t_sprint_answered_history_is_array CHECK (jsonb_typeof(answered_history) = 'array'::text)
 );
 
 COMMENT ON TABLE public.lesson_t_sprint IS 'コーチ主導レッスンスプリント結果・履歴管理テーブル';
@@ -38,68 +50,27 @@ COMMENT ON COLUMN public.lesson_t_sprint.session_note IS 'スプリント中に�
 COMMENT ON COLUMN public.lesson_t_sprint.answered_history IS '実施問題の履歴情報(JSON): question_id, group_id, seq_no, is_skipped, score(1-5|null), highlighted_word_indices';
 COMMENT ON COLUMN public.lesson_t_sprint.insert_date IS '登録日時';
 COMMENT ON COLUMN public.lesson_t_sprint.update_date IS '更新日時';
-
-CREATE INDEX IF NOT EXISTS idx_lesson_t_sprint_coach_student
-  ON public.lesson_t_sprint (coach_id, student_id, insert_date DESC);
-
-CREATE INDEX IF NOT EXISTS idx_lesson_t_sprint_student
-  ON public.lesson_t_sprint (student_id, insert_date DESC);
-
-CREATE INDEX IF NOT EXISTS idx_lesson_t_sprint_content_id
-  ON public.lesson_t_sprint (content_id);
-
----------------------------------------------
--- 行レベルセキュリティ (RLS)
----------------------------------------------
-ALTER TABLE public.lesson_t_sprint ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint;
-DROP POLICY IF EXISTS "Students can view their own lesson sprints" ON public.lesson_t_sprint;
-
--- [コーチ] 自分が実施したレッスンスプリントの全操作（作成・閲覧）が可能
-CREATE POLICY "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint
-FOR ALL TO authenticated
-USING (coach_id = auth.uid() OR public.get_jwt_user_type() = '0')
-WITH CHECK (coach_id = auth.uid());
-
--- [生徒] 自分が対象のレッスンスプリント結果を閲覧可能
-CREATE POLICY "Students can view their own lesson sprints" ON public.lesson_t_sprint
-FOR SELECT TO authenticated USING (
-    student_id = auth.uid()
-);
-
----------------------------------------------
--- 追加パッチ: ライブセッションへの紐づけ (2026-09-06)
----------------------------------------------
--- 【背景】
--- コーチがライブセッション（Zoom Video SDK通話）中に実施したLesson Sprintを、
--- その実施回(com_t_session)に紐づけて管理できるようにする（セッション準備/実施
--- ハブ画面からの起動、レッスン結果画面でのスプリント実施状況表示に使用）。
--- アプリ内Zoomが利用できず外部Zoom等で代替実施したケースのケアとして、
--- session_idはNULL許容（＝ライブセッションと無関係な単独実施も引き続き可能）とする。
----------------------------------------------
-ALTER TABLE public.lesson_t_sprint
-  ADD COLUMN IF NOT EXISTS session_id uuid REFERENCES public.com_t_session(session_id) ON DELETE SET NULL;
-
 COMMENT ON COLUMN public.lesson_t_sprint.session_id IS '実施したライブセッション (com_t_session)。NULL許容（単独実施・外部Zoom実施等はNULL）';
 
-CREATE INDEX IF NOT EXISTS idx_lesson_t_sprint_session ON public.lesson_t_sprint (session_id, insert_date);
+CREATE INDEX idx_lesson_t_sprint_coach_student ON public.lesson_t_sprint (coach_id, student_id, insert_date DESC);
+CREATE INDEX idx_lesson_t_sprint_content_id ON public.lesson_t_sprint (content_id);
+CREATE INDEX idx_lesson_t_sprint_session ON public.lesson_t_sprint (session_id, insert_date);
+CREATE INDEX idx_lesson_t_sprint_student ON public.lesson_t_sprint (student_id, insert_date DESC);
 
--- INSERT/UPDATE時、session_idを指定する場合は「そのコーチ自身が担当し、かつ対象のstudent_idと
--- 一致するセッションであること」を検証する（他コーチ・他生徒のセッションへの誤紐づけ/なりすまし防止）。
-DROP POLICY IF EXISTS "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint;
-CREATE POLICY "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint
-FOR ALL TO authenticated
-USING (coach_id = auth.uid() OR public.get_jwt_user_type() = '0')
+ALTER TABLE public.lesson_t_sprint ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint FOR ALL TO authenticated
+USING (
+    coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+)
 WITH CHECK (
-    coach_id = auth.uid()
-    AND (
-      session_id IS NULL
-      OR EXISTS (
-        SELECT 1 FROM public.com_t_session s
-        WHERE s.session_id = lesson_t_sprint.session_id
-          AND s.coach_id = auth.uid()
-          AND s.student_id = lesson_t_sprint.student_id
-      )
-    )
+    coach_id = auth.uid() AND (session_id IS NULL OR (EXISTS ( SELECT 1
+       FROM public.com_t_session s
+      WHERE s.session_id = lesson_t_sprint.session_id AND s.coach_id = auth.uid() AND s.student_id = lesson_t_sprint.student_id)))
 );
+
+CREATE POLICY "Students can view their own lesson sprints" ON public.lesson_t_sprint FOR SELECT TO authenticated
+USING (
+    student_id = auth.uid()
+);
+-- @end-schema

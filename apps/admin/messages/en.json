@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Gabby Blueprint English",
+    "appName": "Gabby Blueprint",
     "confirm": "Confirm",
     "cancel": "Cancel",
     "close": "Close",
@@ -27,14 +27,30 @@
       "searchPlaceholder": "Search by client name...",
       "emptyMessage": "No results found."
     },
+    "list": {
+      "search": "Search",
+      "clear": "Clear filters",
+      "totalCount": "<styled>{count}</styled> total",
+      "prevPage": "Previous page",
+      "nextPage": "Next page"
+    },
     "monthPicker": {
       "prevYear": "Previous year",
       "nextYear": "Next year",
       "yearLabel": "{year}",
       "months": {
-        "m1": "Jan", "m2": "Feb", "m3": "Mar", "m4": "Apr",
-        "m5": "May", "m6": "Jun", "m7": "Jul", "m8": "Aug",
-        "m9": "Sep", "m10": "Oct", "m11": "Nov", "m12": "Dec"
+        "m1": "Jan",
+        "m2": "Feb",
+        "m3": "Mar",
+        "m4": "Apr",
+        "m5": "May",
+        "m6": "Jun",
+        "m7": "Jul",
+        "m8": "Aug",
+        "m9": "Sep",
+        "m10": "Oct",
+        "m11": "Nov",
+        "m12": "Dec"
       }
     },
     "monthLabel": "{month} {year}",
@@ -153,18 +169,42 @@
     "noIssues": "No issues",
     "alertBadge": "{label}: {count}",
     "modules": {
-      "clients": { "title": "Clients", "desc": "Manage corporate and group accounts", "countLabel": "Registered clients", "alertLabel": "No active contract" },
-      "contracts": { "title": "Contracts", "desc": "Issue licenses and check expiration dates", "countLabel": "Active contracts", "alertLabel": "Expiring soon / overdue" },
-      "users": { "title": "Users", "desc": "Manage student and coach permissions", "countLabel": "Total users", "alertLabel": "Pending invitations" },
-      "contents": { "title": "Contents", "desc": "Update curriculum and course content", "countLabel": "Registered contents", "alertLabel": "Unpublished contents" },
-      "notice": { "title": "Notices", "desc": "Publish announcements to students and clients", "countLabel": "Published notices", "alertLabel": "Drafts / expired" }
+      "clients": {
+        "title": "Clients",
+        "desc": "Manage corporate and group accounts",
+        "countLabel": "Registered clients",
+        "alertLabel": "No active contract"
+      },
+      "contracts": {
+        "title": "Contracts",
+        "desc": "Issue licenses and check expiration dates",
+        "countLabel": "Active contracts",
+        "alertLabel": "Expiring soon / overdue"
+      },
+      "users": {
+        "title": "Users",
+        "desc": "Manage student and coach permissions",
+        "countLabel": "Total users",
+        "alertLabel": "Pending invitations"
+      },
+      "contents": {
+        "title": "Contents",
+        "desc": "Update curriculum and course content",
+        "countLabel": "Registered contents",
+        "alertLabel": "Unpublished contents"
+      },
+      "notice": {
+        "title": "Notices",
+        "desc": "Publish announcements to students and clients",
+        "countLabel": "Published notices",
+        "alertLabel": "Drafts / expired"
+      }
     }
   },
   "users": {
     "page": {
       "title": "User Management",
-      "subtitle": "Create, edit, and manage permissions for user accounts belonging to each tenant",
-      "loading": "Loading user data..."
+      "subtitle": "Create, edit, and manage permissions for user accounts belonging to each tenant"
     },
     "table": {
       "user": "User",
@@ -182,24 +222,42 @@
       "licenseFuture": "[Not started]",
       "licenseExpired": "[Expired]",
       "notApplicable": "N/A",
-      "stageButton": "Stage",
       "editButton": "Edit",
       "actions": "Actions",
       "searchPlaceholder": "Enter search term...",
-      "searchButton": "Search",
-      "totalCount": "<styled>{count}</styled> total",
-      "noData": "No data found."
-    },
-    "filter": {
+      "noData": "No data found.",
       "allUserTypes": "All types"
+    },
+    "detail": {
+      "backToList": "Back to users",
+      "notFound": "User not found.",
+      "tabs": {
+        "basic": "Basic info",
+        "sprint": "Sprint",
+        "specialty": "Specialties",
+        "matching": "Matching",
+        "ratings": "Ratings",
+        "legal": "Legal name"
+      },
+      "basic": {
+        "title": "Basic info",
+        "invitingNote": "This user has not completed registration yet, so the details cannot be edited. Resend the invitation email if needed.",
+        "majorChangeTitle": "Change the type or client?",
+        "majorChangeBody": "Changing the user type or client changes the available features, licenses and visible information. Please review before saving.",
+        "licenseTitle": "License",
+        "manageLicense": "Manage",
+        "licenseAfterRegistration": "A license can be assigned after registration is completed.",
+        "accountTitle": "Account",
+        "userId": "User ID",
+        "copyId": "Copy user ID",
+        "lastSignIn": "Last sign-in",
+        "neverSignedIn": "Never signed in"
+      }
     },
     "form": {
       "createButton": "Add user",
-      "editButton": "Edit",
       "confirmTitle": "Confirm details",
       "createTitle": "Create new user",
-      "editTitle": "Edit user details",
-      "idLabel": "User ID (UUID)",
       "idCopied": "ID copied",
       "creationModeLabel": "Creation method",
       "creationModeInvite": "Send invitation email",
@@ -318,7 +376,8 @@
       "levelManagedOn": "The student can select up to one level above their current level.",
       "levelManagedOff": "The student can select any level (for contracts without a coach).",
       "toastLevelManagedOn": "Turned level management on",
-      "toastLevelManagedOff": "Turned level management off"
+      "toastLevelManagedOff": "Turned level management off",
+      "notReached": "Not reached"
     },
     "bulkImport": {
       "button": "Bulk import",
@@ -358,6 +417,96 @@
       "toastProcessError": "An error occurred during processing",
       "toastClientFetchFailed": "Failed to fetch the client list",
       "toastContractFetchFailed": "Failed to fetch contract information"
+    },
+    "specialty": {
+      "title": "Specialties",
+      "description": "Shown on the student's coach selection screen and on the coach's profile (coaches cannot change them).",
+      "fieldsLabel": "Fields (up to {max})",
+      "fieldsCount": "{count} / {max}",
+      "skillsLabel": "Teaching skills (shown as a separate badge; not counted toward the limit)",
+      "loadFailed": "Failed to load specialties.",
+      "toastSaved": "Specialties saved",
+      "errorTooMany": "You can select up to {max} fields",
+      "errorSave": "Failed to save specialties"
+    },
+    "matching": {
+      "title": "Matching",
+      "visible": "Visible in the students' coach search",
+      "hidden": "Hidden from the students' coach search",
+      "demoNote": "Demo coach: shown only to demo students",
+      "requiredItemsLabel": "Required profile items",
+      "requiredItemsComplete": "All set",
+      "requiredItemsMissing": "The following items are not set (the coach sets them)",
+      "acceptingLabel": "Coach's own setting for new students",
+      "acceptingOn": "Accepting",
+      "acceptingOff": "Not accepting (turned off by the coach)",
+      "suspendLabel": "Pause by admins",
+      "suspendDescription": "While paused, the coach is hidden from the students' coach search and cannot resume it. Current students and scheduled sessions continue as usual.",
+      "suspendedSince": "Paused since {date}",
+      "noteLabel": "Reason (internal note; not shown to the coach)",
+      "notePlaceholder": "e.g. On leave until the end of October",
+      "loadFailed": "Failed to load the matching status.",
+      "toastSuspended": "Matching paused",
+      "toastResumed": "Matching resumed",
+      "errorSave": "Failed to save the matching settings",
+      "items": {
+        "icon": "Profile photo",
+        "country": "Nationality",
+        "teaching_years": "English teaching experience",
+        "education": "Education",
+        "qualifications": "Qualifications",
+        "job_experience": "Job experience",
+        "introduction": "Personal introduction",
+        "availability": "Availability (at least one slot)"
+      }
+    },
+    "legal": {
+      "title": "Legal name",
+      "description": "The name printed on documents such as pay notices, invoices and training reports. Managed separately from the display name. If not set, documents use the display name.",
+      "lastName": "Last name",
+      "firstName": "First name",
+      "lastNamePlaceholder": "Smith",
+      "firstNamePlaceholder": "John",
+      "latinDescription": "Romanized name (optional), used on English documents. Leave blank unless the name is written in Japanese.",
+      "lastNameLatin": "Last name (romanized)",
+      "firstNameLatin": "First name (romanized)",
+      "lastNameLatinPlaceholder": "Yamada",
+      "firstNameLatinPlaceholder": "Taro",
+      "previewJa": "Japanese documents",
+      "previewEn": "English documents",
+      "previewNotSet": "Not set (display name)",
+      "loadFailed": "Failed to load the legal name.",
+      "toastSaved": "Legal name saved",
+      "toastCleared": "Legal name cleared",
+      "errorSave": "Failed to save the legal name",
+      "errorFirstNameRequired": "Enter the first name",
+      "errorTooLong": "Enter up to {max} characters"
+    },
+    "ratingsPage": {
+      "subtitle": "Ratings and comments from students. Comments are not shown to the coach.",
+      "notFound": "Coach not found.",
+      "overall": "Overall",
+      "overallNote": "Average of the 3 items (shown to coach and students)",
+      "coaching": "Coaching",
+      "friendliness": "Friendliness",
+      "recommendation": "Recommendation",
+      "recommendationNote": "Not shown on its own",
+      "ratingCount": "{count, plural, one {# rating} other {# ratings}}",
+      "starLabel": "{value} out of 5",
+      "noRatings": "No ratings yet.",
+      "noFeedbackRatings": "No ratings with comments.",
+      "filterAll": "All ({count})",
+      "filterFeedback": "With comments ({count})",
+      "ratedAt": "Rated at",
+      "student": "Student",
+      "contract": "Contract",
+      "average": "Average",
+      "feedback": "Comment to staff",
+      "source": "Source",
+      "sourceApp": "Student app",
+      "sourceLegacy": "Migrated",
+      "sourceInitial": "Initial",
+      "unknownStudent": "(Unknown)"
     }
   },
   "paymentSettings": {
@@ -433,9 +582,7 @@
       "industryOther": "Other",
       "industryNotSet": "Not set",
       "registeredDateHeader": "Registered",
-      "searchPlaceholder": "Search by client name or code...",
-      "searchButton": "Search",
-      "totalCount": "<styled>{count}</styled> total",
+      "searchPlaceholder": "Search by client name...",
       "noData": "No client data found."
     },
     "form": {
@@ -478,6 +625,7 @@
     "table": {
       "seqHeader": "SEQ",
       "nameHeader": "Display Name (English / Japanese)",
+      "shortNameHeader": "Short name",
       "ianaHeader": "IANA Timezone Name",
       "currentTimeHeader": "Current Local Time",
       "actionsHeader": "Actions",
@@ -485,7 +633,6 @@
       "deleteDialogBody": "Are you sure you want to delete \"<bold>{name}</bold>\"? This will not affect users who already have this timezone set, but it will no longer appear as an option.",
       "deleteConfirm": "Delete",
       "searchPlaceholder": "Search by timezone name or display name...",
-      "totalCount": "<styled>{count}</styled> total",
       "noData": "No timezone data found.",
       "toastDeleted": "Timezone deleted",
       "toastDeleteFailed": "Failed to delete"
@@ -503,6 +650,11 @@
       "nameJaPlaceholder": "e.g. 日本（東京）",
       "nameEnLabel": "Display name (English)",
       "nameEnPlaceholder": "e.g. Japan (Tokyo)",
+      "shortNameJaLabel": "Short name (Japanese)",
+      "shortNameJaPlaceholder": "e.g. 日本時間",
+      "shortNameEnLabel": "Short name (English)",
+      "shortNameEnPlaceholder": "e.g. Japan Time",
+      "shortNameHint": "Shown next to dates and times with the UTC offset, e.g. in emails (Japan Time, UTC+9). Use a name that does not change with daylight saving time (no abbreviations like EST/EDT).",
       "sortNoLabel": "Sort order",
       "confirmQuestion": "Are you sure you want to {action} with this content?",
       "actionCreate": "register",
@@ -516,6 +668,8 @@
         "ianaRequired": "IANA timezone name is required",
         "nameJaRequired": "Display name (Japanese) is required",
         "nameEnRequired": "Display name (English) is required",
+        "shortNameJaRequired": "Short name (Japanese) is required",
+        "shortNameEnRequired": "Short name (English) is required",
         "sortNoRequired": "Please enter a sort order"
       },
       "toastCreated": "Timezone registered",
@@ -545,13 +699,9 @@
       "editTooltip": "Edit term",
       "deleteTooltip": "Delete term",
       "searchPlaceholder": "Search by version name...",
-      "searchButton": "Search",
-      "totalCount": "<styled>{count}</styled> total",
-      "deletingOverlay": "Deleting...",
       "noData": "No term data found.",
       "deleteDialogTitle": "Delete this term?",
       "deleteDialogBody": "This will permanently delete version \"<bold>{version}</bold>\" of the {termType}. This action cannot be undone.",
-      "deleteConfirming": "Deleting...",
       "deleteConfirm": "Yes, delete",
       "toastDeleted": "Term deleted",
       "toastUnexpectedError": "An unexpected error occurred"
@@ -619,7 +769,8 @@
   "liveSessions": {
     "page": {
       "title": "Live Session Management",
-      "subtitle": "Select a client and student to review bookings and reassign the coach if needed"
+      "subtitle": "Select a client and student to review bookings and reassign the coach if needed",
+      "recordsLink": "Session records"
     },
     "status": {
       "scheduled": "Scheduled",
@@ -630,7 +781,9 @@
       "cancelledByCoach": "Cancelled (coach)",
       "cancelledLicenseEnded": "Cancelled (contract ended)",
       "cancelledCoachReassigned": "Cancelled (coach reassigned)",
-      "cancelledOther": "Cancelled (admin)"
+      "cancelledOther": "Cancelled (admin)",
+      "unrecorded": "Not recorded",
+      "cancelledTechnical": "Cancelled (technical issues)"
     },
     "scheduleStatus": {
       "active": "Active",
@@ -697,7 +850,9 @@
       "toastStudentsFetchFailed": "Failed to fetch the student list",
       "toastSlotsFetchFailed": "Failed to fetch schedule slots",
       "toastReleaseSuccess": "The coach's slot has ended. The student can request a new coach again",
-      "toastReleaseFailed": "The operation failed"
+      "toastReleaseFailed": "The operation failed",
+      "recordOutcomeButton": "Record outcome",
+      "correctOutcomeButton": "Correct outcome"
     },
     "cancelDialog": {
       "title": "Cancel Session (Admin Action)",
@@ -715,7 +870,7 @@
       "dateLabel": "Date",
       "timeLabel": "Start time",
       "timePlaceholder": "Time",
-      "hint": "* Must be within the coach's available hours",
+      "hint": "* Times that overlap the coach's or student's existing sessions cannot be booked. Times outside the coach's Weekly Availability can still be booked, so confirm with the coach first",
       "close": "Close",
       "confirmButton": "Book",
       "toastSuccess": "Session booked"
@@ -732,7 +887,7 @@
       "timePlaceholder": "Time",
       "hint1": "* The slot number represents which session of the weekly contract this is (numbers already in use cannot be reused).",
       "timezoneNote": "* Enter the day and start time in the student's timezone (from their profile). The student's time stays the same across daylight saving time changes.",
-      "hint2": "* Conflicts with the coach's availability or existing schedule are checked automatically.",
+      "hint2": "* Sessions that overlap the coach's or student's existing sessions are skipped and left unbooked. The match is made even outside the coach's Weekly Availability, so confirm with the coach first.",
       "close": "Close",
       "confirmButton": "Complete match",
       "toastSuccess": "Match completed. The session has been booked"
@@ -747,6 +902,101 @@
       "close": "Close",
       "confirmButton": "Apply",
       "toastSuccess": "Total session count updated"
+    },
+    "outcome": {
+      "outcomeLegend": "Outcome",
+      "outcomes": {
+        "completed": {
+          "label": "Completed",
+          "hint": "Uses one ticket session"
+        },
+        "leftEarly": {
+          "label": "Ended early (student’s reason)",
+          "hint": "Uses one ticket session"
+        },
+        "noShow": {
+          "label": "Student no-show",
+          "hint": "Uses one ticket session (shown to the student as “did not attend”)"
+        },
+        "coachAbsent": {
+          "label": "Coach absent",
+          "hint": "Returns the ticket session for a makeup (not counted in monthly totals)"
+        },
+        "technical": {
+          "label": "Not held (technical issues)",
+          "hint": "Returns the ticket session for a makeup (not counted in monthly totals)"
+        }
+      },
+      "suggestedBadge": "Suggested by call log",
+      "conductedViaLegend": "How it was held",
+      "viaApp": "In-app call",
+      "viaExternal": "External Zoom",
+      "evidenceTitle": "In-app call record",
+      "evidenceLoading": "Loading...",
+      "evidenceFailed": "The call record could not be loaded",
+      "evidenceNoCoach": "No record of the coach joining the in-app call",
+      "evidenceTogether": "Coach and student connected together: {minutes} min",
+      "evidenceStudentAbsent": "The coach joined, but there is no record of the student joining",
+      "reasonLabel": "Reason (internal note)",
+      "reasonPlaceholder": "e.g. The student reported they attended; confirmed with the coach and corrected to Completed",
+      "externalBadge": "External Zoom",
+      "mismatchBadge": "Differs from call log",
+      "correctedBadge": "Reviewed by admin"
+    },
+    "outcomeDialog": {
+      "title": "Correct Session Outcome",
+      "titleRecord": "Record Session Outcome",
+      "description": "Session with {student} (coach: {coach}) on {datetime}",
+      "ticketNote": "Ticket usage is adjusted automatically to match the outcome. No notifications are sent to the student or coach. If you change a refunded session to Completed (etc.), any makeup already booked with that session stays booked.",
+      "reasonHint": "A reason is required (if you keep the outcome as is, note what you checked)",
+      "historyTitle": "Record history",
+      "historyEmpty": "No history (finalized before this feature, or not recorded yet)",
+      "historyRecorded": "Recorded by {name}",
+      "historyCorrected": "Corrected by {name}",
+      "ticketConsumed": "ticket used",
+      "ticketRestored": "ticket returned",
+      "close": "Close",
+      "submit": "Save correction",
+      "submitRecord": "Record",
+      "toastSuccess": "Session outcome saved"
+    },
+    "records": {
+      "title": "Session Records",
+      "subtitle": "Review the outcomes of started live sessions across all students and coaches, and correct them if needed",
+      "back": "Back to Live Session Management",
+      "searchPlaceholder": "Search by student or coach name...",
+      "reviewFilter": "Needs review",
+      "reviewAll": "All records",
+      "reviewOnly": "Needs review only",
+      "monthFilter": "Month",
+      "allMonths": "All months",
+      "coachFilter": "Coach",
+      "allCoaches": "All coaches",
+      "resultFilter": "Outcome",
+      "allResults": "All outcomes",
+      "results": {
+        "unrecorded": "Not recorded",
+        "completed": "Completed",
+        "left_early": "Ended early (student)",
+        "no_show": "Student no-show",
+        "coach_absent": "Coach absent",
+        "technical": "Technical issues"
+      },
+      "viaFilter": "How it was held",
+      "allVias": "All methods",
+      "vias": {
+        "app": "In-app call",
+        "external": "External Zoom"
+      },
+      "startHeader": "Start (JST)",
+      "studentHeader": "Student",
+      "coachHeader": "Coach",
+      "resultHeader": "Outcome",
+      "noteHeader": "Note",
+      "reviewBadge": "Needs review",
+      "recordButton": "Record",
+      "correctButton": "Correct",
+      "noData": "No matching records"
     }
   },
   "monthlyReports": {
@@ -809,12 +1059,12 @@
   "notice": {
     "page": {
       "title": "Notice Management",
-      "subtitle": "Manage in-app notices, campaigns, and maintenance announcements."
+      "subtitle": "Manage in-app notices, campaigns, and maintenance announcements.",
+      "createButton": "Create notice"
     },
     "table": {
       "searchPlaceholder": "Search by title...",
       "allTypes": "All types",
-      "createButton": "Create notice",
       "titleHeader": "Title",
       "typeHeader": "Type",
       "targetHeader": "Target",
@@ -835,14 +1085,14 @@
       "editTooltip": "Edit",
       "readsTooltip": "View read status",
       "deleteTooltip": "Delete",
-      "paginationSummary": "Showing {shown} of {total}",
       "deleteDialogTitle": "Delete this notice?",
       "deleteDialogBody": "This action cannot be undone. This notice will be removed from user screens.",
-      "deleteConfirming": "Deleting...",
       "deleteConfirm": "Delete",
       "toastDeleted": "Notice deleted",
       "toastDeleteFailed": "Failed to delete",
-      "toastDeleteError": "An error occurred while deleting"
+      "toastDeleteError": "An error occurred while deleting",
+      "homeBadge": "Home",
+      "ctaBadge": "Button"
     },
     "editor": {
       "loadFailedTitle": "Failed to load the notice data.",
@@ -873,8 +1123,6 @@
       "publishedFlagHint": "ON publishes it; OFF saves it as a draft",
       "importantFlagLabel": "Important notice (is_important)",
       "importantFlagHint": "Highlights the \"Important\" badge in red",
-      "dialogFlagLabel": "Show as popup (show_dialog)",
-      "dialogFlagHint": "Automatically shows as a full-screen dialog when the user logs in",
       "attachmentsTitle": "Attachments",
       "addButton": "Add",
       "noAttachments": "There are no attachments",
@@ -891,7 +1139,42 @@
       "toastUpdated": "Notice updated",
       "toastCreated": "Notice created",
       "toastSaveFailed": "Failed to save",
-      "toastSaveError": "An error occurred while saving"
+      "toastSaveError": "An error occurred while saving",
+      "displayModeTitle": "Display",
+      "displayModePopupLabel": "Popup",
+      "displayModePopupHint": "Shown one at a time when students or coaches open the home screen. For urgent or important announcements.",
+      "displayModeHomeLabel": "Home card",
+      "displayModeHomeHint": "Shown as a card at the top of the student's home screen until dismissed. For campaigns and new features.",
+      "displayModeListLabel": "List only",
+      "displayModeListHint": "Shown only in the notice list and the notification center.",
+      "displayModeCoachNote": "Notices for coaches can use \"Popup\" or \"List only\".",
+      "studentExtrasTitle": "Header image & action button (students only)",
+      "imageLabel": "Header image (optional)",
+      "imageHint": "PNG, JPEG or WebP, up to 2MB. Displayed in a 16:9 frame.",
+      "imageSelect": "Choose image",
+      "imageRemove": "Remove image",
+      "imageAlt": "Header image preview",
+      "ctaLabelLabel": "Button label (optional)",
+      "ctaLabelPlaceholder": "e.g. Learn more",
+      "ctaUrlLabel": "Link",
+      "ctaUrlPlaceholder": "/library or https://...",
+      "ctaUrlHint": "An in-app path starting with \"/\", or an external page starting with \"https://\" (opens in a new tab). Enter both the label and the link.",
+      "errorCtaIncomplete": "Enter both the button label and the link.",
+      "errorCtaUrl": "The link must be an in-app path starting with \"/\" or a URL starting with \"https://\".",
+      "errorCtaLabelTooLong": "The button label must be {max} characters or fewer.",
+      "errorImageType": "Choose a PNG, JPEG or WebP image.",
+      "errorImageTooLarge": "Choose an image of 2MB or less.",
+      "errorImageUploadFailed": "Failed to upload the header image.",
+      "previewMobile": "Mobile",
+      "previewDesktop": "Desktop",
+      "previewDeviceLabel": "Device",
+      "previewCaptionPopup": "Popup shown when the home screen opens",
+      "previewCaptionHome": "Card at the top of the home screen (\"Read more\" opens the popup)",
+      "previewCaptionList": "As shown when opened in the notice list",
+      "previewStudentNote": "As shown in the student app",
+      "previewCoachNote": "As shown in the coach app (English)",
+      "previewNote": "Links, the action button and attachments do not work in the preview. The popup is shown as if there are other notices, and reappears when closed. The date is the publish start date.",
+      "previewNoTitle": "(No title)"
     },
     "readsPage": {
       "backToList": "Back to notice list",
@@ -903,11 +1186,9 @@
       "targetUsers": "Target users",
       "read": "Read",
       "unread": "Unread",
-      "allClients": "All clients",
       "allTypes": "All types",
       "studentType": "Student",
       "coachType": "Coach",
-      "totalCount": "<styled>{count}</styled> total",
       "userHeader": "User",
       "clientHeader": "Client",
       "typeHeader": "Type",
@@ -915,7 +1196,11 @@
       "readAtHeader": "Read at (JST)",
       "noUsers": "No target users found",
       "unnamed": "Unnamed",
-      "noClient": "Unassigned"
+      "noClient": "Unassigned",
+      "searchPlaceholder": "Search by name...",
+      "ctaClicked": "Clicked button",
+      "ctaRateOfRead": "{rate}% of read",
+      "ctaClickedAtHeader": "Button clicked at (JST)"
     }
   },
   "calendarEvents": {
@@ -942,7 +1227,6 @@
     "participantsTable": {
       "participantCount": "Participants",
       "searchPlaceholder": "Search by name...",
-      "totalCount": "<styled>{count}</styled> total",
       "noParticipants": "There are no participants yet.",
       "unknown": "(Unknown)",
       "nameHeader": "Name",
@@ -988,13 +1272,16 @@
       "actionsHeader": "Actions",
       "participantsButton": "Participants",
       "manageParticipants": "Manage participants & announcements",
-      "searchPlaceholder": "Search by title...",
-      "totalCount": "<styled>{count}</styled> total",
+      "searchPlaceholder": "Search by title or series...",
       "noData": "No calendar events found.",
       "deleteDialogTitle": "Delete Calendar Event",
       "deleteDialogBody": "Are you sure you want to delete \"<bold>{title}</bold>\"? It will no longer appear on the student/coach calendar after deletion.",
       "deleteConfirm": "Delete",
-      "seriesPrefix": "Series: {title}"
+      "seriesPrefix": "Series: {title}",
+      "allTypes": "All types",
+      "allStatuses": "All statuses",
+      "toastDeleted": "Calendar event deleted.",
+      "toastDeleteFailed": "Failed to delete the calendar event."
     },
     "formDialog": {
       "createButton": "Add event",
@@ -1127,7 +1414,8 @@
         "timeRequired": "Please enter a start time",
         "sessionTitleRequired": "Please enter a topic",
         "clientRequired": "Please select a client"
-      }
+      },
+      "searchPlaceholder": "Search by series name..."
     }
   },
   "chat": {
@@ -1276,12 +1564,8 @@
       "statusCancelled": "Cancelled",
       "statusEnded": "Ended",
       "statusUpcoming": "Upcoming",
-      "statusActive": "Active"
-    },
-    "dataTable": {
+      "statusActive": "Active",
       "searchPlaceholder": "Search by client or contract name...",
-      "searchButton": "Search",
-      "totalCount": "<styled>{count}</styled> total",
       "noData": "No matching contract information found."
     },
     "formDialog": {
@@ -1399,7 +1683,8 @@
       "toastDeleted": "Contract deleted",
       "toastDeleteFailed": "Failed to delete",
       "toastNetworkError": "A network error occurred",
-      "toastPurged": "The contract and its related assignment history were permanently deleted"
+      "toastPurged": "The contract and its related assignment history were permanently deleted",
+      "back": "Back"
     },
     "plans": {
       "table": {
@@ -1414,11 +1699,9 @@
         "codeHeader": "Plan Code",
         "actionsHeader": "Actions",
         "searchPlaceholder": "Search by plan name or code...",
-        "totalCount": "<styled>{count}</styled> total",
         "noData": "No plan data found.",
         "deleteDialogTitle": "Delete Plan",
         "deleteDialogBody": "Are you sure you want to delete plan \"<bold>{name}</bold>\"? This will not affect contracts already created with this plan (it will simply no longer appear as an option).",
-        "cancel": "Cancel",
         "deleteConfirm": "Delete",
         "toastDeleted": "Plan deleted",
         "toastDeleteFailed": "Failed to delete"
@@ -1508,18 +1791,19 @@
       },
       "list": {
         "searchPlaceholder": "Search by title or body...",
-        "filterPlaceholder": "Filter by type",
         "allTypes": "All types",
         "emptyRegistered": "No knowledge entries have been registered yet",
         "emptyFiltered": "No matching knowledge entries found",
         "notEmbeddedBadge": "Not embedded",
         "deleteDialogTitle": "Confirm Knowledge Deletion",
         "deleteDialogBody": "Are you sure you want to delete <bold>\"{title}\"</bold>? It will be excluded from the AI chat's search targets.",
-        "cancel": "Cancel",
         "deleteConfirm": "Delete",
-        "totalCount": "<styled>{count}</styled> total",
         "toastDeleted": "Knowledge entry deleted",
-        "toastDeleteFailed": "Failed to delete"
+        "toastDeleteFailed": "Failed to delete",
+        "typeHeader": "Type",
+        "titleHeader": "Title / Body",
+        "embeddingHeader": "Embedding",
+        "actionsHeader": "Actions"
       },
       "formDialog": {
         "createButton": "Add new knowledge entry",
@@ -1640,11 +1924,13 @@
         "duplicateHint": "{count} identical duplicate rows in the file will be excluded.",
         "mode": {
           "insertOnly": "New only",
+          "overwriteDataOnly": "Overwrite data only",
           "overwrite": "Overwrite existing"
         },
         "modeHint": {
           "insertOnly": "Registers {newCount} new entries. {existingCount} existing entries are skipped and left unchanged.",
-          "overwrite": "Registers {newCount} new entries and overwrites {existingCount} existing entries. Entries with generated audio will be marked as needing regeneration."
+          "overwriteDataOnly": "Registers {newCount} new entries and overwrites the data of {existingCount} existing entries. Audio is kept as is (auto-generated audio is built from the word itself, so corrections to IPA or Color Vowel do not change it). Only {regenerateCount} entries with manually tuned pronunciation will be marked as needing regeneration.",
+          "overwrite": "Registers {newCount} new entries and overwrites {existingCount} existing entries. {regenerateCount} entries with generated audio will be marked as needing regeneration."
         },
         "reset": "Reset",
         "close": "Close",
@@ -1675,9 +1961,7 @@
       "actionsHeader": "Actions",
       "accessAlertHint": "Please set a target for this content to be published to",
       "searchPlaceholder": "Search by content name or label...",
-      "searchButton": "Search",
       "typeFilterAllOption": "All Types",
-      "totalCount": "<styled>{count}</styled> total",
       "noData": "No content data found.",
       "editorButton": {
         "word": "Edit Words",
@@ -1791,11 +2075,10 @@
         "deleteDialogTitle": "Delete Tag",
         "deleteDialogBody": "Are you sure you want to delete the tag <bold>{name}</bold>?",
         "deleteDialogHint": "This action cannot be undone.",
-        "cancelButton": "Cancel",
         "deleteConfirmButton": "Delete",
         "searchPlaceholder": "Search by tag name or ID...",
-        "totalCount": "<styled>{count}</styled> total",
-        "noData": "No tag data found."
+        "noData": "No tag data found.",
+        "allTypes": "All types"
       },
       "formDialog": {
         "createButton": "Add New",

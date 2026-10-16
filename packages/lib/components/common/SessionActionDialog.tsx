@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { focusDialogContent } from './dialogFocus';
 import { Loader2, Plus, X as XIcon } from 'lucide-react';
 import { cn } from '../../utils';
 import { useToast } from '../../hooks/useToast';
@@ -12,10 +13,7 @@ import { CounterpartLocalTime } from './CounterpartLocalTime';
 import {
   SESSION_STATUS,
   CANCEL_CATEGORY,
-  STALE_SESSION_RESOLUTION,
   SessionListItem,
-  CompletionResult,
-  StaleSessionResolution,
   ProposedSlotInput,
 } from '@gabby/types/session';
 
@@ -48,13 +46,15 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, onOpenAutoFocus, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      // 開いた時は中の要素（×ボタン等）にフォーカスせず枠にフォーカスする（dialogFocus.ts）
+      onOpenAutoFocus={onOpenAutoFocus ?? focusDialogContent}
       className={cn(
-        'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
+        'outline-none fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
         className
       )}
       {...props}
@@ -139,7 +139,7 @@ const MAX_PROPOSED_SLOTS = 3;
 
 export interface SessionActionTarget {
   session: SessionListItem;
-  mode: 'cancel' | 'resolve';
+  mode: 'cancel';
 }
 
 interface ProposedSlotDraft {
@@ -174,12 +174,6 @@ export interface SessionActionDialogActions {
     endIso: string,
     excludeSessionId?: string
   ) => Promise<{ success: true; coachConflict: boolean; studentConflict: boolean } | { success: false; message: string }>;
-  /** 期限超過セッションの手動解決（コーチのみ使用。生徒側では渡さない） */
-  resolveStaleSession?: (
-    sessionId: string,
-    resolution: StaleSessionResolution,
-    reason: string
-  ) => Promise<{ success: true } | { success: false; message: string }>;
 }
 
 export interface SessionActionDialogCancelLabels {
@@ -205,22 +199,8 @@ export interface SessionActionDialogCancelLabels {
   counterpartTimeCaution: string;
 }
 
-export interface SessionActionDialogResolveLabels {
-  title: string;
-  description: (counterpartName: string) => string;
-  outcomeLabel: string;
-  statusOptions: { value: StaleSessionResolution; label: string }[];
-  reasonLabel: string;
-  reasonPlaceholder: string;
-  backButton: string;
-  submitButton: string;
-  successToast: string;
-}
-
 export interface SessionActionDialogLabels {
   cancel: SessionActionDialogCancelLabels;
-  /** 期限超過セッションの手動解決モード。コーチのみ使用するため、生徒側では省略してよい */
-  resolve?: SessionActionDialogResolveLabels;
 }
 
 export interface SessionActionDialogProps {
@@ -234,7 +214,8 @@ export interface SessionActionDialogProps {
 }
 
 /**
- * セッションのキャンセル・期限超過セッションの手動解決を行う共通ダイアログ（ポータル共通）。
+ * セッションのキャンセルを行う共通ダイアログ（ポータル共通）。
+ * （開始後の実施結果の記録は、コーチの End Session ダイアログ（apps/coach/components/session/EndSessionDialog.tsx）で行う）
  * apps/student・apps/coach双方の同名コンポーネントを統合したもので、文言・サーバーアクションは
  * すべて呼び出し側からprops経由で注入する（本コンポーネント自体は日本語・英語のどちらの
  * 文字列も一切ハードコードしない）。
@@ -245,22 +226,21 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
   const currentUserId = useUserStore((state) => state.user?.id);
   const [reason, setReason] = useState('');
   const [proposedSlots, setProposedSlots] = useState<ProposedSlotDraft[]>([]);
-  const [resolvedResolution, setResolvedResolution] = useState<StaleSessionResolution>(STALE_SESSION_RESOLUTION.NORMAL);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
     setReason('');
     setProposedSlots([]);
-    if (target?.mode === 'resolve') {
-      setResolvedResolution(STALE_SESSION_RESOLUTION.NORMAL);
-    }
   }, [target]);
 
   const isCoachViewer = target?.session.viewer_role === 'coach';
   const coachId = target ? (isCoachViewer ? currentUserId : target.session.counterpart_id) : undefined;
   const studentId = target ? (isCoachViewer ? target.session.counterpart_id : currentUserId) : undefined;
   const cancelCategory = isCoachViewer ? CANCEL_CATEGORY.COACH : CANCEL_CATEGORY.STUDENT;
+  // 返還なしのキャンセル（生徒による開始12時間未満）は消化済み扱いのため、振替の候補を出せない（cancel_session と同じ判定。
+  // コーチのキャンセルは常に返還される）
+  const canPropose = target?.mode === 'cancel' && (isCoachViewer || !isWithin12Hours(target.session.start_datetime));
 
   const addProposedSlot = () => {
     setProposedSlots((prev) =>
@@ -318,7 +298,7 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     if (!target || hasBlockingConflict) return;
     setIsSubmitting(true);
     try {
-      const validSlots = proposedSlots.filter((s) => s.date && s.time && !s.conflictMessage);
+      const validSlots = canPropose ? proposedSlots.filter((s) => s.date && s.time && !s.conflictMessage) : [];
       const duration = new Date(target.session.end_datetime).getTime() - new Date(target.session.start_datetime).getTime();
       const proposedSlotInputs: ProposedSlotInput[] = validSlots.map((s) => {
         const start = new Date(`${s.date}T${s.time}:00`);
@@ -339,28 +319,6 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     }
   };
 
-  const handleResolve = async () => {
-    if (!target || !reason.trim() || !actions.resolveStaleSession || !labels.resolve) return;
-    setIsSubmitting(true);
-    try {
-      const result = await actions.resolveStaleSession(target.session.session_id, resolvedResolution, reason);
-      if (!result.success) {
-        showToast(result.message, 'error');
-        return;
-      }
-      // COACH_NO_SHOW(4)はRPC側で「完了」ではなくコーチキャンセル相当（チケット返還）として
-      // 記録されるため、completion_resultではなくstatus=CANCELLED/cancel_category=COACHを反映する
-      const patch =
-        resolvedResolution === STALE_SESSION_RESOLUTION.COACH_NO_SHOW
-          ? { status: SESSION_STATUS.CANCELLED, cancel_category: CANCEL_CATEGORY.COACH, completion_result: null }
-          : { status: SESSION_STATUS.COMPLETED, completion_result: resolvedResolution as CompletionResult };
-      onResolved(target.session.session_id, patch);
-      showToast(labels.resolve.successToast, 'success');
-      onClose();
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const policyNote = target?.mode === 'cancel' ? labels.cancel.policyNote(isWithin12Hours(target.session.start_datetime)) : null;
 
@@ -390,72 +348,74 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
               <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={labels.cancel.reasonPlaceholder} />
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>{labels.cancel.proposedSlotsLabel}</Label>
-                {proposedSlots.length < MAX_PROPOSED_SLOTS && (
-                  <Button type="button" size="sm" variant="outline" onClick={addProposedSlot}>
-                    <Plus size={13} />
-                    {labels.cancel.addSlotButton}
-                  </Button>
+            {canPropose && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>{labels.cancel.proposedSlotsLabel}</Label>
+                  {proposedSlots.length < MAX_PROPOSED_SLOTS && (
+                    <Button type="button" size="sm" variant="outline" onClick={addProposedSlot}>
+                      <Plus size={13} />
+                      {labels.cancel.addSlotButton}
+                    </Button>
+                  )}
+                </div>
+                {proposedSlots.length === 0 ? (
+                  <p className="text-[11px] text-slate-400">{labels.cancel.noSlotsHint}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {proposedSlots.map((slot, index) => {
+                      const proposedStart = slot.date && slot.time ? `${slot.date}T${slot.time}:00` : null;
+                      return (
+                        <div key={index} className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="date"
+                              min={tomorrowIsoDate()}
+                              value={slot.date}
+                              onChange={(e) => updateProposedSlot(index, { date: e.target.value })}
+                              className={cn(INPUT_CLASS, 'flex-1')}
+                            />
+                            <select
+                              value={slot.time}
+                              onChange={(e) => updateProposedSlot(index, { time: e.target.value })}
+                              className={cn(INPUT_CLASS, 'w-28 px-2 py-1')}
+                            >
+                              <option value="" disabled>
+                                {labels.cancel.timePlaceholder}
+                              </option>
+                              {PROPOSED_TIME_OPTIONS.map((t) => (
+                                <option key={t} value={t}>
+                                  {t}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => removeProposedSlot(index)}
+                              className="shrink-0 text-slate-400 hover:text-rose-500 transition-colors p-1"
+                              title={labels.cancel.removeSlotLabel}
+                            >
+                              <XIcon size={14} />
+                            </button>
+                          </div>
+                          {slot.isChecking && <p className="text-[11px] text-slate-400">{labels.cancel.checkingText}</p>}
+                          {slot.conflictMessage && <p className="text-[11px] text-rose-600">{slot.conflictMessage}</p>}
+                          {!slot.conflictMessage && proposedStart && (
+                            <CounterpartLocalTime
+                              datetime={proposedStart}
+                              timezone={target.session.counterpart_timezone}
+                              label={labels.cancel.counterpartTimeLabel}
+                              cautionText={labels.cancel.counterpartTimeCaution}
+                              format={formatCounterpartTime}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
-              {proposedSlots.length === 0 ? (
-                <p className="text-[11px] text-slate-400">{labels.cancel.noSlotsHint}</p>
-              ) : (
-                <div className="space-y-2">
-                  {proposedSlots.map((slot, index) => {
-                    const proposedStart = slot.date && slot.time ? `${slot.date}T${slot.time}:00` : null;
-                    return (
-                      <div key={index} className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="date"
-                            min={tomorrowIsoDate()}
-                            value={slot.date}
-                            onChange={(e) => updateProposedSlot(index, { date: e.target.value })}
-                            className={cn(INPUT_CLASS, 'flex-1')}
-                          />
-                          <select
-                            value={slot.time}
-                            onChange={(e) => updateProposedSlot(index, { time: e.target.value })}
-                            className={cn(INPUT_CLASS, 'w-28 px-2 py-1')}
-                          >
-                            <option value="" disabled>
-                              {labels.cancel.timePlaceholder}
-                            </option>
-                            {PROPOSED_TIME_OPTIONS.map((t) => (
-                              <option key={t} value={t}>
-                                {t}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => removeProposedSlot(index)}
-                            className="shrink-0 text-slate-400 hover:text-rose-500 transition-colors p-1"
-                            title={labels.cancel.removeSlotLabel}
-                          >
-                            <XIcon size={14} />
-                          </button>
-                        </div>
-                        {slot.isChecking && <p className="text-[11px] text-slate-400">{labels.cancel.checkingText}</p>}
-                        {slot.conflictMessage && <p className="text-[11px] text-rose-600">{slot.conflictMessage}</p>}
-                        {!slot.conflictMessage && proposedStart && (
-                          <CounterpartLocalTime
-                            datetime={proposedStart}
-                            timezone={target.session.counterpart_timezone}
-                            label={labels.cancel.counterpartTimeLabel}
-                            cautionText={labels.cancel.counterpartTimeCaution}
-                            format={formatCounterpartTime}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
@@ -469,43 +429,6 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
           </>
         )}
 
-        {target?.mode === 'resolve' && labels.resolve && (
-          <>
-            <DialogHeader>
-              <DialogTitle>{labels.resolve.title}</DialogTitle>
-              <DialogDescription>{labels.resolve.description(target.session.counterpart_name)}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>{labels.resolve.outcomeLabel}</Label>
-                <select
-                  value={resolvedResolution}
-                  onChange={(e) => setResolvedResolution(Number(e.target.value) as StaleSessionResolution)}
-                  className={cn(INPUT_CLASS, 'w-full')}
-                >
-                  {labels.resolve.statusOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>{labels.resolve.reasonLabel}</Label>
-                <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={labels.resolve.reasonPlaceholder} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-                {labels.resolve.backButton}
-              </Button>
-              <Button type="button" onClick={handleResolve} disabled={isSubmitting || !reason.trim()}>
-                {isSubmitting && <Loader2 size={14} className="animate-spin" />}
-                {labels.resolve.submitButton}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
       </DialogContent>
     </DialogPrimitive.Root>
   );

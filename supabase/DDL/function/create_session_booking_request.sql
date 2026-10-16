@@ -1,47 +1,24 @@
----------------------------------------------
--- 未消化チケットによる新規予約リクエストRPC (2026-09-11 追加、book_makeup_sessionを置き換え)
--- 前提: table/com_m_lesson_schedule.sql, table/com_t_session.sql,
---       table/com_t_session_slot_proposal.sql, function/fn_schedule_shortfall.sql,
---       function/check_session_conflict.sql の作成が完了していること。
----------------------------------------------
--- 【背景】
--- キャンセルによりticket_refunded=trueとなり未割当に戻ったチケット（週n回契約の
--- うち一部コマ）や、元々未割当のチケットを、そのコマの担当コーチ限定で予約する。
--- 旧book_makeup_session()はコーチのAvailability範囲内であれば即時確定していたが、
--- Availability制約を撤廃し自由に日時を選べるようにする代わりに、必ずコーチの承認を
--- 要するようにする（ダブルブッキング以外の「コーチの実際の都合」は承認ステップで
--- 担保する）。そのため本関数はcom_t_sessionへ直接INSERTせず、
--- com_t_session_slot_proposalへpending行を作成するのみで、確定は
--- approve_slot_proposal()が行う。
+-- =========================================================================
+-- create_session_booking_request: 生徒の自由予約リクエスト（未予約の回の予約の申請）
+-- =========================================================================
+-- 【役割】
+-- 未予約の回（キャンセルで返還された回・元から予約されていない回）を、その枠（schedule_id）の担当コーチに予約を申請する。
+-- コーチの空き時間に縛られず日時を選べる代わりに、必ずコーチの承認を要する（確定は approve_slot_proposal()）。
+-- 本関数は com_t_session に直接書かず、com_t_session_slot_proposal に承認待ちの行を作る
+-- （schedule_id 必須・source_session_id=NULL・proposed_by_role=1（生徒）・expires_at=NULL（期限なし））。
 --
--- 対象コーチは com_m_lesson_schedule.coach_id で既に確定しているため、本関数は
--- コーチ選択を受け付けず、スケジュール(コマ)IDのみを受け取る。
--- shortfall(未割当チケット数)のチェックでは、既にpending中の他リクエストも
--- 暫定的に消費済みとみなし、同一コマへの過剰リクエストを防止する。
+-- 【ルール】
+-- - 予約できる回数は fn_schedule_bookable_count()（未予約の回から、自由予約リクエストと振替候補の回答待ちを差し引いた数）で
+--   判定する（回答待ちの間に同じ回を重ねて申請し、両方の承認で契約の回数を超えるのを防ぐ）。
+-- - 開始が24時間以上先の日時だけ（アドミンの代理予約 admin_book_session_direct は対象外）。
+-- - ダブルブッキングは check_session_conflict() で確かめる。
+-- - アドミンの代理実行は許可しない（アドミンは admin_book_session_direct を使う）ため、権限の判定は
+--   fn_assert_actor_or_admin() を使わず生徒本人であることだけを確かめる。
 --
--- 【24時間ルール (2026-09-15追加)】
--- 生徒による個別予約は、開始24時間以内は不可（翌日以降のみ予約可能）。アドミンの
--- 代理予約(admin_book_session_direct)はこのルールの対象外（未来であればいつでも可能）。
---
--- 【権限チェック・通知の共通化について (2026-09-15追加)】
--- 通知INSERTはfn_notify()を使う（前提: function/fn_notify.sql）。権限チェックは
--- 意図的にfn_assert_actor_or_admin()を使わず素のIF文のままとする。本関数にはアドミンの
--- 代理実行を許可しない（アドミンはadmin_book_session_direct()という別の専用RPCを使う）ため。
---
--- 【通知のリンク先 (2026-10-06変更)】
--- コーチへの通知（アプリ内・メール）のリンク先は、リクエストを承認・却下できる
--- カレンダー（/calendar の Pending Requests）とする（従来の生徒詳細では承認できなかったため）。
---
--- 【スロット提案の統合 (2026-09-15追加)】
--- 書き込み先をcom_t_session_booking_requestからcom_t_session_slot_proposalへ変更する
--- （キャンセル時の振替候補(cancel_session参照)と統合した単一テーブル。詳細は
--- table/com_t_session_slot_proposal.sqlのコメント参照）。本関数が作成する行は
--- 「自由予約リクエスト」を表すため、schedule_id必須・source_session_id=NULL・
--- proposed_by_role=1(生徒)固定・expires_at=NULL(無期限)で挿入する。pending件数の
--- カウントは、同じテーブルを共有する振替候補（他のschedule_id/source_session_idを
--- 持つ行）を誤って含めないよう、source_session_id IS NULLの行のみに絞り込む
--- （振替候補はそもそも本関数のshortfallチェックの対象外という既存仕様を維持するため）。
----------------------------------------------
+-- 【通知】
+-- コーチへ fn_notify() で通知する。リンク先は承認・却下ができるカレンダー（/calendar の Pending Requests）。
+-- =========================================================================
+
 CREATE OR REPLACE FUNCTION public.create_session_booking_request(
     p_schedule_id uuid,
     p_start_datetime timestamptz,
@@ -55,8 +32,6 @@ SET search_path = public
 AS $$
 DECLARE
     v_schedule RECORD;
-    v_shortfall integer;
-    v_pending_count integer;
     v_coach_conflict boolean;
     v_student_conflict boolean;
     v_request_id uuid;
@@ -82,13 +57,7 @@ BEGIN
         RAISE EXCEPTION 'requested start datetime must be at least 24 hours from now';
     END IF;
 
-    SELECT shortfall INTO v_shortfall FROM public.fn_schedule_shortfall(p_schedule_id);
-
-    SELECT COUNT(*) INTO v_pending_count
-    FROM public.com_t_session_slot_proposal r
-    WHERE r.schedule_id = p_schedule_id AND r.status = 1 AND r.source_session_id IS NULL;
-
-    IF v_shortfall - v_pending_count <= 0 THEN
+    IF public.fn_schedule_bookable_count(p_schedule_id) <= 0 THEN
         RAISE EXCEPTION 'no unassigned ticket available for this schedule';
     END IF;
 

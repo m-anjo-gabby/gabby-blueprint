@@ -17,7 +17,7 @@
 1. **ヘッダー** — 画面タイトルと説明文
 2. **音声作成エリア（Design New Audio）** — 英文入力、メモ入力、単語単位の調整、
    Voice/Style/話速/ピッチ設定、SSMLエディタ、試聴・保存操作
-3. **作成済みアセット一覧（Recent Assets）** — テーブル形式。検索・ページング・再生・
+3. **作成済みアセット一覧（Recent Assets）** — テーブル形式（新しい順。サーバーで1ページ10件ずつ取得する）。検索・条件のクリア・ページング・再生・
    ダウンロード・削除
 
 ## 表示要素・操作
@@ -35,24 +35,27 @@
 | 「LISTEN RESULT」ボタン | SSMLが存在する場合のみ有効 | 現在のSSMLで試聴する |
 | 「SAVE ASSET」ボタン | 英文が入力されている場合のみ有効 | フレーズ・コメント・SSML・調整内容をアセットとして保存し、音声ファイルをStorage
   （`audio/designer/`配下）に生成する。保存成功後は入力内容がリセットされる |
-| 一覧の検索ボックス | 常時表示 | フレーズまたはコメントに含まれる文字列で絞り込む |
+| 一覧の検索ボックス | 常時表示 | フレーズまたはコメントの部分一致で検索。Enterまたは「検索」ボタンで確定し、URLの`q`に反映する（1ページ目に戻る）。入力した文字はそのまま文字として検索する（`%`・`,`等も特別な意味を持たない） |
+| 「条件をクリア」ボタン | 常時表示（検索語・絞り込みが無いときは押せない） | 検索語・絞り込み・ページをすべて外し、初期状態の一覧に戻す |
+| 件数・ページ送り（前へ・次へ） | 常時表示（「全 n 件」、1ページ10件。先頭・末尾では該当ボタンが無効） | 前後のページへ移る（URLの`page`） |
 | 一覧の「Listen」ボタン | 音声生成済みの行に表示 | 音声を再生する |
 | 一覧のダウンロードアイコン | 音声生成済みの行に表示 | 音声ファイルをダウンロードする |
-| 一覧の削除アイコン | 各行に表示 | 確認ダイアログの上で、アセットのレコードとStorage上の音声ファイルを削除する |
+| 一覧の削除アイコン | 各行に表示 | 確認ダイアログの上で、アセットのレコードとStorage上の音声ファイルを削除する（削除するファイルは、削除したレコードの音声のパスで決める） |
 
 ## 状態
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
 | 単語調整エリア空 | 「Input text above to start tuning...」 | 英文が未入力の場合 |
-| 一覧0件 | 「No matching assets found.」 | 検索条件に一致するアセットが無い、またはアセットが未登録の場合 |
+| 一覧0件 | 「No assets found.」 | 検索条件に一致するアセットが無い、またはアセットが未登録の場合 |
 
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/tools/tts-designer/page.tsx`
 - `apps/admin/app/(app)/tools/tts-designer/_components/TTSAssetGenerator.tsx`
-- `apps/admin/app/(app)/tools/tts-designer/_components/TTSAssetTable.tsx`
-- `apps/admin/actions/adminTTSAction.ts`（`saveTTSAssetAction`, `deleteTTSAssetAction`。RPCは
+- `apps/admin/app/(app)/tools/tts-designer/_components/TTSAssetTable.tsx`, `_components/columns.tsx`
+- `apps/admin/components/list/`（一覧の共通部品）, `apps/admin/lib/list.ts`。E2E: `testing/e2e/tests/admin/list-filters.spec.ts`（仕様: `testing/e2e/specs/admin/list-filters.md`）
+- `apps/admin/actions/adminTTSAction.ts`（`getTTSAssets`, `saveTTSAssetAction`, `deleteTTSAssetAction`。RPCは
   使わず`com_t_tts_asset`テーブルとStorage `audio`バケットを直接操作する）
 - `packages/lib/azure/ssml.ts`（`buildSSML`）, `packages/lib/hooks/usePlayAzureSpeech`,
   `packages/lib/hooks/usePlayAudioSpeech`

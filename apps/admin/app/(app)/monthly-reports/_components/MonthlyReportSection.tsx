@@ -1,4 +1,7 @@
+import { getLocale } from 'next-intl/server';
 import { getCoachMonthlyReportForAdmin } from '@/actions/adminMonthlyReportAction';
+import { getTimezoneNameMap } from '@gabby/lib/timezone/timezoneNames';
+import { pickTimezoneName } from '@gabby/lib/date/timezone';
 import { ApprovalControlBar } from './ApprovalControlBar';
 import { MonthlyReportGrid } from './MonthlyReportGrid';
 import { ExportCsvButton } from './ExportCsvButton';
@@ -15,7 +18,11 @@ interface Props {
  * page.tsx がコーチ・月ごとに key を変えた <Suspense> で包み、切り替え時に骨組みを表示する。
  */
 export async function MonthlyReportSection({ coachId, yearMonth, coachName }: Props) {
-  const result = await getCoachMonthlyReportForAdmin(coachId, yearMonth);
+  const [result, timezoneNames, locale] = await Promise.all([
+    getCoachMonthlyReportForAdmin(coachId, yearMonth),
+    getTimezoneNameMap(),
+    getLocale(),
+  ]);
 
   if (!result.success) {
     return (
@@ -35,7 +42,12 @@ export async function MonthlyReportSection({ coachId, yearMonth, coachName }: Pr
         lateCancelCount={result.report.late_cancel_count}
         noShowCount={result.report.no_show_count}
         unresolvedCount={result.report.unresolved_count}
-        coachTimezone={result.report.coach_timezone}
+        coachTimezoneName={pickTimezoneName(
+          result.report.coach_timezone,
+          timezoneNames.get(result.report.coach_timezone),
+          'display',
+          locale === 'en' ? 'en' : 'ja'
+        )}
         approval={result.report.approval}
       />
       <div className="flex justify-end gap-2">

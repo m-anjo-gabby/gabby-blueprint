@@ -1,9 +1,8 @@
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { getCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
 import { getCoachesFilter } from '@/actions/adminCalendarEventAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
+import { PageHeader } from '@/components/common/PageHeader';
 import { sessionsAfter, sessionsCopiedFrom } from '../_lib/seriesSessions';
 import { SeriesCreateForm } from './_components/SeriesCreateForm';
 
@@ -32,21 +31,12 @@ export default async function CalendarEventSeriesNewPage({ searchParams }: { sea
   const backHref = sourceSeries ? `/calendar-events/series/${sourceSeries.series_id}` : '/calendar-events/series';
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <Link
-          href={backHref}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-brand transition-colors mb-2"
-        >
-          <ArrowLeft size={14} /> {sourceSeries ? t('backToSource') : t('backToList')}
-        </Link>
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">{sourceSeries ? t('copyPageTitle') : t('createTitle')}</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            {sourceSeries ? t('copyHint', { title: sourceSeries.title }) : t('createSubtitle')}
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        back={{ href: backHref, label: sourceSeries ? t('backToSource') : t('backToList') }}
+        title={sourceSeries ? t('copyPageTitle') : t('createTitle')}
+        description={sourceSeries ? t('copyHint', { title: sourceSeries.title }) : t('createSubtitle')}
+      />
 
       <SeriesCreateForm initialValues={initialValues} cancelHref={backHref} coaches={coaches} clients={clients} />
     </div>

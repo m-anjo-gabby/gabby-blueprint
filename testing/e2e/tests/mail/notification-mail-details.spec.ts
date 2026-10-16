@@ -26,6 +26,8 @@ import { resendReadApiKey, resendTestAddress, waitForEmail } from "../../support
 
 const COACH_EMAIL = "qa-coach-us-01@gabby-qa-test.example";
 const STUDENT_TZ = "Asia/Tokyo";
+/** STUDENT_TZ の短い名前（com_m_timezone.short_name_ja。送信処理が日時に添える） */
+const STUDENT_TZ_NAME = "日本時間";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SESSION_MS = 25 * 60 * 1000;
 
@@ -49,7 +51,7 @@ function at(offsetMs: number, minute: number): Date {
 }
 
 const label = (start: Date, end: Date | null) =>
-  formatReminderSchedule({ startIso: start.toISOString(), endIso: end ? end.toISOString() : null, timeZone: STUDENT_TZ, language: "ja" });
+  formatReminderSchedule({ startIso: start.toISOString(), endIso: end ? end.toISOString() : null, timeZone: STUDENT_TZ, zoneName: STUDENT_TZ_NAME, language: "ja" });
 
 test("キャンセル（振替候補あり）・予約申請の否認・マッチングの成立と否認のメールに、対象の日時と理由が載る", async ({}, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "メール送信は desktop のみ");
@@ -200,13 +202,13 @@ test("キャンセル（振替候補あり）・予約申請の否認・マッ�
   const approved = await waitForEmail({ to: email, since, subject: /マッチングが成立しました/ });
   expect(approved.text).toContain(`【初回のセッション】\n${label(firstStart, end(firstStart))}`);
   expect(approved.text).toContain(
-    `【曜日・時間】\n${formatWeeklySlot({ startIso: firstStart.toISOString(), endIso: end(firstStart).toISOString(), timeZone: STUDENT_TZ, language: "ja" })}`
+    `【曜日・時間】\n${formatWeeklySlot({ startIso: firstStart.toISOString(), endIso: end(firstStart).toISOString(), timeZone: STUDENT_TZ, zoneName: STUDENT_TZ_NAME, language: "ja" })}`
   );
 
   const matchingRejected = await waitForEmail({ to: email, since, subject: /マッチングについて/ });
   const { instant } = getFirstLiveSessionOccurrence(5, "20:00", STUDENT_TZ, STUDENT_TZ);
   expect(matchingRejected.text).toContain(
-    `【ご希望の曜日・時間】\n${formatWeeklySlot({ startIso: instant.toISOString(), endIso: end(instant).toISOString(), timeZone: STUDENT_TZ, language: "ja" })}`
+    `【ご希望の曜日・時間】\n${formatWeeklySlot({ startIso: instant.toISOString(), endIso: end(instant).toISOString(), timeZone: STUDENT_TZ, zoneName: STUDENT_TZ_NAME, language: "ja" })}`
   );
   expect(matchingRejected.text).toContain("【理由】\nE2E: マッチングの否認理由");
 });

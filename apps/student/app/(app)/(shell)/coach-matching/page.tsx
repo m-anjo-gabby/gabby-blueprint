@@ -1,5 +1,5 @@
 import { UserX } from 'lucide-react';
-import { getMyLiveSessionTickets, getMySlotStatus, getCoachBrowseList, getCountryList } from '@/actions/matchingAction';
+import { getMyLiveSessionTickets, getMySlotStatus, getCoachBrowseList, getCountryList, getCoachSpecialtyList } from '@/actions/matchingAction';
 import { getMyLiveSessionContractsCached, pickLiveSessionContract } from '@/lib/liveSessionContracts';
 import { CoachMatchingView } from './_components/CoachMatchingView';
 import { CoachMatchingPageHeader } from './_components/CoachMatchingSkeleton';
@@ -18,11 +18,12 @@ export default async function CoachMatchingPage({ searchParams }: { searchParams
   });
   const slotsPromise = selectionPromise.then(({ ticket }) => (ticket ? getMySlotStatus(ticket.ticket_id) : []));
 
-  const [{ activeContracts, ticket }, slots, coaches, countries] = await Promise.all([
+  const [{ activeContracts, ticket }, slots, coaches, countries, specialties] = await Promise.all([
     selectionPromise,
     slotsPromise,
     getCoachBrowseList(),
     getCountryList(),
+    getCoachSpecialtyList(),
   ]);
 
   if (!ticket) {
@@ -49,6 +50,7 @@ export default async function CoachMatchingPage({ searchParams }: { searchParams
       initialSlots={slots}
       coaches={coaches}
       countries={countries}
+      specialties={specialties}
     />
   );
 }

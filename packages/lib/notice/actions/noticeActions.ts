@@ -169,6 +169,52 @@ export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise
 }
 
 /**
+ * 行動ボタンを押したことを記録する（既読も兼ねる）。
+ * 押した日時は最初の1回だけを残す（2回目以降は更新しない）。
+ */
+export async function recordNoticeCtaClickAction(noticeId: string): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const ctx = await getLogContext();
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return { success: false, error: 'Unauthorized' };
+
+    const now = new Date().toISOString();
+    // 未読なら既読の行を作る（押した日時も同時に入れる）
+    const { error: upsertError } = await supabase
+      .from('com_t_notice_read')
+      .upsert(
+        { notice_id: noticeId, user_id: user.id, read_at: now, cta_clicked_at: now, insert_date: now, update_date: now },
+        { onConflict: 'notice_id,user_id', ignoreDuplicates: true }
+      );
+    if (upsertError) {
+      logger.error("notice:cta_click_failed", upsertError.message, { ...ctx, err: upsertError, payload: { noticeId } });
+      return { success: false, error: upsertError.message };
+    }
+
+    // 既読済みでまだ押していなければ、押した日時を入れる
+    const { error: updateError } = await supabase
+      .from('com_t_notice_read')
+      .update({ cta_clicked_at: now, update_date: now })
+      .eq('notice_id', noticeId)
+      .eq('user_id', user.id)
+      .is('cta_clicked_at', null);
+    if (updateError) {
+      logger.error("notice:cta_click_failed", updateError.message, { ...ctx, err: updateError, payload: { noticeId } });
+      return { success: false, error: updateError.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    logger.error("notice:cta_click_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { noticeId } });
+    return { success: false, error: 'Unexpected error' };
+  }
+}
+
+/**
  * Supabase Storage (notices バケット) から添付ファイルの公開URLを取得
  * @param path Storageパス (例: notices/c7aaeab6.../file.pdf)
  */

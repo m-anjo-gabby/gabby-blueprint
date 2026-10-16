@@ -72,30 +72,38 @@
      前後の記号（`.` `,` `?` `"` など）は取り除いて検索する。
    - 1文字の単語（`a`、`I`）も対象。英字を含まない語（数字のみ等）はボタンが表示されない。
    - ボタン以外の場所をタップするか画面をスクロールすると、ボタンは閉じる。
-2. 「Color Vowelを検索」をタップすると、右下に「Searching Color Vowel...」が表示され、
-   検索が終わると「Color Vowel Dictionary」ダイアログが開く。
+2. 「Color Vowelを検索」をタップすると、下から「Color Vowel辞書」のシートが開く（PCでも同じシートを中央寄せの幅で表示）。
+   検索中は見出しにタップした単語を出し、それ以外は同じ形の骨組みを表示する。シートは「×」・枠外のタップ・下へのスワイプで閉じる。
+   シートの高さは表示領域の85%までで、超える分（長い和訳・説明）はシートの中でスクロールする（見出しの「Color Vowel辞書」と「×」は固定）。
+   見出し語は1行に収まるよう、シートの幅に合わせて文字サイズを段階的に小さくする（最小でも収まらない語だけ折り返す）。
 
 検索は、タップした単語の出現形（`launched`、`offers` など）そのままで行い、大文字小文字は区別しない。
 公開中のエントリだけが対象。
 
-### 辞書ダイアログの表示
+### 辞書シートの表示
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | 品詞タブ | 同じ単語に複数の品詞が登録されている場合のみ（例: `offer` の動詞・名詞）。文中での品詞に関係なく、登録されている全品詞を表示する | タップした品詞のエントリに切り替わる（初期表示は品詞の表示順で先頭のもの） |
-| 見出し語 | 常時表示。辞書に登録された表記のまま表示する（`CEO`、`Friday` 等は大文字を含む）。第一アクセントのある母音の綴りに下線を引き、その下に Color Vowel のアイコンを表示する | — |
-| 「単語を再生」ボタン | 常時表示。単語の音声が未生成の場合は操作不可 | 単語の音声を再生する |
-| 「母音を再生」ボタン | 常時表示。Color Vowel の音声が無い場合は操作不可 | Color Vowel（例: Olive Sock）の音声を再生する |
-| 品詞ラベル・発音記号 | 品詞は常時表示。発音記号は登録されている場合のみ | — |
+| 品詞ラベル | 常時表示（見出し語の上） | — |
+| 見出し語 | 常時表示。辞書に登録された表記のまま表示する（`CEO`、`Friday` 等は大文字を含む）。第一アクセントのある母音の綴りに、その Color Vowel の色で下線を引き、その真下に Color Vowel のアイコンを表示する | — |
+| 音素 | 発音記号（IPA）から自動で変換した音素表記（例: `t ey l er`）。第一アクセントのある母音だけを太字にし、Color Vowel の色で下線を引く。IPA 自体は Color Vowel と別の方式のため表示しない。IPA が未登録、または変換できない記号を含む場合は表示しない | — |
+| 「単語を再生」ボタン | 常時表示。単語の音声が未生成の場合は操作不可 | 単語の音声を再生する。タップしてから再生が終わるまで（読み込み中を含む）、アイコンがスピナーに変わりボタンの色が変わる。再生中にもう一度タップすると停止する |
+| 「母音を再生」ボタン | 常時表示。Color Vowel の音声が無い場合は操作不可 | Color Vowel（例: Olive Sock）の音声を再生する（再生中の表示・停止は「単語を再生」と同じ） |
 | 日本語訳 | 登録されている場合のみ | — |
 | 原形 | 語形変化した語で原形が登録されている場合のみ「原形: launch」の形で表示 | — |
-| Color Vowel の説明 | 常時表示。Color Vowel 名（その色の文字色）と説明文 | — |
+| Color Vowel の説明 | 常時表示。「<Color Vowel 名> の発音」の見出しと説明文 | — |
 
-### 辞書ダイアログの状態
+音素表記の書き方は CHIVOX 利用時の表記ルールに合わせ、変換は `packages/lib/colorVowel/phonemes.ts` で行う
+（`/ɪr/` は `iy r`、`/ɔr/` は `ao r` を暫定で採用。[JUDGEMENT-GUIDE](../../../cv-dictionary/JUDGEMENT-GUIDE.md) CVJ-20261010-09）。
+
+### 辞書シートの状態
 
 | 状態 | 表示内容 | 発生条件 |
 |---|---|---|
-| 未登録 | 「Not in dictionary」と「"<単語>" はColor Vowel辞書に登録されていません。」 | タップした単語が辞書に登録されていない場合（検索エラー時も同じ表示） |
+| 検索中 | 見出しにタップした単語、その他は骨組み | 検索の結果待ち |
+| 未登録 | 「辞書に見つかりませんでした」と「「<単語>」は Color Vowel 辞書に登録されていません。」 | タップした単語が辞書に登録されていない場合 |
+| エラー | 「検索できませんでした」「時間をおいて、もう一度お試しください。」 | 検索に失敗した場合 |
 
 辞書の登録内容は admin の [CV Dictionary](../../admin/tools/cv-dictionary.md) で管理する。
 
@@ -125,7 +133,10 @@
 - `apps/student/app/(app)/training/sprint/play/_components/SprintFeedback.tsx`（発話フィードバック
   モーダルを共用）
 - `apps/student/components/common/LookupText.tsx`（英文の単語分割・タップ）
-- `apps/student/components/common/ColorVowelLookupProvider.tsx`（検索ボタン・辞書ダイアログ。
+- `apps/student/components/common/ColorVowelLookupProvider.tsx`（検索ボタン・検索の状態。
   `apps/student/app/(app)/layout.tsx` で全画面に配置）
+- `apps/student/components/common/ColorVowelDictionarySheet.tsx`（辞書シートの表示・骨組み）
+- `packages/lib/colorVowel/phonemes.ts`（IPA → 音素表記の変換。辞書データ作成の検証 `validate.ts` と共用）
+- E2E: `testing/e2e/tests/smoke/color-vowel-dictionary.spec.ts`
 - `apps/student/actions/colorVowelAction.ts`（`lookupColorVowelDictionary`。
   `com_m_color_vowel_dictionary` を `com_m_color_vowel` と結合して検索する）

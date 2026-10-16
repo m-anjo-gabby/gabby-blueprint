@@ -1,42 +1,31 @@
----------------------------------------------
--- マッチング成立処理 共通ヘルパー関数 (2026-09-15 追加)
----------------------------------------------
--- 【背景】
--- approve_matching_request()（生徒申請→コーチ承認の通常フロー）と
--- admin_match_student_with_coach()（アドミンによる代理即時マッチング）は、
--- 「承認済みのcom_t_matching_requestが既に存在する前提で、target_sessionsを算出し、
--- コーチの空き状況をロック付きで再チェックし、com_m_lesson_scheduleを作成し、
--- com_t_sessionを一括生成する」という承認後ロジックがほぼ丸ごと重複していた
--- （admin_match_student_with_coachのファイル冒頭コメントで「approve_matching_requestの
--- 承認後ロジックをそのまま踏襲」と明記されていた通り）。本関数にその共通部分を集約し、
--- 両者はそれぞれ「com_t_matching_requestの確定方法（既存pending行をUPDATE／新規に
--- approved行をINSERT）」と「通知内容（コーチへの通知要否）」だけを担当する薄いラッパーとする。
+-- =========================================================================
+-- fn_commit_matching_schedule: マッチングの成立の処理（内部用）
+-- =========================================================================
+-- 【役割】
+-- approve_matching_request()（申請の承認）と admin_match_student_with_coach()（アドミンの直接マッチング）が共通で使う
+-- 成立の処理: 目標の回数の算出 → コーチ単位のロック → 予約できる回数の確認 → com_m_lesson_schedule の作成 →
+-- セッションの生成 → チャットのルームの用意と挨拶のメッセージ。
+-- 申請の行（p_request_id）は読み書きせず source_request_id として参照するだけで、申請の行の確定は呼び出し元が行う。
+-- 24時間のルール（p_min_start_datetime）と割合の基準（p_enforce_rate）を適用するかも呼び出し元が決める。
 --
--- 【呼び出し元の責務分担】
--- 本関数は対象のcom_t_matching_request行(p_request_id)を一切読み書きしない
--- （既に存在する前提で、source_request_idとしてFK参照するのみ）。呼び出し元が
--- 承認フロー(UPDATE status=2)・代理作成フロー(INSERT status=2)いずれの場合も、
--- 本関数を呼ぶ前後で自身の責務としてリクエスト行を確定させること。
+-- 【時刻】
+-- 曜日・時刻は p_timezone（生徒の申請時のタイムゾーン）の現地時刻で受け取り、schedule_timezone にそのまま保存する。
+-- start_date / end_date もそのタイムゾーンの日付。基準のタイムゾーンが申請ごとに違い、曜日をまたいで重なりうるため、
+-- 同時の承認を防ぐロックはコーチ単位にしている。
 --
--- 【24時間ルールとの関係】
--- p_min_start_datetimeはfn_generate_sessions_for_schedule()にそのまま渡すのみで、
--- 「アドミンかどうかで下限を変えるか」の判断自体は呼び出し元(approve_matching_request/
--- admin_match_student_with_coach)の責務のままとする。
+-- 【予約できる回数】
+-- fn_matching_slot_availability() で数え、割合（matching_min_bookable_rate()）に満たなければ INSUFFICIENT_BOOKABLE で中止する
+-- （p_enforce_rate = false でも、予約できる回が1回も無ければ NO_BOOKABLE_SESSION）。満たせば成立させ、重なる回は
+-- fn_generate_sessions_for_schedule() が飛ばす（未予約として残り、生徒とコーチが個別に調整する）。
+-- 他の生徒の承認待ちの申請は数えない（fn_matching_occurrence_busy 参照）。
 --
--- 【チャットルーム開設・挨拶メッセージ (2026-09-28追加)】
--- 成立のたびにfn_send_matching_greeting()で生徒×コーチの1対1チャットルームを用意し（開設済みなら
--- それを使う）、コーチから生徒へ挨拶メッセージを送る。成立処理と同じトランザクションで行う。
---
--- 【基準のタイムゾーン (2026-10-06変更)】
--- p_day_of_week/p_start_time/p_end_time は p_timezone（申請の requested_timezone = 生徒の申請時のタイムゾーン）の
--- 現地時刻として受け取り、com_m_lesson_schedule.schedule_timezone にそのまま保存する（従来は承認時のコーチの
--- タイムゾーンを保存していたため、コーチ側の夏時間の切り替えで生徒側の時刻がずれていた）。
--- start_date/end_date もこのタイムゾーンの日付にする。重複チェックは実際の日時で比べる
--- check_coach_schedule_conflict() を使い、基準のタイムゾーンが申請ごとに異なっても曜日をまたいで
--- 重なり得るため、同時承認を防ぐロックは「コーチ単位」にする（旧: コーチ×曜日）。
--- シグネチャが変わるため、旧シグネチャを削除してから作り直す。
----------------------------------------------
+-- 【目標の回数】
+-- fn_matching_slot_target_sessions() で決める。コーチ交代の後は、終了した同じ枠の定期スケジュールで使った回を差し引く
+-- （契約の回数を超えて作らないため）。残りが0回なら NO_REMAINING_SESSIONS で成立させない。
+-- =========================================================================
+
 DROP FUNCTION IF EXISTS public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, timestamptz);
+DROP FUNCTION IF EXISTS public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, text, timestamptz);
 
 CREATE OR REPLACE FUNCTION public.fn_commit_matching_schedule(
     p_request_id uuid,
@@ -48,7 +37,8 @@ CREATE OR REPLACE FUNCTION public.fn_commit_matching_schedule(
     p_start_time time,
     p_end_time time,
     p_timezone text,
-    p_min_start_datetime timestamptz DEFAULT NULL
+    p_min_start_datetime timestamptz DEFAULT NULL,
+    p_enforce_rate boolean DEFAULT true
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -61,14 +51,12 @@ DECLARE
     v_start_date date;
     v_end_date date;
     v_schedule_id uuid;
-    v_ticket_total_sessions smallint;
-    v_ticket_weekly_frequency smallint;
     v_target_sessions smallint;
+    v_availability RECORD;
 BEGIN
-    -- 対象チケットに紐づくライセンス期間(Session生成範囲の基準)と、target_sessions算出用の
-    -- total_sessions/weekly_frequencyを取得
-    SELECT l.start_date, l.end_date, t.total_sessions, t.weekly_frequency
-    INTO v_license_start, v_license_end, v_ticket_total_sessions, v_ticket_weekly_frequency
+    -- 対象チケットに紐づくライセンス期間(Session生成範囲の基準)を取得
+    SELECT l.start_date, l.end_date
+    INTO v_license_start, v_license_end
     FROM public.com_t_user_session_ticket t
     JOIN public.com_t_user_license l ON l.license_id = t.license_id
     WHERE t.ticket_id = p_ticket_id;
@@ -82,21 +70,29 @@ BEGIN
     v_start_date := GREATEST((v_license_start AT TIME ZONE p_timezone)::date, (NOW() AT TIME ZONE p_timezone)::date);
     v_end_date := (v_license_end AT TIME ZONE p_timezone)::date;
 
-    -- このコマ(slot_no)が契約上持つべき目標セッション数。商をbaseとし、余りはslot_no昇順に
-    -- 1つずつ多く配分する（table/com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）
-    v_target_sessions := (v_ticket_total_sessions / v_ticket_weekly_frequency)
-        + CASE WHEN p_slot_no <= (v_ticket_total_sessions % v_ticket_weekly_frequency) THEN 1 ELSE 0 END;
+    -- このコマ(slot_no)の目標セッション数（コーチ交代等で終了した同じコマの定期スケジュールで使った回を差し引いた残り）
+    v_target_sessions := public.fn_matching_slot_target_sessions(p_ticket_id, p_slot_no);
+    IF v_target_sessions = 0 THEN
+        RAISE EXCEPTION 'NO_REMAINING_SESSIONS: slot % of ticket % has no remaining sessions', p_slot_no, p_ticket_id;
+    END IF;
 
     -- 同一コーチへの成立処理を直列化し、重複チェックのレース条件を防ぐ
     -- （この後にfn_send_matching_greeting()内で生徒×コーチのロックを取るが、そちらの後に
     -- 別のロックを取る処理は無いため、デッドロックは起こらない）
     PERFORM pg_advisory_xact_lock(hashtextextended('matching:' || p_coach_id::text, 0));
 
-    IF public.check_coach_schedule_conflict(
-        p_coach_id, p_timezone, p_day_of_week, p_start_time, p_end_time,
-        GREATEST(v_license_start, NOW()), v_license_end
-    ) THEN
-        RAISE EXCEPTION 'SCHEDULE_CONFLICT: coach % already has an overlapping active schedule', p_coach_id;
+    -- 予約できる回数が割合に満たなければ成立させない（作られる回と同じ判定・同じ下限の日時で数える）
+    SELECT * INTO v_availability
+    FROM public.fn_matching_slot_availability(
+        p_ticket_id, p_coach_id, p_slot_no, p_timezone, p_day_of_week, p_start_time, p_end_time,
+        p_min_start_datetime, p_request_id, false
+    );
+    IF v_availability.bookable_sessions = 0 THEN
+        RAISE EXCEPTION 'NO_BOOKABLE_SESSION: no session in this slot can be booked within the license period';
+    END IF;
+    IF p_enforce_rate AND NOT v_availability.is_acceptable THEN
+        RAISE EXCEPTION 'INSUFFICIENT_BOOKABLE: only % of % sessions can be booked (% required)',
+            v_availability.bookable_sessions, v_availability.target_sessions, v_availability.required_sessions;
     END IF;
 
     INSERT INTO public.com_m_lesson_schedule (
@@ -119,4 +115,4 @@ $$;
 
 -- 内部処理専用（approve_matching_request/admin_match_student_with_coach経由以外での
 -- 直接実行は想定しない）
-REVOKE EXECUTE ON FUNCTION public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, text, timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.fn_commit_matching_schedule(uuid, uuid, uuid, uuid, smallint, smallint, time, time, text, timestamptz, boolean) FROM PUBLIC, anon, authenticated;

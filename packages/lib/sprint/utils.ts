@@ -120,6 +120,23 @@ export const formatSprintLevelLabel = (type: SprintQuestionType | string, level:
 };
 
 /**
+ * 習得済みのレベル（生徒の到達レベル）が、まだ最小レベルに届いていないか。
+ * Lv.1から始まる種別（Builders・Mastery）の0は「Lv.1を習得していない」状態で、Lv.1 とは表示しない。
+ */
+export const isSprintLevelNotReached = (type: SprintQuestionType | string, level: number): boolean => {
+  const typeConfig = QUESTION_TYPES[type as SprintQuestionType];
+  return !!typeConfig && level < typeConfig.minLevel;
+};
+
+/**
+ * 習得済みのレベル（生徒の到達レベル）の表示。未到達は notReachedLabel（アプリの言語で渡す）、
+ * それ以外は formatSprintLevelLabel と同じ（Basic がある種別の0は「Basic」）。
+ * 教材の難易度など「レベルそのもの」の表示には formatSprintLevelLabel を使う。
+ */
+export const formatAcquiredSprintLevelLabel = (type: SprintQuestionType | string, level: number, notReachedLabel: string): string =>
+  isSprintLevelNotReached(type, level) ? notReachedLabel : formatSprintLevelLabel(type, level);
+
+/**
  * 発話評価対象のテキストから、句読点・記号を除いた単語配列を生成する共通ヘルパー
  */
 export const cleanAnswerWords = (text: string): string[] => {

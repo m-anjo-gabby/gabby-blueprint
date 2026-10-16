@@ -3,7 +3,7 @@
  *
  * 過去のセッションを再現するため、スケジュール・マッチングリクエスト・セッションは service_role で直接作る
  * （admin_match_student_with_coach 等のRPCは「今日以降」のセッションしか作れないため）。
- * 終了時刻を過ぎたセッションの完了だけは、担当コーチ本人のJWTで resolve_stale_session を呼び、
+ * 終了時刻を過ぎたセッションの完了だけは、担当コーチ本人のJWTで record_session_outcome（End Session）を呼び、
  * チケット消化と履歴の記録をアプリと同じ経路で行う（CLAUDE.md 6章）。
  * セッションは「スケジュール×開始日時」で重複を判定するため、再実行すると不足分の作成と、
  * 前回以降に終了時刻を過ぎたセッションの完了だけが行われる。
@@ -213,9 +213,11 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
       const coach = coaches.find((c) => c.id === s.coach_id);
       if (!coach) throw new Error(`担当コーチが見つかりません: ${s.coach_id as string}`);
       const client = await coachClient(coach);
-      const { error: rpcErr } = await client.rpc("resolve_stale_session", {
+      // 通話の記録が無いため「外部のZoomで実施した実施完了」として記録する（理由が必須）
+      const { error: rpcErr } = await client.rpc("record_session_outcome", {
         p_session_id: s.session_id,
-        p_resolution: 1,
+        p_outcome: 1,
+        p_conducted_via: 2,
         p_reason: "【QA固定】利用者ペルソナの受講実績",
       });
       if (rpcErr) throw rpcErr;

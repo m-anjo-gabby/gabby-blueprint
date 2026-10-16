@@ -22,6 +22,14 @@ export function DashboardPanelCard({ title, aside, children }: DashboardPanelCar
   );
 }
 
+/**
+ * 区画内の行の一覧。件数が溜まっても区画が際限なく伸びないよう、約5行（行の高さ約56px＋間隔8px）で
+ * 止めて一覧の中だけスクロールさせる。6行目が半分見える高さにし、続きがあることを分かるようにする。
+ */
+export function PanelRowList({ children }: { children: ReactNode }) {
+  return <ul className="max-h-84 space-y-2 overflow-y-auto overscroll-contain pr-1">{children}</ul>;
+}
+
 /** 区画内の行（2行の文字＋アイコン、高さ約56px）の骨組み。rows 行分を並べる */
 export function PanelRowsSkeleton({ rows = 2, icon = false }: { rows?: number; icon?: boolean }) {
   return (

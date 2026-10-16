@@ -2,12 +2,11 @@
 
 import {
   getSessionHomeworkCore,
-  getHomeworkChecklistCore,
-  updateHomeworkChecklistItemStatusCore,
+  markSessionHomeworkViewedCore,
 } from '@gabby/lib/sessionHomework/actions/sessionHomeworkActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { SessionHomeworkChecklistItem, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 
 const logger = createLogger('student');
 
@@ -26,33 +25,9 @@ export async function getSessionHomework(sessionId: string): Promise<SessionHome
 }
 
 /**
- * 対象セッションの宿題チェックリストを取得する（生徒本人向け、閲覧のみ。項目の追加はコーチのみ）
+ * 生徒が宿題を開いたことを記録する（コーチの画面の「見たか・最新の追記を見たか」に使う）。
+ * セッション結果画面をサーバーで描く時に呼ぶ。失敗しても画面の表示は止めない。
  */
-export async function getSessionHomeworkChecklist(sessionId: string): Promise<SessionHomeworkChecklistItem[]> {
-  const result = await getHomeworkChecklistCore(sessionId);
-  if (!result.success) {
-    const ctx = await getLogContext();
-    logger.error('student:get_session_homework_checklist_failed', result.errorCode, ctx);
-    return [];
-  }
-  return result.items;
-}
-
-/**
- * 宿題チェックリスト項目の完了状態を更新する（生徒本人のみ、ON/OFFの切り替え）
- */
-export async function updateHomeworkChecklistItemStatus(
-  checklistItemId: string,
-  isDone: boolean
-): Promise<{ success: true; item: SessionHomeworkChecklistItem } | { success: false; message: string }> {
-  const ctx = await getLogContext();
-  const result = await updateHomeworkChecklistItemStatusCore(checklistItemId, isDone);
-
-  if (!result.success) {
-    logger.error('student:update_homework_checklist_item_failed', result.errorCode, ctx);
-    return { success: false, message: 'チェックリストの更新に失敗しました。もう一度お試しください。' };
-  }
-
-  logger.info('student:update_homework_checklist_item_success', 'Checklist item updated', ctx);
-  return { success: true, item: result.item };
+export async function markSessionHomeworkViewed(sessionId: string): Promise<void> {
+  await markSessionHomeworkViewedCore(sessionId);
 }

@@ -2,7 +2,7 @@
 -- 候補提案の承諾/承認RPC (2026-09-15 追加、approve_session_booking_request/
 -- accept_session_reschedule_proposalを統合)
 -- 前提: table/com_t_session_slot_proposal.sql, function/check_session_conflict.sql,
---       function/fn_assert_actor_or_admin.sql, function/fn_notify.sql の作成が
+--       function/fn_assert_actor_or_admin.sql, function/fn_notify.sql, function/fn_schedule_shortfall.sql の作成が
 --       完了していること。
 ---------------------------------------------
 -- 【背景】
@@ -25,6 +25,12 @@
 -- source_session_idが設定されている場合（振替候補）のみ、同じキャンセルに紐づく他の
 -- pending候補を自動的に不採用(declined)にする。自由予約リクエストはsource_session_id
 -- IS NULLのため、この処理は1件も対象にならず無害（元々グルーピングの概念が無いため）。
+--
+-- 【契約の回数の確認 (2026-10-08追加)】
+-- 承諾・承認で作るセッションが契約の回数を超えないよう、未予約の回（fn_schedule_shortfall）が
+-- 残っていることを確かめる。予約リクエスト・振替候補は作成時に回答待ちの分を差し引いて
+-- 受け付けている（fn_schedule_bookable_count）ため通常は残っているが、それ以前に作られた
+-- 回答待ち（同じ回で予約リクエストと振替候補が重なったもの等）でも回数を超えないための最終確認。
 --
 -- 【通知】
 -- 応答した側と逆（＝提案者）へ、採用されたことを通知する。生徒が応答した場合はコーチへ
@@ -68,6 +74,11 @@ BEGIN
     SELECT * INTO v_schedule FROM public.com_m_lesson_schedule WHERE schedule_id = v_proposal.schedule_id;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'lesson schedule % not found', v_proposal.schedule_id;
+    END IF;
+
+    -- 作るセッションが契約の回数に収まること（未予約の回が残っていること）を確かめる
+    IF (SELECT shortfall FROM public.fn_schedule_shortfall(v_proposal.schedule_id)) <= 0 THEN
+        RAISE EXCEPTION 'no unassigned ticket available for this schedule';
     END IF;
 
     -- 提案から応答までに時間が空くことを考慮し、二重予約チェックは改めて必ず行う

@@ -32,7 +32,7 @@ export interface LicenseHistoryEntry {
   license_id: string;
   contract_id: string;
   user_id: string;
-  action: 'assigned' | 'updated' | 'removed';
+  action: 'assigned' | 'updated' | 'invalidated' | 'removed';
   status: number;
   start_date: string;
   end_date: string;
@@ -42,7 +42,7 @@ export interface LicenseHistoryEntry {
 }
 
 /**
- * ライセンスの割当/更新/解除の履歴を記録する（追記専用・失敗しても主処理は継続させる）
+ * ライセンスの割当/更新/無効化/解除の履歴を記録する（追記専用・失敗しても主処理は継続させる）
  */
 export async function recordLicenseHistory(supabase: AdminClient, entry: LicenseHistoryEntry, ctx: LogContext) {
   const { error } = await supabase.from('com_t_user_license_history').insert(entry);

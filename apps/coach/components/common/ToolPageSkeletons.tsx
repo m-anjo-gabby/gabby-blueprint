@@ -4,6 +4,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { PageSkeleton } from '@gabby/lib/components/common/PageSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MyRatingCardSkeleton } from '@/components/rating/MyRatingCard';
 import { ScheduleTabs } from '@/components/common/ScheduleTabs';
 import { PageHeader, PageSkeletonFrame } from '@/components/common/PageHeader';
 import { MonthSelector } from '@/app/(app)/monthly-reports/_components/MonthSelector';
@@ -88,7 +89,7 @@ export function MonthlyReportsPageHeader() {
   return (
     <PageHeader
       title="Monthly Report"
-      description="Your live session counts by student and day. Cells in amber need a lesson to be finalized; cells in rose contain a late cancellation, no-show, or early-ended session."
+      description="Your live session counts by student and day. Cells in amber need End Session to record the outcome; cells in rose contain a late cancellation, no-show, early-ended session, a session held on an external Zoom, or an outcome that differs from the call log."
     />
   );
 }
@@ -133,7 +134,11 @@ export function ProfileSkeleton() {
       <div className="max-w-330">
         <div aria-hidden className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
           <div className="space-y-6">
+            {/* Student matching */}
+            <Skeleton className="h-32 w-full rounded-2xl" />
             <Skeleton className="h-40 w-full rounded-2xl" />
+            {/* My Rating */}
+            <MyRatingCardSkeleton />
             {/* Email notifications */}
             <Skeleton className="h-36 w-full rounded-2xl" />
             <Skeleton className="h-120 w-full rounded-2xl" />

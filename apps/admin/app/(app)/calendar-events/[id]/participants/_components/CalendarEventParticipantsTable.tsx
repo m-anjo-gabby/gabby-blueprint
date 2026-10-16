@@ -1,168 +1,42 @@
 'use client';
 
-import * as React from 'react';
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useTranslations } from 'next-intl';
-import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
-import { getUserTypeLabel } from '@gabby/types/user';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { CalendarEventParticipant } from '@/actions/adminCalendarEventAction';
+import type { CalendarEventParticipant } from '@/actions/adminCalendarEventAction';
+import { DataTable } from '@/components/list/DataTable';
+import { ListToolbar } from '@/components/list/ListToolbar';
+import { useListQuery } from '@/components/list/useListQuery';
+import { paginateLocally } from '@/lib/list';
+import { createColumns } from './columns';
+
+/** 検索の対象（氏名） */
+const toSearchText = (participant: CalendarEventParticipant) => participant.user_name ?? '';
 
 interface CalendarEventParticipantsTableProps {
+  /** 全件（参加者は1回あたり少人数のため、検索・ページ分けはブラウザ側で行う） */
   data: CalendarEventParticipant[];
-  totalCount: number;
 }
 
-export function CalendarEventParticipantsTable({ data, totalCount }: CalendarEventParticipantsTableProps) {
+export function CalendarEventParticipantsTable({ data }: CalendarEventParticipantsTableProps) {
   const t = useTranslations('calendarEvents.participantsTable');
-  const [globalFilter, setGlobalFilter] = React.useState('');
-
-  const columns = React.useMemo<ColumnDef<CalendarEventParticipant>[]>(
-    () => [
-      {
-        accessorKey: 'user_name',
-        header: t('nameHeader'),
-        cell: ({ row }) => <span className="font-bold text-slate-700">{row.original.user_name || t('unknown')}</span>,
-      },
-      {
-        accessorKey: 'user_type',
-        header: t('typeHeader'),
-        cell: ({ row }) => <span className="text-slate-600">{getUserTypeLabel(row.original.user_type)}</span>,
-      },
-      {
-        accessorKey: 'insert_date',
-        header: t('registeredAtHeader'),
-        cell: ({ row }) => <span className="text-slate-500">{formatDateTimeByZone(row.original.insert_date)}</span>,
-      },
-    ],
-    [t]
-  );
-
-  const table = useReactTable({
-    data,
-    columns,
-    state: { globalFilter },
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    initialState: {
-      pagination: { pageSize: 10 },
-    },
-  });
+  const query = useListQuery([], { shallow: true });
+  const list = paginateLocally(data, query, toSearchText);
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm w-fit">
+      <div className="w-fit rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
         <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">{t('participantCount')}</p>
-        <p className="text-2xl font-black text-slate-800 mt-1">{totalCount}</p>
+        <p className="mt-1 text-2xl font-black text-slate-800">{data.length}</p>
       </div>
 
-      <div className="space-y-0">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-slate-50/80 rounded-t-lg border-x border-t border-slate-200">
-          <div className="flex items-center gap-2 w-full max-w-md">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
-              <Input
-                placeholder={t('searchPlaceholder')}
-                value={globalFilter ?? ''}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-10 pr-10 h-9 bg-white border-slate-200 focus-visible:ring-1 focus-visible:ring-slate-400 shadow-sm"
-              />
-              {globalFilter && (
-                <button
-                  onClick={() => setGlobalFilter('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                  type="button"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="hidden md:block text-[13px] text-slate-500 whitespace-nowrap font-medium">
-              {t.rich('totalCount', {
-                count: table.getFilteredRowModel().rows.length,
-                styled: (chunks) => <span className="text-slate-900">{chunks}</span>,
-              })}
-            </div>
-
-            <div className="flex items-center bg-white border border-slate-200 rounded-md p-0.5 shadow-sm">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-                className="h-8 w-8 p-0 hover:bg-slate-100 disabled:opacity-30"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-
-              <div className="flex items-center px-3 text-[13px] font-medium border-x border-slate-100 min-w-[4rem] justify-center text-slate-600">
-                <span>{table.getState().pagination.pageIndex + 1}</span>
-                <span className="mx-1 text-slate-300">/</span>
-                <span>{table.getPageCount() || 1}</span>
-              </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-                className="h-8 w-8 p-0 hover:bg-slate-100 disabled:opacity-30"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-b-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader className="bg-slate-50/50">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className="text-slate-600 font-bold py-3 px-4 text-xs uppercase tracking-wider">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} className="hover:bg-slate-50/40 transition-colors border-slate-100">
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-3 px-4 text-slate-700">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 bg-slate-50/10">
-                    {t('noParticipants')}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+      <div>
+        <ListToolbar
+          query={query}
+          searchPlaceholder={t('searchPlaceholder')}
+          totalCount={list.totalCount}
+          pageCount={list.pageCount}
+          page={list.page}
+        />
+        <DataTable columns={createColumns(t)} data={list.rows} getRowId={(row) => row.participant_id} emptyMessage={t('noParticipants')} />
       </div>
     </div>
   );

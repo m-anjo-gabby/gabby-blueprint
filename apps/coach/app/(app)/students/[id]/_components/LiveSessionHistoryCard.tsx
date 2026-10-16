@@ -107,7 +107,7 @@ export function LiveSessionHistoryCard({
     (s) => s.coach_id === myId || (showOtherCoach && !SESSION_NON_ACTIONABLE_STATUSES.includes(s.status))
   );
   const now = new Date();
-  // 終了予定時刻を過ぎてもEnd Session/Resolveされず残っているセッション（要対応）も、ここに
+  // 終了予定時刻を過ぎてもEnd Sessionで記録されず残っているセッション（要対応）も、ここに
   // 含めて表示する（以前はend_datetime > nowで除外しており、その間どのタブにも出現しない
   // 抜け穴になっていた）。対応自体はこの行をクリックして遷移するSession Hubに一本化する。
   // サーバー側は履歴タブ（Completed/Changes）向けに開始日時の降順で返すが、このタブは
