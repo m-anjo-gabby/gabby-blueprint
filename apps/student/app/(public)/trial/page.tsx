@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { formatUtcOffset } from '@gabby/lib/date/timezone';
@@ -37,8 +38,11 @@ export default async function TrialPage() {
     <div className="min-h-dvh bg-canvas px-4 py-10">
       <div className="mx-auto w-full max-w-2xl space-y-6">
         <div className="rounded-panel border border-line bg-surface p-6 shadow-sm md:p-10">
-          <header className="mb-8 space-y-3">
-            <p className="text-sm font-bold text-brand">Gabby Blueprint</p>
+          <header className="mb-8 space-y-4 text-center">
+            {/* ロゴはログイン画面（LoginForm）と同じ画像 */}
+            <div className="flex justify-center">
+              <Image src="/logo-01.png" alt="Gabby Blueprint" width={320} height={85} className="h-auto w-auto max-w-56 md:max-w-64" priority />
+            </div>
             <h1 className="text-2xl font-bold text-ink">Webトライアルのお申し込み</h1>
             <p className="text-sm leading-relaxed text-ink-muted">
               {`お申し込み後、パスワードを設定した日から${WEB_TRIAL_LICENSE_DAYS}日間、アプリのトレーニングとコーチとのライブセッション1回をお試しいただけます。`}
