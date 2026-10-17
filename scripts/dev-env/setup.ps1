@@ -103,8 +103,10 @@ if ($missingTools.Count -gt 0) {
 }
 
 $nodeVersion = [version]((& node -v).TrimStart('v'))
-if ($nodeVersion -lt [version]'20.10.0') {
-  throw "Node.js $nodeVersion は古いため使えません（20.10 以上が必要）。winget upgrade OpenJS.NodeJS.LTS で更新してください。"
+# clone 前に確認するため定数で持つ。.nvmrc（package.json の engines・Vercel・GitHub Actions と同じメジャー版）とそろえる
+$nodeMajor = 24
+if ($nodeVersion.Major -ne $nodeMajor) {
+  throw "Node.js $nodeVersion は使えません（$nodeMajor 系が必要）。Node.js $nodeMajor 系の LTS をインストールしてください。"
 }
 Write-Ok "Node.js $nodeVersion"
 

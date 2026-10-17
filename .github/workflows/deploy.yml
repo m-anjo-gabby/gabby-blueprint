@@ -114,9 +114,14 @@ jobs:
       group: deploy-${{ inputs.environment }}-${{ matrix.app }}
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.ref }}
+
+      # Vercel CLI を動かす Node（ビルドは Vercel 側で各アプリの engines の版を使う）
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
 
       # プロジェクトは scripts/vercel-env/environments.mjs の vercel と対応する
       - name: Resolve project

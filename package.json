@@ -3,14 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.10.0",
-    "pnpm": ">=9.0.0"
+    "node": "24.x",
+    "pnpm": ">=10.34.0"
   },
   "scripts": {
     "dev": "turbo dev",
     "dev:ssl": "turbo run dev:ssl",
     "build": "turbo build",
-    "lint": "turbo lint",
+    "lint": "node scripts/check-catalog.mjs && eslint --cache --cache-location node_modules/.cache/eslint/ .",
+    "typecheck": "turbo typecheck",
+    "test": "pnpm test:vercel-env && pnpm --filter @gabby/testing unit",
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "clean": "turbo clean && rimraf node_modules",
     "vercel-env": "node scripts/vercel-env/run.mjs",
@@ -19,11 +22,13 @@
     "env:export": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-env/export.ps1"
   },
   "devDependencies": {
-    "prettier": "^3.4.0",
-    "rimraf": "^6.0.0",
-    "tsx": "^4.23.13",
-    "turbo": "^2.3.0",
-    "typescript": "^5.7.0"
+    "eslint": "catalog:",
+    "eslint-config-next": "catalog:",
+    "prettier": "catalog:",
+    "rimraf": "catalog:",
+    "tsx": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@10.34.6"
 }

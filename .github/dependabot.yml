@@ -1,0 +1,33 @@
+# 依存関係の更新の PR を自動で作る。方針は docs/DEPENDENCIES.md。
+# - マイナー版・パッチ版は月1回、まとめて1つの PR にする（CI が通れば開発ブランチに取り込み、E2E で確認する）
+# - メジャー版は PR を作らない（互換性の確認が要るため、計画して1つずつ上げる）
+# - セキュリティ修正（Dependabot alerts）は版の種類に関わらず随時 PR になる
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        patterns:
+          - "*"
