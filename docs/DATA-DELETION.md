@@ -41,7 +41,7 @@
 | `com_t_dialogue_assignment` | `status`（1:割当中 / 0:解除） | 消さない（解除しても進捗・会話ログを残す） |
 | `com_m_color_vowel_dictionary` | `status`（公開ステータス） | 物理 |
 | `com_m_contract_plan` / `com_m_coach_specialty` / `com_m_country` / `com_m_timezone` | `is_active` | B（使われていれば拒否） |
-| `com_m_sprint_questions` | — | 物理（検証・誤登録の問題の片付け用。公開中の問題は通常消さない）。回答の履歴（JSON）は問題 ID だけを持つため残り、結果画面では問題文を引けない問題を一覧から外す（点数の集計は残る）。お気に入りは一緒に消える |
+| `com_m_sprint_questions` | — | 物理（検証・誤登録の問題の片付け用。公開中の問題は通常消さない）。回答の履歴（JSON）は問題 ID だけを持つため残り、結果画面では問題文を引けない問題を一覧から外す（点数の集計は残る）。お気に入りは一緒に消える。音声ファイル（Storage の audio）は問題の削除の後に消し（TSV の一括登録の洗い替えも同じ。他の問題が使っているパスは残す）、失敗しても削除は取り消さずにエラーのログ `sprint:delete_audio_failed` を出す |
 | `com_m_calendar_event` | — （公開は `is_published`） | 物理。開催済み（開始日時を過ぎた）のイベントは削除できず、非公開にする |
 | `com_m_notice` | — （公開は `is_published`） | 物理（既読も一緒に消える） |
 | `com_m_dialogue_session` | — | B（進捗・会話ログがあれば拒否） |

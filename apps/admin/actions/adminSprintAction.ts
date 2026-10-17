@@ -117,16 +117,67 @@ export async function deleteSprintQuestion(questionId: string) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
-    const { error } = await supabase
+    const { data: deleted, error } = await supabase
       .from('com_m_sprint_questions')
       .delete()
-      .eq('question_id', questionId);
+      .eq('question_id', questionId)
+      .select(SPRINT_VOICE_COLUMNS.join(', '))
+      .maybeSingle();
 
     if (error) throw error;
+
+    // 音声ファイルの削除は問題の削除の後に行い、失敗しても削除は取り消さない（エラーのログで気付けるようにする）
+    if (deleted) await removeSprintVoiceFiles(supabase, [deleted as unknown as SprintVoiceRow], ctx, { questionId });
     return { success: true };
   } catch (err: any) {
     logger.error('sprint:delete_failed', err.message, { ...ctx, err, payload: { questionId } });
     return { success: false, message: err.message };
+  }
+}
+
+/** 問題の音声ファイルのパスを持つ列（Storage の audio バケット内のパス） */
+const SPRINT_VOICE_COLUMNS = ['statement_voice', 'question_voice', 'answer_sentence_yes_voice', 'answer_sentence_no_voice'] as const;
+type SprintVoiceRow = Record<(typeof SPRINT_VOICE_COLUMNS)[number], string | null>;
+
+/** 一度に照合・削除するパスの数（PostgREST の URL の長さと Storage の一括削除の上限に収める） */
+const VOICE_REMOVE_CHUNK = 50;
+
+/**
+ * 削除した問題の音声ファイルを Storage から消す。他の問題がまだ同じパスを使っている場合は消さない。
+ * 問題の削除の後に呼び、失敗しても例外にせず、エラーのログ（sprint:delete_audio_failed）だけを残す
+ * （問題の削除は取り消さない）。
+ */
+async function removeSprintVoiceFiles(
+  supabase: Awaited<ReturnType<typeof createAdminClient>>,
+  rows: SprintVoiceRow[],
+  ctx: Awaited<ReturnType<typeof getLogContext>>,
+  payload: Record<string, unknown>
+) {
+  const paths = [...new Set(rows.flatMap((row) => SPRINT_VOICE_COLUMNS.map((col) => row[col])).filter((p): p is string => !!p))];
+  for (let i = 0; i < paths.length; i += VOICE_REMOVE_CHUNK) {
+    const chunk = paths.slice(i, i + VOICE_REMOVE_CHUNK);
+    try {
+      const list = chunk.map((p) => `"${p.replace(/"/g, '\\"')}"`).join(',');
+      const { data: sharing, error: sharingError } = await supabase
+        .from('com_m_sprint_questions')
+        .select(SPRINT_VOICE_COLUMNS.join(', '))
+        .or(SPRINT_VOICE_COLUMNS.map((col) => `${col}.in.(${list})`).join(','));
+      if (sharingError) throw sharingError;
+      const inUse = new Set(
+        ((sharing ?? []) as unknown as SprintVoiceRow[]).flatMap((r) => SPRINT_VOICE_COLUMNS.map((col) => r[col]))
+      );
+      const targets = chunk.filter((p) => !inUse.has(p));
+      if (targets.length === 0) continue;
+
+      const { error } = await supabase.storage.from('audio').remove(targets);
+      if (error) throw error;
+    } catch (err) {
+      logger.error('sprint:delete_audio_failed', err instanceof Error ? err.message : 'Unknown error', {
+        ...ctx,
+        err,
+        payload: { ...payload, paths: chunk },
+      });
+    }
   }
 }
 
@@ -335,14 +386,19 @@ export async function bulkImportSprintQuestions(
     const now = new Date().toISOString();
 
     // 1. 既存の該当する問題種別・レベルの問題を削除 (洗い替え)
-    const { error: deleteError } = await supabase
+    const { data: deletedRows, error: deleteError } = await supabase
       .from('com_m_sprint_questions')
       .delete()
       .eq('content_id', contentId)
       .eq('question_type', type)
-      .eq('difficulty_level', level);
+      .eq('difficulty_level', level)
+      .select(SPRINT_VOICE_COLUMNS.join(', '));
 
     if (deleteError) throw deleteError;
+    // 消した問題の音声ファイルは、新しい行の登録の後に消す（取り込むデータが同じパスを持つ場合は残す）。
+    // 登録に失敗しても消した問題は戻らないため、成否にかかわらず消す
+    const removeDeletedVoices = () =>
+      removeSprintVoiceFiles(supabase, (deletedRows ?? []) as unknown as SprintVoiceRow[], ctx, { contentId, type, level });
 
     // 2. 新しいデータを挿入
     const dataToInsert = questions.map((q, idx) => ({
@@ -359,8 +415,12 @@ export async function bulkImportSprintQuestions(
         .from('com_m_sprint_questions')
         .insert(dataToInsert);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        await removeDeletedVoices();
+        throw insertError;
+      }
     }
+    await removeDeletedVoices();
 
     logger.info('sprint:bulk_import_success', `Imported ${questions.length} questions for content ${contentId}, type ${type}, level ${level}`, { ...ctx });
     revalidatePath('/contents/[id]', 'layout');
