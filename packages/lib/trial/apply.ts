@@ -138,6 +138,8 @@ export async function submitTrialApplication(input: TrialApplicationInput, ctx: 
     p_country_city: input.countryCity,
     p_occupation: input.occupation,
     p_occupation_other: input.occupationOther,
+    p_referral_source: input.referralSource,
+    p_referral_source_other: input.referralSourceOther,
     p_message: input.message,
     p_token: randomBytes(32).toString('hex'),
     p_expires_at: expiresAt.toISOString(),

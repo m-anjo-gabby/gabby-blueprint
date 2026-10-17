@@ -41,6 +41,8 @@ CREATE TABLE public.com_t_trial_application (
     country_city             text,
     occupation               smallint     NOT NULL,
     occupation_other         text,
+    referral_source          smallint     NOT NULL,
+    referral_source_other    text,
     message                  text,
     invitation_id            uuid         UNIQUE REFERENCES public.com_t_invitation(id) ON DELETE SET NULL,
     user_id                  uuid         REFERENCES public.com_m_user(id) ON DELETE SET NULL,
@@ -63,6 +65,8 @@ COMMENT ON COLUMN public.com_t_trial_application.timezone IS 'タイムゾーン
 COMMENT ON COLUMN public.com_t_trial_application.country_city IS '国・都市';
 COMMENT ON COLUMN public.com_t_trial_application.occupation IS '業種・職業のコード（正本は packages/types/trialApplication.ts の TRIAL_OCCUPATIONS）';
 COMMENT ON COLUMN public.com_t_trial_application.occupation_other IS '業種・職業が「その他」の場合の記入内容';
+COMMENT ON COLUMN public.com_t_trial_application.referral_source IS '知ったきっかけのコード（正本は packages/types/trialApplication.ts の TRIAL_REFERRAL_SOURCES）';
+COMMENT ON COLUMN public.com_t_trial_application.referral_source_other IS '知ったきっかけが「その他」の場合の記入内容';
 COMMENT ON COLUMN public.com_t_trial_application.message IS 'ご要望・ご質問（自由記入）';
 COMMENT ON COLUMN public.com_t_trial_application.invitation_id IS '招待ID (com_t_invitation.id)';
 COMMENT ON COLUMN public.com_t_trial_application.user_id IS '本登録したユーザーID (com_m_user.id)';

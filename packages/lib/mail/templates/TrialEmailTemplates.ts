@@ -2,7 +2,8 @@ import {
   formatTrialApplicantName,
   formatTrialApplicantNameLatin,
   formatTrialOccupation,
-  WEB_TRIAL_LICENSE_DAYS,
+  formatTrialReferralSource,
+  WEB_TRIAL_PERIOD_LABEL,
   type TrialApplicationInput,
   type TrialApplicationKind,
 } from '@gabby/types/trialApplication';
@@ -47,7 +48,7 @@ export function buildTrialInviteMail({
           items: [
             {
               title: 'トライアルの期間',
-              text: `パスワードを設定した日から${WEB_TRIAL_LICENSE_DAYS}日間、アプリのトレーニングと、コーチとのライブセッション1回をご利用いただけます。`,
+              text: `パスワードを設定した日から${WEB_TRIAL_PERIOD_LABEL}、アプリのトレーニングと、コーチとのライブセッション1回をご利用いただけます。`,
             },
             {
               title: 'リンクの有効期限について',
@@ -159,6 +160,11 @@ export function buildTrialApplicationNotifyMail({
               label: '業種・職業 / Occupation',
               value: formatTrialOccupation(input.occupation, input.occupationOther),
               sub: formatTrialOccupation(input.occupation, input.occupationOther, 'en'),
+            },
+            {
+              label: '知ったきっかけ / Referral',
+              value: formatTrialReferralSource(input.referralSource, input.referralSourceOther),
+              sub: formatTrialReferralSource(input.referralSource, input.referralSourceOther, 'en'),
             },
             { label: 'タイムゾーン / Time zone', value: timezoneLabel },
             { label: '国・都市 / Country, city', value: input.countryCity || '—' },

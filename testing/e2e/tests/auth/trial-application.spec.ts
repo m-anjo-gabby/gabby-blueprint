@@ -78,6 +78,8 @@ test("申込フォームから申し込み、届いた案内からパスワー�
   await page.getByRole("combobox", { name: /業種・職業/ }).click();
   await page.getByRole("option", { name: "その他" }).click();
   await page.getByLabel("業種・職業（その他）").fill("研究職");
+  await page.getByRole("combobox", { name: /Gabby をどこで知りましたか/ }).click();
+  await page.getByRole("option", { name: "YouTube" }).click();
   await page.getByLabel("国・都市").fill("Canada, Vancouver");
   await page.getByLabel("ご要望・ご質問").fill("E2Eの申込です");
   await page.getByRole("checkbox", { name: /個人情報保護方針/ }).check();
@@ -114,8 +116,8 @@ test("申込フォームから申し込み、届いた案内からパスワー�
   await expect(page.getByLabel("名（ローマ字）")).toHaveValue("");
 
   const { data: app } = await admin
-    .from("com_t_trial_application").select("application_id, occupation, occupation_other, timezone, invitation_id").eq("email", email).single();
-  expect(app).toMatchObject({ occupation: 99, occupation_other: "研究職", timezone: "Asia/Tokyo" });
+    .from("com_t_trial_application").select("application_id, occupation, occupation_other, referral_source, referral_source_other, timezone, invitation_id").eq("email", email).single();
+  expect(app).toMatchObject({ occupation: 99, occupation_other: "研究職", referral_source: 3, referral_source_other: null, timezone: "Asia/Tokyo" });
   const { data: invitation } = await admin.from("com_t_invitation").select("token, user_name, client_id, contract_id").eq("id", app!.invitation_id).single();
   // 画面の名前（コーチも見る）はローマ字の「名 姓」
   expect(invitation).toMatchObject({ user_name: "Trial Shiken", client_id: WEB_TRIAL_CLIENT_ID, contract_id: null });
@@ -162,6 +164,7 @@ test("必須の項目が空のままでは申し込めない", async ({ page }) 
   await expect(page.getByText("姓を入力してください", { exact: true })).toBeVisible();
   await expect(page.getByText("名を入力してください", { exact: true })).toBeVisible();
   await expect(page.getByText("業種・職業を選んでください")).toBeVisible();
+  await expect(page.getByText("Gabby をどこで知ったかを選んでください")).toBeVisible();
   await expect(page.getByText("個人情報保護方針への同意が必要です")).toBeVisible();
   // 入力に誤りがあるうちは確認画面へ進まない
   await expect(page.getByRole("heading", { name: "入力内容のご確認" })).toHaveCount(0);

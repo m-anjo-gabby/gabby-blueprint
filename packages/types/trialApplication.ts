@@ -12,6 +12,12 @@ export const WEB_TRIAL_PLAN_CODE = 'WEB_TRIAL';
 /** トライアルの期間（本登録の日を含む日数。日本時間の暦日） */
 export const WEB_TRIAL_LICENSE_DAYS = 14;
 
+/**
+ * 利用者に見せるトライアルの期間の表記（コーポレートサイトの「2週間無料体験」に合わせる）。
+ * 期間（WEB_TRIAL_LICENSE_DAYS）を変える場合は、この表記も合わせて直す。
+ */
+export const WEB_TRIAL_PERIOD_LABEL = '2週間';
+
 /** 業種・職業の「その他」のコード（選んだ場合は occupation_other に記入内容を持つ） */
 export const TRIAL_OCCUPATION_OTHER = 99;
 
@@ -31,15 +37,47 @@ export const TRIAL_OCCUPATIONS = [
 
 export type TrialOccupationCode = (typeof TRIAL_OCCUPATIONS)[number]['code'];
 
-/** 業種・職業の表示（「その他」は記入内容を添える） */
-export function formatTrialOccupation(
+/** 知ったきっかけの「その他」のコード（選んだ場合は referral_source_other に記入内容を持つ） */
+export const TRIAL_REFERRAL_SOURCE_OTHER = 99;
+
+/** 知ったきっかけの選択肢（旧システムの申込フォームを引き継ぎ、Instagram を追加。コードは DB に保存するため変更しない。表示名・並び順は変えてよい） */
+export const TRIAL_REFERRAL_SOURCES = [
+  { code: 1, label: 'Facebook', labelEn: 'Facebook' },
+  { code: 2, label: 'X（旧Twitter）', labelEn: 'X (Twitter)' },
+  { code: 6, label: 'Instagram', labelEn: 'Instagram' },
+  { code: 3, label: 'YouTube', labelEn: 'YouTube' },
+  { code: 4, label: '検索エンジン（Google・Yahoo!など）', labelEn: 'Search engine (Google, Yahoo!, etc.)' },
+  { code: 5, label: '知り合い・友人から', labelEn: 'Acquaintance / friend' },
+  { code: TRIAL_REFERRAL_SOURCE_OTHER, label: 'その他', labelEn: 'Other' },
+] as const;
+
+interface TrialChoice {
+  readonly code: number;
+  readonly label: string;
+  readonly labelEn: string;
+}
+
+/** 選択肢の表示（「その他」は記入内容を添える） */
+function formatTrialChoice(
+  choices: readonly TrialChoice[],
+  otherCode: number,
   code: number,
   other: string | null | undefined,
-  locale: 'ja' | 'en' = 'ja'
+  locale: 'ja' | 'en'
 ): string {
-  const occupation = TRIAL_OCCUPATIONS.find((o) => o.code === code);
-  const label = occupation ? (locale === 'en' ? occupation.labelEn : occupation.label) : String(code);
-  return code === TRIAL_OCCUPATION_OTHER && other ? `${label}（${other}）` : label;
+  const choice = choices.find((c) => c.code === code);
+  const label = choice ? (locale === 'en' ? choice.labelEn : choice.label) : String(code);
+  return code === otherCode && other ? `${label}（${other}）` : label;
+}
+
+/** 業種・職業の表示（「その他」は記入内容を添える） */
+export function formatTrialOccupation(code: number, other: string | null | undefined, locale: 'ja' | 'en' = 'ja'): string {
+  return formatTrialChoice(TRIAL_OCCUPATIONS, TRIAL_OCCUPATION_OTHER, code, other, locale);
+}
+
+/** 知ったきっかけの表示（「その他」は記入内容を添える） */
+export function formatTrialReferralSource(code: number, other: string | null | undefined, locale: 'ja' | 'en' = 'ja'): string {
+  return formatTrialChoice(TRIAL_REFERRAL_SOURCES, TRIAL_REFERRAL_SOURCE_OTHER, code, other, locale);
 }
 
 /** 入力の上限文字数（旧システムの申込フォームに合わせる） */
@@ -51,6 +89,7 @@ export const TRIAL_FIELD_LIMITS = {
   latinName: 20,
   countryCity: 50,
   occupationOther: 50,
+  referralSourceOther: 50,
   message: 1000,
 } as const;
 
@@ -68,6 +107,8 @@ export interface TrialApplicationInput {
   countryCity: string;
   occupation: number;
   occupationOther: string;
+  referralSource: number;
+  referralSourceOther: string;
   message: string;
 }
 
@@ -111,6 +152,8 @@ export interface TrialApplicationRow {
   country_city: string | null;
   occupation: number;
   occupation_other: string | null;
+  referral_source: number;
+  referral_source_other: string | null;
   message: string | null;
   apply_count: number;
   last_applied_at: string;

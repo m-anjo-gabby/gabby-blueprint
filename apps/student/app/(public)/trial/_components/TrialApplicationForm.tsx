@@ -1,12 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, useWatch, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, ExternalLink } from 'lucide-react';
 import { PRIVACY_POLICY_URL } from '@gabby/lib/contact';
-import { TRIAL_FIELD_LIMITS, TRIAL_OCCUPATION_OTHER, TRIAL_OCCUPATIONS } from '@gabby/types/trialApplication';
+import {
+  TRIAL_FIELD_LIMITS,
+  TRIAL_OCCUPATION_OTHER,
+  TRIAL_OCCUPATIONS,
+  TRIAL_REFERRAL_SOURCE_OTHER,
+  TRIAL_REFERRAL_SOURCES,
+} from '@gabby/types/trialApplication';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -14,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { TRIAL_FORM_DEFAULTS, trialApplicationSchema, type TrialApplicationFormValues } from '../_lib/schema';
 import { TrialApplicationConfirm } from './TrialApplicationConfirm';
+import { TrialStepIndicator } from './TrialStepIndicator';
 
 export interface TrialTimezoneOption {
   value: string;
@@ -23,6 +30,8 @@ export interface TrialTimezoneOption {
 interface TrialApplicationFormProps {
   timezones: TrialTimezoneOption[];
   turnstileSiteKey: string;
+  /** 入力画面の先頭（段階表示の下）に出す案内（無料体験の内容の要約） */
+  intro: ReactNode;
 }
 
 const Required = () => <span className="ml-1 text-xs text-rose-600">必須</span>;
@@ -58,7 +67,73 @@ function NameField({ control, name, label, placeholder, autoComplete, maxLength 
   );
 }
 
-export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialApplicationFormProps) {
+interface ChoiceWithOtherFieldProps {
+  control: Control<TrialApplicationFormValues>;
+  name: 'occupation' | 'referralSource';
+  /** 「その他」を選んだ時に出す記入欄 */
+  otherName: 'occupationOther' | 'referralSourceOther';
+  label: string;
+  choices: readonly { code: number; label: string }[];
+  otherCode: number;
+  otherMaxLength: number;
+}
+
+/** 選択肢（必須）と、「その他」を選んだ時だけ出る記入欄（必須。検証は schema.ts）の組 */
+function ChoiceWithOtherField({ control, name, otherName, label, choices, otherCode, otherMaxLength }: ChoiceWithOtherFieldProps) {
+  const isOther = useWatch({ control, name }) === String(otherCode);
+  return (
+    <>
+      <FormField
+        control={control}
+        name={name}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              {label}
+              <Required />
+            </FormLabel>
+            <Select value={field.value} onValueChange={field.onChange}>
+              <FormControl>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="選択してください" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {choices.map((choice) => (
+                  <SelectItem key={choice.code} value={String(choice.code)}>
+                    {choice.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {isOther && (
+        <FormField
+          control={control}
+          name={otherName}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                {`${label}（その他）`}
+                <Required />
+              </FormLabel>
+              <FormControl>
+                <Input maxLength={otherMaxLength} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+    </>
+  );
+}
+
+export function TrialApplicationForm({ timezones, turnstileSiteKey, intro }: TrialApplicationFormProps) {
   const form = useForm<TrialApplicationFormValues>({
     resolver: zodResolver(trialApplicationSchema),
     defaultValues: TRIAL_FORM_DEFAULTS,
@@ -66,7 +141,6 @@ export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialAppli
   const router = useRouter();
   // 確認画面に出す検証済みの値（null = 入力画面）。入力画面へ戻っても入力内容はフォームの状態に残る
   const [confirmValues, setConfirmValues] = useState<TrialApplicationFormValues | null>(null);
-  const isOtherOccupation = useWatch({ control: form.control, name: 'occupation' }) === String(TRIAL_OCCUPATION_OTHER);
 
   // 確認画面の間は、ブラウザバック（確認画面へ進む時に積んだ履歴を戻る）で入力画面へ戻す
   useEffect(() => {
@@ -89,20 +163,25 @@ export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialAppli
 
   if (confirmValues) {
     return (
-      <TrialApplicationConfirm
-        values={confirmValues}
-        timezoneLabel={timezones.find((tz) => tz.value === confirmValues.timezone)?.label ?? confirmValues.timezone}
-        turnstileSiteKey={turnstileSiteKey}
-        // 積んだ履歴を戻る（上の popstate で入力画面になる）
-        onBack={() => window.history.back()}
-        // 確認画面の履歴を受付完了の画面に置き換える（再読み込みしても完了のまま、ブラウザバックで確認画面に戻らない）
-        onComplete={() => router.replace('/trial/complete')}
-      />
+      <>
+        <TrialStepIndicator current="confirm" />
+        <TrialApplicationConfirm
+          values={confirmValues}
+          timezoneLabel={timezones.find((tz) => tz.value === confirmValues.timezone)?.label ?? confirmValues.timezone}
+          turnstileSiteKey={turnstileSiteKey}
+          // 積んだ履歴を戻る（上の popstate で入力画面になる）
+          onBack={() => window.history.back()}
+          // 確認画面の履歴を受付完了の画面に置き換える（再読み込みしても完了のまま、ブラウザバックで確認画面に戻らない）
+          onComplete={() => router.replace('/trial/complete')}
+        />
+      </>
     );
   }
 
   return (
     <Form {...form}>
+      <TrialStepIndicator current="input" />
+      {intro}
       <form onSubmit={(event) => form.handleSubmit(showConfirm)(event)} className="space-y-6" noValidate>
         <FormField
           control={form.control}
@@ -131,52 +210,15 @@ export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialAppli
           <NameField control={form.control} name="firstNameLatin" label="名（ローマ字）" placeholder="Taro" autoComplete="off" maxLength={TRIAL_FIELD_LIMITS.latinName} />
         </div>
 
-        <FormField
+        <ChoiceWithOtherField
           control={form.control}
           name="occupation"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                業種・職業
-                <Required />
-              </FormLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="選択してください" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {TRIAL_OCCUPATIONS.map((o) => (
-                    <SelectItem key={o.code} value={String(o.code)}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          otherName="occupationOther"
+          label="業種・職業"
+          choices={TRIAL_OCCUPATIONS}
+          otherCode={TRIAL_OCCUPATION_OTHER}
+          otherMaxLength={TRIAL_FIELD_LIMITS.occupationOther}
         />
-
-        {isOtherOccupation && (
-          <FormField
-            control={form.control}
-            name="occupationOther"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  業種・職業（その他）
-                  <Required />
-                </FormLabel>
-                <FormControl>
-                  <Input maxLength={TRIAL_FIELD_LIMITS.occupationOther} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
 
         <FormField
           control={form.control}
@@ -220,6 +262,16 @@ export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialAppli
               <FormMessage />
             </FormItem>
           )}
+        />
+
+        <ChoiceWithOtherField
+          control={form.control}
+          name="referralSource"
+          otherName="referralSourceOther"
+          label="Gabby をどこで知りましたか？"
+          choices={TRIAL_REFERRAL_SOURCES}
+          otherCode={TRIAL_REFERRAL_SOURCE_OTHER}
+          otherMaxLength={TRIAL_FIELD_LIMITS.referralSourceOther}
         />
 
         <FormField

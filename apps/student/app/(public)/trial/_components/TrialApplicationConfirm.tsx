@@ -2,7 +2,14 @@
 
 import { useRef, useState, useTransition, type ReactNode } from 'react';
 import { ArrowLeft, Send } from 'lucide-react';
-import { formatTrialApplicantName, formatTrialApplicantNameLatin, formatTrialOccupation, TRIAL_OCCUPATION_OTHER } from '@gabby/types/trialApplication';
+import {
+  formatTrialApplicantName,
+  formatTrialApplicantNameLatin,
+  formatTrialOccupation,
+  formatTrialReferralSource,
+  TRIAL_OCCUPATION_OTHER,
+  TRIAL_REFERRAL_SOURCE_OTHER,
+} from '@gabby/types/trialApplication';
 import { submitTrial } from '@/actions/trialAction';
 import { Button } from '@/components/ui/button';
 import type { TrialApplicationFormValues } from '../_lib/schema';
@@ -30,6 +37,7 @@ export function TrialApplicationConfirm({ values, timezoneLabel, turnstileSiteKe
   const [isPending, startTransition] = useTransition();
   const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const occupation = Number(values.occupation);
+  const referralSource = Number(values.referralSource);
 
   const handleSubmit = () => {
     if (!turnstileToken) {
@@ -66,6 +74,9 @@ export function TrialApplicationConfirm({ values, timezoneLabel, turnstileSiteKe
         </ConfirmRow>
         <ConfirmRow label="お住まいの地域のタイムゾーン">{timezoneLabel}</ConfirmRow>
         <ConfirmRow label="国・都市">{values.countryCity || <NotEntered />}</ConfirmRow>
+        <ConfirmRow label="Gabby をどこで知りましたか？">
+          {formatTrialReferralSource(referralSource, referralSource === TRIAL_REFERRAL_SOURCE_OTHER ? values.referralSourceOther : null)}
+        </ConfirmRow>
         <ConfirmRow label="ご要望・ご質問">
           {values.message ? <span className="whitespace-pre-wrap">{values.message}</span> : <NotEntered />}
         </ConfirmRow>

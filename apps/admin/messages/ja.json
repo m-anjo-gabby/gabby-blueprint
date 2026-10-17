@@ -2446,6 +2446,7 @@
       "applyCount": "{count}回目の申込",
       "nameHeader": "氏名",
       "occupationHeader": "業種・職業",
+      "referralHeader": "知ったきっかけ",
       "allOccupations": "すべての業種",
       "locationHeader": "国・都市 / タイムゾーン",
       "messageHeader": "ご要望・ご質問",

@@ -25,6 +25,7 @@
 -- （fn_resolve_web_trial_contract）。p_email は小文字にそろえて渡す。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.fn_submit_trial_application(text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval);
+DROP FUNCTION IF EXISTS public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval);
 
 CREATE OR REPLACE FUNCTION public.fn_submit_trial_application(
     p_email text,
@@ -36,6 +37,8 @@ CREATE OR REPLACE FUNCTION public.fn_submit_trial_application(
     p_country_city text,
     p_occupation smallint,
     p_occupation_other text,
+    p_referral_source smallint,
+    p_referral_source_other text,
     p_message text,
     p_token text,
     p_expires_at timestamptz,
@@ -111,10 +114,11 @@ BEGIN
 
     INSERT INTO public.com_t_trial_application AS a (
         email, last_name, first_name, last_name_latin, first_name_latin, timezone, country_city,
-        occupation, occupation_other, message, invitation_id, user_id
+        occupation, occupation_other, referral_source, referral_source_other, message, invitation_id, user_id
     ) VALUES (
         v_email, p_last_name, p_first_name, p_last_name_latin, p_first_name_latin, p_timezone, NULLIF(p_country_city, ''),
-        p_occupation, NULLIF(p_occupation_other, ''), NULLIF(p_message, ''), v_invitation_id, v_user_id
+        p_occupation, NULLIF(p_occupation_other, ''), p_referral_source, NULLIF(p_referral_source_other, ''),
+        NULLIF(p_message, ''), v_invitation_id, v_user_id
     )
     ON CONFLICT (email) DO UPDATE SET
         last_name = EXCLUDED.last_name,
@@ -125,6 +129,8 @@ BEGIN
         country_city = EXCLUDED.country_city,
         occupation = EXCLUDED.occupation,
         occupation_other = EXCLUDED.occupation_other,
+        referral_source = EXCLUDED.referral_source,
+        referral_source_other = EXCLUDED.referral_source_other,
         message = EXCLUDED.message,
         invitation_id = EXCLUDED.invitation_id,
         accepted_at = CASE WHEN v_kind = 'new' THEN NULL ELSE a.accepted_at END,
@@ -147,5 +153,5 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, smallint, text, text, text, timestamptz, interval) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, smallint, text, text, text, timestamptz, interval) TO service_role;

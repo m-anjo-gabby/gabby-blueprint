@@ -513,6 +513,8 @@ CREATE TABLE public.com_t_trial_application (
     country_city             text,
     occupation               smallint     NOT NULL,
     occupation_other         text,
+    referral_source          smallint     NOT NULL,
+    referral_source_other    text,
     message                  text,
     invitation_id            uuid         UNIQUE REFERENCES public.com_t_invitation(id) ON DELETE SET NULL,
     user_id                  uuid         REFERENCES public.com_m_user(id) ON DELETE SET NULL,
@@ -535,6 +537,8 @@ COMMENT ON COLUMN public.com_t_trial_application.timezone IS 'タイムゾーン
 COMMENT ON COLUMN public.com_t_trial_application.country_city IS '国・都市';
 COMMENT ON COLUMN public.com_t_trial_application.occupation IS '業種・職業のコード（正本は packages/types/trialApplication.ts の TRIAL_OCCUPATIONS）';
 COMMENT ON COLUMN public.com_t_trial_application.occupation_other IS '業種・職業が「その他」の場合の記入内容';
+COMMENT ON COLUMN public.com_t_trial_application.referral_source IS '知ったきっかけのコード（正本は packages/types/trialApplication.ts の TRIAL_REFERRAL_SOURCES）';
+COMMENT ON COLUMN public.com_t_trial_application.referral_source_other IS '知ったきっかけが「その他」の場合の記入内容';
 COMMENT ON COLUMN public.com_t_trial_application.message IS 'ご要望・ご質問（自由記入）';
 COMMENT ON COLUMN public.com_t_trial_application.invitation_id IS '招待ID (com_t_invitation.id)';
 COMMENT ON COLUMN public.com_t_trial_application.user_id IS '本登録したユーザーID (com_m_user.id)';
@@ -671,6 +675,7 @@ BEGIN;
 -- （fn_resolve_web_trial_contract）。p_email は小文字にそろえて渡す。
 ---------------------------------------------
 DROP FUNCTION IF EXISTS public.fn_submit_trial_application(text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval);
+DROP FUNCTION IF EXISTS public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval);
 
 CREATE OR REPLACE FUNCTION public.fn_submit_trial_application(
     p_email text,
@@ -682,6 +687,8 @@ CREATE OR REPLACE FUNCTION public.fn_submit_trial_application(
     p_country_city text,
     p_occupation smallint,
     p_occupation_other text,
+    p_referral_source smallint,
+    p_referral_source_other text,
     p_message text,
     p_token text,
     p_expires_at timestamptz,
@@ -757,10 +764,11 @@ BEGIN
 
     INSERT INTO public.com_t_trial_application AS a (
         email, last_name, first_name, last_name_latin, first_name_latin, timezone, country_city,
-        occupation, occupation_other, message, invitation_id, user_id
+        occupation, occupation_other, referral_source, referral_source_other, message, invitation_id, user_id
     ) VALUES (
         v_email, p_last_name, p_first_name, p_last_name_latin, p_first_name_latin, p_timezone, NULLIF(p_country_city, ''),
-        p_occupation, NULLIF(p_occupation_other, ''), NULLIF(p_message, ''), v_invitation_id, v_user_id
+        p_occupation, NULLIF(p_occupation_other, ''), p_referral_source, NULLIF(p_referral_source_other, ''),
+        NULLIF(p_message, ''), v_invitation_id, v_user_id
     )
     ON CONFLICT (email) DO UPDATE SET
         last_name = EXCLUDED.last_name,
@@ -771,6 +779,8 @@ BEGIN
         country_city = EXCLUDED.country_city,
         occupation = EXCLUDED.occupation,
         occupation_other = EXCLUDED.occupation_other,
+        referral_source = EXCLUDED.referral_source,
+        referral_source_other = EXCLUDED.referral_source_other,
         message = EXCLUDED.message,
         invitation_id = EXCLUDED.invitation_id,
         accepted_at = CASE WHEN v_kind = 'new' THEN NULL ELSE a.accepted_at END,
@@ -793,8 +803,8 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, smallint, text, text, text, timestamptz, interval) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, smallint, text, text, text, timestamptz, interval) TO service_role;
 
 COMMIT;
 
@@ -832,6 +842,8 @@ SELECT
   a.country_city,
   a.occupation,
   a.occupation_other,
+  a.referral_source,
+  a.referral_source_other,
   a.message,
   a.apply_count,
   a.last_applied_at,

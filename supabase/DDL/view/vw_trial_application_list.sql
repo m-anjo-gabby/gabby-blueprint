@@ -23,6 +23,8 @@ SELECT
   a.country_city,
   a.occupation,
   a.occupation_other,
+  a.referral_source,
+  a.referral_source_other,
   a.message,
   a.apply_count,
   a.last_applied_at,

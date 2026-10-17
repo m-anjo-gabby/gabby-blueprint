@@ -2446,6 +2446,7 @@
       "applyCount": "Application #{count}",
       "nameHeader": "Name",
       "occupationHeader": "Occupation",
+      "referralHeader": "Referral",
       "allOccupations": "All occupations",
       "locationHeader": "Country, city / time zone",
       "messageHeader": "Message",

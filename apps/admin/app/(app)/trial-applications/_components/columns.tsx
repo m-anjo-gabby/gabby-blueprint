@@ -5,7 +5,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import type { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { formatTrialOccupation, type TrialApplicationRow, type TrialApplicationStatus } from '@gabby/types/trialApplication';
+import { formatTrialOccupation, formatTrialReferralSource, type TrialApplicationRow, type TrialApplicationStatus } from '@gabby/types/trialApplication';
 
 type TableT = ReturnType<typeof useTranslations<'trialApplications.dataTable'>>;
 
@@ -56,6 +56,15 @@ export function createColumns(t: TableT, locale: 'ja' | 'en'): ColumnDef<TrialAp
       header: t('occupationHeader'),
       cell: ({ row }) => (
         <span className="text-slate-600">{formatTrialOccupation(row.original.occupation, row.original.occupation_other, locale)}</span>
+      ),
+    },
+    {
+      accessorKey: 'referral_source',
+      header: t('referralHeader'),
+      cell: ({ row }) => (
+        <span className="text-slate-600">
+          {formatTrialReferralSource(row.original.referral_source, row.original.referral_source_other, locale)}
+        </span>
       ),
     },
     {

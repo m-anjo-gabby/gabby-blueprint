@@ -1,8 +1,8 @@
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { formatUtcOffset } from '@gabby/lib/date/timezone';
-import { WEB_TRIAL_LICENSE_DAYS } from '@gabby/types/trialApplication';
 import { TrialApplicationForm, type TrialTimezoneOption } from './_components/TrialApplicationForm';
+import { TrialSummary } from './_components/TrialSummary';
 
 const logger = createLogger('student');
 
@@ -28,12 +28,5 @@ export default async function TrialPage() {
   const timezones = await getTimezoneOptions();
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
-  return (
-    <>
-      <p className="mb-8 text-center text-sm leading-relaxed text-ink-muted">
-        {`お申し込み後、パスワードを設定した日から${WEB_TRIAL_LICENSE_DAYS}日間、アプリのトレーニングとコーチとのライブセッション1回をお試しいただけます。`}
-      </p>
-      <TrialApplicationForm timezones={timezones} turnstileSiteKey={turnstileSiteKey} />
-    </>
-  );
+  return <TrialApplicationForm timezones={timezones} turnstileSiteKey={turnstileSiteKey} intro={<TrialSummary />} />;
 }
