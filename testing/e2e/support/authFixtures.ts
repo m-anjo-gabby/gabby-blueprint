@@ -288,28 +288,62 @@ export async function cleanupAuthFixture(fixture: AuthFixture | undefined): Prom
   }
   // 顧客に付けた教材の公開先（画面操作で割り当てた場合）
   await admin.from("com_m_contents_access").delete().eq("client_id", fixture.clientId);
-  // 使い捨て顧客の契約・ライセンス・ライブのチケット（grantAppLicense・createDisposableContract）
+  // 使い捨て顧客の契約・ライセンス・ライブのチケット（grantAppLicense・createDisposableContract）と、ユーザーの業務の記録
   const { data: contracts } = await admin.from("com_m_contract").select("contract_id").eq("client_id", fixture.clientId);
-  const contractIds = (contracts ?? []).map((c) => c.contract_id);
-  if (contractIds.length > 0) {
-    // チケットの担当枠（マッチングの成立・直接作成）を先に消す。セッションは担当枠と一緒に消える
-    // （com_t_session.ticket_id は削除で連動しないため、残るとチケット以降を消せない。KJ-2026-1006-01）
-    const { data: tickets } = await admin.from("com_t_user_session_ticket").select("ticket_id").in("contract_id", contractIds);
-    const ticketIds = (tickets ?? []).map((t) => t.ticket_id);
-    if (ticketIds.length > 0) {
-      await admin.from("com_m_lesson_schedule").delete().in("ticket_id", ticketIds);
-      // 生徒のコーチ評価はチケットを参照する
-      await admin.from("com_t_coach_rating").delete().in("ticket_id", ticketIds);
-    }
-    await admin.from("com_t_user_session_ticket_history").delete().in("contract_id", contractIds);
-    await admin.from("com_t_user_session_ticket").delete().in("contract_id", contractIds);
-    await admin.from("com_t_user_license_history").delete().in("contract_id", contractIds);
-    await admin.from("com_t_user_license").delete().in("contract_id", contractIds);
-    await admin.from("com_m_contract").delete().in("contract_id", contractIds);
-  }
+  const contractIds = (contracts ?? []).map((c) => c.contract_id as string);
+  await deleteBusinessRecords(admin, { userIds: fixture.userIds, contractIds });
+  if (contractIds.length > 0) await admin.from("com_m_contract").delete().in("contract_id", contractIds);
   await deleteUsers(fixture);
   const { error } = await admin.from("com_m_client").delete().eq("client_id", fixture.clientId);
   if (error) console.warn(`[authFixtures] 顧客削除に失敗: ${fixture.clientId} ${error.message}`);
+}
+
+/**
+ * 使い捨てのユーザー・契約に関わる業務の記録（評価・研修レポート・セッション・担当枠・マッチング・担当関係・チケット・ライセンス）を消す。
+ * 業務の記録の外部キーは RESTRICT のため（docs/DATA-DELETION.md §3）、参照する側から順に消す（fn_purge_client と同じ順序）。
+ * 固定のコーチとの記録も、使い捨ての生徒側の記録として消える。失敗は警告だけ出して続ける（後始末のため）。
+ */
+export async function deleteBusinessRecords(
+  admin: SupabaseClient,
+  { userIds, contractIds }: { userIds: string[]; contractIds: string[] }
+): Promise<void> {
+  if (userIds.length === 0 && contractIds.length === 0) return;
+  const list = (ids: string[]) => `(${ids.join(",")})`;
+  /** 列のどれかが ids に含まれる行（ids が空の列は条件にしない） */
+  const anyOf = (conds: [string, string[]][]) =>
+    conds.filter(([, ids]) => ids.length > 0).map(([col, ids]) => `${col}.in.${list(ids)}`).join(",");
+  const remove = async (table: string, conds: [string, string[]][]) => {
+    const filter = anyOf(conds);
+    if (!filter) return;
+    const { error } = await admin.from(table).delete().or(filter);
+    if (error) console.warn(`[authFixtures] ${table} の削除に失敗: ${error.message}`);
+  };
+
+  const { data: licenses } = await admin.from("com_t_user_license").select("license_id").or(anyOf([["user_id", userIds], ["contract_id", contractIds]]));
+  const licenseIds = (licenses ?? []).map((l) => l.license_id as string);
+  const { data: tickets } = await admin
+    .from("com_t_user_session_ticket")
+    .select("ticket_id")
+    .or(anyOf([["user_id", userIds], ["contract_id", contractIds], ["license_id", licenseIds]]));
+  const ticketIds = (tickets ?? []).map((t) => t.ticket_id as string);
+  const people: [string, string[]][] = [["student_id", userIds], ["coach_id", userIds]];
+
+  await remove("com_t_coach_rating", [...people, ["ticket_id", ticketIds]]);
+  await remove("com_t_contract_training_report", [...people, ["ticket_id", ticketIds]]);
+  await remove("lesson_t_sprint", people);
+  await remove("com_t_session_dialogue_log", [["opened_by_coach_id", userIds]]);
+  await remove("com_t_dialogue_session_progress", [["updated_by_coach_id", userIds]]);
+  await remove("com_t_dialogue_assignment", [["student_id", userIds], ["assigned_by_coach_id", userIds]]);
+  await remove("com_t_session_call_log", [["user_id", userIds]]);
+  await remove("com_t_session", [...people, ["ticket_id", ticketIds]]);
+  await remove("com_m_lesson_schedule", [...people, ["ticket_id", ticketIds]]);
+  await remove("com_t_matching_request", [...people, ["ticket_id", ticketIds]]);
+  await remove("com_t_coach_monthly_report_approval", [["coach_id", userIds]]);
+  await remove("com_m_coach_student_relationship", people);
+  await remove("com_t_user_session_ticket_history", [["user_id", userIds], ["contract_id", contractIds]]);
+  await remove("com_t_user_session_ticket", [["ticket_id", ticketIds]]);
+  await remove("com_t_user_license_history", [["user_id", userIds], ["contract_id", contractIds]]);
+  await remove("com_t_user_license", [["license_id", licenseIds]]);
 }
 
 async function deleteUsers(fixture: AuthFixture): Promise<void> {
@@ -322,7 +356,12 @@ async function deleteUsers(fixture: AuthFixture): Promise<void> {
     // コーチ評価（コーチの作成時にトリガーで入る初期値の評価を含む）。com_m_user を参照し、残るとユーザーを消せない
     await admin.from("com_t_coach_rating").delete().or(`coach_id.eq.${id},student_id.eq.${id}`);
     await admin.from("com_t_user_role").delete().eq("user_id", id);
-    await admin.from("com_m_user").delete().eq("id", id);
+    const { error: userError } = await admin.from("com_m_user").delete().eq("id", id);
+    if (userError) {
+      // 業務の記録が残っていてユーザーの行を消せない場合は、認証のアカウントも残す（authFixtures.leftovers.ts で見つけられるようにする）
+      console.warn(`[authFixtures] ユーザーの行の削除に失敗: ${id} ${userError.message}`);
+      continue;
+    }
     const { error } = await admin.auth.admin.deleteUser(id);
     if (error) console.warn(`[authFixtures] ユーザー削除に失敗: ${id} ${error.message}`);
   }

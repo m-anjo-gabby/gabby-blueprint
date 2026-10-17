@@ -1156,3 +1156,14 @@
 - **原因**: student の `components/ui/form.tsx` の `useFormField` が `useFormContext()` の `formState`（Proxy）を読むだけで、エラーの変化を購読していなかった。React Compiler が有効なため、親が描き直されない限り `FormMessage` が描き直されない。以前は同じ画面の CAPTCHA のトークン更新で親が描き直され、たまたま表示されていた。
 - **対処**: `useFormField` を `useFormState({ name })` で欄の状態を購読する形（shadcn の現行版）に直した。admin の `form.tsx` も同じ書き方のまま（未対応）。
 - **判断基準への反映**: 「押しても何も出ない」をハイドレーション待ちと決めつけない。`clickUntilVisible` で30秒押しても出ない場合は、フォーカスの移動・コンソール等で検証自体が動いているかを先に確かめる。
+
+### KJ-2026-1017-02 外部キーを RESTRICT にした後、E2E の後始末が途中で止まり、使い捨てのデータが残った
+
+- **該当シナリオ**: 削除の規約の導入（リリース 20261016 節9。業務の記録の外部キーを `RESTRICT` に変更）の後に実行した E2E 全般（dev, 2026-10-17）
+- **事象**: テストはすべて成功したが、使い捨ての顧客24件・ユーザー29件が残った。ユーザーの多くは、認証のアカウントが消えて `com_m_user` の行だけが残っていた（`authFixtures.leftovers.ts` では当初1件しか検出できなかった）。
+- **原因**: `cleanupAuthFixture` が「担当枠を消すとセッションも一緒に消える（CASCADE）」前提の順序で消していた。`RESTRICT` で担当枠・チケット・ライセンスの削除が止まり、
+  続く削除も失敗した（後始末の失敗は警告だけでテストは成功する）。さらに `com_m_user.id` が `auth.users` を参照しなくなったため、ユーザーの行の削除に失敗しても認証のアカウントだけは消えた。
+- **対処**: 業務の記録を参照する側から順に消す `deleteBusinessRecords`（`e2e/support/authFixtures.ts`。`fn_purge_client` と同じ順序）を作り、後始末と残骸の削除で使う。
+  ユーザーの行を消せなかった場合は認証のアカウントを残す。残骸の確認は、顧客に所属するユーザーの行も拾う。残骸は `--delete` で片付けた。
+- **判断基準への反映**: 外部キーの `ON DELETE` を変えたら、E2E を1回流した後に `authFixtures.leftovers.ts` で残骸が0件かを確かめる。
+  新しい業務の記録のテーブル（`RESTRICT` で参照するもの）を追加したら、`deleteBusinessRecords` と `fn_purge_client` の両方に削除の順序を足す。
