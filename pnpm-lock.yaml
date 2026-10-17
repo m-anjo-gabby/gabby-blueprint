@@ -127,8 +127,8 @@ catalogs:
       specifier: ^9.0.3
       version: 9.0.3
     lucide-react:
-      specifier: ^0.563.0
-      version: 0.563.0
+      specifier: ^1.51.0
+      version: 1.59.0
     microsoft-cognitiveservices-speech-sdk:
       specifier: ^1.52.0
       version: 1.52.0
@@ -316,7 +316,7 @@ importers:
         version: 12.43.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       lucide-react:
         specifier: 'catalog:'
-        version: 0.563.0(react@19.3.0)
+        version: 1.59.0(@types/react@19.3.0)(react@19.3.0)
       microsoft-cognitiveservices-speech-sdk:
         specifier: 'catalog:'
         version: 1.52.0
@@ -476,7 +476,7 @@ importers:
         version: 12.43.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       lucide-react:
         specifier: 'catalog:'
-        version: 0.563.0(react@19.3.0)
+        version: 1.59.0(@types/react@19.3.0)(react@19.3.0)
       microsoft-cognitiveservices-speech-sdk:
         specifier: 'catalog:'
         version: 1.52.0
@@ -630,7 +630,7 @@ importers:
         version: 12.43.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       lucide-react:
         specifier: 'catalog:'
-        version: 0.563.0(react@19.3.0)
+        version: 1.59.0(@types/react@19.3.0)(react@19.3.0)
       microsoft-cognitiveservices-speech-sdk:
         specifier: 'catalog:'
         version: 1.52.0
@@ -745,7 +745,7 @@ importers:
         version: 9.0.3
       lucide-react:
         specifier: 'catalog:'
-        version: 0.563.0(react@19.3.0)
+        version: 1.59.0(@types/react@19.3.0)(react@19.3.0)
       microsoft-cognitiveservices-speech-sdk:
         specifier: 'catalog:'
         version: 1.52.0
@@ -3887,10 +3887,14 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lucide-react@0.563.0:
-    resolution: {integrity: sha512-8dXPB2GI4dI8jV4MgUDGBeLdGk8ekfqVZ0BdLcrRzocGgG75ltNEmWS+gE7uokKF/0oSUuczNDT+g9hFJ23FkA==}
+  lucide-react@1.59.0:
+    resolution: {integrity: sha512-5qgMyyCPU6OvnKpLS2t693+ZtiqA8oaSweWoUows0BLFKFf6V75m4+CptpmohZHpD5IuOVIBXHBBiv2vpLJmtw==}
     peerDependencies:
+      '@types/react': '*'
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -7925,9 +7929,11 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-react@0.563.0(react@19.3.0):
+  lucide-react@1.59.0(@types/react@19.3.0)(react@19.3.0):
     dependencies:
       react: 19.3.0
+    optionalDependencies:
+      '@types/react': 19.3.0
 
   magic-string@0.30.21:
     dependencies:

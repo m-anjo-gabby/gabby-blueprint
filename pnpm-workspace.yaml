@@ -34,7 +34,7 @@ catalog:
   clsx: ^2.1.1
   cmdk: ^1.1.1
   framer-motion: ^12.43.0
-  lucide-react: ^0.563.0
+  lucide-react: ^1.51.0
   postcss: ^8.5.28
   react-easy-crop: ^5.5.7
   react-markdown: ^10.1.0
