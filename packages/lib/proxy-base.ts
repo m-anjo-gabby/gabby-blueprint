@@ -25,6 +25,8 @@ export async function createSupabaseProxy(req: NextRequest) {
   let res = NextResponse.next({
     request: { headers: withoutTrustedHeaders(req.headers) },
   });
+  // 認証の Cookie を書く応答を CDN 等にキャッシュさせないヘッダー（Supabase は最初の書き込みでだけ渡すため、作り直した応答にも付け直す）
+  const authCacheHeaders: Record<string, string> = {};
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,12 +34,14 @@ export async function createSupabaseProxy(req: NextRequest) {
     {
       cookies: {
         getAll: () => req.cookies.getAll(),
-        setAll: (cookiesToSet) => {
+        setAll: (cookiesToSet, headers) => {
           cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
           res = NextResponse.next({ request: { headers: withoutTrustedHeaders(req.headers) } });
           cookiesToSet.forEach(({ name, value, options }) =>
             res.cookies.set(name, value, options)
           );
+          Object.assign(authCacheHeaders, headers);
+          Object.entries(authCacheHeaders).forEach(([key, value]) => res.headers.set(key, value));
         },
       },
     }

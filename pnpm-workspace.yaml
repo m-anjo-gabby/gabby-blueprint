@@ -57,7 +57,7 @@ catalog:
 
   # サーバー・外部サービス
   '@ai-sdk/google': ^4.0.87
-  '@supabase/ssr': ^0.8.0
+  '@supabase/ssr': ^0.12.7
   '@supabase/supabase-js': ^2.117.2
   '@zoom/videosdk': ^2.5.0
   ai: ^7.0.127
