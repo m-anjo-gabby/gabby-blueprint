@@ -46,6 +46,8 @@ COMMENT ON COLUMN public.com_m_user_legal.updated_by IS '最後に登録・変�
 COMMENT ON COLUMN public.com_m_user_legal.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_user_legal.update_date IS '更新日時';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_user_legal FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_user_legal ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can manage user legal info" ON public.com_m_user_legal FOR ALL TO authenticated

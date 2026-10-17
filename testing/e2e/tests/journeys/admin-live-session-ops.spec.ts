@@ -108,8 +108,8 @@ test("アドミンが代理キャンセル・予約・コーチ交代・直接�
   // 代理キャンセルした回を、同じ日の1時間後（金曜 21:00）へ予約し直す。回数の個別調整で足した1回は2日後の 10:00
   const moved = jstSlotOn(jstDateOf(target.start_datetime), "21:00");
   const extra = jstSlot(2, "10:00");
-  const slotA = "第1枠: 金曜 20:00〜20:25（Asia/Tokyo）";
-  const slotB = "第1枠: 水曜 20:00〜20:25（Asia/Tokyo）";
+  const slotA = "第1枠: 金曜 20:00〜20:25（日本時間）";
+  const slotB = "第1枠: 水曜 20:00〜20:25（日本時間）";
 
   /**
    * アドミンの操作の後に生徒・コーチ（交代前・交代後）へ登録された通知（fn_notify は管理者の操作では登録しない）。

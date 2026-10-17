@@ -25,6 +25,8 @@ COMMENT ON COLUMN public.com_m_contents_access.update_date IS '更新日時';
 
 CREATE INDEX idx_contents_access_client ON public.com_m_contents_access (client_id);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_contents_access FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_contents_access ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view their own client contents access" ON public.com_m_contents_access FOR SELECT TO authenticated

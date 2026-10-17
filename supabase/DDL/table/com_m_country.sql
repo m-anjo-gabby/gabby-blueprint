@@ -27,6 +27,8 @@ COMMENT ON COLUMN public.com_m_country.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_country.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_country.is_active IS '使用中（国の選択肢に出す）';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_country FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_country ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can view countries" ON public.com_m_country FOR SELECT TO authenticated

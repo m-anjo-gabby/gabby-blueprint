@@ -39,6 +39,7 @@ CREATE TABLE public.com_m_contract (
     contract_name            text         NOT NULL,
     CONSTRAINT chk_contract_dialogue_requires_coach CHECK (NOT has_dialogue_practice OR contract_type = 2),
     CONSTRAINT chk_contract_live_fields CHECK (contract_type = 1 AND weekly_frequency IS NULL AND total_sessions IS NULL OR contract_type = 2 AND weekly_frequency >= 1 AND total_sessions IS NOT NULL),
+    CONSTRAINT chk_contract_status CHECK (status = ANY (ARRAY[0, 1, 9])),
     CONSTRAINT chk_contract_type CHECK (contract_type = ANY (ARRAY[1, 2]))
 );
 
@@ -62,7 +63,10 @@ COMMENT ON COLUMN public.com_m_contract.has_dialogue_practice IS 'ダイアロ�
 COMMENT ON COLUMN public.com_m_contract.contract_name IS '契約名（アドミン管理用。例: 顧客A 2026年度上期）。生徒・コーチには表示しない。顧客内で一意';
 
 CREATE INDEX idx_contract_client_id ON public.com_m_contract (client_id, status);
+CREATE INDEX idx_contract_plan ON public.com_m_contract (plan_id);
 CREATE UNIQUE INDEX uq_contract_client_contract_name ON public.com_m_contract (client_id, contract_name);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_contract FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_contract ENABLE ROW LEVEL SECURITY;
 

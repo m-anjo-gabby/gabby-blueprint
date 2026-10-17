@@ -40,7 +40,8 @@ COMMENT ON COLUMN public.com_m_coach_availability.update_date IS '更新日時';
 
 CREATE INDEX idx_coach_availability_coach ON public.com_m_coach_availability (coach_id);
 
-CREATE TRIGGER on_coach_availability_change_confirm AFTER INSERT OR UPDATE ON public.com_m_coach_availability FOR EACH ROW EXECUTE FUNCTION public.trg_coach_availability_confirmed();
+CREATE TRIGGER on_coach_availability_change_confirm AFTER INSERT OR DELETE OR UPDATE ON public.com_m_coach_availability FOR EACH ROW EXECUTE FUNCTION public.trg_coach_availability_confirmed();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_coach_availability FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_coach_availability ENABLE ROW LEVEL SECURITY;
 

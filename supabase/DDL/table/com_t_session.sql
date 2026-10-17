@@ -96,6 +96,8 @@ CREATE INDEX idx_session_student ON public.com_t_session (student_id, start_date
 CREATE INDEX idx_session_ticket ON public.com_t_session (ticket_id);
 CREATE UNIQUE INDEX uq_session_schedule_datetime ON public.com_t_session (schedule_id, start_datetime) WHERE status = 1;
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_session FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_session ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Involved users can view sessions" ON public.com_t_session FOR SELECT TO authenticated

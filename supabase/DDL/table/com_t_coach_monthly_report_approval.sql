@@ -48,6 +48,8 @@ COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.rate_currency IS 'æ
 
 CREATE INDEX idx_coach_monthly_report_approval_coach ON public.com_t_coach_monthly_report_approval (coach_id, report_month);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_coach_monthly_report_approval FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_coach_monthly_report_approval ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coach and admin can view monthly report approval" ON public.com_t_coach_monthly_report_approval FOR SELECT TO authenticated

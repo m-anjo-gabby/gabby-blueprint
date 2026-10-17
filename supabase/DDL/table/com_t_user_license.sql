@@ -29,14 +29,15 @@ CREATE TABLE public.com_t_user_license (
     update_date              timestamp with time zone DEFAULT now(),
     has_dialogue_practice    boolean      NOT NULL DEFAULT false,
     CONSTRAINT excl_user_license_active_overlap EXCLUDE USING gist (user_id WITH =, tstzrange(start_date, end_date, '[]'::text) WITH &&) WHERE (status = 1),
-    CONSTRAINT unique_user_contract UNIQUE (user_id, contract_id)
+    CONSTRAINT unique_user_contract UNIQUE (user_id, contract_id),
+    CONSTRAINT chk_user_license_status CHECK (status = ANY (ARRAY[0, 1]))
 );
 
 COMMENT ON TABLE public.com_t_user_license IS 'ユーザーライセンス割当情報';
 COMMENT ON COLUMN public.com_t_user_license.license_id IS 'ライセンスID';
 COMMENT ON COLUMN public.com_t_user_license.contract_id IS '契約ID';
 COMMENT ON COLUMN public.com_t_user_license.user_id IS 'ユーザID';
-COMMENT ON COLUMN public.com_t_user_license.status IS 'ステータス 1:有効, 0:停止';
+COMMENT ON COLUMN public.com_t_user_license.status IS 'ステータス 1:有効 0:停止';
 COMMENT ON COLUMN public.com_t_user_license.start_date IS '開始日';
 COMMENT ON COLUMN public.com_t_user_license.end_date IS '終了日';
 COMMENT ON COLUMN public.com_t_user_license.note IS '個別対応時のメモ';
@@ -48,6 +49,7 @@ CREATE INDEX idx_license_contract_stats ON public.com_t_user_license (contract_i
 CREATE INDEX idx_user_license_auth ON public.com_t_user_license (user_id, status, start_date, end_date);
 
 CREATE TRIGGER on_license_change AFTER INSERT OR DELETE OR UPDATE ON public.com_t_user_license FOR EACH ROW EXECUTE FUNCTION public.sync_user_license_metadata();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_user_license FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_t_user_license ENABLE ROW LEVEL SECURITY;
 

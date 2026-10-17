@@ -22,6 +22,9 @@ COMMENT ON COLUMN public.self_t_word_summary.phrase_count IS 'その日に学習
 COMMENT ON COLUMN public.self_t_word_summary.assessment_count IS 'その日に発話評価した回数';
 
 CREATE INDEX idx_daily_summary_perf ON public.self_t_word_summary (user_id, training_date DESC);
+CREATE INDEX idx_word_summary_content ON public.self_t_word_summary (content_id);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.self_t_word_summary FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.self_t_word_summary ENABLE ROW LEVEL SECURITY;
 

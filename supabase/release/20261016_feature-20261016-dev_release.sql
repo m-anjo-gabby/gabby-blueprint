@@ -3259,3 +3259,149 @@ SELECT cron.schedule(
 );
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】データモデルの整備（区分値の CHECK 制約・更新日時のトリガー・外部キーの索引・不要な表の削除）
+--
+-- 【内容】
+--   1. dev にだけ残っていた不要な表（com_m_question・self_t_sprint_backup_20260710・temp_self_t_sprint_backup）を削除する
+--      （正本に無く、コードからも参照していない。staging・本番には無い）。dev にだけある検証用の room_type = 'ADMIN' の
+--      チャットルームは GROUP にそろえる
+--   2. 区分値の列に CHECK 制約を足す（値はコードの定数・列のコメントに合わせる。既存の値が外れていれば中断する）。
+--      種別が今後増える想定でフリーテキストにしている列（com_m_calendar_event.event_type 等）・外部の値
+--      （com_t_mail_event.event_type）・想定値を決めていない列（com_m_ai_knowledge_base.source_type）は対象外。
+--      com_m_sprint_questions.question_type の '1'・'2' は旧システムから移した教材「Gabby NLT」の問題種別で、
+--      アプリの出題の対象外（定数 QUESTION_TYPES に無い）だが行が残っているため許容する
+--   3. 更新日時の列を持つ全テーブルに、更新のたびに現在時刻にするトリガー（set_update_date）を付ける
+--   4. 一覧・RLS・削除の判定でよく使う外部キーの列に索引を足す
+--   あわせて、実際の値と違っていた列のコメントを直す（user_type の 2 はコーチ等）。
+--
+-- 対応ファイル: DDL/function/set_update_date.sql（新規）, DDL/table/（下記の各テーブル）
+-- 【適用前の確認（staging・本番）】2. は既存の値が外れていると中断する。中断したら値を確かめ、直してから再実行する。
+-- =========================================================================
+
+BEGIN;
+
+-- 1. 不要な表 ---------------------------------------------------------------
+DROP TABLE IF EXISTS public.com_m_question;
+DROP TABLE IF EXISTS public.self_t_sprint_backup_20260710;
+DROP TABLE IF EXISTS public.temp_self_t_sprint_backup;
+UPDATE public.com_t_chat_room SET room_type = 'GROUP' WHERE room_type NOT IN ('1ON1', 'GROUP');
+
+-- 2. 区分値の CHECK 制約 ----------------------------------------------------
+ALTER TABLE public.com_m_user ADD CONSTRAINT chk_user_type CHECK (user_type = ANY (ARRAY['0'::text, '1'::text, '2'::text]));
+ALTER TABLE public.com_t_invitation ADD CONSTRAINT chk_invitation_user_type CHECK (user_type = ANY (ARRAY['0'::text, '1'::text, '2'::text]));
+ALTER TABLE public.com_t_chat_room_user ADD CONSTRAINT chk_chat_room_user_user_type CHECK (user_type = ANY (ARRAY['0'::text, '1'::text, '2'::text]));
+ALTER TABLE public.com_t_chat_room ADD CONSTRAINT chk_chat_room_type CHECK (room_type::text = ANY (ARRAY['1ON1'::text, 'GROUP'::text]));
+ALTER TABLE public.com_m_client ADD CONSTRAINT chk_client_type CHECK (client_type = ANY (ARRAY[0, 1, 2]));
+ALTER TABLE public.com_m_contents ADD CONSTRAINT chk_contents_type CHECK (content_type = ANY (ARRAY[0, 1, 2, 3]));
+ALTER TABLE public.com_m_contents_tag ADD CONSTRAINT chk_contents_tag_type CHECK (tag_type = ANY (ARRAY['industry'::text, 'scene'::text, 'skill'::text, 'level'::text, 'other'::text]));
+ALTER TABLE public.com_m_contract ADD CONSTRAINT chk_contract_status CHECK (status = ANY (ARRAY[0, 1, 9]));
+ALTER TABLE public.com_t_user_license ADD CONSTRAINT chk_user_license_status CHECK (status = ANY (ARRAY[0, 1]));
+ALTER TABLE public.com_t_user_license_history ADD CONSTRAINT chk_user_license_history_status CHECK (status = ANY (ARRAY[0, 1]));
+ALTER TABLE public.com_m_word ADD CONSTRAINT chk_word_status CHECK (status = ANY (ARRAY['live'::text, 'pending'::text]));
+ALTER TABLE public.com_m_phrase ADD CONSTRAINT chk_phrase_status CHECK (status = ANY (ARRAY['live'::text, 'pending'::text]));
+ALTER TABLE public.com_m_phrase ADD CONSTRAINT chk_phrase_tts_status CHECK (tts_status = ANY (ARRAY[0, 1, 2, 9]));
+ALTER TABLE public.com_m_color_vowel_dictionary ADD CONSTRAINT chk_cv_dictionary_status CHECK (status = ANY (ARRAY['live'::text, 'pending'::text]));
+ALTER TABLE public.com_m_color_vowel_dictionary ADD CONSTRAINT chk_cv_dictionary_tts_status CHECK (tts_status = ANY (ARRAY[0, 1, 2, 9]));
+ALTER TABLE public.com_m_sprint_questions ADD CONSTRAINT chk_sprint_questions_sprint_type CHECK (sprint_type = ANY (ARRAY['0'::text, '1'::text]));
+ALTER TABLE public.com_m_sprint_questions ADD CONSTRAINT chk_sprint_questions_question_type CHECK (question_type = ANY (ARRAY['0'::text, '1'::text, '2'::text, '4'::text, '5'::text, '6'::text]));
+ALTER TABLE public.com_m_sprint_questions ADD CONSTRAINT chk_sprint_questions_tts_status CHECK (
+    statement_tts_status = ANY (ARRAY[0, 1, 2, 9]) AND question_tts_status = ANY (ARRAY[0, 1, 2, 9])
+    AND answer_sentence_yes_tts_status = ANY (ARRAY[0, 1, 2, 9]) AND answer_sentence_no_tts_status = ANY (ARRAY[0, 1, 2, 9]));
+ALTER TABLE public.self_t_sprint ADD CONSTRAINT chk_self_sprint_types CHECK (
+    sprint_type = ANY (ARRAY['0'::text, '1'::text]) AND question_type = ANY (ARRAY['0'::text, '4'::text, '5'::text, '6'::text])
+    AND answer_type = ANY (ARRAY['0'::text, '1'::text]));
+ALTER TABLE public.lesson_t_sprint ADD CONSTRAINT chk_lesson_sprint_types CHECK (
+    sprint_type = ANY (ARRAY['0'::text, '1'::text]) AND question_type = ANY (ARRAY['0'::text, '4'::text, '5'::text, '6'::text])
+    AND answer_type = ANY (ARRAY['0'::text, '1'::text]));
+ALTER TABLE public.com_m_calendar_event ADD CONSTRAINT chk_calendar_event_target_type CHECK (target_type::text = ANY (ARRAY['ALL'::text, 'CLIENT'::text, 'COACH'::text]));
+ALTER TABLE public.com_m_notice ADD CONSTRAINT chk_notice_target_type CHECK (target_type::text = ANY (ARRAY['ALL'::text, 'CLIENT'::text, 'COACH'::text]));
+
+COMMENT ON COLUMN public.com_m_user.user_type IS 'ユーザー種別 0:管理者 1:生徒 2:コーチ';
+COMMENT ON COLUMN public.com_t_invitation.user_type IS 'ユーザー種別 0:管理者 1:生徒 2:コーチ';
+COMMENT ON COLUMN public.com_t_chat_room_user.user_type IS '参加者の種別（com_m_user.user_type の写し。0:管理者 1:生徒 2:コーチ）';
+COMMENT ON COLUMN public.com_m_contents_tag.tag_type IS 'タグ種別 industry:業界 scene:シチュエーション skill:スキル level:レベル other:その他';
+COMMENT ON COLUMN public.com_t_user_license_history.status IS '記録時点のライセンスのステータス 1:有効 0:停止';
+COMMENT ON COLUMN public.com_t_user_license.status IS 'ステータス 1:有効 0:停止';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_type IS '問題種別 (''0'':Speed, ''4'':Structure, ''5'':Builders, ''6'':Mastery。''1''・''2'' は旧システムから移した教材「Gabby NLT」の種別で、アプリの出題の対象外)';
+
+-- 3. 更新日時のトリガー ------------------------------------------------------
+
+-- ---- DDL/function/set_update_date.sql ----
+---------------------------------------------
+-- set_update_date: 行の更新のたびに更新日時を現在時刻にする（BEFORE UPDATE トリガー用）
+---------------------------------------------
+-- 更新日時の列を持つ全テーブルに trg_set_update_date として付ける（新しいテーブルにも付ける。
+-- 規約は supabase/DDL/README.md）。アプリ・RPC が update_date を書き忘れても、DB 側で必ず更新される
+-- （書いた値は現在時刻で上書きする）。列名が update_date 以外のテーブルは、トリガーの引数で列名を渡す
+-- （例: com_t_tts_asset は 'updated_at'）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.set_update_date()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+    NEW := jsonb_populate_record(NEW, jsonb_build_object(coalesce(TG_ARGV[0], 'update_date'), now()));
+    RETURN NEW;
+END;
+$$;
+
+DO $$
+DECLARE
+    r record;
+BEGIN
+    FOR r IN
+        SELECT c.table_name, c.column_name
+        FROM information_schema.columns c
+        JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name AND t.table_type = 'BASE TABLE'
+        WHERE c.table_schema = 'public' AND c.column_name IN ('update_date', 'updated_at')
+    LOOP
+        EXECUTE format('DROP TRIGGER IF EXISTS trg_set_update_date ON public.%I', r.table_name);
+        EXECUTE format(
+            'CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.set_update_date(%L)',
+            r.table_name, r.column_name);
+    END LOOP;
+END $$;
+
+-- 4. 外部キーの索引（一覧・RLS・削除の判定でよく使う列）----------------------
+CREATE INDEX IF NOT EXISTS idx_user_client ON public.com_m_user (client_id);
+CREATE INDEX IF NOT EXISTS idx_chat_sender ON public.com_t_chat (sender_user_id);
+CREATE INDEX IF NOT EXISTS idx_session_chat_sender ON public.com_t_session_chat (sender_user_id);
+CREATE INDEX IF NOT EXISTS idx_invitation_client ON public.com_t_invitation (client_id);
+CREATE INDEX IF NOT EXISTS idx_coach_student_note_student ON public.com_t_coach_student_note (student_id);
+CREATE INDEX IF NOT EXISTS idx_dialogue_assignment_content ON public.com_t_dialogue_assignment (content_id);
+CREATE INDEX IF NOT EXISTS idx_dialogue_session_progress_session ON public.com_t_dialogue_session_progress (dialogue_session_id);
+CREATE INDEX IF NOT EXISTS idx_session_dialogue_log_assignment ON public.com_t_session_dialogue_log (assignment_id);
+CREATE INDEX IF NOT EXISTS idx_session_homework_coach ON public.com_t_session_homework (coach_id);
+CREATE INDEX IF NOT EXISTS idx_trial_application_user ON public.com_t_trial_application (user_id);
+CREATE INDEX IF NOT EXISTS idx_resume_contents_content ON public.com_t_resume_contents (content_id);
+CREATE INDEX IF NOT EXISTS idx_word_summary_content ON public.self_t_word_summary (content_id);
+CREATE INDEX IF NOT EXISTS idx_contract_plan ON public.com_m_contract (plan_id);
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】使っていない問題種別（'1'・'2'）のスプリントの問題を削除し、問題種別を 0・4・5・6 に限る
+--
+-- 【内容】
+--   旧システムから移した教材「Gabby NLT」に残っていた問題種別 '1'・'2' の問題（dev・staging とも 3,276問）を削除する。
+--   アプリの問題種別は 0:Speed / 4:Structure / 5:Builders / 6:Mastery だけ（packages/types/sprint.ts の QUESTION_TYPES）で、
+--   これらは出題・表示されていない。教材自体と、種別 0・4・5・6 の問題・学習の記録はそのまま残る
+--   （お気に入りに登録された問題は無い。あれば外部キーの CASCADE で一緒に消える）。
+--   そのうえで com_m_sprint_questions.question_type の CHECK 制約を 0・4・5・6 に絞る。
+--
+-- 対応ファイル: DDL/table/com_m_sprint_questions.sql
+-- =========================================================================
+
+BEGIN;
+
+DELETE FROM public.com_m_sprint_questions WHERE question_type IN ('1', '2');
+
+ALTER TABLE public.com_m_sprint_questions DROP CONSTRAINT IF EXISTS chk_sprint_questions_question_type;
+ALTER TABLE public.com_m_sprint_questions ADD CONSTRAINT chk_sprint_questions_question_type
+    CHECK (question_type = ANY (ARRAY['0'::text, '4'::text, '5'::text, '6'::text]));
+COMMENT ON COLUMN public.com_m_sprint_questions.question_type IS '問題種別 (''0'':Speed, ''4'':Structure, ''5'':Builders, ''6'':Mastery)';
+
+COMMIT;

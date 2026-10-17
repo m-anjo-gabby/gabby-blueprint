@@ -60,6 +60,7 @@ CREATE UNIQUE INDEX uq_coach_rating_legacy_id ON public.com_t_coach_rating (lega
 CREATE UNIQUE INDEX uq_coach_rating_ticket_coach ON public.com_t_coach_rating (ticket_id, coach_id) WHERE ticket_id IS NOT NULL;
 
 CREATE TRIGGER trg_coach_rating_refresh_stats AFTER INSERT OR DELETE OR UPDATE ON public.com_t_coach_rating FOR EACH ROW EXECUTE FUNCTION public.trg_refresh_coach_rating_stats();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_coach_rating FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_t_coach_rating ENABLE ROW LEVEL SECURITY;
 

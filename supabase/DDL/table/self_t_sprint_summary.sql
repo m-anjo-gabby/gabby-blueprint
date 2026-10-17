@@ -34,6 +34,8 @@ COMMENT ON COLUMN public.self_t_sprint_summary.mastery_count IS 'その日に学
 CREATE INDEX idx_self_t_sprint_summary_content_id ON public.self_t_sprint_summary (content_id);
 CREATE INDEX idx_sprint_daily_summary_perf ON public.self_t_sprint_summary (user_id, training_date DESC);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.self_t_sprint_summary FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.self_t_sprint_summary ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coaches can view their assigned students' sprint summaries" ON public.self_t_sprint_summary FOR SELECT TO authenticated

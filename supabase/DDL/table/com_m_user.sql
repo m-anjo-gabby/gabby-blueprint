@@ -42,14 +42,15 @@ CREATE TABLE public.com_m_user (
     icon_path                text,
     status                   smallint     NOT NULL DEFAULT 1,
     CONSTRAINT fk_com_m_user_timezone FOREIGN KEY (timezone) REFERENCES public.com_m_timezone(timezone) ON DELETE RESTRICT,
-    CONSTRAINT chk_user_status CHECK (status = ANY (ARRAY[0, 1, 9]))
+    CONSTRAINT chk_user_status CHECK (status = ANY (ARRAY[0, 1, 9])),
+    CONSTRAINT chk_user_type CHECK (user_type = ANY (ARRAY['0'::text, '1'::text, '2'::text]))
 );
 
 COMMENT ON TABLE public.com_m_user IS 'ユーザ情報マスタ';
 COMMENT ON COLUMN public.com_m_user.id IS '認証システムID (UUID)';
 COMMENT ON COLUMN public.com_m_user.user_id IS 'ユーザID';
 COMMENT ON COLUMN public.com_m_user.client_id IS '顧客ID';
-COMMENT ON COLUMN public.com_m_user.user_type IS 'ユーザタイプ 0：管理者 1:生徒 2:モニター';
+COMMENT ON COLUMN public.com_m_user.user_type IS 'ユーザー種別 0:管理者 1:生徒 2:コーチ';
 COMMENT ON COLUMN public.com_m_user.user_name IS 'ユーザ名称';
 COMMENT ON COLUMN public.com_m_user.locale_id IS 'ロケールID';
 COMMENT ON COLUMN public.com_m_user.timezone IS 'IANAタイムゾーン名（例: Asia/Tokyo）';
@@ -60,6 +61,9 @@ COMMENT ON COLUMN public.com_m_user.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_user.icon_path IS 'プロフィールアイコン画像のStorageパス（profileバケット内、例: profile/{user_id}/icon/xxxx.png）';
 COMMENT ON COLUMN public.com_m_user.status IS '状態 1:有効 0:停止（ログインできない） 9:退会済み（個人情報を消去済み）';
 
+CREATE INDEX idx_user_client ON public.com_m_user (client_id);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_user FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 CREATE TRIGGER trg_sync_app_meta_m_user AFTER INSERT OR UPDATE OF client_id, user_type ON public.com_m_user FOR EACH ROW EXECUTE FUNCTION public.sync_user_app_metadata();
 
 ALTER TABLE public.com_m_user ENABLE ROW LEVEL SECURITY;

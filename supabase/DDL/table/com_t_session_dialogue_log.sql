@@ -30,6 +30,7 @@ COMMENT ON COLUMN public.com_t_session_dialogue_log.dialogue_session_id IS '開�
 COMMENT ON COLUMN public.com_t_session_dialogue_log.opened_by_coach_id IS 'リンクを開いたコーチのユーザーID';
 COMMENT ON COLUMN public.com_t_session_dialogue_log.insert_date IS 'オープン日時（=登録日時。更新は行わないためupdate_dateは持たない）';
 
+CREATE INDEX idx_session_dialogue_log_assignment ON public.com_t_session_dialogue_log (assignment_id);
 CREATE INDEX idx_session_dialogue_log_session ON public.com_t_session_dialogue_log (session_id, insert_date);
 
 ALTER TABLE public.com_t_session_dialogue_log ENABLE ROW LEVEL SECURITY;

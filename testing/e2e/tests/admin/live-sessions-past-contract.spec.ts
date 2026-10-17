@@ -87,7 +87,7 @@ test("過去の契約を選ぶと参照のみになり、枠・セッション�
     await test.step("現在の契約が既定で選ばれ、操作のボタンが出る", async () => {
       await expect(contractSelect).toContainText("現在の契約");
       await expect(admin.getByText("過去契約（参照のみ）")).toHaveCount(0);
-      await expect(scheduleSlotRow(admin, "第1枠: 金曜 20:00〜20:25（Asia/Tokyo）").getByRole("button", { name: "コーチ交代" })).toBeVisible();
+      await expect(scheduleSlotRow(admin, "第1枠: 金曜 20:00〜20:25（日本時間）").getByRole("button", { name: "コーチ交代" })).toBeVisible();
     });
 
     await test.step("過去の契約を選ぶと「過去契約（参照のみ）」になり、枠・セッションの操作のボタンが1つも出ない", async () => {
@@ -96,7 +96,7 @@ test("過去の契約を選ぶと参照のみになり、枠・セッション�
       await expect(admin.getByText("全2枠中 稼働1枠・未割当1枠")).toBeVisible();
 
       // 担当ありの枠は内容（未割当の件数を含む）だけを出し、未割当の枠の行（直接マッチング）は出さない
-      const assigned = scheduleSlotRow(admin, "第1枠: 火曜 20:00〜20:25（Asia/Tokyo）");
+      const assigned = scheduleSlotRow(admin, "第1枠: 火曜 20:00〜20:25（日本時間）");
       await expect(assigned).toContainText("未割当 10件");
       await expect(admin.getByTestId("schedule-slot")).toHaveCount(1);
       await expect(main.getByRole("button", { name: OPERATION_BUTTONS })).toHaveCount(0);
@@ -110,7 +110,7 @@ test("過去の契約を選ぶと参照のみになり、枠・セッション�
     await test.step("現在の契約に戻すと、操作のボタンが出る", async () => {
       await contractSelect.selectOption({ label: (await contractSelect.locator("option").filter({ hasText: "現在の契約" }).textContent())! });
       await expect(admin.getByText("過去契約（参照のみ）")).toHaveCount(0);
-      await expect(scheduleSlotRow(admin, "第1枠: 金曜 20:00〜20:25（Asia/Tokyo）").getByRole("button", { name: "コーチ交代" })).toBeVisible();
+      await expect(scheduleSlotRow(admin, "第1枠: 金曜 20:00〜20:25（日本時間）").getByRole("button", { name: "コーチ交代" })).toBeVisible();
     });
   } finally {
     await context.close();

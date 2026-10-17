@@ -21,6 +21,7 @@ CREATE TABLE public.self_t_sprint (
     answered_history         jsonb        NOT NULL DEFAULT '[]'::jsonb,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT chk_self_sprint_types CHECK ((sprint_type = ANY (ARRAY['0'::text, '1'::text])) AND (question_type = ANY (ARRAY['0'::text, '4'::text, '5'::text, '6'::text])) AND (answer_type = ANY (ARRAY['0'::text, '1'::text]))),
     CONSTRAINT self_t_sprint_answered_history_is_array CHECK (jsonb_typeof(answered_history) = 'array'::text)
 );
 
@@ -44,6 +45,7 @@ CREATE INDEX idx_self_t_sprint_user_insert_date ON public.self_t_sprint (user_id
 CREATE INDEX idx_self_t_sprint_user_type ON public.self_t_sprint (user_id, question_type, difficulty_level);
 
 CREATE TRIGGER on_sprint_session_insert AFTER INSERT ON public.self_t_sprint FOR EACH ROW EXECUTE FUNCTION public.sync_sprint_session_lifetime_stats();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.self_t_sprint FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.self_t_sprint ENABLE ROW LEVEL SECURITY;
 

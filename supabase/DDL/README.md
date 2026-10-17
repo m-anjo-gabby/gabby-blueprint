@@ -33,6 +33,19 @@ CREATE TABLE ...       ← 定義（schema.mjs が実DBから生成する。手�
   トリガー・RLS・既定と違う権限）から生成します。列の意味は `COMMENT ON` に書くため、コメントも
   リリーススクリプトで変更します。
 
+## テーブル設計の規約
+
+新しいテーブル・列を作る時は、次にそろえます（既存の例外は直さずに残してよい）。
+
+| 項目 | 規約 |
+|---|---|
+| 登録・更新日時 | 列名は `insert_date` / `update_date`（`timestamp with time zone NOT NULL DEFAULT now()`）。更新日時の列を持つテーブルには `trg_set_update_date`（`set_update_date()` の BEFORE UPDATE トリガー）を付ける。アプリ・RPC で書き忘れても DB が更新する |
+| 区分値の列 | 値の一覧を CHECK 制約で持つ（`chk_<テーブル>_<列>`）。値の意味は列のコメントと `packages/types` の定数に書き、3つをそろえる。値が今後増える前提でフリーテキストにする列（イベント種別等）は、その旨をコメントに書いて CHECK を付けない |
+| 区分値の型 | 新しい区分値は `smallint`（例: `status`）。既存の文字列の区分値（`user_type` の `'0'`〜`'2'`、`sprint_type`・`question_type` 等）は型を変えずに CHECK で守る |
+| 状態・削除 | 論理削除の列を作らない。業務の段階は `status`、選択肢の出し分けは `is_active`（`docs/DATA-DELETION.md`） |
+| 外部キー | `ON DELETE` を必ず書く（`RESTRICT` / `CASCADE` / `SET NULL`。`docs/DATA-DELETION.md` §3）。一覧・RLS で絞り込む列や、親の削除の判定で参照される列には索引を付ける（「誰が操作したか」だけの列は不要） |
+| 写しの列 | 他のテーブルの値を写す場合は、契約時点の内容を残す等の理由をコメントに書く（理由の無い写しは作らない） |
+
 ## 変更の手順
 
 1. リリーススクリプト（`supabase/release/<リリース>.sql`）に、変更の差分（ALTER 等）とその理由を書く

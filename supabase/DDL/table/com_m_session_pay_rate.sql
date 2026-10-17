@@ -25,6 +25,8 @@ COMMENT ON COLUMN public.com_m_session_pay_rate.currency_code IS '通貨コー�
 COMMENT ON COLUMN public.com_m_session_pay_rate.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_session_pay_rate.update_date IS '更新日時';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_session_pay_rate FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_session_pay_rate ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can manage session pay rate" ON public.com_m_session_pay_rate FOR ALL TO authenticated

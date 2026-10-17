@@ -45,6 +45,8 @@ COMMENT ON COLUMN public.com_t_contract_training_report.update_date IS '更新�
 CREATE INDEX idx_contract_training_report_coach ON public.com_t_contract_training_report (coach_id);
 CREATE INDEX idx_contract_training_report_student ON public.com_t_contract_training_report (student_id);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_contract_training_report FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_contract_training_report ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coaches can create their own draft training reports" ON public.com_t_contract_training_report FOR INSERT TO authenticated

@@ -26,6 +26,8 @@ COMMENT ON COLUMN public.com_m_color_vowel.video_path IS 'Storage内の動画フ
 COMMENT ON COLUMN public.com_m_color_vowel.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_color_vowel.update_date IS '更新日時';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_color_vowel FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_color_vowel ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view active color vowels" ON public.com_m_color_vowel FOR SELECT TO authenticated

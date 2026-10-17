@@ -76,6 +76,10 @@ COMMENT ON COLUMN public.com_t_trial_application.accepted_at IS '本登録（パ
 COMMENT ON COLUMN public.com_t_trial_application.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_t_trial_application.update_date IS '更新日時';
 
+CREATE INDEX idx_trial_application_user ON public.com_t_trial_application (user_id);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_trial_application FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_trial_application ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view trial applications" ON public.com_t_trial_application FOR SELECT TO authenticated

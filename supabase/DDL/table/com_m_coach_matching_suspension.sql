@@ -30,6 +30,8 @@ COMMENT ON COLUMN public.com_m_coach_matching_suspension.suspended_by IS '最後
 COMMENT ON COLUMN public.com_m_coach_matching_suspension.insert_date IS '休止した日時';
 COMMENT ON COLUMN public.com_m_coach_matching_suspension.update_date IS '更新日時（メモの変更）';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_coach_matching_suspension FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_coach_matching_suspension ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view coach matching suspensions" ON public.com_m_coach_matching_suspension FOR SELECT TO authenticated

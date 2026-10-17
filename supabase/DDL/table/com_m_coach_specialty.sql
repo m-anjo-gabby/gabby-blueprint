@@ -36,6 +36,8 @@ COMMENT ON COLUMN public.com_m_coach_specialty.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_coach_specialty.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_coach_specialty.is_active IS '使用中（専門分野の設定で選択肢に出す）';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_coach_specialty FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_coach_specialty ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can view coach specialties" ON public.com_m_coach_specialty FOR SELECT TO authenticated

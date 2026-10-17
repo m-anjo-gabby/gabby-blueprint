@@ -30,7 +30,8 @@ CREATE TABLE public.com_m_contents (
     category_id              smallint,
     status                   smallint     NOT NULL DEFAULT 0,
     CONSTRAINT chk_contents_scope CHECK (content_scope = ANY (ARRAY[0, 1])),
-    CONSTRAINT chk_contents_status CHECK (status = ANY (ARRAY[0, 1]))
+    CONSTRAINT chk_contents_status CHECK (status = ANY (ARRAY[0, 1])),
+    CONSTRAINT chk_contents_type CHECK (content_type = ANY (ARRAY[0, 1, 2, 3]))
 );
 
 COMMENT ON TABLE public.com_m_contents IS 'コンテンツ管理マスタ';
@@ -49,6 +50,8 @@ COMMENT ON COLUMN public.com_m_contents.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_contents.content_name_en IS 'コンテンツ名称（英語版・任意。コーチ向け画面で使用し、未入力時はcontent_nameにフォールバックする）';
 COMMENT ON COLUMN public.com_m_contents.category_id IS 'セット分類ID（現状ダイアログプラクティスのみで使用。1:Beginner, 2:Intermediate, 3:Advanced, 4:Corpus）。他コンテンツ種別では未使用のためNULL';
 COMMENT ON COLUMN public.com_m_contents.status IS '公開状態 1:公開 0:非公開（新規作成時は非公開）';
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_contents FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_contents ENABLE ROW LEVEL SECURITY;
 

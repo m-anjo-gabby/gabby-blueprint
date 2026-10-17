@@ -44,6 +44,8 @@ COMMENT ON COLUMN public.com_t_user_session_ticket.update_date IS '更新日時'
 CREATE INDEX idx_session_ticket_contract ON public.com_t_user_session_ticket (contract_id);
 CREATE INDEX idx_session_ticket_user ON public.com_t_user_session_ticket (user_id);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_user_session_ticket FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_user_session_ticket ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coaches can view session tickets of their students" ON public.com_t_user_session_ticket FOR SELECT TO authenticated

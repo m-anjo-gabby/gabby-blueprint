@@ -29,7 +29,9 @@ CREATE TABLE public.com_m_color_vowel_dictionary (
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     lemma                    text,
-    CONSTRAINT unique_word_and_pos UNIQUE (word_en, part_of_speech)
+    CONSTRAINT unique_word_and_pos UNIQUE (word_en, part_of_speech),
+    CONSTRAINT chk_cv_dictionary_status CHECK (status = ANY (ARRAY['live'::text, 'pending'::text])),
+    CONSTRAINT chk_cv_dictionary_tts_status CHECK (tts_status = ANY (ARRAY[0, 1, 2, 9]))
 );
 
 COMMENT ON TABLE public.com_m_color_vowel_dictionary IS 'Color Vowel辞書マスタ';
@@ -54,6 +56,8 @@ COMMENT ON COLUMN public.com_m_color_vowel_dictionary.update_date IS '更新日�
 COMMENT ON COLUMN public.com_m_color_vowel_dictionary.lemma IS '原形（例: launched → launch）。見出し語が原形そのものの場合はNULL';
 
 CREATE INDEX idx_com_m_cv_dictionary_lookup ON public.com_m_color_vowel_dictionary (lower(word_en), part_of_speech, status);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_color_vowel_dictionary FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_color_vowel_dictionary ENABLE ROW LEVEL SECURITY;
 

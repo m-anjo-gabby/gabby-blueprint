@@ -34,6 +34,8 @@ CREATE INDEX idx_user_agreement_revision_id ON public.com_t_user_terms_agreement
 CREATE INDEX idx_user_agreement_term_id ON public.com_t_user_terms_agreement (term_id);
 CREATE INDEX idx_user_agreement_user_id ON public.com_t_user_terms_agreement (user_id);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_user_terms_agreement FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_user_terms_agreement ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users and Admins can insert agreement history" ON public.com_t_user_terms_agreement FOR INSERT TO authenticated

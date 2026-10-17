@@ -49,6 +49,7 @@ CREATE INDEX idx_notification_user_occurred ON public.com_t_notification (user_i
 CREATE INDEX idx_notification_user_unread ON public.com_t_notification (user_id) WHERE is_read = false;
 
 CREATE TRIGGER trg_notification_enqueue_mail AFTER INSERT OR UPDATE ON public.com_t_notification FOR EACH ROW EXECUTE FUNCTION private.enqueue_notification_mail();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_notification FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_t_notification ENABLE ROW LEVEL SECURITY;
 

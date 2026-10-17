@@ -22,13 +22,14 @@ CREATE TABLE public.com_t_user_license_history (
     performed_by             uuid         REFERENCES auth.users(id) ON DELETE SET NULL,
     performed_at             timestamp with time zone NOT NULL DEFAULT now(),
     has_dialogue_practice    boolean      NOT NULL DEFAULT false,
+    CONSTRAINT chk_user_license_history_status CHECK (status = ANY (ARRAY[0, 1])),
     CONSTRAINT com_t_user_license_history_action_check CHECK (action = ANY (ARRAY['assigned'::text, 'updated'::text, 'invalidated'::text, 'removed'::text]))
 );
 
 COMMENT ON TABLE public.com_t_user_license_history IS 'ライセンス変更履歴（割当・更新・無効化・解除の追記専用ログ）';
 COMMENT ON COLUMN public.com_t_user_license_history.license_id IS '対象のライセンスID（com_t_user_license, FKなし）';
 COMMENT ON COLUMN public.com_t_user_license_history.action IS '操作種別 assigned:割当 / updated:更新(更新前スナップショット) / invalidated:無効化(無効化前スナップショット) / removed:解除(解除前スナップショット)';
-COMMENT ON COLUMN public.com_t_user_license_history.status IS '記録時点でのステータス';
+COMMENT ON COLUMN public.com_t_user_license_history.status IS '記録時点のライセンスのステータス 1:有効 0:停止';
 COMMENT ON COLUMN public.com_t_user_license_history.performed_by IS '操作を行った管理者のUUID（不明時はNULL）';
 COMMENT ON COLUMN public.com_t_user_license_history.performed_at IS '操作日時';
 COMMENT ON COLUMN public.com_t_user_license_history.has_dialogue_practice IS '記録時点でのダイアログプラクティス利用可否';

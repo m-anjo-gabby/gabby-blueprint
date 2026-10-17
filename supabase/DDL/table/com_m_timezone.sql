@@ -34,6 +34,7 @@ COMMENT ON COLUMN public.com_m_timezone.short_name_ja IS '短い名前（日本�
 COMMENT ON COLUMN public.com_m_timezone.short_name_en IS '短い名前（英語）。夏時間で変わらない名前（例: Japan Time）。メール等で日時に時差と並べて添える';
 COMMENT ON COLUMN public.com_m_timezone.is_active IS '使用中（タイムゾーンの選択肢に出す）';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_timezone FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 CREATE TRIGGER trg_validate_iana_timezone BEFORE INSERT OR UPDATE ON public.com_m_timezone FOR EACH ROW EXECUTE FUNCTION public.validate_iana_timezone();
 
 ALTER TABLE public.com_m_timezone ENABLE ROW LEVEL SECURITY;

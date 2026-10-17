@@ -33,6 +33,8 @@ COMMENT ON COLUMN public.com_m_calendar_event_series.description IS 'シリー�
 COMMENT ON COLUMN public.com_m_calendar_event_series.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_calendar_event_series.update_date IS '更新日時';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_calendar_event_series FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_calendar_event_series ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admin can manage calendar event series" ON public.com_m_calendar_event_series FOR ALL TO authenticated

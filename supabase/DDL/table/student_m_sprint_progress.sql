@@ -40,6 +40,7 @@ COMMENT ON COLUMN public.student_m_sprint_progress.level_mastery IS 'Mastery到�
 COMMENT ON COLUMN public.student_m_sprint_progress.level_managed IS 'スプリントのレベル管理 (true:到達レベル+1まで選択可, false:全レベル選択可)';
 
 CREATE TRIGGER on_sprint_progress_change_record_level_history AFTER INSERT OR UPDATE OF level_speed, level_structure, level_builders, level_mastery ON public.student_m_sprint_progress FOR EACH ROW EXECUTE FUNCTION public.record_sprint_level_history();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.student_m_sprint_progress FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.student_m_sprint_progress ENABLE ROW LEVEL SECURITY;
 

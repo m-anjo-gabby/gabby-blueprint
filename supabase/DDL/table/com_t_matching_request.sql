@@ -82,6 +82,7 @@ CREATE UNIQUE INDEX uq_matching_request_active_slot ON public.com_t_matching_req
 
 CREATE TRIGGER trg_matching_request_after_insert AFTER INSERT ON public.com_t_matching_request FOR EACH ROW EXECUTE FUNCTION public.trg_matching_request_after_insert();
 CREATE TRIGGER trg_matching_request_before_insert BEFORE INSERT ON public.com_t_matching_request FOR EACH ROW EXECUTE FUNCTION public.trg_matching_request_before_insert();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_matching_request FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_t_matching_request ENABLE ROW LEVEL SECURITY;
 

@@ -24,6 +24,8 @@ COMMENT ON COLUMN public.com_t_user_mail_setting.enabled IS '配信する (TRUE:
 COMMENT ON COLUMN public.com_t_user_mail_setting.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_t_user_mail_setting.update_date IS '更新日時';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_user_mail_setting FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_user_mail_setting ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can insert their own mail settings" ON public.com_t_user_mail_setting FOR INSERT TO authenticated

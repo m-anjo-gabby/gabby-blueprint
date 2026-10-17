@@ -34,7 +34,8 @@ CREATE TABLE public.com_m_notice (
     CONSTRAINT chk_notice_coach_display CHECK (target_type::text <> 'COACH'::text OR display_mode::text <> 'HOME'::text AND image_path IS NULL AND cta_url IS NULL),
     CONSTRAINT chk_notice_cta CHECK ((cta_label IS NULL) = (cta_url IS NULL) AND (cta_label IS NULL OR char_length(cta_label) >= 1 AND char_length(cta_label) <= 30) AND (cta_url IS NULL OR cta_url ~ '^(/([^/]|$)|https://)'::text)),
     CONSTRAINT chk_notice_display_mode CHECK (display_mode::text = ANY (ARRAY['POPUP'::character varying, 'HOME'::character varying, 'LIST'::character varying]::text[])),
-    CONSTRAINT chk_notice_target CHECK (target_type::text = 'ALL'::text AND client_id IS NULL OR target_type::text = 'CLIENT'::text AND client_id IS NOT NULL OR target_type::text = 'COACH'::text AND client_id IS NULL)
+    CONSTRAINT chk_notice_target CHECK (target_type::text = 'ALL'::text AND client_id IS NULL OR target_type::text = 'CLIENT'::text AND client_id IS NOT NULL OR target_type::text = 'COACH'::text AND client_id IS NULL),
+    CONSTRAINT chk_notice_target_type CHECK (target_type::text = ANY (ARRAY['ALL'::text, 'CLIENT'::text, 'COACH'::text]))
 );
 
 COMMENT ON TABLE public.com_m_notice IS 'お知らせマスタ';
@@ -58,6 +59,8 @@ COMMENT ON COLUMN public.com_m_notice.cta_url IS '行動ボタンのリンク先
 
 CREATE INDEX idx_notice_client ON public.com_m_notice (client_id) WHERE client_id IS NOT NULL;
 CREATE INDEX idx_notice_fetch ON public.com_m_notice (is_published, published_at, expired_at);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_notice FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_notice ENABLE ROW LEVEL SECURITY;
 

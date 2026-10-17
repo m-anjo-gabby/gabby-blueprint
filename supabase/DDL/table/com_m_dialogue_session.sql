@@ -36,6 +36,8 @@ COMMENT ON COLUMN public.com_m_dialogue_session.update_date IS '更新日時';
 
 CREATE INDEX idx_dialogue_session_content ON public.com_m_dialogue_session (content_id, session_no);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_dialogue_session FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_dialogue_session ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow select access for authenticated users" ON public.com_m_dialogue_session FOR SELECT TO authenticated

@@ -150,6 +150,9 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
   `RESTRICT`（業務の記録・マスタの参照）/ `CASCADE`（親に付属するだけ）/ `SET NULL`（操作者の記録）を明示し、`NO ACTION` を作らない。
   退会（個人情報の消去）は `fn_withdraw_user`、顧客単位の一括削除は `fn_purge_client` で行い、admin の DangerZone に置く。
   個人情報を持つテーブル・顧客に属するテーブルを追加したら、同じタスクでこの2つの関数と規約の表を直す。
+- **テーブル設計の規約**: `supabase/DDL/README.md`「テーブル設計の規約」が正本。日時は `insert_date` / `update_date`
+  （更新日時は `trg_set_update_date` で DB が更新する）、区分値の列は CHECK 制約・列のコメント・`packages/types` の定数をそろえ、
+  絞り込みに使う外部キーの列には索引を付ける。
 - RPCのシグネチャを変更する場合は、`DROP FUNCTION IF EXISTS`で旧シグネチャを明示的に削除してから
   `CREATE OR REPLACE FUNCTION`で新シグネチャを作成すること（Postgresの関数オーバーロードの
   曖昧性を避けるため）。

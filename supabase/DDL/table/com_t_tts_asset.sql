@@ -31,6 +31,8 @@ COMMENT ON COLUMN public.com_t_tts_asset.updated_at IS '更新日時';
 CREATE INDEX idx_com_t_tts_asset_created_at ON public.com_t_tts_asset (created_at DESC);
 CREATE INDEX idx_com_t_tts_asset_raw_text ON public.com_t_tts_asset USING gin (to_tsvector('english'::regconfig, raw_text));
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_tts_asset FOR EACH ROW EXECUTE FUNCTION public.set_update_date('updated_at');
+
 ALTER TABLE public.com_t_tts_asset ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admin users can manage tts assets" ON public.com_t_tts_asset FOR ALL TO authenticated

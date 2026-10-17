@@ -36,6 +36,8 @@ COMMENT ON COLUMN public.com_t_coach_stats.rating_updated_at IS '評価の集計
 COMMENT ON COLUMN public.com_t_coach_stats.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_t_coach_stats.update_date IS '更新日時';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_coach_stats FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_coach_stats ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Authenticated users can view coach stats" ON public.com_t_coach_stats FOR SELECT TO authenticated

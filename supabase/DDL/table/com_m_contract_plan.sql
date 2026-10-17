@@ -47,6 +47,8 @@ COMMENT ON COLUMN public.com_m_contract_plan.plan_name_en IS 'プラン表示名
 COMMENT ON COLUMN public.com_m_contract_plan.has_dialogue_practice IS 'ダイアログプラクティス（自主トレコンテンツ）の提供有無';
 COMMENT ON COLUMN public.com_m_contract_plan.is_active IS '販売中（契約の作成で選択肢に出す）';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_contract_plan FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_contract_plan ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can manage contract plans" ON public.com_m_contract_plan FOR ALL TO authenticated

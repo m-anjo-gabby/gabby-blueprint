@@ -36,6 +36,9 @@ COMMENT ON COLUMN public.com_t_dialogue_session_progress.insert_date IS '登録�
 COMMENT ON COLUMN public.com_t_dialogue_session_progress.update_date IS '更新日時';
 
 CREATE INDEX idx_dialogue_session_progress_assignment ON public.com_t_dialogue_session_progress (assignment_id);
+CREATE INDEX idx_dialogue_session_progress_session ON public.com_t_dialogue_session_progress (dialogue_session_id);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_dialogue_session_progress FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_t_dialogue_session_progress ENABLE ROW LEVEL SECURITY;
 

@@ -42,6 +42,8 @@ COMMENT ON COLUMN public.com_m_ai_knowledge_base.update_date IS '更新日時';
 CREATE INDEX idx_com_m_ai_knowledge_base_embedding ON public.com_m_ai_knowledge_base USING hnsw (embedding public.vector_cosine_ops);
 CREATE INDEX idx_com_m_ai_knowledge_base_source_type ON public.com_m_ai_knowledge_base (source_type);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_ai_knowledge_base FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_ai_knowledge_base ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admin users can manage ai knowledge base" ON public.com_m_ai_knowledge_base FOR ALL TO authenticated

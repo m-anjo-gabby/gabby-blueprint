@@ -38,6 +38,8 @@ COMMENT ON COLUMN public.com_m_coach_student_relationship.update_date IS '更新
 
 CREATE INDEX idx_coach_student_relationship_student ON public.com_m_coach_student_relationship (student_id);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_coach_student_relationship FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_coach_student_relationship ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Involved users can view coach student relationships" ON public.com_m_coach_student_relationship FOR SELECT TO authenticated

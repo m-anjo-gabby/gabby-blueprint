@@ -30,6 +30,7 @@ CREATE TABLE public.lesson_t_sprint (
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     session_id               uuid         REFERENCES public.com_t_session(session_id) ON DELETE SET NULL,
+    CONSTRAINT chk_lesson_sprint_types CHECK ((sprint_type = ANY (ARRAY['0'::text, '1'::text])) AND (question_type = ANY (ARRAY['0'::text, '4'::text, '5'::text, '6'::text])) AND (answer_type = ANY (ARRAY['0'::text, '1'::text]))),
     CONSTRAINT lesson_t_sprint_answered_history_is_array CHECK (jsonb_typeof(answered_history) = 'array'::text)
 );
 
@@ -56,6 +57,8 @@ CREATE INDEX idx_lesson_t_sprint_coach_student ON public.lesson_t_sprint (coach_
 CREATE INDEX idx_lesson_t_sprint_content_id ON public.lesson_t_sprint (content_id);
 CREATE INDEX idx_lesson_t_sprint_session ON public.lesson_t_sprint (session_id, insert_date);
 CREATE INDEX idx_lesson_t_sprint_student ON public.lesson_t_sprint (student_id, insert_date DESC);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.lesson_t_sprint FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.lesson_t_sprint ENABLE ROW LEVEL SECURITY;
 

@@ -31,6 +31,7 @@ COMMENT ON COLUMN public.com_t_session_chat.sender_role IS '送信者の役割 (
 COMMENT ON COLUMN public.com_t_session_chat.message IS 'メッセージ本文';
 COMMENT ON COLUMN public.com_t_session_chat.created_at IS '送信日時（サーバー確定）';
 
+CREATE INDEX idx_session_chat_sender ON public.com_t_session_chat (sender_user_id);
 CREATE INDEX idx_session_chat_session ON public.com_t_session_chat (session_id, created_at);
 
 ALTER TABLE public.com_t_session_chat ENABLE ROW LEVEL SECURITY;

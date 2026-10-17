@@ -27,6 +27,7 @@ COMMENT ON COLUMN public.com_t_chat.message_type IS 'メッセージ種別 (TEXT
 COMMENT ON COLUMN public.com_t_chat.created_at IS '送信日時';
 COMMENT ON COLUMN public.com_t_chat.deleted_at IS '論理削除日時 (NULL: 未削除)';
 
+CREATE INDEX idx_chat_sender ON public.com_t_chat (sender_user_id);
 CREATE INDEX idx_com_t_chat_room_id ON public.com_t_chat (room_id, created_at DESC);
 
 CREATE TRIGGER on_chat_message_insert_notify AFTER INSERT ON public.com_t_chat FOR EACH ROW EXECUTE FUNCTION public.notify_chat_new_message();

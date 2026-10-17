@@ -21,7 +21,9 @@ CREATE TABLE public.com_m_phrase (
     status                   text         NOT NULL DEFAULT 'live'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
-    CONSTRAINT unique_word_phrase_seq UNIQUE (word_id, seq_no)
+    CONSTRAINT unique_word_phrase_seq UNIQUE (word_id, seq_no),
+    CONSTRAINT chk_phrase_status CHECK (status = ANY (ARRAY['live'::text, 'pending'::text])),
+    CONSTRAINT chk_phrase_tts_status CHECK (tts_status = ANY (ARRAY[0, 1, 2, 9]))
 );
 
 COMMENT ON TABLE public.com_m_phrase IS '出題例文マスタ';
@@ -43,6 +45,8 @@ COMMENT ON COLUMN public.com_m_phrase.update_date IS '更新日時';
 
 CREATE INDEX idx_com_m_phrase_word_id ON public.com_m_phrase (word_id);
 CREATE INDEX idx_com_m_phrase_word_status_seq ON public.com_m_phrase (word_id, status, seq_no);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_phrase FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_phrase ENABLE ROW LEVEL SECURITY;
 

@@ -38,8 +38,11 @@ COMMENT ON COLUMN public.com_t_dialogue_assignment.insert_date IS '登録日時'
 COMMENT ON COLUMN public.com_t_dialogue_assignment.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_t_dialogue_assignment.status IS '状態 1:割当中 0:解除。同一セットの再割当を許容するため、一意性は割当中の行だけを対象にした部分ユニークインデックスで担保する';
 
+CREATE INDEX idx_dialogue_assignment_content ON public.com_t_dialogue_assignment (content_id);
 CREATE INDEX idx_dialogue_assignment_student ON public.com_t_dialogue_assignment (student_id) WHERE status = 1;
 CREATE UNIQUE INDEX idx_dialogue_assignment_unique_active ON public.com_t_dialogue_assignment (student_id, content_id) WHERE status = 1;
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_dialogue_assignment FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_t_dialogue_assignment ENABLE ROW LEVEL SECURITY;
 

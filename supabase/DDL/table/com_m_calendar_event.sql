@@ -30,6 +30,7 @@ CREATE TABLE public.com_m_calendar_event (
     rsvp_enabled             boolean      NOT NULL DEFAULT false,
     series_id                uuid         REFERENCES public.com_m_calendar_event_series(series_id) ON DELETE SET NULL,
     CONSTRAINT chk_calendar_event_target CHECK (target_type::text = 'ALL'::text AND client_id IS NULL OR target_type::text = 'CLIENT'::text AND client_id IS NOT NULL OR target_type::text = 'COACH'::text AND client_id IS NULL),
+    CONSTRAINT chk_calendar_event_target_type CHECK (target_type::text = ANY (ARRAY['ALL'::text, 'CLIENT'::text, 'COACH'::text])),
     CONSTRAINT chk_calendar_event_time_range CHECK (end_datetime IS NULL OR end_datetime > start_datetime)
 );
 
@@ -53,6 +54,8 @@ CREATE INDEX idx_calendar_event_client ON public.com_m_calendar_event (client_id
 CREATE INDEX idx_calendar_event_fetch ON public.com_m_calendar_event (is_published, start_datetime);
 CREATE INDEX idx_calendar_event_series ON public.com_m_calendar_event (series_id) WHERE series_id IS NOT NULL;
 CREATE INDEX idx_calendar_event_type ON public.com_m_calendar_event (event_type);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_calendar_event FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_calendar_event ENABLE ROW LEVEL SECURITY;
 

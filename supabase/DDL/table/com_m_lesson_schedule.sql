@@ -73,6 +73,7 @@ CREATE INDEX idx_lesson_schedule_student ON public.com_m_lesson_schedule (studen
 CREATE UNIQUE INDEX uq_lesson_schedule_active_slot ON public.com_m_lesson_schedule (ticket_id, slot_no) WHERE status = 1;
 
 CREATE TRIGGER on_lesson_schedule_change_sync_relationship AFTER INSERT OR DELETE OR UPDATE ON public.com_m_lesson_schedule FOR EACH ROW EXECUTE FUNCTION public.sync_coach_student_relationship();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_lesson_schedule FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_lesson_schedule ENABLE ROW LEVEL SECURITY;
 

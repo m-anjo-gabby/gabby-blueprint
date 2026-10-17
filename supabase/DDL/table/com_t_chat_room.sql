@@ -10,7 +10,8 @@ CREATE TABLE public.com_t_chat_room (
     room_type                character varying(10) NOT NULL DEFAULT '1ON1'::character varying,
     room_name                character varying(100),
     created_at               timestamp with time zone NOT NULL DEFAULT now(),
-    closed_at                timestamp with time zone
+    closed_at                timestamp with time zone,
+    CONSTRAINT chk_chat_room_type CHECK (room_type::text = ANY (ARRAY['1ON1'::text, 'GROUP'::text]))
 );
 
 COMMENT ON TABLE public.com_t_chat_room IS 'チャットルーム管理';

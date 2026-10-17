@@ -51,7 +51,10 @@ CREATE TABLE public.com_m_sprint_questions (
     legacy_question_id       bigint,
     legacy_group_id          integer,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
-    update_date              timestamp with time zone NOT NULL DEFAULT now()
+    update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT chk_sprint_questions_question_type CHECK (question_type = ANY (ARRAY['0'::text, '4'::text, '5'::text, '6'::text])),
+    CONSTRAINT chk_sprint_questions_sprint_type CHECK (sprint_type = ANY (ARRAY['0'::text, '1'::text])),
+    CONSTRAINT chk_sprint_questions_tts_status CHECK ((statement_tts_status = ANY (ARRAY[0, 1, 2, 9])) AND (question_tts_status = ANY (ARRAY[0, 1, 2, 9])) AND (answer_sentence_yes_tts_status = ANY (ARRAY[0, 1, 2, 9])) AND (answer_sentence_no_tts_status = ANY (ARRAY[0, 1, 2, 9])))
 );
 
 COMMENT ON TABLE public.com_m_sprint_questions IS 'スプリント問題（汎用・コーパス統合）マスタテーブル';
@@ -99,6 +102,8 @@ COMMENT ON COLUMN public.com_m_sprint_questions.update_date IS '更新日時';
 CREATE INDEX idx_sprint_questions_content_level ON public.com_m_sprint_questions (content_id, question_type, difficulty_level);
 CREATE INDEX idx_sprint_questions_corpus_lookup ON public.com_m_sprint_questions (content_id, seq_no) WHERE sprint_type = '1'::text;
 CREATE INDEX idx_sprint_questions_general_lookup ON public.com_m_sprint_questions (sprint_type, question_type, difficulty_level, group_id, seq_no);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_sprint_questions FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_sprint_questions ENABLE ROW LEVEL SECURITY;
 

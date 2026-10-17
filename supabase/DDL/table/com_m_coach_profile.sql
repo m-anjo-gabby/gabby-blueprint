@@ -54,6 +54,7 @@ COMMENT ON COLUMN public.com_m_coach_profile.availability_confirmed_at IS '空�
 COMMENT ON COLUMN public.com_m_coach_profile.accepting_students IS '新規の生徒の受付（コーチ本人が切り替える。falseの間は生徒のコーチ選択に出さない）';
 
 CREATE TRIGGER trg_coach_profile_initial_rating AFTER INSERT ON public.com_m_coach_profile FOR EACH ROW EXECUTE FUNCTION public.trg_create_initial_coach_rating();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_coach_profile FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_coach_profile ENABLE ROW LEVEL SECURITY;
 

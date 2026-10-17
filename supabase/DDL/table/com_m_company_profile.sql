@@ -43,6 +43,8 @@ COMMENT ON COLUMN public.com_m_company_profile.company_name_ja IS '会社名（�
 
 CREATE UNIQUE INDEX uq_company_profile_code ON public.com_m_company_profile (company_code);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_company_profile FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_company_profile ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can manage company profile" ON public.com_m_company_profile FOR ALL TO authenticated

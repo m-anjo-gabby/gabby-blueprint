@@ -59,6 +59,8 @@ CREATE INDEX idx_slot_proposal_schedule ON public.com_t_session_slot_proposal (s
 CREATE INDEX idx_slot_proposal_source_session ON public.com_t_session_slot_proposal (source_session_id);
 CREATE INDEX idx_slot_proposal_student_status ON public.com_t_session_slot_proposal (student_id, status);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_session_slot_proposal FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_session_slot_proposal ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Involved users can view slot proposals" ON public.com_t_session_slot_proposal FOR SELECT TO authenticated

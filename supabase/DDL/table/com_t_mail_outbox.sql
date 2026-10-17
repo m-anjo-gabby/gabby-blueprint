@@ -76,6 +76,7 @@ CREATE INDEX idx_mail_outbox_provider_message ON public.com_t_mail_outbox (provi
 CREATE INDEX idx_mail_outbox_user ON public.com_t_mail_outbox (user_id, insert_date DESC);
 
 CREATE TRIGGER trg_mail_outbox_dispatch AFTER INSERT ON public.com_t_mail_outbox REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION private.on_mail_outbox_inserted();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_mail_outbox FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_t_mail_outbox ENABLE ROW LEVEL SECURITY;
 -- @end-schema
