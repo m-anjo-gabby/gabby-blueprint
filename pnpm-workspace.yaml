@@ -71,7 +71,7 @@ catalog:
   '@playwright/test': ^1.63.0
   cross-env: ^10.1.0
   dotenv: ^18.0.5
-  eslint: ^9.39.5
+  eslint: ^10.12.0
   pino-pretty: ^13.1.3
   prettier: ^3.9.9
   rimraf: ^6.1.3
@@ -94,3 +94,12 @@ onlyBuiltDependencies:
   - esbuild
   - sharp
   - unrs-resolver
+
+# peerDependencies の範囲外だが、動作を確認して使っている組み合わせ。対応版が出たら消す（docs/DEPENDENCIES.md）
+peerDependencyRules:
+  allowedVersions:
+    # eslint-config-next 16.3 が使うプラグインは ESLint 10 を範囲に含めていない（React の版を eslint.config.mjs で明示して動かす）
+    eslint-plugin-import>eslint: '10'
+    eslint-plugin-jsx-a11y>eslint: '10'
+    eslint-plugin-react>eslint: '10'
+    eslint-plugin-react-hooks>eslint: '10'

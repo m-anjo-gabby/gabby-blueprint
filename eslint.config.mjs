@@ -6,10 +6,13 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
 
-  // Next.js のアプリはリポジトリ直下ではなく apps/* にある
+  // Next.js のアプリはリポジトリ直下ではなく apps/* にある。
+  // React の版は明示する（eslint-plugin-react の自動判定は ESLint 10 で削除された API を使っており動かない）。
+  // catalog の react のメジャー版を上げたら合わせる
   {
     settings: {
       next: { rootDir: ["apps/*/"] },
+      react: { version: "19" },
     },
   },
 
