@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { FRAME_DENY_HEADERS } from "../../packages/lib/security/frameHeaders";
 
 const nextConfig: NextConfig = {
   /* モノレポ内の共通パッケージ（packages/*）を導入した際、
@@ -7,6 +8,11 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@gabby/ui", "@gabby/types", "@gabby/lib", "@gabby/utils"],
 
   reactCompiler: true,
+
+  // 他のサイトの iframe への埋め込みを禁止する（全アプリ共通。packages/lib/security/frameHeaders.ts）
+  async headers() {
+    return [{ source: "/:path*", headers: FRAME_DENY_HEADERS }];
+  },
 
   images: {
     remotePatterns: [

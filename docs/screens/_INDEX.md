@@ -28,7 +28,7 @@
 | [favorites.md](student/favorites.md) | `/favorites` | お気に入り教材・フレーズ | ✅ |
 | [library.md](student/library.md) | `/library` | 教材一覧（検索・絞り込み） | ✅ |
 | [notice.md](student/notice.md) | `/notice` | お知らせ一覧 | ✅ |
-| [trial.md](student/trial.md) | `/trial` | Webトライアルの申込（ログイン不要の公開画面。CAPTCHA・個人情報保護方針への同意、申込の種類ごとのメール・管理者への通知、本登録で14日間のライセンス） | ✅ |
+| [trial.md](student/trial.md) | `/trial`・`/trial/complete` | Webトライアルの申込（ログイン不要の公開画面。CAPTCHA・個人情報保護方針への同意、申込の種類ごとのメール・管理者への通知、本登録で14日間のライセンス） | ✅ |
 | [group-sessions.md](student/group-sessions.md) | `/group-sessions` | グループセッション一覧（シリーズごとの回・すべての回に参加する・参加登録した過去のセッション） | ✅ |
 | [notification.md](student/notification.md) | `/notification` | 通知一覧 | ✅ |
 | [profile.md](student/profile.md) | `/profile` | アイコン・タイムゾーン設定 | ✅ |

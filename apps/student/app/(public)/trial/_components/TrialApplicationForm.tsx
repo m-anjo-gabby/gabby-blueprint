@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm, useWatch, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, CheckCircle2, ExternalLink } from 'lucide-react';
+import { ArrowRight, ExternalLink } from 'lucide-react';
 import { PRIVACY_POLICY_URL } from '@gabby/lib/contact';
 import { TRIAL_FIELD_LIMITS, TRIAL_OCCUPATION_OTHER, TRIAL_OCCUPATIONS } from '@gabby/types/trialApplication';
 import { Button } from '@/components/ui/button';
@@ -23,8 +24,6 @@ interface TrialApplicationFormProps {
   timezones: TrialTimezoneOption[];
   turnstileSiteKey: string;
 }
-
-type TrialStep = { kind: 'input' } | { kind: 'confirm'; values: TrialApplicationFormValues } | { kind: 'done' };
 
 const Required = () => <span className="ml-1 text-xs text-rose-600">必須</span>;
 
@@ -64,48 +63,47 @@ export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialAppli
     resolver: zodResolver(trialApplicationSchema),
     defaultValues: TRIAL_FORM_DEFAULTS,
   });
-  // 入力 → 確認（検証済みの値を持つ）→ 受付完了。URL は変えず、表示だけを切り替える
-  const [step, setStep] = useState<TrialStep>({ kind: 'input' });
+  const router = useRouter();
+  // 確認画面に出す検証済みの値（null = 入力画面）。入力画面へ戻っても入力内容はフォームの状態に残る
+  const [confirmValues, setConfirmValues] = useState<TrialApplicationFormValues | null>(null);
   const isOtherOccupation = useWatch({ control: form.control, name: 'occupation' }) === String(TRIAL_OCCUPATION_OTHER);
 
-  // 表示を切り替えたら、新しい表示の先頭から見せる（公開画面はページ全体がスクロールする）
-  const goTo = (next: TrialStep) => {
-    setStep(next);
+  // 確認画面の間は、ブラウザバック（確認画面へ進む時に積んだ履歴を戻る）で入力画面へ戻す
+  useEffect(() => {
+    if (!confirmValues) return;
+    const handlePopState = () => {
+      setConfirmValues(null);
+      window.scrollTo({ top: 0 });
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [confirmValues]);
+
+  // 確認画面へ進む。URL は変えずに履歴を1つ積み、ブラウザバックを「修正する」と同じにする。
+  // 表示を切り替えたら先頭から見せる（公開画面はページ全体がスクロールする）
+  const showConfirm = (values: TrialApplicationFormValues) => {
+    window.history.pushState(null, '', window.location.href);
+    setConfirmValues(values);
     window.scrollTo({ top: 0 });
   };
 
-  if (step.kind === 'confirm') {
+  if (confirmValues) {
     return (
       <TrialApplicationConfirm
-        values={step.values}
-        timezoneLabel={timezones.find((tz) => tz.value === step.values.timezone)?.label ?? step.values.timezone}
+        values={confirmValues}
+        timezoneLabel={timezones.find((tz) => tz.value === confirmValues.timezone)?.label ?? confirmValues.timezone}
         turnstileSiteKey={turnstileSiteKey}
-        // 入力欄は外れても、入力内容はフォームの状態に残る
-        onBack={() => goTo({ kind: 'input' })}
-        onComplete={() => goTo({ kind: 'done' })}
+        // 積んだ履歴を戻る（上の popstate で入力画面になる）
+        onBack={() => window.history.back()}
+        // 確認画面の履歴を受付完了の画面に置き換える（再読み込みしても完了のまま、ブラウザバックで確認画面に戻らない）
+        onComplete={() => router.replace('/trial/complete')}
       />
-    );
-  }
-
-  if (step.kind === 'done') {
-    return (
-      <div className="flex flex-col items-center py-8 text-center" role="status">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
-          <CheckCircle2 className="h-6 w-6 text-emerald-500" aria-hidden />
-        </div>
-        <h2 className="text-xl font-bold text-ink">お申し込みを受け付けました</h2>
-        <p className="mt-3 max-w-md text-sm leading-relaxed text-ink-muted">
-          ご入力のメールアドレスに、ご案内のメールをお送りしました。メールの内容に沿って、トライアルを開始してください。
-          <br />
-          メールが届かない場合は、迷惑メールのフォルダもご確認ください。
-        </p>
-      </div>
     );
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={(event) => form.handleSubmit((values) => goTo({ kind: 'confirm', values }))(event)} className="space-y-6" noValidate>
+      <form onSubmit={(event) => form.handleSubmit(showConfirm)(event)} className="space-y-6" noValidate>
         <FormField
           control={form.control}
           name="email"

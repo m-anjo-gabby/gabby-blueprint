@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { FRAME_DENY_HEADERS } from "../../packages/lib/security/frameHeaders";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
@@ -10,6 +11,11 @@ const nextConfig: NextConfig = {
   // experimental の中から外に出します
   reactCompiler: true, 
   
+  // 他のサイトの iframe への埋め込みを禁止する（全アプリ共通。packages/lib/security/frameHeaders.ts）
+  async headers() {
+    return [{ source: "/:path*", headers: FRAME_DENY_HEADERS }];
+  },
+
   images: {
     remotePatterns: [
       {

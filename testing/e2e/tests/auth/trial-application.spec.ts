@@ -92,12 +92,26 @@ test("申込フォームから申し込み、届いた案内からパスワー�
   await page.getByRole("button", { name: "修正する" }).click();
   await expect(page.getByLabel("名（ローマ字）")).toHaveValue("Trial");
   await expect(page.getByRole("checkbox", { name: /個人情報保護方針/ })).toBeChecked();
+  // ブラウザバックも「修正する」と同じ（確認画面へ進む時に履歴を1つ積む）
+  await page.getByRole("button", { name: "入力内容を確認する" }).click();
+  await expect(page.getByRole("heading", { name: "入力内容のご確認" })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByLabel("名（ローマ字）")).toHaveValue("Trial");
+  await expect(page).toHaveURL(/\/trial$/);
   await page.getByRole("button", { name: "入力内容を確認する" }).click();
 
   // CAPTCHA（テスト用の鍵は自動で通る。確認画面に置く）のトークンが入ってから送る
   await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveValue(/.+/, { timeout: 30_000 });
   await page.getByRole("button", { name: "申し込む" }).click();
-  await expect(page.getByRole("heading", { name: "お申し込みを受け付けました" })).toBeVisible({ timeout: 30_000 });
+  await expect(page).toHaveURL(/\/trial\/complete$/, { timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "お申し込みを受け付けました" })).toBeVisible();
+  // 再読み込みしても完了のまま。ブラウザバックでは確認画面に戻らず、空の入力画面になる（二重送信を防ぐ）
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "お申し込みを受け付けました" })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/trial$/);
+  await expect(page.getByRole("button", { name: "入力内容を確認する" })).toBeVisible();
+  await expect(page.getByLabel("名（ローマ字）")).toHaveValue("");
 
   const { data: app } = await admin
     .from("com_t_trial_application").select("application_id, occupation, occupation_other, timezone, invitation_id").eq("email", email).single();
