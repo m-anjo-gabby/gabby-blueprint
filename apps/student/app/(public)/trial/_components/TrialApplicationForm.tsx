@@ -1,19 +1,18 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useState } from 'react';
 import { useForm, useWatch, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckCircle2, ExternalLink, Send } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ExternalLink } from 'lucide-react';
 import { PRIVACY_POLICY_URL } from '@gabby/lib/contact';
 import { TRIAL_FIELD_LIMITS, TRIAL_OCCUPATION_OTHER, TRIAL_OCCUPATIONS } from '@gabby/types/trialApplication';
-import { submitTrial } from '@/actions/trialAction';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { TRIAL_FORM_DEFAULTS, trialApplicationSchema, type TrialApplicationFormValues } from '../_lib/schema';
-import { TurnstileWidget, type TurnstileWidgetHandle } from './TurnstileWidget';
+import { TrialApplicationConfirm } from './TrialApplicationConfirm';
 
 export interface TrialTimezoneOption {
   value: string;
@@ -24,6 +23,8 @@ interface TrialApplicationFormProps {
   timezones: TrialTimezoneOption[];
   turnstileSiteKey: string;
 }
+
+type TrialStep = { kind: 'input' } | { kind: 'confirm'; values: TrialApplicationFormValues } | { kind: 'done' };
 
 const Required = () => <span className="ml-1 text-xs text-rose-600">必須</span>;
 
@@ -63,31 +64,30 @@ export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialAppli
     resolver: zodResolver(trialApplicationSchema),
     defaultValues: TRIAL_FORM_DEFAULTS,
   });
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
+  // 入力 → 確認（検証済みの値を持つ）→ 受付完了。URL は変えず、表示だけを切り替える
+  const [step, setStep] = useState<TrialStep>({ kind: 'input' });
   const isOtherOccupation = useWatch({ control: form.control, name: 'occupation' }) === String(TRIAL_OCCUPATION_OTHER);
 
-  const onSubmit = (values: TrialApplicationFormValues) => {
-    if (!turnstileToken) {
-      setSubmitError('「人間であることを確認します」のチェックを完了してください。');
-      return;
-    }
-    setSubmitError(null);
-    startTransition(async () => {
-      const result = await submitTrial(values, turnstileToken);
-      if (result.success) {
-        setSubmitted(true);
-        return;
-      }
-      setSubmitError(result.error);
-      turnstileRef.current?.reset();
-    });
+  // 表示を切り替えたら、新しい表示の先頭から見せる（公開画面はページ全体がスクロールする）
+  const goTo = (next: TrialStep) => {
+    setStep(next);
+    window.scrollTo({ top: 0 });
   };
 
-  if (submitted) {
+  if (step.kind === 'confirm') {
+    return (
+      <TrialApplicationConfirm
+        values={step.values}
+        timezoneLabel={timezones.find((tz) => tz.value === step.values.timezone)?.label ?? step.values.timezone}
+        turnstileSiteKey={turnstileSiteKey}
+        // 入力欄は外れても、入力内容はフォームの状態に残る
+        onBack={() => goTo({ kind: 'input' })}
+        onComplete={() => goTo({ kind: 'done' })}
+      />
+    );
+  }
+
+  if (step.kind === 'done') {
     return (
       <div className="flex flex-col items-center py-8 text-center" role="status">
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
@@ -105,7 +105,7 @@ export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialAppli
 
   return (
     <Form {...form}>
-      <form onSubmit={(event) => form.handleSubmit(onSubmit)(event)} className="space-y-6" noValidate>
+      <form onSubmit={(event) => form.handleSubmit((values) => goTo({ kind: 'confirm', values }))(event)} className="space-y-6" noValidate>
         <FormField
           control={form.control}
           name="email"
@@ -276,16 +276,9 @@ export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialAppli
           )}
         />
 
-        <TurnstileWidget ref={turnstileRef} siteKey={turnstileSiteKey} onTokenChange={setTurnstileToken} />
-
-        {submitError && (
-          <p role="alert" className="rounded-control border border-rose-100 bg-rose-50 p-3 text-xs text-rose-600">
-            {submitError}
-          </p>
-        )}
-
-        <Button type="submit" size="lg" className="w-full" pending={isPending} icon={<Send aria-hidden />}>
-          申し込む
+        <Button type="submit" size="lg" className="w-full">
+          入力内容を確認する
+          <ArrowRight aria-hidden />
         </Button>
       </form>
     </Form>

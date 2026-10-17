@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { test, expect } from "../../support/studentApp.ts";
 import { createAdminClient } from "../../../helpers/auth.ts";
 import { newTag } from "../../support/authFixtures.ts";
+import { clickUntilVisible } from "../../support/hydration.ts";
 import { extractAppLinkPath, resendReadApiKey, resendTestAddress, waitForEmail } from "../../support/resendInbox.ts";
 
 /**
@@ -80,7 +81,20 @@ test("申込フォームから申し込み、届いた案内からパスワー�
   await page.getByLabel("国・都市").fill("Canada, Vancouver");
   await page.getByLabel("ご要望・ご質問").fill("E2Eの申込です");
   await page.getByRole("checkbox", { name: /個人情報保護方針/ }).check();
-  // CAPTCHA（テスト用の鍵は自動で通る）のトークンが入ってから送る
+
+  // 確認画面: 入力内容と、コーチに表示される名前（ローマ字の 名 姓）を見せる
+  await page.getByRole("button", { name: "入力内容を確認する" }).click();
+  await expect(page.getByRole("heading", { name: "入力内容のご確認" })).toBeVisible();
+  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.getByText("試験 トライアル")).toBeVisible();
+  await expect(page.getByTestId("trial-coach-display-name")).toHaveText("Trial Shiken");
+  // 「修正する」で入力内容を残したまま戻れる
+  await page.getByRole("button", { name: "修正する" }).click();
+  await expect(page.getByLabel("名（ローマ字）")).toHaveValue("Trial");
+  await expect(page.getByRole("checkbox", { name: /個人情報保護方針/ })).toBeChecked();
+  await page.getByRole("button", { name: "入力内容を確認する" }).click();
+
+  // CAPTCHA（テスト用の鍵は自動で通る。確認画面に置く）のトークンが入ってから送る
   await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveValue(/.+/, { timeout: 30_000 });
   await page.getByRole("button", { name: "申し込む" }).click();
   await expect(page.getByRole("heading", { name: "お申し込みを受け付けました" })).toBeVisible({ timeout: 30_000 });
@@ -129,12 +143,14 @@ test("申込フォームから申し込み、届いた案内からパスワー�
 
 test("必須の項目が空のままでは申し込めない", async ({ page }) => {
   await page.goto("/trial");
-  await page.getByRole("button", { name: "申し込む" }).click();
-  await expect(page.getByText("メールアドレスを入力してください")).toBeVisible();
+  // 画面を開いた直後はハイドレーション前で押下が効かないことがあるため、エラーが出るまで押す
+  await clickUntilVisible(page.getByRole("button", { name: "入力内容を確認する" }), page.getByText("メールアドレスを入力してください"));
   await expect(page.getByText("姓を入力してください", { exact: true })).toBeVisible();
   await expect(page.getByText("名を入力してください", { exact: true })).toBeVisible();
   await expect(page.getByText("業種・職業を選んでください")).toBeVisible();
   await expect(page.getByText("個人情報保護方針への同意が必要です")).toBeVisible();
+  // 入力に誤りがあるうちは確認画面へ進まない
+  await expect(page.getByRole("heading", { name: "入力内容のご確認" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /個人情報保護方針/ })).toHaveAttribute("href", "https://gabbyacademy.com/privacy/");
   const { count } = await fixture!.admin.from("com_t_trial_application").select("application_id", { count: "exact", head: true }).eq("email", fixture!.email);
   expect(count).toBe(0);

@@ -1148,3 +1148,11 @@
 - **原因**: dev・staging は Cloudflare のテスト用の鍵（常に通る）を使うが、トークンはウィジェットの読み込み・自動チェックの後に入る（初回のコンパイルが重い dev では入力より遅い）。ウィジェットの中身は iframe で、ページの構造のテキストには出ない。
 - **対処**: 送信の前に、ウィジェットが作る隠し項目 `input[name="cf-turnstile-response"]` に値が入るのを待つ。
 - **判断基準への反映**: CAPTCHA 付きのフォームは、トークンの隠し項目に値が入ってから送る。ウィジェットが表示されているかは `error-context.md` では判断せず、隠し項目の有無・値で確かめる。
+
+### KJ-2026-1017-01 送信時の検証エラーが表示されない（React Compiler と react-hook-form の formState）
+
+- **該当シナリオ**: Webトライアルの申込フォームの必須チェック（student `/trial`。`e2e/tests/auth/trial-application.spec.ts`。dev, 2026-10-17。確認画面の追加中に発見）
+- **事象**: 空のまま「入力内容を確認する」を押すと、先頭の欄にフォーカスは移る（＝検証では誤りを検出している）のに、各欄の下のエラーが出なかった。押し直しても変わらない。
+- **原因**: student の `components/ui/form.tsx` の `useFormField` が `useFormContext()` の `formState`（Proxy）を読むだけで、エラーの変化を購読していなかった。React Compiler が有効なため、親が描き直されない限り `FormMessage` が描き直されない。以前は同じ画面の CAPTCHA のトークン更新で親が描き直され、たまたま表示されていた。
+- **対処**: `useFormField` を `useFormState({ name })` で欄の状態を購読する形（shadcn の現行版）に直した。admin の `form.tsx` も同じ書き方のまま（未対応）。
+- **判断基準への反映**: 「押しても何も出ない」をハイドレーション待ちと決めつけない。`clickUntilVisible` で30秒押しても出ない場合は、フォーカスの移動・コンソール等で検証自体が動いているかを先に確かめる。

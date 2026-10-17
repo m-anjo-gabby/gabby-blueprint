@@ -7,6 +7,7 @@ import {
   Controller,
   FormProvider,
   useFormContext,
+  useFormState,
   type ControllerProps,
   type FieldPath,
   type FieldValues,
@@ -42,7 +43,10 @@ const FormField = <
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext)
   const itemContext = React.useContext(FormItemContext)
-  const { getFieldState, formState } = useFormContext()
+  const { getFieldState } = useFormContext()
+  // この欄の状態（エラー等）を購読する。useFormContext の formState を読むだけでは、React Compiler の下で
+  // 送信時の検証エラーが表示に反映されないことがある（shadcn の現行版と同じ書き方）
+  const formState = useFormState({ name: fieldContext?.name })
 
   if (!fieldContext) {
     throw new Error("useFormField should be used within <FormField>")
