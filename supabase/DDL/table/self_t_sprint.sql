@@ -11,7 +11,7 @@ CREATE TABLE public.self_t_sprint (
     self_sprint_id           uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
     sprint_type              text         NOT NULL,
-    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE RESTRICT,
     question_type            text         NOT NULL,
     answer_type              text         NOT NULL,
     difficulty_level         smallint     NOT NULL,

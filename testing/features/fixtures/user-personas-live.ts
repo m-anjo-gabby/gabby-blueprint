@@ -238,7 +238,7 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
   }): Promise<string | null> {
     let content: { content_id: string; content_name: string } | null = null;
     for (const name of params.contentNames) {
-      const { data } = await admin.from("com_m_contents").select("content_id, content_name").eq("content_type", 3).eq("content_name", name).eq("delete_flg", "0").maybeSingle();
+      const { data } = await admin.from("com_m_contents").select("content_id, content_name").eq("content_type", 3).eq("content_name", name).maybeSingle();
       if (data) {
         content = data as { content_id: string; content_name: string };
         break;
@@ -251,7 +251,7 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
       .select("assignment_id")
       .eq("student_id", params.studentId)
       .eq("content_id", content.content_id)
-      .eq("delete_flg", "0")
+      .eq("status", 1)
       .maybeSingle();
     let assignmentId = existing?.assignment_id as string | undefined;
     if (!assignmentId) {
@@ -269,7 +269,6 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
       .from("com_m_dialogue_session")
       .select("dialogue_session_id, session_no")
       .eq("content_id", content.content_id)
-      .eq("delete_flg", "0")
       .order("session_no");
     if (sErr) throw sErr;
     const rows = (sessions ?? []).slice(0, params.completedDates.length).map((s, i) => ({

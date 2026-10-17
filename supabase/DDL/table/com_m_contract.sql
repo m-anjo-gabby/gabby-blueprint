@@ -21,7 +21,7 @@
 -- @schema public.com_m_contract
 CREATE TABLE public.com_m_contract (
     contract_id              uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    client_id                uuid         NOT NULL REFERENCES public.com_m_client(client_id),
+    client_id                uuid         NOT NULL REFERENCES public.com_m_client(client_id) ON DELETE RESTRICT,
     plan_name                text         NOT NULL,
     max_licenses             integer      NOT NULL,
     start_date               timestamp with time zone NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE public.com_m_contract (
     insert_date              timestamp with time zone DEFAULT now(),
     update_date              timestamp with time zone DEFAULT now(),
     contract_type            smallint     NOT NULL DEFAULT 1,
-    plan_id                  uuid         NOT NULL REFERENCES public.com_m_contract_plan(plan_id),
+    plan_id                  uuid         NOT NULL REFERENCES public.com_m_contract_plan(plan_id) ON DELETE RESTRICT,
     weekly_frequency         smallint,
     total_sessions           smallint,
     plan_name_en             text         NOT NULL,

@@ -23,6 +23,15 @@ export const getUserTypeLabel = (type: string | null | undefined): string => {
   return USER_TYPE_MAP[type as UserType] ?? '不明';
 };
 
+// com_m_user.status（規約は docs/DATA-DELETION.md）
+// 停止: ログインできない（認証のアカウントを停止する）。退会済み: 個人情報を消去済みで、業務の記録だけが残る
+export const USER_STATUS = {
+  SUSPENDED: 0,
+  ACTIVE: 1,
+  WITHDRAWN: 9,
+} as const;
+export type UserStatus = typeof USER_STATUS[keyof typeof USER_STATUS];
+
 /**
  * ----------------------------------------------
  * 型定義
@@ -48,8 +57,7 @@ export interface UserBase {
   login_failed_count: number;       // 連続ログイン失敗回数
   locked_until: string | null;      // ロック解除日時 (ISO文字列、NULL時は非ロック)
   
-  // DDLの物理順序に合わせてフッター情報を整理
-  delete_flg: string;       // 論理削除フラグ ('0': 未削除, '1': 削除済)
+  status: UserStatus;       // USER_STATUS（1:有効 0:停止 9:退会済み）
   insert_date: string;      // 登録日時 (ISO文字列)
   update_date: string;      // 更新日時 (ISO文字列)
 }
@@ -59,8 +67,10 @@ export interface UserBase {
  * vw_user_list (View) の全カラムと一致し、
  * ライセンス情報や顧客名を含んだリッチなデータ型
  */
-export interface UserRecord extends UserBase {
-  email?: string;             // auth.users から取得
+export interface UserRecord extends Omit<UserBase, 'status'> {
+  /** ユーザーの状態（USER_STATUS）。招待中（本登録前）は null */
+  user_status: UserStatus | null;
+  email?: string;             // auth.users から取得（退会済みは認証のアカウントが無いため無い）
   client_name: string | null; // com_m_client から結合
   last_sign_in_at?: string;   // auth.users から取得
   confirmed_at?: string | null;

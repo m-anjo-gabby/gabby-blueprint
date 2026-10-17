@@ -110,7 +110,6 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
         .select('content_id, content_name, content_name_en, metadata')
         .in('content_id', [...availableIds])
         .eq('content_type', SPRINT_CONTENT_TYPE)
-        .eq('delete_flg', '0')
         .order('seq_no', { ascending: true }),
       fetchSprintAvailableLevels(supabase, [...availableIds]),
     ]);
@@ -157,8 +156,7 @@ export async function getLessonSprintQuestionsCore(
       .select('*')
       .eq('content_id', contentId)
       .eq('question_type', questionType)
-      .eq('difficulty_level', difficultyLevel)
-      .eq('delete_flg', '0');
+      .eq('difficulty_level', difficultyLevel);
 
     if (error) {
       logger.error('lessonSprint:get_questions_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { contentId, questionType, difficultyLevel } });

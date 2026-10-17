@@ -302,7 +302,7 @@ async function setupTenant(key: TenantKey): Promise<TenantContents> {
     .select("content_id")
     .eq("content_type", 0)
     .eq("content_scope", 0)
-    .eq("delete_flg", "0")
+    .eq("status", 1)
     .order("content_name");
   if (error) throw error;
   const wordContentIds = (common ?? []).map((c) => c.content_id as string);
@@ -313,7 +313,7 @@ async function setupTenant(key: TenantKey): Promise<TenantContents> {
       .select("content_id, content_name")
       .eq("content_type", 0)
       .eq("content_scope", 1)
-      .eq("delete_flg", "0");
+      .eq("status", 1);
     if (fallbackErr) throw fallbackErr;
     for (const c of fallback ?? []) {
       if (!FALLBACK_WORD_CONTENT.test(c.content_name as string)) continue;
@@ -329,7 +329,7 @@ async function setupTenant(key: TenantKey): Promise<TenantContents> {
       .select("content_id, content_name, content_type")
       .in("content_type", [0, 3])
       .eq("content_scope", 1)
-      .eq("delete_flg", "0")
+      .eq("status", 1)
       .order("content_name");
     if (limitedErr) throw limitedErr;
     for (const c of limited ?? []) {

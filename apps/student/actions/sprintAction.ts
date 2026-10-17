@@ -148,8 +148,7 @@ export async function getSprintQuestionsAction(
       .select("*")
       .eq("content_id", safeContentId)
       .eq("question_type", safeType)
-      .eq("difficulty_level", safeLevel)
-      .eq("delete_flg", "0");
+      .eq("difficulty_level", safeLevel);
 
     if (error) throw error;
 
@@ -631,7 +630,6 @@ export async function getContentAction(contentId: string) {
         .from("com_m_contents")
         .select("*")
         .eq("content_id", contentId)
-        .eq("delete_flg", "0")
         .single(),
       fetchSprintAvailableLevels(supabase, [contentId]),
     ]);

@@ -18,7 +18,7 @@ export async function getCoachSpecialtyListCore(): Promise<GetCoachSpecialtyList
     const { data, error } = await supabase
       .from('com_m_coach_specialty')
       .select('specialty_code, kind, name_en, name_ja, sort_no')
-      .eq('delete_flg', '0')
+      .eq('is_active', true)
       .order('sort_no', { ascending: true });
 
     if (error) {

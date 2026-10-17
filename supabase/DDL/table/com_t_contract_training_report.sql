@@ -19,9 +19,9 @@
 -- @schema public.com_t_contract_training_report
 CREATE TABLE public.com_t_contract_training_report (
     report_id                uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    ticket_id                uuid         NOT NULL REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE CASCADE,
-    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id),
+    ticket_id                uuid         NOT NULL REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE RESTRICT,
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     comment_text             text         NOT NULL DEFAULT ''::text,
     status                   smallint     NOT NULL DEFAULT 1,
     finalized_at             timestamp with time zone,

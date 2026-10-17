@@ -34,6 +34,8 @@ export function CalendarEventTable({ data, formOptions, hideSeries = false, pend
       const result = await deleteCalendarEvent(event.calendar_event_id);
       if (result.success) {
         showToast(t('toastDeleted'), 'success');
+      } else if (result.reason === 'held') {
+        showToast(t('toastDeleteHeld'), 'error');
       } else {
         showToast(result.message || t('toastDeleteFailed'), 'error');
       }

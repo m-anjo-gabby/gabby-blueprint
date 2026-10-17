@@ -5,7 +5,8 @@ import { ColumnDef } from '@tanstack/react-table';
 import type { useTranslations } from 'next-intl';
 import { ClientFormDialog } from './ClientFormDialog';
 import { Badge } from '@/components/ui/badge';
-import { ClientRecord } from '@gabby/types/client';
+import { CLIENT_STATUS, ClientRecord } from '@gabby/types/client';
+import { InactiveBadge } from '@/components/common/InactiveBadge';
 
 type TableT = ReturnType<typeof useTranslations<'clients.table'>>;
 
@@ -14,7 +15,12 @@ export function createColumns(t: TableT, locale: string): ColumnDef<ClientRecord
   {
     accessorKey: "client_name",
     header: t('nameHeader'),
-    cell: ({ row }) => <span className="font-bold text-slate-700">{row.getValue("client_name")}</span>,
+    cell: ({ row }) => (
+      <span className="flex items-center gap-2 font-bold text-slate-700">
+        {row.original.client_name}
+        {row.original.status === CLIENT_STATUS.ENDED && <InactiveBadge label={t('endedBadge')} />}
+      </span>
+    ),
   },
   {
     accessorKey: "client_type",

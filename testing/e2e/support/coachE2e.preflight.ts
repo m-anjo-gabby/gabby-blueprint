@@ -57,22 +57,22 @@ for (let page = 1; page <= 20 && !coachUserId; page++) {
   if (data.users.length < 200) break;
 }
 const { data: coachUser } = coachUserId
-  ? await admin.from("com_m_user").select("user_type, delete_flg").eq("id", coachUserId).maybeSingle()
+  ? await admin.from("com_m_user").select("user_type, status").eq("id", coachUserId).maybeSingle()
   : { data: null };
-check(`固定アカウント ${QA_COACH_EMAIL}`, coachUser?.user_type === "2" && coachUser?.delete_flg === "0", coachUserId ? JSON.stringify(coachUser) : "ユーザーが無い");
+check(`固定アカウント ${QA_COACH_EMAIL}`, coachUser?.user_type === "2" && coachUser?.status === 1, coachUserId ? JSON.stringify(coachUser) : "ユーザーが無い");
 
 // マスタ・教材
 const { data: plan } = await admin.from("com_m_contract_plan").select("plan_id").eq("plan_code", "LIVE_WEEKLY1_3M").maybeSingle();
 check("プラン LIVE_WEEKLY1_3M", !!plan);
 const { count: sprintCount } = await admin
   .from("com_m_contents").select("content_id", { count: "exact", head: true })
-  .eq("content_type", 2).in("content_scope", [0, 1]).eq("delete_flg", "0").not("content_name", "like", "[%");
+  .eq("content_type", 2).eq("status", 1).not("content_name", "like", "[%");
 check("スプリント教材（共通・限定公開）", (sprintCount ?? 0) > 0, `${sprintCount ?? 0}件`);
 const { data: dialogueSessions } = await admin
-  .from("com_m_dialogue_session").select("content_id").eq("session_no", 1).not("coach_slides_link", "is", null).eq("delete_flg", "0").limit(50);
+  .from("com_m_dialogue_session").select("content_id").eq("session_no", 1).not("coach_slides_link", "is", null).limit(50);
 const { count: dialogueCount } = await admin
   .from("com_m_contents").select("content_id", { count: "exact", head: true })
-  .eq("content_type", 3).in("content_scope", [0, 1]).eq("delete_flg", "0").not("content_name", "like", "[%")
+  .eq("content_type", 3).eq("status", 1).not("content_name", "like", "[%")
   .in("content_id", (dialogueSessions ?? []).map((d) => d.content_id));
 check("ダイアログ教材（Session 1 にコーチ用スライドあり）", (dialogueCount ?? 0) > 0, `${dialogueCount ?? 0}件`);
 

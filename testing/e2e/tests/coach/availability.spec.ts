@@ -39,7 +39,7 @@ test("現地時刻で選んだ枠が UTC で保存され、確認・削除もで
 
   const slots = async () => {
     const { data } = await f.admin
-      .from("com_m_coach_availability").select("day_of_week, start_time, end_time").eq("coach_id", coachId).eq("delete_flg", "0");
+      .from("com_m_coach_availability").select("day_of_week, start_time, end_time").eq("coach_id", coachId);
     return data ?? [];
   };
   const confirmedAt = async () => {

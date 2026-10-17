@@ -39,7 +39,7 @@ BEGIN
         RETURN v_contract_id;
     END IF;
 
-    SELECT * INTO v_plan FROM public.com_m_contract_plan WHERE plan_code = 'WEB_TRIAL' AND delete_flg = '0';
+    SELECT * INTO v_plan FROM public.com_m_contract_plan WHERE plan_code = 'WEB_TRIAL';
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Contract plan WEB_TRIAL not found.';
     END IF;

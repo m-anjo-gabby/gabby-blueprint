@@ -90,7 +90,7 @@ test("アドミンが担当者にモニターロールを付けると、担当�
   const idle = await createMember("idle", `E2E受講生B（${f.tag}）`);
 
   // 受講生Aだけが今日スプリントを1本（5問回答）実施した
-  const { data: sprint } = await admin.from("com_m_contents").select("content_id").eq("content_type", 2).eq("delete_flg", "0").limit(1).single();
+  const { data: sprint } = await admin.from("com_m_contents").select("content_id").eq("content_type", 2).eq("status", 1).limit(1).single();
   if (!sprint) throw new Error("スプリントの教材が見つかりません");
   const { error: sprintError } = await admin.from("self_t_sprint").insert({
     user_id: active.userId, sprint_type: "0", content_id: sprint.content_id, question_type: "0", answer_type: "0",

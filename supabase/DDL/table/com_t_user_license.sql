@@ -19,8 +19,8 @@
 -- @schema public.com_t_user_license
 CREATE TABLE public.com_t_user_license (
     license_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    contract_id              uuid         NOT NULL REFERENCES public.com_m_contract(contract_id),
-    user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id),
+    contract_id              uuid         NOT NULL REFERENCES public.com_m_contract(contract_id) ON DELETE RESTRICT,
+    user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     status                   smallint     NOT NULL DEFAULT 1,
     start_date               timestamp with time zone NOT NULL,
     end_date                 timestamp with time zone NOT NULL,
@@ -29,8 +29,7 @@ CREATE TABLE public.com_t_user_license (
     update_date              timestamp with time zone DEFAULT now(),
     has_dialogue_practice    boolean      NOT NULL DEFAULT false,
     CONSTRAINT excl_user_license_active_overlap EXCLUDE USING gist (user_id WITH =, tstzrange(start_date, end_date, '[]'::text) WITH &&) WHERE (status = 1),
-    CONSTRAINT unique_user_contract UNIQUE (user_id, contract_id),
-    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES public.com_m_user(id)
+    CONSTRAINT unique_user_contract UNIQUE (user_id, contract_id)
 );
 
 COMMENT ON TABLE public.com_t_user_license IS 'ユーザーライセンス割当情報';

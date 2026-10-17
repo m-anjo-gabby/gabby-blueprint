@@ -31,7 +31,7 @@ function toMessageItems(rows: unknown): CalendarEventMessageItem[] {
 /**
  * ログイン中ユーザー（生徒/コーチいずれか）向けに公開中のカレンダーイベント一覧を、
  * 指定期間内で取得する（ポータル共通）。
- * RLS（is_published=TRUE AND delete_flg='0' かつ target_type/user_typeに応じた絞り込み）
+ * RLS（is_published=TRUE かつ target_type/user_typeに応じた絞り込み）
  * に依存するため、呼び出し側でロールを意識する必要はない。
  */
 export async function getPublishedCalendarEventsCore(

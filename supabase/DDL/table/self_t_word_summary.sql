@@ -6,7 +6,7 @@
 CREATE TABLE public.self_t_word_summary (
     summary_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE RESTRICT,
     training_date            date         NOT NULL DEFAULT CURRENT_DATE,
     word_count               integer      NOT NULL DEFAULT 1,
     phrase_count             integer      NOT NULL DEFAULT 0,

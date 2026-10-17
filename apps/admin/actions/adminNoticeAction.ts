@@ -18,7 +18,7 @@ import {
 import { isValidNoticeCtaUrl } from '@gabby/lib/notice/links';
 import { containsPattern } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
-import { USER_TYPES } from '@gabby/types/user';
+import { USER_STATUS, USER_TYPES } from '@gabby/types/user';
 
 const logger = createLogger('admin');
 
@@ -135,8 +135,7 @@ export async function getNotices(params: ListParams<'type'>): Promise<ListResult
         com_m_client (
           client_name
         )
-      `, { count: 'exact' })
-      .eq('delete_flg', '0');
+      `, { count: 'exact' });
 
     if (q) {
       query = query.ilike('title', containsPattern(q));
@@ -187,7 +186,6 @@ export async function getNoticeById(noticeId: string) {
         )
       `)
       .eq('notice_id', noticeId)
-      .eq('delete_flg', '0')
       .single();
 
     if (error) {
@@ -264,7 +262,7 @@ export async function getNoticeReadStatus(
         client_id,
         com_m_client ( client_name )
       `)
-      .eq('delete_flg', '0');
+      .neq('status', USER_STATUS.WITHDRAWN);
 
     if (notice.target_type === 'ALL') {
       query = query.eq('user_type', USER_TYPES.STUDENT);
@@ -387,7 +385,6 @@ export async function createNotice(formData: NoticeFormData) {
       published_at: publishedUtc,
       expired_at: expiredUtc,
       is_published: formData.is_published,
-      delete_flg: '0',
     };
 
     const { data, error } = await supabase
@@ -474,7 +471,7 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData) {
 }
 
 /**
- * お知らせの論理削除
+ * お知らせの削除（既読の記録も一緒に消える）
  */
 export async function deleteNotice(noticeId: string) {
   const ctx = await getLogContext();
@@ -483,10 +480,7 @@ export async function deleteNotice(noticeId: string) {
 
     const { error } = await supabase
       .from('com_m_notice')
-      .update({
-        delete_flg: '1',
-        update_date: new Date().toISOString(),
-      })
+      .delete()
       .eq('notice_id', noticeId);
 
     if (error) {

@@ -17,8 +17,8 @@ CREATE TABLE public.com_t_session_dialogue_log (
     log_id                   uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     session_id               uuid         NOT NULL REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
     assignment_id            uuid         NOT NULL REFERENCES public.com_t_dialogue_assignment(assignment_id) ON DELETE CASCADE,
-    dialogue_session_id      uuid         NOT NULL REFERENCES public.com_m_dialogue_session(dialogue_session_id),
-    opened_by_coach_id       uuid         NOT NULL REFERENCES public.com_m_user(id),
+    dialogue_session_id      uuid         NOT NULL REFERENCES public.com_m_dialogue_session(dialogue_session_id) ON DELETE RESTRICT,
+    opened_by_coach_id       uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     insert_date              timestamp with time zone NOT NULL DEFAULT now()
 );
 

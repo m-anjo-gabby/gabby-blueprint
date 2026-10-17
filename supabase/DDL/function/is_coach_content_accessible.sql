@@ -25,7 +25,6 @@ RETURNS boolean AS $$
     JOIN public.com_m_contents_access a
       ON a.client_id = u.client_id
      AND a.content_id = p_content_id
-     AND a.delete_flg = '0'
     WHERE r.coach_id = auth.uid()
   );
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;

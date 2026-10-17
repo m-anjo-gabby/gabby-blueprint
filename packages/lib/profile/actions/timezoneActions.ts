@@ -19,7 +19,7 @@ export async function getTimezoneListCore(): Promise<GetTimezoneListResult> {
     const { data, error } = await supabase
       .from('com_m_timezone')
       .select('*')
-      .eq('delete_flg', '0')
+      .eq('is_active', true)
       .order('sort_no', { ascending: true });
 
     if (error) {
@@ -51,7 +51,7 @@ export async function updateMyTimezoneCore(timezone: string): Promise<UpdateTime
       .from('com_m_timezone')
       .select('timezone')
       .eq('timezone', timezone)
-      .eq('delete_flg', '0')
+      .eq('is_active', true)
       .maybeSingle();
 
     if (masterError || !master) {

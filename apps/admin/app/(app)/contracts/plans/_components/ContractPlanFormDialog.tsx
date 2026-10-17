@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertContractPlan } from '@/actions/adminContractAction';
+import { ActiveSwitchField } from '@/components/common/ActiveSwitchField';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { ContractPlan } from '@gabby/types/contract';
@@ -32,6 +33,7 @@ function createPlanSchema(t: FormT) {
     total_sessions: z.string().optional(),
     has_dialogue_practice: z.boolean(),
     sort_no: z.coerce.number(),
+    is_active: z.boolean(),
   }).refine((data) => {
     if (data.has_coach !== HAS_COACH_VALUE.YES) return true;
     const weekly = Number(data.weekly_frequency);
@@ -67,6 +69,7 @@ const DEFAULT_VALUES: PlanFormInput = {
   total_sessions: '',
   has_dialogue_practice: false,
   sort_no: 1,
+  is_active: true,
 };
 
 /**
@@ -94,6 +97,7 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
       total_sessions: data.total_sessions != null ? String(data.total_sessions) : '',
       has_dialogue_practice: data.has_dialogue_practice,
       sort_no: data.sort_no,
+      is_active: data.is_active,
     };
   };
 
@@ -120,6 +124,7 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
         total_sessions: hasCoach ? Number(values.total_sessions) : null,
         has_dialogue_practice: hasCoach ? values.has_dialogue_practice : false,
         sort_no: values.sort_no,
+        is_active: values.is_active,
       });
 
       if (result.success) {
@@ -322,6 +327,16 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
                 </FormItem>
               )} />
             </div>
+
+            {/* 販売中（販売をやめたプランは削除せずにオフにする） */}
+            <ActiveSwitchField
+              control={form.control}
+              name="is_active"
+              label={t('isActiveLabel')}
+              onText={t('isActiveOn')}
+              offText={t('isActiveOff')}
+              readOnly={isConfirming}
+            />
           </div>
 
             <div className="shrink-0 p-6 pt-4 border-t border-slate-100 bg-white">

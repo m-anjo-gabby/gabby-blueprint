@@ -24,8 +24,14 @@ export const TAG_TYPES = {
 export const CONTENT_SCOPES = {
   0: { label: '共通', value: 0 },
   1: { label: '限定', value: 1 },
-  9: { label: '非公開', value: 9 },
 } as const;
+
+// 公開状態（com_m_contents.status。新規作成時は非公開）
+export const CONTENT_STATUS = {
+  UNPUBLISHED: 0,
+  PUBLISHED: 1,
+} as const;
+export type ContentStatus = typeof CONTENT_STATUS[keyof typeof CONTENT_STATUS];
 
 /**
  * CEFRレベル定義
@@ -63,7 +69,6 @@ export interface ContentTag {
   tag_name: string;
   tag_type: TagType;
   seq_no: number;
-  delete_flg: '0' | '1';
   insert_date: string;
   update_date: string;
 }
@@ -132,7 +137,7 @@ export interface ContentRecord {
   // セット分類ID（現状ダイアログプラクティス content_type=3 のみで使用。1:Beginner, 2:Intermediate, 3:Advanced, 4:Corpus）
   category_id: number | null;
   metadata: ContentMetadata;
-  delete_flg: '0' | '1';
+  status: ContentStatus;
   insert_date: string;
   update_date: string;
 }

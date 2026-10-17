@@ -146,7 +146,7 @@ BEGIN
                               'applicant_name_en', v_user_name, 'kind', v_kind, 'apply_count', v_apply_count),
            '/trial-applications'
     FROM public.com_m_user u
-    WHERE u.user_type = '0' AND u.delete_flg = '0'
+    WHERE u.user_type = '0' AND u.status = 1
     ON CONFLICT (user_id, notification_type, dedup_key) DO NOTHING;
 
     RETURN QUERY SELECT v_kind, v_application_id, v_apply_count, v_token, false;

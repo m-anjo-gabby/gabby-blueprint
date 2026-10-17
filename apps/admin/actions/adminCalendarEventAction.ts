@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
+import { USER_STATUS } from '@gabby/types/user';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { containsPattern, ilikeAny } from '@gabby/lib/supabase/ilike';
@@ -62,8 +63,7 @@ export async function getCalendarEvents(options: { seriesId?: string } = {}): Pr
     const supabase = createAdminClient();
     let query = supabase
       .from('com_m_calendar_event')
-      .select('*, series:com_m_calendar_event_series(series_id, title, description)')
-      .eq('delete_flg', '0');
+      .select('*, series:com_m_calendar_event_series(series_id, title, description)');
     if (options.seriesId) query = query.eq('series_id', options.seriesId);
     const { data, error } = await query.order('start_datetime', { ascending: false });
 
@@ -108,15 +108,13 @@ export async function getCalendarEventList(params: ListParams<'type' | 'status'>
 
     let query = supabase
       .from('com_m_calendar_event')
-      .select('*, series:com_m_calendar_event_series(series_id, title, description)', { count: 'exact' })
-      .eq('delete_flg', '0');
+      .select('*, series:com_m_calendar_event_series(series_id, title, description)', { count: 'exact' });
 
     if (q) {
       // シリーズ名でも探せるよう、名前が一致するシリーズの回も含める
       const { data: series, error: seriesError } = await supabase
         .from('com_m_calendar_event_series')
         .select('series_id')
-        .eq('delete_flg', '0')
         .ilike('title', containsPattern(q));
       if (seriesError) throw seriesError;
       const seriesIds = (series ?? []).map((row) => row.series_id);
@@ -163,7 +161,7 @@ export async function getCoachesFilter(): Promise<CalendarEventCoachOption[]> {
       .from('com_m_user')
       .select('id, user_name')
       .eq('user_type', '2')
-      .eq('delete_flg', '0')
+      .eq('status', USER_STATUS.ACTIVE)
       .order('user_name');
 
     if (error) {
@@ -295,15 +293,28 @@ export async function upsertCalendarEvent(
 }
 
 /**
- * カレンダーイベントの論理削除
+ * カレンダーイベントの削除（参加の登録・担当コーチ・メッセージも一緒に消える）。
+ * 開催済み（開始日時を過ぎた）イベントは参加の記録を残すため削除せず、非公開にするよう案内する。
  */
-export async function deleteCalendarEvent(calendarEventId: string): Promise<{ success: true } | { success: false; message: string }> {
+export async function deleteCalendarEvent(
+  calendarEventId: string
+): Promise<{ success: true } | { success: false; reason?: 'held'; message: string }> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
+    const { data: event, error: fetchError } = await supabase
+      .from('com_m_calendar_event')
+      .select('start_datetime')
+      .eq('calendar_event_id', calendarEventId)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    if (event && new Date(event.start_datetime).getTime() <= Date.now()) {
+      return { success: false, reason: 'held', message: 'Event already held' };
+    }
+
     const { error } = await supabase
       .from('com_m_calendar_event')
-      .update({ delete_flg: '1', update_date: new Date().toISOString() })
+      .delete()
       .eq('calendar_event_id', calendarEventId);
 
     if (error) {
@@ -311,7 +322,7 @@ export async function deleteCalendarEvent(calendarEventId: string): Promise<{ su
       return { success: false, message: error.message };
     }
 
-    logger.info('calendarEvent:delete_calendar_event_success', 'Calendar event logically deleted', { ...ctx, payload: { calendarEventId } });
+    logger.info('calendarEvent:delete_calendar_event_success', 'Calendar event deleted', { ...ctx, payload: { calendarEventId } });
 
     revalidatePath('/calendar-events');
     return { success: true };

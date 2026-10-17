@@ -57,7 +57,6 @@ export async function markOtherNoticesRead({ admin, clientId, userId }: PopupFix
     .from("com_m_notice")
     .select("notice_id")
     .in("display_mode", ["POPUP", "HOME"])
-    .eq("delete_flg", "0")
     .or(`target_type.eq.ALL,and(target_type.eq.CLIENT,client_id.neq.${clientId})`);
   if (error) throw new Error(`お知らせの取得に失敗: ${error.message}`);
   if (!data?.length) return;

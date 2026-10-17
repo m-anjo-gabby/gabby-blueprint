@@ -80,7 +80,6 @@ export interface NoticeItem {
   published_at: string;    // UTC ISO文字列
   expired_at: string | null;
   is_published: boolean;
-  delete_flg: string;
   insert_date: string;
   update_date: string;
   // 結合フィールド

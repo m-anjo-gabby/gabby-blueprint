@@ -18,7 +18,7 @@ export async function getCountryListCore(): Promise<GetCountryListResult> {
     const { data, error } = await supabase
       .from('com_m_country')
       .select('*')
-      .eq('delete_flg', '0')
+      .eq('is_active', true)
       .order('sort_no', { ascending: true });
 
     if (error) {

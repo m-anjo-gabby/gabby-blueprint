@@ -43,7 +43,6 @@ export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<L
     let query = supabase
       .from('com_m_ai_knowledge_base')
       .select('knowledge_id, source_type, title, body, metadata, embedding_model, update_date', { count: 'exact' })
-      .eq('delete_flg', '0')
       .order('update_date', { ascending: false })
       .order('knowledge_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
       .range(from, to);

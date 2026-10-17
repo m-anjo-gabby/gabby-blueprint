@@ -17,7 +17,6 @@ export async function getTags() {
     const { data, error } = await supabase
       .from('com_m_contents_tag')
       .select('*')
-      .eq('delete_flg', '0')
       .order('tag_type', { ascending: true })
       .order('seq_no', { ascending: true });
 
@@ -68,7 +67,8 @@ export async function upsertTag(payload: Partial<ContentTag>) {
   }
 }
 
-/** * タグの論理削除 
+/**
+ * タグの削除（教材との紐付けも一緒に消える）
  */
 export async function deleteTag(tagId: string) {
   const ctx = await getLogContext();
@@ -76,7 +76,7 @@ export async function deleteTag(tagId: string) {
     const supabase = createAdminClient();
     const { error } = await supabase
       .from('com_m_contents_tag')
-      .update({ delete_flg: '1', update_date: new Date().toISOString() })
+      .delete()
       .eq('tag_id', tagId);
 
     if (error) {
@@ -84,7 +84,7 @@ export async function deleteTag(tagId: string) {
       return { success: false, message: error.message };
     }
 
-    logger.info('tag:delete_tag_success', `Tag logically deleted`, { 
+    logger.info('tag:delete_tag_success', `Tag deleted`, { 
       ...ctx,
       payload: { tagId } 
     });

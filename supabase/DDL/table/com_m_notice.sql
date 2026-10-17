@@ -25,7 +25,6 @@ CREATE TABLE public.com_m_notice (
     published_at             timestamp with time zone NOT NULL,
     expired_at               timestamp with time zone,
     is_published             boolean      NOT NULL DEFAULT false,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     display_mode             character varying(10) NOT NULL DEFAULT 'LIST'::character varying,
@@ -50,7 +49,6 @@ COMMENT ON COLUMN public.com_m_notice.attachments IS '添付ファイル情報 (
 COMMENT ON COLUMN public.com_m_notice.published_at IS '公開開始日時 (JST入力→UTC保持)';
 COMMENT ON COLUMN public.com_m_notice.expired_at IS '公開終了日時 (JST入力→UTC保持)';
 COMMENT ON COLUMN public.com_m_notice.is_published IS '公開フラグ (TRUE: 公開中 / FALSE: 下書き等)';
-COMMENT ON COLUMN public.com_m_notice.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_notice.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_notice.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_notice.display_mode IS '表示方法 (POPUP: ホームを開いた時にポップアップ / HOME: ホームのカード（生徒のみ） / LIST: お知らせ一覧のみ)';
@@ -59,12 +57,12 @@ COMMENT ON COLUMN public.com_m_notice.cta_label IS '行動ボタンの文言 (�
 COMMENT ON COLUMN public.com_m_notice.cta_url IS '行動ボタンのリンク先 (アプリ内の /... または https://...)';
 
 CREATE INDEX idx_notice_client ON public.com_m_notice (client_id) WHERE client_id IS NOT NULL;
-CREATE INDEX idx_notice_fetch ON public.com_m_notice (is_published, delete_flg, published_at, expired_at);
+CREATE INDEX idx_notice_fetch ON public.com_m_notice (is_published, published_at, expired_at);
 
 ALTER TABLE public.com_m_notice ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view published notices for all or their client" ON public.com_m_notice FOR SELECT TO authenticated
 USING (
-    is_published = true AND delete_flg = '0'::text AND published_at <= now() AND (expired_at IS NULL OR expired_at > now()) AND (target_type::text = 'ALL'::text AND public.get_jwt_user_type() = '1'::text OR target_type::text = 'CLIENT'::text AND public.get_jwt_user_type() = '1'::text AND client_id = public.get_jwt_client_id() OR target_type::text = 'COACH'::text AND public.get_jwt_user_type() = '2'::text)
+    is_published = true AND published_at <= now() AND (expired_at IS NULL OR expired_at > now()) AND (target_type::text = 'ALL'::text AND public.get_jwt_user_type() = '1'::text OR target_type::text = 'CLIENT'::text AND public.get_jwt_user_type() = '1'::text AND client_id = public.get_jwt_client_id() OR target_type::text = 'COACH'::text AND public.get_jwt_user_type() = '2'::text)
 );
 -- @end-schema

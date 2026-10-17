@@ -118,7 +118,7 @@
 | セッション件数バッジ | 常時表示 | 表示のみ |
 | セッションカード | セッション番号、コーチ用教材（タイトル・リンク）、生徒用教材（タイトル・リンク）、管理メモ（設定時のみ） | 教材リンクは新規タブで開く外部リンク |
 | 編集アイコン | 各セッションカード | セッション登録ダイアログが編集モードで開く |
-| 削除アイコン | 各セッションカード | 確認ダイアログを経て論理削除する（取り消せない操作として案内） |
+| 削除アイコン | 各セッションカード | 確認ダイアログを経て削除する（取り消せない操作として案内）。進捗・会話の記録があるセッションは削除できない旨を表示する |
 | 「セッション追加」ボタン | 常時表示 | セッション登録ダイアログを開く（セッション番号は既存最大値+1が初期値） |
 
 ### セッション登録ダイアログ
@@ -156,7 +156,7 @@
   （`index.tsx`, `DialogueSessionList.tsx`, `DialogueSessionFormDialog.tsx`）
 - `apps/admin/actions/adminDialogueAction.ts`
   （`getDialogueSessions`, `upsertDialogueSession`, `deleteDialogueSession`。RPCではなく
-  `com_m_dialogue_session`への直接CRUD。論理削除）
+  `com_m_dialogue_session`への直接CRUD。削除は物理で、進捗・会話ログがあれば外部キーで止まる）
 - `apps/admin/actions/adminContentAction.ts`（`getContentById`）
 - `apps/admin/actions/adminWordAction.ts`（`getWordsByContentId`, `upsertWord`, `deleteWord`,
   `getPhrasesByWordId`, `upsertPhrase`, `deletePhrase`, `bulkUpsertWordsAndPhrases`）

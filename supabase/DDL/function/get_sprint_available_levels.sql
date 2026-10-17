@@ -24,7 +24,6 @@ RETURNS TABLE (
     SELECT DISTINCT q.content_id, q.question_type, q.difficulty_level
     FROM public.com_m_sprint_questions q
     WHERE q.content_id = ANY(p_content_ids)
-      AND q.delete_flg = '0'
     ORDER BY q.content_id, q.question_type, q.difficulty_level;
 $$ LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public;
 

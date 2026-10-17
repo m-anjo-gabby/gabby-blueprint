@@ -75,14 +75,14 @@ export async function upsertKnowledgeEntry(params: UpsertKnowledgeEntryParams): 
 }
 
 /**
- * ナレッジを論理削除する（delete_flg='1'）。
+ * ナレッジを削除する。
  */
 export async function deleteKnowledgeEntry(knowledgeId: string): Promise<void> {
   const supabase = createAdminClient();
 
   const { error } = await supabase
     .from(TABLE_NAME)
-    .update({ delete_flg: '1', update_date: new Date().toISOString() })
+    .delete()
     .eq('knowledge_id', knowledgeId);
 
   if (error) {

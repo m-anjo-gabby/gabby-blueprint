@@ -21,9 +21,9 @@
 -- @schema public.com_t_coach_rating
 CREATE TABLE public.com_t_coach_rating (
     rating_id                uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id),
-    student_id               uuid         REFERENCES public.com_m_user(id),
-    ticket_id                uuid         REFERENCES public.com_t_user_session_ticket(ticket_id),
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    student_id               uuid         REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    ticket_id                uuid         REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE RESTRICT,
     coaching_score           numeric(2,1) NOT NULL,
     friendliness_score       numeric(2,1) NOT NULL,
     recommendation_score     numeric(2,1) NOT NULL,

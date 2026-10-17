@@ -37,7 +37,7 @@ CREATE TABLE public.com_t_trial_application (
     first_name               text         NOT NULL,
     last_name_latin          text         NOT NULL,
     first_name_latin         text         NOT NULL,
-    timezone                 text         NOT NULL REFERENCES public.com_m_timezone(timezone),
+    timezone                 text         NOT NULL REFERENCES public.com_m_timezone(timezone) ON DELETE RESTRICT,
     country_city             text,
     occupation               smallint     NOT NULL,
     occupation_other         text,

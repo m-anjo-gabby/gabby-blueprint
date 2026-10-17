@@ -29,10 +29,16 @@ export interface DialogueSession {
   student_slides_title: string | null;
   student_slides_link: string | null;
   admin_notes: string | null;
-  delete_flg: '0' | '1';
   insert_date: string;
   update_date: string;
 }
+
+// com_t_dialogue_assignment.status（解除しても進捗・会話ログを残すため行は消さない）
+export const DIALOGUE_ASSIGNMENT_STATUS = {
+  UNASSIGNED: 0,
+  ASSIGNED: 1,
+} as const;
+export type DialogueAssignmentStatus = typeof DIALOGUE_ASSIGNMENT_STATUS[keyof typeof DIALOGUE_ASSIGNMENT_STATUS];
 
 // DBレコード型 (com_t_dialogue_assignment)
 export interface DialogueAssignment {
@@ -41,7 +47,7 @@ export interface DialogueAssignment {
   content_id: string;
   assigned_by_coach_id: string;
   assigned_date: string;
-  delete_flg: '0' | '1';
+  status: DialogueAssignmentStatus;
   insert_date: string;
   update_date: string;
 }

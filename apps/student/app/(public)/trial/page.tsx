@@ -11,7 +11,7 @@ async function getTimezoneOptions(): Promise<TrialTimezoneOption[]> {
   const { data, error } = await createAdminClient()
     .from('com_m_timezone')
     .select('timezone, display_name_ja')
-    .eq('delete_flg', '0')
+    .eq('is_active', true)
     .order('sort_no', { ascending: true });
   if (error) {
     logger.error('trial:get_timezones_failed', error.message, { err: error });

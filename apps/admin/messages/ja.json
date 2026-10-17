@@ -227,7 +227,9 @@
       "actions": "操作",
       "searchPlaceholder": "検索語句を入力...",
       "noData": "データが見つかりませんでした。",
-      "allUserTypes": "すべての区分"
+      "allUserTypes": "すべての区分",
+      "statusWithdrawn": "退会済み",
+      "statusSuspended": "停止中"
     },
     "detail": {
       "backToList": "ユーザー管理へ戻る",
@@ -252,7 +254,37 @@
         "userId": "ユーザーID",
         "copyId": "ユーザーIDをコピー",
         "lastSignIn": "最終ログイン",
-        "neverSignedIn": "未ログイン"
+        "neverSignedIn": "未ログイン",
+        "accountActionsTitle": "アカウントの操作"
+      },
+      "account": {
+        "activeNote": "利用中です。停止するとログインできなくなります（データはそのまま残り、再開できます）。",
+        "suspendedNote": "停止中です。ログインできません。",
+        "withdrawnNote": "退会済みです。個人情報は消去済みで、セッション・学習等の記録だけが「退会済みユーザー」として残っています。",
+        "suspend": "利用を停止する",
+        "resume": "利用を再開する",
+        "suspendConfirmTitle": "利用を停止しますか？",
+        "suspendConfirmBody": "このユーザーはログインできなくなります。ライセンス・予定はそのまま残ります（必要に応じてライセンスの停止・セッションのキャンセルを別に行ってください）。",
+        "toastSuspended": "利用を停止しました",
+        "toastResumed": "利用を再開しました",
+        "toastWithdrawn": "退会の処理が完了しました",
+        "toastFailed": "処理に失敗しました",
+        "withdrawTitle": "退会（個人情報の消去）",
+        "withdrawDescription": "利用規約に基づく削除の申し出に対応します。この操作は取り消せません。",
+        "withdraw": "退会させる",
+        "withdrawConfirmTitle": "退会させますか？（取り消せません）",
+        "withdrawConfirmLead": "このユーザーの個人情報を消去し、ログインのアカウントを削除します。",
+        "withdrawErased": "消えるもの: 氏名・メールアドレス・正式氏名・プロフィール画像・コーチのプロフィール・お気に入り・通知・メールの記録・宿題・コーチのメモ",
+        "withdrawKept": "残るもの（「退会済みユーザー」として）: セッション・チケット・ライセンス・評価・研修レポート・学習の記録・チャットの本文",
+        "withdrawPrecondition": "有効なライセンス・今後のセッション・回答待ちの申請・稼働中の定期予定がある場合は、先に停止・キャンセルしてください。",
+        "withdrawInputLabel": "確認のため、ユーザーの表示名を入力してください",
+        "withdrawErrors": {
+          "active_license": "有効なライセンスがあります。先にライセンスを停止してください",
+          "scheduled_session": "今後のセッションがあります。先にキャンセルしてください",
+          "active_matching": "回答待ちの申請または稼働中の定期予定があります。先に終了してください",
+          "name_mismatch": "表示名が一致しません",
+          "forbidden": "システム管理者だけが実行できます"
+        }
       }
     },
     "form": {
@@ -584,7 +616,8 @@
       "industryNotSet": "未設定",
       "registeredDateHeader": "登録日",
       "searchPlaceholder": "顧客名で検索...",
-      "noData": "顧客データが見つかりませんでした。"
+      "noData": "顧客データが見つかりませんでした。",
+      "endedBadge": "取引終了"
     },
     "form": {
       "createButton": "新規登録",
@@ -615,7 +648,41 @@
       "toastCreated": "顧客を登録しました",
       "toastUpdated": "顧客を更新しました",
       "toastGenericFailed": "処理に失敗しました",
-      "toastSystemError": "システムエラーが発生しました"
+      "toastSystemError": "システムエラーが発生しました",
+      "statusLabel": "取引状態",
+      "statusActive": "取引中",
+      "statusEnded": "取引終了"
+    },
+    "purge": {
+      "title": "顧客の削除（関連するデータをすべて削除）",
+      "description": "テスト・営業用デモ・誤って作った顧客を、所属するユーザー・契約・記録ごと削除します。この操作は取り消せません。",
+      "button": "顧客を削除する",
+      "confirmTitle": "顧客をすべてのデータごと削除しますか？（取り消せません）",
+      "confirmLead": "次のデータが削除されます。",
+      "confirmNote": "実際の顧客の取引を終える場合は、削除ではなく「取引状態」を取引終了にしてください。",
+      "inputLabel": "確認のため、顧客名を入力してください",
+      "toastPurged": "顧客を削除しました",
+      "counts": {
+        "students": "生徒",
+        "coaches": "コーチ",
+        "invitations": "招待中",
+        "contracts": "契約",
+        "licenses": "ライセンス",
+        "sessions": "セッション",
+        "trainings": "学習の記録",
+        "chat_messages": "チャットのメッセージ",
+        "notices": "お知らせ",
+        "calendar_events": "イベント"
+      },
+      "errors": {
+        "protected_client": "この顧客（初期テナント・Webトライアル）は削除できません",
+        "has_admin": "管理者が所属しているため削除できません",
+        "linked_to_other_client": "他の顧客のユーザーとのセッション・担当関係等があるため削除できません",
+        "client_not_found": "顧客が見つかりません",
+        "forbidden": "システム管理者だけが実行できます",
+        "name_mismatch": "顧客名が一致しません",
+        "unexpected": "削除に失敗しました"
+      }
     }
   },
   "timezones": {
@@ -631,12 +698,14 @@
       "currentTimeHeader": "現地の現在日時",
       "actionsHeader": "操作",
       "deleteDialogTitle": "タイムゾーンの削除",
-      "deleteDialogBody": "「<bold>{name}</bold>」を削除してもよろしいですか？ 既にこのタイムゾーンを設定しているユーザーには影響しませんが、選択肢からは表示されなくなります。",
+      "deleteDialogBody": "「<bold>{name}</bold>」を削除してもよろしいですか？ この操作は取り消せません。ユーザー等が使っているタイムゾーンは削除できないため、編集で「使用中」をオフにしてください。",
       "deleteConfirm": "削除する",
       "searchPlaceholder": "タイムゾーン名、表示名称で検索...",
       "noData": "タイムゾーンデータが見つかりませんでした。",
       "toastDeleted": "タイムゾーンを削除しました",
-      "toastDeleteFailed": "削除に失敗しました"
+      "toastDeleteFailed": "削除に失敗しました",
+      "inactiveBadge": "使用停止",
+      "toastInUse": "ユーザー等が使っているため削除できません。編集で「使用中」をオフにしてください"
     },
     "form": {
       "createButton": "新規登録",
@@ -676,7 +745,10 @@
       "toastCreated": "タイムゾーンを登録しました",
       "toastUpdated": "タイムゾーンを更新しました",
       "toastGenericFailed": "処理に失敗しました",
-      "toastSystemError": "システムエラーが発生しました"
+      "toastSystemError": "システムエラーが発生しました",
+      "isActiveLabel": "使用中",
+      "isActiveOn": "タイムゾーンの選択肢に表示します",
+      "isActiveOff": "使用停止。選択肢に表示しません（設定済みのユーザーはそのまま使えます）"
     }
   },
   "terms": {
@@ -1282,7 +1354,8 @@
       "allTypes": "すべての種別",
       "allStatuses": "すべての公開状態",
       "toastDeleted": "カレンダーイベントを削除しました",
-      "toastDeleteFailed": "削除に失敗しました"
+      "toastDeleteFailed": "削除に失敗しました",
+      "toastDeleteHeld": "開催済みのイベントは削除できません。参加の記録を残すため、編集で非公開にしてください"
     },
     "formDialog": {
       "createButton": "新規登録",
@@ -1702,10 +1775,12 @@
         "searchPlaceholder": "プラン名、コードで検索...",
         "noData": "プランデータが見つかりませんでした。",
         "deleteDialogTitle": "プランの削除",
-        "deleteDialogBody": "プラン「<bold>{name}</bold>」を削除してもよろしいですか？既にこのプランを選択して作成された契約には影響しません（選択肢から消えるのみです）。",
+        "deleteDialogBody": "「<bold>{name}</bold>」を削除してもよろしいですか？ この操作は取り消せません。契約で使われているプランは削除できないため、編集で「販売中」をオフにしてください。",
         "deleteConfirm": "削除する",
         "toastDeleted": "プランを削除しました",
-        "toastDeleteFailed": "削除に失敗しました"
+        "toastDeleteFailed": "削除に失敗しました",
+        "inactiveBadge": "販売終了",
+        "toastInUse": "契約で使われているため削除できません。編集で「販売中」をオフにしてください"
       },
       "formDialog": {
         "createButton": "新規登録",
@@ -1751,7 +1826,10 @@
         "toastCreated": "プランを登録しました",
         "toastUpdated": "プランを更新しました",
         "toastGenericFailed": "処理に失敗しました",
-        "toastSystemError": "システムエラーが発生しました"
+        "toastSystemError": "システムエラーが発生しました",
+        "isActiveLabel": "販売中",
+        "isActiveOn": "契約の作成でプランの選択肢に表示します",
+        "isActiveOff": "販売終了。選択肢に表示しません（作成済みの契約には影響しません）"
       }
     }
   },
@@ -1968,7 +2046,8 @@
         "word": "単語を編集",
         "sprint": "問題を編集",
         "dialogue": "セッションを編集"
-      }
+      },
+      "unpublishedBadge": "非公開"
     },
     "formDialog": {
       "createButton": "新規登録",
@@ -2024,7 +2103,10 @@
         "sprintThemeRequired": "コーパススプリントの場合はテーマを入力してください",
         "sprintSupportRequired": "少なくとも1つの問題種別を有効にしてください",
         "dialogueCategoryRequired": "セット分類を選択してください"
-      }
+      },
+      "statusLabel": "公開状態",
+      "statusPublished": "公開",
+      "statusUnpublished": "非公開"
     },
     "accessDialog": {
       "toastFetchFailed": "データ取得に失敗しました",
@@ -2339,7 +2421,8 @@
           "deleteDialogTitle": "セッションを削除しますか？",
           "deleteDialogHint": "この操作は取り消せません。",
           "cancelButton": "キャンセル",
-          "deleteConfirmButton": "削除する"
+          "deleteConfirmButton": "削除する",
+          "deleteInUse": "進捗・会話の記録があるため削除できません"
         },
         "sessionFormDialog": {
           "createButton": "セッション追加",

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { useTranslations } from 'next-intl';
-import { USER_TYPES, type UserRecord } from '@gabby/types/user';
+import { USER_STATUS, USER_TYPES, type UserRecord } from '@gabby/types/user';
 
 type FormT = ReturnType<typeof useTranslations<'users.form'>>;
 
@@ -65,7 +65,16 @@ export function isRegisteredUser(user: Pick<UserRecord, 'last_sign_in_at' | 'con
   return !!user.last_sign_in_at || !!user.confirmed_at;
 }
 
-/** 代理ログインできるか（本登録済みの生徒・コーチのみ。管理者は対象外） */
-export function canImpersonateUser(user: Pick<UserRecord, 'user_type' | 'last_sign_in_at' | 'confirmed_at'>): boolean {
-  return (user.user_type === USER_TYPES.STUDENT || user.user_type === USER_TYPES.COACH) && isRegisteredUser(user);
+/** 代理ログインできるか（本登録済みで有効な生徒・コーチのみ。管理者・停止中・退会済みは対象外） */
+export function canImpersonateUser(user: Pick<UserRecord, 'user_type' | 'last_sign_in_at' | 'confirmed_at' | 'user_status'>): boolean {
+  return (
+    (user.user_type === USER_TYPES.STUDENT || user.user_type === USER_TYPES.COACH) &&
+    user.user_status === USER_STATUS.ACTIVE &&
+    isRegisteredUser(user)
+  );
+}
+
+/** 停止・退会の操作を出すか（ユーザーの行がある生徒・コーチ。招待中は対象外） */
+export function canManageAccount(user: Pick<UserRecord, 'user_type' | 'user_status'>): boolean {
+  return (user.user_type === USER_TYPES.STUDENT || user.user_type === USER_TYPES.COACH) && user.user_status !== null;
 }

@@ -14,11 +14,11 @@
 CREATE TABLE public.com_t_dialogue_session_progress (
     progress_id              uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     assignment_id            uuid         NOT NULL REFERENCES public.com_t_dialogue_assignment(assignment_id) ON DELETE CASCADE,
-    dialogue_session_id      uuid         NOT NULL REFERENCES public.com_m_dialogue_session(dialogue_session_id),
+    dialogue_session_id      uuid         NOT NULL REFERENCES public.com_m_dialogue_session(dialogue_session_id) ON DELETE RESTRICT,
     is_completed             boolean      NOT NULL DEFAULT false,
     completed_date           date,
     notes                    text,
-    updated_by_coach_id      uuid         NOT NULL REFERENCES public.com_m_user(id),
+    updated_by_coach_id      uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT com_t_dialogue_session_progre_assignment_id_dialogue_sessio_key UNIQUE (assignment_id, dialogue_session_id)

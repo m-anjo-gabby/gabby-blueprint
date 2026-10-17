@@ -8,7 +8,7 @@
 -- 【担当コーチの扱い】
 -- 担当関係は com_m_coach_student_relationship をそのまま使い、稼働中・終了を問わず行があれば担当とみなす
 -- （hasCoachStudentRelationship() と同じ判定。コーチ交代直後の引き継ぎを妨げないため）。
--- assigned_by_coach_id は誰が割り当てたかの記録で、割り当て後の更新（解除＝delete_flg 等）は
+-- assigned_by_coach_id は誰が割り当てたかの記録で、割り当て後の更新（解除＝status = 0 等）は
 -- その生徒の担当コーチなら誰でもできる。
 --
 -- 【参照できる範囲】
@@ -18,13 +18,14 @@
 -- @schema public.com_t_dialogue_assignment
 CREATE TABLE public.com_t_dialogue_assignment (
     assignment_id            uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id),
-    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id),
-    assigned_by_coach_id     uuid         NOT NULL REFERENCES public.com_m_user(id),
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE RESTRICT,
+    assigned_by_coach_id     uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     assigned_date            date         NOT NULL DEFAULT CURRENT_DATE,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
-    update_date              timestamp with time zone NOT NULL DEFAULT now()
+    update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    status                   smallint     NOT NULL DEFAULT 1,
+    CONSTRAINT chk_dialogue_assignment_status CHECK (status = ANY (ARRAY[0, 1]))
 );
 
 COMMENT ON TABLE public.com_t_dialogue_assignment IS 'ダイアログプラクティス 割当トランザクション（コーチが生徒に対しセット単位で教材を割り当てる）';
@@ -33,12 +34,12 @@ COMMENT ON COLUMN public.com_t_dialogue_assignment.student_id IS '割当先の�
 COMMENT ON COLUMN public.com_t_dialogue_assignment.content_id IS '割り当てたセット（教材）ID (com_m_contents.content_id、content_type=3)';
 COMMENT ON COLUMN public.com_t_dialogue_assignment.assigned_by_coach_id IS '割り当てを行ったコーチのユーザーID（監査・履歴用。編集権限を本人に限定するものではない）';
 COMMENT ON COLUMN public.com_t_dialogue_assignment.assigned_date IS '割当日';
-COMMENT ON COLUMN public.com_t_dialogue_assignment.delete_flg IS '論理削除フラグ（割当解除="1"）。同一セットの再割当を許容するため、一意性は有効な割当のみを対象にした部分ユニークインデックスで担保する';
 COMMENT ON COLUMN public.com_t_dialogue_assignment.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_t_dialogue_assignment.update_date IS '更新日時';
+COMMENT ON COLUMN public.com_t_dialogue_assignment.status IS '状態 1:割当中 0:解除。同一セットの再割当を許容するため、一意性は割当中の行だけを対象にした部分ユニークインデックスで担保する';
 
-CREATE INDEX idx_dialogue_assignment_student ON public.com_t_dialogue_assignment (student_id) WHERE delete_flg = '0'::text;
-CREATE UNIQUE INDEX idx_dialogue_assignment_unique_active ON public.com_t_dialogue_assignment (student_id, content_id) WHERE delete_flg = '0'::text;
+CREATE INDEX idx_dialogue_assignment_student ON public.com_t_dialogue_assignment (student_id) WHERE status = 1;
+CREATE UNIQUE INDEX idx_dialogue_assignment_unique_active ON public.com_t_dialogue_assignment (student_id, content_id) WHERE status = 1;
 
 ALTER TABLE public.com_t_dialogue_assignment ENABLE ROW LEVEL SECURITY;
 

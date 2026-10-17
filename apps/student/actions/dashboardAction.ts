@@ -1,7 +1,7 @@
 "use server";
 
 import { createServerClient } from "@gabby/lib/supabase/server";
-import { ContentItem } from "@gabby/types/content";
+import { CONTENT_STATUS, ContentItem } from "@gabby/types/content";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
@@ -29,8 +29,7 @@ export async function getDashboardContentData(): Promise<ContentItem[]> {
         *,
         is_favorite:com_t_favorite_contents(count)
       `)
-      .eq('delete_flg', '0')
-      .neq('content_scope', 9)
+      .eq('status', CONTENT_STATUS.PUBLISHED)
       // 条件：おすすめ(recommend > 0) または RLSで許可されたもの
       // 実際にはRLSでフィルタされるため、ここでは表示優先度順に取得
       .order('recommend', { ascending: false })

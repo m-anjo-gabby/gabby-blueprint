@@ -96,7 +96,7 @@
   限定公開教材を可視とするため、RLS任せでは他の生徒のテナント向け教材まで候補に出てしまう
   （2026-09-24修正）。割当（`assignDialogueContentCore`）でもサーバー側で同じ範囲を再検証し、
   範囲外の教材は`forbidden`として拒否する。
-- 割当（`com_t_dialogue_assignment`）は論理削除方式。一度解除した教材を再度Assignした場合は、
+- 割当（`com_t_dialogue_assignment`）は解除しても行を残す（`status = 0`）。一度解除した教材を再度Assignした場合は、
   同じ行を再利用する（`assigned_by_coach_id`・`assigned_date`は再割当時点の値に更新される）。
 - セッション進捗（`com_t_dialogue_session_progress`）は、進捗が発生した行のみ作成される
   （未着手セッションはレコード自体が存在せず、UI側で「未完了」として扱う）。

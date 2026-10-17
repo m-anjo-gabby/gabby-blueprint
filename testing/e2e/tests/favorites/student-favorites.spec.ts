@@ -117,7 +117,6 @@ test.describe("使い捨てのアプリのみ契約の生徒", () => {
       .from("com_m_sprint_questions")
       .select("question_id, group_id, seq_no, sprint_type, question_type, difficulty_level, question_en")
       .eq("content_id", sprint.content_id)
-      .eq("delete_flg", "0")
       .order("question_type")
       .order("difficulty_level")
       .order("seq_no")
@@ -292,7 +291,7 @@ test.describe("使い捨ての生徒（お気に入りの上限）", () => {
       .select("content_id, content_scope")
       .eq("content_type", 0)
       .in("content_scope", [0, 1])
-      .eq("delete_flg", "0")
+      .eq("status", 1)
       .not("content_name", "like", "[%");
     if (contentsError || !contents) throw new Error(`単語帳の教材の取得に失敗しました: ${contentsError?.message}`);
     const phrasesByContent = await Promise.all(

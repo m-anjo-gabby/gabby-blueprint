@@ -83,7 +83,6 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
         tag_name: values.tag_name,
         tag_type: values.tag_type as TagType,
         seq_no: Number(values.seq_no),
-        delete_flg: '0',
       };
 
       // 編集モードの場合は既存の UUID を payload に含める

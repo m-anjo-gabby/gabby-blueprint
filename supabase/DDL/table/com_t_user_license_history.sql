@@ -12,8 +12,8 @@
 CREATE TABLE public.com_t_user_license_history (
     history_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     license_id               uuid         NOT NULL,
-    contract_id              uuid         REFERENCES public.com_m_contract(contract_id),
-    user_id                  uuid         REFERENCES public.com_m_user(id),
+    contract_id              uuid         REFERENCES public.com_m_contract(contract_id) ON DELETE RESTRICT,
+    user_id                  uuid         REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     action                   text         NOT NULL,
     status                   smallint     NOT NULL,
     start_date               timestamp with time zone NOT NULL,

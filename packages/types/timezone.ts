@@ -10,7 +10,7 @@ export interface TimezoneMaster {
   short_name_ja: string;
   short_name_en: string;
   sort_no: number;
-  delete_flg: string;
+  is_active: boolean; // 使用中（タイムゾーンの選択肢に出す）
   insert_date: string;
   update_date: string;
 }

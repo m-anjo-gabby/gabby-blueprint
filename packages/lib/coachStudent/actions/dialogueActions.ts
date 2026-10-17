@@ -6,6 +6,7 @@ import type { LogContext } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { getStudentAvailableContentIds, hasCoachStudentRelationship } from './coachStudentActions';
 import {
+  DIALOGUE_ASSIGNMENT_STATUS,
   DialogueAssignmentSummary,
   DialogueCategory,
   DialogueContentSummary,
@@ -63,7 +64,6 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
       .select('content_id, content_name, content_name_en, category_id')
       .in('content_id', [...availableIds])
       .eq('content_type', DIALOGUE_CONTENT_TYPE)
-      .eq('delete_flg', '0')
       .order('category_id', { ascending: true })
       .order('seq_no', { ascending: true })
       .order('content_id', { ascending: true }); // 同順位（seq_noの重複）の並びを固定する
@@ -82,8 +82,7 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
     const { data: sessions, error: sessionsError } = await supabase
       .from('com_m_dialogue_session')
       .select('content_id, session_no, coach_slides_link')
-      .in('content_id', contentIds)
-      .eq('delete_flg', '0');
+      .in('content_id', contentIds);
 
     if (sessionsError) {
       logger.error('dialogue:get_contents_session_count_failed', sessionsError.message, { ...ctx, err: sessionsError, userId: user.id });
@@ -117,7 +116,7 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
 
 /**
  * コーチが担当生徒にダイアログ教材セットを割り当てる。
- * 過去に割り当てて解除済み(delete_flg='1')の行があれば再割当として復活させる
+ * 過去に割り当てて解除済み(status=0)の行があれば再割当として復活させる
  * （部分ユニークインデックスidx_dialogue_assignment_unique_activeとの整合のため）。
  */
 export async function assignDialogueContentCore(
@@ -147,7 +146,7 @@ export async function assignDialogueContentCore(
 
     const { data: existing, error: existingError } = await supabase
       .from('com_t_dialogue_assignment')
-      .select('assignment_id, delete_flg')
+      .select('assignment_id, status')
       .eq('student_id', studentId)
       .eq('content_id', contentId)
       .maybeSingle();
@@ -158,7 +157,7 @@ export async function assignDialogueContentCore(
     }
 
     if (existing) {
-      if (existing.delete_flg === '0') {
+      if (existing.status === DIALOGUE_ASSIGNMENT_STATUS.ASSIGNED) {
         // 既に割当済み。冪等に成功扱いとする
         return { success: true, assignment_id: existing.assignment_id };
       }
@@ -166,7 +165,7 @@ export async function assignDialogueContentCore(
       const { error: reactivateError } = await supabase
         .from('com_t_dialogue_assignment')
         .update({
-          delete_flg: '0',
+          status: DIALOGUE_ASSIGNMENT_STATUS.ASSIGNED,
           assigned_by_coach_id: user.id,
           assigned_date: today(),
           update_date: new Date().toISOString(),
@@ -252,7 +251,7 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
 
     const { error } = await supabase
       .from('com_t_dialogue_assignment')
-      .update({ delete_flg: '1', update_date: new Date().toISOString() })
+      .update({ status: DIALOGUE_ASSIGNMENT_STATUS.UNASSIGNED, update_date: new Date().toISOString() })
       .eq('assignment_id', assignmentId);
 
     if (error) {
@@ -282,7 +281,7 @@ async function fetchDialogueAssignmentSummaries(
       .from('com_t_dialogue_assignment')
       .select('assignment_id, content_id, assigned_by_coach_id, assigned_date, com_m_contents(content_name, content_name_en, category_id)')
       .eq('student_id', studentId)
-      .eq('delete_flg', '0')
+      .eq('status', DIALOGUE_ASSIGNMENT_STATUS.ASSIGNED)
       .order('assigned_date', { ascending: false });
 
     if (assignmentsError) {
@@ -301,7 +300,6 @@ async function fetchDialogueAssignmentSummaries(
       .from('com_m_dialogue_session')
       .select(DIALOGUE_SESSION_SELECT)
       .in('content_id', contentIds)
-      .eq('delete_flg', '0')
       .order('session_no', { ascending: true });
 
     if (sessionsError) {

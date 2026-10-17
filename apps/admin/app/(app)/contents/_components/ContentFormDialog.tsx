@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
-import { Content, CONTENT_SCOPES, CONTENT_TYPES, ContentScope, ContentType, CEFR_CONFIG } from '@gabby/types/content';
+import { Content, CONTENT_SCOPES, CONTENT_STATUS, CONTENT_TYPES, ContentScope, type ContentStatus, ContentType, CEFR_CONFIG } from '@gabby/types/content';
 import { QUESTION_TYPES, SPRINT_TYPES } from '@gabby/types/sprint';
 import { DIALOGUE_CATEGORIES, DialogueCategory } from '@gabby/types/dialogue';
 import { upsertContent } from '@/actions/adminContentAction';
@@ -32,6 +32,7 @@ function createContentSchema(t: FormT) {
     content_name_en: z.string().optional(),
     content_type: z.string().min(1, t('errors.typeRequired')),
     content_scope: z.string().min(1, t('errors.scopeRequired')),
+    status: z.string(),
     content_label: z.string().min(1, t('errors.labelRequired')),
     seq_no: z.string().min(1, t('errors.seqRequired')),
     difficulty_level: z.string().min(1, t('errors.difficultyRequired')),
@@ -108,7 +109,8 @@ const DEFAULT_VALUES: ContentFormValues = {
   content_name: '',
   content_name_en: '',
   content_type: '0',
-  content_scope: '9',
+  content_scope: '0',
+  status: String(CONTENT_STATUS.UNPUBLISHED),
   content_label: '',
   seq_no: '1',
   difficulty_level: '1',
@@ -142,6 +144,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       content_name_en: data.content_name_en || '',
       content_type: String(data.content_type),
       content_scope: String(data.content_scope),
+      status: String(data.status),
       content_label: data.content_label,
       seq_no: String(data.seq_no),
       difficulty_level: String(data.difficulty_level || 1),
@@ -226,6 +229,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         content_name_en: values.content_name_en?.trim() || null,
         content_type: Number(values.content_type) as ContentType,
         content_scope: Number(values.content_scope) as ContentScope,
+        status: Number(values.status) as ContentStatus,
         category_id: isDialogue && values.dialogue_category && values.dialogue_category !== 'none'
           ? Number(values.dialogue_category)
           : null,
@@ -383,6 +387,26 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                   </FormItem>
                 )} />
               </div>
+
+              {/* 公開状態（新規作成時は非公開。使わなくなった教材も削除せずに非公開にする） */}
+              <FormField control={form.control} name="status" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('statusLabel')}</FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                      {field.value === String(CONTENT_STATUS.PUBLISHED) ? t('statusPublished') : t('statusUnpublished')}
+                    </div>
+                  ) : (
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger className="bg-white rounded-xl border-slate-200"><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value={String(CONTENT_STATUS.UNPUBLISHED)}>{t('statusUnpublished')}</SelectItem>
+                        <SelectItem value={String(CONTENT_STATUS.PUBLISHED)}>{t('statusPublished')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </FormItem>
+              )} />
 
               {/* --- ダイアログプラクティス選択時のみ表示する特化セクション --- */}
               {currentContentType === '3' && (

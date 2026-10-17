@@ -123,7 +123,7 @@ test("申込フォームから申し込み、届いた案内からパスワー�
   expect(invitation).toMatchObject({ user_name: "Trial Shiken", client_id: WEB_TRIAL_CLIENT_ID, contract_id: null });
   const { count: notified } = await admin
     .from("com_t_notification").select("notification_id", { count: "exact", head: true }).eq("notification_type", "TRIAL_APPLIED").like("dedup_key", `${app!.application_id}:%`);
-  const { count: admins } = await admin.from("com_m_user").select("id", { count: "exact", head: true }).eq("user_type", "0").eq("delete_flg", "0");
+  const { count: admins } = await admin.from("com_m_user").select("id", { count: "exact", head: true }).eq("user_type", "0").eq("status", 1);
   expect(notified).toBe(admins);
 
   // 届いた案内のリンク（受信を読めない環境では、同じリンクを招待のトークンから組み立てる）

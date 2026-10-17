@@ -172,7 +172,7 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
 
   /** 顧客に限定公開(1)教材のアクセス権（com_m_contents_access）を付与する（付与済みなら何もしない） */
   async function ensureContentAccess(clientId: string, contentId: string, notes: string): Promise<void> {
-    const { data: access } = await admin.from("com_m_contents_access").select("access_id").eq("client_id", clientId).eq("content_id", contentId).eq("delete_flg", "0").maybeSingle();
+    const { data: access } = await admin.from("com_m_contents_access").select("access_id").eq("client_id", clientId).eq("content_id", contentId).maybeSingle();
     if (access) return;
     const { error } = await admin.from("com_m_contents_access").insert({ client_id: clientId, content_id: contentId, notes });
     if (error) throw error;
@@ -187,7 +187,7 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
       .from("com_m_contents")
       .select("content_id, content_name, content_scope")
       .eq("content_type", 2)
-      .eq("delete_flg", "0")
+      .eq("status", 1)
       .in("content_scope", [0, 1])
       .eq("metadata->sprint->>sprint_type", "0")
       .order("content_name");

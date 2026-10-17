@@ -101,7 +101,6 @@ export interface CalendarEventItem {
   client_id: string | null;
   rsvp_enabled: boolean;
   is_published: boolean;
-  delete_flg: string;
   insert_date: string;
   update_date: string;
   // 結合フィールド（生徒/コーチ向けクエリでのみ計算。com_t_calendar_event_participantから結合）

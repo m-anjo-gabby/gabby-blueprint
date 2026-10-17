@@ -172,7 +172,6 @@ function toPreviewNotice(draft: NoticePreviewDraft, noTitle: string): NoticeItem
     published_at: draft.publishedAtJst ? new Date(`${draft.publishedAtJst}T00:00:00+09:00`).toISOString() : now,
     expired_at: null,
     is_published: true,
-    delete_flg: '0',
     insert_date: now,
     update_date: now,
     is_read: false,

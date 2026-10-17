@@ -234,7 +234,7 @@ test.describe("スプリントの発話", () => {
         .from("com_m_contents")
         .select("content_scope, metadata")
         .eq("content_id", contentId)
-        .eq("delete_flg", "0")
+        .eq("status", 1)
         .maybeSingle();
       if (!content) continue;
       if (content.content_scope === 1) {

@@ -17,7 +17,7 @@
 CREATE TABLE public.com_t_session_call_log (
     call_log_id              uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     session_id               uuid         NOT NULL REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
-    user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id),
+    user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     role                     text         NOT NULL,
     zoom_session_id          text,
     joined_at                timestamp with time zone NOT NULL DEFAULT now(),

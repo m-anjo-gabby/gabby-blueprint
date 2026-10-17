@@ -144,6 +144,12 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
   認証そのもの（ログイン・パスワード変更等の `packages/lib/auth/core.ts`）は `auth.getUser()` のままにする。
 - **リリース作業**: staging・本番へのリリース（マージ → DB のリリーススクリプト → 環境変数 → GitHub Actions の `Deploy`）は
   `docs/RELEASE.md` が正本。Claude が進める場合は `.claude/skills/release` に従い、終わったら同スキルの `HISTORY.md` に記録とつまずきを残す。
+- **削除の規約**: 正本は `docs/DATA-DELETION.md`。論理削除（`delete_flg`）は使わず、残すものは意味のある状態
+  （業務の段階は `status`、選択肢の出し分けだけは `is_active`）、消すものは物理削除にする。画面の「削除」は誤登録の取り消しとし、
+  利用実績があれば外部キーの `RESTRICT` で止めて（`isInUseError()`）「使用をやめる」操作を案内する。外部キーは全件で
+  `RESTRICT`（業務の記録・マスタの参照）/ `CASCADE`（親に付属するだけ）/ `SET NULL`（操作者の記録）を明示し、`NO ACTION` を作らない。
+  退会（個人情報の消去）は `fn_withdraw_user`、顧客単位の一括削除は `fn_purge_client` で行い、admin の DangerZone に置く。
+  個人情報を持つテーブル・顧客に属するテーブルを追加したら、同じタスクでこの2つの関数と規約の表を直す。
 - RPCのシグネチャを変更する場合は、`DROP FUNCTION IF EXISTS`で旧シグネチャを明示的に削除してから
   `CREATE OR REPLACE FUNCTION`で新シグネチャを作成すること（Postgresの関数オーバーロードの
   曖昧性を避けるため）。

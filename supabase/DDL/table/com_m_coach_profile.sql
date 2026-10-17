@@ -4,7 +4,7 @@
 -- 【作成】
 -- コーチの作成時に handle_new_user() トリガーが空の行を作り、coach_since（作成月の1日）を入れる。
 -- 作成時にトリガーが新人コーチの初期の評価（3項目とも4）を登録する（fn_create_initial_coach_rating）。
--- 作成・論理削除はトリガー（service_role）だけで行い、コーチ本人は自分の行の更新だけができる。
+-- 作成はトリガー（service_role）だけで行い、コーチ本人は自分の行の更新だけができる。
 --
 -- 【参照できる範囲】
 -- 有効なプロフィールは認証済みユーザーなら誰でも参照できる（生徒がコーチを選ぶため）。自分の行は常に参照できる。
@@ -22,14 +22,13 @@
 -- @schema public.com_m_coach_profile
 CREATE TABLE public.com_m_coach_profile (
     user_id                  uuid         PRIMARY KEY REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    country_code             text         REFERENCES public.com_m_country(country_code),
+    country_code             text         REFERENCES public.com_m_country(country_code) ON DELETE RESTRICT,
     coach_since              date,
     education                text,
     qualifications           text,
     teaching_years           smallint,
     job_experience           text,
     introduction             text,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     intro_video_path         text,
@@ -47,7 +46,6 @@ COMMENT ON COLUMN public.com_m_coach_profile.qualifications IS '保有資格';
 COMMENT ON COLUMN public.com_m_coach_profile.teaching_years IS '英語指導年数';
 COMMENT ON COLUMN public.com_m_coach_profile.job_experience IS '職務経験';
 COMMENT ON COLUMN public.com_m_coach_profile.introduction IS '自己紹介（自由記述）';
-COMMENT ON COLUMN public.com_m_coach_profile.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_coach_profile.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_coach_profile.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_coach_profile.intro_video_path IS '紹介ビデオのStorageパス（profileバケット内、例: profile/{user_id}/video/xxxx.mp4）';
@@ -61,7 +59,7 @@ ALTER TABLE public.com_m_coach_profile ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can view active coach profiles" ON public.com_m_coach_profile FOR SELECT TO authenticated
 USING (
-    delete_flg = '0'::text OR user_id = auth.uid()
+    true
 );
 
 CREATE POLICY "Coaches can update their own profile" ON public.com_m_coach_profile FOR UPDATE TO authenticated

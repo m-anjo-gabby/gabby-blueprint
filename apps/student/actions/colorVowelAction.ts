@@ -76,7 +76,6 @@ export async function lookupColorVowelDictionary(
       `
       )
       .eq("status", "live")
-      .eq("delete_flg", 0)
       .ilike("word_en", cleanWord);
 
     if (error) {

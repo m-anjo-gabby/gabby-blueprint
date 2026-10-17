@@ -4,7 +4,7 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { USER_TYPES, UserType } from '@gabby/types/user';
+import { USER_STATUS, USER_TYPES, UserType } from '@gabby/types/user';
 import {
   AddChatRoomMemberPayload,
   CHAT_ROOM_TYPES,
@@ -67,7 +67,7 @@ export async function getChatRoomTargetUsers(): Promise<{
       .from('com_m_user')
       .select('id, user_name, user_type, client_id')
       .in('user_type', HUMAN_USER_TYPES)
-      .eq('delete_flg', '0')
+      .eq('status', USER_STATUS.ACTIVE)
       .order('user_name', { ascending: true });
 
     if (error) {
@@ -265,11 +265,11 @@ export async function addChatRoomMember(
 
     const { data: profile } = await supabase
       .from('com_m_user')
-      .select('id, user_name, user_type, icon_path, client_id, delete_flg, com_m_client(client_name)')
+      .select('id, user_name, user_type, icon_path, client_id, status, com_m_client(client_name)')
       .eq('id', payload.userId)
       .maybeSingle();
 
-    if (!profile || profile.delete_flg !== '0' || !HUMAN_USER_TYPES.includes(profile.user_type as UserType)) {
+    if (!profile || profile.status !== USER_STATUS.ACTIVE || !HUMAN_USER_TYPES.includes(profile.user_type as UserType)) {
       return { success: false, error: 'Target user not found' };
     }
 

@@ -191,7 +191,8 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
       form.reset(initialValues)
       const [clientData, planData] = await Promise.all([getClientsFilter(), getContractPlans()])
       setClients(clientData)
-      setPlans(planData)
+      // 販売終了のプランは選択肢に出さない（編集中の契約が使っているプランは残す）
+      setPlans(planData.filter((plan) => plan.is_active || plan.plan_id === initialData?.plan_id))
     } else {
       // 閉じるときもフォームをリセット（メモリリークや意図しない保持を防ぐ）
       form.reset(getInitialValues(initialData))

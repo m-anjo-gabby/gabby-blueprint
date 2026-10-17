@@ -114,7 +114,6 @@ export interface ColorVowelRow {
   audio_path: string;
   video_title: string | null;
   video_path: string | null;
-  delete_flg: number; // 0: 有効, 1: 削除済み
   insert_date: string;
   update_date: string;
 }
@@ -140,7 +139,6 @@ export interface ColorVowelDictionaryRow {
   tts_status: 0 | 1 | 2 | 9; // 0:未生成, 1:生成済, 2:要再生成, 9:エラー
   last_tts_date: string | null;
   status: 'live' | 'pending';
-  delete_flg: number; // 0: 有効, 1: 削除済み
   insert_date: string | null;
   update_date: string | null;
 }

@@ -19,7 +19,6 @@ export interface CoachAvailabilitySlot {
   day_of_week: DayOfWeek;
   start_time: string; // "HH:MM:SS"
   end_time: string;   // "HH:MM:SS"
-  delete_flg: string;
   insert_date: string;
   update_date: string;
 }

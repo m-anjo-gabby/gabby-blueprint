@@ -1,6 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { USER_TYPES } from '@gabby/types/user';
+import { USER_STATUS, USER_TYPES } from '@gabby/types/user';
 import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
 import { MailSendError, sendCore } from '../core';
@@ -81,11 +81,11 @@ type LoadedRecipient = Omit<MailRecipient, 'language' | 'timezoneName'> & {
 async function loadRecipient(admin: SupabaseClient, userId: string): Promise<LoadedRecipient | null> {
   const { data: user, error } = await admin
     .from('com_m_user')
-    .select('user_type, user_name, timezone, delete_flg, zone:com_m_timezone(short_name_ja, short_name_en)')
+    .select('user_type, user_name, timezone, status, zone:com_m_timezone(short_name_ja, short_name_en)')
     .eq('id', userId)
     .maybeSingle();
   if (error) throw new Error(`recipient_fetch_failed: ${error.message}`);
-  if (!user || user.delete_flg !== '0') return null;
+  if (!user || user.status !== USER_STATUS.ACTIVE) return null;
 
   // 多対1の結合は1件のオブジェクトで返る（型の推論は配列になるため両方を受ける）
   const zone = Array.isArray(user.zone) ? user.zone[0] : user.zone;

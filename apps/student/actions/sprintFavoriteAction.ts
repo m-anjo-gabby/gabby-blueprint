@@ -4,7 +4,7 @@ import { createServerClient } from "@gabby/lib/supabase/server";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { getSprintTitle, resolveSprintHasLevel } from "@gabby/lib";
-import type { ContentMetadata } from "@gabby/types/content";
+import { CONTENT_STATUS, type ContentMetadata } from "@gabby/types/content";
 import { FAVORITE_SPRINT_QUESTION_COLUMNS, type FavoriteSprintQuestionFields, type FavoriteSprintQuestionItem } from "@gabby/types/sprint";
 import { toggleFavoriteRow } from "@/lib/favoriteToggle";
 import { FAVORITE_LIMIT, type FavoriteToggleResult } from "@/constants/favorites";
@@ -56,8 +56,7 @@ export async function getFavoriteSprintQuestions(): Promise<FavoriteSprintQuesti
       .from('com_m_contents')
       .select('content_id, content_name, metadata')
       .in('content_id', contentIds)
-      .eq('delete_flg', '0')
-      .neq('content_scope', 9);
+      .eq('status', CONTENT_STATUS.PUBLISHED);
 
     if (contentError) {
       logger.error("sprint:get_favorite_question_contents_failed", contentError.message, { ...ctx, err: contentError });

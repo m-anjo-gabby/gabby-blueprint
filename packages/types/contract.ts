@@ -49,6 +49,7 @@ export interface ContractPlan {
   total_sessions: number | null;
   has_dialogue_practice: boolean;
   sort_no: number;
+  is_active: boolean; // 販売中（契約の作成で選択肢に出す）
 }
 
 // ライセンス割当画面で表示するためのユーザー簡略情報

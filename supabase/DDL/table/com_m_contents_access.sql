@@ -7,10 +7,9 @@
 -- @schema public.com_m_contents_access
 CREATE TABLE public.com_m_contents_access (
     access_id                uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    client_id                uuid         NOT NULL REFERENCES public.com_m_client(client_id),
-    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id),
+    client_id                uuid         NOT NULL REFERENCES public.com_m_client(client_id) ON DELETE CASCADE,
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
     notes                    text,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT com_m_contents_access_client_id_content_id_key UNIQUE (client_id, content_id)
@@ -21,7 +20,6 @@ COMMENT ON COLUMN public.com_m_contents_access.access_id IS 'アクセスID';
 COMMENT ON COLUMN public.com_m_contents_access.client_id IS '顧客ID';
 COMMENT ON COLUMN public.com_m_contents_access.content_id IS 'コンテンツID';
 COMMENT ON COLUMN public.com_m_contents_access.notes IS 'メモ';
-COMMENT ON COLUMN public.com_m_contents_access.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_contents_access.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_contents_access.update_date IS '更新日時';
 

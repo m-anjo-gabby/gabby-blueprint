@@ -35,6 +35,8 @@ export function DialogueSessionList({ sessions, contentId, onUpdate }: DialogueS
     if (res.success) {
       showToast(t('deleted'), 'success');
       onUpdate();
+    } else if ('reason' in res && res.reason === 'in_use') {
+      showToast(t('deleteInUse'), 'error');
     } else {
       showToast(res.message || t('deleteFailed'), 'error');
     }

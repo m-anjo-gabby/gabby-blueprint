@@ -81,7 +81,7 @@ async function pickHistoryContents(clientId: string): Promise<HistoryContents> {
       .select("content_id, content_scope")
       .eq("content_type", contentType)
       .in("content_scope", [0, 1])
-      .eq("delete_flg", "0")
+      .eq("status", 1)
       .order("content_scope")
       .order("content_id")
       .limit(1)

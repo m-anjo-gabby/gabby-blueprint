@@ -558,8 +558,7 @@ export async function getCoachBrowseListCore(ticketId: string): Promise<
     const { data: profiles, error: profileError } = await supabase
       .from('com_m_coach_profile')
       .select('user_id, country_code, coach_since, education, qualifications, teaching_years, job_experience, introduction, intro_video_path')
-      .in('user_id', matchableCoaches.map((c: { coach_id: string }) => c.coach_id))
-      .eq('delete_flg', '0');
+      .in('user_id', matchableCoaches.map((c: { coach_id: string }) => c.coach_id));
 
     if (profileError) {
       logger.error('matching:get_coach_list_profile_failed', profileError.message, { ...ctx, err: profileError });
@@ -583,8 +582,7 @@ export async function getCoachBrowseListCore(ticketId: string): Promise<
       supabase
         .from('com_m_coach_availability')
         .select('availability_id, coach_id, day_of_week, start_time, end_time')
-        .in('coach_id', coachIds)
-        .eq('delete_flg', '0'),
+        .in('coach_id', coachIds),
       getCoachRatingStatsCore(coachIds),
       getCoachSpecialtyCodesCore(coachIds),
     ]);
@@ -716,7 +714,6 @@ export async function createMatchingRequestCore(input: CreateMatchingRequestInpu
       .select('availability_id')
       .eq('coach_id', input.coach_id)
       .eq('day_of_week', first.day_of_week)
-      .eq('delete_flg', '0')
       .lte('start_time', `${utcStartTime}:00`)
       .gte('end_time', `${utcEndTime}:00`)
       .limit(1);

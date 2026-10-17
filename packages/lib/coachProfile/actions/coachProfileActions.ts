@@ -54,7 +54,6 @@ export async function getMyCoachProfileCore(): Promise<GetMyCoachProfileResult> 
 
 /**
  * 指定ユーザーのコーチ公開プロフィールを取得する（ポータル共通）
- * RLSにより有効なコーチプロフィール（delete_flg='0'）のみ取得可能。
  * 生徒がコーチを選択する際の参照用途を想定。
  */
 export async function getCoachProfileByUserIdCore(userId: string): Promise<GetMyCoachProfileResult> {
@@ -108,7 +107,7 @@ export async function updateMyCoachProfileCore(values: CoachProfileFormValues): 
         .from('com_m_country')
         .select('country_code')
         .eq('country_code', values.country_code)
-        .eq('delete_flg', '0')
+        .eq('is_active', true)
         .maybeSingle();
 
       if (countryError || !country) {

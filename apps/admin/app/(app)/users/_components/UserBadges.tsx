@@ -4,16 +4,23 @@ import { useTranslations } from 'next-intl';
 import { ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { getUserTypeLabel, USER_TYPES, type UserRecord } from '@gabby/types/user';
+import { getUserTypeLabel, USER_STATUS, USER_TYPES, type UserRecord } from '@gabby/types/user';
 
 const BADGE_BASE = 'h-5 shrink-0 whitespace-nowrap px-1.5 text-[11px] font-bold shadow-none';
 
-type StatusUser = Pick<UserRecord, 'last_sign_in_at' | 'confirmed_at' | 'mail_sent_at' | 'last_mail_error'>;
+type StatusUser = Pick<UserRecord, 'last_sign_in_at' | 'confirmed_at' | 'mail_sent_at' | 'last_mail_error' | 'user_status'>;
 
-/** アカウントの状態（利用中 / 招待確認済 / 送信失敗 / 招待中）。一覧と詳細画面の見出しで共通 */
+/** アカウントの状態（退会済み / 停止中 / 利用中 / 招待確認済 / 送信失敗 / 招待中）。一覧と詳細画面の見出しで共通 */
 export function UserStatusBadge({ user }: { user: StatusUser }) {
   const t = useTranslations('users.table');
-  const { last_sign_in_at, confirmed_at, mail_sent_at, last_mail_error } = user;
+  const { last_sign_in_at, confirmed_at, mail_sent_at, last_mail_error, user_status } = user;
+
+  if (user_status === USER_STATUS.WITHDRAWN) {
+    return <Badge className={cn(BADGE_BASE, 'border-slate-300 bg-slate-100 text-slate-500')}>{t('statusWithdrawn')}</Badge>;
+  }
+  if (user_status === USER_STATUS.SUSPENDED) {
+    return <Badge className={cn(BADGE_BASE, 'border-slate-300 bg-slate-100 text-slate-600')}>{t('statusSuspended')}</Badge>;
+  }
 
   if (last_sign_in_at) {
     return <Badge className={cn(BADGE_BASE, 'border-emerald-200 bg-emerald-50 text-emerald-700')}>{t('statusActive')}</Badge>;

@@ -20,7 +20,6 @@ export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]
       .from('com_m_phrase')
       .select('*')
       .eq('word_id', wordId)
-      .eq('delete_flg', '0')
       .order('seq_no', { ascending: true });
 
     if (error) {
@@ -53,7 +52,6 @@ export async function createPhrase(wordId: string, seqNo: number) {
           phrase_en: 'New English phrase',
           phrase_ja: '新しいフレーズ',
           tts_status: 0,  // 未生成
-          delete_flg: '0',
         },
       ])
       .select()
@@ -122,7 +120,7 @@ export async function updatePhrase(
 }
 
 /**
- * フレーズの論理削除
+ * フレーズの削除（お気に入りも一緒に消える）
  */
 export async function deletePhrase(phraseId: string) {
   const ctx = await getLogContext();
@@ -131,10 +129,7 @@ export async function deletePhrase(phraseId: string) {
 
     const { error } = await supabase
       .from('com_m_phrase')
-      .update({ 
-        delete_flg: '1',
-        update_date: new Date().toISOString() 
-      })
+      .delete()
       .eq('phrase_id', phraseId);
 
     if (error) {
@@ -142,7 +137,7 @@ export async function deletePhrase(phraseId: string) {
       return { success: false, message: error.message };
     }
 
-    logger.info('phrase:delete_phrase_success', `Phrase logically deleted`, { 
+    logger.info('phrase:delete_phrase_success', `Phrase deleted`, { 
       ...ctx,
       payload: { phraseId } 
     });

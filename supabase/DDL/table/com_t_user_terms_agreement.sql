@@ -10,13 +10,13 @@
 CREATE TABLE public.com_t_user_terms_agreement (
     agreement_id             uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    term_id                  uuid         NOT NULL REFERENCES public.com_m_terms(term_id),
+    term_id                  uuid         NOT NULL REFERENCES public.com_m_terms(term_id) ON DELETE RESTRICT,
     agreed_date              timestamp with time zone NOT NULL DEFAULT now(),
     ip_address               text,
     user_agent               text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
-    revision_id              uuid         REFERENCES public.com_m_terms_revision(revision_id),
+    revision_id              uuid         REFERENCES public.com_m_terms_revision(revision_id) ON DELETE RESTRICT,
     CONSTRAINT com_t_user_terms_agreement_user_id_term_id_key UNIQUE (user_id, term_id)
 );
 

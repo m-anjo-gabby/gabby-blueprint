@@ -50,7 +50,6 @@ CREATE TABLE public.com_m_sprint_questions (
     last_tts_date            timestamp with time zone,
     legacy_question_id       bigint,
     legacy_group_id          integer,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now()
 );
@@ -94,18 +93,17 @@ COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_status IS
 COMMENT ON COLUMN public.com_m_sprint_questions.last_tts_date IS '最終TTS音声生成日時';
 COMMENT ON COLUMN public.com_m_sprint_questions.legacy_question_id IS '移行元レガシー問題ID';
 COMMENT ON COLUMN public.com_m_sprint_questions.legacy_group_id IS '移行元レガシーグループID';
-COMMENT ON COLUMN public.com_m_sprint_questions.delete_flg IS '削除フラグ (''0'':有効, ''1'':削除済)';
 COMMENT ON COLUMN public.com_m_sprint_questions.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_sprint_questions.update_date IS '更新日時';
 
-CREATE INDEX idx_sprint_questions_content_level ON public.com_m_sprint_questions (content_id, question_type, difficulty_level) WHERE delete_flg = '0'::text;
-CREATE INDEX idx_sprint_questions_corpus_lookup ON public.com_m_sprint_questions (content_id, seq_no) WHERE delete_flg = '0'::text AND sprint_type = '1'::text;
-CREATE INDEX idx_sprint_questions_general_lookup ON public.com_m_sprint_questions (sprint_type, question_type, difficulty_level, group_id, seq_no) WHERE delete_flg = '0'::text;
+CREATE INDEX idx_sprint_questions_content_level ON public.com_m_sprint_questions (content_id, question_type, difficulty_level);
+CREATE INDEX idx_sprint_questions_corpus_lookup ON public.com_m_sprint_questions (content_id, seq_no) WHERE sprint_type = '1'::text;
+CREATE INDEX idx_sprint_questions_general_lookup ON public.com_m_sprint_questions (sprint_type, question_type, difficulty_level, group_id, seq_no);
 
 ALTER TABLE public.com_m_sprint_questions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow select access for authenticated users" ON public.com_m_sprint_questions FOR SELECT TO authenticated
 USING (
-    delete_flg = '0'::text
+    true
 );
 -- @end-schema

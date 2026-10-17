@@ -28,20 +28,21 @@
 
 -- @schema public.com_m_user
 CREATE TABLE public.com_m_user (
-    id                       uuid         PRIMARY KEY REFERENCES auth.users(id),
+    id                       uuid         PRIMARY KEY,
     user_id                  bigserial    NOT NULL UNIQUE,
-    client_id                uuid         REFERENCES public.com_m_client(client_id),
+    client_id                uuid         REFERENCES public.com_m_client(client_id) ON DELETE RESTRICT,
     user_type                text         DEFAULT '1'::text,
     user_name                text,
     locale_id                text         DEFAULT 'ja'::text,
     timezone                 text         NOT NULL DEFAULT 'Asia/Tokyo'::text,
     login_failed_count       integer      NOT NULL DEFAULT 0,
     locked_until             timestamp with time zone,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     icon_path                text,
-    CONSTRAINT fk_com_m_user_timezone FOREIGN KEY (timezone) REFERENCES public.com_m_timezone(timezone)
+    status                   smallint     NOT NULL DEFAULT 1,
+    CONSTRAINT fk_com_m_user_timezone FOREIGN KEY (timezone) REFERENCES public.com_m_timezone(timezone) ON DELETE RESTRICT,
+    CONSTRAINT chk_user_status CHECK (status = ANY (ARRAY[0, 1, 9]))
 );
 
 COMMENT ON TABLE public.com_m_user IS 'ユーザ情報マスタ';
@@ -54,10 +55,10 @@ COMMENT ON COLUMN public.com_m_user.locale_id IS 'ロケールID';
 COMMENT ON COLUMN public.com_m_user.timezone IS 'IANAタイムゾーン名（例: Asia/Tokyo）';
 COMMENT ON COLUMN public.com_m_user.login_failed_count IS 'ログイン連続失敗回数';
 COMMENT ON COLUMN public.com_m_user.locked_until IS 'アカウントロックアウト終了日時';
-COMMENT ON COLUMN public.com_m_user.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_user.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_user.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_user.icon_path IS 'プロフィールアイコン画像のStorageパス（profileバケット内、例: profile/{user_id}/icon/xxxx.png）';
+COMMENT ON COLUMN public.com_m_user.status IS '状態 1:有効 0:停止（ログインできない） 9:退会済み（個人情報を消去済み）';
 
 CREATE TRIGGER trg_sync_app_meta_m_user AFTER INSERT OR UPDATE OF client_id, user_type ON public.com_m_user FOR EACH ROW EXECUTE FUNCTION public.sync_user_app_metadata();
 
@@ -65,7 +66,7 @@ ALTER TABLE public.com_m_user ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can view active coach directory" ON public.com_m_user FOR SELECT TO authenticated
 USING (
-    user_type = '2'::text AND delete_flg = '0'::text
+    user_type = '2'::text
 );
 
 CREATE POLICY "Chat room members can view each other" ON public.com_m_user FOR SELECT TO authenticated

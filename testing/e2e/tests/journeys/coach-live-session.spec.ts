@@ -68,7 +68,7 @@ test("ダッシュボードで今日のセッションと未読を確認し、�
   const { f, p, day } = await setUpLiveSessionDay("coachlive");
   await prepareContent(f, 2);
   const { data: dialogueSessions } = await f.admin
-    .from("com_m_dialogue_session").select("content_id").eq("session_no", 1).not("coach_slides_link", "is", null).eq("delete_flg", "0").limit(50);
+    .from("com_m_dialogue_session").select("content_id").eq("session_no", 1).not("coach_slides_link", "is", null).limit(50);
   const dialogue = await prepareContent(f, 3, (dialogueSessions ?? []).map((d) => d.content_id));
 
   const { context, page } = await openCoachContext(browser, { email: p.coachEmail, password: PASSWORD });

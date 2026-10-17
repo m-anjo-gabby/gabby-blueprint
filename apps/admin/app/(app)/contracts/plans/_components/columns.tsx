@@ -5,6 +5,7 @@ import type { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { InactiveBadge } from '@/components/common/InactiveBadge';
 import type { ContractPlan } from '@gabby/types/contract';
 import { ContractPlanFormDialog } from './ContractPlanFormDialog';
 
@@ -22,7 +23,10 @@ export function createColumns(t: TableT, { onDelete }: { onDelete: (plan: Contra
       header: t('planNameHeader'),
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <span className="font-bold text-slate-700">{row.original.plan_name}</span>
+          <span className="flex items-center gap-2 font-bold text-slate-700">
+            {row.original.plan_name}
+            {!row.original.is_active && <InactiveBadge label={t('inactiveBadge')} />}
+          </span>
           <span className="text-[11px] text-slate-400">{row.original.plan_name_en}</span>
         </div>
       ),

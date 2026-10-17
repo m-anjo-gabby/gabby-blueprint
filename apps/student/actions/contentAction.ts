@@ -1,7 +1,7 @@
 "use server";
 
 import { createServerClient } from "@gabby/lib/supabase/server";
-import { ContentItem, ContentRecord, ContentTagSummary } from "@gabby/types/content";
+import { CONTENT_STATUS, ContentItem, ContentRecord, ContentTagSummary } from "@gabby/types/content";
 import { ResumeContentResponse, ResumeMetadata } from "@gabby/types/training";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
@@ -49,8 +49,7 @@ export async function getAllContent(): Promise<ContentItem[]> {
     const { data, error } = await supabase
       .from('com_m_contents')
       .select(CONTENT_SELECT)
-      .eq('delete_flg', '0')
-      .neq('content_scope', 9)
+      .eq('status', CONTENT_STATUS.PUBLISHED)
       .neq('content_type', 3)
       .order('seq_no', { ascending: true });
 
@@ -70,7 +69,7 @@ export async function getAllContent(): Promise<ContentItem[]> {
     const { data: dialogueData, error: dialogueError } = await supabase
       .from('com_m_contents')
       .select(CONTENT_SELECT)
-      .eq('delete_flg', '0')
+      .eq('status', CONTENT_STATUS.PUBLISHED)
       .in('content_id', assignments.map(a => a.content_id));
 
     if (dialogueError) {

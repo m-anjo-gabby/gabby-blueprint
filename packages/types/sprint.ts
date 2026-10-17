@@ -179,7 +179,6 @@ export interface SprintQuestion {
   last_tts_date: string | null;
   legacy_question_id: number | null;
   legacy_group_id: number | null;
-  delete_flg: string;
   insert_date: string;
   update_date: string;
 }

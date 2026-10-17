@@ -38,7 +38,7 @@ AS $$
         CASE WHEN NULLIF(btrim(p.introduction, E' \t\r\n　'), '') IS NULL THEN 'introduction' END,
         CASE WHEN NOT EXISTS (
             SELECT 1 FROM public.com_m_coach_availability a
-            WHERE a.coach_id = p.user_id AND a.delete_flg = '0'
+            WHERE a.coach_id = p.user_id
         ) THEN 'availability' END
     ], NULL)
     FROM public.com_m_coach_profile p

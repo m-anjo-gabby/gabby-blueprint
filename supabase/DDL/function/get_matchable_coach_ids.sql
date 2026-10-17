@@ -5,7 +5,7 @@
 -- 申請できるコーチのIDを返す。マッチングはチケットごとのため、対象もチケットで決まる。
 -- 呼び出した生徒（auth.uid()）のチケットでなければ何も返さない。
 --
--- 【対象コーチの定義】有効なコーチプロフィール（com_m_coach_profile.delete_flg = '0'）のうち、次をすべて満たすコーチ
+-- 【対象コーチの定義】有効なコーチ（com_m_user.status = 1）のコーチプロフィールのうち、次をすべて満たすコーチ
 --   - コーチ本人が新規の生徒を受け付けている（com_m_coach_profile.accepting_students）
 --   - アドミンが休止にしていない（com_m_coach_matching_suspension に行が無い）
 --   - プロフィールの必須項目と空き時間がそろっている（fn_coach_matching_missing_items() が空）
@@ -45,7 +45,8 @@ RETURNS TABLE (coach_id uuid) AS $$
   SELECT p.user_id
   FROM caller_ticket ct
   CROSS JOIN public.com_m_coach_profile p
-  WHERE p.delete_flg = '0'
+  JOIN public.com_m_user cu ON cu.id = p.user_id
+  WHERE cu.status = 1
     AND p.accepting_students
     AND NOT EXISTS (SELECT 1 FROM public.com_m_coach_matching_suspension s WHERE s.coach_id = p.user_id)
     AND cardinality(public.fn_coach_matching_missing_items(p.user_id)) = 0

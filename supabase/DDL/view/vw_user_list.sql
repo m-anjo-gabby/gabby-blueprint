@@ -33,11 +33,14 @@ SELECT
     ELSE 'active'
   END AS license_state,
   u.insert_date,            -- ソート等に使用する登録日時
-  -- 2026-09-30追加: アドミン管理用の契約名（CREATE OR REPLACE で列を足すため末尾に置く）
-  con.contract_name
+  -- アドミン管理用の契約名（CREATE OR REPLACE で列を足すため末尾に置く）
+  con.contract_name,
+  -- ユーザーの状態（com_m_user.status。1:有効 0:停止 9:退会済み）
+  u.status AS user_status
 FROM 
   public.com_m_user u
-  INNER JOIN auth.users au ON u.id = au.id
+  -- 退会済みのユーザーは認証のアカウントを消しているため、外部結合にして一覧に残す（email 等は NULL）
+  LEFT JOIN auth.users au ON u.id = au.id
   LEFT JOIN public.com_m_client c ON u.client_id = c.client_id
   LEFT JOIN LATERAL (
     SELECT array_agg(role_id) AS roles
@@ -87,7 +90,8 @@ SELECT
     ELSE 'inviting'                                 -- 招待中（リンク有効期間内）
   END AS license_state,
   i.insert_date,               -- 招待日時を登録日時としてマージ
-  NULL AS contract_name
+  NULL AS contract_name,
+  NULL::smallint AS user_status
 FROM 
   public.com_t_invitation i
   LEFT JOIN public.com_m_client c ON i.client_id = c.client_id

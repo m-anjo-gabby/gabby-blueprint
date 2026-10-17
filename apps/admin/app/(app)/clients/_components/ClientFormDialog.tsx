@@ -15,7 +15,8 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { createClient, updateClient } from '@/actions/adminClientAction';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { ClientRecord, ClientPayload } from '@gabby/types/client';
+import { PurgeClientSection } from './PurgeClientSection';
+import { CLIENT_STATUS, ClientRecord, ClientPayload, type ClientStatus } from '@gabby/types/client';
 
 // --- 1. スキーマ定義 ---
 type FormT = ReturnType<typeof useTranslations<'clients.form'>>;
@@ -25,6 +26,7 @@ function createClientSchema(t: FormT) {
     client_name: z.string().min(1, t('errors.nameRequired')),
     client_type: z.string().min(1, t('errors.typeRequired')),
     industry_type: z.string().min(1, t('errors.industryRequired')),
+    status: z.string(),
   });
 }
 
@@ -39,6 +41,7 @@ const DEFAULT_VALUES: ClientFormValues = {
   client_name: '',
   client_type: '1',
   industry_type: '1',
+  status: String(CLIENT_STATUS.ACTIVE),
 };
 
 /**
@@ -62,6 +65,7 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
       client_name: data.client_name,
       client_type: String(data.client_type),
       industry_type: String(data.industry_type),
+      status: String(data.status),
     };
   };
 
@@ -83,6 +87,7 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
         client_name: values.client_name,
         client_type: Number(values.client_type),
         industry_type: Number(values.industry_type),
+        status: Number(values.status) as ClientStatus,
       };
 
       let result;
@@ -218,6 +223,32 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
               )} />
             </div>
 
+            {/* 取引状態（編集時のみ。取引を終えた顧客は削除せずに取引終了にする） */}
+            {mode === 'edit' && (
+              <FormField control={form.control} name="status" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('statusLabel')}</FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                      {field.value === String(CLIENT_STATUS.ENDED) ? t('statusEnded') : t('statusActive')}
+                    </div>
+                  ) : (
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={String(CLIENT_STATUS.ACTIVE)}>{t('statusActive')}</SelectItem>
+                        <SelectItem value={String(CLIENT_STATUS.ENDED)}>{t('statusEnded')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </FormItem>
+              )} />
+            )}
+
             {/* アクションエリア */}
             <div className="pt-4 mt-6 border-t border-slate-100">
               {isConfirming ? (
@@ -258,6 +289,11 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
                 </Button>
               )}
             </div>
+
+            {/* 顧客単位の一括削除（戻せない操作。テスト・デモ・誤って作った顧客の片付け用） */}
+            {mode === 'edit' && initialData && !isConfirming && (
+              <PurgeClientSection client={initialData} onPurged={() => setOpen(false)} />
+            )}
           </form>
         </Form>
       </DialogContent>

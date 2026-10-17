@@ -221,7 +221,7 @@ export async function prepareContent(
     .select("content_id, content_name, content_scope")
     .eq("content_type", contentType)
     .in("content_scope", [0, 1])
-    .eq("delete_flg", "0")
+    .eq("status", 1)
     .not("content_name", "like", "[%");
   if (contentIds) query = query.in("content_id", contentIds);
   const { data, error } = await query.order("content_scope").order("content_name").limit(1).single();

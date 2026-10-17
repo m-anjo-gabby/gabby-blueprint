@@ -54,7 +54,7 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    SELECT user_type INTO v_user_type FROM public.com_m_user WHERE id = NEW.user_id AND delete_flg = '0';
+    SELECT user_type INTO v_user_type FROM public.com_m_user WHERE id = NEW.user_id AND status = 1;
     IF v_user_type IS NULL OR v_user_type NOT IN ('1', '2') THEN
         RETURN NULL;
     END IF;

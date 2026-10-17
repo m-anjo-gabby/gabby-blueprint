@@ -9,6 +9,7 @@ import {
   ClientRecord 
 } from '@gabby/types/client';
 import { revalidatePath } from 'next/cache';
+import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { containsPattern } from '@gabby/lib/supabase/ilike';
@@ -28,8 +29,8 @@ export async function getClientsFilter(): Promise<ClientOption[]> {
 
     const { data, error } = await supabase
       .from('com_m_client')
-      .select('client_id, client_name')
-      .eq('delete_flg', '0')
+      .select('client_id, client_name, status')
+      .order('status', { ascending: true })
       .order('client_name');
 
     if (error) {
@@ -45,7 +46,7 @@ export async function getClientsFilter(): Promise<ClientOption[]> {
 }
 
 /**
- * 顧客一覧取得（ページネーション・削除フラグ・顧客名の部分一致検索）
+ * 顧客一覧取得（ページネーション・顧客名の部分一致検索。取引終了の顧客も含む）
  */
 export async function getClients(params: ListParams): Promise<ListResult<ClientRecord>> {
   const ctx = await getLogContext();
@@ -57,7 +58,7 @@ export async function getClients(params: ListParams): Promise<ListResult<ClientR
     let query = supabase
       .from('com_m_client')
       .select('*', { count: 'exact' })
-      .eq('delete_flg', '0')
+      .order('status', { ascending: true })
       .order('insert_date', { ascending: false })
       .order('client_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
       .range(from, to);
@@ -155,7 +156,8 @@ export async function updateClient(
 }
 
 /**
- * 顧客の論理削除
+ * 顧客の削除（誤登録の取り消し）。契約・ユーザーがある顧客は外部キー（RESTRICT）で止まり、
+ * 取引の終了（status）か、DangerZone の一括削除（purgeClient）を案内する
  */
 export async function deleteClient(clientId: string): Promise<ClientResponse> {
   const ctx = await getLogContext();
@@ -164,18 +166,16 @@ export async function deleteClient(clientId: string): Promise<ClientResponse> {
 
     const { error } = await supabase
       .from('com_m_client')
-      .update({ 
-        delete_flg: '1',
-        update_date: new Date().toISOString() 
-      })
+      .delete()
       .eq('client_id', clientId);
 
     if (error) {
+      if (isInUseError(error)) return { success: false, reason: 'in_use', message: error.message };
       logger.error('client:delete_client_failed', error.message, { ...ctx, err: error, payload: { clientId } });
       return { success: false, message: error.message };
     }
 
-    logger.info('client:delete_client_success', `Client logically deleted`, { 
+    logger.info('client:delete_client_success', `Client deleted`, {  
       ...ctx,
       payload: { clientId } 
     });

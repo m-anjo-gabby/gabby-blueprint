@@ -4,6 +4,7 @@
 import { createAdminClient } from "@gabby/lib/supabase/admin";
 import { formatToJstDate, getUtcRangeFromJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from 'next/cache';
+import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
@@ -94,8 +95,7 @@ export async function getContractPlans() {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('com_m_contract_plan')
-      .select('plan_id, plan_code, plan_name, plan_name_en, contract_type, weekly_frequency, period_months, total_sessions, has_dialogue_practice, sort_no')
-      .eq('delete_flg', '0')
+      .select('plan_id, plan_code, plan_name, plan_name_en, contract_type, weekly_frequency, period_months, total_sessions, has_dialogue_practice, sort_no, is_active')
       .order('sort_no', { ascending: true });
 
     if (error) {
@@ -128,6 +128,7 @@ export async function upsertContractPlan(payload: {
   total_sessions: number | null;
   has_dialogue_practice: boolean;
   sort_no: number;
+  is_active: boolean;
 }) {
   const ctx = await getLogContext();
   try {
@@ -138,7 +139,6 @@ export async function upsertContractPlan(payload: {
       .from('com_m_contract_plan')
       .upsert({
         ...payload,
-        delete_flg: '0',
         update_date: new Date().toISOString(),
       })
       .select()
@@ -164,9 +164,8 @@ export async function upsertContractPlan(payload: {
 }
 
 /**
- * 契約プランの論理削除（プランマスタ管理画面用）
- * 既存契約からの参照(plan_id)はそのまま残るため、過去に選択済みの契約には影響しない
- * （選択肢に表示されなくなるだけ）。
+ * 契約プランの削除（誤登録の取り消し。プランマスタ管理画面用）
+ * 契約で使われているプランは外部キー（RESTRICT）で止まり、販売終了（is_active = false）にするよう案内する。
  */
 export async function deleteContractPlan(planId: string) {
   const ctx = await getLogContext();
@@ -174,15 +173,16 @@ export async function deleteContractPlan(planId: string) {
     const supabase = createAdminClient();
     const { error } = await supabase
       .from('com_m_contract_plan')
-      .update({ delete_flg: '1', update_date: new Date().toISOString() })
+      .delete()
       .eq('plan_id', planId);
 
     if (error) {
+      if (isInUseError(error)) return { success: false, reason: 'in_use' as const, message: error.message };
       logger.error('contract:delete_contract_plan_failed', error.message, { ...ctx, err: error, payload: { planId } });
       return { success: false, message: error.message };
     }
 
-    logger.info('contract:delete_contract_plan_success', 'Contract plan logically deleted', { ...ctx, payload: { planId } });
+    logger.info('contract:delete_contract_plan_success', 'Contract plan deleted', { ...ctx, payload: { planId } });
 
     revalidatePath('/contracts/plans');
     revalidatePath('/contracts');

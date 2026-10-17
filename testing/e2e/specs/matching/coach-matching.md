@@ -19,7 +19,7 @@
 ## 前提条件
 
 - 生徒: 有効なライブ付き契約のライセンスとチケット（`com_t_user_session_ticket`。`weekly_frequency` がコマ数）。開始前の次の契約でも申請できる。
-- コーチ: 有効なコーチプロフィール（`com_m_coach_profile.delete_flg = '0'`）で、アイコンとプロフィールの必須6項目（紹介ビデオは任意）と1件以上の空き時間がそろい（`fn_coach_matching_missing_items`）、本人が新規の生徒を受け付けていて（`accepting_students`）、アドミンが休止にしていない（`com_m_coach_matching_suspension`）。デモコーチ（`demo_user`）はデモの生徒にだけ対象になる。プランが Webトライアル（`WEB_TRIAL`）のチケットでは「Webトライアル担当」（`web_trial_coach`）のコーチだけが対象（担当のコーチは通常のチケットでも対象）。判定はチケットごと（`get_matchable_coach_ids(p_ticket_id)`）。テスト用のコーチは `testing/helpers/coach-matching-profile.ts` で必須項目を埋める。
+- コーチ: 有効なコーチ（`com_m_user.status = 1`）で、アイコンとプロフィールの必須6項目（紹介ビデオは任意）と1件以上の空き時間がそろい（`fn_coach_matching_missing_items`）、本人が新規の生徒を受け付けていて（`accepting_students`）、アドミンが休止にしていない（`com_m_coach_matching_suspension`）。デモコーチ（`demo_user`）はデモの生徒にだけ対象になる。プランが Webトライアル（`WEB_TRIAL`）のチケットでは「Webトライアル担当」（`web_trial_coach`）のコーチだけが対象（担当のコーチは通常のチケットでも対象）。判定はチケットごと（`get_matchable_coach_ids(p_ticket_id)`）。テスト用のコーチは `testing/helpers/coach-matching-profile.ts` で必須項目を埋める。
 - アカウント: 申請〜承認はデータを作るため、使い捨ての生徒・コーチを都度作る（[FIXTURES.md](../../../FIXTURES.md)「アカウントの種類と使い分け」）。固定アカウントは閲覧の確認だけに使う。
 
 ## 時刻の基準

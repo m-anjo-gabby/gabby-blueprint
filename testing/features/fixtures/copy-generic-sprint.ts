@@ -5,7 +5,7 @@
  *
  * 移植するもの（ID は移植元と同じ。既にある行・ファイルはそのまま残す＝冪等）:
  *   - 教材（com_m_contents）
- *   - 問題（com_m_sprint_questions。削除済み delete_flg='1' の行も含めて同じ状態で写す）
+ *   - 問題（com_m_sprint_questions）
  *   - 問題の音声ファイル（Storage の audio バケット。*_voice 列のパス）
  * 移植しないもの: 顧客ごとのアクセス権（com_m_contents_access）。固定アカウントの顧客へは各投入スクリプトが付与する。
  *

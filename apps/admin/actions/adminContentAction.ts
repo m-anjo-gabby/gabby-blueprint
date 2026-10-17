@@ -3,6 +3,8 @@
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { CONTENT_TYPES, Content, ContentRecord, ContentTagSummary } from '@gabby/types/content';
+import { isInUseError } from '@gabby/lib/supabase/pgErrors';
+import { CLIENT_STATUS } from '@gabby/types/client';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
@@ -41,8 +43,6 @@ export async function getContents(params: ListParams<'type'>): Promise<ListResul
           )
         )
       `, { count: 'exact' })
-      .eq('delete_flg', '0')
-      .eq('access.delete_flg', '0')
       .order('content_type', { ascending: true })
       // ダイアログ教材はセット分類ごとにseq_noを振り直しているため、分類単位でまとめて並べる（他種別はNULL）
       .order('category_id', { ascending: true, nullsFirst: false })
@@ -95,7 +95,6 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
       .from('com_m_contents')
       .select('*')
       .eq('content_id', contentId)
-      .eq('delete_flg', '0')
       .single();
 
     if (error) {
@@ -189,7 +188,8 @@ export async function upsertContent(payload: Partial<Content>) {
 }
 
 /**
- * 教材の論理削除
+ * 教材の削除（誤登録の取り消し）。学習の履歴・割当がある教材は外部キー（RESTRICT）で止まり、
+ * 非公開（status = 0）にするよう案内する
  */
 export async function deleteContent(contentId: string) {
   const ctx = await getLogContext();
@@ -198,18 +198,16 @@ export async function deleteContent(contentId: string) {
 
     const { error } = await supabase
       .from('com_m_contents')
-      .update({ 
-        delete_flg: '1',
-        update_date: new Date().toISOString() 
-      })
+      .delete()
       .eq('content_id', contentId);
 
     if (error) {
+      if (isInUseError(error)) return { success: false, reason: 'in_use' as const, message: error.message };
       logger.error('content:delete_content_failed', error.message, { ...ctx, err: error, payload: { contentId } });
       return { success: false, message: error.message };
     }
 
-    logger.info('content:delete_content_success', `Content logically deleted`, { 
+    logger.info('content:delete_content_success', `Content deleted`, {  
       ...ctx,
       payload: { contentId } 
     });
@@ -233,7 +231,6 @@ export async function getTagAssignmentData(contentId: string) {
     const { data: allTags, error: tagError } = await supabase
       .from('com_m_contents_tag')
       .select('tag_id, tag_name, tag_type, seq_no')
-      .eq('delete_flg', '0')
       .order('seq_no', { ascending: true });
 
     if (tagError) {
@@ -344,7 +341,7 @@ export async function getContentAccessData(contentId: string) {
     const { data: allClients, error: clientError } = await supabase
       .from('com_m_client')
       .select('client_id, client_name')
-      .eq('delete_flg', '0')
+      .eq('status', CLIENT_STATUS.ACTIVE)
       .order('client_name', { ascending: true });
 
     if (clientError) {
@@ -355,8 +352,7 @@ export async function getContentAccessData(contentId: string) {
     const { data: accessData, error: accessError } = await supabase
       .from('com_m_contents_access')
       .select('client_id')
-      .eq('content_id', contentId)
-      .eq('delete_flg', '0');
+      .eq('content_id', contentId);
 
     if (accessError) {
       logger.error('content:get_content_access_data_failed', accessError.message, { ...ctx, err: accessError, payload: { contentId } });

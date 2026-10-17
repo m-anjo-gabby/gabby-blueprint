@@ -19,11 +19,11 @@
 -- @schema public.com_t_coach_monthly_report_approval
 CREATE TABLE public.com_t_coach_monthly_report_approval (
     approval_id              uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id),
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     report_month             date         NOT NULL,
     status                   smallint     NOT NULL DEFAULT 1,
     session_count_snapshot   jsonb,
-    approved_by              uuid         REFERENCES public.com_m_user(id),
+    approved_by              uuid         REFERENCES public.com_m_user(id) ON DELETE SET NULL,
     approved_at              timestamp with time zone,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),

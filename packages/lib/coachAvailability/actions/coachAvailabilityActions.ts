@@ -35,7 +35,6 @@ export async function getMyAvailabilityCore(): Promise<GetCoachAvailabilityResul
       .from('com_m_coach_availability')
       .select('*')
       .eq('coach_id', user.id)
-      .eq('delete_flg', '0')
       .order('day_of_week', { ascending: true })
       .order('start_time', { ascending: true });
 
@@ -64,7 +63,6 @@ export async function getCoachAvailabilityByUserIdCore(coachId: string): Promise
       .from('com_m_coach_availability')
       .select('*')
       .eq('coach_id', coachId)
-      .eq('delete_flg', '0')
       .order('day_of_week', { ascending: true })
       .order('start_time', { ascending: true });
 
@@ -125,7 +123,7 @@ export async function addAvailabilityCore(values: CoachAvailabilityFormValues): 
 }
 
 /**
- * ログイン中コーチ自身の空き時間を1件削除する（論理削除。ポータル共通）
+ * ログイン中コーチ自身の空き時間を1件削除する（ポータル共通）
  */
 export async function deleteAvailabilityCore(availabilityId: string): Promise<DeleteCoachAvailabilityResult> {
   const ctx = await getLogContext();
@@ -137,7 +135,7 @@ export async function deleteAvailabilityCore(availabilityId: string): Promise<De
 
     const { error } = await supabase
       .from('com_m_coach_availability')
-      .update({ delete_flg: '1', update_date: new Date().toISOString() })
+      .delete()
       .eq('availability_id', availabilityId)
       .eq('coach_id', user.id);
 

@@ -20,8 +20,8 @@
 -- @schema public.com_m_coach_student_relationship
 CREATE TABLE public.com_m_coach_student_relationship (
     relationship_id          uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id),
-    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id),
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     is_active                boolean      NOT NULL DEFAULT true,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),

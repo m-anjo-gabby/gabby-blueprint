@@ -68,7 +68,6 @@ export interface CoachProfileRecord {
   intro_video_path: string | null; // 紹介ビデオのStorageパス（profileバケット内）
   zoom_meeting_url: string | null; // ライブセッション用の固定ビデオ通話URL（生徒への公開範囲はUI側で制御。公開プロフィールの一部としては扱わない）
   accepting_students: boolean; // 新規の生徒の受付（コーチ本人が切り替える。false の間は生徒のコーチ選択に出さない）
-  delete_flg: string;
   insert_date: string;
   update_date: string;
 }

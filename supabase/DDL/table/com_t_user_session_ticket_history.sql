@@ -10,8 +10,8 @@
 CREATE TABLE public.com_t_user_session_ticket_history (
     history_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     ticket_id                uuid         NOT NULL,
-    contract_id              uuid         REFERENCES public.com_m_contract(contract_id),
-    user_id                  uuid         REFERENCES public.com_m_user(id),
+    contract_id              uuid         REFERENCES public.com_m_contract(contract_id) ON DELETE RESTRICT,
+    user_id                  uuid         REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     action                   text         NOT NULL,
     sessions_delta           smallint     NOT NULL,
     used_sessions_after      smallint     NOT NULL,

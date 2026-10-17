@@ -227,7 +227,9 @@
       "actions": "Actions",
       "searchPlaceholder": "Enter search term...",
       "noData": "No data found.",
-      "allUserTypes": "All types"
+      "allUserTypes": "All types",
+      "statusWithdrawn": "Withdrawn",
+      "statusSuspended": "Suspended"
     },
     "detail": {
       "backToList": "Back to users",
@@ -252,7 +254,37 @@
         "userId": "User ID",
         "copyId": "Copy user ID",
         "lastSignIn": "Last sign-in",
-        "neverSignedIn": "Never signed in"
+        "neverSignedIn": "Never signed in",
+        "accountActionsTitle": "Account actions"
+      },
+      "account": {
+        "activeNote": "Active. Suspending blocks sign-in (data is kept and the account can be resumed).",
+        "suspendedNote": "Suspended. The user cannot sign in.",
+        "withdrawnNote": "Withdrawn. Personal data has been erased; only session and learning records remain as \"Deleted user\".",
+        "suspend": "Suspend",
+        "resume": "Resume",
+        "suspendConfirmTitle": "Suspend this user?",
+        "suspendConfirmBody": "The user will no longer be able to sign in. Licenses and schedules are kept (stop the license or cancel sessions separately if needed).",
+        "toastSuspended": "User suspended",
+        "toastResumed": "User resumed",
+        "toastWithdrawn": "Withdrawal completed",
+        "toastFailed": "The operation failed",
+        "withdrawTitle": "Withdraw (erase personal data)",
+        "withdrawDescription": "Handles a deletion request under the Terms of Use. This cannot be undone.",
+        "withdraw": "Withdraw",
+        "withdrawConfirmTitle": "Withdraw this user? (cannot be undone)",
+        "withdrawConfirmLead": "This erases the user's personal data and deletes the sign-in account.",
+        "withdrawErased": "Erased: name, email, legal name, profile image, coach profile, favorites, notifications, mail records, homework, coach notes",
+        "withdrawKept": "Kept (as \"Deleted user\"): sessions, tickets, licenses, ratings, training reports, learning records, chat messages",
+        "withdrawPrecondition": "If the user has an active license, upcoming sessions, pending requests or an active schedule, stop or cancel them first.",
+        "withdrawInputLabel": "To confirm, type the user's display name",
+        "withdrawErrors": {
+          "active_license": "The user has an active license. Stop the license first",
+          "scheduled_session": "The user has upcoming sessions. Cancel them first",
+          "active_matching": "The user has a pending request or an active schedule. End it first",
+          "name_mismatch": "The display name does not match",
+          "forbidden": "Only system administrators can do this"
+        }
       }
     },
     "form": {
@@ -584,7 +616,8 @@
       "industryNotSet": "Not set",
       "registeredDateHeader": "Registered",
       "searchPlaceholder": "Search by client name...",
-      "noData": "No client data found."
+      "noData": "No client data found.",
+      "endedBadge": "Ended"
     },
     "form": {
       "createButton": "Add client",
@@ -615,7 +648,41 @@
       "toastCreated": "Client registered",
       "toastUpdated": "Client updated",
       "toastGenericFailed": "The operation failed",
-      "toastSystemError": "A system error occurred"
+      "toastSystemError": "A system error occurred",
+      "statusLabel": "Status",
+      "statusActive": "Active",
+      "statusEnded": "Ended"
+    },
+    "purge": {
+      "title": "Delete client (with all related data)",
+      "description": "Deletes a test, demo or mistakenly created client together with its users, contracts and records. This cannot be undone.",
+      "button": "Delete client",
+      "confirmTitle": "Delete this client and all its data? (cannot be undone)",
+      "confirmLead": "The following data will be deleted.",
+      "confirmNote": "To end business with a real client, set its status to \"Ended\" instead of deleting it.",
+      "inputLabel": "To confirm, type the client name",
+      "toastPurged": "Client deleted",
+      "counts": {
+        "students": "Students",
+        "coaches": "Coaches",
+        "invitations": "Pending invitations",
+        "contracts": "Contracts",
+        "licenses": "Licenses",
+        "sessions": "Sessions",
+        "trainings": "Learning records",
+        "chat_messages": "Chat messages",
+        "notices": "Notices",
+        "calendar_events": "Events"
+      },
+      "errors": {
+        "protected_client": "This client (initial tenant / Web trial) cannot be deleted",
+        "has_admin": "An administrator belongs to this client, so it cannot be deleted",
+        "linked_to_other_client": "It has sessions or assignments with users of other clients, so it cannot be deleted",
+        "client_not_found": "Client not found",
+        "forbidden": "Only system administrators can do this",
+        "name_mismatch": "The client name does not match",
+        "unexpected": "Failed to delete"
+      }
     }
   },
   "timezones": {
@@ -631,12 +698,14 @@
       "currentTimeHeader": "Current Local Time",
       "actionsHeader": "Actions",
       "deleteDialogTitle": "Delete Timezone",
-      "deleteDialogBody": "Are you sure you want to delete \"<bold>{name}</bold>\"? This will not affect users who already have this timezone set, but it will no longer appear as an option.",
+      "deleteDialogBody": "Are you sure you want to delete \"<bold>{name}</bold>\"? This cannot be undone. A timezone in use cannot be deleted; turn off \"Active\" instead.",
       "deleteConfirm": "Delete",
       "searchPlaceholder": "Search by timezone name or display name...",
       "noData": "No timezone data found.",
       "toastDeleted": "Timezone deleted",
-      "toastDeleteFailed": "Failed to delete"
+      "toastDeleteFailed": "Failed to delete",
+      "inactiveBadge": "Inactive",
+      "toastInUse": "This timezone is in use and cannot be deleted. Turn off \"Active\" instead"
     },
     "form": {
       "createButton": "Add timezone",
@@ -676,7 +745,10 @@
       "toastCreated": "Timezone registered",
       "toastUpdated": "Timezone updated",
       "toastGenericFailed": "The operation failed",
-      "toastSystemError": "A system error occurred"
+      "toastSystemError": "A system error occurred",
+      "isActiveLabel": "Active",
+      "isActiveOn": "Shown in the timezone options",
+      "isActiveOff": "Inactive. Not shown in the options (users who already use it keep it)"
     }
   },
   "terms": {
@@ -1282,7 +1354,8 @@
       "allTypes": "All types",
       "allStatuses": "All statuses",
       "toastDeleted": "Calendar event deleted.",
-      "toastDeleteFailed": "Failed to delete the calendar event."
+      "toastDeleteFailed": "Failed to delete the calendar event.",
+      "toastDeleteHeld": "Events that have already taken place cannot be deleted. Unpublish it instead to keep the attendance records"
     },
     "formDialog": {
       "createButton": "Add event",
@@ -1702,10 +1775,12 @@
         "searchPlaceholder": "Search by plan name or code...",
         "noData": "No plan data found.",
         "deleteDialogTitle": "Delete Plan",
-        "deleteDialogBody": "Are you sure you want to delete plan \"<bold>{name}</bold>\"? This will not affect contracts already created with this plan (it will simply no longer appear as an option).",
+        "deleteDialogBody": "Are you sure you want to delete \"<bold>{name}</bold>\"? This cannot be undone. A plan used by contracts cannot be deleted; turn off \"On sale\" instead.",
         "deleteConfirm": "Delete",
         "toastDeleted": "Plan deleted",
-        "toastDeleteFailed": "Failed to delete"
+        "toastDeleteFailed": "Failed to delete",
+        "inactiveBadge": "Discontinued",
+        "toastInUse": "This plan is used by contracts and cannot be deleted. Turn off \"On sale\" instead"
       },
       "formDialog": {
         "createButton": "Add plan",
@@ -1751,7 +1826,10 @@
         "toastCreated": "Plan registered",
         "toastUpdated": "Plan updated",
         "toastGenericFailed": "The operation failed",
-        "toastSystemError": "A system error occurred"
+        "toastSystemError": "A system error occurred",
+        "isActiveLabel": "On sale",
+        "isActiveOn": "Shown in the plan options when creating a contract",
+        "isActiveOff": "Discontinued. Not shown in the options (existing contracts are not affected)"
       }
     }
   },
@@ -1968,7 +2046,8 @@
         "word": "Edit Words",
         "sprint": "Edit Questions",
         "dialogue": "Edit Sessions"
-      }
+      },
+      "unpublishedBadge": "Unpublished"
     },
     "formDialog": {
       "createButton": "Add New",
@@ -2024,7 +2103,10 @@
         "sprintThemeRequired": "Please enter a theme for the Corpus Sprint",
         "sprintSupportRequired": "Please enable at least one question type",
         "dialogueCategoryRequired": "Please select a set category"
-      }
+      },
+      "statusLabel": "Visibility",
+      "statusPublished": "Published",
+      "statusUnpublished": "Unpublished"
     },
     "accessDialog": {
       "toastFetchFailed": "Failed to fetch data",
@@ -2339,7 +2421,8 @@
           "deleteDialogTitle": "Delete this session?",
           "deleteDialogHint": "This action cannot be undone.",
           "cancelButton": "Cancel",
-          "deleteConfirmButton": "Delete"
+          "deleteConfirmButton": "Delete",
+          "deleteInUse": "This session has progress or dialogue records and cannot be deleted"
         },
         "sessionFormDialog": {
           "createButton": "Add Session",

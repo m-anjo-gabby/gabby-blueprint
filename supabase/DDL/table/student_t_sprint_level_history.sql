@@ -38,7 +38,7 @@ CREATE TABLE public.student_t_sprint_level_history (
     effective_at             timestamp with time zone NOT NULL,
     changed_by               uuid,
     voided_at                timestamp with time zone,
-    voided_by_history_id     bigint       REFERENCES public.student_t_sprint_level_history(history_id),
+    voided_by_history_id     bigint       REFERENCES public.student_t_sprint_level_history(history_id) ON DELETE SET NULL,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT chk_sprint_level_history_change_kind CHECK (change_kind = ANY (ARRAY[0, 1, 2])),
     CONSTRAINT chk_sprint_level_history_question_type CHECK (question_type = ANY (ARRAY[0, 4, 5, 6]))

@@ -54,7 +54,7 @@ test("期間は日本時間で区切り、各実績は生徒のタイムゾー�
   });
   await grantAppLicense(f, studentId, { start: new Date("2026-08-31T15:00:00Z"), end: new Date("2026-11-30T14:59:59.999Z") });
 
-  const { data: sprint } = await admin.from("com_m_contents").select("content_id").eq("content_type", 2).eq("delete_flg", "0").limit(1).single();
+  const { data: sprint } = await admin.from("com_m_contents").select("content_id").eq("content_type", 2).eq("status", 1).limit(1).single();
   if (!sprint) throw new Error("スプリントの教材が見つかりません");
   const { error: sprintError } = await admin.from("self_t_sprint").insert({
     user_id: studentId, sprint_type: "0", content_id: sprint.content_id, question_type: "0", answer_type: "0",

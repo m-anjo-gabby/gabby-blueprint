@@ -4,6 +4,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import type { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { InactiveBadge } from '@/components/common/InactiveBadge';
 import type { TimezoneMaster } from '@gabby/types/timezone';
 import { TimezoneFormDialog } from './TimezoneFormDialog';
 import { CurrentTimeCell } from './CurrentTimeCell';
@@ -33,7 +34,10 @@ export function createColumns(t: TableT, { locale, onDelete }: ColumnOptions): C
             : [row.original.display_name_ja, row.original.display_name_en];
         return (
           <div className="flex flex-col">
-            <span className="font-bold text-slate-700">{primary}</span>
+            <span className="flex items-center gap-2 font-bold text-slate-700">
+              {primary}
+              {!row.original.is_active && <InactiveBadge label={t('inactiveBadge')} />}
+            </span>
             <span className="text-xs text-slate-500">{secondary}</span>
           </div>
         );

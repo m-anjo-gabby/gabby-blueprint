@@ -11,6 +11,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertTimezone } from '@/actions/adminTimezoneAction';
+import { ActiveSwitchField } from '@/components/common/ActiveSwitchField';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { TimezoneMaster } from '@gabby/types/timezone';
@@ -30,6 +31,7 @@ function createTimezoneSchema(t: FormT) {
     short_name_ja: z.string().min(1, t('errors.shortNameJaRequired')),
     short_name_en: z.string().min(1, t('errors.shortNameEnRequired')),
     sort_no: z.string().min(1, t('errors.sortNoRequired')),
+    is_active: z.boolean(),
   });
 }
 
@@ -42,7 +44,7 @@ const NAME_FIELDS = [
   { name: 'short_name_ja', labelKey: 'shortNameJaLabel', placeholderKey: 'shortNameJaPlaceholder', hintKey: 'shortNameHint' },
   { name: 'short_name_en', labelKey: 'shortNameEnLabel', placeholderKey: 'shortNameEnPlaceholder', hintKey: null },
 ] as const satisfies ReadonlyArray<{
-  name: Exclude<keyof TimezoneFormValues, 'timezone' | 'sort_no'>;
+  name: Exclude<keyof TimezoneFormValues, 'timezone' | 'sort_no' | 'is_active'>;
   labelKey: Parameters<FormT>[0];
   placeholderKey: Parameters<FormT>[0];
   hintKey: Parameters<FormT>[0] | null;
@@ -60,6 +62,7 @@ const DEFAULT_VALUES: TimezoneFormValues = {
   short_name_ja: '',
   short_name_en: '',
   sort_no: '1',
+  is_active: true,
 };
 
 /**
@@ -84,6 +87,7 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
       short_name_ja: data.short_name_ja,
       short_name_en: data.short_name_en,
       sort_no: String(data.sort_no),
+      is_active: data.is_active,
     };
   };
 
@@ -107,7 +111,7 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
         short_name_ja: values.short_name_ja,
         short_name_en: values.short_name_en,
         sort_no: Number(values.sort_no),
-        delete_flg: '0',
+        is_active: values.is_active,
       };
 
       const result = await upsertTimezone(payload);
@@ -227,6 +231,16 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
                 <FormMessage />
               </FormItem>
             )} />
+
+            {/* --- 使用中（使わなくなったタイムゾーンは削除せずにオフにする） --- */}
+            <ActiveSwitchField
+              control={form.control}
+              name="is_active"
+              label={t('isActiveLabel')}
+              onText={t('isActiveOn')}
+              offText={t('isActiveOff')}
+              readOnly={isConfirming}
+            />
 
             {/* --- アクションエリア --- */}
             <div className="pt-4 mt-6 border-t border-slate-100">

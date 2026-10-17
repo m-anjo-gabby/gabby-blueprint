@@ -45,7 +45,7 @@ BEGIN
            r.session_id::text || ':' || r.lead_key,
            jsonb_build_object('session_id', r.session_id, 'lead', r.lead_key)
     FROM recipients r
-    JOIN public.com_m_user u ON u.id = r.user_id AND u.delete_flg = '0'
+    JOIN public.com_m_user u ON u.id = r.user_id AND u.status = 1
     ON CONFLICT (user_id, mail_type, dedup_key) DO NOTHING;
 
     GET DIAGNOSTICS v_count = ROW_COUNT;

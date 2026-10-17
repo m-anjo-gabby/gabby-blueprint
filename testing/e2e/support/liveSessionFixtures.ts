@@ -149,7 +149,7 @@ export async function prepareLiveSessionDay(
   if (callLogError) throw new Error(`入退室ログの作成に失敗しました: ${callLogError.message}`);
 
   const { data: sprintContent } = await admin
-    .from("com_m_contents").select("content_id").eq("content_type", 2).eq("delete_flg", "0").limit(1).single();
+    .from("com_m_contents").select("content_id").eq("content_type", 2).eq("status", 1).limit(1).single();
   const isoDate = (t: number) => new Date(t).toISOString().slice(0, 10);
   const { error: summaryError } = await admin.from("self_t_sprint_summary").insert([
     { user_id: pair.studentId, content_id: sprintContent!.content_id, training_date: isoDate(now), question_count: 12, assessment_count: 5 },

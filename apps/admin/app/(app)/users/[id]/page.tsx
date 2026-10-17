@@ -7,11 +7,12 @@ import { formatToJstDateTime } from '@gabby/lib/date/date';
 import { USER_TYPES } from '@gabby/types/user';
 import { LicenseFormDialog } from '../_components/LicenseFormDialog';
 import { LicenseSummary } from '../_components/LicenseSummary';
-import { isRegisteredUser } from '../_lib/userSchema';
+import { canManageAccount, isRegisteredUser } from '../_lib/userSchema';
 import { requireUserForTab } from './_lib/userDetail';
 import { BASIC_TAB_GRID, DetailSection } from './_components/DetailSection';
 import { UserBasicInfoForm } from './_components/UserBasicInfoForm';
 import { UserIdField } from './_components/UserIdField';
+import { UserAccountActions } from './_components/UserAccountActions';
 
 /** ユーザー詳細の基本情報タブ（基本情報の編集・ライセンス・アカウント） */
 export default async function UserBasicTabPage({ params }: { params: Promise<{ id: string }> }) {
@@ -65,6 +66,12 @@ export default async function UserBasicTabPage({ params }: { params: Promise<{ i
             </div>
           </dl>
         </DetailSection>
+
+        {canManageAccount(user) && (
+          <DetailSection title={t('accountActionsTitle')}>
+            <UserAccountActions user={user} />
+          </DetailSection>
+        )}
       </div>
     </div>
   );

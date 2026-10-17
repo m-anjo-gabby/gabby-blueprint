@@ -23,7 +23,6 @@ export async function getSprintQuestionsByFilter(contentId: string, type: Sprint
       .eq('content_id', contentId)
       .eq('question_type', type)
       .eq('difficulty_level', level)
-      .eq('delete_flg', '0')
       .order('group_id', { ascending: true })
       .order('seq_no', { ascending: true });
 
@@ -89,7 +88,6 @@ export async function bulkUpsertSprintQuestions(questions: Partial<SprintQuestio
         ...rest,
         update_date: now,
         ...(q.question_id ? {} : { insert_date: now }),
-        delete_flg: '0'
       };
     });
 
@@ -112,7 +110,8 @@ export async function bulkUpsertSprintQuestions(questions: Partial<SprintQuestio
 }
 
 /**
- * スプリント問題の論理削除
+ * スプリント問題の削除（検証・誤登録の片付け用。お気に入りも一緒に消える。
+ * 回答の履歴（JSON）は問題IDだけを持つため残り、画面では「削除された問題」と表示する）
  */
 export async function deleteSprintQuestion(questionId: string) {
   const ctx = await getLogContext();
@@ -120,7 +119,7 @@ export async function deleteSprintQuestion(questionId: string) {
     const supabase = await createAdminClient();
     const { error } = await supabase
       .from('com_m_sprint_questions')
-      .update({ delete_flg: '1', update_date: new Date().toISOString() })
+      .delete()
       .eq('question_id', questionId);
 
     if (error) throw error;
@@ -253,8 +252,7 @@ export async function moveSprintQuestionsLevel(
       .select('question_id, difficulty_level, seq_no')
       .in('question_id', questionIds)
       .eq('content_id', contentId)
-      .eq('question_type', type)
-      .eq('delete_flg', '0');
+      .eq('question_type', type);
 
     if (fetchError) throw fetchError;
     const fromLevels = new Set((sources ?? []).map((q) => q.difficulty_level));
@@ -274,7 +272,6 @@ export async function moveSprintQuestionsLevel(
         .eq('content_id', contentId)
         .eq('question_type', type)
         .eq('difficulty_level', toLevel)
-        .eq('delete_flg', '0')
         .order('seq_no', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -355,7 +352,6 @@ export async function bulkImportSprintQuestions(
       difficulty_level: level,
       insert_date: now,
       update_date: now,
-      delete_flg: '0'
     }));
 
     if (dataToInsert.length > 0) {

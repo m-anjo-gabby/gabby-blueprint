@@ -3,7 +3,7 @@
 import { createAdminClient } from "@gabby/lib/supabase/admin";
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { USER_TYPES } from "@gabby/types/user";
+import { USER_STATUS, USER_TYPES } from "@gabby/types/user";
 
 const logger = createLogger('admin');
 
@@ -39,7 +39,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
     // 対象ユーザーが「生徒」または「コーチ」であることを確認する（管理者への代理ログインは対象外）
     const { data: targetUser, error: targetUserError } = await supabase
       .from('com_m_user')
-      .select('id, user_type, user_name, delete_flg')
+      .select('id, user_type, user_name, status')
       .eq('id', targetUserId)
       .maybeSingle();
 
@@ -49,7 +49,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
     }
 
     const isImpersonatableType = targetUser.user_type === USER_TYPES.STUDENT || targetUser.user_type === USER_TYPES.COACH;
-    if (!isImpersonatableType || targetUser.delete_flg !== '0') {
+    if (!isImpersonatableType || targetUser.status !== USER_STATUS.ACTIVE) {
       return { success: false, message: '生徒・コーチアカウントのみ代理ログインできます' };
     }
 

@@ -33,7 +33,7 @@ CREATE TABLE public.com_t_session_slot_proposal (
     reason                   text,
     reject_reason            text,
     responded_at             timestamp with time zone,
-    resulting_session_id     uuid         REFERENCES public.com_t_session(session_id),
+    resulting_session_id     uuid         REFERENCES public.com_t_session(session_id) ON DELETE SET NULL,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT chk_slot_proposal_booking_role CHECK (source_session_id IS NOT NULL OR proposed_by_role = 1),

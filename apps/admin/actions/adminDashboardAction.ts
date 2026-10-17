@@ -4,6 +4,8 @@
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { CLIENT_STATUS } from '@gabby/types/client';
+import { CONTENT_STATUS } from '@gabby/types/content';
 
 const logger = createLogger('admin');
 
@@ -50,7 +52,7 @@ async function getClientsSummary(supabase: ReturnType<typeof createAdminClient>,
     const { count: totalCount, error: totalError } = await supabase
       .from('com_m_client')
       .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0');
+      .eq('status', CLIENT_STATUS.ACTIVE);
 
     if (totalError) throw totalError;
 
@@ -140,16 +142,14 @@ async function getContentsSummary(supabase: ReturnType<typeof createAdminClient>
   try {
     const { count: totalCount, error: totalError } = await supabase
       .from('com_m_contents')
-      .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0');
+      .select('*', { count: 'exact', head: true });
 
     if (totalError) throw totalError;
 
     const { count: privateCount, error: privateError } = await supabase
       .from('com_m_contents')
       .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0')
-      .eq('content_scope', 9);
+      .eq('status', CONTENT_STATUS.UNPUBLISHED);
 
     if (privateError) throw privateError;
 
@@ -170,7 +170,6 @@ async function getNoticeSummary(supabase: ReturnType<typeof createAdminClient>, 
     const { count: publishedCount, error: publishedError } = await supabase
       .from('com_m_notice')
       .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0')
       .eq('is_published', true);
 
     if (publishedError) throw publishedError;
@@ -178,7 +177,6 @@ async function getNoticeSummary(supabase: ReturnType<typeof createAdminClient>, 
     const { count: draftCount, error: draftError } = await supabase
       .from('com_m_notice')
       .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0')
       .eq('is_published', false);
 
     if (draftError) throw draftError;
@@ -186,7 +184,6 @@ async function getNoticeSummary(supabase: ReturnType<typeof createAdminClient>, 
     const { count: expiredButPublishedCount, error: expiredError } = await supabase
       .from('com_m_notice')
       .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0')
       .eq('is_published', true)
       .lt('expired_at', nowIso);
 

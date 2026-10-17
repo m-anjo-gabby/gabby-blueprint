@@ -23,11 +23,11 @@ export const groupSessionReminderHandler: MailHandler = async ({ admin, row, rec
 
   const { data: event, error } = await admin
     .from('com_m_calendar_event')
-    .select('title, description, start_datetime, end_datetime, location_url, is_published, delete_flg, series:com_m_calendar_event_series(title)')
+    .select('title, description, start_datetime, end_datetime, location_url, is_published, series:com_m_calendar_event_series(title)')
     .eq('calendar_event_id', calendarEventId)
     .maybeSingle();
   if (error) throw new Error(`event_fetch_failed: ${error.message}`);
-  if (!event || !event.is_published || event.delete_flg !== '0') return { skip: 'event_unavailable' };
+  if (!event || !event.is_published) return { skip: 'event_unavailable' };
   if (new Date(event.start_datetime).getTime() <= nowMs) return { skip: 'event_started' };
 
   const [{ count: participantCount, error: pErr }, { count: coachCount, error: cErr }] = await Promise.all([

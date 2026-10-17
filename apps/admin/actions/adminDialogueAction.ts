@@ -3,6 +3,7 @@
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { DialogueSession } from '@gabby/types/dialogue';
+import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 
@@ -20,7 +21,6 @@ export async function getDialogueSessions(contentId: string): Promise<DialogueSe
       .from('com_m_dialogue_session')
       .select('*')
       .eq('content_id', contentId)
-      .eq('delete_flg', '0')
       .order('session_no', { ascending: true });
 
     if (error) {
@@ -107,7 +107,8 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
 }
 
 /**
- * ダイアログプラクティス セッション明細の論理削除
+ * ダイアログプラクティス セッション明細の削除（誤登録の取り消し）。
+ * 進捗・会話ログがあるセッションは外部キー（RESTRICT）で止まる
  */
 export async function deleteDialogueSession(dialogueSessionId: string, contentId: string) {
   const ctx = await getLogContext();
@@ -116,18 +117,16 @@ export async function deleteDialogueSession(dialogueSessionId: string, contentId
 
     const { error } = await supabase
       .from('com_m_dialogue_session')
-      .update({
-        delete_flg: '1',
-        update_date: new Date().toISOString(),
-      })
+      .delete()
       .eq('dialogue_session_id', dialogueSessionId);
 
     if (error) {
+      if (isInUseError(error)) return { success: false, reason: 'in_use' as const, message: error.message };
       logger.error('dialogue:delete_session_failed', error.message, { ...ctx, err: error, payload: { dialogueSessionId } });
       return { success: false, message: error.message };
     }
 
-    logger.info('dialogue:delete_session_success', 'Dialogue session logically deleted', { ...ctx, payload: { dialogueSessionId } });
+    logger.info('dialogue:delete_session_success', 'Dialogue session deleted', { ...ctx, payload: { dialogueSessionId } });
 
     revalidatePath(`/contents/${contentId}`);
     return { success: true };

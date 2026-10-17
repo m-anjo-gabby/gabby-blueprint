@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { useTranslations } from 'next-intl';
-import { ArrowRight, Building2, EyeOff, Globe, Lock, Pencil, Plus } from 'lucide-react';
+import { ArrowRight, Building2, Globe, Lock, Pencil, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { type Content, type ContentType, CONTENT_TYPES, CONTENT_SCOPES } from '@gabby/types/content';
+import { type Content, type ContentType, CONTENT_STATUS, CONTENT_TYPES, CONTENT_SCOPES } from '@gabby/types/content';
+import { InactiveBadge } from '@/components/common/InactiveBadge';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
 import { ContentFormDialog } from './ContentFormDialog';
 import { ContentTagDialog } from './ContentTagDialog';
@@ -40,18 +41,21 @@ export function createColumns(t: TableT): ColumnDef<Content>[] {
       cell: ({ row }) => (
         <div className="flex flex-col gap-0.5 py-1">
           {/* エディタがある種別は教材名からも遷移できるようにする（操作列ボタンの補助導線） */}
-          {EDITOR_LABEL_KEYS[row.original.content_type] ? (
-            <Link
-              href={getEditorHref(row.original)}
-              className="text-sm font-bold text-slate-900 leading-tight w-fit hover:text-brand hover:underline underline-offset-2 transition-colors"
-            >
-              {row.original.content_name}
-            </Link>
-          ) : (
-            <span className="text-sm font-bold text-slate-900 leading-tight">
-              {row.original.content_name}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {EDITOR_LABEL_KEYS[row.original.content_type] ? (
+              <Link
+                href={getEditorHref(row.original)}
+                className="text-sm font-bold text-slate-900 leading-tight w-fit hover:text-brand hover:underline underline-offset-2 transition-colors"
+              >
+                {row.original.content_name}
+              </Link>
+            ) : (
+              <span className="text-sm font-bold text-slate-900 leading-tight">
+                {row.original.content_name}
+              </span>
+            )}
+            {row.original.status === CONTENT_STATUS.UNPUBLISHED && <InactiveBadge label={t('unpublishedBadge')} />}
+          </div>
           {row.original.content_name_en && (
             <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]">
               {row.original.content_name_en}
@@ -91,7 +95,6 @@ export function createColumns(t: TableT): ColumnDef<Content>[] {
         const styles = {
           0: { icon: <Globe size={11} />, text: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
           1: { icon: <Lock size={11} />, text: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
-          9: { icon: <EyeOff size={11} />, text: "text-slate-500", bg: "bg-slate-100", border: "border-slate-200" },
         }[scope];
 
         // 限定(1)の場合のみ、全体をダイアログのトリガーにする
@@ -151,7 +154,7 @@ export function createColumns(t: TableT): ColumnDef<Content>[] {
           );
         }
 
-        // 共通・非公開は従来通り（クリック不可）
+        // 共通はクリック不可
         return (
           <div className="flex flex-col gap-1.5 min-w-[140px]">
             <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border w-fit ${styles.bg} ${styles.border}`}>

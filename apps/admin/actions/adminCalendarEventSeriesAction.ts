@@ -56,8 +56,7 @@ export async function getCalendarEventSeriesList(): Promise<CalendarEventSeriesI
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('com_m_calendar_event_series')
-    .select('series_id, event_type, title, description, insert_date, update_date, sessions:com_m_calendar_event(start_datetime, delete_flg)')
-    .eq('delete_flg', '0')
+    .select('series_id, event_type, title, description, insert_date, update_date, sessions:com_m_calendar_event(start_datetime)')
     .order('insert_date', { ascending: false });
 
   if (error) {
@@ -67,7 +66,7 @@ export async function getCalendarEventSeriesList(): Promise<CalendarEventSeriesI
 
   const nowIso = new Date().toISOString();
   return (data ?? []).map(({ sessions, ...series }) => {
-    const active = (sessions ?? []).filter((s) => s.delete_flg === '0');
+    const active = sessions ?? [];
     const upcoming = active.map((s) => s.start_datetime).filter((start) => start >= nowIso).sort();
     return {
       ...series,
@@ -89,7 +88,6 @@ export async function getCalendarEventSeries(
     .from('com_m_calendar_event_series')
     .select('series_id, title, description')
     .eq('series_id', seriesId)
-    .eq('delete_flg', '0')
     .maybeSingle();
   if (error) {
     logger.error('calendarEventSeries:get_failed', error.message, { ...ctx, err: error, payload: { seriesId } });

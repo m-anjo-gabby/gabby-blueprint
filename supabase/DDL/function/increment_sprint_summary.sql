@@ -27,7 +27,7 @@ BEGIN
   -- 1. ユーザーマスタからタイムゾーンを取得（デフォルトは 'Asia/Tokyo'）
   SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_user_timezone
   FROM public.com_m_user
-  WHERE id = v_user_id AND delete_flg = '0';
+  WHERE id = v_user_id;
 
   -- 2. ユーザーのタイムゾーン基準で現在日付を切り出す
   v_local_today := (CURRENT_TIMESTAMP AT TIME ZONE v_user_timezone)::date;

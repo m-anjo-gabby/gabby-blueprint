@@ -18,9 +18,9 @@
 -- @schema public.com_t_user_session_ticket
 CREATE TABLE public.com_t_user_session_ticket (
     ticket_id                uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    license_id               uuid         NOT NULL UNIQUE REFERENCES public.com_t_user_license(license_id) ON DELETE CASCADE,
-    contract_id              uuid         NOT NULL REFERENCES public.com_m_contract(contract_id),
-    user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id),
+    license_id               uuid         NOT NULL UNIQUE REFERENCES public.com_t_user_license(license_id) ON DELETE RESTRICT,
+    contract_id              uuid         NOT NULL REFERENCES public.com_m_contract(contract_id) ON DELETE RESTRICT,
+    user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     weekly_frequency         smallint     NOT NULL,
     total_sessions           smallint     NOT NULL,
     used_sessions            smallint     NOT NULL DEFAULT 0,

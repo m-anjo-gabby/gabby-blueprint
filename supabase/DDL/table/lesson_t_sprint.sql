@@ -14,10 +14,10 @@
 -- @schema public.lesson_t_sprint
 CREATE TABLE public.lesson_t_sprint (
     lesson_sprint_id         uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     sprint_type              text         NOT NULL,
-    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE RESTRICT,
     question_type            text         NOT NULL,
     answer_type              text         NOT NULL,
     difficulty_level         smallint     NOT NULL,

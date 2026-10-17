@@ -35,6 +35,8 @@ export function TimezoneDataTable({ data }: TimezoneDataTableProps) {
       const result = await deleteTimezone(timezone.timezone);
       if (result.success) {
         showToast(t('toastDeleted'), 'success');
+      } else if ('reason' in result && result.reason === 'in_use') {
+        showToast(t('toastInUse'), 'error');
       } else {
         showToast(result.message || t('toastDeleteFailed'), 'error');
       }

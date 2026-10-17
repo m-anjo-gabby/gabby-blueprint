@@ -25,7 +25,7 @@ DECLARE
 BEGIN
     SELECT event_type INTO v_event_type
     FROM public.com_m_calendar_event_series
-    WHERE series_id = p_series_id AND delete_flg = '0';
+    WHERE series_id = p_series_id;
     IF v_event_type IS NULL THEN
         RAISE EXCEPTION 'series_not_found';
     END IF;

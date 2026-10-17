@@ -3,6 +3,7 @@
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { TimezoneMaster } from '@gabby/types/timezone';
 import { revalidatePath } from 'next/cache';
+import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 
@@ -18,7 +19,6 @@ export async function getTimezones() {
     const { data, error } = await supabase
       .from('com_m_timezone')
       .select('*')
-      .eq('delete_flg', '0')
       .order('sort_no', { ascending: true });
 
     if (error) {
@@ -74,7 +74,8 @@ export async function upsertTimezone(payload: Partial<TimezoneMaster>) {
 }
 
 /**
- * タイムゾーンの論理削除
+ * タイムゾーンの削除（誤登録の取り消し）。ユーザー等が使っているタイムゾーンは外部キー（RESTRICT）で止まり、
+ * 使用停止（is_active = false）にするよう案内する
  */
 export async function deleteTimezone(timezone: string) {
   const ctx = await getLogContext();
@@ -82,15 +83,16 @@ export async function deleteTimezone(timezone: string) {
     const supabase = createAdminClient();
     const { error } = await supabase
       .from('com_m_timezone')
-      .update({ delete_flg: '1', update_date: new Date().toISOString() })
+      .delete()
       .eq('timezone', timezone);
 
     if (error) {
+      if (isInUseError(error)) return { success: false, reason: 'in_use' as const, message: error.message };
       logger.error('timezone:delete_timezone_failed', error.message, { ...ctx, err: error, payload: { timezone } });
       return { success: false, message: error.message };
     }
 
-    logger.info('timezone:delete_timezone_success', 'Timezone logically deleted', { ...ctx, payload: { timezone } });
+    logger.info('timezone:delete_timezone_success', 'Timezone deleted', { ...ctx, payload: { timezone } });
 
     revalidatePath('/timezones');
     return { success: true };

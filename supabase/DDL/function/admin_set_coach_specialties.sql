@@ -41,7 +41,7 @@ BEGIN
     FROM unnest(v_codes) AS c
     WHERE NOT EXISTS (
         SELECT 1 FROM public.com_m_coach_specialty s
-        WHERE s.specialty_code = c AND s.delete_flg = '0'
+        WHERE s.specialty_code = c AND s.is_active
     )
     LIMIT 1;
     IF v_invalid IS NOT NULL THEN

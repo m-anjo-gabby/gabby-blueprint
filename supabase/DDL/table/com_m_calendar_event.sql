@@ -25,7 +25,6 @@ CREATE TABLE public.com_m_calendar_event (
     target_type              character varying(10) NOT NULL DEFAULT 'ALL'::character varying,
     client_id                uuid         REFERENCES public.com_m_client(client_id) ON DELETE CASCADE,
     is_published             boolean      NOT NULL DEFAULT false,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     rsvp_enabled             boolean      NOT NULL DEFAULT false,
@@ -45,14 +44,13 @@ COMMENT ON COLUMN public.com_m_calendar_event.location_url IS '参加URL（Zoom�
 COMMENT ON COLUMN public.com_m_calendar_event.target_type IS '配信対象タイプ (ALL: 生徒全体 / CLIENT: 顧客単位 / COACH: コーチ全体)';
 COMMENT ON COLUMN public.com_m_calendar_event.client_id IS '対象顧客ID (target_typeがCLIENTの場合に使用)';
 COMMENT ON COLUMN public.com_m_calendar_event.is_published IS '公開フラグ (TRUE: 公開中 / FALSE: 下書き)';
-COMMENT ON COLUMN public.com_m_calendar_event.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_calendar_event.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_calendar_event.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_calendar_event.rsvp_enabled IS '参加確認フラグ (TRUE: 生徒/コーチが参加登録・キャンセルできる / FALSE: 参加確認機能を使わない告知)';
 COMMENT ON COLUMN public.com_m_calendar_event.series_id IS 'シリーズID（com_m_calendar_event_series。単発のイベントは NULL）';
 
 CREATE INDEX idx_calendar_event_client ON public.com_m_calendar_event (client_id) WHERE client_id IS NOT NULL;
-CREATE INDEX idx_calendar_event_fetch ON public.com_m_calendar_event (is_published, delete_flg, start_datetime);
+CREATE INDEX idx_calendar_event_fetch ON public.com_m_calendar_event (is_published, start_datetime);
 CREATE INDEX idx_calendar_event_series ON public.com_m_calendar_event (series_id) WHERE series_id IS NOT NULL;
 CREATE INDEX idx_calendar_event_type ON public.com_m_calendar_event (event_type);
 
@@ -68,7 +66,7 @@ WITH CHECK (
 
 CREATE POLICY "Users can view published calendar events" ON public.com_m_calendar_event FOR SELECT TO authenticated
 USING (
-    is_published = true AND delete_flg = '0'::text AND (target_type::text = 'ALL'::text AND public.get_jwt_user_type() = '1'::text OR target_type::text = 'CLIENT'::text AND public.get_jwt_user_type() = '1'::text AND client_id = public.get_jwt_client_id() OR target_type::text = 'COACH'::text AND public.get_jwt_user_type() = '2'::text OR public.get_jwt_user_type() = '2'::text AND (EXISTS ( SELECT 1
+    is_published = true AND (target_type::text = 'ALL'::text AND public.get_jwt_user_type() = '1'::text OR target_type::text = 'CLIENT'::text AND public.get_jwt_user_type() = '1'::text AND client_id = public.get_jwt_client_id() OR target_type::text = 'COACH'::text AND public.get_jwt_user_type() = '2'::text OR public.get_jwt_user_type() = '2'::text AND (EXISTS ( SELECT 1
        FROM public.com_t_calendar_event_coach c
       WHERE c.calendar_event_id = com_m_calendar_event.calendar_event_id AND c.coach_id = auth.uid())))
 );

@@ -2,6 +2,7 @@
 
 import { createServerClient } from "@gabby/lib/supabase/server";
 import { FAVORITE_PHRASE_COLUMNS, FavoritePhraseItem, FavoriteResponse, TrainingWord, TrainingWordResponse } from "@gabby/types/word";
+import { CONTENT_STATUS } from "@gabby/types/content";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { toggleFavoriteRow } from "@/lib/favoriteToggle";
@@ -158,7 +159,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
         )
       `)
       .eq('user_id', user.id)
-      .neq('com_m_phrase.com_m_word.com_m_contents.content_scope', 9)
+      .eq('com_m_phrase.com_m_word.com_m_contents.status', CONTENT_STATUS.PUBLISHED)
       .order('insert_date', { ascending: false })
       .limit(FAVORITE_LIMIT);
 
