@@ -2,6 +2,8 @@
 
 import { createAdminClient } from "@gabby/lib/supabase/admin";
 import { QUESTION_TYPES, SprintQuestion, SprintQuestionType } from "@gabby/types/sprint";
+import type { TableInsert, TableUpdate } from "@gabby/types/db";
+import type { TTSAdjustmentData } from "@gabby/types/word";
 import { revalidatePath } from 'next/cache';
 import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { createLogger } from '@gabby/lib/logger';
@@ -9,6 +11,9 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
 
 const logger = createLogger('admin');
+
+/** スプリントの問題の登録・更新の入力（登録日時・更新日時はこちらで入れる） */
+export type SprintQuestionInput = Omit<TableInsert<'com_m_sprint_questions'>, 'insert_date' | 'update_date'>;
 
 /**
  * 種別とレベルを指定してスプリント問題一覧を取得
@@ -36,61 +41,19 @@ export async function getSprintQuestionsByFilter(contentId: string, type: Sprint
 }
 
 /**
- * スプリント問題の登録・更新
- */
-export async function upsertSprintQuestion(payload: Partial<SprintQuestion>) {
-  const ctx = await getLogContext();
-  try {
-    const supabase = await createAdminClient();
-    const isEdit = !!payload.question_id;
-
-    const { insert_date, ...cleanPayload } = payload;
-    const dataToSave = {
-      ...cleanPayload,
-      update_date: new Date().toISOString(),
-    };
-
-    let error;
-    if (isEdit) {
-      const { error: updateError } = await supabase
-        .from('com_m_sprint_questions')
-        .update(dataToSave)
-        .eq('question_id', payload.question_id!);
-      error = updateError;
-    } else {
-      const { error: insertError } = await supabase
-        .from('com_m_sprint_questions')
-        .insert([{ ...dataToSave, insert_date: new Date().toISOString() }]);
-      error = insertError;
-    }
-
-    if (error) throw error;
-
-    logger.info('sprint:upsert_success', `Question ${isEdit ? 'updated' : 'created'}`, { ...ctx });
-    return { success: true };
-  } catch (err: any) {
-    logger.error('sprint:upsert_failed', err.message, { ...ctx, err, payload });
-    return { success: false, message: err.message };
-  }
-}
-
-/**
  * スプリント問題の複数一括登録・更新
  */
-export async function bulkUpsertSprintQuestions(questions: Partial<SprintQuestion>[]) {
+export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
     const now = new Date().toISOString();
 
-    const dataToSave = questions.map(q => {
-      const { insert_date, ...rest } = q;
-      return {
-        ...rest,
-        update_date: now,
-        ...(q.question_id ? {} : { insert_date: now }),
-      };
-    });
+    const dataToSave = questions.map(q => ({
+      ...q,
+      update_date: now,
+      ...(q.question_id ? {} : { insert_date: now }),
+    }));
 
     // Supabaseのupsertを使用（question_idが既にあれば更新、なければ挿入）
     const { error } = await supabase
@@ -189,7 +152,7 @@ export async function saveSprintAudio(
   level: number,
   ssml: string,
   mode: 'auto' | 'manual',
-  adjustmentData: any,
+  adjustmentData: TTSAdjustmentData,
   currentPath?: string | null
 ) {
   const ctx = await getLogContext();
@@ -219,7 +182,7 @@ export async function saveSprintAudio(
     if (uploadError) throw uploadError;
 
     // 4. DB 更新用カラムのマッピング
-    const updates: any = {
+    const updates: TableUpdate<'com_m_sprint_questions'> = {
       update_date: new Date().toISOString(),
     };
 
@@ -375,7 +338,7 @@ export async function bulkImportSprintQuestions(
   contentId: string,
   type: SprintQuestionType,
   level: number,
-  questions: Partial<SprintQuestion>[]
+  questions: Omit<SprintQuestionInput, 'content_id' | 'question_type' | 'difficulty_level'>[]
 ) {
   const ctx = await getLogContext();
   try {
@@ -398,7 +361,7 @@ export async function bulkImportSprintQuestions(
       removeSprintVoiceFiles(supabase, (deletedRows ?? []) as unknown as SprintVoiceRow[], ctx, { contentId, type, level });
 
     // 2. 新しいデータを挿入
-    const dataToInsert = questions.map((q, idx) => ({
+    const dataToInsert = questions.map((q) => ({
       ...q,
       content_id: contentId,
       question_type: type,

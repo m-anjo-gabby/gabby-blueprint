@@ -1,5 +1,5 @@
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import type { UserTrainingPerformanceResponse } from '@/actions/performanceAction';
+import type { UserTrainingPerformanceResponse } from '@gabby/types/training';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const WEEKDAY_LABELS = ['月', '火', '水', '木', '金', '土', '日'];

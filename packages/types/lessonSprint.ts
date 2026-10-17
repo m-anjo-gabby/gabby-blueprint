@@ -1,4 +1,4 @@
-import { SprintAnswerType, SprintAvailableLevels, SprintQuestion, SprintQuestionType } from './sprint';
+import { SprintAnswerType, SprintAvailableLevels, SprintQuestion, SprintQuestionType, SprintType } from './sprint';
 import { CoachStudentErrorCode } from './coachStudent';
 import { ContentMetadata } from './content';
 
@@ -31,7 +31,7 @@ export interface CreateLessonSprintResultInput {
   student_id: string;
   /** 実施したライブセッション (com_t_session.session_id)。単独実施（外部Zoom等）の場合はnull */
   session_id: string | null;
-  sprint_type: string;
+  sprint_type: SprintType;
   content_id: string;
   question_type: SprintQuestionType;
   answer_type: SprintAnswerType;
@@ -67,10 +67,10 @@ export interface LessonSprintRecord {
   coach_id: string;
   student_id: string;
   session_id: string | null;
-  sprint_type: string;
+  sprint_type: SprintType;
   content_id: string;
-  question_type: string;
-  answer_type: string;
+  question_type: SprintQuestionType;
+  answer_type: SprintAnswerType;
   difficulty_level: number;
   time_limit_sec: number;
   total_answered: number;

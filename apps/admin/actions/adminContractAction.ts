@@ -9,7 +9,9 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
-import type { ContractDetail } from '@gabby/types/contract';
+import type { ContractDetail, ContractStatus, ContractType } from '@gabby/types/contract';
+import type { TableInsert } from '@gabby/types/db';
+import { USER_TYPES } from '@gabby/types/user';
 import {
   ISSUED_LICENSE_COLUMNS,
   recordIssuedLicenses,
@@ -122,7 +124,7 @@ export async function upsertContractPlan(payload: {
   plan_code: string;
   plan_name: string;
   plan_name_en: string;
-  contract_type: number;
+  contract_type: ContractType;
   weekly_frequency: number | null;
   period_months: number;
   total_sessions: number | null;
@@ -392,7 +394,7 @@ export async function updateContract(
     max_licenses: number;
     start_date: string;
     end_date: string;
-    status: number;
+    status: ContractStatus;
     note?: string | null;
     weekly_frequency?: number | null;
     total_sessions?: number | null;
@@ -595,7 +597,7 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
       .from('vw_user_list')
       .select('id, user_name, email, license_id')
       .eq('client_id', clientId)
-      .eq('user_type', 1);
+      .eq('user_type', USER_TYPES.STUDENT);
 
     if (userError) {
       logger.error('contract:get_license_assignment_users_view_failed', userError.message, { ...ctx, err: userError, payload: { contractId, clientId } });
@@ -986,7 +988,7 @@ export async function bulkAssignLicenses(
       };
     }
 
-    const insertData = targetUserIds.map(userId => ({
+    const insertData: TableInsert<'com_t_user_license'>[] = targetUserIds.map(userId => ({
       contract_id: contractId,
       user_id: userId,
       status: 1,

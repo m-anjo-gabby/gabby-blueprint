@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SprintQuestion, SprintQuestionType, SprintAnswerType, QUESTION_TYPES, type SprintAvailableLevels } from "@gabby/types/sprint";
+import { SprintQuestion, SprintQuestionType, SprintAnswerType, QUESTION_TYPES, type SprintAvailableLevels, type SprintType } from "@gabby/types/sprint";
 import { MetadataSprint } from "@gabby/types/content";
 import { AnalysisResult, FeedbackConfig } from "@gabby/types/speechAssessment";
 import { resolveSprintHasLevel, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel } from "@gabby/lib";
@@ -13,7 +13,7 @@ interface SprintConfigInput {
   timeLimitSec: number;
   contentId: string | null;
   answerType: SprintAnswerType | null;
-  sprintType?: string | null;
+  sprintType?: SprintType | null;
   isAssessmentMode: boolean;
 }
 
@@ -42,7 +42,7 @@ interface SprintState {
     timeLimitSec: number;
     contentId: string | null;
     answerType: SprintAnswerType | null;
-    sprintType: string | null;
+    sprintType: SprintType | null;
     isAssessmentMode: boolean;
   };
 

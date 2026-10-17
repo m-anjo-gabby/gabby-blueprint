@@ -6,6 +6,8 @@ import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { type ColorVowelDictionaryRow } from '@gabby/types/colorVowel';
+import type { TableRow } from '@gabby/types/db';
+import type { TTSAdjustmentData } from '@gabby/types/word';
 import {
   type CVImportAudioState,
   type CVImportEntry,
@@ -113,7 +115,7 @@ export async function getCVDictionaryByWord(wordEn: string): Promise<CVDictionar
  * PKは (word_en, part_of_speech) のためUpsertで処理
  */
 export async function upsertCVDictionaryEntry(
-  payload: Partial<CVDictionaryEntry> & { word_en: string; part_of_speech: string }
+  payload: Partial<CVDictionaryEntry> & Pick<TableRow<'com_m_color_vowel_dictionary'>, 'word_en' | 'part_of_speech' | 'syllables' | 'stress_vowel_spelling' | 'cv_id'>
 ) {
   const ctx = await getLogContext();
   try {
@@ -123,10 +125,11 @@ export async function upsertCVDictionaryEntry(
       word_en: payload.word_en,
       part_of_speech: payload.part_of_speech,
       word_ja: payload.word_ja ?? '',
-      syllables: payload.syllables ?? null,
-      primary_stress_syllable: payload.primary_stress_syllable ?? null,
-      stress_vowel_spelling: payload.stress_vowel_spelling ?? null,
-      cv_id: payload.cv_id ?? null,
+      syllables: payload.syllables,
+      // NOT NULL（既定値 1 = 第1音節）
+      primary_stress_syllable: payload.primary_stress_syllable ?? 1,
+      stress_vowel_spelling: payload.stress_vowel_spelling,
+      cv_id: payload.cv_id,
       phonetic_spelling: payload.phonetic_spelling ?? null,
       lemma: payload.lemma ?? null,
       update_date: new Date().toISOString(),
@@ -306,7 +309,7 @@ export async function saveCVDictionaryAudio(
   partOfSpeech: string,
   ssml: string,
   mode: 'auto' | 'manual',
-  adjustmentData: unknown,
+  adjustmentData: TTSAdjustmentData,
   currentAudioPath?: string | null
 ) {
   const ctx = await getLogContext();

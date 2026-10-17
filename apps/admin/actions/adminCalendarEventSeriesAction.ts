@@ -12,6 +12,7 @@ import {
   CalendarEventTargetType,
 } from '@gabby/types/calendarEvent';
 import { getCalendarEvents } from './adminCalendarEventAction';
+import type { Json } from '@gabby/types/db';
 
 const logger = createLogger('admin');
 
@@ -151,7 +152,7 @@ export async function deleteCalendarEventSeries(seriesId: string): Promise<{ suc
   }
 }
 
-type SessionPayload = Record<string, unknown>;
+type SessionPayload = { [key: string]: Json };
 
 /**
  * 入力（日本時間）の回を RPC に渡す形にする。日時・内容が不正な行があれば null。

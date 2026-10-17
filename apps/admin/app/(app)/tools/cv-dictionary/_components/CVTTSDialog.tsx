@@ -217,7 +217,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
         }));
 
       if (entry.tts_adjustments) {
-        const data = entry.tts_adjustments as unknown as TTSAdjustmentData;
+        const data = entry.tts_adjustments;
 
         if (data.settings) {
           setParams({

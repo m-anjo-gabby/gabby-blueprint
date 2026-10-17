@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { ContentTag } from '@gabby/types/content';
+import type { TableInsert } from '@gabby/types/db';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -33,7 +34,7 @@ export async function getTags() {
 
 /** * タグの保存（新規・更新） 
  */
-export async function upsertTag(payload: Partial<ContentTag>) {
+export async function upsertTag(payload: TableInsert<'com_m_contents_tag'>) {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();

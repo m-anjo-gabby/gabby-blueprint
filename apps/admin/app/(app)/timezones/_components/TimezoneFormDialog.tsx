@@ -15,6 +15,7 @@ import { ActiveSwitchField } from '@/components/common/ActiveSwitchField';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { TimezoneMaster } from '@gabby/types/timezone';
+import type { TableInsert } from '@gabby/types/db';
 
 /**
  * --- 1. スキーマ定義 ---
@@ -104,7 +105,7 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
   const onSubmit = async (values: TimezoneFormValues) => {
     setServerError(null);
     try {
-      const payload: Partial<TimezoneMaster> = {
+      const payload: TableInsert<'com_m_timezone'> = {
         timezone: values.timezone,
         display_name_ja: values.display_name_ja,
         display_name_en: values.display_name_en,

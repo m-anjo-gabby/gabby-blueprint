@@ -17,7 +17,20 @@ import {
 } from 'lucide-react';
 import { bulkImportSprintQuestions } from '@/actions/adminSprintAction';
 import { cn } from '@/lib/utils';
-import { SprintQuestionType, SprintQuestion } from '@gabby/types/sprint';
+import { SprintQuestionType } from '@gabby/types/sprint';
+
+/** TSV の1行（ヘッダー名 → 値） */
+type TsvRow = Partial<Record<string, string>>;
+
+/** 取り込む問題（教材・種別・レベルはサーバーアクション側で付ける） */
+type ImportQuestion = Parameters<typeof bulkImportSprintQuestions>[3][number];
+
+/** 検証済みの行。エラーの行は行番号（0始まり）とエラーの内容だけを持つ */
+type ImportRow =
+  | { isValid: true; question: ImportQuestion }
+  | { isValid: false; index: number; error: string };
+
+type ImportErrorRow = Extract<ImportRow, { isValid: false }>;
 
 interface SprintBulkImportDialogProps {
   contentId: string;
@@ -44,7 +57,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
   const t = useTranslations('contents.editor.sprint.bulkImportDialog');
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
-  const [data, setData] = useState<any[]>([]); 
+  const [data, setData] = useState<ImportRow[]>([]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
@@ -64,7 +77,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
 
   const processFile = (file: File) => {
     setLayoutError(null);
-    Papa.parse(file, {
+    Papa.parse<TsvRow>(file, {
       header: true,
       delimiter: "\t", // 💡 タブ区切り (TSV) を明示
       quoteChar: "",   // 💡 ダブルクォーテーションをフィールド囲み文字として処理しない
@@ -90,7 +103,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
         const masteryStatementMap = new Map<string, { en: string; ja: string }>();
 
         // 1周目のループ: バリデーション & Mastery用の共通Statement収集
-        const validatedRows = results.data.map((row: any, index: number) => {
+        const validatedRows = results.data.map((row, index) => {
           const error = validateRow(row, index);
           
           const tsvGroupId = row.tsv_group_id?.trim();
@@ -102,17 +115,12 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
             masteryStatementMap.set(tsvGroupId, { en: statementEn, ja: statementJa });
           }
 
-          return {
-            ...row,
-            index,
-            isValid: !error,
-            error: error || undefined
-          };
+          return { row, index, error };
         });
 
         // 2周目のループ: データの最終整形（UUIDの割り当て、MasteryのStatement伝播）
-        const finalPayload: any[] = validatedRows.map((row: any) => {
-          if (!row.isValid) return row;
+        const finalPayload: ImportRow[] = validatedRows.map(({ row, index, error }) => {
+          if (error) return { isValid: false, index, error };
 
           const tsvGroupId = row.tsv_group_id?.trim();
           let finalGroupId: string | null = null;
@@ -134,18 +142,21 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
             finalStatementJa = shared.ja;
           }
 
+          // question_en・answer_sentence_yes_en（Speedは answer_sentence_no_en も）は validateRow で空でないことを確認済み
           return {
-            seq_no: Number(row.seq_no),
-            group_id: finalGroupId,
-            statement_en: finalStatementEn,
-            statement_ja: finalStatementJa || null,
-            question_en: row.question_en?.trim(),
-            question_ja: row.question_ja?.trim() || null,
-            answer_sentence_yes_en: row.answer_sentence_yes_en?.trim(),
-            answer_sentence_yes_ja: row.answer_sentence_yes_ja?.trim() || null,
-            answer_sentence_no_en: isSpeed ? row.answer_sentence_no_en?.trim() : null,
-            answer_sentence_no_ja: isSpeed ? row.answer_sentence_no_ja?.trim() : null,
-            isValid: true
+            isValid: true,
+            question: {
+              seq_no: Number(row.seq_no),
+              group_id: finalGroupId,
+              statement_en: finalStatementEn,
+              statement_ja: finalStatementJa || null,
+              question_en: row.question_en?.trim() ?? '',
+              question_ja: row.question_ja?.trim() || null,
+              answer_sentence_yes_en: row.answer_sentence_yes_en?.trim() ?? '',
+              answer_sentence_yes_ja: row.answer_sentence_yes_ja?.trim() || null,
+              answer_sentence_no_en: isSpeed ? row.answer_sentence_no_en?.trim() ?? null : null,
+              answer_sentence_no_ja: isSpeed ? row.answer_sentence_no_ja?.trim() ?? null : null,
+            },
           };
         });
 
@@ -155,7 +166,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
     });
   };
 
-  const validateRow = (row: any, index: number): string | null => {
+  const validateRow = (row: TsvRow, index: number): string | null => {
     const lineNum = index + 2;
     const prefix = t('rowErrorPrefix', { line: lineNum });
 
@@ -186,7 +197,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
     setIsProcessing(true);
     try {
       // サーバーアクション側で content_id, question_type, difficulty_level を付与し既存のデータを全削除 (洗い替え)
-      const payload: Partial<SprintQuestion>[] = data.map(({ isValid, error, ...cleanData }) => cleanData);
+      const payload = data.flatMap((d) => (d.isValid ? [d.question] : []));
 
       const result = await bulkImportSprintQuestions(contentId, type, level, payload);
       if (result.success) {
@@ -210,7 +221,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const errorItems = data.filter(d => !d.isValid);
+  const errorItems = data.filter((d): d is ImportErrorRow => !d.isValid);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

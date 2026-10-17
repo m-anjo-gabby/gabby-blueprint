@@ -18,7 +18,7 @@ import { PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
 import { Content, CONTENT_SCOPES, CONTENT_STATUS, CONTENT_TYPES, ContentScope, type ContentStatus, ContentType, CEFR_CONFIG } from '@gabby/types/content';
 import { QUESTION_TYPES, SPRINT_TYPES } from '@gabby/types/sprint';
 import { DIALOGUE_CATEGORIES, DialogueCategory } from '@gabby/types/dialogue';
-import { upsertContent } from '@/actions/adminContentAction';
+import { upsertContent, type ContentUpsertInput } from '@/actions/adminContentAction';
 import { useRouter } from 'next/navigation';
 
 /**
@@ -224,7 +224,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
       const isDialogue = values.content_type === '3';
 
-      const payload: Partial<Content> = {
+      const payload: ContentUpsertInput = {
         content_name: values.content_name,
         content_name_en: values.content_name_en?.trim() || null,
         content_type: Number(values.content_type) as ContentType,

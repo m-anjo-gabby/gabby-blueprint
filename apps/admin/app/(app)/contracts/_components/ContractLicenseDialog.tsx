@@ -315,7 +315,7 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                                 <div className="text-center space-y-2">
                                   <AlertDialogTitle className="text-xl font-black text-slate-800">{t('invalidateConfirmTitle')}</AlertDialogTitle>
                                   <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
-                                    {t('invalidateConfirmBody', { name: user.user_name })}
+                                    {t('invalidateConfirmBody', { name: user.user_name ?? '' })}
                                   </AlertDialogDescription>
                                 </div>
                               </AlertDialogHeader>

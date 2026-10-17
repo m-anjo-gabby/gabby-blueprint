@@ -11,7 +11,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { upsertWord } from '@/actions/adminWordAction';
+import { upsertWord, type WordInput } from '@/actions/adminWordAction';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit, Languages } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { WordRecord, WORD_STATUS, WordStatus } from '@gabby/types/word';
@@ -72,7 +72,7 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
   const onSubmit = async (values: WordFormValues) => {
     setServerError(null);
     try {
-      const payload: Partial<WordRecord> = {
+      const payload: WordInput = {
         content_id: contentId,
         word_en: values.word_en,
         word_ja: values.word_ja,

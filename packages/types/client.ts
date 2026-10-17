@@ -1,4 +1,5 @@
 // packages/types/client.ts
+import type { TableRow } from './db';
 
 // com_m_client.status
 export const CLIENT_STATUS = {
@@ -7,13 +8,16 @@ export const CLIENT_STATUS = {
 } as const;
 export type ClientStatus = typeof CLIENT_STATUS[keyof typeof CLIENT_STATUS];
 
+/** com_m_client.client_type（0: 初期テナント 1:法人, 2:個人。値は DB の CHECK 制約に従う） */
+export type ClientType = TableRow<'com_m_client'>['client_type'];
+
 /**
  * ClientRecord: com_m_client テーブルの完全な定義 (Entity)
  */
 export type ClientRecord = {
   client_id: string;
   client_name: string;
-  client_type: number;   // 0: 初期テナント 1:法人, 2:個人
+  client_type: ClientType;
   industry_type: number; // 業界種別
   status: ClientStatus;
   insert_date: string;
@@ -26,7 +30,7 @@ export type ClientRecord = {
 export interface Client {
   client_id: string;
   client_name: string;
-  client_type: number;
+  client_type: ClientType;
   industry_type: number;
 }
 
@@ -44,7 +48,7 @@ export type ClientOption = Pick<Client, 'client_id' | 'client_name'> & {
  */
 export interface ClientPayload {
   client_name: string;
-  client_type: number;
+  client_type: ClientType;
   industry_type: number;
   status: ClientStatus;
 }

@@ -130,3 +130,4 @@ GitHub Actions の `Deploy` でアプリをデプロイ」の順に行います�
 リリーススクリプトは変更の差分と理由、`supabase/DDL/` は今の形を持ちます。dev に適用した後、
 `node supabase/release/schema.mjs --env=dev --write <table>` でテーブルの正本の定義を取り込み、
 リリース前に `--check` で正本と dev にずれが無いことを確かめます（`supabase/DDL/README.md`）。
+アプリの DB の型（`packages/types/database.ts`）も同じタイミングで `node supabase/release/types.mjs --env=dev --write` で作り直します。

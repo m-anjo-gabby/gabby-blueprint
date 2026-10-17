@@ -1,3 +1,5 @@
+import type { DayOfWeek } from '@gabby/types/coachAvailability';
+
 /**
  * 入力用（JSTの日付文字列をUTCのISO形式に変換）
  * 契約・ライセンスの開始/終了日時の境界値を正確に生成
@@ -288,7 +290,7 @@ export interface FirstLiveSessionOccurrence {
   /** 初回ライブセッションの絶対時刻（UTC） */
   instant: Date;
   /** targetTimeZoneでの曜日 (0:日...6:土) */
-  day_of_week: number;
+  day_of_week: DayOfWeek;
   /** targetTimeZoneでの開始時刻 "HH:MM" */
   start_time: string;
 }
@@ -338,7 +340,8 @@ export const getFirstLiveSessionOccurrence = (
   const h = parts.find((p) => p.type === 'hour')?.value ?? '00';
   const m = parts.find((p) => p.type === 'minute')?.value ?? '00';
 
-  return { instant, day_of_week: targetDayOfWeek, start_time: `${h}:${m}` };
+  // getUTCDay() は 0〜6 を返す
+  return { instant, day_of_week: targetDayOfWeek as DayOfWeek, start_time: `${h}:${m}` };
 };
 
 /**

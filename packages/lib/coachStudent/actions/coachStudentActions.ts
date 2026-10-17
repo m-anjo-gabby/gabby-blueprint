@@ -27,6 +27,7 @@ import {
   StudentNextSessionSummary,
   TRAINING_REPORT_STATUS,
 } from '@gabby/types/coachStudent';
+import type { TableUpdate } from '@gabby/types/db';
 import { SESSION_STATUS, SESSION_RESULT_STATUSES } from '@gabby/types/session';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
@@ -1029,9 +1030,12 @@ export async function updateStudentSprintLevelCore(
     const newLevels = { ...toStageLevels(currentProgress), [questionType]: newLevel };
     const newStage = computeStage(newLevels);
 
+    const levelUpdate: TableUpdate<'student_m_sprint_progress'> = { stage: newStage, update_date: new Date().toISOString() };
+    levelUpdate[typeMeta.dbKey] = newLevel;
+
     const { data: updated, error: updateError } = await supabase
       .from('student_m_sprint_progress')
-      .update({ [typeMeta.dbKey]: newLevel, stage: newStage, update_date: new Date().toISOString() })
+      .update(levelUpdate)
       .eq('user_id', studentId)
       .select('stage, level_speed, level_structure, level_builders, level_mastery, level_managed')
       .single();

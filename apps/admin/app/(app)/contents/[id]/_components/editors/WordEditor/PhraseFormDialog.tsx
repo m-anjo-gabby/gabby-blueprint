@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { upsertPhrase } from '@/actions/adminWordAction';
+import { upsertPhrase, type PhraseInput } from '@/actions/adminWordAction';
 import { PlusCircle, CheckCircle2, Edit, MessageSquare, XCircle } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { PhraseRecord, WORD_STATUS, WordStatus, PHRASE_TYPES, PhraseType } from '@gabby/types/word';
@@ -74,7 +74,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
   const onSubmit = async (values: PhraseFormValues) => {
     setServerError(null);
     try {
-      const payload: Partial<PhraseRecord> = {
+      const payload: PhraseInput = {
         word_id: wordId,
         phrase_en: values.phrase_en,
         phrase_ja: values.phrase_ja,

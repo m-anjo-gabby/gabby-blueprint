@@ -1961,7 +1961,10 @@
         "errors": {
           "wordRequired": "English word is required",
           "posRequired": "Please select a part of speech",
-          "jaRequired": "Japanese translation is required"
+          "jaRequired": "Japanese translation is required",
+          "syllablesRequired": "Syllables are required",
+          "stressVowelRequired": "Stressed vowel spelling is required",
+          "cvIdRequired": "Please select a Color Vowel"
         }
       },
       "bulkImportDialog": {

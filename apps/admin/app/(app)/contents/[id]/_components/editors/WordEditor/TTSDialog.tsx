@@ -240,7 +240,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
 
       // 3. 調整データの復元
       if (phrase.tts_adjustments) {
-        const data = phrase.tts_adjustments as unknown as TTSAdjustmentData;
+        const data = phrase.tts_adjustments;
 
         // 設定の復元
         if (data.settings) {

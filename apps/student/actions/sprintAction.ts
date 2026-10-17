@@ -1,7 +1,7 @@
 'use server';
 
 import { createServerClient } from "@gabby/lib/supabase/server";
-import { SprintQuestion, SprintQuestionResponse, SprintQuestionType, type SprintAvailableLevels } from "@gabby/types/sprint";
+import { QUESTION_TYPES, SprintQuestion, SprintQuestionResponse, SprintQuestionType, type SprintAnswerType, type SprintAvailableLevels, type SprintType } from "@gabby/types/sprint";
 import { fetchSprintAvailableLevels } from "@gabby/lib/sprint/availableLevels";
 import { readSprintHistory, selfSprintHistorySchema } from "@gabby/lib/sprint/answeredHistory";
 import { createLogger } from "@gabby/lib/logger";
@@ -49,10 +49,10 @@ export interface SprintHistoryItem {
  * 自主トレスプリント結果登録用の入力ペイロード型
  */
 export interface CreateSprintScoreInput {
-  sprint_type: string;
+  sprint_type: SprintType;
   content_id: string;
-  question_type: '0' | '4' | '5' | '6';
-  answer_type: string;
+  question_type: SprintQuestionType;
+  answer_type: SprintAnswerType;
   difficulty_level: number;
   time_limit_sec: number;
   total_answered: number;
@@ -112,7 +112,7 @@ function shuffleArray<T>(array: T[]): T[] {
  */
 export async function getSprintQuestionsAction(
   content_id: string,
-  question_type: '0' | '4' | '5' | '6',
+  question_type: SprintQuestionType,
   difficulty_level: number,
   mode: 'sprint' | 'drill' = 'sprint'
 ): Promise<SprintQuestionResponse> {
@@ -123,7 +123,8 @@ export async function getSprintQuestionsAction(
     const supabase = await createServerClient();
 
     const safeContentId = String(content_id).trim();
-    const safeType = String(question_type).trim();
+    if (!(question_type in QUESTION_TYPES)) throw new Error("Invalid question type");
+    const safeType = question_type;
     const safeLevel = Number(difficulty_level);
 
     // 選択画面の鍵表示と同じ判定をサーバーでも行う（URLの level 指定等で選択画面を経由しない場合も含む）

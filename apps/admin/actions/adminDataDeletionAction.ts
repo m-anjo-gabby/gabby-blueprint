@@ -7,6 +7,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { USER_STATUS } from '@gabby/types/user';
+import type { DeletedStoragePaths, PurgeClientCounts } from '@gabby/types/dataDeletion';
 
 // 停止・退会・顧客単位の一括削除（規約は docs/DATA-DELETION.md）。
 // 退会・一括削除は戻せないため、システム管理者（admin ロール）だけが実行でき、対象の名前の入力で確認する。
@@ -27,25 +28,6 @@ export type DataDeletionResult<E extends string> =
   | { success: true }
   | { success: false; errorCode: E | 'forbidden' | 'name_mismatch' | 'unexpected_error' };
 
-/** 顧客単位の一括削除で消える件数（fn_purge_client の counts） */
-export interface PurgeClientCounts {
-  students: number;
-  coaches: number;
-  invitations: number;
-  contracts: number;
-  licenses: number;
-  sessions: number;
-  trainings: number;
-  chat_messages: number;
-  notices: number;
-  calendar_events: number;
-}
-
-interface StoragePaths {
-  profile?: string[];
-  homework?: string[];
-  chat?: string[];
-}
 
 /** システム管理者（admin ロール）か */
 async function requireSystemAdmin(): Promise<string | null> {
@@ -59,9 +41,9 @@ function pickBlocker<T extends readonly string[]>(message: string | undefined, c
 }
 
 /** Storage のファイルを消す（失敗してもエラーのログだけ残して続ける。DB の消去は済んでいるため） */
-async function removeDeletedFiles(paths: StoragePaths, ctx: Awaited<ReturnType<typeof getLogContext>>, payload: Record<string, unknown>) {
+async function removeDeletedFiles(paths: DeletedStoragePaths, ctx: Awaited<ReturnType<typeof getLogContext>>, payload: Record<string, unknown>) {
   const supabase = createAdminClient();
-  for (const [bucket, list] of Object.entries(paths) as [keyof StoragePaths, string[] | undefined][]) {
+  for (const [bucket, list] of Object.entries(paths) as [keyof DeletedStoragePaths, string[] | undefined][]) {
     await removeStorageFiles(supabase, bucket, list ?? [], { event: 'dataDeletion:delete_files_failed', ctx, payload });
   }
 }
@@ -137,7 +119,7 @@ export async function withdrawUser(userId: string, confirmName: string): Promise
       throw error;
     }
 
-    const result = data as { storage?: StoragePaths; counts?: Record<string, number> } | null;
+    const result = data;
     await removeDeletedFiles(result?.storage ?? {}, ctx, { userId });
     if (!(await deleteAuthUser(userId, ctx))) return { success: false, errorCode: 'unexpected_error' };
 
@@ -164,7 +146,7 @@ export async function previewPurgeClient(
       if (blocker) return { success: false, errorCode: blocker };
       throw error;
     }
-    return { success: true, counts: (data as { counts: PurgeClientCounts }).counts };
+    return { success: true, counts: data.counts };
   } catch (err) {
     logger.error('client:purge_preview_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { clientId } });
     return { success: false, errorCode: 'unexpected_error' };
@@ -194,7 +176,7 @@ export async function purgeClient(clientId: string, confirmName: string): Promis
       throw error;
     }
 
-    const result = data as { user_ids?: string[]; storage?: StoragePaths; counts?: PurgeClientCounts };
+    const result = data;
     await removeDeletedFiles(result.storage ?? {}, ctx, { clientId });
     // 顧客の行は消えているため、認証のアカウントの削除に失敗した分は記録だけ残す（ログインしても所属の無い状態になる）
     for (const userId of result.user_ids ?? []) {

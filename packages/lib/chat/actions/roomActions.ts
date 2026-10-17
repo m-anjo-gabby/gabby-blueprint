@@ -21,6 +21,11 @@ import { getAuthUser } from '@gabby/lib/supabase/authUser';
 // ルーム作成で選択可能なuser_type
 const HUMAN_USER_TYPES: readonly UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
 
+/** チャットに参加できる種別か（com_m_user.user_type は NULL を許す列のため、NULL も弾く） */
+function isHumanUserType(userType: UserType | null): userType is UserType {
+  return userType !== null && HUMAN_USER_TYPES.includes(userType);
+}
+
 // GROUPルームが維持すべき最低参加人数（これを下回る削除は拒否する）
 const MIN_GROUP_ROOM_MEMBERS = 2;
 
@@ -140,8 +145,8 @@ async function createOneOnOneChatRoom(
   }
 
   if (
-    !HUMAN_USER_TYPES.includes(profileA.user_type as UserType) ||
-    !HUMAN_USER_TYPES.includes(profileB.user_type as UserType)
+    !isHumanUserType(profileA.user_type) ||
+    !isHumanUserType(profileB.user_type)
   ) {
     return { success: false, error: 'Invalid member combination' };
   }
@@ -193,7 +198,8 @@ async function createGroupChatRoom(
     return { success: false, error: 'Target user not found' };
   }
 
-  if (profiles.some((p) => !HUMAN_USER_TYPES.includes(p.user_type as UserType))) {
+  const members = profiles.flatMap((p) => (isHumanUserType(p.user_type) ? [{ id: p.id, user_type: p.user_type }] : []));
+  if (members.length !== profiles.length) {
     return { success: false, error: 'Invalid member combination' };
   }
 
@@ -209,7 +215,7 @@ async function createGroupChatRoom(
   }
 
   const { error: memberError } = await supabase.from('com_t_chat_room_user').insert(
-    profiles.map((p) => ({ room_id: newRoom.room_id, user_id: p.id, user_type: p.user_type }))
+    members.map((m) => ({ room_id: newRoom.room_id, user_id: m.id, user_type: m.user_type }))
   );
 
   if (memberError) {
@@ -269,7 +275,7 @@ export async function addChatRoomMember(
       .eq('id', payload.userId)
       .maybeSingle();
 
-    if (!profile || profile.status !== USER_STATUS.ACTIVE || !HUMAN_USER_TYPES.includes(profile.user_type as UserType)) {
+    if (!profile || profile.status !== USER_STATUS.ACTIVE || !isHumanUserType(profile.user_type)) {
       return { success: false, error: 'Target user not found' };
     }
 

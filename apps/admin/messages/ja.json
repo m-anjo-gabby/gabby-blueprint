@@ -1961,7 +1961,10 @@
         "errors": {
           "wordRequired": "英単語は必須です",
           "posRequired": "品詞を選択してください",
-          "jaRequired": "日本語訳は必須です"
+          "jaRequired": "日本語訳は必須です",
+          "syllablesRequired": "音節は必須です",
+          "stressVowelRequired": "下線を引く母音の綴りは必須です",
+          "cvIdRequired": "Color Vowel を選択してください"
         }
       },
       "bulkImportDialog": {

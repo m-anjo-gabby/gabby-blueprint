@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { Upload, AlertCircle, Loader2, CheckCircle2, UserPlus, RefreshCcw, Download } from 'lucide-react';
-import { RawCsvRow, BulkUser, BulkImportResponse } from '@gabby/types/user';
+import { RawCsvRow, BulkUser, BulkImportResponse, USER_TYPES } from '@gabby/types/user';
 import { bulkCreateUsers } from '@/actions/adminUserAction';
 import { getActiveContractsByClient, bulkAssignLicenses } from '@/actions/adminContractAction';
 import { getClientsFilter } from '@/actions/adminClientAction'; // 追加
@@ -129,7 +129,7 @@ export function UserBulkImportDialog() {
           return {
             email,
             user_name: userName,
-            user_type: '1',
+            user_type: USER_TYPES.STUDENT,
             client_id: selectedClientId,
             client_name: selectedClient?.client_name || '',
             isValid: !error,

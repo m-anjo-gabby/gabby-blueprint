@@ -77,7 +77,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
           user_name: profile.user_name ?? '',
           icon_path: profile.icon_path,
           email: user.email,
-          locale_id: profile.locale_id,
+          locale_id: profile.locale_id ?? 'ja',
           timezone: profile.timezone,
           app_metadata: (user.app_metadata as UserAppMetadata) || { user_type: '1', roles: [] },
         });

@@ -32,6 +32,7 @@ Claude がリリースを進める場合は `.claude/skills/release` に従い�
 
 - [ ] リリーススクリプトの全セクションを dev に適用済み（`pnpm release:status --env=dev`）。
 - [ ] テーブルの正本と dev が一致している（`node supabase/release/schema.mjs --env=dev --check`）。
+- [ ] アプリの DB の型と dev が一致している（`node supabase/release/types.mjs --env=dev --check`）。
 - [ ] 環境変数の定義の変更を確かめる（`git diff origin/staging -- scripts/vercel-env/manifest.mjs`）。変更があれば、staging・本番の値ファイルを `--init` して値を用意する。
 - [ ] 手作業がある場合は、リリーススクリプトの冒頭（【注意】）に書いてある。
 - [ ] 画面・業務ルールの変更に合わせて仕様書（`docs/screens/`・`testing/e2e/specs/`）を更新した。

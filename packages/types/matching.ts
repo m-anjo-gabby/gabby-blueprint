@@ -13,6 +13,8 @@ export const MATCHING_REQUEST_STATUS = {
   APPROVED: 2,
   REJECTED: 3,
   CANCELLED: 4,
+  /** コーチ交代等によりアドミンが終了 */
+  ENDED: 5,
   /** 回答期限（申請から24時間。DBの matching_request_ttl()）切れ */
   EXPIRED: 6,
 } as const;

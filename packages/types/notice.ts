@@ -30,6 +30,11 @@ export const NOTICE_TYPES = {
 
 export type NoticeType = keyof typeof NOTICE_TYPES;
 
+/** 画面・URL から受け取った値がお知らせ種別か */
+export function isNoticeType(value: unknown): value is NoticeType {
+  return typeof value === 'string' && Object.hasOwn(NOTICE_TYPES, value);
+}
+
 // 重要お知らせバッジ定義
 export const NOTICE_IMPORTANT_BADGE = {
   label: '重要',

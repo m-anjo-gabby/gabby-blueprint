@@ -8,7 +8,8 @@ import {
   BulkUser, 
   BulkImportResponse, 
   BulkImportResultDetail, 
-  RoleDefinition
+  RoleDefinition,
+  isUserType,
 } from "@gabby/types/user";
 import { formatToJstDate } from "@gabby/lib/date/date";
 import { revalidatePath } from "next/cache";
@@ -103,7 +104,7 @@ export async function getUsers(params: ListParams<'clientId' | 'userType'>): Pro
       query = query.eq('client_id', clientId);
     }
 
-    if (userType) {
+    if (isUserType(userType)) {
       query = query.eq('user_type', userType);
     }
 

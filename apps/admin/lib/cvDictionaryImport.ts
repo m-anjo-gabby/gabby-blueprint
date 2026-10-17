@@ -1,5 +1,6 @@
 // CV辞書 一括登録の行検証・キー正規化（クライアントのプレビューとServer Actionの双方で使用）
 import { PART_OF_SPEECH_TYPES, COLOR_VOWEL_COLORS } from '@gabby/types/colorVowel';
+import type { TtsStatus } from '@gabby/types/word';
 
 // ============================================================
 // 定数
@@ -34,7 +35,7 @@ export type CVImportMode = 'insertOnly' | 'overwrite' | 'overwriteDataOnly';
 
 /** 取込で上書きする既存エントリの音声の状態（com_m_color_vowel_dictionary の tts_status / tts_ssml_mode） */
 export interface CVImportAudioState {
-  tts_status: number;
+  tts_status: TtsStatus;
   tts_ssml_mode: string;
 }
 
@@ -130,7 +131,7 @@ export const validateCVImportEntry = (e: CVImportEntry): CVImportRowErrorCode | 
  * 自動（auto）の音声は英単語のテキストだけから作るため、発音記号・Color Vowel 等の補正では変わらない。
  * データのみの上書きでは、発音記号を個別に指定している手動（manual）の音声だけを「要再生成」にする
  */
-export const nextTTSStatusOnOverwrite = (existing: CVImportAudioState, mode: CVImportMode): number => {
+export const nextTTSStatusOnOverwrite = (existing: CVImportAudioState, mode: CVImportMode): TtsStatus => {
   if (existing.tts_status !== TTS_STATUS_GENERATED) return existing.tts_status;
   if (mode === 'overwriteDataOnly' && existing.tts_ssml_mode !== 'manual') return existing.tts_status;
   return TTS_STATUS_NEEDS_REGENERATION;

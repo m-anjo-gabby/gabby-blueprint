@@ -170,6 +170,8 @@ for (const { key, label } of LEARNERS) {
       await expect(page.getByText("これまでの歩み", { exact: true })).toBeVisible();
       await expect(page.getByText(/^次の節目/).first()).toBeVisible();
 
+      // ハイドレーション前に押すと遷移しない（TEST-JUDGEMENT-GUIDE KJ-2026-1018-01）
+      await page.waitForLoadState("networkidle");
       await page.getByRole("link", { name: "記録を見る" }).click();
       await page.waitForURL("**/training/performance**");
       await expect(page.getByRole("heading", { level: 1, name: "トレーニング記録" })).toBeAttached();

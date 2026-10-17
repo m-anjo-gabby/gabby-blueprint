@@ -1,3 +1,5 @@
+import type { TTSAdjustmentData, TtsStatus } from './word';
+
 // packages/types/colorVowel.ts
 
 // -----------------------------------------------------------------------
@@ -126,17 +128,17 @@ export interface ColorVowelDictionaryRow {
   word_en: string;
   part_of_speech: PartOfSpeechType | string; // DB値は PartOfSpeechType の value
   word_ja: string | null;
-  syllables: string | null;
-  primary_stress_syllable: number | null;
-  stress_vowel_spelling: string | null;
-  cv_id: string | null;
+  syllables: string;
+  primary_stress_syllable: number;
+  stress_vowel_spelling: string;
+  cv_id: string;
   phonetic_spelling: string | null;
   lemma: string | null; // 原形（見出し語が原形そのものの場合は null）
   audio_path: string | null;
   tts_ssml: string | null;
   tts_ssml_mode: 'auto' | 'manual' | null;
-  tts_adjustments: Record<string, unknown> | null;
-  tts_status: 0 | 1 | 2 | 9; // 0:未生成, 1:生成済, 2:要再生成, 9:エラー
+  tts_adjustments: TTSAdjustmentData | null;
+  tts_status: TtsStatus; // 0:未生成, 1:生成済, 2:要再生成, 9:エラー
   last_tts_date: string | null;
   status: 'live' | 'pending';
   insert_date: string | null;

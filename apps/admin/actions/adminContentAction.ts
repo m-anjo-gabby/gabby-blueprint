@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
-import { CONTENT_TYPES, Content, ContentRecord, ContentTagSummary } from '@gabby/types/content';
+import { CONTENT_TYPES, Content, ContentRecord, ContentTagSummary, type ContentType } from '@gabby/types/content';
 import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { CLIENT_STATUS } from '@gabby/types/client';
 import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
@@ -21,7 +21,7 @@ export async function getContents(params: ListParams<'type'>): Promise<ListResul
   const ctx = await getLogContext();
   const { q, filters } = params;
   // 種別は既知の値だけを条件にする（不正な値は「すべて」として扱う）
-  const contentType = Object.hasOwn(CONTENT_TYPES, filters.type) ? Number(filters.type) : undefined;
+  const contentType = Object.hasOwn(CONTENT_TYPES, filters.type) ? (Number(filters.type) as ContentType) : undefined;
   try {
     const supabase = await createAdminClient();
     const [from, to] = toRange(params);
@@ -113,52 +113,51 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
 /**
  * 教材の登録・更新 (Upsert)
  */
-export async function upsertContent(payload: Partial<Content>) {
+/** 教材の登録・更新の入力（タグ・公開先は別の操作で保存するため含めない） */
+export type ContentUpsertInput = Pick<ContentRecord, 'content_name' | 'content_label'> & Partial<Omit<ContentRecord, 'content_name' | 'content_label'>>;
+
+export async function upsertContent(payload: ContentUpsertInput) {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
-    const isEdit = !!payload.content_id;
+    const { content_id: contentId, metadata, ...columns } = payload;
+    const isEdit = !!contentId;
 
     // 更新（Edit）時の既存メタデータとの安全なマージ処理
-    let finalMetadata = payload.metadata || {};
-    if (isEdit && payload.content_id) {
+    let finalMetadata = metadata || {};
+    if (contentId) {
       const { data: existingRecord } = await supabase
         .from('com_m_contents')
         .select('metadata')
-        .eq('content_id', payload.content_id)
+        .eq('content_id', contentId)
         .single();
       
       if (existingRecord?.metadata) {
         finalMetadata = {
-          ...(existingRecord.metadata as Record<string, unknown>),
-          ...payload.metadata,
+          ...existingRecord.metadata,
+          ...metadata,
           // スプリントデータの階層が壊れないよう明示的にディープマージ
-          sprint: payload.metadata?.sprint ? {
-            ...((existingRecord.metadata as any).sprint || {}),
-            ...payload.metadata.sprint
-          } : (existingRecord.metadata as any).sprint
+          sprint: metadata?.sprint ? {
+            ...(existingRecord.metadata.sprint || {}),
+            ...metadata.sprint
+          } : existingRecord.metadata.sprint
         };
       }
     }
 
     // クライアント側で既存の metadata とマージされたものが送られてくる想定
     const dataToSave = {
-      ...payload,
+      ...columns,
       metadata: finalMetadata,
       update_date: new Date().toISOString(),
     };
 
-    // リレーション項目（tagsやaccess_clients）がpayloadに含まれている場合は、
-    // com_m_contentsの直接のカラムではないため、DB保存前に除外する
-    delete (dataToSave as any).tags;
-    delete (dataToSave as any).access_clients;
-
     let query;
-    if (isEdit) {
+    if (contentId) {
       query = supabase
         .from('com_m_contents')
         .update(dataToSave)
-        .eq('content_id', payload.content_id)
+        .eq('content_id', contentId)
         .select();
     } else {
       query = supabase

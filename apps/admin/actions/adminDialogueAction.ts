@@ -67,7 +67,7 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
     };
 
     let query;
-    if (isEdit) {
+    if (payload.dialogue_session_id) {
       query = supabase
         .from('com_m_dialogue_session')
         .update(dataToSave)

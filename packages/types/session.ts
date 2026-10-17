@@ -138,10 +138,11 @@ export type CancelSessionResult =
   | { success: false; errorCode: SessionActionErrorCode };
 
 /** cancel_session RPCに渡す、候補提案する時間1件分（最大3件まで。コーチ・生徒どちらのキャンセルでも使う） */
-export interface ProposedSlotInput {
+// JSON として RPC に渡すため interface ではなく type にする（interface は Json に代入できない）
+export type ProposedSlotInput = {
   start_datetime: string; // UTC ISO文字列
   end_datetime: string;
-}
+};
 
 // com_t_session_slot_proposal.status のうち、振替候補(source_session_id IS NOT NULL)が
 // 取り得る値のサブセット（2026-09-15、com_t_session_reschedule_proposalとの統合により

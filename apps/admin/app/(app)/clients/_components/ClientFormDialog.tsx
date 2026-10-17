@@ -16,7 +16,7 @@ import { createClient, updateClient } from '@/actions/adminClientAction';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { PurgeClientSection } from './PurgeClientSection';
-import { CLIENT_STATUS, ClientRecord, ClientPayload, type ClientStatus } from '@gabby/types/client';
+import { CLIENT_STATUS, ClientRecord, ClientPayload, type ClientStatus, type ClientType } from '@gabby/types/client';
 
 // --- 1. スキーマ定義 ---
 type FormT = ReturnType<typeof useTranslations<'clients.form'>>;
@@ -85,7 +85,7 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
       // Payloadオブジェクトの構築
       const payload: ClientPayload = {
         client_name: values.client_name,
-        client_type: Number(values.client_type),
+        client_type: Number(values.client_type) as ClientType,
         industry_type: Number(values.industry_type),
         status: Number(values.status) as ClientStatus,
       };

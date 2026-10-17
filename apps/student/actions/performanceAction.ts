@@ -4,40 +4,9 @@ import { createServerClient } from "@gabby/lib/supabase/server";
 import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import type { UserTrainingPerformanceResponse } from '@gabby/types/training';
 
 const logger = createLogger('student');
-
-export interface PerformanceWordSummary {
-  content_id: string;
-  training_date: string;
-  word_count: number;
-  phrase_count: number;
-  assessment_count: number;
-  update_date: string;
-  content_name: string;
-}
-
-export interface PerformanceSprintSession {
-  self_sprint_id: string;
-  content_id: string;
-  total_answered: number;
-  insert_date: string;
-  assessment_count: number;
-}
-
-export interface PerformanceSprintDrill {
-  summary_id: string;
-  content_id: string;
-  training_date: string;
-  question_count: number;
-  assessment_count: number;
-}
-
-export interface UserTrainingPerformanceResponse {
-  words: PerformanceWordSummary[];
-  sprint_sessions: PerformanceSprintSession[];
-  sprint_drills: PerformanceSprintDrill[];
-}
 
 /**
  * ログイン中ユーザーの特定月のトレーニング実績を一括取得する (RPC経由)

@@ -60,7 +60,7 @@ export interface PhraseRecord {
   audio_path: string | null;
   tts_ssml: string | null;
   tts_ssml_mode: 'auto' | 'manual';
-  tts_adjustments?: WordAdjustment[];
+  tts_adjustments?: TTSAdjustmentData | null;
   tts_status: TtsStatus;
   last_tts_date: string | null;
   status: WordStatus;

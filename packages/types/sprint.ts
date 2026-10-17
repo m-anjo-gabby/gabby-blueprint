@@ -1,8 +1,15 @@
+import type { TTSAdjustmentData, TtsStatus } from './word';
+
 /**
  * スプリント種別
  * '0':汎用スプリント, '1':コーパススプリント
  */
 export type SprintType = '0' | '1';
+
+/** URL・DB 由来の値（数値で届くことがある）をスプリント種別にする。'1' 以外は汎用（'0'） */
+export function toSprintType(value: unknown): SprintType {
+  return String(value) === '1' ? '1' : '0';
+}
 
 /**
  * スプリント種別定義（汎用 / コーパス）のメタデータ定義
@@ -41,11 +48,14 @@ export type SprintAnswerType = '0' | '1';
 /**
  * 各スプリント種別のメタデータ定義（レベルマップ内包型）
  */
+/** 種別ごとのレベルを持つ student_m_sprint_progress の列 */
+export type SprintLevelColumn = 'level_speed' | 'level_builders' | 'level_structure' | 'level_mastery';
+
 export interface QuestionTypeMetadata {
   label: string;
   value: SprintQuestionType;
   seq_no: number;
-  dbKey: string;      // ユーザー進捗レコードのDBカラム名
+  dbKey: SprintLevelColumn;      // ユーザー進捗レコードのDBカラム名
   hasBasic: boolean;      // レベル0(Basic)が存在するかどうか
   minLevel: number;       // 最小レベル (0 または 1)
   maxLevel: number;       // 上限レベル (5 または 10)
@@ -133,7 +143,7 @@ export const SPRINT_FLOW_TIMING = {
 export interface SprintQuestion {
   question_id: string; // UUID
   content_id: string;  // UUID
-  sprint_type: string; // 0:汎用スプリント, 1:コーパススプリント
+  sprint_type: SprintType; // 0:汎用スプリント, 1:コーパススプリント
   question_type: SprintQuestionType;
   difficulty_level: number;
   group_id: string | null; // UUID (Speedの場合はnull)
@@ -145,8 +155,8 @@ export interface SprintQuestion {
   statement_voice: string | null;
   statement_tts_ssml: string | null;
   statement_tts_ssml_mode: TtsSsmlMode;
-  statement_tts_adjustments: any | null;
-  statement_tts_status: number;
+  statement_tts_adjustments: TTSAdjustmentData | null;
+  statement_tts_status: TtsStatus;
 
   // ② クエスチョン（問い・指示）セクション
   question_en: string;
@@ -154,8 +164,8 @@ export interface SprintQuestion {
   question_voice: string | null;
   question_tts_ssml: string | null;
   question_tts_ssml_mode: TtsSsmlMode;
-  question_tts_adjustments: any | null;
-  question_tts_status: number;
+  question_tts_adjustments: TTSAdjustmentData | null;
+  question_tts_status: TtsStatus;
 
   // ③ 解答（YES・通常正解文）セクション
   answer_sentence_yes_en: string;
@@ -163,8 +173,8 @@ export interface SprintQuestion {
   answer_sentence_yes_voice: string | null;
   answer_sentence_yes_tts_ssml: string | null;
   answer_sentence_yes_tts_ssml_mode: TtsSsmlMode;
-  answer_sentence_yes_tts_adjustments: any | null;
-  answer_sentence_yes_tts_status: number;
+  answer_sentence_yes_tts_adjustments: TTSAdjustmentData | null;
+  answer_sentence_yes_tts_status: TtsStatus;
 
   // ④ 解答（NO・否定文 ※Speed専用）セクション
   answer_sentence_no_en: string | null;
@@ -172,8 +182,8 @@ export interface SprintQuestion {
   answer_sentence_no_voice: string | null;
   answer_sentence_no_tts_ssml: string | null;
   answer_sentence_no_tts_ssml_mode: TtsSsmlMode;
-  answer_sentence_no_tts_adjustments: any | null;
-  answer_sentence_no_tts_status: number;
+  answer_sentence_no_tts_adjustments: TTSAdjustmentData | null;
+  answer_sentence_no_tts_status: TtsStatus;
 
   // 管理・移行・システム共通カラム
   last_tts_date: string | null;

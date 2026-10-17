@@ -15,6 +15,7 @@ import { upsertTag } from '@/actions/adminTagAction';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { ContentTag, TAG_TYPES, TagType } from '@gabby/types/content';
+import type { TableInsert } from '@gabby/types/db';
 
 /**
  * --- 1. スキーマ定義 ---
@@ -79,7 +80,7 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
   const onSubmit = async (values: TagFormValues) => {
     setServerError(null);
     try {
-      const payload: Partial<ContentTag> = {
+      const payload: TableInsert<'com_m_contents_tag'> = {
         tag_name: values.tag_name,
         tag_type: values.tag_type as TagType,
         seq_no: Number(values.seq_no),

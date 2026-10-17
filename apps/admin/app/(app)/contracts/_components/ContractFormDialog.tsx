@@ -35,7 +35,7 @@ function createContractSchema(t: FormT) {
     max_licenses: z.coerce.number().min(1, t('errors.maxLicensesInvalid')),
     start_date: z.string().min(1, t('errors.startDateRequired')),
     end_date: z.string().min(1, t('errors.endDateRequired')),
-    status: z.coerce.number(),
+    status: z.coerce.number().pipe(z.literal([0, 1, 9])),
     note: z.string().nullable().optional(),
     weekly_frequency: z.coerce.number().nullable().optional(),
     total_sessions: z.coerce.number().nullable().optional(),

@@ -47,7 +47,7 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
         id: data.id,
         user_id: data.user_id,
         user_name: data.user_name,
-        user_type: data.user_type,
+        user_type: data.user_type ?? '',
         icon_path: data.icon_path,
         client_id: data.client_id,
         client_name: client?.client_name ?? null,

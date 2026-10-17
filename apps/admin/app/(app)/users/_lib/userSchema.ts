@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { useTranslations } from 'next-intl';
-import { USER_STATUS, USER_TYPES, type UserRecord } from '@gabby/types/user';
+import { USER_STATUS, USER_TYPES, isUserType, type UserRecord } from '@gabby/types/user';
 
 type FormT = ReturnType<typeof useTranslations<'users.form'>>;
 
@@ -13,7 +13,7 @@ export function createUserBaseSchema(t: FormT) {
     email: z.email({ message: t('errors.invalidEmail') }),
     user_name: z.string().min(1, t('errors.nameRequired')),
     client_id: z.string().min(1, t('errors.clientRequired')),
-    user_type: z.string().min(1, t('errors.userTypeRequired')),
+    user_type: z.enum([USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH], { message: t('errors.userTypeRequired') }),
     roles: z.array(z.string()),
   });
 }
@@ -55,7 +55,8 @@ export function toUserBaseValues(user: UserRecord): UserBaseValues {
     email: user.email ?? '',
     user_name: user.user_name ?? '',
     client_id: user.client_id ?? '',
-    user_type: user.user_type,
+    // com_m_user.user_type は NULL を許す列のため、種別でない値は生徒として表示する（保存時に選び直せる）
+    user_type: isUserType(user.user_type) ? user.user_type : USER_TYPES.STUDENT,
     roles: user.roles ?? [],
   };
 }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SprintQuestion, SprintQuestionType, SprintAnswerType } from '@gabby/types/sprint';
+import { SprintQuestion, SprintQuestionType, SprintAnswerType, SprintType } from '@gabby/types/sprint';
 import { MetadataSprint } from '@gabby/types/content';
 
 interface LessonSprintSessionResult {
@@ -15,7 +15,7 @@ interface LessonSprintConfigState {
   level: string;
   timeLimitSec: number;
   answerType: SprintAnswerType | null;
-  sprintType: string | null;
+  sprintType: SprintType | null;
 }
 
 interface LessonSprintState {

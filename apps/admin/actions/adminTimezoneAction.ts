@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { TimezoneMaster } from '@gabby/types/timezone';
+import type { TableInsert } from '@gabby/types/db';
 import { revalidatePath } from 'next/cache';
 import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { createLogger } from '@gabby/lib/logger';
@@ -37,7 +38,7 @@ export async function getTimezones() {
  * timezone（IANAタイムゾーン名）を主キーとしてupsertする。
  * IANA形式として不正な値はDB側のトリガー（validate_iana_timezone）で拒否される。
  */
-export async function upsertTimezone(payload: Partial<TimezoneMaster>) {
+export async function upsertTimezone(payload: TableInsert<'com_m_timezone'>) {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();

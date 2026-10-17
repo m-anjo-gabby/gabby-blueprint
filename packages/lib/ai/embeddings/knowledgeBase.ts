@@ -51,7 +51,8 @@ export async function upsertKnowledgeEntry(params: UpsertKnowledgeEntryParams): 
         title: params.title,
         body: params.body,
         metadata: params.metadata ?? {},
-        embedding,
+        // pgvector の列は文字列の表現（'[0.1,0.2,...]'）で渡す
+        embedding: JSON.stringify(embedding),
         embedding_model: EMBEDDING_MODEL,
         created_by: params.createdBy,
         update_date: new Date().toISOString(),

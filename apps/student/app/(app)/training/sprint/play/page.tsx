@@ -5,7 +5,7 @@ import { getSprintQuestionsAction, getLastSprintSessionAction, getContentAction 
 import { SprintSelect } from "./_components/SprintSelect";
 import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
 import { SprintTimePlayer } from "./_components/SprintTimePlayer";
-import { SprintQuestionType, SprintAnswerType, QUESTION_TYPES } from "@gabby/types/sprint";
+import { SprintQuestionType, SprintAnswerType, QUESTION_TYPES, toSprintType } from "@gabby/types/sprint";
 import { useToast } from "@gabby/lib/hooks/useToast";
 import { useSprintStore } from "@/stores/useSprintStore";
 import { AlertCircle, Volume2, BookOpen } from "lucide-react";
@@ -103,7 +103,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
           timeLimitSec: fallbackTime,
           contentId: fallbackContentId,
           answerType: (resolvedParams.answer_type as SprintAnswerType) || '0',
-          sprintType: resolvedParams.sprint_type || '0',
+          sprintType: toSprintType(resolvedParams.sprint_type),
         };
       }
 
@@ -184,7 +184,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     );
 
     if (response.success && response.data && response.data.length > 0) {
-      const sprintType = resolvedParams.sprint_type || response.data[0]?.sprint_type || '0';
+      const sprintType = toSprintType(resolvedParams.sprint_type || response.data[0]?.sprint_type);
       const isAssessmentMode = selectedConfig.isAssessmentMode !== undefined ? selectedConfig.isAssessmentMode : config.isAssessmentMode;
 
       // 💡 ストア側のアクションに集約してセッション情報・初期化を一撃で適用

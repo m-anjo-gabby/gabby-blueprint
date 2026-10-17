@@ -202,7 +202,7 @@ export async function signInCore(
         login_failed_count: 0,
         locked_until: null,
         update_date: new Date().toISOString()
-      } as Partial<UserBase>)
+      })
       .eq('id', userMaster.id);
 
     if (resetError) {
@@ -395,7 +395,7 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
   if (updated.user?.id) {
     const { error: unlockError } = await createAdminClient()
       .from('com_m_user')
-      .update({ login_failed_count: 0, locked_until: null, update_date: new Date().toISOString() } as Partial<UserBase>)
+      .update({ login_failed_count: 0, locked_until: null, update_date: new Date().toISOString() })
       .eq('id', updated.user.id);
     if (unlockError) {
       logger.error('auth:reset_password_unlock_failed', unlockError.message, { err: unlockError, userId: updated.user.id });

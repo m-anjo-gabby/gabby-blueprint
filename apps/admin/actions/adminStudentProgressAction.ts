@@ -4,6 +4,7 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import type { TableUpdate } from '@gabby/types/db';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
 import { clampLevel, computeStage, getForcedLevels, getStageGoals } from '@gabby/lib/sprint/stageProgression';
@@ -86,9 +87,12 @@ export async function updateStudentSprintLevel(
     const newLevels = { ...toStageLevels(current), [questionType]: newLevel };
     const newStage = computeStage(newLevels);
 
+    const levelUpdate: TableUpdate<'student_m_sprint_progress'> = { stage: newStage, update_date: new Date().toISOString() };
+    levelUpdate[meta.dbKey] = newLevel;
+
     const { data, error } = await supabase
       .from('student_m_sprint_progress')
-      .update({ [meta.dbKey]: newLevel, stage: newStage, update_date: new Date().toISOString() })
+      .update(levelUpdate)
       .eq('user_id', userId)
       .select(PROGRESS_COLUMNS)
       .single();

@@ -6,7 +6,7 @@ import { ChevronLeft, ArrowRight, Loader2, Lock, BookOpen, Timer } from 'lucide-
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, SprintQuestionType, SprintAnswerType, SprintQuestion } from '@gabby/types/sprint';
+import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, SprintQuestionType, SprintAnswerType, SprintQuestion, toSprintType } from '@gabby/types/sprint';
 import { resolveSprintHasLevel, formatSprintLevelLabel, getSprintTitle, resolveCoachContentName, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel } from '@gabby/lib';
 import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
@@ -126,8 +126,7 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
       level: String(difficultyLevel),
       timeLimitSec,
       answerType,
-      // DB由来の値はランタイムで数値になっていることがあるため、明示的に文字列化する
-      sprintType: String(result.questions[0]?.sprint_type ?? '0'),
+      sprintType: toSprintType(result.questions[0]?.sprint_type),
     });
     setContentName(selectedContent ? resolveCoachContentName(selectedContent) : null);
     setContentMetadata(sprintMeta ?? null);

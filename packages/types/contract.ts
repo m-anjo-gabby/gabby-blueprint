@@ -7,8 +7,13 @@ export interface ContractLicenseStats {
   remaining_licenses: number;     // 割当可能数
 }
 
+import type { TableRow } from './db';
+
 // 契約タイプ 1: Blueprintのみ, 2: Blueprint+ライブセッション
 export type ContractType = 1 | 2;
+
+/** 契約の状態（com_m_contract.status。値は DB の CHECK 制約に従う） */
+export type ContractStatus = NonNullable<TableRow<'com_m_contract'>['status']>;
 
 // 契約情報の型定義（ビュー vw_contract_details に対応）
 export interface ContractDetail {
@@ -55,10 +60,11 @@ export interface ContractPlan {
 // ライセンス割当画面で表示するためのユーザー簡略情報
 export interface LicenseUserItem {
   id: string;
-  user_name: string;
-  email: string;
+  user_name: string | null;
+  /** 退会済み（認証のアカウントを消したユーザー）は null */
+  email: string | null;
   // 割当済みの場合のみ設定されるライセンスID（無効化操作に使用）
-  license_id?: string;
+  license_id?: string | null;
   // 割当済みの場合のみ設定されるライセンスステータス（1:有効 0:無効化済み）
   license_status?: number;
   // ライブセッション付き契約の場合のみ設定されるチケット消化状況

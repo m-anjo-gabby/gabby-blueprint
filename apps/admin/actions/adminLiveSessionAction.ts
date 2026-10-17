@@ -25,6 +25,7 @@ import {
   ReleaseLessonScheduleSlotResult,
 } from '@gabby/types/adminLiveSession';
 import type { ConductedVia, SessionOutcome, SessionOutcomeEvidence } from '@gabby/types/session';
+import { USER_TYPES } from '@gabby/types/user';
 
 const logger = createLogger('admin');
 
@@ -41,7 +42,7 @@ export async function getClientStudents(clientId: string): Promise<GetClientStud
       .from('vw_user_list')
       .select('id, user_name, email')
       .eq('client_id', clientId)
-      .eq('user_type', 1)
+      .eq('user_type', USER_TYPES.STUDENT)
       .order('user_name');
 
     if (error) {
@@ -258,7 +259,7 @@ export async function getCoachesForMatching(): Promise<AdminCoachSummary[]> {
     const { data, error } = await supabase
       .from('com_m_user')
       .select('id, user_name')
-      .eq('user_type', 2)
+      .eq('user_type', USER_TYPES.COACH)
       .order('user_name');
 
     if (error) {

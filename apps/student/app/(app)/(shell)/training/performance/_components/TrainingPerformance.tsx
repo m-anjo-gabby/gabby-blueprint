@@ -7,7 +7,7 @@ import { getContentTypeConfig, getTrainingMetricConfig } from '@gabby/lib/conten
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
-import { UserTrainingPerformanceResponse } from '@/actions/performanceAction';
+import { UserTrainingPerformanceResponse } from '@gabby/types/training';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';

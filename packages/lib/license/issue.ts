@@ -13,6 +13,7 @@
 import 'server-only';
 import type { createAdminClient } from '../supabase/admin';
 import { createLogger, type LogContext } from '../logger';
+import type { TableRow } from '@gabby/types/db';
 
 const logger = createLogger('common');
 
@@ -33,7 +34,7 @@ export interface LicenseHistoryEntry {
   contract_id: string;
   user_id: string;
   action: 'assigned' | 'updated' | 'invalidated' | 'removed';
-  status: number;
+  status: TableRow<'com_t_user_license'>['status'];
   start_date: string;
   end_date: string;
   has_dialogue_practice: boolean;
@@ -131,7 +132,7 @@ export interface IssuingContract {
 export interface IssuedLicenseRow {
   license_id: string;
   user_id: string;
-  status: number;
+  status: TableRow<'com_t_user_license'>['status'];
   start_date: string;
   end_date: string;
   note: string | null;

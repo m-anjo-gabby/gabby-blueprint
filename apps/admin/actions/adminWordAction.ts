@@ -9,6 +9,12 @@ import { getLogContext } from '@gabby/lib/logger/context';
 
 const logger = createLogger('admin');
 
+/** 単語の登録・更新の入力（word_id があれば更新） */
+export type WordInput = Pick<WordRecord, 'content_id' | 'word_en' | 'word_ja'> & Partial<Pick<WordRecord, 'word_id' | 'frequency_rank' | 'status'>>;
+
+/** フレーズの登録・更新の入力（phrase_id があれば更新） */
+export type PhraseInput = Pick<PhraseRecord, 'word_id' | 'phrase_en' | 'phrase_ja' | 'phrase_type'> & Partial<Pick<PhraseRecord, 'phrase_id' | 'seq_no' | 'status'>>;
+
 /**
  * 特定の教材に紐づく単語一覧を取得する
  */
@@ -38,7 +44,7 @@ export async function getWordsByContentId(contentId: string): Promise<WordRecord
 /**
  * 単語の登録または更新 (Upsert)
  */
-export async function upsertWord(payload: Partial<WordRecord>) {
+export async function upsertWord(payload: WordInput) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -210,7 +216,7 @@ export async function getPhrasesByContentId(contentId: string): Promise<PhraseRe
 /**
  * フレーズの登録または更新 (Upsert)
  */
-export async function upsertPhrase(payload: Partial<PhraseRecord>) {
+export async function upsertPhrase(payload: PhraseInput) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();

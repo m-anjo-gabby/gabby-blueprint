@@ -12,6 +12,14 @@ export const USER_TYPES = {
 // 値の型を抽出 ( '0' | '1' | '2' )
 export type UserType = typeof USER_TYPES[keyof typeof USER_TYPES];
 
+/** 画面・URL から受け取った値がユーザー種別か */
+export function isUserType(value: unknown): value is UserType {
+  return Object.values(USER_TYPES).includes(value as UserType);
+}
+
+/** ユーザー一覧のライセンス・招待の状態（private.vw_user_list.license_state） */
+export type LicenseState = 'none' | 'active' | 'future' | 'expired' | 'mail_failed' | 'expired_invite' | 'inviting';
+
 export const USER_TYPE_MAP: Record<UserType, string> = {
   [USER_TYPES.ADMIN]: '管理者',
   [USER_TYPES.STUDENT]: '生徒',
@@ -86,7 +94,7 @@ export interface UserRecord extends Omit<UserBase, 'status'> {
   license_end_date: string | null;
   plan_name: string | null;
   contract_name: string | null; // アドミン管理用の契約名
-  license_state: 'none' | 'active' | 'future' | 'expired' | 'mail_failed' | 'expired_invite' | 'inviting';
+  license_state: LicenseState;
 
   // 招待メール関連
   mail_sent_at?: string | null;
@@ -101,7 +109,7 @@ export interface CreateUserPayload {
   email: string;
   user_name: string;
   client_id: string;
-  user_type: string;
+  user_type: UserType;
   timezone?: string; // オプショナルでフロントから指定可能にする場合
   roles?: string[];
 }

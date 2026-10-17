@@ -62,5 +62,5 @@ export async function connect(envName, askToken) {
   }
 
   const query = (sql) => api(token, 'POST', `/projects/${ref}/database/query`, { query: sql });
-  return { envVars, ref, project, query };
+  return { envVars, ref, token, project, query };
 }

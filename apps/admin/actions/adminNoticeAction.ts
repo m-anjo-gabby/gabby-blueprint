@@ -10,6 +10,7 @@ import {
   NOTICE_CTA_LABEL_MAX,
   NOTICE_DISPLAY_MODES,
   NOTICE_TYPES,
+  isNoticeType,
   NoticeAttachment,
   NoticeType,
   NoticeTargetType,
@@ -19,7 +20,7 @@ import {
 import { isValidNoticeCtaUrl } from '@gabby/lib/notice/links';
 import { containsPattern } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
-import { USER_STATUS, USER_TYPES } from '@gabby/types/user';
+import { USER_STATUS, USER_TYPES, isUserType, type UserType } from '@gabby/types/user';
 
 const logger = createLogger('admin');
 
@@ -142,7 +143,7 @@ export async function getNotices(params: ListParams<'type'>): Promise<ListResult
       query = query.ilike('title', containsPattern(q));
     }
 
-    if (noticeType) {
+    if (isNoticeType(noticeType)) {
       query = query.eq('notice_type', noticeType);
     }
 
@@ -208,7 +209,7 @@ export interface NoticeReadStatusUser {
   id: string;
   user_id: number;
   user_name: string | null;
-  user_type: string;
+  user_type: UserType | null;
   client_id: string | null;
   client_name: string | null;
   is_read: boolean;
@@ -267,7 +268,8 @@ export async function getNoticeReadStatus(
 
     if (notice.target_type === 'ALL') {
       query = query.eq('user_type', USER_TYPES.STUDENT);
-    } else if (notice.target_type === 'CLIENT') {
+    } else if (notice.target_type === 'CLIENT' && notice.client_id) {
+      // 顧客向けは client_id が必ず入る（CHECK 制約 chk_notice_target）
       query = query.eq('user_type', USER_TYPES.STUDENT).eq('client_id', notice.client_id);
     } else if (notice.target_type === 'COACH') {
       query = query.eq('user_type', USER_TYPES.COACH);
@@ -277,7 +279,7 @@ export async function getNoticeReadStatus(
     if (clientId) {
       query = query.eq('client_id', clientId);
     }
-    if (userType) {
+    if (isUserType(userType)) {
       query = query.eq('user_type', userType);
     }
     if (q) {
