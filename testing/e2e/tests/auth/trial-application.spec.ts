@@ -70,7 +70,8 @@ test("申込フォームから申し込み、届いた案内からパスワー�
   await page.goto("/trial");
   await expect(page.getByRole("heading", { name: "無料体験のお申し込み" })).toBeVisible();
   await page.getByLabel("メールアドレス").fill(email);
-  await page.getByLabel("氏名").fill("E2Eトライアル");
+  await page.getByLabel(/^姓\s*必須$/).fill("試験");
+  await page.getByLabel(/^名\s*必須$/).fill("トライアル");
   await page.getByLabel("姓（ローマ字）").fill("Shiken");
   await page.getByLabel("名（ローマ字）").fill("Trial");
   await page.getByRole("combobox", { name: /業種・職業/ }).click();
@@ -87,8 +88,9 @@ test("申込フォームから申し込み、届いた案内からパスワー�
   const { data: app } = await admin
     .from("com_t_trial_application").select("application_id, occupation, occupation_other, timezone, invitation_id").eq("email", email).single();
   expect(app).toMatchObject({ occupation: 99, occupation_other: "研究職", timezone: "Asia/Tokyo" });
-  const { data: invitation } = await admin.from("com_t_invitation").select("token, client_id, contract_id").eq("id", app!.invitation_id).single();
-  expect(invitation).toMatchObject({ client_id: WEB_TRIAL_CLIENT_ID, contract_id: null });
+  const { data: invitation } = await admin.from("com_t_invitation").select("token, user_name, client_id, contract_id").eq("id", app!.invitation_id).single();
+  // 画面の名前（コーチも見る）はローマ字の「名 姓」
+  expect(invitation).toMatchObject({ user_name: "Trial Shiken", client_id: WEB_TRIAL_CLIENT_ID, contract_id: null });
   const { count: notified } = await admin
     .from("com_t_notification").select("notification_id", { count: "exact", head: true }).eq("notification_type", "TRIAL_APPLIED").like("dedup_key", `${app!.application_id}:%`);
   const { count: admins } = await admin.from("com_m_user").select("id", { count: "exact", head: true }).eq("user_type", "0").eq("delete_flg", "0");
@@ -109,6 +111,12 @@ test("申込フォームから申し込み、届いた案内からパスワー�
 
   const { data: registered } = await admin.from("com_t_trial_application").select("user_id, accepted_at").eq("email", email).single();
   expect(registered?.accepted_at).not.toBeNull();
+  // 申込の姓・名から正式な氏名を作る（ユーザーの削除で一緒に消える）
+  const { data: user } = await admin.from("com_m_user").select("user_name").eq("id", registered!.user_id).single();
+  expect(user?.user_name).toBe("Trial Shiken");
+  const { data: legal } = await admin
+    .from("com_m_user_legal").select("last_name, first_name, last_name_latin, first_name_latin, updated_by").eq("user_id", registered!.user_id).single();
+  expect(legal).toEqual({ last_name: "試験", first_name: "トライアル", last_name_latin: "Shiken", first_name_latin: "Trial", updated_by: null });
   const { data: licenses } = await admin.from("com_t_user_license").select("license_id, start_date, end_date, contract_id").eq("user_id", registered!.user_id);
   expect(licenses).toHaveLength(1);
   const days = (Date.parse(licenses![0].end_date) + 1 - Date.parse(licenses![0].start_date)) / DAY_MS;
@@ -123,7 +131,8 @@ test("必須の項目が空のままでは申し込めない", async ({ page }) 
   await page.goto("/trial");
   await page.getByRole("button", { name: "申し込む" }).click();
   await expect(page.getByText("メールアドレスを入力してください")).toBeVisible();
-  await expect(page.getByText("氏名を入力してください")).toBeVisible();
+  await expect(page.getByText("姓を入力してください", { exact: true })).toBeVisible();
+  await expect(page.getByText("名を入力してください", { exact: true })).toBeVisible();
   await expect(page.getByText("業種・職業を選んでください")).toBeVisible();
   await expect(page.getByText("個人情報保護方針への同意が必要です")).toBeVisible();
   await expect(page.getByRole("link", { name: /個人情報保護方針/ })).toHaveAttribute("href", "https://gabbyacademy.com/privacy/");

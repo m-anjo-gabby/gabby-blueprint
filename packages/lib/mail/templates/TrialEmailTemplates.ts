@@ -1,4 +1,6 @@
 import {
+  formatTrialApplicantName,
+  formatTrialApplicantNameLatin,
   formatTrialOccupation,
   WEB_TRIAL_LICENSE_DAYS,
   type TrialApplicationInput,
@@ -132,12 +134,13 @@ export function buildTrialApplicationNotifyMail({
   adminUrl: string | null;
 }): MailContent {
   const label = KIND_LABELS[kind];
-  const romaji = `${input.romajiLastName} ${input.romajiFirstName}`;
+  const name = formatTrialApplicantName(input);
+  const nameLatin = formatTrialApplicantNameLatin(input);
   return {
-    subject: mailSubject('bilingual', `Webトライアルの申込（${label.ja}）/ Web trial application: ${input.userName}`),
+    subject: mailSubject('bilingual', `Webトライアルの申込（${label.ja}）/ Web trial application: ${name}`),
     doc: {
       language: 'bilingual',
-      preheader: `${input.userName}（${romaji}）/ ${formatTrialOccupation(input.occupation, input.occupationOther)}`,
+      preheader: `${name}（${nameLatin}）/ ${formatTrialOccupation(input.occupation, input.occupationOther)}`,
       headerLabel: '運営 / Operations',
       blocks: [
         {
@@ -150,7 +153,7 @@ export function buildTrialApplicationNotifyMail({
           rows: [
             { label: '種類 / Type', value: `${label.ja} / ${label.en}`, sub: applyCount > 1 ? `${applyCount}回目 / #${applyCount}` : null },
             { label: '申込日時 / Applied at', value: `${appliedAt}（日本時間 / JST）` },
-            { label: '氏名 / Name', value: input.userName, sub: romaji },
+            { label: '氏名 / Name', value: name, sub: nameLatin },
             { label: 'メール / Email', value: input.email },
             {
               label: '業種・職業 / Occupation',

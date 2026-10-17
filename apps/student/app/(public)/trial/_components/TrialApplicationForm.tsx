@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, useWatch, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, ExternalLink, Send } from 'lucide-react';
 import { PRIVACY_POLICY_URL } from '@gabby/lib/contact';
@@ -26,6 +26,37 @@ interface TrialApplicationFormProps {
 }
 
 const Required = () => <span className="ml-1 text-xs text-rose-600">必須</span>;
+
+interface NameFieldProps {
+  control: Control<TrialApplicationFormValues>;
+  name: 'lastName' | 'firstName' | 'lastNameLatin' | 'firstNameLatin';
+  label: string;
+  placeholder: string;
+  autoComplete: string;
+  maxLength: number;
+}
+
+/** 氏名の1欄（姓・名・それぞれのローマ字。いずれも必須） */
+function NameField({ control, name, label, placeholder, autoComplete, maxLength }: NameFieldProps) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>
+            {label}
+            <Required />
+          </FormLabel>
+          <FormControl>
+            <Input autoComplete={autoComplete} placeholder={placeholder} maxLength={maxLength} {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
 
 export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialApplicationFormProps) {
   const form = useForm<TrialApplicationFormValues>({
@@ -93,56 +124,13 @@ export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialAppli
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="userName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                氏名
-                <Required />
-              </FormLabel>
-              <FormControl>
-                <Input autoComplete="name" placeholder="山田 太郎" maxLength={TRIAL_FIELD_LIMITS.userName} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid gap-6 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="romajiLastName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  姓（ローマ字）
-                  <Required />
-                </FormLabel>
-                <FormControl>
-                  <Input autoComplete="family-name" placeholder="Yamada" maxLength={TRIAL_FIELD_LIMITS.romajiName} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="romajiFirstName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  名（ローマ字）
-                  <Required />
-                </FormLabel>
-                <FormControl>
-                  <Input autoComplete="given-name" placeholder="Taro" maxLength={TRIAL_FIELD_LIMITS.romajiName} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        {/* 氏名（姓・名）。正式な氏名として本登録時に登録し、ローマ字はコーチが見る名前（名 姓）にも使う */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+          <NameField control={form.control} name="lastName" label="姓" placeholder="山田" autoComplete="family-name" maxLength={TRIAL_FIELD_LIMITS.name} />
+          <NameField control={form.control} name="firstName" label="名" placeholder="太郎" autoComplete="given-name" maxLength={TRIAL_FIELD_LIMITS.name} />
+          {/* ローマ字欄は漢字の自動入力が入らないよう autoComplete を切る */}
+          <NameField control={form.control} name="lastNameLatin" label="姓（ローマ字）" placeholder="Yamada" autoComplete="off" maxLength={TRIAL_FIELD_LIMITS.latinName} />
+          <NameField control={form.control} name="firstNameLatin" label="名（ローマ字）" placeholder="Taro" autoComplete="off" maxLength={TRIAL_FIELD_LIMITS.latinName} />
         </div>
 
         <FormField
@@ -207,7 +195,8 @@ export function TrialApplicationForm({ timezones, turnstileSiteKey }: TrialAppli
                     <SelectValue placeholder="選択してください" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                {/* 選択肢が多いため、7件強の高さに収めてスクロールさせる（続きがあることが分かるよう半件分のぞかせる） */}
+                <SelectContent className="max-h-[min(15.5rem,var(--radix-select-content-available-height))]">
                   {timezones.map((tz) => (
                     <SelectItem key={tz.value} value={tz.value}>
                       {tz.label}

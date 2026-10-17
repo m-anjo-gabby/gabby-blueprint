@@ -32,22 +32,20 @@ export function createColumns(t: TableT, locale: 'ja' | 'en'): ColumnDef<TrialAp
       ),
     },
     {
-      accessorKey: 'user_name',
+      accessorKey: 'full_name',
       header: t('nameHeader'),
       cell: ({ row }) => {
-        const { user_name, romaji_last_name, romaji_first_name, email, user_id } = row.original;
+        const { full_name, full_name_latin, email, user_id } = row.original;
         return (
           <div className="min-w-0">
             {user_id ? (
               <Link href={`/users/${user_id}`} className="font-bold text-slate-700 hover:text-brand">
-                {user_name}
+                {full_name}
               </Link>
             ) : (
-              <span className="font-bold text-slate-700">{user_name}</span>
+              <span className="font-bold text-slate-700">{full_name}</span>
             )}
-            <span className="block text-xs text-slate-500">
-              {romaji_last_name} {romaji_first_name}
-            </span>
+            <span className="block text-xs text-slate-500">{full_name_latin}</span>
             <span className="block truncate text-xs text-slate-500">{email}</span>
           </div>
         );

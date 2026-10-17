@@ -17,6 +17,10 @@
 -- 同じアドレスの前回の申込から p_min_interval 以内なら何もせず throttled = true を返す（二重送信・連打で
 -- 招待メール・通知が重ならないように。画面には通常の受付完了を表示する）。
 --
+-- 【氏名】
+-- 姓・名とそれぞれのローマ字を受け取る。招待（→ com_m_user.user_name。コーチも見る画面の名前）には
+-- ローマ字の「名 姓」（例: Taro Yamada）を入れ、正式な氏名（com_m_user_legal）は本登録時にアプリが申込から作る。
+--
 -- 招待の所属は固定の顧客「Webトライアル」（web_trial_client_id()）。契約・ライセンスは本登録の時点で決める
 -- （fn_resolve_web_trial_contract）。p_email は小文字にそろえて渡す。
 ---------------------------------------------
@@ -24,9 +28,10 @@ DROP FUNCTION IF EXISTS public.fn_submit_trial_application(text, text, text, tex
 
 CREATE OR REPLACE FUNCTION public.fn_submit_trial_application(
     p_email text,
-    p_user_name text,
-    p_romaji_last_name text,
-    p_romaji_first_name text,
+    p_last_name text,
+    p_first_name text,
+    p_last_name_latin text,
+    p_first_name_latin text,
     p_timezone text,
     p_country_city text,
     p_occupation smallint,
@@ -50,6 +55,7 @@ AS $$
 #variable_conflict use_column
 DECLARE
     v_email text := lower(trim(p_email));
+    v_user_name text := btrim(p_first_name_latin) || ' ' || btrim(p_last_name_latin);
     v_app public.com_t_trial_application%ROWTYPE;
     v_inv public.com_t_invitation%ROWTYPE;
     v_kind text;
@@ -75,13 +81,13 @@ BEGIN
         SELECT * INTO v_inv FROM public.com_t_invitation i WHERE lower(i.email) = v_email;
         IF NOT FOUND THEN
             INSERT INTO public.com_t_invitation (email, user_name, user_type, client_id, contract_id, roles, token, expires_at)
-            VALUES (v_email, p_user_name, '1', public.web_trial_client_id(), NULL, '{}', p_token, p_expires_at)
+            VALUES (v_email, v_user_name, '1', public.web_trial_client_id(), NULL, '{}', p_token, p_expires_at)
             RETURNING id INTO v_invitation_id;
             v_kind := 'new';
             v_token := p_token;
         ELSIF v_inv.accepted_at IS NULL AND v_inv.id IS NOT DISTINCT FROM v_app.invitation_id THEN
             UPDATE public.com_t_invitation
-            SET user_name = p_user_name, token = p_token, expires_at = p_expires_at,
+            SET user_name = v_user_name, token = p_token, expires_at = p_expires_at,
                 mail_sent_at = NULL, last_mail_error = NULL, update_date = now()
             WHERE id = v_inv.id;
             v_invitation_id := v_inv.id;
@@ -93,7 +99,7 @@ BEGIN
         ELSE
             -- 本登録済みの招待が残っているが、ユーザーは削除済み。トライアルの招待として作り直す
             UPDATE public.com_t_invitation
-            SET user_name = p_user_name, user_type = '1', client_id = public.web_trial_client_id(), contract_id = NULL,
+            SET user_name = v_user_name, user_type = '1', client_id = public.web_trial_client_id(), contract_id = NULL,
                 roles = '{}', token = p_token, expires_at = p_expires_at, accepted_at = NULL,
                 mail_sent_at = NULL, last_mail_error = NULL, invited_by = NULL, update_date = now()
             WHERE id = v_inv.id;
@@ -104,16 +110,17 @@ BEGIN
     END IF;
 
     INSERT INTO public.com_t_trial_application AS a (
-        email, user_name, romaji_last_name, romaji_first_name, timezone, country_city,
+        email, last_name, first_name, last_name_latin, first_name_latin, timezone, country_city,
         occupation, occupation_other, message, invitation_id, user_id
     ) VALUES (
-        v_email, p_user_name, p_romaji_last_name, p_romaji_first_name, p_timezone, NULLIF(p_country_city, ''),
+        v_email, p_last_name, p_first_name, p_last_name_latin, p_first_name_latin, p_timezone, NULLIF(p_country_city, ''),
         p_occupation, NULLIF(p_occupation_other, ''), NULLIF(p_message, ''), v_invitation_id, v_user_id
     )
     ON CONFLICT (email) DO UPDATE SET
-        user_name = EXCLUDED.user_name,
-        romaji_last_name = EXCLUDED.romaji_last_name,
-        romaji_first_name = EXCLUDED.romaji_first_name,
+        last_name = EXCLUDED.last_name,
+        first_name = EXCLUDED.first_name,
+        last_name_latin = EXCLUDED.last_name_latin,
+        first_name_latin = EXCLUDED.first_name_latin,
         timezone = EXCLUDED.timezone,
         country_city = EXCLUDED.country_city,
         occupation = EXCLUDED.occupation,
@@ -129,7 +136,8 @@ BEGIN
 
     INSERT INTO public.com_t_notification (user_id, notification_type, dedup_key, payload, link_path)
     SELECT u.id, 'TRIAL_APPLIED', v_application_id::text || ':' || v_apply_count::text,
-           jsonb_build_object('application_id', v_application_id, 'applicant_name', p_user_name, 'kind', v_kind, 'apply_count', v_apply_count),
+           jsonb_build_object('application_id', v_application_id, 'applicant_name', p_last_name || ' ' || p_first_name,
+                              'applicant_name_en', v_user_name, 'kind', v_kind, 'apply_count', v_apply_count),
            '/trial-applications'
     FROM public.com_m_user u
     WHERE u.user_type = '0' AND u.delete_flg = '0'
@@ -139,5 +147,5 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_submit_trial_application(text, text, text, text, text, text, text, smallint, text, text, text, timestamptz, interval) TO service_role;

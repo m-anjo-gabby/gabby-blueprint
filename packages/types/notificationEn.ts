@@ -125,7 +125,7 @@ export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
         },
   TRIAL_APPLIED: (payload) => ({
     title: payload.kind === 'reapply' ? 'Web trial re-application' : 'Web trial application',
-    body: `${String(payload.applicant_name ?? '')}: ${TRIAL_APPLIED_NOTE_EN[String(payload.kind)] ?? 'A new web trial application was received.'}`,
+    body: `${String(payload.applicant_name_en ?? payload.applicant_name ?? '')}: ${TRIAL_APPLIED_NOTE_EN[String(payload.kind)] ?? 'A new web trial application was received.'}`,
   }),
 };
 

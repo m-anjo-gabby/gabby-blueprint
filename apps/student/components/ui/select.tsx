@@ -83,17 +83,17 @@ const SelectContent = React.forwardRef<
       position={position}
       {...props}
     >
-      <SelectScrollUpButton />
+      {/* 上下の矢印ボタンは出さず、一覧の右側の通常のスクロールバーでスクロールする
+          （Radix が Viewport に付けるスクロールバー非表示のスタイルを ! で打ち消す） */}
       <SelectPrimitive.Viewport
         className={cn(
-          "p-1",
+          "p-1 [scrollbar-width:thin]! [&::-webkit-scrollbar]:block! [&::-webkit-scrollbar]:w-2",
           position === "popper" &&
             "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
         )}
       >
         {children}
       </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ))

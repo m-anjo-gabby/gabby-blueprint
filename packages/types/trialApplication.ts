@@ -45,24 +45,43 @@ export function formatTrialOccupation(
 /** 入力の上限文字数（旧システムの申込フォームに合わせる） */
 export const TRIAL_FIELD_LIMITS = {
   email: 200,
-  userName: 15,
-  romajiName: 20,
+  /** 姓・名それぞれ */
+  name: 20,
+  /** 姓・名それぞれのローマ字 */
+  latinName: 20,
   countryCity: 50,
   occupationOther: 50,
   message: 1000,
 } as const;
 
-/** 申込フォームの入力値 */
+/**
+ * 申込フォームの入力値。
+ * 氏名の first / last は書く順番ではなく「名・姓」の意味（com_m_user_legal と同じ。山田 太郎 → lastName = 山田）。
+ */
 export interface TrialApplicationInput {
   email: string;
-  userName: string;
-  romajiLastName: string;
-  romajiFirstName: string;
+  lastName: string;
+  firstName: string;
+  lastNameLatin: string;
+  firstNameLatin: string;
   timezone: string;
   countryCity: string;
   occupation: number;
   occupationOther: string;
   message: string;
+}
+
+/** 申込者の氏名（日本語の書き方「姓 名」。メールの宛名・運営向けの表示） */
+export function formatTrialApplicantName(input: Pick<TrialApplicationInput, 'lastName' | 'firstName'>): string {
+  return `${input.lastName} ${input.firstName}`;
+}
+
+/**
+ * 申込者のローマ字の氏名（英語の書き方「名 姓」）。本登録したユーザーの画面の名前（com_m_user.user_name）と
+ * 同じ組み立て（fn_submit_trial_application が招待に入れる）。
+ */
+export function formatTrialApplicantNameLatin(input: Pick<TrialApplicationInput, 'lastNameLatin' | 'firstNameLatin'>): string {
+  return `${input.firstNameLatin} ${input.lastNameLatin}`;
 }
 
 /**
@@ -80,9 +99,14 @@ export type TrialApplicationStatus = 'registered' | 'invited' | 'expired';
 export interface TrialApplicationRow {
   application_id: string;
   email: string;
-  user_name: string;
-  romaji_last_name: string;
-  romaji_first_name: string;
+  last_name: string;
+  first_name: string;
+  last_name_latin: string;
+  first_name_latin: string;
+  /** 姓 名（ビューで組み立てる。検索用） */
+  full_name: string;
+  /** ローマ字の 名 姓（ビューで組み立てる。検索用） */
+  full_name_latin: string;
   timezone: string;
   country_city: string | null;
   occupation: number;

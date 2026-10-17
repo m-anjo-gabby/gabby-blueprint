@@ -15,7 +15,7 @@ const requiredText = (label: string, max: number) =>
 const optionalText = (label: string, max: number) => z.string().trim().max(max, `${label}は${max}文字以内で入力してください`);
 
 const romaji = (label: string) =>
-  requiredText(label, TRIAL_FIELD_LIMITS.romajiName).regex(ROMAJI_PATTERN, `${label}は半角の英字で入力してください`);
+  requiredText(label, TRIAL_FIELD_LIMITS.latinName).regex(ROMAJI_PATTERN, `${label}は半角の英字で入力してください`);
 
 export const trialApplicationSchema = z
   .object({
@@ -25,9 +25,10 @@ export const trialApplicationSchema = z
       .min(1, 'メールアドレスを入力してください')
       .max(TRIAL_FIELD_LIMITS.email, `メールアドレスは${TRIAL_FIELD_LIMITS.email}文字以内で入力してください`)
       .pipe(z.email('メールアドレスの形式が正しくありません')),
-    userName: requiredText('氏名', TRIAL_FIELD_LIMITS.userName),
-    romajiLastName: romaji('姓（ローマ字）'),
-    romajiFirstName: romaji('名（ローマ字）'),
+    lastName: requiredText('姓', TRIAL_FIELD_LIMITS.name),
+    firstName: requiredText('名', TRIAL_FIELD_LIMITS.name),
+    lastNameLatin: romaji('姓（ローマ字）'),
+    firstNameLatin: romaji('名（ローマ字）'),
     timezone: z.string().min(1, 'お住まいの地域のタイムゾーンを選んでください'),
     countryCity: optionalText('国・都市', TRIAL_FIELD_LIMITS.countryCity),
     occupation: z.string().refine((value) => OCCUPATION_CODES.includes(value), '業種・職業を選んでください'),
@@ -46,9 +47,10 @@ export type TrialApplicationFormValues = z.input<typeof trialApplicationSchema>;
 
 export const TRIAL_FORM_DEFAULTS: TrialApplicationFormValues = {
   email: '',
-  userName: '',
-  romajiLastName: '',
-  romajiFirstName: '',
+  lastName: '',
+  firstName: '',
+  lastNameLatin: '',
+  firstNameLatin: '',
   timezone: 'Asia/Tokyo',
   countryCity: '',
   occupation: '',
@@ -62,9 +64,10 @@ export function toTrialApplicationInput(values: z.output<typeof trialApplication
   const occupation = Number(values.occupation);
   return {
     email: values.email.toLowerCase(),
-    userName: values.userName,
-    romajiLastName: values.romajiLastName,
-    romajiFirstName: values.romajiFirstName,
+    lastName: values.lastName,
+    firstName: values.firstName,
+    lastNameLatin: values.lastNameLatin,
+    firstNameLatin: values.firstNameLatin,
     timezone: values.timezone,
     countryCity: values.countryCity,
     occupation,

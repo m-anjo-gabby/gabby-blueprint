@@ -6,15 +6,19 @@
 --   registered … 本登録済み、または登録済みのアドレスからの申込（user_id あり）
 --   invited    … 招待が本登録前・有効期限内
 --   expired    … それ以外（招待の期限切れ、トライアル以外の招待中のアドレス等）
+-- 氏名の検索用に、姓・名をつないだ full_name（姓 名）・full_name_latin（ローマ字の 名 姓）を添える。
 CREATE OR REPLACE VIEW private.vw_trial_application_list
 WITH (security_invoker = false) -- 定義者権限を維持
 AS
 SELECT
   a.application_id,
   a.email,
-  a.user_name,
-  a.romaji_last_name,
-  a.romaji_first_name,
+  a.last_name,
+  a.first_name,
+  a.last_name_latin,
+  a.first_name_latin,
+  a.last_name || ' ' || a.first_name AS full_name,
+  a.first_name_latin || ' ' || a.last_name_latin AS full_name_latin,
   a.timezone,
   a.country_city,
   a.occupation,

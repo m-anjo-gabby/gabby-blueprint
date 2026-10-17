@@ -29,18 +29,20 @@
 ## フロー（正常系）
 
 1. 申込画面で必須項目を入力し、個人情報保護方針に同意し、CAPTCHA が通ってから「申し込む」→ 「お申し込みを受け付けました」。
-2. 申込（`com_t_trial_application`）が入力どおりに記録され、招待（所属は固定の顧客・契約なし）が作られ、管理者全員に通知 `TRIAL_APPLIED` が1件ずつ届く。
+2. 申込（`com_t_trial_application`）が入力どおりに記録され、招待（所属は固定の顧客・契約なし・名前はローマ字の「名 姓」）が作られ、
+   管理者全員に通知 `TRIAL_APPLIED` が1件ずつ届く。
 3. 申込者に「Webトライアルのお申し込みありがとうございます」の案内が届き、サポート窓口に申込の内容のメール（日英併記）が届く。
 4. 案内のリンクからパスワードを設定 → 本登録してホーム（`/dashboard`）に入る。
 5. 本登録の月の契約（固定の顧客。無ければ作る）で、本登録の日から14日間（日本時間 0:00 〜 14日目 23:59:59.999）のライセンスと、
    ライブ1回のチケット・割当履歴が発行され、申込のタイムゾーンがユーザーに設定され、申込に本登録の日時とユーザーが記録される。
+   ユーザーの名前はローマ字の「名 姓」になり、申込の姓・名とローマ字から正式な氏名（`com_m_user_legal`。登録者は空）が作られる。
 6. admin の一覧で、その申込が「登録済み」になる。
 
 ## 異常系・バリデーション一覧
 
 | # | 条件 | 期待結果 | 発生層 |
 |---|---|---|---|
-| 1 | 必須項目が空・個人情報保護方針に未同意で送信 | 各欄の下にエラー（「メールアドレスを入力してください」「業種・職業を選んでください」「個人情報保護方針への同意が必要です」等）。申込は作られない | UI |
+| 1 | 必須項目が空・個人情報保護方針に未同意で送信 | 各欄の下にエラー（「メールアドレスを入力してください」「姓を入力してください」「名を入力してください」「業種・職業を選んでください」「個人情報保護方針への同意が必要です」等）。申込は作られない | UI |
 | 2 | 業種「その他」で記入が空 | 「業種・職業を入力してください」 | 両方 |
 | 3 | ローマ字に英字以外 | 「姓（ローマ字）は半角の英字で入力してください」等 | 両方 |
 | 4 | CAPTCHA の完了前に送信 | 「『人間であることを確認します』のチェックを完了してください。」 | UI |
@@ -57,7 +59,7 @@
 - RPC: `fn_submit_trial_application`（受付・種類の判定・招待・通知。service_role のみ）、`fn_resolve_web_trial_contract`（本登録の月の契約。service_role のみ）
 - ビュー: `private.vw_trial_application_list`（admin の一覧の状態）
 - テーブル: `com_t_trial_application`、`com_t_invitation`、`com_t_notification`、`com_m_contract`、本登録時の `com_t_user_license`・`com_t_user_license_history`・
-  `com_t_user_session_ticket`・`com_t_user_session_ticket_history`、`com_m_user`（タイムゾーン）
+  `com_t_user_session_ticket`・`com_t_user_session_ticket_history`、`com_m_user`（タイムゾーン）、`com_m_user_legal`（正式な氏名）
 - 実装参照: `packages/lib/trial/`（`apply.ts`・`registration.ts`）、`packages/lib/security/turnstile.ts`、`packages/lib/mail/templates/TrialEmailTemplates.ts`、
   `apps/student/actions/trialAction.ts`、`apps/admin/actions/adminTrialApplicationAction.ts`
 

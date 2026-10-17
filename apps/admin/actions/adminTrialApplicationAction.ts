@@ -31,7 +31,7 @@ export async function getTrialApplications(
     const [from, to] = toRange(params);
 
     let query = supabase.schema('private').from('vw_trial_application_list').select('*', { count: 'exact' });
-    if (q) query = query.or(ilikeAny(['user_name', 'romaji_last_name', 'romaji_first_name', 'email'], q));
+    if (q) query = query.or(ilikeAny(['full_name', 'full_name_latin', 'email'], q));
     if (status) query = query.eq('status', status);
     if (occupation !== null) query = query.eq('occupation', occupation);
 

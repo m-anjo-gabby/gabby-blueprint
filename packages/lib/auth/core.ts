@@ -606,11 +606,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
     //    Webトライアルの申込からの招待は、本登録の月の契約で本登録の日から14日間のライセンスを発行する
     const trialApplication = await findTrialApplicationByInvitation(supabase, inviteRecord.id, ctx);
     if (trialApplication) {
-      await completeTrialRegistration(supabase, {
-        applicationId: trialApplication.application_id,
-        timezone: trialApplication.timezone,
-        userId: newUserId,
-      }, ctx);
+      await completeTrialRegistration(supabase, { application: trialApplication, userId: newUserId }, ctx);
     } else if (inviteRecord.contract_id) {
       const licenseResult = await issueInitialLicense(supabase, {
         contractId: inviteRecord.contract_id,

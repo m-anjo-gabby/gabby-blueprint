@@ -8,7 +8,7 @@
  */
 import 'server-only';
 import { randomBytes } from 'crypto';
-import type { TrialApplicationInput, TrialApplicationKind } from '@gabby/types/trialApplication';
+import { formatTrialApplicantName, type TrialApplicationInput, type TrialApplicationKind } from '@gabby/types/trialApplication';
 import { createAdminClient } from '../supabase/admin';
 import { createLogger, type LogContext } from '../logger';
 import { REPORTING_TIMEZONE } from '../date/reporting';
@@ -65,7 +65,7 @@ async function sendApplicantMail(supabase: AdminClient, input: TrialApplicationI
       to: input.email,
       kind: 'account_invite_trial',
       mail: buildTrialInviteMail({
-        userName: input.userName,
+        userName: formatTrialApplicantName(input),
         inviteUrl: `${studentUrl()}/auth/invite?token=${row.invitation_token}`,
         expiresDays: INVITATION_EXPIRES_DAYS,
       }),
@@ -87,7 +87,7 @@ async function sendApplicantMail(supabase: AdminClient, input: TrialApplicationI
       to: input.email,
       kind: 'account_trial_registered',
       mail: buildTrialAlreadyRegisteredMail({
-        userName: input.userName,
+        userName: formatTrialApplicantName(input),
         loginUrl: `${studentUrl()}/login`,
         forgotPasswordUrl: `${studentUrl()}/forgot-password`,
       }),
@@ -130,9 +130,10 @@ export async function submitTrialApplication(input: TrialApplicationInput, ctx: 
 
   const { data, error } = await supabase.rpc('fn_submit_trial_application', {
     p_email: input.email,
-    p_user_name: input.userName,
-    p_romaji_last_name: input.romajiLastName,
-    p_romaji_first_name: input.romajiFirstName,
+    p_last_name: input.lastName,
+    p_first_name: input.firstName,
+    p_last_name_latin: input.lastNameLatin,
+    p_first_name_latin: input.firstNameLatin,
     p_timezone: input.timezone,
     p_country_city: input.countryCity,
     p_occupation: input.occupation,

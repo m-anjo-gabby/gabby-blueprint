@@ -8,6 +8,12 @@
 -- 所属は固定の顧客「Webトライアル」（web_trial_client_id()）、契約は本登録の月ごとに
 -- fn_resolve_web_trial_contract() が探す（無ければ作る）。
 --
+-- 【氏名】
+-- 姓・名とそれぞれのローマ字表記を持つ（いずれも必須。意味は com_m_user_legal と同じで、山田 太郎 → last_name = 山田）。
+-- 本登録時に、正式な氏名（com_m_user_legal）をこの4項目から作る。画面に出す名前（com_m_user.user_name。
+-- コーチも見る）はローマ字の「名 姓」（例: Taro Yamada）にする（fn_submit_trial_application が招待に入れる）。
+-- 登録済みのアドレスからの再申込では、正式な氏名・画面の名前は変えない。
+--
 -- 【個人情報保護方針への同意】
 -- 申込フォームは個人情報保護方針（packages/lib/contact.ts の PRIVACY_POLICY_URL）への同意を必須にしている。
 -- 同意が無いと申し込めないため列には持たず、同意の日時は申込の日時（last_applied_at）として扱う。
@@ -27,9 +33,10 @@
 CREATE TABLE public.com_t_trial_application (
     application_id           uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     email                    text         NOT NULL UNIQUE,
-    user_name                text         NOT NULL,
-    romaji_last_name         text         NOT NULL,
-    romaji_first_name        text         NOT NULL,
+    last_name                text         NOT NULL,
+    first_name               text         NOT NULL,
+    last_name_latin          text         NOT NULL,
+    first_name_latin         text         NOT NULL,
     timezone                 text         NOT NULL REFERENCES public.com_m_timezone(timezone),
     country_city             text,
     occupation               smallint     NOT NULL,
@@ -48,9 +55,10 @@ CREATE TABLE public.com_t_trial_application (
 COMMENT ON TABLE public.com_t_trial_application IS 'Webトライアルの申込（メールアドレスごとに1行。再申込は同じ行を更新）';
 COMMENT ON COLUMN public.com_t_trial_application.application_id IS '申込ID';
 COMMENT ON COLUMN public.com_t_trial_application.email IS 'メールアドレス（小文字）';
-COMMENT ON COLUMN public.com_t_trial_application.user_name IS '氏名';
-COMMENT ON COLUMN public.com_t_trial_application.romaji_last_name IS '姓（ローマ字）';
-COMMENT ON COLUMN public.com_t_trial_application.romaji_first_name IS '名（ローマ字）';
+COMMENT ON COLUMN public.com_t_trial_application.last_name IS '姓（本登録時に com_m_user_legal.last_name へ設定）';
+COMMENT ON COLUMN public.com_t_trial_application.first_name IS '名（本登録時に com_m_user_legal.first_name へ設定）';
+COMMENT ON COLUMN public.com_t_trial_application.last_name_latin IS '姓のローマ字表記（本登録時に com_m_user_legal.last_name_latin へ設定）';
+COMMENT ON COLUMN public.com_t_trial_application.first_name_latin IS '名のローマ字表記（本登録時に com_m_user_legal.first_name_latin へ設定）';
 COMMENT ON COLUMN public.com_t_trial_application.timezone IS 'タイムゾーン（本登録時に com_m_user.timezone へ設定）';
 COMMENT ON COLUMN public.com_t_trial_application.country_city IS '国・都市';
 COMMENT ON COLUMN public.com_t_trial_application.occupation IS '業種・職業のコード（正本は packages/types/trialApplication.ts の TRIAL_OCCUPATIONS）';
