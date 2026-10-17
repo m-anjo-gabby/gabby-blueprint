@@ -3,6 +3,7 @@
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
+import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
@@ -471,21 +472,32 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData) {
 }
 
 /**
- * お知らせの削除（既読の記録も一緒に消える）
+ * お知らせの削除（既読の記録も一緒に消える）。削除の後に画像・添付のファイルを消す
  */
 export async function deleteNotice(noticeId: string) {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
 
-    const { error } = await supabase
+    const { data: deleted, error } = await supabase
       .from('com_m_notice')
       .delete()
-      .eq('notice_id', noticeId);
+      .eq('notice_id', noticeId)
+      .select('image_path, attachments')
+      .maybeSingle();
 
     if (error) {
       logger.error('notice:delete_failed', error.message, { ...ctx, err: error, payload: { noticeId } });
       return { success: false, message: error.message };
+    }
+
+    if (deleted) {
+      const attachments = Array.isArray(deleted.attachments) ? (deleted.attachments as { path?: string }[]) : [];
+      await removeStorageFiles(supabase, 'notices', [deleted.image_path, ...attachments.map((a) => a.path)], {
+        event: 'notice:delete_files_failed',
+        ctx,
+        payload: { noticeId },
+      });
     }
 
     logger.info('notice:delete_success', `Notice deleted: ${noticeId}`, {

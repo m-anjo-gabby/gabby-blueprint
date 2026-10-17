@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { CONTENT_TYPES, Content, ContentRecord, ContentTagSummary } from '@gabby/types/content';
 import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { CLIENT_STATUS } from '@gabby/types/client';
+import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
@@ -196,6 +197,17 @@ export async function deleteContent(contentId: string) {
   try {
     const supabase = await createAdminClient();
 
+    // 消す前に、教材に付属する音声のパスを集める（単語・フレーズは CASCADE、スプリントの問題は外部キーが無いため後で消す）
+    const [{ data: phrases, error: phraseError }, { data: questions, error: questionError }] = await Promise.all([
+      supabase.from('com_m_phrase').select('audio_path, com_m_word!inner(content_id)').eq('com_m_word.content_id', contentId),
+      supabase
+        .from('com_m_sprint_questions')
+        .select('statement_voice, question_voice, answer_sentence_yes_voice, answer_sentence_no_voice')
+        .eq('content_id', contentId),
+    ]);
+    if (phraseError) throw phraseError;
+    if (questionError) throw questionError;
+
     const { error } = await supabase
       .from('com_m_contents')
       .delete()
@@ -206,6 +218,21 @@ export async function deleteContent(contentId: string) {
       logger.error('content:delete_content_failed', error.message, { ...ctx, err: error, payload: { contentId } });
       return { success: false, message: error.message };
     }
+
+    const { error: questionDeleteError } = await supabase.from('com_m_sprint_questions').delete().eq('content_id', contentId);
+    if (questionDeleteError) {
+      logger.error('content:delete_sprint_questions_failed', questionDeleteError.message, { ...ctx, err: questionDeleteError, payload: { contentId } });
+    }
+    await removeStorageFiles(
+      supabase,
+      'audio',
+      [
+        ...(phrases ?? []).map((p) => p.audio_path as string | null),
+        // 問題の行が消せなかった場合は、残った行が参照する音声を消さない
+        ...(questionDeleteError ? [] : (questions ?? []).flatMap((q) => [q.statement_voice, q.question_voice, q.answer_sentence_yes_voice, q.answer_sentence_no_voice])),
+      ],
+      { event: 'content:delete_files_failed', ctx, payload: { contentId } }
+    );
 
     logger.info('content:delete_content_success', `Content deleted`, {  
       ...ctx,

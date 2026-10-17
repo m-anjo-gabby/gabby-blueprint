@@ -3,6 +3,7 @@
 import { createAdminClient } from "@gabby/lib/supabase/admin";
 import { PhraseRecord, WordRecord } from '@gabby/types/word';
 import { revalidatePath } from 'next/cache';
+import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 
@@ -100,27 +101,7 @@ export async function deleteWord(wordId: string) {
   try {
     const supabase = await createAdminClient();
 
-    // 1. Storage内の該当単語ディレクトリ配下のファイルをリストアップ
-    const folderPath = `words/${wordId}/phrases`;
-    const { data: files, error: listError } = await supabase
-      .storage
-      .from('audio')
-      .list(folderPath);
-
-    // 2. ファイルが存在すれば一括削除
-    if (files && files.length > 0) {
-      const pathsToDelete = files.map(f => `${folderPath}/${f.name}`);
-      const { error: removeError } = await supabase
-        .storage
-        .from('audio')
-        .remove(pathsToDelete);
-
-      if (removeError) {
-        logger.warn("word:storage_cleanup_failed", `Storage Cleanup Error (non-critical): ${removeError.message}`, { ...ctx, payload: { wordId, folderPath } });
-      }
-    }
-
-    // 3. DBから単語を削除
+    // 1. DBから単語を削除（フレーズは CASCADE で消える）
     const { error: dbError } = await supabase
       .from('com_m_word')
       .delete()
@@ -129,6 +110,19 @@ export async function deleteWord(wordId: string) {
     if (dbError) {
       logger.error('word:delete_word_db_failed', dbError.message, { ...ctx, err: dbError, payload: { wordId } });
       throw dbError;
+    }
+
+    // 2. 単語の音声のフォルダ（words/{word_id}/phrases）の中のファイルを消す（失敗はログだけ残す）
+    const folderPath = `words/${wordId}/phrases`;
+    const { data: files, error: listError } = await supabase.storage.from('audio').list(folderPath);
+    if (listError) {
+      logger.error('word:delete_files_failed', listError.message, { ...ctx, err: listError, payload: { wordId, folderPath } });
+    } else {
+      await removeStorageFiles(supabase, 'audio', (files ?? []).map((f) => `${folderPath}/${f.name}`), {
+        event: 'word:delete_files_failed',
+        ctx,
+        payload: { wordId },
+      });
     }
 
     logger.info('word:delete_word_success', `Word deleted`, { ...ctx, payload: { wordId } });
@@ -160,6 +154,55 @@ export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]
     return data as PhraseRecord[];
   } catch (err) {
     logger.error('word:get_phrases_by_word_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { wordId } });
+    return [];
+  }
+}
+
+/**
+ * 特定のコンテンツに紐づくすべてのフレーズを取得する
+ */
+export async function getPhrasesByContentId(contentId: string): Promise<PhraseRecord[]> {
+  const ctx = await getLogContext();
+  try {
+    const supabase = createAdminClient();
+    const PAGE_SIZE = 1000;
+    let allData: any[] = [];
+    let from = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('com_m_phrase')
+        .select(`
+          *,
+          com_m_word!inner(content_id)
+        `)
+        .eq('com_m_word.content_id', contentId)
+        .order('word_id', { ascending: true })
+        .order('seq_no', { ascending: true })
+        .order('phrase_id', { ascending: true }) // 同順位の並びを固定し、分割取得での重複・欠落を防ぐ
+        .range(from, from + PAGE_SIZE - 1);
+
+      if (error) {
+        logger.error('word:get_phrases_by_content_id_failed', error.message, { ...ctx, err: error, payload: { contentId } });
+        return [];
+      }
+
+      if (data && data.length > 0) {
+        allData = [...allData, ...data];
+        if (data.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          from += PAGE_SIZE;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+
+    return allData as PhraseRecord[];
+  } catch (err) {
+    logger.error('word:get_phrases_by_content_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId } });
     return [];
   }
 }
@@ -226,40 +269,34 @@ export async function upsertPhrase(payload: Partial<PhraseRecord>) {
 /**
  * フレーズの物理削除
  */
-export async function deletePhrase(phraseId: string, audioPath?: string | null) {
+export async function deletePhrase(phraseId: string) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
 
-    if (audioPath) {
-      if (!audioPath.includes(phraseId)) {
-        logger.error('word:delete_phrase_security_alert', `Attempted unauthorized path deletion. phraseId: ${phraseId}, path: ${audioPath}`, ctx);
-        throw new Error("不正なファイルパスです。");
-      }
-
-      const { error: storageError } = await supabase.storage
-        .from('audio')
-        .remove([audioPath]);
-
-      if (storageError) {
-        logger.warn("word:delete_phrase_storage_failed", `Storage deletion warning: ${storageError.message}`, { ...ctx, payload: { phraseId, audioPath } });
-      }
-    }
-
-    const { error: dbError } = await supabase
+    // DB を先に消し、音声のパスは削除した行から取る（画面から渡されたパスは使わない）
+    const { data: deleted, error: dbError } = await supabase
       .from('com_m_phrase')
       .delete()
-      .eq('phrase_id', phraseId);
+      .eq('phrase_id', phraseId)
+      .select('audio_path')
+      .maybeSingle();
 
     if (dbError) {
       logger.error('word:delete_phrase_db_failed', dbError.message, { ...ctx, err: dbError, payload: { phraseId } });
       throw dbError;
     }
 
-    logger.info('word:delete_phrase_success', `Phrase deleted`, { ...ctx, payload: { phraseId, audioPath } });
+    await removeStorageFiles(supabase, 'audio', [deleted?.audio_path], {
+      event: 'word:delete_phrase_files_failed',
+      ctx,
+      payload: { phraseId },
+    });
+
+    logger.info('word:delete_phrase_success', `Phrase deleted`, { ...ctx, payload: { phraseId } });
     return { success: true };
   } catch (error) {
-    logger.error("word:delete_phrase_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { phraseId, audioPath } });
+    logger.error("word:delete_phrase_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { phraseId } });
     return { success: false, message: error instanceof Error ? error.message : '予期せぬエラーが発生しました' };
   }
 }
@@ -298,10 +335,11 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[
 
     // 2. フレーズの更新
     const wordIds = results.map(r => r.word_id);
-    const { error: deleteError } = await supabase
+    const { data: deletedPhrases, error: deleteError } = await supabase
       .from('com_m_phrase')
       .delete()
-      .in('word_id', wordIds);
+      .in('word_id', wordIds)
+      .select('audio_path');
 
     if (deleteError) {
       logger.error('word:bulk_upsert_delete_phrases_failed', deleteError.message, { ...ctx, err: deleteError, payload: { wordIds } });
@@ -331,6 +369,13 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[
         throw phraseError;
       }
     }
+
+    // 洗い替えで消したフレーズの音声を消す（取り込んだフレーズは音声を持たないため、すべて不要になる）
+    await removeStorageFiles(supabase, 'audio', (deletedPhrases ?? []).map((p) => p.audio_path as string | null), {
+      event: 'word:bulk_upsert_delete_files_failed',
+      ctx,
+      payload: { contentId },
+    });
 
     logger.info('word:bulk_upsert_success', `Bulk upsert completed`, { 
       ...ctx,

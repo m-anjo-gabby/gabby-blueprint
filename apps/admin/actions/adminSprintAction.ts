@@ -3,6 +3,7 @@
 import { createAdminClient } from "@gabby/lib/supabase/admin";
 import { QUESTION_TYPES, SprintQuestion, SprintQuestionType } from "@gabby/types/sprint";
 import { revalidatePath } from 'next/cache';
+import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
@@ -166,11 +167,7 @@ async function removeSprintVoiceFiles(
       const inUse = new Set(
         ((sharing ?? []) as unknown as SprintVoiceRow[]).flatMap((r) => SPRINT_VOICE_COLUMNS.map((col) => r[col]))
       );
-      const targets = chunk.filter((p) => !inUse.has(p));
-      if (targets.length === 0) continue;
-
-      const { error } = await supabase.storage.from('audio').remove(targets);
-      if (error) throw error;
+      await removeStorageFiles(supabase, 'audio', chunk.filter((p) => !inUse.has(p)), { event: 'sprint:delete_audio_failed', ctx, payload });
     } catch (err) {
       logger.error('sprint:delete_audio_failed', err instanceof Error ? err.message : 'Unknown error', {
         ...ctx,

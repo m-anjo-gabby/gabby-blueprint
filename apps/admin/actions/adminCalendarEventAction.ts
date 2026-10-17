@@ -3,6 +3,7 @@
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { USER_STATUS } from '@gabby/types/user';
+import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { containsPattern, ilikeAny } from '@gabby/lib/supabase/ilike';
@@ -312,6 +313,12 @@ export async function deleteCalendarEvent(
       return { success: false, reason: 'held', message: 'Event already held' };
     }
 
+    const { data: messages, error: messagesError } = await supabase
+      .from('com_t_calendar_event_message')
+      .select('attachments')
+      .eq('calendar_event_id', calendarEventId);
+    if (messagesError) throw messagesError;
+
     const { error } = await supabase
       .from('com_m_calendar_event')
       .delete()
@@ -321,6 +328,16 @@ export async function deleteCalendarEvent(
       logger.error('calendarEvent:delete_calendar_event_failed', error.message, { ...ctx, err: error, payload: { calendarEventId } });
       return { success: false, message: error.message };
     }
+
+    // アナウンス（メッセージ）は CASCADE で消えるため、その添付のファイルを消す
+    const attachmentPaths = (messages ?? []).flatMap((m) =>
+      Array.isArray(m.attachments) ? (m.attachments as CalendarEventMessageAttachment[]).map((a) => a.path) : []
+    );
+    await removeStorageFiles(supabase, 'calendar-event-message', attachmentPaths, {
+      event: 'calendarEvent:delete_files_failed',
+      ctx,
+      payload: { calendarEventId },
+    });
 
     logger.info('calendarEvent:delete_calendar_event_success', 'Calendar event deleted', { ...ctx, payload: { calendarEventId } });
 

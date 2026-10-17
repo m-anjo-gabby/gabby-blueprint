@@ -20,7 +20,7 @@ import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
 import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
 import { buildSSML } from '@gabby/lib/azure/ssml';
 import { PhraseRecord, TTSAdjustmentData } from '@gabby/types/word';
-import { getPhrasesByContentId } from '@/actions/adminPhraseAction';
+import { getPhrasesByContentId } from '@/actions/adminWordAction';
 import { useWordStore } from '@/stores/useWordStore';
 import { clientLogger } from '@gabby/lib/logger/client';
 

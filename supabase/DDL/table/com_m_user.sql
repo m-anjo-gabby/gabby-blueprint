@@ -105,8 +105,6 @@ USING (
     id = auth.uid()
 );
 
-REVOKE ALL ON public.com_m_user FROM anon;
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON public.com_m_user TO anon;
 REVOKE ALL ON public.com_m_user FROM authenticated;
 GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON public.com_m_user TO authenticated;
 GRANT UPDATE (timezone, update_date, icon_path) ON public.com_m_user TO authenticated;

@@ -15,6 +15,10 @@
 
 - **論理削除（`delete_flg`）は使わない。** 「消したことにして残す」状態を作らず、残すものは意味のある状態（A）、消すものは物理削除（B〜D）にする。
 - 例外: チャットのメッセージの取り消し（`com_t_chat.deleted_at`）は、画面に「削除されたメッセージ」と出す機能の状態として残す。
+- **Storage のファイル**: 行を物理削除したら、その行（と `CASCADE` で一緒に消える行）が持つファイルも消す。DB の削除を先に行い
+  （削除した行から `select` でパスを受け取る等）、ファイルは `removeStorageFiles()`（`packages/lib/storage/removeStorageFiles.ts`）で消す。
+  ファイルの削除に失敗しても DB の削除は取り消さず、エラーのログ（`<domain>:delete_files_failed` 等）で気付けるようにする。
+  他の行がまだ同じパスを使う可能性がある場合（スプリントの問題の音声等）は、使われていないパスだけを消す。
 - B の「実績があれば拒否」は外部キーの `RESTRICT`（§3）を最終的な安全装置にする。サーバーアクションは `isInUseError()`（`packages/lib/supabase/pgErrors.ts`。エラーコード `23503`）で判定して `reason: 'in_use'` を返し、画面は「使われているため削除できません。〜をオフにしてください」と A を案内する。事前に件数を確かめて文言を分けてもよい（例: `deleteContract`）。
 - C・D は admin の **DangerZone**（`components/common/DangerZone.tsx`。区画の最下部、赤枠）に置き、`TypedConfirmDialog`（対象の名前の入力で確認）で実行する。D は実行前に消える件数を種類ごとに表示する。実行できるのはシステム管理者（`admin` ロール）だけ（`adminDataDeletionAction.ts`）。
 

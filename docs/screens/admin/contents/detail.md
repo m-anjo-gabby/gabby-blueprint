@@ -159,8 +159,8 @@
   `com_m_dialogue_session`への直接CRUD。削除は物理で、進捗・会話ログがあれば外部キーで止まる）
 - `apps/admin/actions/adminContentAction.ts`（`getContentById`）
 - `apps/admin/actions/adminWordAction.ts`（`getWordsByContentId`, `upsertWord`, `deleteWord`,
-  `getPhrasesByWordId`, `upsertPhrase`, `deletePhrase`, `bulkUpsertWordsAndPhrases`）
-- `apps/admin/actions/adminPhraseAction.ts`（`getPhrasesByContentId`）
+  `getPhrasesByWordId`, `getPhrasesByContentId`, `upsertPhrase`, `deletePhrase`, `bulkUpsertWordsAndPhrases`。
+  単語・フレーズの削除と一括登録の洗い替えは、DB の削除の後に音声ファイルを消す）
 - `apps/admin/actions/adminSprintAction.ts`（`getSprintQuestionsByFilter`, `bulkUpsertSprintQuestions`,
   `deleteSprintQuestion`, `saveSprintAudio`, `moveSprintQuestionsLevel`）
 - `apps/admin/hooks/useSaveAzureSpeech.ts`（Azure TTS生成〜Storage保存〜DB更新の一連処理）

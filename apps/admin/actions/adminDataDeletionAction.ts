@@ -5,6 +5,7 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { USER_STATUS } from '@gabby/types/user';
 
 // 停止・退会・顧客単位の一括削除（規約は docs/DATA-DELETION.md）。
@@ -57,15 +58,11 @@ function pickBlocker<T extends readonly string[]>(message: string | undefined, c
   return codes.find((code) => message?.includes(code)) ?? null;
 }
 
-/** Storage のファイルを消す（失敗しても記録だけ残して続ける。DB の消去は済んでいるため） */
-async function removeStorageFiles(paths: StoragePaths, ctx: Awaited<ReturnType<typeof getLogContext>>) {
+/** Storage のファイルを消す（失敗してもエラーのログだけ残して続ける。DB の消去は済んでいるため） */
+async function removeDeletedFiles(paths: StoragePaths, ctx: Awaited<ReturnType<typeof getLogContext>>, payload: Record<string, unknown>) {
   const supabase = createAdminClient();
   for (const [bucket, list] of Object.entries(paths) as [keyof StoragePaths, string[] | undefined][]) {
-    if (!list || list.length === 0) continue;
-    for (let i = 0; i < list.length; i += 100) {
-      const { error } = await supabase.storage.from(bucket).remove(list.slice(i, i + 100));
-      if (error) logger.warn('dataDeletion:remove_storage_failed', error.message, { ...ctx, err: error, payload: { bucket } });
-    }
+    await removeStorageFiles(supabase, bucket, list ?? [], { event: 'dataDeletion:delete_files_failed', ctx, payload });
   }
 }
 
@@ -141,7 +138,7 @@ export async function withdrawUser(userId: string, confirmName: string): Promise
     }
 
     const result = data as { storage?: StoragePaths; counts?: Record<string, number> } | null;
-    await removeStorageFiles(result?.storage ?? {}, ctx);
+    await removeDeletedFiles(result?.storage ?? {}, ctx, { userId });
     if (!(await deleteAuthUser(userId, ctx))) return { success: false, errorCode: 'unexpected_error' };
 
     logger.info('user:withdraw_success', 'User withdrawn (personal data erased)', { ...ctx, payload: { userId, counts: result?.counts } });
@@ -198,7 +195,7 @@ export async function purgeClient(clientId: string, confirmName: string): Promis
     }
 
     const result = data as { user_ids?: string[]; storage?: StoragePaths; counts?: PurgeClientCounts };
-    await removeStorageFiles(result.storage ?? {}, ctx);
+    await removeDeletedFiles(result.storage ?? {}, ctx, { clientId });
     // 顧客の行は消えているため、認証のアカウントの削除に失敗した分は記録だけ残す（ログインしても所属の無い状態になる）
     for (const userId of result.user_ids ?? []) {
       await deleteAuthUser(userId, ctx);

@@ -73,10 +73,10 @@ export function PhraseList({ wordId }: PhraseListProps) {
   /**
    * フレーズの削除実行
    */
-  const handleDelete = async (phraseId: string, audioPath?: string | null) => {
+  const handleDelete = async (phraseId: string) => {
     try {
-      // phraseId と audioPath を渡す
-      const result = await deletePhrase(phraseId, audioPath);
+      // 音声ファイルはサーバー側で、削除した行のパスから消す
+      const result = await deletePhrase(phraseId);
       if (result.success) {
         showToast(t('deleted'), "success");
         fetchPhrases();
@@ -284,7 +284,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
                               {t('cancelButton')}
                             </AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => handleDelete(phrase.phrase_id, phrase.audio_path)}
+                              onClick={() => handleDelete(phrase.phrase_id)}
                               className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg"
                             >
                               {t('deleteConfirmButton')}

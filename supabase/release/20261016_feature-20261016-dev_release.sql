@@ -3405,3 +3405,23 @@ ALTER TABLE public.com_m_sprint_questions ADD CONSTRAINT chk_sprint_questions_qu
 COMMENT ON COLUMN public.com_m_sprint_questions.question_type IS '問題種別 (''0'':Speed, ''4'':Structure, ''5'':Builders, ''6'':Mastery)';
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】未ログイン（anon）のテーブルへの書き込み権限を外す
+--
+-- 【内容】
+--   Supabase の既定で anon に付いている、public スキーマの全テーブルへの INSERT / UPDATE / DELETE / TRUNCATE /
+--   REFERENCES / TRIGGER の権限を外し、今後作るテーブルにも付かないよう既定の権限を変える（postgres が作るテーブル）。
+--   これまでも anon の書き込みは RLS（anon 向けの書き込みのポリシーが無い）で止まっており、動きは変わらない。
+--   RLS の設定を誤った場合の二重の守りにする。未ログインの画面（Webトライアルの申込・ログイン・配信停止等）の
+--   書き込みはサーバー側の service_role で行っている。参照（SELECT）の権限は変えない（利用規約は未ログインでも読む）。
+--
+-- 対応ファイル: DDL/table/（全テーブル。定義の権限の行）, DDL/README.md（テーブル設計の規約）
+-- =========================================================================
+
+BEGIN;
+
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM anon;
+
+COMMIT;

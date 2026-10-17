@@ -27,9 +27,14 @@ const SCHEMAS = ['public', 'ops'];
 // 生成の対象外（手書きの正本）。ops.release_history は run.mjs が実行時に読み込んで作るため冪等な手書きのままにする
 const HAND_WRITTEN = ['ops.release_history'];
 const MARKER_RE = /^-- @schema ([a-z_]+\.[a-z0-9_]+)\r?\n[\s\S]*?^-- @end-schema$/gm;
-// Supabase が新しいテーブルに既定で付ける権限。これと違う場合だけ GRANT/REVOKE を出力する
+// 新しいテーブルに既定で付く権限。これと違う場合だけ GRANT/REVOKE を出力する
+// （authenticated は Supabase の既定の全権限。anon は書き込みの権限を既定の権限から外しているため参照だけ。
+//  リリース 20261016 の「未ログイン（anon）のテーブルへの書き込み権限を外す」）
 const API_ROLES = ['anon', 'authenticated'];
-const ALL_PRIVILEGES = 'DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE';
+const DEFAULT_PRIVILEGES = {
+  anon: 'SELECT',
+  authenticated: 'DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE',
+};
 
 function fail(message) {
   console.error(`\n[中止] ${message}`);
@@ -222,12 +227,12 @@ function indent(expr) {
   return expr.split('\n').map((l) => `    ${l.trimEnd()}`).join('\n');
 }
 
-/** anon / authenticated の権限が Supabase の既定（全権限）と違う場合だけ出力する */
+/** anon / authenticated の権限が既定（DEFAULT_PRIVILEGES）と違う場合だけ出力する */
 function renderGrants(table) {
   const out = [];
   for (const role of API_ROLES) {
     const privs = privilegesOf(table.acl, role);
-    if (privs.join(',') === ALL_PRIVILEGES) continue;
+    if (privs.join(',') === DEFAULT_PRIVILEGES[role]) continue;
     out.push(`REVOKE ALL ON ${table.name} FROM ${role};`);
     if (privs.length > 0) out.push(`GRANT ${privs.join(', ')} ON ${table.name} TO ${role};`);
   }
