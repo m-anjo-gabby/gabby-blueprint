@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
@@ -17,7 +17,7 @@ const STATUS_BADGE_CLASS: Record<TrialApplicationStatus, string> = {
 
 const formatJst = (value: string | null) => formatDateTimeByZone(value, 'Asia/Tokyo', false);
 
-export function createColumns(t: TableT, locale: 'ja' | 'en'): ColumnDef<TrialApplicationRow>[] {
+export function createColumns(t: TableT, locale: 'ja' | 'en'): ListColumnDef<TrialApplicationRow>[] {
   return [
     {
       accessorKey: 'last_applied_at',

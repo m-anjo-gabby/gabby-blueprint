@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { ArrowRight, Building2, Globe, Lock, Pencil, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +33,7 @@ function getEditorHref(content: Content): string {
   return `/contents/${content.content_id}`;
 }
 
-export function createColumns(t: TableT): ColumnDef<Content>[] {
+export function createColumns(t: TableT): ListColumnDef<Content>[] {
   return [
     {
       accessorKey: "content_name",

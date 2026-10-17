@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { Building2, CheckCheck, CheckCircle2, Clock, Edit3, EyeOff, Globe, Paperclip, Trash2, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -44,7 +44,7 @@ function PublishStatusBadge({ notice, t }: { notice: AdminNoticeListItem; t: Tab
 export function createColumns(
   t: TableT,
   { onDelete }: { onDelete: (notice: AdminNoticeListItem) => void }
-): ColumnDef<AdminNoticeListItem>[] {
+): ListColumnDef<AdminNoticeListItem>[] {
   return [
     {
       accessorKey: 'title',

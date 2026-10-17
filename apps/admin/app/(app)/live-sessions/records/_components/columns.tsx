@@ -1,6 +1,6 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ interface ColumnOptions {
   onCorrect: (record: AdminSessionRecord) => void;
 }
 
-export function createColumns(t: TableT, { tStatus, onCorrect }: ColumnOptions): ColumnDef<AdminSessionRecord>[] {
+export function createColumns(t: TableT, { tStatus, onCorrect }: ColumnOptions): ListColumnDef<AdminSessionRecord>[] {
   return [
     {
       accessorKey: 'start_datetime',

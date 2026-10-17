@@ -1,6 +1,6 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { getUserTypeLabel } from '@gabby/types/user';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
@@ -8,7 +8,7 @@ import type { CalendarEventParticipant } from '@/actions/adminCalendarEventActio
 
 type TableT = ReturnType<typeof useTranslations<'calendarEvents.participantsTable'>>;
 
-export function createColumns(t: TableT): ColumnDef<CalendarEventParticipant>[] {
+export function createColumns(t: TableT): ListColumnDef<CalendarEventParticipant>[] {
   return [
     {
       accessorKey: 'user_name',

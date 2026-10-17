@@ -1,6 +1,6 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { format } from 'date-fns';
 import { Calendar, Download, FileAudio, Headphones, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,7 @@ const fileNameOf = (asset: TTSAssetListItem) => asset.audio_path?.split('/').pop
 /** 音声ファイル名（ダウンロード時の名前にも使う） */
 export const downloadNameOf = (asset: TTSAssetListItem) => fileNameOf(asset) ?? `tts_${asset.asset_id}`;
 
-export function createColumns({ playingId, downloadingId, onPlay, onDownload, onDelete }: ColumnOptions): ColumnDef<TTSAssetListItem>[] {
+export function createColumns({ playingId, downloadingId, onPlay, onDownload, onDelete }: ColumnOptions): ListColumnDef<TTSAssetListItem>[] {
   return [
     {
       accessorKey: 'raw_text',

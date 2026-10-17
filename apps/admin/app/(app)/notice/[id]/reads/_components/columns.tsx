@@ -1,7 +1,7 @@
 'use client';
 
 import type { useTranslations } from 'next-intl';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { Building2, CheckCircle2, CircleDashed } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUserTypeLabel, USER_TYPES } from '@gabby/types/user';
@@ -12,8 +12,8 @@ type TableT = ReturnType<typeof useTranslations<'notice.readsTable'>>;
 
 const BADGE_CLASS = 'inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border';
 
-export function createColumns(t: TableT, { hasCta }: { hasCta: boolean }): ColumnDef<NoticeReadStatusUser>[] {
-  const columns: ColumnDef<NoticeReadStatusUser>[] = [
+export function createColumns(t: TableT, { hasCta }: { hasCta: boolean }): ListColumnDef<NoticeReadStatusUser>[] {
+  const columns: ListColumnDef<NoticeReadStatusUser>[] = [
     {
       accessorKey: 'user_name',
       header: t('userHeader'),

@@ -1,7 +1,7 @@
 // src/app/(app)/admin/contracts/_components/columns.tsx
 'use client';
 
-import { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { format, isAfter, isBefore, startOfDay } from 'date-fns';
@@ -14,14 +14,13 @@ import { Eye, Pencil } from 'lucide-react';
 
 type TableT = ReturnType<typeof useTranslations<'contracts.table'>>;
 
-export function createColumns(t: TableT, locale: string): ColumnDef<ContractDetail>[] {
+export function createColumns(t: TableT, locale: string): ListColumnDef<ContractDetail>[] {
   const dateLocale = locale === 'en' ? enUS : ja;
   return [
   {
     id: 'client_name',
     accessorKey: 'client_name',
     header: t('clientHeader'),
-    filterFn: 'includesString',
     cell: ({ row }) => {
       return (
         <span className="font-medium text-slate-900">

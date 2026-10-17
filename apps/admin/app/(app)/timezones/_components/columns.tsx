@@ -1,6 +1,6 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ interface ColumnOptions {
   onDelete: (timezone: TimezoneMaster) => void;
 }
 
-export function createColumns(t: TableT, { locale, onDelete }: ColumnOptions): ColumnDef<TimezoneMaster>[] {
+export function createColumns(t: TableT, { locale, onDelete }: ColumnOptions): ListColumnDef<TimezoneMaster>[] {
   return [
     {
       accessorKey: 'sort_no',

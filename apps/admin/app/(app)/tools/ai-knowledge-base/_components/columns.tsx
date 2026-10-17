@@ -1,6 +1,6 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { Library, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -17,7 +17,7 @@ interface ColumnOptions {
   onDelete: (entry: KnowledgeEntry) => void;
 }
 
-export function createColumns(t: ListT, { sourceTypeOptions, onDelete }: ColumnOptions): ColumnDef<KnowledgeEntry>[] {
+export function createColumns(t: ListT, { sourceTypeOptions, onDelete }: ColumnOptions): ListColumnDef<KnowledgeEntry>[] {
   return [
     {
       accessorKey: 'source_type',

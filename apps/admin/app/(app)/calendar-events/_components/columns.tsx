@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { Trash2, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,7 +31,7 @@ interface ColumnOptions {
   onDelete: (event: CalendarEventItem) => void;
 }
 
-export function createColumns(t: TableT, { hideSeries, formOptions, onDelete }: ColumnOptions): ColumnDef<CalendarEventItem>[] {
+export function createColumns(t: TableT, { hideSeries, formOptions, onDelete }: ColumnOptions): ListColumnDef<CalendarEventItem>[] {
   return [
     {
       accessorKey: 'event_type',

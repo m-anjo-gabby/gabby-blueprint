@@ -1,7 +1,7 @@
 // apps/admin/app/(app)/clients/_components/columns.tsx
 'use client';
 
-import { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { ClientFormDialog } from './ClientFormDialog';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,7 @@ import { InactiveBadge } from '@/components/common/InactiveBadge';
 
 type TableT = ReturnType<typeof useTranslations<'clients.table'>>;
 
-export function createColumns(t: TableT, locale: string): ColumnDef<ClientRecord>[] {
+export function createColumns(t: TableT, locale: string): ListColumnDef<ClientRecord>[] {
   return [
   {
     accessorKey: "client_name",

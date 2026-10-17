@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { Edit, FileText, ShieldCheck, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ interface ColumnOptions {
   onDelete: (term: TermListItem) => void;
 }
 
-export function createColumns(t: TableT, { termTypeLabel, onDelete }: ColumnOptions): ColumnDef<TermListItem>[] {
+export function createColumns(t: TableT, { termTypeLabel, onDelete }: ColumnOptions): ListColumnDef<TermListItem>[] {
   return [
     {
       accessorKey: 'term_type',

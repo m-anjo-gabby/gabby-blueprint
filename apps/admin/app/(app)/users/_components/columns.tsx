@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ColumnDef } from "@tanstack/react-table";
+import type { ListColumnDef } from "@/components/list/listTable";
 import type { useTranslations } from "next-intl";
 import { Building2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ type TableT = ReturnType<typeof useTranslations<'users.table'>>;
  * 生徒のスプリント・コーチの専門などの設定は詳細画面のタブで行う。
  * ライセンスの割当は件数が多いため、一覧のライセンス欄から直接ダイアログで行う。
  */
-export function createColumns(t: TableT): ColumnDef<UserRecord>[] {
+export function createColumns(t: TableT): ListColumnDef<UserRecord>[] {
   return [
   {
     accessorKey: "user_name",

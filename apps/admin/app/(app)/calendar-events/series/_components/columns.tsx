@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,7 @@ import type { CalendarEventSeriesItem } from '@gabby/types/calendarEvent';
 
 type SeriesT = ReturnType<typeof useTranslations<'calendarEvents.series'>>;
 
-export function createColumns(t: SeriesT): ColumnDef<CalendarEventSeriesItem>[] {
+export function createColumns(t: SeriesT): ListColumnDef<CalendarEventSeriesItem>[] {
   return [
     {
       accessorKey: 'title',

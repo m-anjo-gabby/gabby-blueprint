@@ -1,6 +1,6 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,7 @@ import { ContractPlanFormDialog } from './ContractPlanFormDialog';
 
 type TableT = ReturnType<typeof useTranslations<'contracts.plans.table'>>;
 
-export function createColumns(t: TableT, { onDelete }: { onDelete: (plan: ContractPlan) => void }): ColumnDef<ContractPlan>[] {
+export function createColumns(t: TableT, { onDelete }: { onDelete: (plan: ContractPlan) => void }): ListColumnDef<ContractPlan>[] {
   return [
     {
       accessorKey: 'sort_no',

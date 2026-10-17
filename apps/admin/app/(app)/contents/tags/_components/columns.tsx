@@ -1,6 +1,6 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ const TYPE_COLORS: Record<TagType, string> = {
   other: 'bg-slate-100 text-slate-700 border-slate-200',
 };
 
-export function createColumns(t: TableT, { onDelete }: { onDelete: (tag: ContentTag) => void }): ColumnDef<ContentTag>[] {
+export function createColumns(t: TableT, { onDelete }: { onDelete: (tag: ContentTag) => void }): ListColumnDef<ContentTag>[] {
   return [
     {
       accessorKey: 'seq_no',

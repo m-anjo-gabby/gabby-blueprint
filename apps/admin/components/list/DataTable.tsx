@@ -1,19 +1,12 @@
 'use client';
 
-import { flexRender, getCoreRowModel, useReactTable, type ColumnDef, type RowData } from '@tanstack/react-table';
+import { flexRender, useTable, type RowData } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { listTableFeatures, type ListColumnDef } from './listTable';
 
-declare module '@tanstack/react-table' {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface ColumnMeta<TData extends RowData, TValue> {
-    /** 見出しと各行のセルに付けるクラス（狭い画面で列を隠す `hidden xl:table-cell` 等） */
-    className?: string;
-  }
-}
-
-interface DataTableProps<T> {
-  columns: ColumnDef<T>[];
+interface DataTableProps<T extends RowData> {
+  columns: ListColumnDef<T>[];
   /** 表示するページの行（ページ分けは呼び出し側で済ませる） */
   data: T[];
   emptyMessage: string;
@@ -26,11 +19,11 @@ interface DataTableProps<T> {
 
 /**
  * 一覧の表。ListToolbar の直下に置く前提で、下側だけ角丸にしている（単独で置く場合は standalone）。
- * 表のオブジェクト（useReactTable の戻り値）は中身が変わっても同じ参照のため、
+ * 表のオブジェクト（useTable の戻り値）は中身が変わっても同じ参照のため、
  * React Compiler に表示を使い回されないよう、親から受け取らずにこの部品の中で作る。
  */
-export function DataTable<T>({ columns, data, emptyMessage, pending = false, getRowId, standalone = false }: DataTableProps<T>) {
-  const table = useReactTable({ data, columns, getRowId, getCoreRowModel: getCoreRowModel() });
+export function DataTable<T extends RowData>({ columns, data, emptyMessage, pending = false, getRowId, standalone = false }: DataTableProps<T>) {
+  const table = useTable({ features: listTableFeatures, data, columns, getRowId });
 
   return (
     <div
@@ -60,7 +53,7 @@ export function DataTable<T>({ columns, data, emptyMessage, pending = false, get
           {table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row) => (
               <TableRow key={row.id} className="border-slate-100 transition-colors hover:bg-slate-50/40">
-                {row.getVisibleCells().map((cell) => (
+                {row.getAllCells().map((cell) => (
                   <TableCell key={cell.id} className={cn('px-4 py-3 text-slate-700', cell.column.columnDef.meta?.className)}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
