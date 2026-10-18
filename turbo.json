@@ -3,6 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/**", "!$TURBO_ROOT$/packages/**/node_modules/**"],
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "dev": {
@@ -14,6 +15,7 @@
       "persistent": true
     },
     "typecheck": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/**", "!$TURBO_ROOT$/packages/**/node_modules/**"],
       "outputs": []
     }
   }
