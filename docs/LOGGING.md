@@ -40,7 +40,7 @@ if (error) {
 - 第1引数はイベント名（3章）、第2引数は人が読む短い説明、第3引数は文脈。
 - 文脈に置ける項目は `LogContext` の型で決まっている（`userId` / `requestId` / `ip` / `path` / `impersonation` / `err` / `payload` 等）。それ以外の値は `payload` に入れる。
 - エラーは必ず `err` に**エラーそのもの**を渡す（`error.message` だけを渡さない）。`type` / `message` / `code` / `details` / `hint` / `stack` / `cause` に整形して出す。
-- `catch` の値は型注記を付けずに受け（`unknown`）、ログの本文や画面に出すメッセージは `getErrorMessage(err)`（`packages/lib/logger/errorMessage.ts`。Supabase の Error でないエラーも扱う）で取り出す。
+- `catch` の値は型注記を付けずに受け（`unknown`）、ログの本文や画面に出すメッセージは `getErrorMessage(err)`（`packages/lib/logger/errorMessage.ts`。Supabase の Error でないエラーも扱う）で取り出す（`err instanceof Error ? err.message : …` は ESLint で止める）。画面に返す文言には、エラーの本文を入れない（`docs/CODING.md`「エラーの返し方」）。
 - Server Action・Server Component では `getLogContext()` を広げて渡す（proxy のログと `requestId` で突き合わせられる）。
 
 ### ブラウザ
