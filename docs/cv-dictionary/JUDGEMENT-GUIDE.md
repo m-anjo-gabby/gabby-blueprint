@@ -3,9 +3,15 @@
 ColorVowel辞書データ作成で得た判断・気づきを蓄積し、同じ迷いや誤りを繰り返さないためのファイル。
 語ごとの確認状況は [review-ledger.tsv](./review-ledger.tsv)、運用の流れは [README.md](./README.md) を参照。
 
-- 新しい事例は本ファイル末尾に追記する。
+## 事例の育て方
+
+- 新しい事例は本ファイル末尾に追記する。1語だけの判断は台帳（review-ledger.tsv）に書けば足り、ここには複数の語に効く方針だけを書く。
 - 方針が確定したら、スキルの生成ルール
-  [`.claude/skills/cv-dictionary-tsv/reference.md`](../../.claude/skills/cv-dictionary-tsv/reference.md) にも反映する。
+  [`.claude/skills/cv-dictionary-tsv/reference.md`](../../.claude/skills/cv-dictionary-tsv/reference.md) と、機械的に確かめられるものは
+  `validate.ts` にも反映する。確定した方針の事例は、コンテンツチームとの合意の記録として判断と根拠を残す（消さない）。
+- 作業の手順についての気づき（台帳の付け方・コミットの単位等）は、[README.md](./README.md)「運用ルール」に移し、事例は消す。
+- 未決の論点は `open-policies.json` と下の表で持ち、決まったら事例に移す。
+- ファイルが300行を超えたら棚卸しする（手順の事例を README へ移す、確定から時間が経った事例の論点・事象を短くする）。
 
 ## 未決の論点（コンテンツチーム確認待ち）
 
@@ -125,27 +131,6 @@ CVJ-20261010-09 の確認依頼Excelで別に確認している。
 - **根拠**: 回答「OLIVE SOCK で統一」「一般的に北米では Olive Sock で OK」。③では要確認に出していない
   `auburn_dog` の語（all, audit, caution, raw など）にも「OLIVE SOCK as the most common (AUBURN DOG possible for some people)」と指摘があった。
 - **反映先**: reference.md「7. cv_id」、`validate.ts`（`auburn_dog` を要確認に出す）、台帳
-
-### CVJ-20261010-04 「③登録データ一覧」の指摘も台帳に確定行として記録する
-
-- **状態**: 確定
-- **対象**: impact, in-store, online, our, private-brand, translate, update ほか（台帳の分類「コンテンツチーム指摘」40行）
-- **論点・事象**: コンテンツチームは要確認（②）に出していない語にも、③の「指摘・コメント」で修正を書いてくれる。
-  台帳に記録しないと、次回の辞書データ作成で同じ語が元の値で生成され、上書き取込用のTSVにも出ない。
-- **判断**: ③の指摘で値を変えた語と、方針の適用で値が変わった語は、台帳に `confirmed` で追記する（分類「コンテンツチーム指摘」）。
-  指摘のうち値を変えないもの（`am` の「短縮形になることが多い」など）は記録しない。
-- **根拠**: 台帳の確定値は `validate.ts` で次回以降の生成に強制され、`ledger.ts export` で上書き取込用に書き出せる。
-- **反映先**: README.md「台帳の列」
-
-### CVJ-20261010-05 確認依頼Excelに載った語が台帳に無かった（X-ray / X-rays）
-
-- **状態**: 確定
-- **対象**: `X-ray` / `X-rays`（CVR-0063 / CVR-0064、GC様向け Lv1）
-- **論点・事象**: 確認依頼Excel（20261007）には CVR-0063 / 0064 として載っていたが、コミット済みの台帳には無かった
-  （Excel出力後の台帳の更新がコミットされなかったとみられる）。
-- **判断**: 回答の反映時に、Excelと同じIDで台帳に記録した。確認依頼Excelを出力したら、台帳の変更も同じコミットに含める。
-- **根拠**: 台帳とExcelのIDがずれると、回答をどの行に反映するか取り違える。
-- **反映先**: 台帳
 
 ### CVJ-20261010-06 その他の指摘（未対応・別途検討）
 

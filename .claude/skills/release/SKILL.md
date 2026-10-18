@@ -50,3 +50,4 @@ description: 開発ブランチ（feature/YYYYMMDD-dev）を staging・本番へ
    - 道具で防げるもの → `supabase/release/`・`scripts/vercel-env/`・`.github/workflows/deploy.yml` の改善
    - Claude の進め方 → このファイルの「分担」「進め方の注意」
 3. 反映できなかったもの（大きい改善）は「改善の候補」に残し、ユーザーに一言伝える。
+4. HISTORY.md を片付ける。前回までに反映済みで、今回起きなかったつまずきの行を消し、「リリースの記録」を直近10件にする。
