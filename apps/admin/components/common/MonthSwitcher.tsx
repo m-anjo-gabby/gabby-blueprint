@@ -3,7 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { MonthPickerPopover } from './MonthPickerPopover';
+import { MonthPickerPopover, monthKey } from './MonthPickerPopover';
 
 function shiftMonth(yearMonth: string, delta: number): string {
   const [year, month] = yearMonth.split('-').map(Number);
@@ -46,7 +46,7 @@ export function MonthSwitcher({ currentMonth, paramName = 'month' }: { currentMo
           type="button"
           className="min-w-[6rem] text-center text-sm font-bold text-slate-800 rounded-md px-2 py-1 hover:bg-slate-100 transition-colors"
         >
-          {t('monthLabel', { year, month: tMonths(`m${month}`) })}
+          {t('monthLabel', { year, month: tMonths(monthKey(month)) })}
         </button>
       </MonthPickerPopover>
       <button

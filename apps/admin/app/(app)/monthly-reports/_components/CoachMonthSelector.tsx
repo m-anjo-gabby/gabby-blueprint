@@ -4,7 +4,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { type AdminCoachSummary } from '@gabby/types/adminLiveSession';
-import { MonthPickerPopover } from '@/components/common/MonthPickerPopover';
+import { MonthPickerPopover, monthKey } from '@/components/common/MonthPickerPopover';
 
 function shiftMonth(yearMonth: string, delta: number): string {
   const [year, month] = yearMonth.split('-').map(Number);
@@ -65,7 +65,7 @@ export function CoachMonthSelector({
           >
             {(() => {
               const [year, month] = currentMonth.split('-').map(Number);
-              return t('monthLabel', { year, month: tMonths(`m${month}`) });
+              return t('monthLabel', { year, month: tMonths(monthKey(month)) });
             })()}
           </button>
         </MonthPickerPopover>

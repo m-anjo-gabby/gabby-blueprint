@@ -1,4 +1,5 @@
 // apps/admin/lib/navigation.ts
+import type { Messages } from 'next-intl';
 import {
   LayoutDashboard,
   Building2,
@@ -30,9 +31,12 @@ import {
 // 型定義
 // ============================================================
 
+/** メニューの表示名の翻訳キー（messages の nav） */
+export type NavLabelKey = keyof Messages['nav'];
+
 export interface NavLeaf {
   type?: 'leaf';
-  label: string;
+  label: NavLabelKey;
   href: string;
   icon: LucideIcon;
   requiredRoles: readonly string[];
@@ -40,7 +44,7 @@ export interface NavLeaf {
 
 export interface NavGroup {
   type: 'group';
-  label: string;
+  label: NavLabelKey;
   icon: LucideIcon;
   requiredRoles: readonly string[]; // グループ自体を表示する最低権限（子の union）
   children: readonly NavLeaf[];
