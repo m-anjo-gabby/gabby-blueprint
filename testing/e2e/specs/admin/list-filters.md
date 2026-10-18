@@ -60,7 +60,7 @@
 - 実装参照: `apps/admin/components/list/`（`useListQuery` / `ListToolbar` / `DataTable` / `ListSelectFilter` / `ClientFilter` / `DeleteConfirmDialog`）、
   `apps/admin/lib/list.ts`（`parseListParams` / `toRange` / `toPageCount` / `paginateLocally`）、`packages/lib/supabase/ilike.ts`（`containsPattern` / `ilikeAny`）
 - 一覧のサーバーアクション: 各画面の `apps/admin/actions/*`（`ListParams` を受け取り `ListResult<T>` を返す）
-- 規約: `CLAUDE.md`「管理画面の一覧（admin）」
+- 規約: `docs/UI-ADMIN.md`「管理画面の一覧（admin）」
 
 ## E2Eテストケース候補
 

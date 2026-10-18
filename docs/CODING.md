@@ -1,6 +1,6 @@
 # コーディング規約
 
-アプリ（admin / coach / student）と共通パッケージ（`packages/*`）のコードの書き方。画面の作り方（シェル・骨組み・ブランド色等）は `CLAUDE.md`、ログは [LOGGING.md](./LOGGING.md)、依存パッケージは [DEPENDENCIES.md](./DEPENDENCIES.md)、DB は `supabase/DDL/README.md` が正本。
+アプリ（admin / coach / student）と共通パッケージ（`packages/*`）のコードの書き方。画面の作り方（シェル・骨組み・ブランド色等）は [UI.md](./UI.md)、ログは [LOGGING.md](./LOGGING.md)、依存パッケージは [DEPENDENCIES.md](./DEPENDENCIES.md)、DB は `supabase/DDL/README.md` が正本。
 
 既存のコードもこの規約に寄せてある（2026-10）。道具で止められない決まりからずれた箇所を見つけたら、その箇所を改修するついでに直す。
 
@@ -57,7 +57,7 @@
 | アプリ内の定数・文言 | `apps/<app>/constants/`（admin の文言は `messages/{ja,en}.json`） |
 
 - import: アプリ内は `@/`、共通パッケージは `@gabby/lib/...` / `@gabby/types/...`。アプリから `packages/` を相対パスで参照しない。
-- サーバーとブラウザの両方で使う定数は `'use client'` のファイルに置かない（`CLAUDE.md` §2 の「初期表示に必要なデータ」）。
+- サーバーとブラウザの両方で使う定数は `'use client'` のファイルに置かない（[UI.md](./UI.md)「ローディング表示」の「初期表示に必要なデータ」）。
 - 部品の export は名前付き（`export function Xxx`）。`export default` は Next.js が決めるファイル（`page.tsx` / `layout.tsx` / `loading.tsx` 等）だけにする。
 
 ## 5. 型

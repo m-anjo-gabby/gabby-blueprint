@@ -3,7 +3,7 @@ import { openAdminContext } from '../../support/adminApp.ts';
 
 /**
  * アドミンのシェル（ヘッダーの通知・サイドバーのチャット未読）の未読・件数は、レイアウトでサーバー取得して流し込み、
- * 画面を開いた後にブラウザからサーバーアクションで取りに行かない（CLAUDE.md「ローディング表示」。apps/admin/lib/shellData.ts）。
+ * 画面を開いた後にブラウザからサーバーアクションで取りに行かない（docs/UI.md「ローディング表示」。apps/admin/lib/shellData.ts）。
  * 通知の画面は、開くたびに最新を取り直す（useFetchOnMount）ため1回だけ呼ぶ。閲覧のみ（DBは変更しない）。
  */
 

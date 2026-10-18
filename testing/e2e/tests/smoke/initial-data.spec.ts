@@ -3,7 +3,7 @@ import { storageStatePath } from '../../support/personas.ts';
 import { expect, test } from '../../support/studentApp.ts';
 
 /**
- * スモーク: 初期表示のデータ（docs/screens/student/dashboard.md「アプリシェル」、CLAUDE.md「ローディング表示」）。
+ * スモーク: 初期表示のデータ（docs/screens/student/dashboard.md「アプリシェル」、docs/UI.md「ローディング表示」）。
  * 画面・ヘッダー・ナビの初期表示に必要なデータはサーバーで取得して流し込み、表示後にブラウザから
  * サーバーアクションで取りに行かない（サーバーアクションは1つずつ順番に実行され、海外の利用者ほど遅くなるため）。
  * この方針が後から崩れていないかを、主要画面を直接開いた時のサーバーアクションの回数で確認する。

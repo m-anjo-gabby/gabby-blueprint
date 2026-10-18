@@ -21,4 +21,4 @@ pnpm install
 pnpm dev:ssl
 ```
 
-開発規約は [CLAUDE.md](CLAUDE.md) にまとめています。
+開発規約は [CLAUDE.md](CLAUDE.md) にまとめています（画面の作り方は [docs/UI.md](docs/UI.md) ほか）。
