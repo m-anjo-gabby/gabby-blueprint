@@ -5,6 +5,7 @@
 | 対象 | 正本 |
 | :--- | :--- |
 | コードの書き方 | `docs/CODING.md` |
+| 認可・入口の守り方 | `docs/SECURITY.md` |
 | 画面の作り方 | `docs/UI.md`（全アプリ共通）/ `docs/UI-ADMIN.md` / `docs/UI-STUDENT.md` |
 | ログ | `docs/LOGGING.md` |
 | 依存パッケージ・版 | `docs/DEPENDENCIES.md` |
@@ -43,12 +44,13 @@
 
 - クリーンコード: DRY原則（Don't Repeat Yourself）を徹底し、関心の分離（Separation of Concerns）を意識したコンポーネント設計を行うこと。
 - コーディング規約: 書式・命名・ファイル構成・型・エラーの返し方・コメントは `docs/CODING.md` が正本。書式は Prettier（`pnpm format`）に任せる。サーバーアクションは `ActionResult`（`packages/types/action.ts`）を返し、失敗の `message` はアプリの言語の文言にする（admin は next-intl。DB・例外の本文を入れずログに残す）。共通部分の `*Core` は `errorCode` だけを返す。admin のアクションは先頭で `requireAdminRole`（`apps/admin/lib/adminAuth.ts`）を呼び、サーバー側の `catch` は先頭で `unstable_rethrow` を呼ぶ（どちらも単体テストで検査）。コメントは日本語の常体で「なぜ」を書き、変更の経緯・絵文字・区切り線・コメントアウトしたコードを残さない。
+- 認可（全アプリ共通）: 正本は `docs/SECURITY.md`。サーバーアクションは公開の画面のパスからも呼べるため、proxy に頼らず各アクションで守る。service_role（`createAdminClient`）を使う処理は、先に `getAuthUser()` と対象への権利（参加者・当事者・本人）を確かめる。公開のパスを増やす場合は、ログインの代わりの守り方（秘密の値・署名・CAPTCHA 等）を決める。SECURITY DEFINER の関数は `search_path` の固定・PUBLIC と anon からの `REVOKE`・呼び出し元の確認をそろえる（`supabase/DDL/README.md`「関数の権限」。どれも単体テストで検査）。
 - 共通化: 複数アプリ（admin/coach/student）にまたがるロジック・型定義は `packages/types` や `packages/lib` に集約し、アプリごとの重複実装を避けること。
 - ブランド色（全アプリ共通）: 画面・共通UIのブランド色は `brand` / `brand-strong` / `brand-soft` / `brand-N`（および `gold`）トークンで書き、パレット名（`indigo-*` 等）を直接書かない。詳細は `docs/UI.md`「ブランド色」。
 - 画面の作り方: 正本は `docs/UI.md`（全アプリ共通: ブランド色・ローディング表示・初期表示のデータ取得・ダイアログのフォーカス・チャット）、`docs/UI-ADMIN.md`（admin: 一覧・next-intl）、`docs/UI-STUDENT.md`（student: UI実装規約）。各アプリと `packages/lib` の `CLAUDE.md` が読み込むため、そのファイルを触ると自動で読まれる。要点: 画面の枠は本物にし、データに依存する区画だけを本番と同じ形の骨組みにする。初期表示に必要なデータは表示後にブラウザからサーバーアクションで取りに行かず、サーバーで取得する。
 - ログ（全アプリ共通）: 規約は `docs/LOGGING.md` が正本。サーバーは `createLogger(service)`、ブラウザは `clientLogger` を使い、`console.*` は使わない（ESLint の `no-console`）。イベント名は `<domain>:<action>_<outcome>`。エラーは `err` にエラーそのものを渡す。氏名・本文等の個人情報は `payload` に入れない。監査・業務の履歴はログではなく DB に残す。
 - 環境変数（全アプリ共通）: アプリの環境変数は `scripts/vercel-env/manifest.mjs` が正本（使うアプリ・環境ごとの値の決め方・秘密かどうか）。`process.env` で新しい変数を使う場合や、使わなくなった場合は同じタスクで定義を追加・廃止（`removed: true`）し、`pnpm vercel-env --write-examples` で `apps/*/.env.example` を作り直す（`.env.example` を直接編集しない）。staging・本番への反映は Vercel の画面ではなく `pnpm vercel-env --env=<staging|prod> --apply` で行い、リリースで追加・変更する変数はリリーススクリプト冒頭の手順にも書く。詳細は `scripts/vercel-env/README.md`。
-- 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラー・警告がない状態にしてから完了とすること（lint は警告も失敗にしている。書式は `prettier --check`。全体は `pnpm check` で、GitHub Actions の `CI` も同じ内容を push のたびに実行する）。`packages/lib` の画面・DB に依らない処理を作った・変えた場合は、同じ作業で単体テストも足す（`testing/unit/README.md`）。
+- 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラー・警告がない状態にしてから完了とすること（Claude Code ではプロジェクトの設定 `.claude/settings.json` のフックが、ファイルを書くたびにそのファイルへ Prettier と ESLint を実行し、指摘を返す。tsc は対象外のため別に実行する。staging・本番に影響するコマンド（リリーススクリプト・環境変数の反映・Deploy・main/staging への push）は同じ設定で毎回確認を求める。lint は警告も失敗にしている。書式は `prettier --check`。全体は `pnpm check` で、GitHub Actions の `CI` も同じ内容を push のたびに実行する）。`packages/lib` の画面・DB に依らない処理を作った・変えた場合は、同じ作業で単体テストも足す（`testing/unit/README.md`）。
 
 # 4. コミュニケーション・トーン
 
@@ -82,8 +84,9 @@
 # 6. データ主体テスト・dev環境接続時の注意
 
 - データ主体テスト・回帰テストの技術規約とナレッジは `testing/CONVENTIONS.md` /
-  `testing/TEST-JUDGEMENT-GUIDE.md` に集約する。テスト自動化に着手する際は必ず参照し、
-  新しい気づき・失敗事例は `TEST-JUDGEMENT-GUIDE.md` に追記すること。
+  `testing/TEST-JUDGEMENT-GUIDE.md` に集約する。テスト自動化に着手する際は `TEST-JUDGEMENT-GUIDE.md` 1章（判断基準）の
+  関係する分類を読む。新しい気づき・失敗事例は同ファイルの「気づきの育て方」に従い、記録するだけでなく、仕組み・規約へ移せるものは移し、
+  古くなった事例は消す。
 - E2E（Playwright、`testing/playwright.config.ts`）は `testing/e2e/CONVENTIONS.md` に従う。特に実行時は
   8章「トークン消費を抑える運用」（要約だけ読む・失敗分だけ再実行・画像より `error-context.md` を優先）を守り、
   dev サーバーは自前で起動せず Playwright の `webServer` に任せる。

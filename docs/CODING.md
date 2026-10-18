@@ -1,6 +1,6 @@
 # コーディング規約
 
-アプリ（admin / coach / student）と共通パッケージ（`packages/*`）のコードの書き方。画面の作り方（シェル・骨組み・ブランド色等）は [UI.md](./UI.md)、ログは [LOGGING.md](./LOGGING.md)、依存パッケージは [DEPENDENCIES.md](./DEPENDENCIES.md)、DB は `supabase/DDL/README.md` が正本。
+アプリ（admin / coach / student）と共通パッケージ（`packages/*`）のコードの書き方。画面の作り方（シェル・骨組み・ブランド色等）は [UI.md](./UI.md)、認可と入口の守り方は [SECURITY.md](./SECURITY.md)、ログは [LOGGING.md](./LOGGING.md)、依存パッケージは [DEPENDENCIES.md](./DEPENDENCIES.md)、DB は `supabase/DDL/README.md` が正本。
 
 既存のコードもこの規約に寄せてある（2026-10）。道具で止められない決まりからずれた箇所を見つけたら、その箇所を改修するついでに直す。
 
@@ -14,6 +14,7 @@
 | admin の翻訳のキー（6章） | TypeScript（`apps/admin/i18n/messages.d.ts`）と単体テスト（`testing/unit/admin-messages.test.ts`） | `pnpm typecheck` / `pnpm test` |
 | `eslint-disable` の理由（`-- 理由` を必須）・使われなくなった指示 | ESLint（`@eslint-community/eslint-comments`・`reportUnusedDisableDirectives`） | `pnpm lint` |
 | admin のアクションのロールの確認・サーバー側の `catch` の `unstable_rethrow`（6章） | 単体テスト（`testing/unit/admin-action-guard.test.ts`・`server-catch-rethrow.test.ts`） | `pnpm test` |
+| service_role を使うアクションの利用者の確認・DB の関数の権限（SECURITY.md） | 単体テスト（`testing/unit/server-action-auth.test.ts`・`ddl-function-security.test.ts`） | `pnpm test` |
 
 まとめて `pnpm check`（push のたびに GitHub Actions の `CI` も同じ内容を実行する）。
 
@@ -117,14 +118,17 @@ export async function updateNotice(input: NoticeInput): Promise<ActionResult<{ n
 - 画面で分岐が必要な失敗（使用中で消せない・期限切れ等）だけ `errorCode` も返す（`ActionResult<T, 'in_use'>`）。画面は `errorCode` で分岐し、文言は画面側で出してもよい。
 - 想定内の失敗（入力の誤り・権限なし・見つからない等）は `throw` せず、結果で返す（本番の Next.js はアクションで投げたエラーの本文を画面に渡さない）。
 - 共通部分の実装（`*Core`）は `CoreResult<T, C>` を返す。失敗は `{ success: false, errorCode }` だけで、文言は持たない。各アプリのアクションが `errorCode` を自分の言語の文言に変える（例: admin の `Record<ProfileIconErrorCode, MessageKey>`、coach の `Record<CoachAvailabilityErrorCode, string>`）。`XxxErrorCode` の型は `packages/types/<domain>.ts` に置く。種別を分けない場合は `BasicErrorCode`（`'unauthorized' | 'unexpected_error'`）。
-- admin のアクションは、先頭で `requireAdminRole(SYSTEM_ADMIN_ONLY | ADMIN_OR_CONTENT_MANAGER)`（`apps/admin/lib/adminAuth.ts`）を呼ぶ。サーバーアクションはどの画面からでも呼べ、入口の proxy は画面のパスでしかロールを判定できないため（多くは service_role で RLS も通らない）。ロールが足りなければ例外を投げる（通常の画面操作では起きない経路のため、画面の文言は用意しない）。admin の Route Handler は `checkAdminRoleForRoute` を使う。付け忘れは単体テスト（`testing/unit/admin-action-guard.test.ts`）で止める。
+- admin のアクションは、先頭で `requireAdminRole(SYSTEM_ADMIN_ONLY | ADMIN_OR_CONTENT_MANAGER)`（`apps/admin/lib/adminAuth.ts`）を呼ぶ。サーバーアクションはどの画面からでも呼べ、入口の proxy は画面のパスでしかロールを判定できないため（多くは service_role で RLS も通らない）。ロールが足りなければ例外を投げる（通常の画面操作では起きない経路のため、画面の文言は用意しない）。admin の Route Handler は `checkAdminRoleForRoute` を使う。付け忘れは単体テスト（`testing/unit/admin-action-guard.test.ts`）で止める。student・coach・共通のアクション、公開の入口の守り方は [SECURITY.md](./SECURITY.md)。
 - 3アプリから直接呼ぶ共通のアクション（chat・お知らせ・通知）も `CoreResult` を返し、画面の文言は呼び出す側（共通の部品は各アプリが渡すラベル）で出す（例: `ChatActionErrorCode` と admin の `useChatErrorMessage`）。
 
 ### 画面のデータの取得（Server Component）
 
-- 画面の表示に使う取得関数は、失敗をログに残して `null`（1件）または `[]`（一覧）を返し、画面は「取得できなかった」表示か空の表示にする（区画ごとに `Suspense` で分ける場合も同じ）。
-- 取得の成否で画面の出し方を変える場合は `CoreResult<{ data: T }, BasicErrorCode>` を返し、画面は `res.success ? res.data : 既定値` で受ける（例: student の学習記録・モニター）。
-- 想定外の失敗で画面を出せない場合は `throw` し、`error.tsx` に任せる。投げる `Error` の文言は開発者向け（画面には出ない）でよい。
+失敗を「0件」と同じ見た目にしない（利用者も運営も、障害に気づけないため）。
+
+- 一覧・画面の主な内容の取得関数は、失敗をログに残して `CoreResult<{ data: T }, BasicErrorCode>` の失敗を返す。画面はその区画を `SectionLoadError`（`packages/lib/components/common/`。文言と再読み込みのラベルはアプリの言語で渡す。student は `constants/network.ts`）で出し、空の一覧に置き換えない（例: student `monitor/page.tsx`）。区画ごとに `Suspense` で分ける場合は、その区画の中で出す。
+- 補助の区画（件数・バッジ・おすすめ・お知らせのカード等、無くても画面の用が足りるもの）の取得は、失敗をログに残して `null`（1件）または `[]`（一覧）を返し、出さない・空にしてよい。
+- 想定外の失敗で画面全体を出せない場合は `throw` し、`error.tsx` に任せる。投げる `Error` の文言は開発者向け（画面には出ない）でよい。
+- `res.success ? res.data : []` のように失敗を空の値へ置き換えている既存の画面は、改修するついでに上の形へ寄せる。
 
 ### `catch`
 
