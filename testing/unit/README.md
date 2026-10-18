@@ -35,6 +35,13 @@
 
 今は無し（2026-10-18 に全件を足した）。新しく見つけたらここに足す。
 
+### 低（必要になった時に足す）
+
+固定の文言の一覧（`notice/labels.ts`）、別の処理を包むだけのもの（`notification/display.ts`。文面は `packages/types/notificationText.ts`）、
+URL・画像の処理（`profile/cropImage.ts`・`getProfileIconUrl.ts`・`country/getCountryFlagUrl.ts` 等）、メールの送信処理の型・組み立て（`mail/dispatch/handlers/payload.ts`・`mail/templates/TrialEmailTemplates.ts`）。
+最新の一覧は CI の Summary（テストの無いファイル）で見る。
+
 ### 対象外（単体テストでは確かめない）
 
-`ai/`（外部の API）、`audio/`（ブラウザの音声の機能。E2E の偽の認識器で確かめる）、型・定数だけのファイル（`security/frameHeaders.ts` 等）。
+`ai/`（外部の API）、`audio/`（ブラウザの音声の機能。E2E の偽の認識器で確かめる）、`speech/`、ログイン・認証の画面の処理（`auth/callback.ts`・`portalActions.ts`。E2E で確かめる）、
+型・定数だけのファイル（`security/frameHeaders.ts`・`sprint/constants.ts`・`shell/shellDataTypes.ts` 等）。
