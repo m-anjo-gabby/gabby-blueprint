@@ -1,7 +1,6 @@
 ---------------------------------------------
 -- 0. モニタリング対象生徒 判定関数（内部共通ヘルパー）
 ---------------------------------------------
--- 【2026-09-22 新規作成】
 -- 生徒モニタリング画面（apps/student /monitor）向けの「対象生徒」判定ロジックを
 -- 一箇所に集約する内部ヘルパー関数。private スキーマに置き、authenticated には公開せず、
 -- get_monitor_user_list / get_monitor_word_history / get_monitor_sprint_history /
@@ -50,19 +49,19 @@ AS $$
     FROM public.com_m_user u
     INNER JOIN public.com_t_user_license l
       ON l.user_id = u.id
-     AND l.status = 1 -- 💡 有効なライセンスのみを対象とする（停止・満了は日付が重なっていても除外）
+     AND l.status = 1 -- 有効なライセンスのみを対象とする（停止・満了は日付が重なっていても除外）
      -- 対象期間の日付は集計期間のタイムゾーン（日本時間）の暦日。終了日いっぱいまでを含める
      AND l.start_date < ((_end_date + 1)::timestamp AT TIME ZONE public.reporting_timezone())
      AND l.end_date >= (_start_date::timestamp AT TIME ZONE public.reporting_timezone())
     LEFT JOIN public.com_m_contract con ON con.contract_id = l.contract_id
     WHERE u.client_id = _client_id
       AND u.user_type ~ '1'
-      -- 💡 デモユーザーはどんな時でも絶対に含めない
+      -- デモユーザーはどんな時でも絶対に含めない
       AND NOT EXISTS (
         SELECT 1 FROM public.com_t_user_role r
         WHERE r.user_id = u.id AND r.role_id = 'demo_user'
       )
-      -- 💡 モニターロールの切り替えロジック
+      -- モニターロールの切り替えロジック
       AND (
         _include_monitor = TRUE -- ONならモニターロールの人も通過させる
         OR
@@ -79,5 +78,5 @@ AS $$
       l.end_date DESC;
 $$;
 
--- 🚨 内部ヘルパーのため外部公開しない（SECURITY DEFINER関数の内部からのみ呼び出される）
+-- 内部ヘルパーのため外部公開しない（SECURITY DEFINER関数の内部からのみ呼び出される）
 REVOKE ALL ON FUNCTION private.get_monitor_target_users(UUID, DATE, DATE, BOOLEAN) FROM PUBLIC, anon, authenticated;

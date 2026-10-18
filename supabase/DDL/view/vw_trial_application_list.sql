@@ -42,7 +42,7 @@ LEFT JOIN public.com_t_invitation i ON i.id = a.invitation_id;
 
 COMMENT ON VIEW private.vw_trial_application_list IS 'Webトライアルの申込一覧（admin 用。状態の判定つき）';
 
--- 🔒 セキュリティ権限の再設定
+-- セキュリティ権限の再設定
 REVOKE ALL ON private.vw_trial_application_list FROM anon, authenticated;
 GRANT USAGE ON SCHEMA private TO service_role;
 GRANT SELECT ON private.vw_trial_application_list TO service_role;

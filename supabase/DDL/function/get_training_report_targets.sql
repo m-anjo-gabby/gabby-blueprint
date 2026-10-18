@@ -1,6 +1,6 @@
 ---------------------------------------------
--- トレーニングレポート作成対象のライセンス一覧取得 (2026-10-01 追加)
--- 前提: table/com_t_user_license.sql, table/com_m_contract.sql（contract_name追加パッチまで）,
+-- トレーニングレポート作成対象のライセンス一覧取得
+-- 前提: table/com_t_user_license.sql, table/com_m_contract.sql,
 --       table/com_t_user_session_ticket.sql, table/com_t_contract_training_report.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】

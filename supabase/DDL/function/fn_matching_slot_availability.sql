@@ -1,5 +1,5 @@
 ---------------------------------------------
--- 専属コーチのマッチングで、毎週の枠を申請・承認したときに予約できる回数 (2026-10-09 追加)
+-- 専属コーチのマッチングで、毎週の枠を申請・承認したときに予約できる回数
 -- 前提: function/matching_min_bookable_rate.sql, function/fn_matching_occurrence_busy.sql,
 --       function/fn_weekly_occurrences.sql の作成が完了していること。
 ---------------------------------------------
@@ -35,7 +35,7 @@ AS $$
     -- このコマの契約上の回数（商をbaseとし、余りはslot_no昇順に1つずつ多く配分する。table/com_m_lesson_schedule.sqlの
     -- target_sessionsパッチ参照）から、同じコマの終了した定期スケジュール（コーチ交代等。status<>1）で既に使った回
     -- （実施済み・予約済み・返還なしのキャンセル。fn_schedule_shortfall の実績と同じ数え方）を差し引く。
-    -- コーチ交代の後に別のコーチで成立させる時、契約の回数を超えて作らない・未予約を多く数えないため（2026-10-09）。
+    -- コーチ交代の後に別のコーチで成立させる時、契約の回数を超えて作らない・未予約を多く数えないため。
     SELECT GREATEST(
         (t.total_sessions / t.weekly_frequency)
             + CASE WHEN p_slot_no <= (t.total_sessions % t.weekly_frequency) THEN 1 ELSE 0 END

@@ -1,5 +1,5 @@
 ---------------------------------------------
--- コーチ評価の対象（評価を受け付けている契約×コーチ）の判定 (2026-10-10 追加)
+-- コーチ評価の対象（評価を受け付けている契約×コーチ）の判定
 -- 前提: table/com_t_coach_rating.sql, table/com_m_lesson_schedule.sql, table/com_t_session.sql,
 --       table/com_t_user_session_ticket.sql, table/com_t_user_license.sql の作成が完了していること。
 ---------------------------------------------

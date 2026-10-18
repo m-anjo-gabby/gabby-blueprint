@@ -33,5 +33,5 @@ BEGIN
 END;
 $$;
 
--- 🚨 内部ヘルパーのため外部公開しない（SECURITY DEFINER関数の内部からのみ呼び出される）
+-- 内部ヘルパーのため外部公開しない（SECURITY DEFINER関数の内部からのみ呼び出される）
 REVOKE ALL ON FUNCTION private.get_monitor_client_id() FROM PUBLIC, anon, authenticated;

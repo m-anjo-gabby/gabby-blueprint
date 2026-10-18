@@ -1,23 +1,16 @@
 ---------------------------------------------
--- 定期スケジュール単位の未割当チケット数(shortfall)算出関数 (2026-09-05 追加)
+-- 定期スケジュール単位の未割当チケット数(shortfall)算出関数
 -- 前提: table/com_m_lesson_schedule.sql, table/com_t_session.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】
--- packages/lib/coachStudent/actions/coachStudentActions.ts の
--- getStudentLiveSessionShortfallsCore が持っていた「未消化枠」計算ロジック
--- （countWeekdayOccurrencesによる対象曜日の出現回数=expectedと、
--- com_t_sessionの件数=actualの差分）を、チケット返還ルール対応のためSQL側に
--- 一本化する。以後、TS側・RPC側どちらもこの関数を唯一の真実源として使う。
+-- コマ（定期スケジュール）ごとの「未消化枠」（expected と actual の差分）の計算を1か所にまとめる。
+-- TS側・RPC側どちらもこの関数を唯一の真実源として使う。
 --
--- expected (2026-09-14変更): schedule.target_sessions（このコマが契約上持つべき目標
--- セッション数。承認時にtotal_sessions/weekly_frequencyの均等割りで確定、table/
--- com_m_lesson_schedule.sqlのtarget_sessionsパッチ参照）をそのまま返す。
--- 変更前はstart_date〜end_date間の対象曜日(day_of_week)の出現回数（暦週の数え上げ）を
--- expectedとしていたが、これはfn_generate_sessions_for_schedule()が実際に生成する回数の
--- 再計算にすぎず、マッチング承認が契約開始から遅れて生成本数が契約上の目標を
--- 恒久的に下回るケースを検知できなかった（expected自体が実績と同じロジックで
--- 導出されるため乖離が生じ得ない）。target_sessionsを契約上のエンタイトルメントを表す
--- 唯一の真実源とすることで、この乖離を正しくshortfallとして検知できるようにする。
+-- expected: schedule.target_sessions（このコマが契約上持つべき目標
+-- セッション数。承認時にtotal_sessions/weekly_frequencyの均等割りで確定。table/
+-- com_m_lesson_schedule.sql参照）をそのまま返す。対象曜日の出現回数（fn_generate_sessions_for_schedule()が
+-- 実際に生成する回数と同じ数え方）を使わないのは、マッチング承認が契約開始から遅れて生成本数が
+-- 契約上の目標を下回るケースを shortfall として検知するため。
 --
 -- actual: com_t_session側で「その週の枠が消化済み扱い」となる行数。
 --   - status IN (1,2): scheduled/completed(内訳問わず) はいずれもその週の枠を
@@ -37,7 +30,7 @@
 -- 「◯回中◯回」といった内訳表示（LiveSessionShortfallItem.expected_sessions/actual_sessions）
 -- を、TS側で計算をやり直すことなくこの関数だけで賄うため。
 --
--- 【ステータス簡素化 (2026-09-14変更)】
+-- 【ステータス簡素化】
 -- 旧status値(6,7,8,9,10)を撤廃しstatus=2(completed)/3(cancelled)に統合したことに伴い、
 -- actualの判定式もstatus値のみで単純に書けるようになった（table/com_t_session.sqlの
 -- ステータス簡素化パッチ参照）。

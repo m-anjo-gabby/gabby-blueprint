@@ -1,5 +1,5 @@
 ---------------------------------------------
--- コーチの担当生徒経由コンテンツアクセス判定ヘルパー関数 (2026-09-03 追加)
+-- コーチの担当生徒経由コンテンツアクセス判定ヘルパー関数
 -- com_m_contentsのRLSポリシーから、コンテンツへのアクセス権を持つ生徒の
 -- client_id(com_m_user.client_id)を判定しようとすると、com_m_user側の既存ポリシー
 -- ("Users can view themselves and colleagues")がコーチ自身のclient_idしか許可しないため、
@@ -11,9 +11,8 @@
 -- 横断しうる）の client_id にアクセス権があれば閲覧を許可する。
 -- 例: コーパススプリント教材（Lesson Sprintのコーチ向け教材選択画面）。
 --
--- 2026-09-03: 担当関係の判定元をcom_m_lesson_schedule（スケジューリング用データ）から
--- 判定専用の派生マスタcom_m_coach_student_relationshipに変更（意味論・挙動は変更なし。
--- 引き続きstatusを問わず、一度でも担当したことがあれば判定対象とする。
+-- 担当関係は、スケジューリング用の com_m_lesson_schedule ではなく判定専用の派生マスタ
+-- com_m_coach_student_relationship で判定する（statusを問わず、一度でも担当したことがあれば対象とする。
 -- 詳細はtable/com_m_coach_student_relationship.sqlを参照）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.is_coach_content_accessible(p_content_id uuid)

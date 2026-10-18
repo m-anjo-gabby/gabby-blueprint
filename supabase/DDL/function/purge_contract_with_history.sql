@@ -1,5 +1,5 @@
 ---------------------------------------------
--- 契約の完全削除（履歴含む）RPC (2026-08-22 追加)
+-- 契約の完全削除（履歴含む）RPC
 -- 前提: table/com_m_contract.sql, table/com_t_user_license.sql,
 --       table/com_t_user_license_history.sql, table/com_t_user_session_ticket.sql,
 --       table/com_t_user_session_ticket_history.sql の作成が完了していること。

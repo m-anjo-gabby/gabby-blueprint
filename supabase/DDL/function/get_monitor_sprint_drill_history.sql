@@ -1,8 +1,7 @@
 ---------------------------------------------
--- 4. スプリントドリル履歴関数（新規追加）
+-- get_monitor_sprint_drill_history: モニター画面のスプリントのドリルの履歴
 ---------------------------------------------
--- 【2026-09-22 抜本改修】対象生徒の判定を private.get_monitor_target_users に一本化
--- （get_monitor_sprint_history と同様。詳細はそちらのコメント参照）。
+-- 対象生徒の判定は private.get_monitor_target_users に任せる（get_monitor_sprint_history と同じ）。
 CREATE OR REPLACE FUNCTION public.get_monitor_sprint_drill_history(
     _start_date DATE,
     _end_date DATE,
@@ -50,7 +49,7 @@ BEGIN
 END;
 $$;
 
--- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+-- 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
 ALTER FUNCTION public.get_monitor_sprint_drill_history(DATE, DATE, UUID[], BOOLEAN) OWNER TO postgres;
 REVOKE EXECUTE ON FUNCTION public.get_monitor_sprint_drill_history(DATE, DATE, UUID[], BOOLEAN) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.get_monitor_sprint_drill_history(DATE, DATE, UUID[], BOOLEAN) TO authenticated;

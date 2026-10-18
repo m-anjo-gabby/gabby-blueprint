@@ -82,7 +82,7 @@ SELECT
   NULL AS plan_name,
   i.mail_sent_at,
   i.last_mail_error,
-  -- 💡 フロントエンドが「招待状態」を識別するためのステータスを生成
+  -- フロントエンドが「招待状態」を識別するためのステータスを生成
   CASE 
     -- メール送信失敗を最優先で表示
     WHEN i.last_mail_error IS NOT NULL THEN 'mail_failed'
@@ -101,7 +101,7 @@ WHERE
 
 COMMENT ON VIEW private.vw_user_list IS 'ユーザー管理用一覧ビュー (本登録＆招待中ユーザー統合版)';
 
--- 🔒 セキュリティ権限の再設定
+-- セキュリティ権限の再設定
 REVOKE ALL ON private.vw_user_list FROM anon, authenticated;
 GRANT USAGE ON SCHEMA private TO service_role;
 GRANT SELECT ON private.vw_user_list TO service_role;

@@ -3515,3 +3515,22 @@ ALTER TABLE public.com_m_contract
     ALTER COLUMN update_date SET NOT NULL;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】使われていない旧版のモニター用の関数（private スキーマ）を削除する
+--
+-- 【内容】
+--   dev にだけ残っていた private.get_monitor_user_list / get_monitor_word_history / get_monitor_sprint_history
+--   （SECURITY DEFINER。どのリリーススクリプトにも無く、アプリ・他の関数から呼ばれていない）を削除する。
+--   モニター画面は public の同名の関数（DDL/function/get_monitor_*.sql）を使う。staging・本番には無く、何もしない。
+--
+-- 対応ファイル: なし（正本に無い関数の削除）
+-- =========================================================================
+
+BEGIN;
+
+DROP FUNCTION IF EXISTS private.get_monitor_user_list(boolean);
+DROP FUNCTION IF EXISTS private.get_monitor_word_history(date, date, uuid[], boolean);
+DROP FUNCTION IF EXISTS private.get_monitor_sprint_history(timestamptz, timestamptz, uuid[], boolean);
+
+COMMIT;

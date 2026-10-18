@@ -1,5 +1,5 @@
 ---------------------------------------------
--- admin_add_calendar_event_series_sessions: シリーズに複数の回をまとめて登録する (2026-10-05 追加)
+-- admin_add_calendar_event_series_sessions: シリーズに複数の回をまとめて登録する
 ---------------------------------------------
 -- アドミンのシリーズ詳細「回をまとめて追加」から呼ぶ（admin アプリのサーバーアクション、service_role）。
 -- 各回（com_m_calendar_event）と担当コーチ（com_t_calendar_event_coach）を1つのトランザクションで登録し、

@@ -1,6 +1,5 @@
 ---------------------------------------------
--- 候補提案の承諾/承認RPC (2026-09-15 追加、approve_session_booking_request/
--- accept_session_reschedule_proposalを統合)
+-- 候補提案の承諾/承認RPC（振替候補・自由予約リクエストの共通）
 -- 前提: table/com_t_session_slot_proposal.sql, function/check_session_conflict.sql,
 --       function/fn_assert_actor_or_admin.sql, function/fn_notify.sql, function/fn_schedule_shortfall.sql の作成が
 --       完了していること。
@@ -26,7 +25,7 @@
 -- pending候補を自動的に不採用(declined)にする。自由予約リクエストはsource_session_id
 -- IS NULLのため、この処理は1件も対象にならず無害（元々グルーピングの概念が無いため）。
 --
--- 【契約の回数の確認 (2026-10-08追加)】
+-- 【契約の回数の確認】
 -- 承諾・承認で作るセッションが契約の回数を超えないよう、未予約の回（fn_schedule_shortfall）が
 -- 残っていることを確かめる。予約リクエスト・振替候補は作成時に回答待ちの分を差し引いて
 -- 受け付けている（fn_schedule_bookable_count）ため通常は残っているが、それ以前に作られた

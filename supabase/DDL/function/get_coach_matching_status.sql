@@ -1,5 +1,5 @@
 ---------------------------------------------
--- コーチのマッチング対象の状態の取得 (2026-10-11 追加)
+-- コーチのマッチング対象の状態の取得
 -- 前提: function/fn_coach_matching_missing_items.sql, table/com_m_coach_matching_suspension.sql,
 --       table/com_m_coach_profile.sql（accepting_students パッチ）
 ---------------------------------------------

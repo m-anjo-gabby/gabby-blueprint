@@ -1,5 +1,5 @@
 ---------------------------------------------
--- ライブセッションの実施結果の記録RPC（コーチの「End Session」） (2026-10-14 追加)
+-- ライブセッションの実施結果の記録RPC（コーチの「End Session」）
 -- 前提: function/fn_session_outcome_evidence.sql, function/fn_apply_session_outcome.sql,
 --       function/fn_notify.sql の作成が完了していること。
 ---------------------------------------------
