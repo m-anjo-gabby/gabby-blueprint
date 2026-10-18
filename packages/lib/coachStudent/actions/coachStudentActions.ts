@@ -704,8 +704,8 @@ export async function getStudentLiveSessionShortfallsCore(
 /**
  * active_contractに対応するチケットのセッション消化状況サマリーを算出する
  * （Student Overviewヘッダー用）。com_t_user_session_ticket.total_sessions/used_sessionsは
- * 担当関係のあるコーチなら誰でも参照できるRLS（2026-09-03追加）、com_t_sessionも担当外を
- * 含めて参照できるRLS（2026-09-08拡張）のため、消化済み・予約済みの集計自体はticket_id単位で
+ * 担当関係のあるコーチなら誰でも参照できるRLS、com_t_sessionも担当外を
+ * 含めて参照できるRLSのため、消化済み・予約済みの集計自体はticket_id単位で
  * 全コーチ分をまとめて取得できる。一方com_m_lesson_scheduleは自分の行しか読めないため、
  * 「未予約数」は自分の担当分しか正確に計算できない。そのため他コーチ分は内訳を出さず、
  * total_sessionsからの残差（合計件数のみ）として扱う。

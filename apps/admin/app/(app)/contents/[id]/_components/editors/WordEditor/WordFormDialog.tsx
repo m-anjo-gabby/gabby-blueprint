@@ -122,10 +122,7 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
         )}
       </DialogTrigger>
 
-      {/* 改善ポイント: 
-          1. focus:outline-none で起動時の白い縁取りを防止
-          2. [&>button]:... セレクタで、右上の×ボタンを白く、かつホバー時のみくっきり表示
-      */}
+      {/* focus:outline-none: 開いた時の白い縁取りを出さない。[&>button]: 右上の×ボタンを白くし、ホバー時だけはっきり表示する */}
       <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl focus:outline-none [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button:focus]:ring-0 [&>button:focus]:outline-none">
         {/* 起動時の最初のフォーカスを吸い込むためのダミー要素。
             これにより×ボタンや入力欄が不自然に光るのを防ぎます。

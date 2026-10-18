@@ -118,7 +118,6 @@ export async function signInCore(
   } | null;
 
   if (masterError) {
-    // console.error から共通ロガーへ統合
     logger.error('auth:master_fetch_failed', masterError.message, { err: masterError, payload: { email } });
   }
 
@@ -250,7 +249,7 @@ export async function forgotPasswordCore(
   }
 
   try {
-    // 改善: メール自体は独自で送るため、Supabase側からは「送信」ではなく「認証リンク（トークン）」のみを行政権限で発行させる
+    // メールは自前で送るため、Supabase には送信させず、認証リンク（トークン）だけを管理者権限で発行させる
     const supabaseAdmin = await createAdminClient();
 
     const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
@@ -274,7 +273,7 @@ export async function forgotPasswordCore(
       return { success: true };
     }
 
-    // 修正: Supabase内部の verify エンドポイントを経由すると、非PKCE時はセッションが
+    // Supabase 内部の verify エンドポイントを経由すると、非PKCE時はセッションが
     // フラグメント (#) で返りサーバーサイドの callback で取得できなくなるため、
     // 直接アプリのコールバック URL を生成してトークン (hashed_token) を渡します。
     const tokenHash = data.properties.hashed_token;
@@ -554,7 +553,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
       user_metadata: {
         user_name: inviteRecord.user_name,
         user_type: inviteRecord.user_type,
-        client_id: inviteRecord.client_id, // 修正: ここで client_id をメタデータに渡すことで、トリガー側が初期テナントにフォールバックするのを防ぎます
+        client_id: inviteRecord.client_id, // メタデータに渡し、トリガーが既定の顧客を使わないようにする
         roles: inviteRecord.roles, // 招待時のロールをメタデータにも同期
       },
     });
@@ -574,7 +573,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
     const { error: dbUserError } = await supabase
       .from('com_m_user')
       .update({
-        client_id: inviteRecord.client_id, // 修正: トリガーだけでなく、念のためここでも確定した client_id で上書き同期を保証します
+        client_id: inviteRecord.client_id, // トリガーの結果に関わらず、招待の顧客で上書きする
         user_name: inviteRecord.user_name,
         user_type: inviteRecord.user_type,
         update_date: new Date().toISOString(),

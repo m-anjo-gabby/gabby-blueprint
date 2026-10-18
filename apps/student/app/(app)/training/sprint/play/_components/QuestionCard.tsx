@@ -51,7 +51,7 @@ export function QuestionCard({
   const isAutoPlaying = useSprintStore((state) => state.drill.isAutoPlaying);
   const setDrillEvalType = useSprintStore((state) => state.setDrillEvalType);
   const drillEvalType = useSprintStore((state) => state.drill.evalType);
-  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 追加：発話評価ON/OFFフラグの取得
+  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 発話評価の ON/OFF
 
   // 安全に現在の問題データを特定 (Zustand内部の同期ラグ対策)
   // フック群（useMemo等）よりも前に宣言することで、配下のフック内から安全に変数を参照させエラーを解決します
@@ -130,7 +130,7 @@ export function QuestionCard({
         return { text: `${config.phaseLabel}を再生中...`, color: 'text-brand' };
       case 'thinking':
       case 'answer':
-        // 改修：ご指定に基づき、評価モードの状態に関わらずメインメッセージは「回答しましょう」で完全統一
+        // 主の文言は発話評価の ON/OFF に関わらず「回答しましょう」
         return { text: '回答しましょう', color: 'text-amber-500' };
       default:
         return { text: '待機中', color: 'text-ink-subtle' };
@@ -312,7 +312,7 @@ export function QuestionCard({
               <h3 className={cn('text-xs font-bold leading-none whitespace-nowrap', statusMessage.color)}>
                 {statusMessage.text}
               </h3>
-              {/* 改修：回答・シンキング状態で未オープン・未録音状態の場合のサブテキストを、発話評価ON/OFFの状態に応じて動的に分岐 */}
+              {/* 回答・考え中で未表示・未録音の場合の補足は、発話評価の ON/OFF で出し分ける */}
               {(audioPhase === 'answer' || audioPhase === 'thinking') && !isRevealed && !isRecording && (
                 <div className="flex items-center gap-1 mt-1 text-ink-subtle">
                   {isAssessmentMode ? (

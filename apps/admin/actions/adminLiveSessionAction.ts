@@ -404,9 +404,8 @@ export async function cancelSessionAsAdmin(
  * アドミンは既に関係者間で調整済みの内容を即時反映すればよいため、管理者専用の
  * admin_book_session_direct RPCを使う（承認ステップを挟まず即座にセッション行を作る）。
  *
- * 【振替の廃止 (2026-09-15追加)】
- * 生徒・コーチ向けの「振替」概念を廃止したのと同様、アドミン専用のadmin_reschedule_session
- * （日時変更を1回のRPCで完結させる専用関数）も廃止した。日時を変更したい場合は、
+ * 日時の変更は、生徒・コーチと同じく「キャンセル＋予約」の2操作で行う（管理者専用の日時変更の RPC は持たない）。
+ * 日時を変更したい場合は、
  * cancelSessionAsAdmin（返還あり）でチケットを未割当に戻してから、本関数で改めて
  * 予約するという「キャンセル＋予約」の2操作に統一する（生徒・コーチと同じ操作の型に揃え、
  * 管理者専用の特殊経路を極力減らす）。
@@ -558,7 +557,7 @@ export async function adjustTargetSessionsAsAdmin(
 }
 
 /**
- * 以下、ライブセッションの実施結果の確認・修正（2026-10-14）。
+ * 以下、ライブセッションの実施結果の確認・修正。
  * 結果の修正（admin_correct_session_outcome）・推定の取得（get_session_outcome_evidence）・実施記録の一覧
  * （admin_get_session_records）は fn_assert_actor_or_admin で管理者のJWTを見るため、上の代理操作と同じく
  * createServerClient で呼ぶ。

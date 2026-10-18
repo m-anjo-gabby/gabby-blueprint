@@ -135,7 +135,7 @@ export async function getMonitorWordHistory(
   startDate: string,
   endDate: string,
   userIds?: string[],
-  includeMonitor: boolean = false, // 引数を追加
+  includeMonitor: boolean = false,
 ): Promise<{ success: boolean; data: MonitorWordSummaryHistoryItem[]; error?: string }> {
   const ctx = await getLogContext();
 
@@ -148,7 +148,7 @@ export async function getMonitorWordHistory(
       _start_date: startDate,
       _end_date: endDate,
       _user_ids: userIds && userIds.length > 0 ? userIds : null,
-      _include_monitor: includeMonitor, // パラメータを追加
+      _include_monitor: includeMonitor,
     });
 
     if (error) throw error;

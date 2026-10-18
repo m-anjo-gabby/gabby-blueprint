@@ -48,7 +48,7 @@ export function WordHistoryView({ initialData, targetMonth }: WordHistoryViewPro
     );
   }, [items]);
 
-  // 日付ごとにグループ化（React Compiler が確実に追随できるよう外部関数参照を排除し、依存配列を修正）
+  // 日付ごとにまとめる
   const groupedData = useMemo(() => {
     const groups: GroupedWordHistory = {};
 
@@ -68,7 +68,7 @@ export function WordHistoryView({ initialData, targetMonth }: WordHistoryViewPro
     });
 
     return groups;
-  }, [items, timezone]); // 静的解析が一致するよう `timezone` を依存配列にしっかり追加
+  }, [items, timezone]);
 
   const toggleDate = (date: string) => {
     setExpandedDates((prev) => (prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date]));

@@ -6,7 +6,6 @@ import { resolveTargetMonth } from '@/lib/userTimezone';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  // Next.js 15の仕様変更に合わせ、Promise型として定義します
   searchParams: Promise<{
     month?: string; // YYYY-MM
   }>;

@@ -70,7 +70,7 @@ export function SprintQuestionList({ questions, type, onUpdate, contentId, hasLe
 
   // 音声ステータスと管理ボタンのレンダリング
   const renderAudioControls = (q: SprintQuestion, section: 'statement' | 'question' | 'answer_yes' | 'answer_no') => {
-    // 修正: _en 拡張スキーマに合わせて、対応する音声パスとステータスのキーを正しく判定します
+    // 英語の列（*_en）に対応する音声のパスと状態の列を判定する
     const prefix =
       section === 'statement'
         ? 'statement'

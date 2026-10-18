@@ -43,7 +43,7 @@ export function SprintDrillPlayerControls({
   const isAutoPlaying = useSprintStore((state) => state.drill.isAutoPlaying);
   const isPlayingQuestionSequence = useSprintStore((state) => state.drill.isPlayingQuestionSequence);
   const isPlayingAnswerSequence = useSprintStore((state) => state.drill.isPlayingAnswerSequence);
-  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 追加：発話評価ON/OFFフラグの取得
+  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 発話評価の ON/OFF
 
   // 速度ポップオーバーの開閉ステート
   const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
@@ -143,7 +143,7 @@ export function SprintDrillPlayerControls({
           </button>
         </div>
 
-        {/* 改修：発話評価OFFモード（isAssessmentMode === false）の場合、マイクボタンを恒久的に disabled（非活性）化 */}
+        {/* 発話評価が OFF の場合、マイクのボタンは押せない */}
         <button
           onClick={isRecording ? onStopRecord : onStartRecord}
           disabled={(isInteractionDisabled && !isRecording) || isManualPlaying || !isAssessmentMode}

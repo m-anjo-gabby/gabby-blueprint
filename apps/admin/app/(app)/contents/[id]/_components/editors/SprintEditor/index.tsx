@@ -32,8 +32,6 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
   const fetchQuestions = useCallback(async () => {
     try {
       setIsLoading(true);
-      // 修正: DDLの変更に伴い、将来的な拡張も見据えて contentId も含めてアクションに渡せるように口を確保します。
-      // 現状の汎用フィルタ用アクションのシグネチャに合わせて取得
       const data = await getSprintQuestionsByFilter(contentId, selectedType, Number(selectedLevel));
       setQuestions(data);
     } finally {
@@ -42,8 +40,6 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
   }, [contentId, selectedType, selectedLevel]);
 
   useEffect(() => {
-    // 修正: 不要なマイクロタスクを排除し、useEffect の標準パターンに則って
-    // 安全かつシンプルにフェッチ関数を呼び出します。
     fetchQuestions();
   }, [fetchQuestions]);
 

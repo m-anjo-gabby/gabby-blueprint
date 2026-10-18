@@ -17,7 +17,7 @@ import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprin
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-// 修正: 新しい _en カラム拡張の型定義・スキーマに合わせてバリデーションパスを改修
+// 英語の列（*_en）を入力の検証の対象にする
 type FormT = ReturnType<typeof useTranslations<'contents.editor.sprint.questionFormDialog'>>;
 
 function createSprintQuestionSchema(t: FormT) {

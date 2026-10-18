@@ -658,7 +658,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
   // マイク拒否、またはそもそも発話評価OFFモードの場合を共通の「脳内で回答」ステート条件としてマッピング
   const isBrainAnswerMode = micStatus === 'denied' || !isAssessmentMode;
 
-  // 追加：回答フェーズ以外（再生中等）の時は、発話評価OFFモード時のスキップボタンを非活性（disabled）に倒す制御フラグ[cite: 1]
+  // 発話評価が OFF の時のスキップのボタンは、回答の段階以外（再生中等）では押せない
   const isBrainActionDisabled = audioPhase !== 'answer';
 
   // 🆕 直前の非idleフェーズを記録（idle区間中のメッセージ表示継続に使用）
@@ -759,7 +759,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
             }
           />
 
-          {/* 改修箇所：洗練されたカプセル・コネクト型のステッププログレスバー表示 */}
+          {/* 段階の進み具合（つながったカプセル型） */}
           <div className="w-full flex justify-center pt-2 select-none">
             <div className="w-full max-w-md bg-canvas border border-line/60 rounded-control p-2 flex items-center justify-between gap-1.5 sm:gap-3">
               {userActionSteps.map((step, idx) => {
@@ -865,7 +865,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
                   className="flex flex-col items-center gap-4 w-full"
                 >
                   {isBrainAnswerMode ? (
-                    // 改修：発話評価OFF、またはマイク拒否状態の場合：回答フェーズに関わらず常にこのボタンレイアウトへ統一[cite: 1]
+                    // 発話評価が OFF、またはマイクが拒否されている場合は、段階に関わらずこのボタンの並び
                     // 回答フェーズ（audioPhase === 'answer'）以外ではdisabled（非活性）として振る舞います[cite: 1]
                     <div className="flex flex-col items-center gap-4 py-4 w-full">
                       <div className="flex items-center gap-2 text-rose-500">

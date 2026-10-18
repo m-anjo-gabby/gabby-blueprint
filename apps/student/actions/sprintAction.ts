@@ -64,7 +64,7 @@ export interface CreateSprintScoreInput {
   time_limit_sec: number;
   total_answered: number;
   total_assessments: number;
-  history: SprintHistoryItem[]; // 拡張された answered_history 配列が入る
+  history: SprintHistoryItem[]; // answered_history（問題ごとの回答の履歴）
 }
 
 /**
@@ -83,7 +83,7 @@ export interface SprintResultResponse {
       difficulty_level: number;
       time_limit_sec: number;
       total_answered: number;
-      answered_history: SprintHistoryItem[]; // 拡張された履歴
+      answered_history: SprintHistoryItem[]; // 問題ごとの回答の履歴
       insert_date: string;
       update_date: string;
     };
@@ -244,7 +244,7 @@ export async function createSprintScore(
       return { success: false, data: null, error: 'Invalid sprint history' };
     }
 
-    // self_t_sprint へのインサート (JSONBなので拡張されたオブジェクト配列をそのまま渡せる)
+    // self_t_sprint へ登録する（answered_history は JSONB のため配列をそのまま渡す）
     const { data, error } = await supabase
       .from('self_t_sprint')
       .insert([

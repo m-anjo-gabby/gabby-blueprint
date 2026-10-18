@@ -182,22 +182,19 @@ export async function createUser(
   try {
     const supabase = await createAdminClient();
 
-    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え -> 共通ヘルパーを利用
-    // const redirectBase = user_type === USER_TYPES.ADMIN ? process.env.NEXT_PUBLIC_SITE_URL : process.env.NEXT_PUBLIC_STUDENT_URL;
-
     // 登録済み・招待中のアドレスでないか先に確認します
     const conflict = await checkEmailAvailable(supabase, email);
     if (conflict) {
       return { success: false, user_id: null, errorType: 'email_exists', message: t(conflict) };
     }
 
-    // 有効期限を 3日間に設定（従来の24時間制限を突破） -> 共通ヘルパーを利用
+    // 招待の有効期限（INVITATION_EXPIRES_DAYS 日）
     const expiresAt = getInvitationExpiry();
 
     // 暗号論的に安全なランダムトークンを生成
     const invitationToken = randomBytes(32).toString('hex');
 
-    // 1. 招待メールを送信し、アカウントを作成 -> 【変更】独自招待テーブルへのレコード挿入にリプレイス
+    // 1. 招待を登録する（アカウントは本登録のときに作る）
     const { data: inviteData, error } = await supabase
       .from('com_t_invitation')
       .insert({
@@ -234,7 +231,7 @@ export async function createUser(
 
     const userId = inviteData.id; // 既存機能（一括インポートなど）との互換性のため、発行された招待ID(UUID)を仮のuserIdとして引き継ぐ
 
-    // 2. DB側のロール紐付け -> 【変更】本登録時(メールリンク承認時)に移行するため、この時点での com_t_user_role への直接挿入はスキップ（上記で配列として保存済み）
+    // 2. ロール（com_t_user_role）は本登録のときに紐付ける（招待には配列で保存済み）
     /*
     if (roles.length > 0) {
       const { error: roleError } = await supabase
@@ -247,7 +244,7 @@ export async function createUser(
     }
     */
 
-    // 独自メール送信処理を実行 (Resend) -> 共通ヘルパーを利用してURLを解決・種別ごとのテンプレートを送り分け
+    // 招待メールを送る（ユーザー種別ごとの文面・リンク先で送り分ける）
     const inviteUrl = getInvitationUrl(user_type, inviteData.token);
     const mailResult = await sendInvitationEmail({
       to: email,
@@ -451,10 +448,7 @@ export async function resendInvite(email: string, userType?: string) {
   try {
     const supabase = await createAdminClient();
 
-    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え -> 共通ヘルパーへ移譲
-    // const redirectBase = userType === USER_TYPES.ADMIN ? process.env.NEXT_PUBLIC_SITE_URL : process.env.NEXT_PUBLIC_STUDENT_URL;
-
-    // 改善: 既存の承認待ち(accepted_at IS NULL)の招待状を取得します
+    // 本登録前（accepted_at IS NULL）の招待を取得する
     const { data: currentInvite, error: fetchError } = await supabase
       .from('com_t_invitation')
       .select('*')
@@ -467,7 +461,7 @@ export async function resendInvite(email: string, userType?: string) {
       return { success: false, message: t('users.errors.invitationNotFound') };
     }
 
-    // 改善: 安全性の向上として有効期限を送信時点から付け直し、新しいワンタイムトークンを再生成します -> 共通ヘルパーを利用
+    // 再送のたびに有効期限を送信時点から付け直し、トークンも作り直す（古いリンクを使えなくする）
     const newExpiresAt = getInvitationExpiry();
     const newWeightToken = randomBytes(32).toString('hex');
 
@@ -485,8 +479,8 @@ export async function resendInvite(email: string, userType?: string) {
       throw updateError;
     }
 
-    // 改善: 再生成したトークンで Resend 経由でメールを再送 -> 共通ヘルパーを利用してURLを解決・種別ごとのテンプレートを送り分け
-    // 考慮点: 引数の userType が省略されて渡された場合でも、DBから取得した一貫性のある currentInvite.user_type をフォールバックとして優先適用
+    // 作り直したトークンで招待メールを再送する（ユーザー種別ごとの文面・リンク先で送り分ける）
+    // 引数の userType が無い場合は、招待に保存したユーザー種別を使う
     const resolvedUserType = userType || currentInvite.user_type;
     const inviteUrl = getInvitationUrl(resolvedUserType, newWeightToken);
     const mailResult = await sendInvitationEmail({
@@ -497,7 +491,7 @@ export async function resendInvite(email: string, userType?: string) {
       expiresDays: INVITATION_EXPIRES_DAYS,
     });
 
-    // 改善: 再送結果をDBに記録（成功時はエラーをクリア）
+    // 再送の結果を招待に記録する（成功時はエラーを消す）
     await supabase
       .from('com_t_invitation')
       .update({
@@ -630,7 +624,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
 
   for (const user of users) {
     try {
-      // 改善: メールAPI (Resend) のレートリミット(2req/s)を考慮し、2人目以降は少し待機する
+      // メール送信（Resend）の上限（2件/秒）を超えないよう、2人目以降は少し待つ
       if (results.length > 0) {
         await new Promise((resolve) => setTimeout(resolve, 600)); // 0.6秒待機
       }
