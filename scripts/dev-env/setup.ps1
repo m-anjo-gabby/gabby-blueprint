@@ -78,6 +78,7 @@ Write-Step '1. ツールのインストール'
 # ---------------------------------------------------------------------------
 $tools = @(
   @{ Command = 'git';    Id = 'Git.Git';                    Name = 'Git' }
+  @{ Command = 'gh';     Id = 'GitHub.cli';                 Name = 'GitHub CLI（Deploy の実行・CI の確認）' }
   @{ Command = 'node';   Id = 'OpenJS.NodeJS.LTS';          Name = 'Node.js LTS' }
   @{ Command = 'mkcert'; Id = 'FiloSottile.mkcert';         Name = 'mkcert（ローカルHTTPS証明書）' }
   @{ Command = 'code';   Id = 'Microsoft.VisualStudioCode'; Name = 'VSCode' }
@@ -128,6 +129,19 @@ foreach ($key in $gitSettings.Keys) {
     Invoke-Native 'git' @('config', '--global', $key, $wanted)
     Write-Ok "$key = $wanted"
   }
+}
+
+# GitHub CLI にログインし、git の認証にも使う（clone のサインインを兼ねる。ブラウザで認証する）
+# 未ログインの場合は stderr に出て終了コード 1 になる（$ErrorActionPreference = 'Stop' で止まらないよう try で包む）
+$ghLoggedIn = try { & gh auth status 2>$null | Out-Null; $LASTEXITCODE -eq 0 } catch { $false }
+if ($ghLoggedIn) {
+  Write-Skip 'GitHub CLI のログイン'
+} elseif (Confirm-Action 'GitHub CLI にログインしますか？（ブラウザが開きます）' -Yes:$Yes) {
+  Invoke-Native 'gh' @('auth', 'login', '--hostname', 'github.com', '--git-protocol', 'https', '--web')
+  Invoke-Native 'gh' @('auth', 'setup-git')
+  Write-Ok 'GitHub CLI にログインしました。'
+} else {
+  Write-Warn 'GitHub CLI に未ログインのまま続けます（後で gh auth login を実行してください）。'
 }
 
 # ---------------------------------------------------------------------------

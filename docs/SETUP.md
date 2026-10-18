@@ -10,7 +10,7 @@
 
 | 区分 | 内容 | 入手方法 |
 |---|---|---|
-| ツール | Git / Node.js / pnpm / mkcert / VSCode | 各自インストール（手順1） |
+| ツール | Git / GitHub CLI / Node.js / pnpm / mkcert / VSCode | 各自インストール（手順1） |
 | ツール（任意） | Python 3 / openpyxl（CV辞書の確認依頼Excelを出力する場合のみ） | 各自インストール（手順10） |
 | ソース | GitHub `m-anjo-gabby/gabby-blueprint` | clone（手順2） |
 | 環境ファイル | `apps/*/.env.local` など（Git管理外・シークレット） | 既存端末からコピー、または担当者から受領（手順4） |
@@ -44,8 +44,8 @@ pnpm env:export -- -OutDir D:\transfer # 出力先を指定する場合
 
 | 順 | 内容 | 対応する手動手順 |
 |---|---|---|
-| 1 | Git / Node.js / mkcert / VSCode を winget でインストール | 手順1 |
-| 2 | Git の設定（`core.autocrlf=input`・`core.longpaths=true`・名前とメール） | 手順1 |
+| 1 | Git / GitHub CLI / Node.js / mkcert / VSCode を winget でインストール | 手順1 |
+| 2 | Git の設定（`core.autocrlf=input`・`core.longpaths=true`・名前とメール）と GitHub CLI のログイン | 手順1 |
 | 3 | clone と作業ブランチへの切り替え（配置先はエクスポート元と同じパスが既定） | 手順2 |
 | 4 | pnpm のインストールと `pnpm install --frozen-lockfile` | 手順1・3 |
 | 5 | 環境ファイル等の展開（既存のファイルと内容が違う場合は上書きを確認） | 手順4 |
@@ -70,6 +70,7 @@ PowerShell で実行します（winget は Windows 11 標準）。
 
 ```powershell
 winget install --id Git.Git -e
+winget install --id GitHub.cli -e              # GitHub CLI（Deploy の実行・CI の確認。docs/RELEASE.md の gh コマンド）
 winget install --id OpenJS.NodeJS.LTS -e      # Node.js 24 LTS（版は .nvmrc。package.json の engines も 24.x）
 winget install --id FiloSottile.mkcert -e     # ローカルHTTPS用の証明書作成ツール
 winget install --id Microsoft.VisualStudioCode -e
@@ -93,6 +94,16 @@ git config --global core.autocrlf input
 git config --global core.longpaths true   # node_modules の長いパスで「Filename too long」にならないように
 git config --global user.name  "<名前>"
 git config --global user.email "<メールアドレス>"
+```
+
+### GitHub CLI のログイン
+
+ブラウザで認証します。`gh auth setup-git` で git の認証にも使われるため、次の clone でサインインを求められません。
+
+```powershell
+gh auth login --hostname github.com --git-protocol https --web
+gh auth setup-git
+gh auth status           # Logged in to github.com と表示されればOK
 ```
 
 ## 2. ソースの取得
