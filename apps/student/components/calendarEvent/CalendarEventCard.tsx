@@ -9,7 +9,7 @@ import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useNow } from '@gabby/lib/hooks/useNow';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useEventAnnouncements } from '@gabby/lib/calendarEvent/useEventAnnouncements';
-import { CalendarEventItem, CALENDAR_EVENT_TYPES, getCalendarEventPhase } from '@gabby/types/calendarEvent';
+import { type CalendarEventItem, CALENDAR_EVENT_TYPES, getCalendarEventPhase } from '@gabby/types/calendarEvent';
 import { getCalendarEventMessages, getCalendarEventMessageAttachmentUrl } from '@/actions/calendarEventAction';
 import { AddToCalendarMenu } from './AddToCalendarMenu';
 import { useEventParticipation } from './useEventParticipation';

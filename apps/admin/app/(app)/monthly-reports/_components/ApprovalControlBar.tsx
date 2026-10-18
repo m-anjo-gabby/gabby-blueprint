@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { approveMonthlyReport, revokeMonthlyReportApproval } from '@/actions/adminMonthlyReportAction';
-import { MonthlyReportApproval } from '@gabby/types/monthlyReport';
+import { type MonthlyReportApproval } from '@gabby/types/monthlyReport';
 
 export function ApprovalControlBar({
   coachId,

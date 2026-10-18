@@ -3,7 +3,7 @@
 import { getCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { CoachMonthlyReport, MonthlyReportErrorCode } from '@gabby/types/monthlyReport';
+import { type CoachMonthlyReport, type MonthlyReportErrorCode } from '@gabby/types/monthlyReport';
 
 const logger = createLogger('coach');
 

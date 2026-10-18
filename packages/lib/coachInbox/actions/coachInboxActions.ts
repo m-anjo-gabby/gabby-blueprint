@@ -8,10 +8,11 @@ import {
   getPendingIncomingRescheduleProposalGroupsForCoachCore,
 } from '../../session/actions/sessionActions';
 import {
-  CoachIncomingRequestErrorCode,
-  CoachIncomingRequestItem,
-  GetIncomingRequestsForCoachResult,
+  type CoachIncomingRequestErrorCode,
+  type CoachIncomingRequestItem,
+  type GetIncomingRequestsForCoachResult,
 } from '@gabby/types/coachInbox';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -52,11 +53,7 @@ export async function getPendingIncomingRequestsForCoachCore(): Promise<GetIncom
 
     return { success: true, requests: items };
   } catch (err) {
-    logger.error(
-      'coachInbox:get_pending_incoming_requests_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachInbox:get_pending_incoming_requests_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

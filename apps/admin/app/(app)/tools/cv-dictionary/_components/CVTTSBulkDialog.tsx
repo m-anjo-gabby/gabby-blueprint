@@ -30,11 +30,15 @@ import {
   ChevronRight,
   ArrowLeft,
 } from 'lucide-react';
-import { TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { type TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
+import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
 import { buildSSML } from '@gabby/lib/azure/ssml';
-import { getAllCVDictionaryEntries, saveCVDictionaryAudio, CVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
+import {
+  getAllCVDictionaryEntries,
+  saveCVDictionaryAudio,
+  type CVDictionaryEntry,
+} from '@/actions/adminCVDictionaryAction';
 import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
 
 // ============================================================

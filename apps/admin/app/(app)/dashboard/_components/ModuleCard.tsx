@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import type { DashboardModuleSummary } from '@/actions/adminDashboardAction';
 import { DASHBOARD_MODULE_CONFIG } from './moduleConfig';
 
-type Props = {
+interface Props {
   summary: DashboardModuleSummary;
-};
+}
 
 export default async function ModuleCard({ summary }: Props) {
   const config = DASHBOARD_MODULE_CONFIG[summary.key];

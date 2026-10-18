@@ -60,7 +60,7 @@ interface PhraseAudioHeaderProps {
  * QuestionCard / SprintResult で同一マークアップが色違いで重複していたため共通化。
  * タップ領域は視認性・誤タップ防止のため 32px（w-8 h-8）に統一。
  */
-export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
+export function PhraseAudioHeader({
   label,
   tone,
   onPlay,
@@ -70,7 +70,7 @@ export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
   isJaVisible = false,
   onToggleJa,
   className,
-}) => {
+}: PhraseAudioHeaderProps) {
   const styles = TONE_STYLES[tone];
 
   return (
@@ -104,4 +104,4 @@ export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
       </div>
     </div>
   );
-};
+}

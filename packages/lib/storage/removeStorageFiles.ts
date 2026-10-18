@@ -1,6 +1,7 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createLogger, type LogContext, type LogEventName } from '../logger';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -33,7 +34,7 @@ export async function removeStorageFiles(
       const { error } = await supabase.storage.from(bucket).remove(chunk);
       if (error) throw error;
     } catch (err) {
-      logger.error(event, err instanceof Error ? err.message : 'Unknown error', {
+      logger.error(event, getErrorMessage(err), {
         ...ctx,
         err,
         payload: { ...payload, bucket, paths: chunk },

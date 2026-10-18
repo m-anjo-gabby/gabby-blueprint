@@ -1,5 +1,5 @@
 // lib/tts/ssml.ts
-import { TTSAdjustmentData } from '@gabby/types/word';
+import { type TTSAdjustmentData } from '@gabby/types/word';
 
 function escapeXml(unsafe: string): string {
   return unsafe.replace(/[<>&"']/g, (c) => {

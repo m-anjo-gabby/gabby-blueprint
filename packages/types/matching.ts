@@ -1,4 +1,4 @@
-import { DayOfWeek } from './coachAvailability';
+import { type DayOfWeek } from './coachAvailability';
 import type { CoachRatingStats } from './coachRating';
 
 /**

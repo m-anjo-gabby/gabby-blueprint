@@ -9,8 +9,8 @@ import {
 import { getCoachesForMatching } from './adminLiveSessionAction';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { AdminCoachSummary } from '@gabby/types/adminLiveSession';
-import { CoachMonthlyReport } from '@gabby/types/monthlyReport';
+import { type AdminCoachSummary } from '@gabby/types/adminLiveSession';
+import { type CoachMonthlyReport } from '@gabby/types/monthlyReport';
 
 const logger = createLogger('admin');
 

@@ -147,7 +147,7 @@ export type FavoritePhraseItem = Pick<PhraseRecord, (typeof FAVORITE_PHRASE_COLU
 /**
  * サーバーアクションからの生レスポンス型 (Join結果)
  */
-export type FavoriteResponse = {
+export interface FavoriteResponse {
   favorite_id: string;
   phrase_id: string;
   insert_date: string;
@@ -160,4 +160,4 @@ export type FavoriteResponse = {
       };
     };
   };
-};
+}

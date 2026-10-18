@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { CoachAvatar } from '@/components/session/CoachAvatar';
 import { formatSessionSlot } from '@/lib/sessionFormat';
 import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
-import { MyBookingRequestItem, MyRescheduleProposalGroup, SessionListItem } from '@gabby/types/session';
+import { type MyBookingRequestItem, type MyRescheduleProposalGroup, type SessionListItem } from '@gabby/types/session';
 
 const PAGE_SIZE = 5;
 

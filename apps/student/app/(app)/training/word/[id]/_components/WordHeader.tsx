@@ -10,7 +10,7 @@ interface WordHeaderProps {
   onBack: () => void;
 }
 
-export const WordHeader: React.FC<WordHeaderProps> = ({ onBack }) => {
+export function WordHeader({ onBack }: WordHeaderProps) {
   const { contentName, cefr, words, wordIdx, setShowIndex } = useWordDrillStore();
 
   const currentWord = words[wordIdx];
@@ -87,4 +87,4 @@ export const WordHeader: React.FC<WordHeaderProps> = ({ onBack }) => {
       </div>
     </div>
   );
-};
+}

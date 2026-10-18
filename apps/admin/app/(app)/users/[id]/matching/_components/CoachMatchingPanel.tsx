@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { isCoachMatchable } from '@gabby/lib/coachProfile/matchingReadiness';
-import { CoachMatchingStatus } from '@gabby/types/coachProfile';
+import { type CoachMatchingStatus } from '@gabby/types/coachProfile';
 import { setCoachMatchingSuspension } from '@/actions/adminCoachMatchingAction';
 
 interface Props {

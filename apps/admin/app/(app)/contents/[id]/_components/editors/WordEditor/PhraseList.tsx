@@ -17,7 +17,7 @@ import {
   Download,
 } from 'lucide-react';
 import { getPhrasesByWordId, deletePhrase } from '@/actions/adminWordAction';
-import { PhraseRecord } from '@gabby/types/word';
+import { type PhraseRecord } from '@gabby/types/word';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { TTSDialog } from './TTSDialog';
 import { PhraseFormDialog } from './PhraseFormDialog';

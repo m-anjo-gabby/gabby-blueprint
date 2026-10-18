@@ -5,7 +5,8 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getCoachMatchingStatusCore } from '@gabby/lib/coachProfile/actions/coachMatchingStatusActions';
-import { CoachMatchingStatus } from '@gabby/types/coachProfile';
+import { type CoachMatchingStatus } from '@gabby/types/coachProfile';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -63,15 +64,11 @@ export async function setCoachMatchingSuspension(
     });
     return { success: true };
   } catch (err) {
-    logger.error(
-      'coach_matching:admin_set_suspension_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      {
-        ...ctx,
-        err,
-        payload: { coachId },
-      },
-    );
+    logger.error('coach_matching:admin_set_suspension_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { coachId },
+    });
     return { success: false };
   }
 }

@@ -5,7 +5,7 @@ import { WordEditor } from './_components/editors/WordEditor';
 import { SprintEditor } from './_components/editors/SprintEditor';
 import { DialogueEditor } from './_components/editors/DialogueEditor';
 import { EditorHeader } from './_components/EditorHeader';
-import { SprintQuestionType } from '@gabby/types/sprint';
+import { type SprintQuestionType } from '@gabby/types/sprint';
 
 interface Props {
   // Next.js 15 では params と searchParams は Promise になります

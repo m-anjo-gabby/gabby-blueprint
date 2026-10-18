@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 
 // 認可情報を含むメタデータの型定義
-export type UserAppMetadata = {
+export interface UserAppMetadata {
   user_type?: string; // '0': admin, '1': student
   roles?: string[]; // ['system_admin', 'content_manager'] など
   client_id?: string;
-};
+}
 
 export type User = {
   id: string; // Supabase Auth の UUID
@@ -19,11 +19,11 @@ export type User = {
   app_metadata: UserAppMetadata;
 } | null;
 
-type UserState = {
+interface UserState {
   user: User;
   setUser: (user: User) => void;
   clearUser: () => void;
-};
+}
 
 export const useUserStore = create<UserState>((set) => ({
   user: null,

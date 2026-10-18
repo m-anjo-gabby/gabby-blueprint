@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { fetchTrainingReportData, isAdminRequest, renderTrainingReportPdfs } from '@/lib/trainingReport/queries';
 import { buildContentDisposition, buildTrainingReportFileBase } from '@/lib/trainingReport/format';
 

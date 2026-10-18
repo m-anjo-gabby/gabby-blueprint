@@ -195,7 +195,10 @@ console.log('\n--- シナリオ2: 生徒B 直近1年/2年の境界 ---');
   if (error) throw error;
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  type Row = { ticket_id: string; com_t_user_license: { start_date: string; end_date: string } };
+  interface Row {
+    ticket_id: string;
+    com_t_user_license: { start_date: string; end_date: string };
+  }
   const rows = (contracts ?? []) as unknown as Row[];
   const within1yr = rows.filter((r) => new Date(r.com_t_user_license.start_date) >= oneYearAgo);
   const outside1yr = rows.filter((r) => new Date(r.com_t_user_license.start_date) < oneYearAgo);

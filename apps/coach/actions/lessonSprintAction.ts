@@ -12,13 +12,13 @@ import {
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
-  CreateLessonSprintResultInput,
-  LessonSprintContentSummary,
-  LessonSprintHistoryListItem,
-  LessonSprintRecord,
+  type CreateLessonSprintResultInput,
+  type LessonSprintContentSummary,
+  type LessonSprintHistoryListItem,
+  type LessonSprintRecord,
 } from '@gabby/types/lessonSprint';
-import { CoachStudentErrorCode } from '@gabby/types/coachStudent';
-import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { type CoachStudentErrorCode } from '@gabby/types/coachStudent';
+import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 
 const logger = createLogger('coach');
 

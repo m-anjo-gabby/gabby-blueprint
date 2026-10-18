@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { updateSessionPayRate } from '@/actions/adminPaymentSettingsAction';
-import { SessionPayRate } from '@gabby/types/monthlyReport';
+import { type SessionPayRate } from '@gabby/types/monthlyReport';
 
 export function PaymentSettingsForm({ initialSessionPayRate }: { initialSessionPayRate: SessionPayRate }) {
   const t = useTranslations('paymentSettings');

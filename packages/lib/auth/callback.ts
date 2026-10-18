@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '../supabase/server';
 import { createLogger } from '../logger';
 import { sanitizeReturnTo } from './returnTo';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 /**
  * `/auth/callback`（メール内リンクの受け口）の共通処理。各アプリの route.ts は
@@ -59,7 +60,7 @@ export function createAuthCallbackHandler(
 
       return NextResponse.redirect(`${origin}/login`);
     } catch (err) {
-      logger.error('auth:callback_unexpected', err instanceof Error ? err.message : 'Unknown error', { err });
+      logger.error('auth:callback_unexpected', getErrorMessage(err), { err });
       return NextResponse.redirect(`${origin}/login?error=callback`);
     }
   };

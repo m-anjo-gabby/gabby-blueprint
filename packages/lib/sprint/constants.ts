@@ -1,4 +1,4 @@
-import { SprintQuestionType } from '@gabby/types/sprint';
+import { type SprintQuestionType } from '@gabby/types/sprint';
 
 /**
  * 各スプリント種別の説明（回答ルール・ヒント）

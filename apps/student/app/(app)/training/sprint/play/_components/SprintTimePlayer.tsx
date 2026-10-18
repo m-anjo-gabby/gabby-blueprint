@@ -27,7 +27,7 @@ import {
   extractContentWords,
 } from '@gabby/lib';
 import { clientLogger } from '@gabby/lib/logger/client';
-import { SprintQuestion, SPRINT_FLOW_TIMING } from '@gabby/types/sprint';
+import { type SprintQuestion, SPRINT_FLOW_TIMING } from '@gabby/types/sprint';
 import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
 import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
 import { waitFor } from '@gabby/lib/audio/core/flow';
@@ -36,7 +36,7 @@ import { useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackF
 import type { AnalysisResult } from '@gabby/types/speechAssessment';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 import { useSprintStore } from '@/stores/useSprintStore';
-import { createSprintScoreAction, SprintHistoryItem } from '@/actions/sprintAction';
+import { createSprintScoreAction, type SprintHistoryItem } from '@/actions/sprintAction';
 import { useSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useSprintTimers';
 import { ExitProcessingOverlay } from './ExitProcessingOverlay';
 import { getSprintResultHref } from '@/components/training/sprint-result/links';
@@ -82,7 +82,7 @@ interface StatPreviewTileProps {
 }
 
 // タイムアップ完了オーバーレイ内の「結果先出し」プレビュー統計タイル
-const StatPreviewTile: React.FC<StatPreviewTileProps> = ({ icon: Icon, label, value, suffix, color, active }) => {
+function StatPreviewTile({ icon: Icon, label, value, suffix, color, active }: StatPreviewTileProps) {
   const animated = useCountUp(value ?? 0, active && value !== null);
   return (
     <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
@@ -100,9 +100,9 @@ const StatPreviewTile: React.FC<StatPreviewTileProps> = ({ icon: Icon, label, va
       </span>
     </div>
   );
-};
+}
 
-export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({ questions = [], onExit }) => {
+export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerProps) {
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -1193,4 +1193,4 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({ questions = 
       )}
     </ImmersivePanel>
   );
-};
+}

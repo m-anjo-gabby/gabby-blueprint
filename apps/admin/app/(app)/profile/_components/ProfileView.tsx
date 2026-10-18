@@ -11,7 +11,7 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { uploadProfileIcon, removeProfileIcon, updateMyTimezone } from '@/actions/adminProfileAction';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { TimezoneMaster } from '@gabby/types/timezone';
+import { type TimezoneMaster } from '@gabby/types/timezone';
 
 interface ProfileViewProps {
   userName: string;

@@ -6,7 +6,7 @@ import type { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { format, isAfter, isBefore, startOfDay } from 'date-fns';
 import { ja, enUS } from 'date-fns/locale';
-import { ContractDetail } from '@gabby/types/contract';
+import { type ContractDetail } from '@gabby/types/contract';
 import { ContractFormDialog } from './ContractFormDialog';
 import { ContractLicenseDialog } from './ContractLicenseDialog';
 import { DeleteContractDialog } from './DeleteContractDialog';

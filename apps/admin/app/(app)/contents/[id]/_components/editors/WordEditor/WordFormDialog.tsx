@@ -14,7 +14,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertWord, type WordInput } from '@/actions/adminWordAction';
 import { PlusCircle, CheckCircle2, Edit, Languages } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { WordRecord, WORD_STATUS, WordStatus } from '@gabby/types/word';
+import { type WordRecord, WORD_STATUS, type WordStatus } from '@gabby/types/word';
 
 /**
  * バリデーションスキーマ

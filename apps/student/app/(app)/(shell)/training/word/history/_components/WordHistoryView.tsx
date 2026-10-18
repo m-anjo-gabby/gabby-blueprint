@@ -7,7 +7,7 @@ import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { motion, AnimatePresence } from 'framer-motion';
-import { WordSummaryHistoryItem } from '@/actions/wordAction';
+import { type WordSummaryHistoryItem } from '@/actions/wordAction';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { MonthSwitcher } from '../../../_components/MonthSwitcher';
 import { StatTile } from '../../../_components/StatTile';
@@ -23,7 +23,7 @@ interface GroupedWordHistory {
   [date: string]: WordSummaryHistoryItem[];
 }
 
-export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, targetMonth }) => {
+export function WordHistoryView({ initialData, targetMonth }: WordHistoryViewProps) {
   const isLoading = initialData === null;
   const items = useMemo(() => initialData ?? [], [initialData]);
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
@@ -167,4 +167,4 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
       </div>
     </>
   );
-};
+}

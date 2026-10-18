@@ -12,8 +12,8 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
   CALENDAR_EVENT_TYPES,
-  CalendarEventItem,
-  CalendarEventMessageItem,
+  type CalendarEventItem,
+  type CalendarEventMessageItem,
   getCalendarEventPhase,
 } from '@gabby/types/calendarEvent';
 

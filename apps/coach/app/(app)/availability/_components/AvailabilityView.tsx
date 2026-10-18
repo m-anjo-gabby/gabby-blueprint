@@ -11,8 +11,8 @@ import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getUtcOffsetMinutes, shiftWeeklyMinute } from '@gabby/lib/date/date';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { formatUtcOffset } from '@gabby/lib/date/timezone';
-import { CoachAvailabilitySlot, DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
-import { TimezoneMaster } from '@gabby/types/timezone';
+import { type CoachAvailabilitySlot, type DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
+import { type TimezoneMaster } from '@gabby/types/timezone';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
 import { WeeklyAvailabilityGrid, SLOTS_PER_DAY, slotKey, slotIndexToLabel } from './WeeklyAvailabilityGrid';
 

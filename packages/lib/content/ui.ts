@@ -1,10 +1,10 @@
 // packages/lib/content/ui.ts
-import { TAG_TYPES, TagType } from '@gabby/types/content';
+import { TAG_TYPES, type TagType } from '@gabby/types/content';
 import {
   BookOpen,
   FileText,
   HelpCircle,
-  LucideIcon,
+  type LucideIcon,
   MessageSquareText,
   MessagesSquare,
   Mic,
@@ -27,7 +27,7 @@ export const getTagStyle = (tagType: string) => {
  * ブランド色（青）・状態色（emerald/amber/rose）と重ならない色相を選び、
  * 面積の小さい部位（アイコンのマス・種別チップ）に限定して使う。
  */
-export type ContentTheme = {
+export interface ContentTheme {
   /** アイコンのマス（薄い背景＋色付きアイコン） */
   iconTile: string;
   /** 背景なしでアイコン単体に色を付ける場合 */
@@ -36,9 +36,13 @@ export type ContentTheme = {
   chip: string;
   /** チップをリンク・ボタンとして使う場合のホバー */
   chipHover: string;
-};
+}
 
-type ContentTypeConfig = { label: string; icon: LucideIcon; theme: ContentTheme };
+interface ContentTypeConfig {
+  label: string;
+  icon: LucideIcon;
+  theme: ContentTheme;
+}
 
 const CONTENT_TYPE_CONFIG: Record<number, ContentTypeConfig> = {
   // 単語帳: ブランド色（#0e3196）より明るいスカイで区別する
@@ -116,7 +120,11 @@ export type TrainingMetric = 'word' | 'phrase' | 'sprint' | 'drill' | 'speech';
  */
 export const SPRINT_MODE_LABEL = { sprint: 'タイムアタック', drill: 'ドリル' } as const;
 
-type TrainingMetricConfig = { label: string; icon: LucideIcon; theme: ContentTheme };
+interface TrainingMetricConfig {
+  label: string;
+  icon: LucideIcon;
+  theme: ContentTheme;
+}
 
 const SPEECH_THEME: ContentTheme = {
   iconTile: 'bg-rose-50 text-rose-500',

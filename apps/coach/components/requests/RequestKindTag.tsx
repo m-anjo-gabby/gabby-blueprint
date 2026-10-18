@@ -1,5 +1,5 @@
 import { CalendarPlus, Repeat, Shuffle, Sparkles } from 'lucide-react';
-import { CoachIncomingRequestItem } from '@gabby/types/coachInbox';
+import { type CoachIncomingRequestItem } from '@gabby/types/coachInbox';
 
 const KIND_META: Record<CoachIncomingRequestItem['kind'], { label: string; icon: typeof Repeat; className: string }> = {
   matching: { label: 'Matching Request', icon: Repeat, className: 'bg-brand-50 text-brand border-brand-200' },

@@ -11,6 +11,7 @@
 import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 import { createAdminClient } from '../../helpers/auth.ts';
 import { assertReleaseApplied } from '../../helpers/preflight.ts';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);
@@ -33,7 +34,7 @@ try {
   ]);
   check('RPC（承認・否認・終了処理・入退室）', true);
 } catch (e) {
-  check('RPC（承認・否認・終了処理・入退室）', false, e instanceof Error ? e.message : String(e));
+  check('RPC（承認・否認・終了処理・入退室）', false, getErrorMessage(e, String(e)));
 }
 
 // リリースSQLの反映（列）
@@ -106,7 +107,7 @@ try {
   check(
     `コーチのサイト ${COACH_BASE_URL}/login`,
     env === 'dev',
-    `${e instanceof Error ? e.message : String(e)}${env === 'dev' ? '（dev は Playwright が起動するため問題なし）' : ''}`,
+    `${getErrorMessage(e, String(e))}${env === 'dev' ? '（dev は Playwright が起動するため問題なし）' : ''}`,
   );
 }
 

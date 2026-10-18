@@ -1,7 +1,7 @@
 // 📄 packages/lib/navigation/student-path.ts
 
-import { ContentItem } from '@gabby/types/content';
-import { ResumeContentResponse } from '@gabby/types/training';
+import { type ContentItem } from '@gabby/types/content';
+import { type ResumeContentResponse } from '@gabby/types/training';
 
 /**
  * 1. 通常のライブラリやおすすめ等から遷移する場合 (新規オープン)

@@ -69,7 +69,10 @@ const sdClient = await signInAsRole(`${TAG}-lifecycle-student-sd@gabby-qa-test.e
 
 console.log('対象ユーザー特定完了:', { coachId, saId, sbId, scId, sdId, seId, sfId });
 
-type ScheduleRow = { schedule_id: string; target_sessions: number };
+interface ScheduleRow {
+  schedule_id: string;
+  target_sessions: number;
+}
 async function getSchedule(coachIdArg: string, studentIdArg: string): Promise<ScheduleRow> {
   const { data, error } = await admin
     .from('com_m_lesson_schedule')
@@ -82,7 +85,11 @@ async function getSchedule(coachIdArg: string, studentIdArg: string): Promise<Sc
   return data as ScheduleRow;
 }
 
-type ShortfallRow = { expected_sessions: number; actual_sessions: number; shortfall: number };
+interface ShortfallRow {
+  expected_sessions: number;
+  actual_sessions: number;
+  shortfall: number;
+}
 async function shortfallFor(scheduleId: string): Promise<ShortfallRow> {
   const { data, error } = await admin.rpc('fn_schedule_shortfall', { p_schedule_id: scheduleId }).single();
   if (error) throw error;
@@ -188,19 +195,19 @@ if (scFuture.length < 3 || scPast.length < 2)
   throw new Error(`生徒SCの前提セッションが揃っていません(future=${scFuture.length}, past=${scPast.length})`);
 const scTicketId = scSessions![0].ticket_id as string;
 
-type FinalizeSessionRow = {
+interface FinalizeSessionRow {
   new_status: number;
   completion_result: number;
   overlap_seconds: number;
   student_joined: boolean;
-};
-type MonthlySessionRow = {
+}
+interface MonthlySessionRow {
   session_id: string;
   completion_result: number | null;
   cancel_category: number | null;
   counts_toward_total: boolean;
   is_attention: boolean;
-};
+}
 
 const scNormalSessionId = scFuture[0].session_id;
 const scEarlyEndedSessionId = scFuture[1].session_id;

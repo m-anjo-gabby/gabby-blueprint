@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Trash2, AlertCircle, Layout, StickyNote } from 'lucide-react';
-import { DialogueSession } from '@gabby/types/dialogue';
+import { type DialogueSession } from '@gabby/types/dialogue';
 import { deleteDialogueSession } from '@/actions/adminDialogueAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import {

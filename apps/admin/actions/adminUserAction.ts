@@ -2,13 +2,13 @@
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import {
-  UserRecord,
-  CreateUserPayload,
-  CreateUserResponse,
-  BulkUser,
-  BulkImportResponse,
-  BulkImportResultDetail,
-  RoleDefinition,
+  type UserRecord,
+  type CreateUserPayload,
+  type CreateUserResponse,
+  type BulkUser,
+  type BulkImportResponse,
+  type BulkImportResultDetail,
+  type RoleDefinition,
   isUserType,
 } from '@gabby/types/user';
 import { formatToJstDate } from '@gabby/lib/date/date';
@@ -23,6 +23,7 @@ import { INVITATION_EXPIRES_DAYS, sendInvitationEmail } from '@gabby/lib/mail/ac
 import { validatePasswordStrength } from '@gabby/lib/auth/validation'; // パスワード強度の共通バリデーション
 import { randomBytes } from 'crypto'; // 暗号トークン生成用
 import { getPortalBaseUrl } from '@gabby/lib/navigation/portalUrl';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -135,7 +136,7 @@ export async function getUsers(params: ListParams<'clientId' | 'userType'>): Pro
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('user:get_users_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('user:get_users_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { clientId, userType },
@@ -280,7 +281,7 @@ export async function createUser(
       message: mailResult.success ? null : mailResult.error || '招待メールの送信に失敗しました',
     };
   } catch (err) {
-    logger.error('user:create_user_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('user:create_user_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload,
@@ -424,7 +425,7 @@ export async function createUserDirect(
     return { success: true, user_id: userId, errorType: null, message: null };
   } catch (err) {
     // 💡 セキュリティ: payloadには平文パスワードが含まれるため、ログにはそのまま渡さない
-    logger.error('user:create_user_direct_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('user:create_user_direct_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { ...payload, password: undefined },
@@ -508,7 +509,7 @@ export async function resendInvite(email: string, userType?: string) {
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
-    logger.error('user:resend_invite_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('user:resend_invite_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { email },
@@ -598,7 +599,7 @@ export async function updateUser(id: string, payload: CreateUserPayload & { role
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (err) {
-    logger.error('user:update_user_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('user:update_user_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { id, payload },
@@ -643,7 +644,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
         });
       }
     } catch (err) {
-      logger.error('user:bulk_create_users_loop_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      logger.error('user:bulk_create_users_loop_unexpected', getErrorMessage(err), {
         ...ctx,
         err,
         payload: { email: user.email },
@@ -682,7 +683,7 @@ export async function getRoles(): Promise<RoleDefinition[]> {
 
     return data as RoleDefinition[];
   } catch (error) {
-    logger.error('user:get_roles_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('user:get_roles_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });

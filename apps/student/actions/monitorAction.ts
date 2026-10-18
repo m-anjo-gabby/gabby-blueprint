@@ -3,7 +3,7 @@
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { WordSummaryHistoryItem } from './wordAction'; // Re-use type
+import { type WordSummaryHistoryItem } from './wordAction'; // Re-use type
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 

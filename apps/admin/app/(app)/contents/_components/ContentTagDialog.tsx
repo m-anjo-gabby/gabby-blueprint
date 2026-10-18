@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tag as TagIcon, Plus, X, Loader2, ArrowLeft, CheckCircle2, Hash } from 'lucide-react';
 import { getTagAssignmentData, assignTag, removeTag } from '@/actions/adminContentAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { Content, ContentTagSummary } from '@gabby/types/content';
+import { type Content, type ContentTagSummary } from '@gabby/types/content';
 
 interface Props {
   content: Content;

@@ -6,13 +6,14 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
   CALENDAR_EVENT_TYPES,
-  CalendarEventItem,
-  CalendarEventSeriesItem,
-  CalendarEventSeriesSummary,
-  CalendarEventTargetType,
+  type CalendarEventItem,
+  type CalendarEventSeriesItem,
+  type CalendarEventSeriesSummary,
+  type CalendarEventTargetType,
 } from '@gabby/types/calendarEvent';
 import { getCalendarEvents } from './adminCalendarEventAction';
 import type { Json } from '@gabby/types/db';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -136,7 +137,7 @@ export async function updateCalendarEventSeries(
     revalidatePath('/calendar-events');
     return { success: true };
   } catch (error) {
-    logger.error('calendarEventSeries:update_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('calendarEventSeries:update_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -166,7 +167,7 @@ export async function deleteCalendarEventSeries(
     revalidatePath('/calendar-events');
     return { success: true };
   } catch (error) {
-    logger.error('calendarEventSeries:delete_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('calendarEventSeries:delete_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -174,7 +175,9 @@ export async function deleteCalendarEventSeries(
   }
 }
 
-type SessionPayload = { [key: string]: Json };
+interface SessionPayload {
+  [key: string]: Json;
+}
 
 /**
  * 入力（日本時間）の回を RPC に渡す形にする。日時・内容が不正な行があれば null。
@@ -240,7 +243,7 @@ export async function createCalendarEventSeries(
     revalidatePath('/calendar-events');
     return { success: true, seriesId: data };
   } catch (error) {
-    logger.error('calendarEventSeries:create_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('calendarEventSeries:create_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -283,11 +286,7 @@ export async function addCalendarEventSeriesSessions(
     revalidatePath('/calendar-events');
     return { success: true, count };
   } catch (error) {
-    logger.error(
-      'calendarEventSeries:add_sessions_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      { ...ctx, err: error },
-    );
+    logger.error('calendarEventSeries:add_sessions_unexpected', getErrorMessage(error), { ...ctx, err: error });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

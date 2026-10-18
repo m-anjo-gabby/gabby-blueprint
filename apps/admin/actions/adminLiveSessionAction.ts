@@ -12,20 +12,21 @@ import { getSessionOutcomeEvidenceCore } from '@gabby/lib/session/actions/sessio
 import { getTimezoneNameMap } from '@gabby/lib/timezone/timezoneNames';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import {
-  AdminStudentSummary,
-  AdminScheduleSlotSummary,
-  AdminCoachSummary,
-  AdminContractSummary,
-  AdminSessionActionResult,
-  AdminSessionListItem,
-  AdminSessionOutcomeHistoryEntry,
-  AdminSessionRecord,
-  GetClientStudentsResult,
-  GetScheduleSlotsForTicketResult,
-  ReleaseLessonScheduleSlotResult,
+  type AdminStudentSummary,
+  type AdminScheduleSlotSummary,
+  type AdminCoachSummary,
+  type AdminContractSummary,
+  type AdminSessionActionResult,
+  type AdminSessionListItem,
+  type AdminSessionOutcomeHistoryEntry,
+  type AdminSessionRecord,
+  type GetClientStudentsResult,
+  type GetScheduleSlotsForTicketResult,
+  type ReleaseLessonScheduleSlotResult,
 } from '@gabby/types/adminLiveSession';
 import type { ConductedVia, SessionOutcome, SessionOutcomeEvidence } from '@gabby/types/session';
 import { USER_TYPES } from '@gabby/types/user';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -60,7 +61,7 @@ export async function getClientStudents(clientId: string): Promise<GetClientStud
 
     return { success: true, students };
   } catch (err) {
-    logger.error('liveSession:get_client_students_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSession:get_client_students_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { clientId },
@@ -156,7 +157,7 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
       .filter((c): c is AdminContractSummary => c !== null)
       .sort((a, b) => b.start_date.localeCompare(a.start_date));
   } catch (err) {
-    logger.error('liveSession:get_student_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSession:get_student_contracts_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { studentId },
@@ -224,7 +225,7 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
 
     return { success: true, slots };
   } catch (err) {
-    logger.error('liveSession:get_schedule_slots_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSession:get_schedule_slots_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { ticketId },
@@ -268,11 +269,11 @@ export async function getSessionsForTicket(ticketId: string): Promise<AdminSessi
 
     return rows.map((s) => ({ ...s, coach_name: nameById.get(s.coach_id) ?? '(Unknown)' }));
   } catch (err) {
-    logger.error(
-      'liveSession:get_sessions_for_ticket_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err, payload: { ticketId } },
-    );
+    logger.error('liveSession:get_sessions_for_ticket_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { ticketId },
+    });
     return [];
   }
 }
@@ -306,7 +307,7 @@ export async function releaseLessonScheduleSlot(scheduleId: string): Promise<Rel
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:release_schedule_slot_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSession:release_schedule_slot_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { scheduleId },
@@ -335,7 +336,7 @@ export async function getCoachesForMatching(): Promise<AdminCoachSummary[]> {
 
     return (data ?? []).map((c) => ({ id: c.id, user_name: c.user_name ?? '(Unknown)' }));
   } catch (err) {
-    logger.error('liveSession:get_coaches_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSession:get_coaches_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -384,7 +385,7 @@ export async function cancelSessionAsAdmin(
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:cancel_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSession:cancel_as_admin_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { sessionId },
@@ -432,7 +433,7 @@ export async function bookMakeupSessionAsAdmin(
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:book_makeup_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSession:book_makeup_as_admin_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { scheduleId },
@@ -490,7 +491,7 @@ export async function matchStudentWithCoachAsAdmin(params: {
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:admin_match_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSession:admin_match_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: params,
@@ -541,11 +542,11 @@ export async function adjustTargetSessionsAsAdmin(
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error(
-      'liveSession:adjust_target_sessions_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err, payload: { scheduleId, newTargetSessions, reason } },
-    );
+    logger.error('liveSession:adjust_target_sessions_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { scheduleId, newTargetSessions, reason },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -609,7 +610,7 @@ export async function getSessionOutcomeHistory(sessionId: string): Promise<Admin
       performed_at: r.performed_at,
     }));
   } catch (err) {
-    logger.error('liveSession:get_outcome_history_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSession:get_outcome_history_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { sessionId },
@@ -654,7 +655,7 @@ export async function correctSessionOutcomeAsAdmin(
     revalidatePath('/live-sessions', 'layout');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:correct_outcome_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSession:correct_outcome_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { sessionId },

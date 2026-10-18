@@ -11,13 +11,14 @@ import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import {
   CALENDAR_EVENT_TYPES,
   isCalendarEventType,
-  CalendarEventItem,
-  CalendarEventType,
-  CalendarEventTargetType,
-  CalendarEventCoachOption,
-  CalendarEventMessageItem,
-  CalendarEventMessageAttachment,
+  type CalendarEventItem,
+  type CalendarEventType,
+  type CalendarEventTargetType,
+  type CalendarEventCoachOption,
+  type CalendarEventMessageItem,
+  type CalendarEventMessageAttachment,
 } from '@gabby/types/calendarEvent';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -84,11 +85,7 @@ export async function getCalendarEvents(options: { seriesId?: string } = {}): Pr
       coaches: coachesByEventId.get(row.calendar_event_id) ?? [],
     })) as CalendarEventItem[];
   } catch (error) {
-    logger.error(
-      'calendarEvent:get_calendar_events_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      { ...ctx, err: error },
-    );
+    logger.error('calendarEvent:get_calendar_events_unexpected', getErrorMessage(error), { ...ctx, err: error });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -159,11 +156,7 @@ export async function getCalendarEventList(
 
     return { rows, totalCount: count || 0 };
   } catch (error) {
-    logger.error(
-      'calendarEvent:get_calendar_event_list_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      { ...ctx, err: error },
-    );
+    logger.error('calendarEvent:get_calendar_event_list_unexpected', getErrorMessage(error), { ...ctx, err: error });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -189,11 +182,7 @@ export async function getCoachesFilter(): Promise<CalendarEventCoachOption[]> {
 
     return (data ?? []).map((row) => ({ coach_id: row.id, user_name: row.user_name }));
   } catch (error) {
-    logger.error(
-      'calendarEvent:get_coaches_filter_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      { ...ctx, err: error },
-    );
+    logger.error('calendarEvent:get_coaches_filter_unexpected', getErrorMessage(error), { ...ctx, err: error });
     return [];
   }
 }
@@ -321,15 +310,11 @@ export async function upsertCalendarEvent(
     revalidatePath('/calendar-events');
     return { success: true, data: saved };
   } catch (error) {
-    logger.error(
-      'calendarEvent:upsert_calendar_event_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      {
-        ...ctx,
-        err: error,
-        payload: formData,
-      },
-    );
+    logger.error('calendarEvent:upsert_calendar_event_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: formData,
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -389,15 +374,11 @@ export async function deleteCalendarEvent(
     revalidatePath('/calendar-events');
     return { success: true };
   } catch (error) {
-    logger.error(
-      'calendarEvent:delete_calendar_event_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      {
-        ...ctx,
-        err: error,
-        payload: { calendarEventId },
-      },
-    );
+    logger.error('calendarEvent:delete_calendar_event_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { calendarEventId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -462,15 +443,11 @@ export async function getCalendarEventParticipants(
       totalCount: participants.length,
     };
   } catch (error) {
-    logger.error(
-      'calendarEvent:get_participants_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      {
-        ...ctx,
-        err: error,
-        payload: { calendarEventId },
-      },
-    );
+    logger.error('calendarEvent:get_participants_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { calendarEventId },
+    });
     return { event: null, participants: [], totalCount: 0 };
   }
 }
@@ -506,7 +483,7 @@ export async function getCalendarEventMessages(calendarEventId: string): Promise
 
     return (data ?? []).map((row) => ({ ...row, attachments: Array.isArray(row.attachments) ? row.attachments : [] }));
   } catch (error) {
-    logger.error('calendarEvent:get_messages_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('calendarEvent:get_messages_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { calendarEventId },
@@ -554,7 +531,7 @@ export async function createCalendarEventMessage(
     revalidatePath(`/calendar-events/${calendarEventId}/participants`);
     return { success: true };
   } catch (error) {
-    logger.error('calendarEvent:create_message_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('calendarEvent:create_message_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { calendarEventId },
@@ -605,7 +582,7 @@ export async function updateCalendarEventMessage(
     revalidatePath(`/calendar-events/${calendarEventId}/participants`);
     return { success: true };
   } catch (error) {
-    logger.error('calendarEvent:update_message_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('calendarEvent:update_message_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { calendarEventMessageId },
@@ -669,7 +646,7 @@ export async function deleteCalendarEventMessage(
     revalidatePath(`/calendar-events/${calendarEventId}/participants`);
     return { success: true };
   } catch (error) {
-    logger.error('calendarEvent:delete_message_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('calendarEvent:delete_message_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { calendarEventMessageId },
@@ -728,15 +705,11 @@ export async function uploadCalendarEventMessageFile(
 
     return { success: true, attachment: newAttachment };
   } catch (error) {
-    logger.error(
-      'calendarEvent:upload_message_file_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      {
-        ...ctx,
-        err: error,
-        payload: { calendarEventMessageId },
-      },
-    );
+    logger.error('calendarEvent:upload_message_file_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { calendarEventMessageId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -774,15 +747,11 @@ export async function deleteCalendarEventMessageFile(
 
     return { success: true };
   } catch (error) {
-    logger.error(
-      'calendarEvent:delete_message_file_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      {
-        ...ctx,
-        err: error,
-        payload: { storagePath },
-      },
-    );
+    logger.error('calendarEvent:delete_message_file_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { storagePath },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

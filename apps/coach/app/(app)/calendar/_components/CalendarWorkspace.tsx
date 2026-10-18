@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { PendingRequestsPanel } from './PendingRequestsPanel';
-import { CoachIncomingRequestItem } from '@gabby/types/coachInbox';
+import { type CoachIncomingRequestItem } from '@gabby/types/coachInbox';
 
 /** Pending Requests パネルでホバーされたリクエストに対応する日付 (YYYY-MM-DD)。カレンダー側で強調表示する */
 const HighlightedDateContext = createContext<string | null>(null);

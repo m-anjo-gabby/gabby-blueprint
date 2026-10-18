@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { convertWeeklyTimeZone, formatDateTimeByZone } from '@gabby/lib/date/date';
-import { DayOfWeek } from '@gabby/types/coachAvailability';
-import { LiveSessionContractSummary, LiveSessionOverview, SlotStatusItem } from '@gabby/types/matching';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
+import { type LiveSessionContractSummary, type LiveSessionOverview, type SlotStatusItem } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import { ShellSectionTitle } from '@/components/shell/ShellPage';
 import { SessionBreakdown } from './SessionBreakdown';

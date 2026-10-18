@@ -8,7 +8,7 @@ import { LogIn, Loader2, AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { startImpersonation } from '@/actions/adminImpersonationAction';
-import { UserRecord, USER_TYPES } from '@gabby/types/user';
+import { type UserRecord, USER_TYPES } from '@gabby/types/user';
 
 interface Props {
   user: UserRecord;

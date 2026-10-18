@@ -35,11 +35,11 @@ import {
   Check,
   Copy,
 } from 'lucide-react';
-import { PhraseRecord, TTSAdjustmentData, WordAdjustment } from '@gabby/types/word';
-import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { type PhraseRecord, type TTSAdjustmentData, type WordAdjustment } from '@gabby/types/word';
+import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
-import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
+import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
 import { buildSSML } from '@gabby/lib/azure/ssml';
 
 interface TTSDialogProps {

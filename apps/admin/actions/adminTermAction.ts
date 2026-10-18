@@ -8,6 +8,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import type { TermDetail, TermListItem, TermType } from '@gabby/types/term';
 import { containsPattern } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -95,7 +96,7 @@ export async function getTerms(params: ListParams): Promise<ListResult<TermListI
       totalCount: listResult.count || 0,
     };
   } catch (error) {
-    logger.error('term:get_terms_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('term:get_terms_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -136,7 +137,7 @@ export async function deleteTerm(termId: string): Promise<TermActionResult> {
     revalidatePath('/terms');
     return { success: true };
   } catch (error) {
-    logger.error('term:delete_term_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('term:delete_term_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { termId },
@@ -195,7 +196,7 @@ export async function getTermDetail(termId: string): Promise<TermDetail | null> 
       })),
     };
   } catch (error) {
-    logger.error('term:get_term_detail_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('term:get_term_detail_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { termId },
@@ -233,7 +234,7 @@ export async function addTermRevision(termId: string, content: string, changeNot
     revalidatePath(`/terms/${termId}/edit`);
     return { success: true };
   } catch (error) {
-    logger.error('term:add_revision_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('term:add_revision_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { termId },
@@ -283,7 +284,7 @@ export async function createTerm(params: {
     revalidatePath('/terms');
     return { success: true };
   } catch (error) {
-    logger.error('term:create_term_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('term:create_term_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { ...params, content: undefined },

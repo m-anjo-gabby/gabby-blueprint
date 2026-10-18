@@ -6,7 +6,7 @@ import {
 } from '@gabby/lib/sessionHomework/actions/sessionHomeworkActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import { type SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 
 const logger = createLogger('student');
 

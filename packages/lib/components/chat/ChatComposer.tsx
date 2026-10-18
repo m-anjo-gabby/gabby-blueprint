@@ -8,7 +8,7 @@ import { sendChatMessage } from '../../chat/actions/messageActions';
 import { formatFileSize } from '../../chat/formatFileSize';
 import { useChatDraft, useChatDraftStore } from '../../stores/useChatDraftStore';
 import { cn } from '../../utils';
-import { ChatMessage } from '@gabby/types/chat';
+import { type ChatMessage } from '@gabby/types/chat';
 import { useChatUi } from './ChatUiContext';
 
 interface ChatComposerProps {

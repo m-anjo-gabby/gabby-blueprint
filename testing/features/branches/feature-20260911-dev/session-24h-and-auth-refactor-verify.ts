@@ -81,7 +81,12 @@ const adminClient: SupabaseClient = await signInAsRole(adminEmail, PASSWORD);
 
 console.log('対象ユーザー特定完了:', { coach1Id, coach2Id, t1Id, t2Id, t3Id, t4Id });
 
-type ScheduleRow = { schedule_id: string; day_of_week: number; start_time: string; target_sessions: number };
+interface ScheduleRow {
+  schedule_id: string;
+  day_of_week: number;
+  start_time: string;
+  target_sessions: number;
+}
 async function getSchedule(coachId: string, studentId: string): Promise<ScheduleRow> {
   const { data, error } = await admin
     .from('com_m_lesson_schedule')

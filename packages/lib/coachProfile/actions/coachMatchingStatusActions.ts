@@ -6,10 +6,11 @@ import { getLogContext } from '../../logger/context';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import {
   COACH_MATCHING_REQUIRED_ITEMS,
-  CoachMatchingRequiredItem,
-  GetCoachMatchingStatusResult,
-  UpdateMyAcceptingStudentsResult,
+  type CoachMatchingRequiredItem,
+  type GetCoachMatchingStatusResult,
+  type UpdateMyAcceptingStudentsResult,
 } from '@gabby/types/coachProfile';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -74,7 +75,7 @@ export async function getCoachMatchingStatusCore(coachId: string): Promise<GetCo
       },
     };
   } catch (err) {
-    logger.error('coachProfile:get_matching_status_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachProfile:get_matching_status_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { coachId },
@@ -120,11 +121,7 @@ export async function updateMyAcceptingStudentsCore(
     });
     return { success: true, acceptingStudents: data.accepting_students };
   } catch (err) {
-    logger.error(
-      'coachProfile:update_accepting_students_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachProfile:update_accepting_students_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

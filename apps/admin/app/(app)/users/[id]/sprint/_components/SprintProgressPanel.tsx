@@ -13,8 +13,8 @@ import {
   setStudentSprintStage,
   setStudentSprintLevelManaged,
 } from '@/actions/adminStudentProgressAction';
-import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
-import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
+import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
+import { MAX_STAGE, type StageLevels } from '@gabby/types/stageProgression';
 import { getStageGaps, getStageGoals } from '@gabby/lib/sprint/stageProgression';
 import { formatAcquiredSprintLevelLabel } from '@gabby/lib/sprint/utils';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';

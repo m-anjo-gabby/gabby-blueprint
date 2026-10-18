@@ -1,4 +1,4 @@
-import { QUESTION_TYPES, SprintQuestionType, type SprintAvailableLevels } from '@gabby/types/sprint';
+import { QUESTION_TYPES, type SprintQuestionType, type SprintAvailableLevels } from '@gabby/types/sprint';
 import type { MetadataSprint } from '@gabby/types/content';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 

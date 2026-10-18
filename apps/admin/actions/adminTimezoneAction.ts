@@ -1,12 +1,13 @@
 'use server';
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { TimezoneMaster } from '@gabby/types/timezone';
+import { type TimezoneMaster } from '@gabby/types/timezone';
 import type { TableInsert } from '@gabby/types/db';
 import { revalidatePath } from 'next/cache';
 import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -25,7 +26,7 @@ export async function getTimezones() {
     }
     return data as TimezoneMaster[];
   } catch (error) {
-    logger.error('timezone:get_timezones_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('timezone:get_timezones_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -69,7 +70,7 @@ export async function upsertTimezone(payload: TableInsert<'com_m_timezone'>) {
     revalidatePath('/timezones');
     return { success: true, data: savedTimezone };
   } catch (error) {
-    logger.error('timezone:upsert_timezone_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('timezone:upsert_timezone_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload,
@@ -99,7 +100,7 @@ export async function deleteTimezone(timezone: string) {
     revalidatePath('/timezones');
     return { success: true };
   } catch (error) {
-    logger.error('timezone:delete_timezone_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('timezone:delete_timezone_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { timezone },

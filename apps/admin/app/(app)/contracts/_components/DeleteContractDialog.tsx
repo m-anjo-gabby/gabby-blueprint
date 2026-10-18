@@ -19,7 +19,7 @@ import { Trash2, AlertCircle, ShieldAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { deleteContract, purgeContractWithHistory } from '@/actions/adminContractAction';
-import { ContractDetail } from '@gabby/types/contract';
+import { type ContractDetail } from '@gabby/types/contract';
 
 interface Props {
   contract: ContractDetail;

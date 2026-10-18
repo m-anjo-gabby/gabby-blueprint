@@ -1,5 +1,5 @@
 import { AudioLines } from 'lucide-react';
-import { CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { type CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
 import { cn } from '../../utils';
 
 export interface CoachSpecialtyTagsProps {

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { createBrowserClient } from '@gabby/lib/supabase/client';
-import { ChatMessage } from '@gabby/types/chat';
+import { type ChatMessage } from '@gabby/types/chat';
 import { getChatMessageById } from '@gabby/lib/chat/actions/messageActions';
 
 /**

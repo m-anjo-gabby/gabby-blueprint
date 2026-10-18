@@ -4,35 +4,36 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import {
-  AssignedStudentSummary,
-  CoachStudentNote,
-  ContractTrainingReport,
-  GetAssignedStudentsResult,
-  GetStudentOverviewResult,
-  GetStudentUpcomingSessionResult,
-  GetStudentLiveSessionShortfallsResult,
-  GetStudentLiveSessionContractsResult,
-  GetStudentSessionsByTicketResult,
-  LiveSessionShortfallItem,
-  GetStudentNotesResult,
-  GetSelfTrainingWeekSummaryResult,
-  AddCoachStudentNoteResult,
-  GetContractTrainingReportsResult,
-  SaveContractTrainingReportDraftResult,
-  FinalizeContractTrainingReportResult,
-  UpdateStudentSprintProgressResult,
-  StudentSprintProgress,
-  StudentLatestContractSummary,
-  StudentContractSessionSummary,
-  StudentNextSessionSummary,
+  type AssignedStudentSummary,
+  type CoachStudentNote,
+  type ContractTrainingReport,
+  type GetAssignedStudentsResult,
+  type GetStudentOverviewResult,
+  type GetStudentUpcomingSessionResult,
+  type GetStudentLiveSessionShortfallsResult,
+  type GetStudentLiveSessionContractsResult,
+  type GetStudentSessionsByTicketResult,
+  type LiveSessionShortfallItem,
+  type GetStudentNotesResult,
+  type GetSelfTrainingWeekSummaryResult,
+  type AddCoachStudentNoteResult,
+  type GetContractTrainingReportsResult,
+  type SaveContractTrainingReportDraftResult,
+  type FinalizeContractTrainingReportResult,
+  type UpdateStudentSprintProgressResult,
+  type StudentSprintProgress,
+  type StudentLatestContractSummary,
+  type StudentContractSessionSummary,
+  type StudentNextSessionSummary,
   TRAINING_REPORT_STATUS,
 } from '@gabby/types/coachStudent';
 import type { TableUpdate } from '@gabby/types/db';
 import { SESSION_STATUS, SESSION_RESULT_STATUSES } from '@gabby/types/session';
-import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
-import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
+import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
+import { MAX_STAGE, type StageLevels } from '@gabby/types/stageProgression';
 import { clampLevel, computeStage, getForcedLevels } from '../../sprint/stageProgression';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 const MAX_NOTE_LENGTH = 4000;
@@ -276,11 +277,7 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
 
     return { success: true, students };
   } catch (err) {
-    logger.error(
-      'coachStudent:get_assigned_students_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachStudent:get_assigned_students_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -378,7 +375,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
       },
     };
   } catch (err) {
-    logger.error('coachStudent:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachStudent:get_overview_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -486,11 +483,7 @@ export async function getStudentLiveSessionContractsCore(
 
     return { success: true, contracts };
   } catch (err) {
-    logger.error(
-      'coachStudent:get_student_contracts_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachStudent:get_student_contracts_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -550,11 +543,7 @@ export async function getStudentSessionsByTicketCore(
       sessions: rows.map((s) => ({ ...s, coach_name: nameById.get(s.coach_id) ?? '(Unknown)' })),
     };
   } catch (err) {
-    logger.error(
-      'coachStudent:get_student_sessions_by_ticket_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachStudent:get_student_sessions_by_ticket_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -602,7 +591,7 @@ export async function getStudentUpcomingSessionCore(studentId: string): Promise<
 
     return { success: true, session: session ?? null };
   } catch (err) {
-    logger.error('coachStudent:get_upcoming_session_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachStudent:get_upcoming_session_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -617,7 +606,11 @@ export async function getStudentUpcomingSessionCore(studentId: string): Promise<
  * expected/actual/shortfallの算出はDB側のfn_schedule_shortfall()を唯一の真実源とし、
  * create_session_booking_request RPCの予約可否判定と齟齬が生じないようにする。
  */
-type ScheduleShortfallRow = { expected_sessions: number; actual_sessions: number; shortfall: number };
+interface ScheduleShortfallRow {
+  expected_sessions: number;
+  actual_sessions: number;
+  shortfall: number;
+}
 
 /**
  * 指定コーチ・生徒の現在稼働中(status=1)スケジュールについて、fn_schedule_shortfall()を
@@ -703,11 +696,7 @@ export async function getStudentLiveSessionShortfallsCore(
 
     return { success: true, shortfalls: result.shortfalls };
   } catch (err) {
-    logger.error(
-      'coachStudent:get_session_shortfalls_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachStudent:get_session_shortfalls_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -831,7 +820,7 @@ export async function getStudentNotesCore(studentId: string): Promise<GetStudent
 
     return { success: true, notes: notes ?? [] };
   } catch (err) {
-    logger.error('coachStudent:get_notes_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachStudent:get_notes_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -888,11 +877,7 @@ export async function getSelfTrainingWeekSummaryCore(
       summary: { days, active_days: activeDays, total_questions: totalQuestions, total_assessments: totalAssessments },
     };
   } catch (err) {
-    logger.error(
-      'coachStudent:get_self_training_summary_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachStudent:get_self_training_summary_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -932,7 +917,7 @@ export async function addCoachStudentNoteCore(studentId: string, noteText: strin
     logger.info('coachStudent:add_note_success', 'Coach student note created', { ...ctx, userId: user.id });
     return { success: true, note: data as CoachStudentNote };
   } catch (err) {
-    logger.error('coachStudent:add_note_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachStudent:add_note_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -989,7 +974,7 @@ export async function getContractTrainingReportsCore(studentId: string): Promise
     const reports = await attachCoachNames(supabase, (data ?? []) as Omit<ContractTrainingReport, 'coach_name'>[]);
     return { success: true, reports };
   } catch (err) {
-    logger.error('coachStudent:get_training_reports_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachStudent:get_training_reports_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -1073,11 +1058,7 @@ export async function saveContractTrainingReportDraftCore(
     });
     return { success: true, report };
   } catch (err) {
-    logger.error(
-      'coachStudent:save_training_report_draft_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachStudent:save_training_report_draft_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -1129,11 +1110,7 @@ export async function finalizeContractTrainingReportCore(
     });
     return { success: true, report };
   } catch (err) {
-    logger.error(
-      'coachStudent:finalize_training_report_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachStudent:finalize_training_report_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -1226,7 +1203,7 @@ export async function updateStudentSprintLevelCore(
     });
     return { success: true, progress: updated as StudentSprintProgress };
   } catch (err) {
-    logger.error('coachStudent:update_level_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachStudent:update_level_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -1317,7 +1294,7 @@ export async function forceStageUpStudentCore(
     });
     return { success: true, progress: updated as StudentSprintProgress };
   } catch (err) {
-    logger.error('coachStudent:force_stage_up_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachStudent:force_stage_up_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

@@ -4,7 +4,7 @@ import {
   markNotificationAsReadAction,
   markAllNotificationsAsReadAction,
 } from '@gabby/lib/notification/actions/notificationActions';
-import { NotificationItem } from '@gabby/types/notification';
+import { type NotificationItem } from '@gabby/types/notification';
 import { clientLogger } from '../logger/client';
 
 interface NotificationState {

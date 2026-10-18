@@ -11,12 +11,12 @@ import {
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
-  DialogueAssignmentSummary,
-  DialogueContentSummary,
-  UpdateDialogueSessionProgressInput,
-  LogSessionDialogueOpenInput,
+  type DialogueAssignmentSummary,
+  type DialogueContentSummary,
+  type UpdateDialogueSessionProgressInput,
+  type LogSessionDialogueOpenInput,
 } from '@gabby/types/dialogue';
-import { CoachStudentErrorCode } from '@gabby/types/coachStudent';
+import { type CoachStudentErrorCode } from '@gabby/types/coachStudent';
 
 const logger = createLogger('coach');
 

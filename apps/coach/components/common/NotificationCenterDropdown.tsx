@@ -18,7 +18,7 @@ import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
-import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
+import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, type NoticeType } from '@gabby/types/notice';
 import { getNotificationDisplay } from '@gabby/lib/notification/display';
 import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
 

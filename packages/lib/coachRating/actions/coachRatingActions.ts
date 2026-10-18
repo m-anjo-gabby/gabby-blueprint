@@ -9,21 +9,22 @@ import {
   COACH_RATING_FEEDBACK_MAX_LENGTH,
   COACH_RATING_MAX,
   COACH_RATING_MIN,
-  CoachRatingStats,
-  PendingCoachRating,
-  SubmitCoachRatingInput,
-  SubmitCoachRatingResult,
+  type CoachRatingStats,
+  type PendingCoachRating,
+  type SubmitCoachRatingInput,
+  type SubmitCoachRatingResult,
 } from '@gabby/types/coachRating';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
-type CoachStatsRow = {
+interface CoachStatsRow {
   coach_id: string;
   rating_count: number;
   rating_overall_avg: number | string | null;
   rating_coaching_avg: number | string | null;
   rating_friendliness_avg: number | string | null;
-};
+}
 
 // numeric 列は PostgREST から文字列で返ることがあるため数値にそろえる
 const toNumberOrNull = (value: number | string | null): number | null => (value === null ? null : Number(value));
@@ -60,7 +61,7 @@ export async function getCoachRatingStatsCore(coachIds: string[]): Promise<Map<s
     }
     return statsById;
   } catch (err) {
-    logger.error('coach_rating:get_stats_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coach_rating:get_stats_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -68,7 +69,7 @@ export async function getCoachRatingStatsCore(coachIds: string[]): Promise<Map<s
   }
 }
 
-type PendingCoachRatingRow = {
+interface PendingCoachRatingRow {
   ticket_id: string;
   coach_id: string;
   coach_name: string | null;
@@ -76,7 +77,7 @@ type PendingCoachRatingRow = {
   plan_name: string | null;
   license_end_date: string;
   completed_count: number;
-};
+}
 
 /**
  * ログイン中の生徒が評価を待っている「契約×コーチ」の一覧を取得する（対象の判定は fn_coach_rating_targets）。
@@ -103,7 +104,7 @@ export async function getMyPendingCoachRatingsCore(): Promise<PendingCoachRating
       completedCount: row.completed_count,
     }));
   } catch (err) {
-    logger.error('coach_rating:get_pending_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coach_rating:get_pending_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -164,7 +165,7 @@ export async function submitCoachRatingCore(input: SubmitCoachRatingInput): Prom
     });
     return { success: true };
   } catch (err) {
-    logger.error('coach_rating:submit_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coach_rating:submit_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

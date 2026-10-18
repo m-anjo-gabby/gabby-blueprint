@@ -6,6 +6,7 @@
  */
 import 'server-only';
 import { createLogger, type LogContext } from '../logger';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -40,7 +41,7 @@ export async function verifyTurnstileToken(token: string, ctx: LogContext): Prom
     }
     return result.success;
   } catch (err) {
-    logger.error('security:turnstile_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('security:turnstile_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

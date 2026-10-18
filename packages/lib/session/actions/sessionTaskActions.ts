@@ -4,15 +4,16 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import {
-  CoachLiveSessionShortfallItem,
+  type CoachLiveSessionShortfallItem,
   COMPLETION_RESULT,
-  CoachSessionTasksSummary,
-  GetCoachSessionTasksResult,
-  MissingHomeworkTask,
+  type CoachSessionTasksSummary,
+  type GetCoachSessionTasksResult,
+  type MissingHomeworkTask,
   SESSION_STATUS,
-  UnfinalizedSessionTask,
+  type UnfinalizedSessionTask,
 } from '@gabby/types/session';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -20,7 +21,11 @@ const logger = createLogger('common');
 // 直近の実施分のみを対象にする（終了予定時刻超過タスクは実施記録の正確性に関わるため期限を設けない）。
 const MISSING_HOMEWORK_LOOKBACK_DAYS = 14;
 
-type ScheduleShortfallRpcRow = { expected_sessions: number; actual_sessions: number; shortfall: number };
+interface ScheduleShortfallRpcRow {
+  expected_sessions: number;
+  actual_sessions: number;
+  shortfall: number;
+}
 
 /**
  * ダッシュボードの"Session Tasks"パネル向けに、コーチが対応すべき3種類の項目を横断して取得する。
@@ -161,7 +166,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
     const tasks: CoachSessionTasksSummary = { unfinalizedSessions, missingHomeworkSessions, shortfalls };
     return { success: true, tasks };
   } catch (err) {
-    logger.error('session:get_coach_tasks_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:get_coach_tasks_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

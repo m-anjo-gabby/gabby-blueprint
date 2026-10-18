@@ -17,12 +17,12 @@ import {
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
-  MyBookingRequestItem,
-  MyRescheduleProposalGroup,
+  type MyBookingRequestItem,
+  type MyRescheduleProposalGroup,
   PROPOSED_BY_ROLE,
-  SessionActionErrorCode,
-  SessionListItem,
-  SessionResultSummary,
+  type SessionActionErrorCode,
+  type SessionListItem,
+  type SessionResultSummary,
 } from '@gabby/types/session';
 
 const logger = createLogger('student');

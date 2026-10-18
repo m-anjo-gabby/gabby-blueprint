@@ -3,8 +3,9 @@
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { GetTimezoneListResult, UpdateTimezoneResult } from '@gabby/types/profile';
+import { type GetTimezoneListResult, type UpdateTimezoneResult } from '@gabby/types/profile';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -29,7 +30,7 @@ export async function getTimezoneListCore(): Promise<GetTimezoneListResult> {
 
     return { success: true, timezones: data ?? [] };
   } catch (err) {
-    logger.error('profile:get_timezone_list_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('profile:get_timezone_list_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -78,7 +79,7 @@ export async function updateMyTimezoneCore(timezone: string): Promise<UpdateTime
     logger.info('profile:update_timezone_success', `Timezone updated: ${timezone}`, { ...ctx, userId: user.id });
     return { success: true, timezone };
   } catch (err) {
-    logger.error('profile:update_timezone_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('profile:update_timezone_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

@@ -1,4 +1,4 @@
-import { ChatMessage } from '@gabby/types/chat';
+import { type ChatMessage } from '@gabby/types/chat';
 
 // Slackなどのグルーピング慣習に合わせ、同一送信者・同一カレンダー日・5分以内の連投は
 // 見出し（アイコン・名前・日時）を省略してひとつながりのメッセージ群として扱う。

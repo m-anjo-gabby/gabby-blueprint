@@ -8,7 +8,7 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { uploadProfileIcon, removeProfileIcon, updateMyTimezone } from '@/actions/studentProfileAction';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { TimezoneMaster } from '@gabby/types/timezone';
+import { type TimezoneMaster } from '@gabby/types/timezone';
 import type { MailSettings } from '@gabby/lib/mail/settingsActions';
 import { ProfileSection } from './ProfileSection';
 import { AccountInfoRow, SecuritySection } from './ProfileParts';

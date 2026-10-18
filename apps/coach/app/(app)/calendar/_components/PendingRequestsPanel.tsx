@@ -7,7 +7,7 @@ import { MatchingRequestCard } from '@/components/requests/MatchingRequestCard';
 import { BookingRequestCard } from '@/components/requests/BookingRequestCard';
 import { RescheduleProposalRequestCard } from '@/components/requests/RescheduleProposalRequestCard';
 import { useCoachPendingRequests } from '@/hooks/useCoachPendingRequests';
-import { CoachIncomingRequestItem } from '@gabby/types/coachInbox';
+import { type CoachIncomingRequestItem } from '@gabby/types/coachInbox';
 
 interface PendingRequestsPanelProps {
   initialRequests: CoachIncomingRequestItem[];

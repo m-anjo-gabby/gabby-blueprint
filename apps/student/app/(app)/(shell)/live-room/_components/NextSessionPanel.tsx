@@ -3,9 +3,9 @@
 import { Button } from '@/components/ui/button';
 import { SessionCoachHeading } from '@/components/session/SessionCoachHeading';
 import { JoinSessionButton } from '@/components/session/JoinSessionButton';
-import { SessionListItem } from '@gabby/types/session';
+import { type SessionListItem } from '@gabby/types/session';
 import { ShellSectionTitle } from '@/components/shell/ShellPage';
-import { PreviousSessionLink, PreviousSessionSummary } from './PreviousSessionLink';
+import { PreviousSessionLink, type PreviousSessionSummary } from './PreviousSessionLink';
 
 interface Props {
   session: SessionListItem;

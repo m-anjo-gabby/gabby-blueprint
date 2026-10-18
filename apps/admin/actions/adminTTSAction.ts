@@ -8,6 +8,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import type { TTSAdjustmentData, TTSAssetAdjustments } from '@gabby/types/word';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -102,7 +103,7 @@ export async function savePhrase(
       path: newFilePath,
     };
   } catch (error) {
-    logger.error('tts:save_phrase_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('tts:save_phrase_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { phraseId, wordId },
@@ -188,7 +189,7 @@ export async function saveTTSAssetAction(payload: {
       data,
     };
   } catch (error) {
-    logger.error('tts:save_asset_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('tts:save_asset_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload,
@@ -232,7 +233,7 @@ export async function getTTSAssets(params: ListParams): Promise<ListResult<TTSAs
     }
     return { rows: data ?? [], totalCount: count || 0 };
   } catch (error) {
-    logger.error('tts:get_assets_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('tts:get_assets_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -284,7 +285,7 @@ export async function deleteTTSAssetAction(assetId: string) {
     revalidatePath('/tools/tts-designer');
     return { success: true, message: '削除しました' };
   } catch (error) {
-    logger.error('tts:delete_asset_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('tts:delete_asset_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { assetId },

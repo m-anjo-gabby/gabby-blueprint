@@ -11,10 +11,10 @@ import { uploadSessionHomeworkAttachmentCore } from '@gabby/lib/sessionHomework/
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
-  HomeworkAttachmentErrorCode,
-  PendingHomeworkAttachment,
-  SessionHomeworkComment,
-  SessionHomeworkEntry,
+  type HomeworkAttachmentErrorCode,
+  type PendingHomeworkAttachment,
+  type SessionHomeworkComment,
+  type SessionHomeworkEntry,
 } from '@gabby/types/sessionHomework';
 
 const logger = createLogger('coach');

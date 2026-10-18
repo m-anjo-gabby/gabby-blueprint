@@ -8,11 +8,12 @@ import {
   PROFILE_ICON_BUCKET,
   PROFILE_ICON_MAX_SIZE,
   PROFILE_ICON_ALLOWED_MIME_TYPES,
-  ProfileIconMimeType,
-  UploadProfileIconResult,
-  RemoveProfileIconResult,
+  type ProfileIconMimeType,
+  type UploadProfileIconResult,
+  type RemoveProfileIconResult,
 } from '@gabby/types/profile';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -97,7 +98,7 @@ export async function uploadProfileIconCore(formData: FormData): Promise<UploadP
     logger.info('profile:upload_icon_success', `Profile icon updated: ${newIconPath}`, { ...ctx, userId: user.id });
     return { success: true, iconPath: newIconPath };
   } catch (err) {
-    logger.error('profile:upload_icon_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('profile:upload_icon_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -150,7 +151,7 @@ export async function removeProfileIconCore(): Promise<RemoveProfileIconResult> 
     logger.info('profile:remove_icon_success', 'Profile icon removed', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('profile:remove_icon_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('profile:remove_icon_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

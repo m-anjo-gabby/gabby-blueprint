@@ -4,27 +4,27 @@ import { createServerClient } from '../../supabase/server';
 import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { DayOfWeek } from '@gabby/types/coachAvailability';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
 import {
-  BookableTicketSlot,
-  CoachBrowseItem,
-  CreateMatchingRequestInput,
-  CreateMatchingRequestResult,
-  WithdrawMatchingRequestResult,
-  ApproveMatchingRequestResult,
-  GetMatchingSlotOptionsResult,
-  GetMyBookableTicketsResult,
-  GetMyLiveSessionContractsResult,
-  GetMyLiveSessionOverviewResult,
-  RejectMatchingRequestResult,
-  IncomingMatchingRequestItem,
-  LiveSessionContractSummary,
-  LiveSessionTicketSummary,
+  type BookableTicketSlot,
+  type CoachBrowseItem,
+  type CreateMatchingRequestInput,
+  type CreateMatchingRequestResult,
+  type WithdrawMatchingRequestResult,
+  type ApproveMatchingRequestResult,
+  type GetMatchingSlotOptionsResult,
+  type GetMyBookableTicketsResult,
+  type GetMyLiveSessionContractsResult,
+  type GetMyLiveSessionOverviewResult,
+  type RejectMatchingRequestResult,
+  type IncomingMatchingRequestItem,
+  type LiveSessionContractSummary,
+  type LiveSessionTicketSummary,
   MATCHING_REQUEST_STATUS,
-  MatchingRequestErrorCode,
-  MatchingSlotAvailability,
-  MatchingSlotOption,
-  SlotStatusItem,
+  type MatchingRequestErrorCode,
+  type MatchingSlotAvailability,
+  type MatchingSlotOption,
+  type SlotStatusItem,
 } from '@gabby/types/matching';
 import { SESSION_STATUS } from '@gabby/types/session';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
@@ -34,6 +34,7 @@ import { getCoachSpecialtyCodesCore } from '../../coachSpecialty/actions/coachSp
 import { getTimezoneNameMap } from '../../timezone/timezoneNames';
 import { pickTimezoneName } from '../../date/timezone';
 import { WEB_TRIAL_PLAN_CODE } from '@gabby/types/trialApplication';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -41,7 +42,11 @@ function isValidTimeRange(startTime: string, endTime: string): boolean {
   return /^\d{2}:\d{2}$/.test(startTime) && /^\d{2}:\d{2}$/.test(endTime) && startTime < endTime;
 }
 
-type ScheduleShortfallRow = { expected_sessions: number; actual_sessions: number; shortfall: number };
+interface ScheduleShortfallRow {
+  expected_sessions: number;
+  actual_sessions: number;
+  shortfall: number;
+}
 
 type SlotOptionRow = MatchingSlotAvailability & { day_of_week: number; start_time: string };
 
@@ -136,7 +141,7 @@ export async function getMyLiveSessionTicketsCore(): Promise<
 
     return { success: true, tickets: activeTickets };
   } catch (err) {
-    logger.error('matching:get_my_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:get_my_tickets_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -216,7 +221,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
 
     return { success: true, contracts };
   } catch (err) {
-    logger.error('matching:get_my_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:get_my_contracts_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -379,7 +384,7 @@ export async function getMySlotStatusCore(
 
     return { success: true, slots };
   } catch (err) {
-    logger.error('matching:get_slot_status_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:get_slot_status_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -493,7 +498,7 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
       },
     };
   } catch (err) {
-    logger.error('matching:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:get_overview_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -594,7 +599,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
 
     return { success: true, slots };
   } catch (err) {
-    logger.error('matching:get_my_bookable_tickets_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:get_my_bookable_tickets_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -715,7 +720,7 @@ export async function getCoachBrowseListCore(
 
     return { success: true, coaches };
   } catch (err) {
-    logger.error('matching:get_coach_list_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:get_coach_list_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -887,7 +892,7 @@ export async function createMatchingRequestCore(
     logger.info('matching:create_request_success', 'Matching request created', { ...ctx, userId: user.id });
     return { success: true, request: data };
   } catch (err) {
-    logger.error('matching:create_request_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:create_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -927,7 +932,7 @@ export async function getMatchingSlotOptionsCore(
     }
     return { success: true, options: options ?? [] };
   } catch (err) {
-    logger.error('matching:get_slot_options_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:get_slot_options_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -968,7 +973,7 @@ export async function withdrawMatchingRequestCore(requestId: string): Promise<Wi
     logger.info('matching:withdraw_request_success', 'Matching request withdrawn', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('matching:withdraw_request_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:withdraw_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -1091,11 +1096,7 @@ export async function getPendingIncomingRequestsAsCoachCore(): Promise<
 
     return { success: true, requests: await attachRequestDetails(supabase, requests ?? []) };
   } catch (err) {
-    logger.error(
-      'matching:get_pending_incoming_requests_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('matching:get_pending_incoming_requests_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -1140,7 +1141,7 @@ export async function getMatchingRequestHistoryPageAsCoachCore(
 
     return { success: true, items: await attachRequestDetails(supabase, page), nextCursor };
   } catch (err) {
-    logger.error('matching:get_request_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:get_request_history_page_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -1192,7 +1193,7 @@ export async function approveMatchingRequestCore(requestId: string): Promise<App
     logger.info('matching:approve_request_success', 'Matching request approved', { ...ctx, userId: user.id });
     return { success: true, scheduleId: data as string };
   } catch (err) {
-    logger.error('matching:approve_request_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:approve_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -1240,7 +1241,7 @@ export async function rejectMatchingRequestCore(
     logger.info('matching:reject_request_success', 'Matching request rejected', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('matching:reject_request_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('matching:reject_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

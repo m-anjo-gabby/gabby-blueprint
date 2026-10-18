@@ -10,7 +10,7 @@ import { useToast } from '../../hooks/useToast';
 import { useUserStore } from '../../stores/useUserStore';
 import { generateLessonStartTimeOptions, isAtLeastHoursFromNow, MIN_SESSION_BOOKING_LEAD_HOURS } from '../../date/date';
 import { CounterpartLocalTime } from './CounterpartLocalTime';
-import { SESSION_STATUS, CANCEL_CATEGORY, SessionListItem, ProposedSlotInput } from '@gabby/types/session';
+import { SESSION_STATUS, CANCEL_CATEGORY, type SessionListItem, type ProposedSlotInput } from '@gabby/types/session';
 
 /**
  * ----------------------------------------------

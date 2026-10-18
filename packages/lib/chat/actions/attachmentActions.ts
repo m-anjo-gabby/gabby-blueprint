@@ -4,8 +4,13 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { CHAT_ATTACHMENT_ALLOWED_MIME_TYPES, CHAT_ATTACHMENT_MAX_SIZE, PendingChatAttachment } from '@gabby/types/chat';
+import {
+  CHAT_ATTACHMENT_ALLOWED_MIME_TYPES,
+  CHAT_ATTACHMENT_MAX_SIZE,
+  type PendingChatAttachment,
+} from '@gabby/types/chat';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -83,7 +88,7 @@ export async function uploadChatAttachment(
 
     return { success: true, attachment };
   } catch (err) {
-    logger.error('chat:upload_attachment_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('chat:upload_attachment_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { roomId },
@@ -113,7 +118,7 @@ export async function getChatAttachmentUrl(path: string): Promise<{ url: string 
 
     return { url: data.signedUrl };
   } catch (err) {
-    logger.error('chat:get_attachment_url_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('chat:get_attachment_url_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { path },

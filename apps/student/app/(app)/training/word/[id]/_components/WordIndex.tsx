@@ -13,7 +13,7 @@ interface WordIndexProps {
   onSelect: (idx: number) => void;
 }
 
-export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
+export function WordIndex({ isOpen, onSelect }: WordIndexProps) {
   const activeWordRef = useRef<HTMLButtonElement | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const horizontalScrollRef = useRef<HTMLDivElement | null>(null);
@@ -239,4 +239,4 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
       </DrawerContent>
     </Drawer>
   );
-};
+}

@@ -11,6 +11,7 @@ import {
   type TrialApplicationStatus,
 } from '@gabby/types/trialApplication';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -52,7 +53,7 @@ export async function getTrialApplications(
     }
     return { rows: (data ?? []) as TrialApplicationRow[], totalCount: count ?? 0 };
   } catch (error) {
-    logger.error('trial:get_trial_applications_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('trial:get_trial_applications_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });

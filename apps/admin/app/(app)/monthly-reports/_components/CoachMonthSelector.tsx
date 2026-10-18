@@ -3,7 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { AdminCoachSummary } from '@gabby/types/adminLiveSession';
+import { type AdminCoachSummary } from '@gabby/types/adminLiveSession';
 import { MonthPickerPopover } from '@/components/common/MonthPickerPopover';
 
 function shiftMonth(yearMonth: string, delta: number): string {

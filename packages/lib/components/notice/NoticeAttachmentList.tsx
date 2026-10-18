@@ -16,7 +16,10 @@ function formatFileSize(bytes: number): string {
 }
 
 /** 処理中の操作（ファイルごと・操作ごと） */
-type PendingAction = { attachmentId: string; kind: 'preview' | 'download' };
+interface PendingAction {
+  attachmentId: string;
+  kind: 'preview' | 'download';
+}
 
 const BUTTON_CLASS =
   'inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-bold transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0';

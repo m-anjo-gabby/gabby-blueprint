@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { CalendarEventMessageAttachment, CalendarEventMessageItem } from '@gabby/types/calendarEvent';
+import { type CalendarEventMessageAttachment, type CalendarEventMessageItem } from '@gabby/types/calendarEvent';
 import {
   createCalendarEventMessage,
   updateCalendarEventMessage,

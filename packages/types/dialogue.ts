@@ -1,4 +1,4 @@
-import { CoachStudentErrorCode } from './coachStudent';
+import { type CoachStudentErrorCode } from './coachStudent';
 
 /**
  * ダイアログプラクティス セット分類

@@ -8,11 +8,12 @@ import { PROFILE_ICON_BUCKET } from '@gabby/types/profile';
 import {
   COACH_INTRO_VIDEO_MAX_SIZE,
   COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES,
-  CoachIntroVideoMimeType,
-  UploadCoachIntroVideoResult,
-  RemoveCoachIntroVideoResult,
+  type CoachIntroVideoMimeType,
+  type UploadCoachIntroVideoResult,
+  type RemoveCoachIntroVideoResult,
 } from '@gabby/types/coachProfile';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -108,7 +109,7 @@ export async function uploadCoachIntroVideoCore(formData: FormData): Promise<Upl
     });
     return { success: true, introVideoPath: newVideoPath };
   } catch (err) {
-    logger.error('coachProfile:upload_intro_video_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachProfile:upload_intro_video_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -165,7 +166,7 @@ export async function removeCoachIntroVideoCore(): Promise<RemoveCoachIntroVideo
     logger.info('coachProfile:remove_intro_video_success', 'Coach intro video removed', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('coachProfile:remove_intro_video_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachProfile:remove_intro_video_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

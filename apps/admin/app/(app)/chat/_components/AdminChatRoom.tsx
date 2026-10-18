@@ -7,7 +7,7 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { ChatTimeline } from '@gabby/lib/components/chat/ChatTimeline';
 import { ChatAvatar } from '@gabby/lib/components/chat/ChatAvatar';
-import { CHAT_ROOM_TYPES, ChatMessage, ChatRoom, ChatRoomMemberSummary } from '@gabby/types/chat';
+import { CHAT_ROOM_TYPES, type ChatMessage, type ChatRoom, type ChatRoomMemberSummary } from '@gabby/types/chat';
 import { getUserTypeLabel, USER_TYPES } from '@gabby/types/user';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { GroupParticipantsManager } from './GroupParticipantsManager';

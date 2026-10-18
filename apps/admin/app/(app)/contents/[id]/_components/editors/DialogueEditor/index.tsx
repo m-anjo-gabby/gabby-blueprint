@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { DialogueSession } from '@gabby/types/dialogue';
+import { type DialogueSession } from '@gabby/types/dialogue';
 import { getDialogueSessions } from '@/actions/adminDialogueAction';
 import { DialogueSessionList } from './DialogueSessionList';
 import { DialogueSessionFormDialog } from './DialogueSessionFormDialog';

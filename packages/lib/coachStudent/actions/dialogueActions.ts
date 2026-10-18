@@ -7,19 +7,20 @@ import { getLogContext } from '../../logger/context';
 import { getStudentAvailableContentIds, hasCoachStudentRelationship } from './coachStudentActions';
 import {
   DIALOGUE_ASSIGNMENT_STATUS,
-  DialogueAssignmentSummary,
-  DialogueCategory,
-  DialogueContentSummary,
-  GetAvailableDialogueContentsResult,
-  AssignDialogueContentResult,
-  UnassignDialogueContentResult,
-  GetStudentDialogueAssignmentsResult,
-  UpdateDialogueSessionProgressInput,
-  UpdateDialogueSessionProgressResult,
-  LogSessionDialogueOpenInput,
-  LogSessionDialogueOpenResult,
+  type DialogueAssignmentSummary,
+  type DialogueCategory,
+  type DialogueContentSummary,
+  type GetAvailableDialogueContentsResult,
+  type AssignDialogueContentResult,
+  type UnassignDialogueContentResult,
+  type GetStudentDialogueAssignmentsResult,
+  type UpdateDialogueSessionProgressInput,
+  type UpdateDialogueSessionProgressResult,
+  type LogSessionDialogueOpenInput,
+  type LogSessionDialogueOpenResult,
 } from '@gabby/types/dialogue';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -121,7 +122,7 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
 
     return { success: true, contents: result };
   } catch (err) {
-    logger.error('dialogue:get_contents_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('dialogue:get_contents_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -236,7 +237,7 @@ export async function assignDialogueContentCore(
     });
     return { success: true, assignment_id: data.assignment_id };
   } catch (err) {
-    logger.error('dialogue:assign_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('dialogue:assign_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -314,7 +315,7 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
 
     return { success: true };
   } catch (err) {
-    logger.error('dialogue:unassign_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('dialogue:unassign_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -443,7 +444,7 @@ async function fetchDialogueAssignmentSummaries(
 
     return { success: true, assignments: result };
   } catch (err) {
-    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('dialogue:get_assignments_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -470,7 +471,7 @@ export async function getStudentDialogueAssignmentsCore(
 
     return await fetchDialogueAssignmentSummaries(supabase, studentId, user.id, ctx);
   } catch (err) {
-    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('dialogue:get_assignments_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -493,7 +494,7 @@ export async function getMyDialogueAssignmentsCore(): Promise<GetStudentDialogue
 
     return await fetchDialogueAssignmentSummaries(supabase, user.id, user.id, ctx);
   } catch (err) {
-    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('dialogue:get_assignments_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -587,7 +588,7 @@ export async function updateDialogueSessionProgressCore(
 
     return { success: true };
   } catch (err) {
-    logger.error('dialogue:update_progress_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('dialogue:update_progress_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -648,7 +649,7 @@ export async function logSessionDialogueOpenCore(
 
     return { success: true };
   } catch (err) {
-    logger.error('dialogue:log_open_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('dialogue:log_open_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

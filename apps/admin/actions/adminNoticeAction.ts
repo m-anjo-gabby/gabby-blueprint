@@ -11,9 +11,9 @@ import {
   NOTICE_DISPLAY_MODES,
   NOTICE_TYPES,
   isNoticeType,
-  NoticeAttachment,
-  NoticeType,
-  NoticeTargetType,
+  type NoticeAttachment,
+  type NoticeType,
+  type NoticeTargetType,
   type AdminNoticeListItem,
   type NoticeDisplayMode,
 } from '@gabby/types/notice';
@@ -21,6 +21,7 @@ import { isValidNoticeCtaUrl } from '@gabby/lib/notice/links';
 import { containsPattern } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { USER_STATUS, USER_TYPES, isUserType, type UserType } from '@gabby/types/user';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -177,7 +178,7 @@ export async function getNotices(params: ListParams<'type'>): Promise<ListResult
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('notice:get_notices_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('notice:get_notices_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { noticeType },
@@ -216,7 +217,7 @@ export async function getNoticeById(noticeId: string) {
       client_name: data.com_m_client?.client_name || null,
     };
   } catch (error) {
-    logger.error('notice:get_by_id_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('notice:get_by_id_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { noticeId },
@@ -393,7 +394,7 @@ export async function getNoticeReadStatus(
       ctaClickCount,
     };
   } catch (error) {
-    logger.error('notice:read_status_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('notice:read_status_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { noticeId },
@@ -452,7 +453,7 @@ export async function createNotice(formData: NoticeFormData) {
     revalidatePath('/notice');
     return { success: true, noticeId: data.notice_id };
   } catch (error) {
-    logger.error('notice:create_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('notice:create_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: formData,
@@ -512,7 +513,7 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData) {
     revalidatePath(`/notice/${noticeId}/edit`);
     return { success: true };
   } catch (error) {
-    logger.error('notice:update_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('notice:update_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { noticeId },
@@ -558,7 +559,7 @@ export async function deleteNotice(noticeId: string) {
     revalidatePath('/notice');
     return { success: true };
   } catch (error) {
-    logger.error('notice:delete_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('notice:delete_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { noticeId },
@@ -610,7 +611,7 @@ export async function uploadNoticeImage(
     });
     return { success: true, path: storagePath };
   } catch (error) {
-    logger.error('notice:upload_image_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('notice:upload_image_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { noticeId },
@@ -671,7 +672,7 @@ export async function uploadNoticeFile(
 
     return { success: true, attachment: newAttachment };
   } catch (error) {
-    logger.error('notice:upload_file_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('notice:upload_file_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { noticeId },
@@ -699,7 +700,7 @@ export async function deleteNoticeFile(storagePath: string): Promise<{ success: 
     logger.info('notice:delete_file_success', `Attachment removed: ${cleanPath}`, { ...ctx, payload: { storagePath } });
     return { success: true };
   } catch (error) {
-    logger.error('notice:delete_file_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('notice:delete_file_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { storagePath },

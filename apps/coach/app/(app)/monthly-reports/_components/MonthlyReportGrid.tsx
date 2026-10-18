@@ -1,8 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { CoachMonthlyReport, MonthlyReportSession, MonthlyReportStudentRow } from '@gabby/types/monthlyReport';
-import { AttentionCellDetail, AttentionCellDialog } from './AttentionCellDialog';
+import {
+  type CoachMonthlyReport,
+  type MonthlyReportSession,
+  type MonthlyReportStudentRow,
+} from '@gabby/types/monthlyReport';
+import { type AttentionCellDetail, AttentionCellDialog } from './AttentionCellDialog';
 
 function daysInMonth(reportMonth: string): number {
   const [year, month] = reportMonth.split('-').map(Number);

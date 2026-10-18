@@ -7,7 +7,7 @@ import { getContentTypeConfig, getTrainingMetricConfig } from '@gabby/lib/conten
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
-import { UserTrainingPerformanceResponse } from '@gabby/types/training';
+import { type UserTrainingPerformanceResponse } from '@gabby/types/training';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
@@ -80,7 +80,7 @@ interface TrainingPerformanceProps {
   targetMonth: string; // 形式: "YYYY-MM"
 }
 
-export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initialData, targetMonth }) => {
+export function TrainingPerformance({ initialData, targetMonth }: TrainingPerformanceProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const timezone = useTimezone();
 
@@ -337,7 +337,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
       </div>
     </>
   );
-};
+}
 
 function DayDetailRow({
   icon: Icon,

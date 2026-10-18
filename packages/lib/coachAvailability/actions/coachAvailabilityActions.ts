@@ -4,15 +4,16 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import {
-  CoachAvailabilityFormValues,
-  CoachAvailabilitySlot,
-  GetCoachAvailabilityResult,
-  AddCoachAvailabilityResult,
-  DeleteCoachAvailabilityResult,
-  GetAvailabilityConfirmedAtResult,
-  ConfirmAvailabilityResult,
+  type CoachAvailabilityFormValues,
+  type CoachAvailabilitySlot,
+  type GetCoachAvailabilityResult,
+  type AddCoachAvailabilityResult,
+  type DeleteCoachAvailabilityResult,
+  type GetAvailabilityConfirmedAtResult,
+  type ConfirmAvailabilityResult,
 } from '@gabby/types/coachAvailability';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -49,11 +50,7 @@ export async function getMyAvailabilityCore(): Promise<GetCoachAvailabilityResul
 
     return { success: true, slots: (data ?? []) as CoachAvailabilitySlot[] };
   } catch (err) {
-    logger.error(
-      'coachAvailability:get_my_availability_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachAvailability:get_my_availability_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -85,7 +82,7 @@ export async function getCoachAvailabilityByUserIdCore(coachId: string): Promise
 
     return { success: true, slots: (data ?? []) as CoachAvailabilitySlot[] };
   } catch (err) {
-    logger.error('coachAvailability:get_by_coach_id_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachAvailability:get_by_coach_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -133,7 +130,7 @@ export async function addAvailabilityCore(values: CoachAvailabilityFormValues): 
     logger.info('coachAvailability:add_success', 'Coach availability slot added', { ...ctx, userId: user.id });
     return { success: true, slot: data as CoachAvailabilitySlot };
   } catch (err) {
-    logger.error('coachAvailability:add_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachAvailability:add_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -171,7 +168,7 @@ export async function deleteAvailabilityCore(availabilityId: string): Promise<De
     logger.info('coachAvailability:delete_success', 'Coach availability slot removed', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('coachAvailability:delete_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachAvailability:delete_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -203,11 +200,7 @@ export async function getMyAvailabilityConfirmedAtCore(): Promise<GetAvailabilit
 
     return { success: true, confirmedAt: data?.availability_confirmed_at ?? null };
   } catch (err) {
-    logger.error(
-      'coachAvailability:get_confirmed_at_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachAvailability:get_confirmed_at_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -241,7 +234,7 @@ export async function confirmMyAvailabilityCore(): Promise<ConfirmAvailabilityRe
     });
     return { success: true, confirmedAt: data as string };
   } catch (err) {
-    logger.error('coachAvailability:confirm_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachAvailability:confirm_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

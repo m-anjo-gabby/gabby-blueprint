@@ -4,14 +4,14 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { PHRASE_TYPES, PhraseType } from '@gabby/types/word';
+import { PHRASE_TYPES, type PhraseType } from '@gabby/types/word';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 
 interface WordCardProps {
   onToggleFavorite: (phraseId: string, currentState: boolean) => void;
 }
 
-export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
+export function WordCard({ onToggleFavorite }: WordCardProps) {
   const { words, wordIdx, phraseIdx, isFlipped, toggleFlip } = useWordDrillStore();
 
   const currentWord = words[wordIdx];
@@ -123,4 +123,4 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
       </div>
     </div>
   );
-};
+}

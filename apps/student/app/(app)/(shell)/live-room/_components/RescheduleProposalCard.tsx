@@ -10,7 +10,7 @@ import { useNow } from '@gabby/lib/hooks/useNow';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { formatSessionSlot, formatTimeUntil } from '@/lib/sessionFormat';
 import { acceptRescheduleProposal, declineRescheduleProposals } from '@/actions/sessionAction';
-import { MyRescheduleProposalGroup } from '@gabby/types/session';
+import { type MyRescheduleProposalGroup } from '@gabby/types/session';
 
 interface Props {
   group: MyRescheduleProposalGroup;

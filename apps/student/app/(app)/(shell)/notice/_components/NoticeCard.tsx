@@ -9,7 +9,7 @@ import { NoticeDetail } from '@gabby/lib/components/notice/NoticeDetail';
 import { NOTICE_LABELS_JA } from '@gabby/lib/notice/labels';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatZonedDateJapanese } from '@gabby/lib/date/date';
-import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
+import { type NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, type NoticeType } from '@gabby/types/notice';
 
 interface NoticeCardProps {
   notice: NoticeItem;

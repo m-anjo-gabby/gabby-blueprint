@@ -1,8 +1,8 @@
 import {
   COACH_MATCHING_REQUIRED_ITEMS,
-  CoachMatchingRequiredItem,
-  CoachMatchingStatus,
-  CoachProfileFormValues,
+  type CoachMatchingRequiredItem,
+  type CoachMatchingStatus,
+  type CoachProfileFormValues,
 } from '@gabby/types/coachProfile';
 
 export interface CoachMatchingReadinessInput {

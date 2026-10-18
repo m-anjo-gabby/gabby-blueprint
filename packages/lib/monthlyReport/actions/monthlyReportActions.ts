@@ -6,24 +6,25 @@ import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { toIsoDateInZone } from '../../date/date';
 import {
-  ApproveCoachMonthlyReportResult,
-  CoachMonthlyReport,
-  GetCoachMonthlyReportResult,
-  MonthlyReportApproval,
-  MonthlyReportErrorCode,
-  MonthlyReportSession,
-  MonthlyReportStudentRow,
-  RevokeCoachMonthlyReportApprovalResult,
+  type ApproveCoachMonthlyReportResult,
+  type CoachMonthlyReport,
+  type GetCoachMonthlyReportResult,
+  type MonthlyReportApproval,
+  type MonthlyReportErrorCode,
+  type MonthlyReportSession,
+  type MonthlyReportStudentRow,
+  type RevokeCoachMonthlyReportApprovalResult,
 } from '@gabby/types/monthlyReport';
 import {
   SESSION_STATUS,
   COMPLETION_RESULT,
   CANCEL_CATEGORY,
-  SessionStatus,
-  CompletionResult,
-  CancelCategory,
+  type SessionStatus,
+  type CompletionResult,
+  type CancelCategory,
 } from '@gabby/types/session';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -214,7 +215,7 @@ export async function getCoachMonthlyReportCore(reportMonth: string): Promise<Ge
 
     return await buildMonthlyReport(supabase, user.id, reportMonth);
   } catch (err) {
-    logger.error('monthlyReport:get_coach_report_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('monthlyReport:get_coach_report_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -234,7 +235,7 @@ export async function getAdminCoachMonthlyReportCore(
     const supabase = createAdminClient();
     return await buildMonthlyReport(supabase, coachId, reportMonth);
   } catch (err) {
-    logger.error('monthlyReport:get_admin_report_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('monthlyReport:get_admin_report_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -273,7 +274,7 @@ export async function approveCoachMonthlyReportCore(
     });
     return { success: true };
   } catch (err) {
-    logger.error('monthlyReport:approve_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('monthlyReport:approve_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -311,7 +312,7 @@ export async function revokeCoachMonthlyReportApprovalCore(
     });
     return { success: true };
   } catch (err) {
-    logger.error('monthlyReport:revoke_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('monthlyReport:revoke_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

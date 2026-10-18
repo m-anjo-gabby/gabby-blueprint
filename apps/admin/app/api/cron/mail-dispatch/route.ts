@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { dispatchMail } from '@gabby/lib/mail/dispatch/dispatchMail';
 import { sendMailDailyReport } from '@gabby/lib/mail/dispatch/dailyReport';
 import { createLogger } from '@gabby/lib/logger';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('mail');
 
@@ -48,7 +49,7 @@ async function handle(req: NextRequest) {
     const summary = await dispatchMail();
     return NextResponse.json(summary);
   } catch (err) {
-    logger.error('mail:dispatch_route_failed', err instanceof Error ? err.message : 'Unknown error', { err });
+    logger.error('mail:dispatch_route_failed', getErrorMessage(err), { err });
     return NextResponse.json({ error: 'dispatch_failed' }, { status: 500 });
   }
 }

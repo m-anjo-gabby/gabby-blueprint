@@ -5,7 +5,7 @@ import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { ClientFormDialog } from './ClientFormDialog';
 import { Badge } from '@/components/ui/badge';
-import { CLIENT_STATUS, ClientRecord } from '@gabby/types/client';
+import { CLIENT_STATUS, type ClientRecord } from '@gabby/types/client';
 import { InactiveBadge } from '@/components/common/InactiveBadge';
 
 type TableT = ReturnType<typeof useTranslations<'clients.table'>>;

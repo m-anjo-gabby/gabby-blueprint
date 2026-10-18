@@ -5,7 +5,7 @@ import { Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
-import { NotificationItem } from '@gabby/types/notification';
+import { type NotificationItem } from '@gabby/types/notification';
 import { getNotificationDisplay } from '@gabby/lib/notification/display';
 
 interface NotificationCardProps {

@@ -87,7 +87,10 @@ console.log('対象ユーザー特定完了:', { coachId, studentAId, studentBId
 // ---------------------------------------------------------------------------
 // 1. com_m_coach_student_relationship: is_active（コーチ自身の実JWT・RLS配下）
 // ---------------------------------------------------------------------------
-type RelationshipRow = { student_id: string; is_active: boolean };
+interface RelationshipRow {
+  student_id: string;
+  is_active: boolean;
+}
 let relationships: RelationshipRow[] = [];
 {
   const { data, error } = await coachClient
@@ -127,13 +130,13 @@ check(
 // ---------------------------------------------------------------------------
 type ContractJoinRow =
   { plan_name: string; plan_name_en: string } | { plan_name: string; plan_name_en: string }[] | null;
-type LicenseRow = {
+interface LicenseRow {
   user_id: string;
   start_date: string;
   end_date: string;
   status: number;
   com_m_contract: ContractJoinRow;
-};
+}
 
 let licenses: LicenseRow[] = [];
 {
@@ -150,7 +153,12 @@ let licenses: LicenseRow[] = [];
 }
 
 const nowIso = new Date().toISOString();
-type LatestContract = { plan_name_en: string; start_date: string; end_date: string; is_current: boolean };
+interface LatestContract {
+  plan_name_en: string;
+  start_date: string;
+  end_date: string;
+  is_current: boolean;
+}
 const latestByStudent = new Map<string, LatestContract & { _end: string }>();
 for (const license of licenses) {
   const contractJoin = license.com_m_contract;

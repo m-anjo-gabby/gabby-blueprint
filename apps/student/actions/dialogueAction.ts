@@ -1,7 +1,7 @@
 'use server';
 
 import { getMyDialogueAssignmentsCore } from '@gabby/lib/coachStudent/actions/dialogueActions';
-import { DialogueAssignmentSummary } from '@gabby/types/dialogue';
+import { type DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 

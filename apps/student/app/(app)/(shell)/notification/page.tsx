@@ -6,7 +6,7 @@ import { BellOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
 import { useFetchOnMount } from '@gabby/lib/hooks/useFetchOnMount';
-import { NotificationItem } from '@gabby/types/notification';
+import { type NotificationItem } from '@gabby/types/notification';
 import { NotificationCard } from './_components/NotificationCard';
 import { NotificationListSkeleton, NotificationPageHeader } from './_components/NotificationSkeleton';
 

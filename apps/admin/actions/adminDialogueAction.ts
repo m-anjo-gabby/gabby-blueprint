@@ -2,10 +2,11 @@
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
-import { DialogueSession } from '@gabby/types/dialogue';
+import { type DialogueSession } from '@gabby/types/dialogue';
 import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -30,7 +31,7 @@ export async function getDialogueSessions(contentId: string): Promise<DialogueSe
 
     return (data || []) as DialogueSession[];
   } catch (error) {
-    logger.error('dialogue:get_sessions_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('dialogue:get_sessions_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { contentId },
@@ -101,7 +102,7 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
     revalidatePath(`/contents/${payload.content_id}`);
     return { success: true, data: data as DialogueSession };
   } catch (error) {
-    logger.error('dialogue:upsert_session_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('dialogue:upsert_session_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload,
@@ -142,7 +143,7 @@ export async function deleteDialogueSession(dialogueSessionId: string, contentId
     revalidatePath(`/contents/${contentId}`);
     return { success: true };
   } catch (error) {
-    logger.error('dialogue:delete_session_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('dialogue:delete_session_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { dialogueSessionId },

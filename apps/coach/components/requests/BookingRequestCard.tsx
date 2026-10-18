@@ -19,7 +19,7 @@ import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { approveSessionBookingRequest, rejectSessionBookingRequest } from '@/actions/sessionAction';
 import { SESSION_BOOKING_REQUEST_STATUS } from '@gabby/types/session';
-import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
 import { RequestKindTag } from './RequestKindTag';
 
 const STATUS_BADGE: Record<number, { label: string; className: string }> = {

@@ -1,4 +1,4 @@
-import { SessionStatus, CompletionResult, CancelCategory } from './session';
+import { type SessionStatus, type CompletionResult, type CancelCategory } from './session';
 import type { SprintQuestionType } from './sprint';
 
 /**

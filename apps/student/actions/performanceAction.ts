@@ -5,6 +5,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import type { UserTrainingPerformanceResponse } from '@gabby/types/training';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('student');
 
@@ -41,7 +42,7 @@ export async function getUserTrainingPerformanceAction(
     );
     return { success: true, data: resData };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error, String(error));
     logger.error('performance:get_user_performance_failed', 'Failed to fetch user performance data', {
       ...ctx,
       payload: { error: message },

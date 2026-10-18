@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { BellOff } from 'lucide-react';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
 import { useFetchOnMount } from '@gabby/lib/hooks/useFetchOnMount';
-import { NotificationItem } from '@gabby/types/notification';
+import { type NotificationItem } from '@gabby/types/notification';
 import { NotificationCard } from './_components/NotificationCard';
 import { NotificationListSkeleton, NotificationPageLayout } from './_components/NotificationPageParts';
 

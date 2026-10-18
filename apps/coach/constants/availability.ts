@@ -1,4 +1,4 @@
-import { DayOfWeek } from '@gabby/types/coachAvailability';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
 
 /** English day-of-week labels for the Coach portal (0:Sun ... 6:Sat, matching com_m_coach_availability.day_of_week). */
 export const DAY_OF_WEEK_LABEL_EN: Record<DayOfWeek, string> = {

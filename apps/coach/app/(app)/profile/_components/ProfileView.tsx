@@ -14,9 +14,13 @@ import {
 } from '@/actions/coachProfileAction';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { TimezoneMaster } from '@gabby/types/timezone';
-import { CountryMaster } from '@gabby/types/country';
-import { CoachMatchingStatus, CoachProfileFormValues, CoachProfileRecord } from '@gabby/types/coachProfile';
+import { type TimezoneMaster } from '@gabby/types/timezone';
+import { type CountryMaster } from '@gabby/types/country';
+import {
+  type CoachMatchingStatus,
+  type CoachProfileFormValues,
+  type CoachProfileRecord,
+} from '@gabby/types/coachProfile';
 import { getCoachMatchingMissingItems } from '@gabby/lib/coachProfile/matchingReadiness';
 import { getCoachProfileFormProgress } from '../_lib/profileCompleteness';
 import { MatchingStatusCard } from './MatchingStatusCard';

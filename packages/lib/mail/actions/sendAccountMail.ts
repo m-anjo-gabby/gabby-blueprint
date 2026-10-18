@@ -9,6 +9,7 @@ import { buildCoachInviteMail } from '../templates/CoachInviteEmailTemplate';
 import { buildStudentInviteMail } from '../templates/InviteEmailTemplate';
 import { buildPasswordResetMail } from '../templates/PasswordResetEmailTemplate';
 import { createLogger } from '../../logger';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 /*
  * 🔒 アカウント関連のメール（招待・パスワード再設定）を組み立てて Resend 経由ですぐ送る。
@@ -20,7 +21,10 @@ const logger = createLogger('mail');
 /** 招待リンクの有効期限（日数）。招待の新規送信・再送の期限と、メール本文の期限表記で共通 */
 export const INVITATION_EXPIRES_DAYS = 3;
 
-export type AccountMailResult = { success: boolean; error?: string };
+export interface AccountMailResult {
+  success: boolean;
+  error?: string;
+}
 
 export async function sendAccountMail({
   to,
@@ -43,13 +47,13 @@ export async function sendAccountMail({
     logger.info(`mail:${logName}_success`, `${label}を送信しました: ${to}`, { payload: { messageId: data?.id } });
     return { success: true };
   } catch (err) {
-    logger.error(`mail:${logName}_failed`, err instanceof Error ? err.message : 'Unknown error', {
+    logger.error(`mail:${logName}_failed`, getErrorMessage(err), {
       err,
       payload: { to },
     });
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'メール送信中に予期せぬエラーが発生しました。',
+      error: getErrorMessage(err, 'メール送信中に予期せぬエラーが発生しました。'),
     };
   }
 }

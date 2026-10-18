@@ -64,7 +64,9 @@ const otherCoachClient = await signInAsRole(otherCoachEmail, PASSWORD);
 
 console.log('対象ユーザー特定完了:', { coachId, otherCoachEmail, nsId, nmId });
 
-type ScheduleRow = { schedule_id: string };
+interface ScheduleRow {
+  schedule_id: string;
+}
 async function getSchedule(coachIdArg: string, studentIdArg: string): Promise<ScheduleRow> {
   const { data, error } = await admin
     .from('com_m_lesson_schedule')
@@ -94,7 +96,11 @@ async function getStaleSessionId(scheduleId: string): Promise<string> {
   return data.session_id as string;
 }
 
-type ShortfallRow = { expected_sessions: number; actual_sessions: number; shortfall: number };
+interface ShortfallRow {
+  expected_sessions: number;
+  actual_sessions: number;
+  shortfall: number;
+}
 async function shortfallFor(scheduleId: string): Promise<ShortfallRow> {
   const { data, error } = await admin.rpc('fn_schedule_shortfall', { p_schedule_id: scheduleId }).single();
   if (error) throw error;

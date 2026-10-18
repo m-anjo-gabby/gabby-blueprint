@@ -3,6 +3,7 @@
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -40,7 +41,7 @@ export interface AdminCoachRatings {
   ratings: AdminCoachRatingRow[];
 }
 
-type RpcResult = {
+interface RpcResult {
   coach: { id: string; name: string | null; email: string | null };
   stats: Record<keyof AdminCoachRatingStats, number | string> | null;
   ratings: {
@@ -56,7 +57,7 @@ type RpcResult = {
     license_start: string | null;
     license_end: string | null;
   }[];
-};
+}
 
 /**
  * コーチの評価（集計・評価の行・運営へのコメント）を取得する（admin_get_coach_ratings。アドミン以外はDB側で拒否）。
@@ -74,7 +75,8 @@ export async function getCoachRatings(coachId: string): Promise<AdminCoachRating
     }
     if (!data) return null;
 
-    const result = data as RpcResult;
+    // jsonb の戻り値は Json 型のため、RPC が返す形として読み替える
+    const result = data as unknown as RpcResult;
     return {
       coach: result.coach,
       stats: result.stats
@@ -101,7 +103,7 @@ export async function getCoachRatings(coachId: string): Promise<AdminCoachRating
       })),
     };
   } catch (err) {
-    logger.error('coach_rating:admin_get_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coach_rating:admin_get_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

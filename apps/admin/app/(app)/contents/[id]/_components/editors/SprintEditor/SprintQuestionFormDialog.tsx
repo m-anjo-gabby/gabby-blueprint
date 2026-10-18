@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { bulkUpsertSprintQuestions } from '@/actions/adminSprintAction';
 import { PlusCircle, Edit, MessageSquare, Sparkles, CheckCircle2, Trash2, Plus } from 'lucide-react';
-import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 

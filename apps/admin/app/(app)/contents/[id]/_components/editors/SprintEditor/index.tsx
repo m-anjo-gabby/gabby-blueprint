@@ -4,8 +4,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { QUESTION_TYPES, SprintQuestionType, SprintQuestion } from '@gabby/types/sprint';
-import { Content } from '@gabby/types/content';
+import { QUESTION_TYPES, type SprintQuestionType, type SprintQuestion } from '@gabby/types/sprint';
+import { type Content } from '@gabby/types/content';
 import { useMemo } from 'react';
 import { getSprintQuestionsByFilter } from '@/actions/adminSprintAction';
 import { SprintQuestionList } from './SprintQuestionList';

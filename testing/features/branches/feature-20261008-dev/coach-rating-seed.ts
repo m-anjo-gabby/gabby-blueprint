@@ -74,7 +74,7 @@ console.log('Preflight OK: 対象RPCはすべて反映済みです。');
 // ---------------------------------------------------------------------------
 // 共通ヘルパー（feature-20260925-dev/live-session-hub-redesign-seed.ts と同型）
 // ---------------------------------------------------------------------------
-type Plan = {
+interface Plan {
   plan_id: string;
   plan_name: string;
   plan_name_en: string;
@@ -82,7 +82,7 @@ type Plan = {
   weekly_frequency: number | null;
   total_sessions: number | null;
   has_dialogue_practice: boolean;
-};
+}
 async function getPlan(planCode: string): Promise<Plan> {
   const { data, error } = await admin.from('com_m_contract_plan').select('*').eq('plan_code', planCode).single();
   if (error) throw error;

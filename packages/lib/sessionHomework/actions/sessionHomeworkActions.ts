@@ -4,17 +4,18 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
-  AddHomeworkCommentResult,
-  CreateSessionHomeworkResult,
-  GetRecentSessionHomeworkResult,
-  GetSessionHomeworkResult,
-  PendingHomeworkAttachment,
-  SessionHomeworkAttachment,
-  SessionHomeworkComment,
-  SessionHomeworkEntry,
-  SetHomeworkNotNeededResult,
+  type AddHomeworkCommentResult,
+  type CreateSessionHomeworkResult,
+  type GetRecentSessionHomeworkResult,
+  type GetSessionHomeworkResult,
+  type PendingHomeworkAttachment,
+  type SessionHomeworkAttachment,
+  type SessionHomeworkComment,
+  type SessionHomeworkEntry,
+  type SetHomeworkNotNeededResult,
 } from '@gabby/types/sessionHomework';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -73,7 +74,7 @@ export async function getSessionHomeworkCore(sessionId: string): Promise<GetSess
 
     return { success: true, homework: data ? normalizeHomeworkRow(data as unknown as RawHomeworkRow) : null };
   } catch (err) {
-    logger.error('sessionHomework:get_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('sessionHomework:get_homework_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -123,11 +124,7 @@ export async function getRecentSessionHomeworkCore(
 
     return { success: true, entries };
   } catch (err) {
-    logger.error(
-      'sessionHomework:get_recent_homework_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('sessionHomework:get_recent_homework_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -234,7 +231,7 @@ export async function createSessionHomeworkCore(
       entry: { ...homeworkRow, attachments: attachmentRows, comments: [] } as SessionHomeworkEntry,
     };
   } catch (err) {
-    logger.error('sessionHomework:create_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('sessionHomework:create_homework_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -340,7 +337,7 @@ export async function addHomeworkCommentCore(
     });
     return { success: true, comment: { ...commentRow, attachments: attachmentRows } as SessionHomeworkComment };
   } catch (err) {
-    logger.error('sessionHomework:add_comment_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('sessionHomework:add_comment_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -362,7 +359,7 @@ export async function markSessionHomeworkViewedCore(sessionId: string): Promise<
       logger.error('sessionHomework:mark_viewed_failed', error.message, { ...ctx, err: error, payload: { sessionId } });
     }
   } catch (err) {
-    logger.error('sessionHomework:mark_viewed_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('sessionHomework:mark_viewed_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { sessionId },
@@ -412,7 +409,7 @@ export async function setSessionHomeworkNotNeededCore(
     });
     return { success: true };
   } catch (err) {
-    logger.error('sessionHomework:set_not_needed_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('sessionHomework:set_not_needed_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { sessionId },

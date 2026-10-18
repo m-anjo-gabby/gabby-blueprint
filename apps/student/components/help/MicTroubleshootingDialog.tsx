@@ -13,7 +13,7 @@ interface MicTroubleshootingDialogProps {
 
 type DeviceTab = 'ios' | 'android' | 'pc';
 
-export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> = ({ open, onOpenChange }) => {
+export function MicTroubleshootingDialog({ open, onOpenChange }: MicTroubleshootingDialogProps) {
   const [activeTab, setActiveTab] = useState<DeviceTab>('ios');
 
   const steps = {
@@ -118,4 +118,4 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
       </DialogContent>
     </Dialog>
   );
-};
+}

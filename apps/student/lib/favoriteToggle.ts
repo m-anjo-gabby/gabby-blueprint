@@ -3,6 +3,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { FAVORITE_LIMIT_ERROR_CODE, type FavoriteToggleResult } from '@/constants/favorites';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('student');
 
@@ -74,7 +75,7 @@ export async function toggleFavoriteRow(
     logger.info('favorite:toggle_success', `Favorite ${isFavorite ? 'added' : 'removed'}`, { ...ctx, payload });
     return { ok: true };
   } catch (err) {
-    logger.error('favorite:toggle_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('favorite:toggle_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload,

@@ -7,7 +7,7 @@ interface AudioTroubleshootingDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const AudioTroubleshootingDialog: React.FC<AudioTroubleshootingDialogProps> = ({ open, onOpenChange }) => {
+export function AudioTroubleshootingDialog({ open, onOpenChange }: AudioTroubleshootingDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-panel p-6 bg-white border border-line/60 shadow-2xl">
@@ -64,4 +64,4 @@ export const AudioTroubleshootingDialog: React.FC<AudioTroubleshootingDialogProp
       </DialogContent>
     </Dialog>
   );
-};
+}

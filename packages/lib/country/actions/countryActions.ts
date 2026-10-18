@@ -3,7 +3,8 @@
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { GetCountryListResult } from '@gabby/types/country';
+import { type GetCountryListResult } from '@gabby/types/country';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -28,7 +29,7 @@ export async function getCountryListCore(): Promise<GetCountryListResult> {
 
     return { success: true, countries: data ?? [] };
   } catch (err) {
-    logger.error('country:get_country_list_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('country:get_country_list_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

@@ -5,8 +5,8 @@ import { uploadProfileIconCore, removeProfileIconCore } from '@gabby/lib/profile
 import { getTimezoneListCore, updateMyTimezoneCore } from '@gabby/lib/profile/actions/timezoneActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { ProfileIconErrorCode, MyProfile, UpdateTimezoneErrorCode } from '@gabby/types/profile';
-import { TimezoneMaster } from '@gabby/types/timezone';
+import { type ProfileIconErrorCode, type MyProfile, type UpdateTimezoneErrorCode } from '@gabby/types/profile';
+import { type TimezoneMaster } from '@gabby/types/timezone';
 
 const logger = createLogger('admin');
 

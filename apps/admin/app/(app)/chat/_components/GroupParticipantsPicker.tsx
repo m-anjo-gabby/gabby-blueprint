@@ -7,9 +7,9 @@ import { cn } from '@/lib/utils';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
-import { USER_TYPES, UserType, getUserTypeLabel } from '@gabby/types/user';
-import { ChatTargetUser } from '@gabby/types/chat';
-import { ClientOption } from '@gabby/types/client';
+import { USER_TYPES, type UserType, getUserTypeLabel } from '@gabby/types/user';
+import { type ChatTargetUser } from '@gabby/types/chat';
+import { type ClientOption } from '@gabby/types/client';
 
 const SELECTABLE_USER_TYPES: UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
 

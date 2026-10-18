@@ -8,7 +8,7 @@
 import 'server-only';
 import { createServerClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
-import { User } from '@supabase/supabase-js';
+import { type User } from '@supabase/supabase-js';
 import { USER_TYPES } from '@gabby/types/user';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
@@ -19,6 +19,7 @@ import type { MailLanguage } from '../mail/layout/document';
 import { getPasswordStrengthErrorCode } from './validation';
 import { AUTH_ERROR_MESSAGES_JA, formatAuthErrorMessage, type AuthErrorCode } from './errors';
 import { clearRecoveryMarker, hasValidRecoveryMarker, setRecoveryMarker } from './recovery';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 // 💡 共通認証モジュールとしてのロガーを生成
 const logger = createLogger('common');
@@ -26,7 +27,7 @@ const logger = createLogger('common');
 /**
  * 認証レスポンスの共通型
  */
-export type AuthResponse = {
+export interface AuthResponse {
   /** 日本語の既定文言（portalActions で各アプリの表示言語の文言に置き換える） */
   error?: string;
   /** エラー種別。文言の出し分けや、どの入力欄に出すかの判定に使う */
@@ -35,7 +36,7 @@ export type AuthResponse = {
   errorDetail?: string;
   success?: boolean;
   user?: User;
-};
+}
 
 /** エラー応答を組み立てる（既定の日本語文言を付けておく） */
 function authErrorResponse(code: AuthErrorCode, detail?: string): AuthResponse {
@@ -303,7 +304,7 @@ export async function forgotPasswordCore(
 
     return { success: true };
   } catch (err) {
-    logger.error('auth:forgot_password_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('auth:forgot_password_unexpected', getErrorMessage(err), {
       err,
       payload: { email },
     });
@@ -531,7 +532,7 @@ export async function verifyInvitationCore(token: string): Promise<VerifyInvitat
     if (!result.invite) return { valid: false, ...authErrorFields(result.errorCode) };
     return { valid: true, invitation: { email: result.invite.email, userName: result.invite.user_name } };
   } catch (err) {
-    logger.error('auth:verify_invitation_unexpected', err instanceof Error ? err.message : 'Unknown error', { err });
+    logger.error('auth:verify_invitation_unexpected', getErrorMessage(err), { err });
     return { valid: false, ...authErrorFields('unexpected') };
   }
 }
@@ -666,7 +667,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
 
     return { success: true };
   } catch (err) {
-    logger.error('auth:accept_invite_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('auth:accept_invite_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

@@ -13,7 +13,7 @@ import { deleteChatMessage, getChatMessageById, getChatMessages } from '../../ch
 import { formatMessageHeaderTime, isContinuationMessage } from '../../chat/messageGrouping';
 import { getChatRoomCounterpart, getChatRoomTitle } from '../../chat/roomDisplay';
 import { cn } from '../../utils';
-import { CHAT_ROOM_TYPES, ChatMessage, ChatRoom, ChatRoomMemberSummary } from '@gabby/types/chat';
+import { CHAT_ROOM_TYPES, type ChatMessage, type ChatRoom, type ChatRoomMemberSummary } from '@gabby/types/chat';
 import { CHAT_SPLIT_CLASSES, getHeaderTimeLabels, useChatUi } from './ChatUiContext';
 import { ChatAvatar } from './ChatAvatar';
 import { ChatComposer } from './ChatComposer';

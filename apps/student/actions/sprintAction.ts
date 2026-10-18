@@ -3,9 +3,9 @@
 import { createServerClient } from '@gabby/lib/supabase/server';
 import {
   QUESTION_TYPES,
-  SprintQuestion,
-  SprintQuestionResponse,
-  SprintQuestionType,
+  type SprintQuestion,
+  type SprintQuestionResponse,
+  type SprintQuestionType,
   type SprintAnswerType,
   type SprintAvailableLevels,
   type SprintType,
@@ -611,7 +611,7 @@ export async function reportSprintProgress(
   } catch (err) {
     // 記録処理の失敗（ネットワーク一時不通など）が、ユーザーのドリル学習継続を阻害しないよう、
     // エラーは捕捉してログに留めるソフトランディング構造を維持
-    logger.error('sprint:report_progress_failed', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('sprint:report_progress_failed', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { contentId, questionCount, assessmentCount, questionType },

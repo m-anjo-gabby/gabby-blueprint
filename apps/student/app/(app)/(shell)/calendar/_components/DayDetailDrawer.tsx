@@ -7,12 +7,12 @@ import { Drawer, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerTitle } f
 import { formatZonedDateJapanese } from '@gabby/lib/date/date';
 import { SESSION_STATUS } from '@gabby/types/session';
 import { getSessionStatusBadge } from '@/constants/session';
-import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
+import { type CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import {
   CalendarEventCard,
   formatEventTimeInZone as formatTimeInZone,
 } from '@/components/calendarEvent/CalendarEventCard';
-import { SessionActionTarget } from './SessionActionDialog';
+import { type SessionActionTarget } from './SessionActionDialog';
 
 const WEEKDAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
 

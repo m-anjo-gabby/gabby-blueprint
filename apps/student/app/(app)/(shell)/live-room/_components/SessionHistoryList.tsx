@@ -12,7 +12,7 @@ import { ShellSectionTitle } from '@/components/shell/ShellPage';
 import { formatSessionSlot } from '@/lib/sessionFormat';
 import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
 import { useHydrated } from '@gabby/lib/hooks/useHydrated';
-import { SESSION_STATUS, SessionListItem } from '@gabby/types/session';
+import { SESSION_STATUS, type SessionListItem } from '@gabby/types/session';
 import { getSessionStatusBadge } from '@/constants/session';
 
 const PAGE_SIZE = 10;

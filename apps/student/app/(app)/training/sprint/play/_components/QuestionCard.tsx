@@ -3,7 +3,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 import { Eye, CircleDot, Headphones, Mic, MicOff } from 'lucide-react';
 
 // 🔌 Zustand ストアのインポート
@@ -33,7 +33,7 @@ const SPRINT_LABELS: Record<SprintQuestionType, { sectionTitle: string; instruct
   '6': { sectionTitle: '質問', instruction: '', phaseLabel: '質問文' },
 };
 
-export const QuestionCard: React.FC<QuestionCardProps> = ({
+export function QuestionCard({
   groupCurrentIndex = 0,
   groupTotalCount = 3,
   onPlayAudio,
@@ -41,7 +41,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   isRecording = false,
   timeLeft = 0,
   maxTime = 10,
-}) => {
+}: QuestionCardProps) {
   // 📦 1. まず必要なストアの値をすべて取得
   const questions = useSprintStore((state) => state.session.questions) ?? NO_QUESTIONS;
   const currentIndex = useSprintStore((state) => state.session.currentIndex);
@@ -557,4 +557,4 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       </div>
     </div>
   );
-};
+}

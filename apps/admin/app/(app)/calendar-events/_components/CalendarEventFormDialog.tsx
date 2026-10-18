@@ -13,18 +13,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { upsertCalendarEvent, CalendarEventFormData } from '@/actions/adminCalendarEventAction';
+import { upsertCalendarEvent, type CalendarEventFormData } from '@/actions/adminCalendarEventAction';
 import Link from 'next/link';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import {
-  CalendarEventItem,
-  CalendarEventType,
-  CalendarEventTargetType,
-  CalendarEventCoachOption,
+  type CalendarEventItem,
+  type CalendarEventType,
+  type CalendarEventTargetType,
+  type CalendarEventCoachOption,
   CALENDAR_EVENT_TYPES,
 } from '@gabby/types/calendarEvent';
-import { ClientOption } from '@gabby/types/client';
+import { type ClientOption } from '@gabby/types/client';
 import { CalendarEventCoachPicker } from './CalendarEventCoachPicker';
 import { todayJstDateStr, utcToJstParts } from '../_lib/jst';
 

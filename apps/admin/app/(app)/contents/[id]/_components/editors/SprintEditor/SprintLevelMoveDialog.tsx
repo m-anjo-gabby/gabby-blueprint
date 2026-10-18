@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { ArrowRightLeft } from 'lucide-react';
-import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
+import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import { formatSprintLevelLabel } from '@gabby/lib';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { moveSprintQuestionsLevel } from '@/actions/adminSprintAction';

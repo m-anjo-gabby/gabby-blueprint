@@ -21,8 +21,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-import { WordAdjustment } from '@gabby/types/word';
-import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { type WordAdjustment } from '@gabby/types/word';
+import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { AZURE_GENERAL_VOICES, AZURE_STYLES } from '@gabby/types/azure';
 import { saveTTSAssetAction } from '@/actions/adminTTSAction';

@@ -2,7 +2,7 @@
 
 import { AvatarCropUploader } from '@gabby/lib/components/common/AvatarCropUploader';
 import { TimezoneSelector } from '@gabby/lib/components/common/TimezoneSelector';
-import { TimezoneMaster } from '@gabby/types/timezone';
+import { type TimezoneMaster } from '@gabby/types/timezone';
 
 interface AccountSummaryCardProps {
   userName: string;

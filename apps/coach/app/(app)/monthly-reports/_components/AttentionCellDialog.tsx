@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { MonthlyReportSession } from '@gabby/types/monthlyReport';
+import { type MonthlyReportSession } from '@gabby/types/monthlyReport';
 import { sessionStatusLabel } from './sessionStatusLabel';
 
 export interface AttentionCellDetail {

@@ -5,10 +5,11 @@ import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import type { TableUpdate } from '@gabby/types/db';
-import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
-import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
+import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
+import { MAX_STAGE, type StageLevels } from '@gabby/types/stageProgression';
 import { clampLevel, computeStage, getForcedLevels, getStageGoals } from '@gabby/lib/sprint/stageProgression';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -115,7 +116,7 @@ export async function updateStudentSprintLevel(
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
-    logger.error('admin:update_student_level_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('admin:update_student_level_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -171,7 +172,7 @@ export async function setStudentSprintStage(userId: string, targetStage: number)
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
-    logger.error('admin:set_student_stage_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('admin:set_student_stage_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -214,7 +215,7 @@ export async function setStudentSprintLevelManaged(
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
-    logger.error('admin:set_student_level_managed_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('admin:set_student_level_managed_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

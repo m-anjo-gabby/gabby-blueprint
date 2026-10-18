@@ -5,12 +5,13 @@ import { getLogContext } from '../../logger/context';
 import { generateVideoSdkSignature } from '../../zoom/signature';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../constants';
 import {
-  CheckLiveSessionJoinableResult,
-  GetLiveSessionRoomAccessResult,
+  type CheckLiveSessionJoinableResult,
+  type GetLiveSessionRoomAccessResult,
   LIVE_SESSION_ROOM_ROLE,
-  RecordCallJoinResult,
+  type RecordCallJoinResult,
 } from '@gabby/types/liveSessionRoom';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -120,7 +121,7 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
       },
     };
   } catch (err) {
-    logger.error('liveSessionRoom:coach_access_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSessionRoom:coach_access_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -205,7 +206,7 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
       },
     };
   } catch (err) {
-    logger.error('liveSessionRoom:student_access_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSessionRoom:student_access_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -252,7 +253,7 @@ export async function checkStudentLiveSessionJoinableCore(sessionId: string): Pr
     }
     return { success: true, joinable: true };
   } catch (err) {
-    logger.error('liveSessionRoom:student_joinable_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSessionRoom:student_joinable_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -292,7 +293,7 @@ export async function recordSessionCallJoinCore(
 
     return { success: true, callLogId: data as string };
   } catch (err) {
-    logger.error('liveSessionRoom:record_call_join_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSessionRoom:record_call_join_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -326,7 +327,7 @@ export async function recordSessionCallLeaveCore(callLogId: string): Promise<{ s
 
     return { success: true };
   } catch (err) {
-    logger.error('liveSessionRoom:record_call_leave_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSessionRoom:record_call_leave_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -394,7 +395,7 @@ export async function recordSessionChatMessageCore(sessionId: string, message: s
 
     return { success: true };
   } catch (err) {
-    logger.error('liveSessionRoom:record_chat_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('liveSessionRoom:record_chat_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

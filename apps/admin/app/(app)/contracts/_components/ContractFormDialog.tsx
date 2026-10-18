@@ -17,7 +17,7 @@ import { createContract, updateContract, getContractPlans } from '@/actions/admi
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { AlertCircle, PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { ContractDetail, ContractPlan } from '@gabby/types/contract';
+import { type ContractDetail, type ContractPlan } from '@gabby/types/contract';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 // --- スキーマ定義 ---

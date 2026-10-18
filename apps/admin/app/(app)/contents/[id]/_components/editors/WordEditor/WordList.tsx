@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, Trash2, AlertCircle } from 'lucide-react';
 import { getWordsByContentId, deleteWord } from '@/actions/adminWordAction';
-import { WordRecord, WORD_STATUS } from '@gabby/types/word';
+import { type WordRecord, WORD_STATUS } from '@gabby/types/word';
 import { cn } from '@/lib/utils';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { WordFormDialog } from './WordFormDialog';

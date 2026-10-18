@@ -14,7 +14,7 @@ import { upsertTimezone } from '@/actions/adminTimezoneAction';
 import { ActiveSwitchField } from '@/components/common/ActiveSwitchField';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { TimezoneMaster } from '@gabby/types/timezone';
+import { type TimezoneMaster } from '@gabby/types/timezone';
 import type { TableInsert } from '@gabby/types/db';
 
 /**

@@ -20,10 +20,10 @@ import {
   ChevronRight,
   ArrowLeft,
 } from 'lucide-react';
-import { TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { type TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
-import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
+import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 import { saveSprintAudio } from '@/actions/adminSprintAction';
 
 interface SprintTTSBulkDialogProps {

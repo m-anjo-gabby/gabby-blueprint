@@ -81,7 +81,7 @@ interface SprintHistoryViewProps {
   targetMonth: string; // 形式: "YYYY-MM"
 }
 
-export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialData, targetMonth }) => {
+export function SprintHistoryView({ initialData, targetMonth }: SprintHistoryViewProps) {
   const isLoading = initialData === null;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -356,4 +356,4 @@ export const SprintHistoryView: React.FC<SprintHistoryViewProps> = ({ initialDat
       </div>
     </>
   );
-};
+}

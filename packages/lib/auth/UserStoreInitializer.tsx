@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { createBrowserClient } from '../supabase/client';
-import { UserAppMetadata, useUserStore } from '../stores/useUserStore';
+import { type UserAppMetadata, useUserStore } from '../stores/useUserStore';
 import { clientLogger } from '../logger/client';
 
 /**

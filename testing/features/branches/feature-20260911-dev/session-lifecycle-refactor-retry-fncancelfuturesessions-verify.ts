@@ -51,7 +51,10 @@ const sfId = await findUserByEmail(`${TAG}-lifecycle-student-sf@gabby-qa-test.ex
 const adminClient = await signInAsRole('qa-admin@gabby-qa-test.example', PASSWORD);
 console.log('対象ユーザー特定完了:', { coachId, seId, sfId });
 
-type ScheduleRow = { schedule_id: string; target_sessions: number };
+interface ScheduleRow {
+  schedule_id: string;
+  target_sessions: number;
+}
 async function getSchedule(coachIdArg: string, studentIdArg: string): Promise<ScheduleRow> {
   const { data, error } = await admin
     .from('com_m_lesson_schedule')

@@ -17,7 +17,7 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import {
   SESSION_STATUS,
-  SessionListItem,
+  type SessionListItem,
   SESSION_NON_ACTIONABLE_STATUSES,
   SESSION_RESULT_STATUSES,
   isSelfInitiatedCancel,
@@ -28,7 +28,7 @@ import type {
   StudentLiveSessionContractSummary,
 } from '@gabby/types/coachStudent';
 import { getStudentSessionsByTicket } from '@/actions/studentAction';
-import { SessionActionDialog, SessionActionTarget } from '../../../calendar/_components/SessionActionDialog';
+import { SessionActionDialog, type SessionActionTarget } from '../../../calendar/_components/SessionActionDialog';
 
 function toSessionListItem(
   session: CoachSessionListItem,

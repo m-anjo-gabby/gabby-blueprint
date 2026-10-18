@@ -16,6 +16,7 @@ import {
   toCVEntryKey,
   validateCVImportEntry,
 } from '@/lib/cvDictionaryImport';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -75,7 +76,7 @@ export async function getCVDictionaryWords(): Promise<CVWordSummary[]> {
       has_audio_count: counts.hasAudio,
     }));
   } catch (err) {
-    logger.error('cvDict:get_words_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err });
+    logger.error('cvDict:get_words_unexpected', getErrorMessage(err, 'Unknown'), { ...ctx, err });
     return [];
   }
 }
@@ -101,7 +102,7 @@ export async function getCVDictionaryByWord(wordEn: string): Promise<CVDictionar
 
     return data as CVDictionaryEntry[];
   } catch (err) {
-    logger.error('cvDict:get_by_word_unexpected', err instanceof Error ? err.message : 'Unknown', {
+    logger.error('cvDict:get_by_word_unexpected', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
       payload: { wordEn },
@@ -157,7 +158,7 @@ export async function upsertCVDictionaryEntry(
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: '登録しました' };
   } catch (err) {
-    logger.error('cvDict:upsert_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload });
+    logger.error('cvDict:upsert_unexpected', getErrorMessage(err, 'Unknown'), { ...ctx, err, payload });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -197,7 +198,7 @@ export async function deleteCVDictionaryEntry(wordEn: string, partOfSpeech: stri
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: '削除しました' };
   } catch (err) {
-    logger.error('cvDict:delete_unexpected', err instanceof Error ? err.message : 'Unknown', {
+    logger.error('cvDict:delete_unexpected', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
       payload: { wordEn, partOfSpeech },
@@ -308,7 +309,7 @@ export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVI
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: '', inserted: insertCount, updated: updateCount, skipped: skipCount };
   } catch (err) {
-    logger.error('cvDict:bulk_upsert_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err });
+    logger.error('cvDict:bulk_upsert_unexpected', getErrorMessage(err, 'Unknown'), { ...ctx, err });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -401,7 +402,7 @@ export async function saveCVDictionaryAudio(
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: '音声を更新しました', path: newFilePath };
   } catch (err) {
-    logger.error('cvDict:audio_save_unexpected', err instanceof Error ? err.message : 'Unknown', {
+    logger.error('cvDict:audio_save_unexpected', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
       payload: { wordEn, partOfSpeech },
@@ -430,7 +431,7 @@ export async function getAllCVDictionaryEntries(): Promise<CVDictionaryEntry[]> 
 
     return data as CVDictionaryEntry[];
   } catch (err) {
-    logger.error('cvDict:get_all_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err });
+    logger.error('cvDict:get_all_unexpected', getErrorMessage(err, 'Unknown'), { ...ctx, err });
     return [];
   }
 }

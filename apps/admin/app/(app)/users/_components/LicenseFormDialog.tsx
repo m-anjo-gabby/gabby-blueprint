@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { RefreshCcw, ClipboardList, Loader2, AlertCircle, Edit2, Ban } from 'lucide-react';
-import { ContractDetail } from '@gabby/types/contract';
+import { type ContractDetail } from '@gabby/types/contract';
 import {
   getActiveContractsByClient,
   getLicenseTimeline,
@@ -29,7 +29,7 @@ import {
   invalidateUserLicense,
   updateUserLicense,
 } from '@/actions/adminContractAction';
-import { UserRecord } from '@gabby/types/user';
+import { type UserRecord } from '@gabby/types/user';
 
 /** ライセンスの履歴の1件（getLicenseTimeline の戻り値） */
 type LicenseTimelineItem = Awaited<ReturnType<typeof getLicenseTimeline>>[number];

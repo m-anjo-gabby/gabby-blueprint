@@ -6,6 +6,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { CLIENT_STATUS } from '@gabby/types/client';
 import { CONTENT_STATUS } from '@gabby/types/content';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -77,7 +78,7 @@ async function getClientsSummary(
       alertCount,
     };
   } catch (error) {
-    logger.error('dashboard:get_clients_summary_failed', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('dashboard:get_clients_summary_failed', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -112,7 +113,7 @@ async function getContractsSummary(
       alertCount: alertIds.size,
     };
   } catch (error) {
-    logger.error('dashboard:get_contracts_summary_failed', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('dashboard:get_contracts_summary_failed', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -144,7 +145,7 @@ async function getUsersSummary(supabase: ReturnType<typeof createAdminClient>): 
       alertCount: pendingCount || 0,
     };
   } catch (error) {
-    logger.error('dashboard:get_users_summary_failed', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('dashboard:get_users_summary_failed', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -174,7 +175,7 @@ async function getContentsSummary(supabase: ReturnType<typeof createAdminClient>
       alertCount: privateCount || 0,
     };
   } catch (error) {
-    logger.error('dashboard:get_contents_summary_failed', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('dashboard:get_contents_summary_failed', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -216,7 +217,7 @@ async function getNoticeSummary(
       alertCount: (draftCount || 0) + (expiredButPublishedCount || 0),
     };
   } catch (error) {
-    logger.error('dashboard:get_notice_summary_failed', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('dashboard:get_notice_summary_failed', getErrorMessage(error), {
       ...ctx,
       err: error,
     });

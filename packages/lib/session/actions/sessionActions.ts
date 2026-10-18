@@ -5,44 +5,45 @@ import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { groupRescheduleProposals } from '../rescheduleProposalUtils';
 import { readSprintHistory } from '../../sprint/answeredHistory';
-import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
 import {
-  AcceptRescheduleProposalResult,
-  ApproveSessionBookingRequestResult,
-  CancelSessionResult,
-  CheckSessionConflictResult,
-  CreateSessionBookingRequestResult,
-  DeclineRescheduleProposalResult,
-  GetMyRescheduleProposalsResult,
-  GetSessionResultSummaryResult,
-  IncomingRescheduleProposalGroup,
-  MyRescheduleProposalGroup,
+  type AcceptRescheduleProposalResult,
+  type ApproveSessionBookingRequestResult,
+  type CancelSessionResult,
+  type CheckSessionConflictResult,
+  type CreateSessionBookingRequestResult,
+  type DeclineRescheduleProposalResult,
+  type GetMyRescheduleProposalsResult,
+  type GetSessionResultSummaryResult,
+  type IncomingRescheduleProposalGroup,
+  type MyRescheduleProposalGroup,
   PROPOSED_BY_ROLE,
-  ProposedByRole,
-  ProposedSlotInput,
+  type ProposedByRole,
+  type ProposedSlotInput,
   RESCHEDULE_PROPOSAL_STATUS,
-  RespondSessionBookingRequestResult,
-  RecordSessionOutcomeResult,
-  GetSessionOutcomeEvidenceResult,
-  SessionOutcome,
-  ConductedVia,
+  type RespondSessionBookingRequestResult,
+  type RecordSessionOutcomeResult,
+  type GetSessionOutcomeEvidenceResult,
+  type SessionOutcome,
+  type ConductedVia,
   SESSION_BOOKING_REQUEST_STATUS,
   SESSION_STATUS,
-  SessionActionErrorCode,
-  SessionBookingRequest,
-  MyBookingRequestItem,
-  SessionCallLogEntry,
-  SessionChatMessageEntry,
-  SessionDialogueLogEntry,
-  SessionListItem,
-  SessionRescheduleProposal,
-  SessionRescheduleProposalGroup,
-  SessionSprintSummaryEntry,
-  SessionStatus,
-  CompletionResult,
-  CancelCategory,
+  type SessionActionErrorCode,
+  type SessionBookingRequest,
+  type MyBookingRequestItem,
+  type SessionCallLogEntry,
+  type SessionChatMessageEntry,
+  type SessionDialogueLogEntry,
+  type SessionListItem,
+  type SessionRescheduleProposal,
+  type SessionRescheduleProposalGroup,
+  type SessionSprintSummaryEntry,
+  type SessionStatus,
+  type CompletionResult,
+  type CancelCategory,
 } from '@gabby/types/session';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -84,7 +85,7 @@ function classifyRpcError(message: string | undefined): SessionActionErrorCode {
   return 'unexpected_error';
 }
 
-type SessionRow = {
+interface SessionRow {
   session_id: string;
   schedule_id: string;
   student_id: string;
@@ -97,7 +98,7 @@ type SessionRow = {
   rescheduled_from: string | null;
   cancel_reason: string | null;
   status_note: string | null;
-};
+}
 
 /**
  * com_t_sessionの生行から、相手方(counterpart)の名前を解決してSessionListItem[]を組み立てる。
@@ -185,7 +186,7 @@ export async function getMySessionsCore(
 
     return { success: true, sessions: await toSessionListItems(supabase, user.id, sessions ?? []) };
   } catch (err) {
-    logger.error('session:get_my_sessions_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:get_my_sessions_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -223,7 +224,7 @@ export async function getMyUpcomingSessionsCore(
 
     return { success: true, sessions: await toSessionListItems(supabase, user.id, sessions ?? []) };
   } catch (err) {
-    logger.error('session:get_my_upcoming_sessions_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:get_my_upcoming_sessions_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -266,7 +267,7 @@ export async function getMyPastSessionsCore(
 
     return { success: true, sessions: await toSessionListItems(supabase, user.id, sessions ?? []) };
   } catch (err) {
-    logger.error('session:get_my_past_sessions_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:get_my_past_sessions_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -316,7 +317,7 @@ export async function cancelSessionCore(
     logger.info('session:cancel_success', 'Session cancelled', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('session:cancel_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:cancel_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { sessionId },
@@ -364,7 +365,7 @@ export async function getMyRescheduleProposalsCore(
 
     return { success: true, proposals: (data ?? []) as SessionRescheduleProposal[] };
   } catch (err) {
-    logger.error('session:get_reschedule_proposals_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:get_reschedule_proposals_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -417,11 +418,7 @@ export async function getMyRescheduleProposalGroupsCore(
       }),
     };
   } catch (err) {
-    logger.error(
-      'session:get_my_reschedule_proposal_groups_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('session:get_my_reschedule_proposal_groups_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -486,11 +483,10 @@ export async function getPendingIncomingRescheduleProposalGroupsForCoachCore(): 
     const groups = groupRescheduleProposals((data ?? []) as SessionRescheduleProposal[]);
     return { success: true, groups: await enrichRescheduleProposalGroups(supabase, groups) };
   } catch (err) {
-    logger.error(
-      'session:get_pending_incoming_reschedule_proposal_groups_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('session:get_pending_incoming_reschedule_proposal_groups_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -551,11 +547,7 @@ export async function getRescheduleProposalHistoryPageForCoachCore(
 
     return { success: true, items: await enrichRescheduleProposalGroups(supabase, page), nextCursor };
   } catch (err) {
-    logger.error(
-      'session:get_reschedule_proposal_history_page_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('session:get_reschedule_proposal_history_page_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -591,11 +583,11 @@ export async function acceptRescheduleProposalCore(proposalId: string): Promise<
     });
     return { success: true, newSessionId: data as string };
   } catch (err) {
-    logger.error(
-      'session:accept_reschedule_proposal_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err, payload: { proposalId } },
-    );
+    logger.error('session:accept_reschedule_proposal_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { proposalId },
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -656,11 +648,11 @@ export async function declineRescheduleProposalsCore(sessionId: string): Promise
     });
     return { success: true };
   } catch (err) {
-    logger.error(
-      'session:decline_reschedule_proposals_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err, payload: { sessionId } },
-    );
+    logger.error('session:decline_reschedule_proposals_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { sessionId },
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -705,7 +697,7 @@ export async function checkSessionConflictCore(
     const row = data[0] as { coach_conflict: boolean; student_conflict: boolean };
     return { success: true, coachConflict: row.coach_conflict, studentConflict: row.student_conflict };
   } catch (err) {
-    logger.error('session:check_conflict_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:check_conflict_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -756,7 +748,7 @@ export async function createSessionBookingRequestCore(
     });
     return { success: true, requestId: data as string };
   } catch (err) {
-    logger.error('session:create_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:create_booking_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { scheduleId },
@@ -796,7 +788,7 @@ export async function approveSessionBookingRequestCore(requestId: string): Promi
     });
     return { success: true, newSessionId: data as string };
   } catch (err) {
-    logger.error('session:approve_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:approve_booking_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { requestId },
@@ -842,7 +834,7 @@ export async function rejectSessionBookingRequestCore(
     });
     return { success: true };
   } catch (err) {
-    logger.error('session:reject_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:reject_booking_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { requestId },
@@ -883,7 +875,7 @@ export async function withdrawSessionBookingRequestCore(
     });
     return { success: true };
   } catch (err) {
-    logger.error('session:withdraw_booking_request_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:withdraw_booking_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { requestId },
@@ -937,7 +929,7 @@ export async function getMyBookingRequestsCore(): Promise<
       requests: requests.map((r) => ({ ...r, coach_name: nameById.get(r.coach_id) ?? '(Unknown)' })),
     };
   } catch (err) {
-    logger.error('session:get_my_booking_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:get_my_booking_requests_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -996,11 +988,7 @@ export async function getPendingIncomingBookingRequestsForCoachCore(): Promise<
       requests: await attachBookingRequestStudentNames(supabase, (data ?? []) as SessionBookingRequest[]),
     };
   } catch (err) {
-    logger.error(
-      'session:get_pending_incoming_booking_requests_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('session:get_pending_incoming_booking_requests_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -1049,11 +1037,7 @@ export async function getBookingRequestHistoryPageForCoachCore(
 
     return { success: true, items: await attachBookingRequestStudentNames(supabase, page), nextCursor };
   } catch (err) {
-    logger.error(
-      'session:get_booking_request_history_page_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('session:get_booking_request_history_page_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -1100,7 +1084,7 @@ export async function recordSessionOutcomeCore(
     });
     return { success: true };
   } catch (err) {
-    logger.error('session:record_outcome_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:record_outcome_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { sessionId, outcome },
@@ -1149,7 +1133,7 @@ export async function getSessionOutcomeEvidenceCore(sessionId: string): Promise<
       },
     };
   } catch (err) {
-    logger.error('session:get_outcome_evidence_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:get_outcome_evidence_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { sessionId },
@@ -1343,7 +1327,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
       },
     };
   } catch (err) {
-    logger.error('session:get_result_summary_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('session:get_result_summary_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { sessionId },

@@ -1,4 +1,4 @@
-import { DayOfWeek } from '@gabby/types/coachAvailability';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
 
 /** 専属コーチマッチング機能の曜日ラベル（0:日 ... 6:土、com_m_coach_availability.day_of_weekに準拠） */
 export const DAY_OF_WEEK_LABEL_JA: Record<DayOfWeek, string> = {

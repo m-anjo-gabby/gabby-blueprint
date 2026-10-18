@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Plus, Trash2, AlertCircle, CheckCircle2, Music4, Headphones, Settings2, Zap } from 'lucide-react';
-import { getCVDictionaryByWord, deleteCVDictionaryEntry, CVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
+import {
+  getCVDictionaryByWord,
+  deleteCVDictionaryEntry,
+  type CVDictionaryEntry,
+} from '@/actions/adminCVDictionaryAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { CVWordFormDialog } from './CVWordFormDialog';
 import { CVTTSDialog } from './CVTTSDialog';

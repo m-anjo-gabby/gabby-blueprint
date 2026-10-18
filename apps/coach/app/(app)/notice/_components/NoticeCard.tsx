@@ -7,7 +7,7 @@ import { ChevronDown, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
-import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
+import { type NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, type NoticeType } from '@gabby/types/notice';
 import { NoticeDetail } from '@gabby/lib/components/notice/NoticeDetail';
 import { NOTICE_LABELS_EN } from '@gabby/lib/notice/labels';
 import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';

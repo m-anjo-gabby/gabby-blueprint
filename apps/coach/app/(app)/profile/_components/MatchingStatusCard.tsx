@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, CircleAlert, PauseCircle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { CoachMatchingRequiredItem } from '@gabby/types/coachProfile';
+import { type CoachMatchingRequiredItem } from '@gabby/types/coachProfile';
 import { isCoachMatchable } from '@gabby/lib/coachProfile/matchingReadiness';
 import { updateMyAcceptingStudents } from '@/actions/coachProfileAction';
 import { SAVE_NETWORK_ERROR_MESSAGE } from '@/constants/network';

@@ -18,7 +18,7 @@ import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
 import { formatZonedDate } from '@gabby/lib/date/date';
-import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
+import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, type NoticeType } from '@gabby/types/notice';
 import { getNotificationDisplay } from '@gabby/lib/notification/display';
 
 // お知らせ(告知)と通知(個人イベント)を1つの通知センターに統合したベル。

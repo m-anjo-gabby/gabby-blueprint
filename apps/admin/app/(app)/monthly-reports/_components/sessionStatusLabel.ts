@@ -1,5 +1,5 @@
 import type { useTranslations } from 'next-intl';
-import { MonthlyReportSession } from '@gabby/types/monthlyReport';
+import { type MonthlyReportSession } from '@gabby/types/monthlyReport';
 import { SESSION_STATUS, COMPLETION_RESULT, CANCEL_CATEGORY } from '@gabby/types/session';
 
 type StatusT = ReturnType<typeof useTranslations<'monthlyReports.status'>>;

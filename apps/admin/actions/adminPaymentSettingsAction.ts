@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { SessionPayRate } from '@gabby/types/monthlyReport';
+import { type SessionPayRate } from '@gabby/types/monthlyReport';
 
 const logger = createLogger('admin');
 

@@ -13,20 +13,21 @@ import {
 import { toggleFavoriteRow } from '@/lib/favoriteToggle';
 import { FAVORITE_LIMIT, type FavoriteToggleResult } from '@/constants/favorites';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('student');
 
-type FavoriteSprintQuestionRow = {
+interface FavoriteSprintQuestionRow {
   favorite_id: string;
   insert_date: string;
   question: FavoriteSprintQuestionFields;
-};
+}
 
-type SprintContentRow = {
+interface SprintContentRow {
   content_id: string;
   content_name: string;
   metadata: ContentMetadata | null;
-};
+}
 
 /**
  * お気に入りのスプリント問題一覧を取得（新しく登録した順）。
@@ -89,7 +90,7 @@ export async function getFavoriteSprintQuestions(): Promise<FavoriteSprintQuesti
       ];
     });
   } catch (err) {
-    logger.error('sprint:get_favorite_questions_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('sprint:get_favorite_questions_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -120,7 +121,7 @@ export async function getFavoriteSprintQuestionIds(questionIds: string[]): Promi
     }
     return (data ?? []).map((r) => r.question_id as string);
   } catch (err) {
-    logger.error('sprint:get_favorite_question_ids_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('sprint:get_favorite_question_ids_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

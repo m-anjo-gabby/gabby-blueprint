@@ -6,7 +6,7 @@ import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { COACH_SPECIALTY_FIELD_MAX, CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { COACH_SPECIALTY_FIELD_MAX, type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
 import { setCoachSpecialties, type CoachSpecialtySettings } from '@/actions/adminCoachSpecialtyAction';
 
 interface Props {

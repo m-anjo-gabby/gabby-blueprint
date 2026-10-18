@@ -8,8 +8,8 @@ import {
 import { getPendingIncomingRequestsForCoachCore } from '@gabby/lib/coachInbox/actions/coachInboxActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { IncomingMatchingRequestItem, MatchingRequestErrorCode } from '@gabby/types/matching';
-import { CoachIncomingRequestItem } from '@gabby/types/coachInbox';
+import { type IncomingMatchingRequestItem, type MatchingRequestErrorCode } from '@gabby/types/matching';
+import { type CoachIncomingRequestItem } from '@gabby/types/coachInbox';
 
 const logger = createLogger('coach');
 

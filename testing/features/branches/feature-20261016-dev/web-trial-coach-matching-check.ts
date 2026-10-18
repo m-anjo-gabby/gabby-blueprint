@@ -65,11 +65,11 @@ async function planCodeOf(service: SupabaseClient, ticketId: string): Promise<st
     .single();
   if (error) throw error;
   const first = <T>(v: T | T[] | null | undefined): T | undefined => (Array.isArray(v) ? v[0] : v) ?? undefined;
-  type Row = {
+  interface Row {
     com_m_contract:
       | { com_m_contract_plan: { plan_code: string } | { plan_code: string }[] }
       | { com_m_contract_plan: { plan_code: string } }[];
-  };
+  }
   const license = first(data.com_t_user_license as unknown as Row | Row[]);
   return first(first(license?.com_m_contract)?.com_m_contract_plan)?.plan_code;
 }

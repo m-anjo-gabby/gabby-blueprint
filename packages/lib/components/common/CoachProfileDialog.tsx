@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { CoachProfileDialogData, CoachProfileDialogLabels } from '@gabby/types/coachProfile';
+import { type CoachProfileDialogData, type CoachProfileDialogLabels } from '@gabby/types/coachProfile';
 import { CoachProfileCardHeader, CoachProfileCardBody } from './CoachProfileCard';
 
 export interface CoachProfileDialogProps {

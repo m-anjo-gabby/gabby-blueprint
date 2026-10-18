@@ -1,14 +1,14 @@
 import { create } from 'zustand';
 import {
-  SprintQuestion,
-  SprintQuestionType,
-  SprintAnswerType,
+  type SprintQuestion,
+  type SprintQuestionType,
+  type SprintAnswerType,
   QUESTION_TYPES,
   type SprintAvailableLevels,
   type SprintType,
 } from '@gabby/types/sprint';
-import { MetadataSprint } from '@gabby/types/content';
-import { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
+import { type MetadataSprint } from '@gabby/types/content';
+import { type AnalysisResult, type FeedbackConfig } from '@gabby/types/speechAssessment';
 import { resolveSprintHasLevel, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel } from '@gabby/lib';
 
 export type SprintUiView = 'loading' | 'selecting' | 'gesture_needed' | 'error' | 'drill' | 'sprint' | 'no_content';

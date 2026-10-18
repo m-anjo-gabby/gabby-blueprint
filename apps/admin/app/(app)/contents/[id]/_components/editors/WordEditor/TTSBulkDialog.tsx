@@ -30,12 +30,12 @@ import {
   ChevronRight,
   ArrowLeft,
 } from 'lucide-react';
-import { TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { type TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
-import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
+import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
 import { buildSSML } from '@gabby/lib/azure/ssml';
-import { PhraseRecord, TTSAdjustmentData } from '@gabby/types/word';
+import { type PhraseRecord, type TTSAdjustmentData } from '@gabby/types/word';
 import { getPhrasesByContentId } from '@/actions/adminWordAction';
 import { useWordStore } from '@/stores/useWordStore';
 import { clientLogger } from '@gabby/lib/logger/client';

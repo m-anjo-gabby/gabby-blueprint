@@ -18,17 +18,17 @@ import { getCoachSessionTasksCore } from '@gabby/lib/session/actions/sessionTask
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
-  CoachSessionTasksSummary,
-  ConductedVia,
-  IncomingRescheduleProposalGroup,
-  ProposedSlotInput,
-  SessionActionErrorCode,
-  SessionListItem,
-  SessionOutcome,
-  SessionOutcomeEvidence,
-  SessionResultSummary,
+  type CoachSessionTasksSummary,
+  type ConductedVia,
+  type IncomingRescheduleProposalGroup,
+  type ProposedSlotInput,
+  type SessionActionErrorCode,
+  type SessionListItem,
+  type SessionOutcome,
+  type SessionOutcomeEvidence,
+  type SessionResultSummary,
 } from '@gabby/types/session';
-import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
 
 const logger = createLogger('coach');
 

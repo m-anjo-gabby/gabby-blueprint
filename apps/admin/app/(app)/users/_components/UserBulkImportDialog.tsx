@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import { useState, useRef, type DragEvent, type ChangeEvent } from 'react';
 import Papa from 'papaparse';
 import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -9,15 +9,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { Upload, AlertCircle, Loader2, CheckCircle2, UserPlus, RefreshCcw, Download } from 'lucide-react';
-import { RawCsvRow, BulkUser, BulkImportResponse, USER_TYPES } from '@gabby/types/user';
+import { type RawCsvRow, type BulkUser, type BulkImportResponse, USER_TYPES } from '@gabby/types/user';
 import { bulkCreateUsers } from '@/actions/adminUserAction';
 import { getActiveContractsByClient } from '@/actions/adminContractAction';
 import { getClientsFilter } from '@/actions/adminClientAction'; // 追加
-import { ContractDetail } from '@gabby/types/contract';
+import { type ContractDetail } from '@gabby/types/contract';
 import { Badge } from '@/components/ui/badge';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { cn } from '@/lib/utils';
-import { ClientOption } from '@gabby/types/client';
+import { type ClientOption } from '@gabby/types/client';
 
 const MAX_BULK_COUNT = 30;
 

@@ -21,6 +21,7 @@ import {
 import { groupSessionReminderHandler } from './handlers/groupSessionReminder';
 import { notificationHandler } from './handlers/notification';
 import { liveSessionReminderHandler } from './handlers/liveSessionReminder';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('mail');
 
@@ -190,7 +191,7 @@ async function processRow(
     });
     return 'sent';
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = getErrorMessage(err);
     const action = classifySendError(err instanceof MailSendError ? err.code : null);
     logger.error('mail:dispatch_row_failed', message, {
       payload: { mailId: row.mail_id, mailType: row.mail_type, attempts: row.attempts, action: action.kind },

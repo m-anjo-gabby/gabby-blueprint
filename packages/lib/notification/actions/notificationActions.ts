@@ -3,8 +3,9 @@
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { NotificationItem } from '@gabby/types/notification';
+import { type NotificationItem } from '@gabby/types/notification';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -36,7 +37,7 @@ export async function getNotificationsAction(): Promise<{
 
     return { success: true, data: (data || []) as NotificationItem[] };
   } catch (err) {
-    logger.error('notification:get_all_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('notification:get_all_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -66,7 +67,7 @@ export async function getUnreadNotificationCountAction(): Promise<number> {
 
     return count ?? 0;
   } catch (err) {
-    logger.error('notification:unread_count_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('notification:unread_count_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -100,7 +101,7 @@ export async function markNotificationAsReadAction(notificationId: string): Prom
 
     return { success: true };
   } catch (err) {
-    logger.error('notification:mark_read_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('notification:mark_read_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -134,7 +135,7 @@ export async function markAllNotificationsAsReadAction(): Promise<{
 
     return { success: true };
   } catch (err) {
-    logger.error('notification:mark_all_read_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('notification:mark_all_read_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

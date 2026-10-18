@@ -1,5 +1,5 @@
 // packages/lib/assessment/wordMatchStyle.ts
-import { WordMatch } from '@gabby/types/speechAssessment';
+import { type WordMatch } from '@gabby/types/speechAssessment';
 
 export interface WordMatchStyle {
   text: string;

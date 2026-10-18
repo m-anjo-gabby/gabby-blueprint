@@ -5,6 +5,7 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { type ColorVowelDicResult, getPartOfSpeechSeqNo } from '@gabby/types/colorVowel';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('student');
 
@@ -167,7 +168,7 @@ export async function lookupColorVowelDictionary(rawWord: string): Promise<Color
 
     return results;
   } catch (err) {
-    logger.error('cvDict:lookup_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('cvDict:lookup_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { rawWord },

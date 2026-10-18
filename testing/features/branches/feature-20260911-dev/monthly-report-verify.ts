@@ -85,14 +85,14 @@ console.log('対象ユーザー特定完了:', {
   reportMonthCurrent,
 });
 
-type SessionRow = {
+interface SessionRow {
   session_id: string;
   student_id: string;
   status: number;
   counts_toward_total: boolean;
   is_unresolved: boolean;
   is_attention: boolean;
-};
+}
 
 // ---------------------------------------------------------------------------
 // 1. 前月分: カウント規則・注意色クラスタ

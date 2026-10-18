@@ -1,4 +1,4 @@
-import { CoachSpecialtyMaster, CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { type CoachSpecialtyMaster, type CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
 
 /**
  * コーチに設定された専門コードを、マスタの表示順の表示用タグにする。

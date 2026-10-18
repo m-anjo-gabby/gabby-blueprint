@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { ChevronLeft, BookOpen, Layers, CheckCircle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ContentRecord, CONTENT_TYPES } from '@gabby/types/content';
+import { type ContentRecord, CONTENT_TYPES } from '@gabby/types/content';
 import { WordBulkImportDialog } from './editors/WordEditor/WordBulkImportDialog';
 import { TTSBulkDialog } from './editors/WordEditor/TTSBulkDialog';
 import { CONTENTS_LIST_PATH, getContentsListHref } from '../../_lib/listQuery';

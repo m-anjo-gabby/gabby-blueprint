@@ -16,19 +16,19 @@ import { getCoachSpecialtyListCore } from '@gabby/lib/coachSpecialty/actions/coa
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
-  BookableTicketSlot,
-  CoachBrowseItem,
-  CreateMatchingRequestInput,
-  LiveSessionContractSummary,
-  LiveSessionOverview,
-  LiveSessionTicketSummary,
-  MatchingRequestErrorCode,
-  MatchingSlotOption,
-  SlotStatusItem,
+  type BookableTicketSlot,
+  type CoachBrowseItem,
+  type CreateMatchingRequestInput,
+  type LiveSessionContractSummary,
+  type LiveSessionOverview,
+  type LiveSessionTicketSummary,
+  type MatchingRequestErrorCode,
+  type MatchingSlotOption,
+  type SlotStatusItem,
 } from '@gabby/types/matching';
-import { CountryMaster } from '@gabby/types/country';
-import { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
-import { DayOfWeek } from '@gabby/types/coachAvailability';
+import { type CountryMaster } from '@gabby/types/country';
+import { type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
 
 const logger = createLogger('student');
 

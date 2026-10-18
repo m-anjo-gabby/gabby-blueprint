@@ -30,13 +30,13 @@ import {
   NOTICE_CTA_LABEL_MAX,
   NOTICE_DISPLAY_MODES,
   NOTICE_TYPES,
-  NoticeAttachment,
-  NoticeType,
-  NoticeTargetType,
+  type NoticeAttachment,
+  type NoticeType,
+  type NoticeTargetType,
   type NoticeDisplayMode,
 } from '@gabby/types/notice';
 import { getNoticeImageUrl, isValidNoticeCtaUrl } from '@gabby/lib/notice/links';
-import { ClientOption } from '@gabby/types/client';
+import { type ClientOption } from '@gabby/types/client';
 import {
   createNotice,
   updateNotice,
@@ -44,7 +44,7 @@ import {
   uploadNoticeImage,
   deleteNoticeFile,
   utcToJstInputStr,
-  NoticeFormData,
+  type NoticeFormData,
 } from '@/actions/adminNoticeAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
 

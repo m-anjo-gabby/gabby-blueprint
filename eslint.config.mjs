@@ -30,6 +30,33 @@ const eslintConfig = defineConfig([
           ignoreRestSiblings: true,
         },
       ],
+      // 型の書き方をそろえる。docs/CODING.md「型」
+      // オブジェクトの形は interface、ユニオン型・別名は type
+      '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
+      // 型だけの import は type を付ける（実行時の依存と区別する）
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { fixStyle: 'inline-type-imports', disallowTypeAnnotations: false },
+      ],
+      // 部品は function で宣言し、props の型は引数に付ける
+      '@typescript-eslint/no-restricted-types': [
+        'error',
+        {
+          types: {
+            'React.FC': '部品は function で宣言し、props の型は引数に付けてください（docs/CODING.md）',
+            FC: '部品は function で宣言し、props の型は引数に付けてください（docs/CODING.md）',
+          },
+        },
+      ],
+      // catch の値からメッセージを取り出すときは getErrorMessage を使う。docs/LOGGING.md
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "ConditionalExpression[test.operator='instanceof'][test.right.name='Error'][consequent.property.name='message']",
+          message: 'getErrorMessage(err)（@gabby/lib/logger/errorMessage）を使ってください（docs/LOGGING.md）',
+        },
+      ],
     },
   },
 

@@ -15,7 +15,7 @@ import { upsertContractPlan } from '@/actions/adminContractAction';
 import { ActiveSwitchField } from '@/components/common/ActiveSwitchField';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { ContractPlan } from '@gabby/types/contract';
+import { type ContractPlan } from '@gabby/types/contract';
 
 // コーチ有無はcontract_typeの実値(1/2)をそのまま文字列で扱う（Select用）
 const HAS_COACH_VALUE = { NO: '1', YES: '2' } as const;

@@ -63,7 +63,7 @@ interface SprintSelectProps {
   onStart: (config: SprintConfig & { answerType: SprintAnswerType; isAssessmentMode: boolean }) => void;
 }
 
-export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
+export function SprintSelect({ onStart }: SprintSelectProps) {
   const router = useRouter();
   const { showConfirm } = useConfirm();
 
@@ -1001,4 +1001,4 @@ export const SprintSelect: React.FC<SprintSelectProps> = ({ onStart }) => {
       <ConfirmContainer />
     </ImmersivePanel>
   );
-};
+}

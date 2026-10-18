@@ -25,7 +25,7 @@ interface SprintDrillPlayerControlsProps {
 /**
  * スプリントドリル用のメイン操作パネル（ポップオーバー・ダイレクト選択版）
  */
-export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps> = ({
+export function SprintDrillPlayerControls({
   onNext,
   onPrev,
   onPlayAudio,
@@ -35,7 +35,7 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
   playbackRate,
   onChangePlaybackRate,
   isStarted = true,
-}) => {
+}: SprintDrillPlayerControlsProps) {
   // 🔌 Zustand ストアから状態を直接マッピング
   const currentIndex = useSprintStore((state) => state.session.currentIndex);
   const totalQuestions = useSprintStore((state) => state.session.questions.length);
@@ -186,4 +186,4 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
       </div>
     </div>
   );
-};
+}

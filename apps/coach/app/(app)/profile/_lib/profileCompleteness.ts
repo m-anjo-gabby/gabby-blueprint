@@ -1,4 +1,4 @@
-import { COACH_PROFILE_FORM_REQUIRED_ITEMS, CoachProfileFormValues } from '@gabby/types/coachProfile';
+import { COACH_PROFILE_FORM_REQUIRED_ITEMS, type CoachProfileFormValues } from '@gabby/types/coachProfile';
 import { getCoachMatchingMissingItems } from '@gabby/lib/coachProfile/matchingReadiness';
 
 export interface CoachProfileFormProgress {

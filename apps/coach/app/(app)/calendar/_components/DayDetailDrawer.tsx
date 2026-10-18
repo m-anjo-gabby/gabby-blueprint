@@ -23,16 +23,16 @@ import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useEventAnnouncements } from '@gabby/lib/calendarEvent/useEventAnnouncements';
 import { SESSION_STATUS } from '@gabby/types/session';
 import { getSessionStatusBadge } from '@/constants/session';
-import { CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
+import { type CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CALENDAR_EVENT_TYPE_LABEL_EN } from '@/constants/calendarEvent';
-import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
+import { type CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import {
   joinCalendarEvent,
   cancelCalendarEventParticipation,
   getCalendarEventMessages,
   getCalendarEventMessageAttachmentUrl,
 } from '@/actions/calendarEventAction';
-import { SessionActionTarget } from './SessionActionDialog';
+import { type SessionActionTarget } from './SessionActionDialog';
 
 interface DayDetailDrawerProps {
   date: string | null; // YYYY-MM-DD

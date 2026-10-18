@@ -5,6 +5,7 @@ import { getAuthUser } from '../supabase/authUser';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
 import { ACTIVE_MAIL_CATEGORIES, isMailCategory, type MailCategory } from './dispatch/registry';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -35,7 +36,7 @@ export async function getMyMailSettingsCore(): Promise<MailSettings | null> {
     }
     return settings;
   } catch (err) {
-    logger.error('mail:get_settings_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('mail:get_settings_unexpected', getErrorMessage(err), { ...ctx, err });
     return null;
   }
 }
@@ -76,7 +77,7 @@ export async function updateMyMailSettingCore(
     });
     return { success: true };
   } catch (err) {
-    logger.error('mail:update_setting_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('mail:update_setting_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

@@ -83,7 +83,10 @@ const COPY = {
   },
 } as const;
 
-type Row = { label: string; value: string };
+interface Row {
+  label: string;
+  value: string;
+}
 
 /** 通知の種別と集めた情報から、件名・本文に足す内容を作る（対象外の種別・情報が無い場合は何も足さない） */
 export function buildNotificationDetails({

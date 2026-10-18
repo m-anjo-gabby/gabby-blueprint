@@ -15,6 +15,7 @@ import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/a
 import { assertReleaseApplied, assertRpcRemoved } from '../../../helpers/preflight.ts';
 import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 import { currentTermIndex, monthRange, termOf } from '../../../helpers/fixture-terms.ts';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);
@@ -167,11 +168,7 @@ try {
   await assertRpcRemoved(service, [{ name: 'get_monitor_user_list', dummyArgs: { _include_monitor: false } }]);
   record('旧シグネチャ get_monitor_user_list(BOOLEAN) が削除されている', true);
 } catch (e) {
-  record(
-    '旧シグネチャ get_monitor_user_list(BOOLEAN) が削除されている',
-    false,
-    e instanceof Error ? e.message : String(e),
-  );
+  record('旧シグネチャ get_monitor_user_list(BOOLEAN) が削除されている', false, getErrorMessage(e, String(e)));
 }
 const { error: privateErr } = await monitor
   .schema('private')

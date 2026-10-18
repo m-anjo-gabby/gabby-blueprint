@@ -14,7 +14,7 @@ import {
   Globe,
   Bot,
   Library,
-  LucideIcon,
+  type LucideIcon,
   CalendarDays,
   CalendarRange,
   Video,

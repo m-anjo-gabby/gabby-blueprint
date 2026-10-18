@@ -5,7 +5,7 @@ import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { Building2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { UserRecord, USER_TYPES } from '@gabby/types/user';
+import { type UserRecord, USER_TYPES } from '@gabby/types/user';
 import { LicenseFormDialog } from './LicenseFormDialog';
 import { ImpersonateButton } from './ImpersonateButton';
 import { LicenseSummary } from './LicenseSummary';

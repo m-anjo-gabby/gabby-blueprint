@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, Trash2, AlertCircle, Volume2 } from 'lucide-react';
-import { getCVDictionaryWords, CVWordSummary } from '@/actions/adminCVDictionaryAction';
+import { getCVDictionaryWords, type CVWordSummary } from '@/actions/adminCVDictionaryAction';
 import { cn } from '@/lib/utils';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { CVWordFormDialog } from './CVWordFormDialog';

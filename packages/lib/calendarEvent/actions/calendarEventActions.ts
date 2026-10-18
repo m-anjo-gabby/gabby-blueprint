@@ -4,14 +4,15 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import {
-  CalendarEventCoachOption,
-  CalendarEventItem,
-  CalendarEventMessageItem,
+  type CalendarEventCoachOption,
+  type CalendarEventItem,
+  type CalendarEventMessageItem,
   getCalendarEventPhase,
   sortCalendarEventMessages,
 } from '@gabby/types/calendarEvent';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { createAdminClient } from '../../supabase/admin';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -82,7 +83,7 @@ export async function getPublishedCalendarEventsCore(
 
     return { success: true, events };
   } catch (err) {
-    logger.error('calendarEvent:get_published_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('calendarEvent:get_published_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -155,7 +156,7 @@ export async function joinCalendarEventCore(
     });
     return { success: true };
   } catch (err) {
-    logger.error('calendarEvent:join_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('calendarEvent:join_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -226,7 +227,7 @@ export async function joinCalendarEventSeriesCore(
     });
     return { success: true, joinedIds: targetIds };
   } catch (err) {
-    logger.error('calendarEvent:join_series_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('calendarEvent:join_series_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -270,11 +271,7 @@ export async function cancelCalendarEventParticipationCore(
     });
     return { success: true };
   } catch (err) {
-    logger.error(
-      'calendarEvent:cancel_participation_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('calendarEvent:cancel_participation_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -314,7 +311,7 @@ export async function getCalendarEventMessagesCore(
 
     return { success: true, messages: toMessageItems(data) };
   } catch (err) {
-    logger.error('calendarEvent:get_messages_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('calendarEvent:get_messages_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

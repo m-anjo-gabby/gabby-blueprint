@@ -26,7 +26,7 @@ interface WordControlsProps {
  * 上下2段の「スプリットボタン構造」により、高い機能性と誤操作防止を両立
  * 再生速度変更は、ポップオーバーメニューから選択可能
  */
-export const WordControls: React.FC<WordControlsProps> = ({
+export function WordControls({
   isListening,
   isPlaying,
   timeLeft,
@@ -38,7 +38,7 @@ export const WordControls: React.FC<WordControlsProps> = ({
   onToggleAutoPlay,
   onSpeak,
   onVoiceCheck,
-}) => {
+}: WordControlsProps) {
   const { isAutoPlaying, words, wordIdx, phraseIdx } = useWordDrillStore();
 
   // 📝 再生速度ポップオーバーの開閉ローカルステート
@@ -257,4 +257,4 @@ export const WordControls: React.FC<WordControlsProps> = ({
       </div>
     </div>
   );
-};
+}

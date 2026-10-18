@@ -25,17 +25,17 @@ import {
 } from '@gabby/lib/coachProfile/actions/coachMatchingStatusActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { ProfileIconErrorCode, MyProfile, UpdateTimezoneErrorCode } from '@gabby/types/profile';
-import { TimezoneMaster } from '@gabby/types/timezone';
-import { CountryMaster } from '@gabby/types/country';
-import { CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { type ProfileIconErrorCode, type MyProfile, type UpdateTimezoneErrorCode } from '@gabby/types/profile';
+import { type TimezoneMaster } from '@gabby/types/timezone';
+import { type CountryMaster } from '@gabby/types/country';
+import { type CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
 import {
-  CoachProfileErrorCode,
-  CoachProfileFormValues,
-  CoachProfileRecord,
-  CoachIntroVideoErrorCode,
-  CoachMatchingStatus,
-  CoachZoomSettingsFormValues,
+  type CoachProfileErrorCode,
+  type CoachProfileFormValues,
+  type CoachProfileRecord,
+  type CoachIntroVideoErrorCode,
+  type CoachMatchingStatus,
+  type CoachZoomSettingsFormValues,
 } from '@gabby/types/coachProfile';
 
 const logger = createLogger('coach');

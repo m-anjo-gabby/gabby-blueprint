@@ -20,7 +20,7 @@ import { Users, UserPlus, Ban, Loader2, ArrowLeft, CheckCircle2, AlertCircle } f
 import { useTranslations } from 'next-intl';
 import { getLicenseAssignmentUsers, assignLicenseToUser, invalidateUserLicense } from '@/actions/adminContractAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { LicenseUserItem, ContractDetail } from '@gabby/types/contract';
+import { type LicenseUserItem, type ContractDetail } from '@gabby/types/contract';
 import { startOfDay } from 'date-fns';
 
 interface Props {

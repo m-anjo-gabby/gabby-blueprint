@@ -44,14 +44,14 @@ const TRIGGER_STYLES = {
  * controlled コンポーネントとし、外側タップで閉じるバックドロップは内包する。
  * トリガーボタンの文字サイズ・配色は既存デザインを維持するため variant で出し分ける。
  */
-export const PlaybackRateControl: React.FC<PlaybackRateControlProps> = ({
+export function PlaybackRateControl({
   playbackRate,
   onChangePlaybackRate,
   isOpen,
   onOpenChange,
   disabled = false,
   variant = 'word',
-}) => {
+}: PlaybackRateControlProps) {
   const s = TRIGGER_STYLES[variant];
   const isRateActive = playbackRate !== 1.0;
 
@@ -103,4 +103,4 @@ export const PlaybackRateControl: React.FC<PlaybackRateControlProps> = ({
       </AnimatePresence>
     </div>
   );
-};
+}

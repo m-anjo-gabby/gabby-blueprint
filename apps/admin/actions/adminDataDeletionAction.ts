@@ -8,6 +8,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { USER_STATUS } from '@gabby/types/user';
 import type { DeletedStoragePaths, PurgeClientCounts } from '@gabby/types/dataDeletion';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 // 停止・退会・顧客単位の一括削除（規約は docs/DATA-DELETION.md）。
 // 退会・一括削除は戻せないため、システム管理者（admin ロール）だけが実行でき、対象の名前の入力で確認する。
@@ -107,11 +108,11 @@ export async function setUserSuspended(
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (err) {
-    logger.error(
-      suspended ? 'user:suspend_unexpected' : 'user:resume_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err, payload: { userId } },
-    );
+    logger.error(suspended ? 'user:suspend_unexpected' : 'user:resume_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { userId },
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -157,7 +158,7 @@ export async function withdrawUser(userId: string, confirmName: string): Promise
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (err) {
-    logger.error('user:withdraw_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('user:withdraw_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { userId },
@@ -189,7 +190,7 @@ export async function previewPurgeClient(
     }
     return { success: true, counts: data.counts };
   } catch (err) {
-    logger.error('client:purge_preview_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('client:purge_preview_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { clientId },
@@ -242,7 +243,7 @@ export async function purgeClient(clientId: string, confirmName: string): Promis
     revalidatePath('/contracts');
     return { success: true };
   } catch (err) {
-    logger.error('client:purge_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('client:purge_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { clientId },

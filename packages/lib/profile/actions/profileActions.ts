@@ -3,8 +3,9 @@
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { GetMyProfileResult } from '@gabby/types/profile';
+import { type GetMyProfileResult } from '@gabby/types/profile';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -55,7 +56,7 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
       },
     };
   } catch (err) {
-    logger.error('profile:get_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('profile:get_my_profile_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

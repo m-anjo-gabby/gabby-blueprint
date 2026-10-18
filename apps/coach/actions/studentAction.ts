@@ -19,19 +19,19 @@ import {
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
-  AssignedStudentSummary,
-  StudentOverviewProfile,
-  StudentSessionHistoryItem,
-  LiveSessionShortfallItem,
-  StudentLiveSessionContractSummary,
-  CoachSessionListItem,
-  CoachStudentNote,
-  ContractTrainingReport,
-  CoachStudentErrorCode,
-  StudentSprintProgress,
-  SelfTrainingWeekSummary,
+  type AssignedStudentSummary,
+  type StudentOverviewProfile,
+  type StudentSessionHistoryItem,
+  type LiveSessionShortfallItem,
+  type StudentLiveSessionContractSummary,
+  type CoachSessionListItem,
+  type CoachStudentNote,
+  type ContractTrainingReport,
+  type CoachStudentErrorCode,
+  type StudentSprintProgress,
+  type SelfTrainingWeekSummary,
 } from '@gabby/types/coachStudent';
-import { SprintQuestionType } from '@gabby/types/sprint';
+import { type SprintQuestionType } from '@gabby/types/sprint';
 
 const logger = createLogger('coach');
 

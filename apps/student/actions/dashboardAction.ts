@@ -4,6 +4,7 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('student');
 
@@ -46,7 +47,7 @@ export async function getMyActivePlans(): Promise<MyPlan[]> {
     }));
   } catch (err) {
     // ホームの補助表示のため、失敗時は契約なしと同じ扱いにして画面全体は表示させる
-    logger.error('dashboard:get_active_plans_failed', err instanceof Error ? err.message : String(err), {
+    logger.error('dashboard:get_active_plans_failed', getErrorMessage(err, String(err)), {
       ...ctx,
       err,
     });

@@ -8,22 +8,23 @@ import { getStudentAvailableContentIds, hasCoachStudentRelationship } from './co
 import { fetchSprintAvailableLevels } from '../../sprint/availableLevels';
 import { lessonSprintHistorySchema, readSprintHistory } from '../../sprint/answeredHistory';
 import {
-  CreateLessonSprintResultInput,
-  CreateLessonSprintResultResponse,
-  GetLessonSprintContentsResult,
-  GetLessonSprintDetailResult,
-  GetLessonSprintHistoryResult,
-  GetLessonSprintHistoryPageResult,
-  GetLessonSprintQuestionsResult,
-  LessonSprintHistoryItem,
-  LessonSprintHistoryListItem,
-  LessonSprintRecord,
-  UpdateLessonSprintSessionNoteResult,
+  type CreateLessonSprintResultInput,
+  type CreateLessonSprintResultResponse,
+  type GetLessonSprintContentsResult,
+  type GetLessonSprintDetailResult,
+  type GetLessonSprintHistoryResult,
+  type GetLessonSprintHistoryPageResult,
+  type GetLessonSprintQuestionsResult,
+  type LessonSprintHistoryItem,
+  type LessonSprintHistoryListItem,
+  type LessonSprintRecord,
+  type UpdateLessonSprintSessionNoteResult,
 } from '@gabby/types/lessonSprint';
 import { SESSION_STATUS } from '@gabby/types/session';
-import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import type { TableRow } from '@gabby/types/db';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 type SupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -143,7 +144,7 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
       })),
     };
   } catch (err) {
-    logger.error('lessonSprint:get_contents_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('lessonSprint:get_contents_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -214,7 +215,7 @@ export async function getLessonSprintQuestionsCore(
 
     return { success: true, questions: finalData };
   } catch (err) {
-    logger.error('lessonSprint:get_questions_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('lessonSprint:get_questions_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -331,7 +332,7 @@ export async function createLessonSprintResultCore(
     });
     return { success: true, lesson_sprint_id: data.lesson_sprint_id };
   } catch (err) {
-    logger.error('lessonSprint:create_result_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('lessonSprint:create_result_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -419,7 +420,7 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
 
     return { success: true, records: (data ?? []).map(mapLessonSprintHistoryRow) };
   } catch (err) {
-    logger.error('lessonSprint:get_history_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('lessonSprint:get_history_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -471,7 +472,7 @@ export async function getLessonSprintHistoryPageCore(
 
     return { success: true, items: page.map(mapLessonSprintHistoryRow), nextCursor };
   } catch (err) {
-    logger.error('lessonSprint:get_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('lessonSprint:get_history_page_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -538,7 +539,7 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
 
     return { success: true, record: record as LessonSprintRecord, questions: sortedQuestions };
   } catch (err) {
-    logger.error('lessonSprint:get_result_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('lessonSprint:get_result_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -583,7 +584,7 @@ export async function updateLessonSprintSessionNoteCore(
 
     return { success: true };
   } catch (err) {
-    logger.error('lessonSprint:update_session_note_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('lessonSprint:update_session_note_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

@@ -18,7 +18,7 @@ interface AudioResumeBannerProps {
  * - 'failedAgain': 再読み込みした同じ画面でもまた回復しなかった状態。Safari のタブ側の音声処理が
  *   壊れていると再読み込みでは直らないため、タブを閉じて開き直すよう案内する。
  */
-export const AudioResumeBanner: React.FC<AudioResumeBannerProps> = ({ status, onResume }) => {
+export function AudioResumeBanner({ status, onResume }: AudioResumeBannerProps) {
   if (status === 'ok') return null;
 
   if (status === 'failedAgain') {
@@ -88,4 +88,4 @@ export const AudioResumeBanner: React.FC<AudioResumeBannerProps> = ({ status, on
       </button>
     </div>
   );
-};
+}

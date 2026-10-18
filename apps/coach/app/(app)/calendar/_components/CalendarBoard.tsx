@@ -8,11 +8,11 @@ import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { SessionListItem } from '@gabby/types/session';
-import { CalendarEventItem, CALENDAR_EVENT_TYPES, withParticipation } from '@gabby/types/calendarEvent';
-import { CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
+import { type SessionListItem } from '@gabby/types/session';
+import { type CalendarEventItem, CALENDAR_EVENT_TYPES, withParticipation } from '@gabby/types/calendarEvent';
+import { type CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import { getSessionStatusBadge } from '@/constants/session';
-import { SessionActionDialog, SessionActionTarget } from './SessionActionDialog';
+import { SessionActionDialog, type SessionActionTarget } from './SessionActionDialog';
 import { DayDetailDrawer } from './DayDetailDrawer';
 import { useHighlightedDate } from './CalendarWorkspace';
 

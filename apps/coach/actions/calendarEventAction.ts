@@ -9,7 +9,7 @@ import {
 } from '@gabby/lib/calendarEvent/actions/calendarEventActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { CalendarEventItem, CalendarEventMessageItem } from '@gabby/types/calendarEvent';
+import { type CalendarEventItem, type CalendarEventMessageItem } from '@gabby/types/calendarEvent';
 
 const logger = createLogger('coach');
 

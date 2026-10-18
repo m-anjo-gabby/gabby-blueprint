@@ -7,10 +7,11 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import {
   HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES,
   HOMEWORK_ATTACHMENT_MAX_SIZE,
-  PendingHomeworkAttachment,
-  UploadHomeworkAttachmentResult,
+  type PendingHomeworkAttachment,
+  type UploadHomeworkAttachmentResult,
 } from '@gabby/types/sessionHomework';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -91,7 +92,7 @@ export async function uploadSessionHomeworkAttachmentCore(
 
     return { success: true, attachment };
   } catch (err) {
-    logger.error('sessionHomework:upload_attachment_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('sessionHomework:upload_attachment_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { sessionId },
@@ -120,15 +121,11 @@ export async function getSessionHomeworkAttachmentUrl(path: string): Promise<{ u
 
     return { url: data.signedUrl };
   } catch (err) {
-    logger.error(
-      'sessionHomework:get_attachment_url_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      {
-        ...ctx,
-        err,
-        payload: { path },
-      },
-    );
+    logger.error('sessionHomework:get_attachment_url_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { path },
+    });
     return { url: null, error: 'Unexpected error' };
   }
 }

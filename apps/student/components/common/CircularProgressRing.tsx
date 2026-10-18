@@ -34,7 +34,7 @@ export interface CircularProgressRingProps {
  * 色分けや中央表示内容など、画面ごとに異なる「状態」のロジックは呼び出し側に残し、
  * ここでは一切持たない（children経由でコンポジションする）。
  */
-export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
+export function CircularProgressRing({
   size,
   viewBoxSize,
   radius,
@@ -47,7 +47,7 @@ export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
   transitionEase = 'linear',
   className,
   children,
-}) => {
+}: CircularProgressRingProps) {
   const circumference = 2 * Math.PI * radius;
   const clampedProgress = Math.max(0, Math.min(1, progress));
   const strokeDashoffset = circumference * (1 - clampedProgress);
@@ -81,4 +81,4 @@ export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
       <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
     </div>
   );
-};
+}

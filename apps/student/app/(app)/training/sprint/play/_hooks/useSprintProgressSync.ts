@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import { SprintQuestionType } from '@gabby/types/sprint';
+import { type SprintQuestionType } from '@gabby/types/sprint';
 import { usePeriodicSync } from '@gabby/lib/hooks/usePeriodicSync';
 import { reportSprintProgress } from '@/actions/sprintAction';
 import { useSprintStore } from '@/stores/useSprintStore';

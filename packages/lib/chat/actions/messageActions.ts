@@ -4,9 +4,15 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { USER_TYPES } from '@gabby/types/user';
-import { CHAT_MESSAGE_TYPES, ChatAttachmentRecord, ChatMessage, SendChatMessagePayload } from '@gabby/types/chat';
+import {
+  CHAT_MESSAGE_TYPES,
+  type ChatAttachmentRecord,
+  type ChatMessage,
+  type SendChatMessagePayload,
+} from '@gabby/types/chat';
 import { getCurrentUserWithType } from './roomActions';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -107,7 +113,7 @@ export async function sendChatMessage(
 
     return { success: true, data: { ...chatRow, attachments: [] } as ChatMessage };
   } catch (err) {
-    logger.error('chat:send_message_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('chat:send_message_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { roomId: payload.roomId },
@@ -161,7 +167,7 @@ export async function getChatMessages(params: {
 
     return { success: true, data: rows.slice(0, limit).map((m) => maskIfDeleted(normalizeMessageRow(m))), hasMore };
   } catch (err) {
-    logger.error('chat:get_messages_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('chat:get_messages_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { roomId: params.roomId },
@@ -200,7 +206,7 @@ export async function getChatMessageById(chatId: string): Promise<{
 
     return { success: true, data: maskIfDeleted(normalizeMessageRow(data)) };
   } catch (err) {
-    logger.error('chat:get_message_by_id_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('chat:get_message_by_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { chatId },
@@ -274,7 +280,7 @@ export async function markAsRead(params: {
 
     return { success: true };
   } catch (err) {
-    logger.error('chat:mark_read_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('chat:mark_read_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: params,
@@ -315,7 +321,7 @@ export async function deleteChatMessage(params: { chatId: string }): Promise<{ s
     logger.info('chat:delete_message_success', `Chat message deleted: ${params.chatId}`, { ...ctx, payload: params });
     return { success: true };
   } catch (err) {
-    logger.error('chat:delete_message_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('chat:delete_message_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: params,

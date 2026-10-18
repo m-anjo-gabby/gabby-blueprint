@@ -1,11 +1,12 @@
 'use server';
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { ContentTag } from '@gabby/types/content';
+import { type ContentTag } from '@gabby/types/content';
 import type { TableInsert } from '@gabby/types/db';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -27,7 +28,7 @@ export async function getTags() {
     }
     return data as ContentTag[];
   } catch (error) {
-    logger.error('tag:get_tags_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('tag:get_tags_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -66,7 +67,7 @@ export async function upsertTag(payload: TableInsert<'com_m_contents_tag'>) {
     revalidatePath('/contents/tags');
     return { success: true, data: savedTag };
   } catch (error) {
-    logger.error('tag:upsert_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('tag:upsert_tag_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload,
@@ -97,7 +98,7 @@ export async function deleteTag(tagId: string) {
     revalidatePath('/contents/tags');
     return { success: true };
   } catch (error) {
-    logger.error('tag:delete_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('tag:delete_tag_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { tagId },

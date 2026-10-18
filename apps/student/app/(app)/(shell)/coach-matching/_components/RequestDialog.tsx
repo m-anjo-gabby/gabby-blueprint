@@ -15,12 +15,12 @@ import {
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { createMatchingRequest, getMatchingSlotOptions } from '@/actions/matchingAction';
 import {
-  CoachBrowseItem,
-  MatchingSlotOption,
-  SlotStatusItem,
+  type CoachBrowseItem,
+  type MatchingSlotOption,
+  type SlotStatusItem,
   getMatchingUnbookedBreakdown,
 } from '@gabby/types/matching';
-import { DayOfWeek } from '@gabby/types/coachAvailability';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import {
   generateLessonStartTimeOptions,
@@ -33,8 +33,8 @@ import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import {
   AvailabilityLegend,
   CoachAvailabilityCalendar,
-  AvailabilityCell,
-  AvailabilityCellState,
+  type AvailabilityCell,
+  type AvailabilityCellState,
 } from './CoachAvailabilityCalendar';
 import { cn } from '@/lib/utils';
 

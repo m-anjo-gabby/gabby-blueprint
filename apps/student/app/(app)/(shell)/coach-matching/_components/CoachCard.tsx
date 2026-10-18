@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { GraduationCap, IdCard, CalendarClock } from 'lucide-react';
-import { CoachBrowseItem, SlotMatchStatus } from '@gabby/types/matching';
-import { DayOfWeek } from '@gabby/types/coachAvailability';
-import { CountryMaster } from '@gabby/types/country';
-import { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { type CoachBrowseItem, type SlotMatchStatus } from '@gabby/types/matching';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
+import { type CountryMaster } from '@gabby/types/country';
+import { type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
 import { toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
 import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyTags';
 import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';

@@ -1,4 +1,4 @@
-import { MonthlyReportSession } from '@gabby/types/monthlyReport';
+import { type MonthlyReportSession } from '@gabby/types/monthlyReport';
 import { SESSION_STATUS, COMPLETION_RESULT, CANCEL_CATEGORY } from '@gabby/types/session';
 
 /** Short English label for a session's status, for the Monthly Report detail dialog */

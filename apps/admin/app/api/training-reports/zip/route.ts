@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { zipSync } from 'fflate';
 import { TRAINING_REPORT_BULK_LIMIT } from '@gabby/types/trainingReport';
 import {

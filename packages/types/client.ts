@@ -14,7 +14,7 @@ export type ClientType = TableRow<'com_m_client'>['client_type'];
 /**
  * ClientRecord: com_m_client テーブルの完全な定義 (Entity)
  */
-export type ClientRecord = {
+export interface ClientRecord {
   client_id: string;
   client_name: string;
   client_type: ClientType;
@@ -22,7 +22,7 @@ export type ClientRecord = {
   status: ClientStatus;
   insert_date: string;
   update_date: string;
-};
+}
 
 /**
  * Client: アプリケーション内で一般的に利用する顧客情報の最小単位

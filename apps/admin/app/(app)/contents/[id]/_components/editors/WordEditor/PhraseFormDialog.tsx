@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertPhrase, type PhraseInput } from '@/actions/adminWordAction';
 import { PlusCircle, CheckCircle2, Edit, MessageSquare, XCircle } from 'lucide-react';
-import { PhraseRecord, WORD_STATUS, WordStatus, PHRASE_TYPES, PhraseType } from '@gabby/types/word';
+import { type PhraseRecord, WORD_STATUS, type WordStatus, PHRASE_TYPES, type PhraseType } from '@gabby/types/word';
 
 /**
  * フレーズバリデーションスキーマ

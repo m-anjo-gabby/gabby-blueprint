@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Star, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
-import { ContentItem } from '@gabby/types/content';
+import { type ContentItem } from '@gabby/types/content';
 import { motion } from 'framer-motion';
 import { getContentTypeConfig, getCefrStyle } from '@gabby/lib/content/ui';
 import { cn } from '@/lib/utils';

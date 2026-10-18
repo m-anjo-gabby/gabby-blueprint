@@ -10,9 +10,9 @@ import {
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
-  CoachAvailabilityErrorCode,
-  CoachAvailabilityFormValues,
-  CoachAvailabilitySlot,
+  type CoachAvailabilityErrorCode,
+  type CoachAvailabilityFormValues,
+  type CoachAvailabilitySlot,
 } from '@gabby/types/coachAvailability';
 
 const logger = createLogger('coach');

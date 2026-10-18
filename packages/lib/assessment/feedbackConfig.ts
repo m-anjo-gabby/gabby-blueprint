@@ -1,5 +1,5 @@
 // packages/lib/assessment/feedbackConfig.ts
-import { FeedbackConfig } from '@gabby/types/speechAssessment';
+import { type FeedbackConfig } from '@gabby/types/speechAssessment';
 
 export type ScoreTier = 'excellent' | 'great' | 'good' | 'fair' | 'poor';
 

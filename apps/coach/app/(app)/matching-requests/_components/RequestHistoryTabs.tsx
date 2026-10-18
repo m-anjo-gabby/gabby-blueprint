@@ -8,9 +8,9 @@ import { BookingRequestCard } from '@/components/requests/BookingRequestCard';
 import { RescheduleProposalRequestCard } from '@/components/requests/RescheduleProposalRequestCard';
 import { getMatchingRequestHistoryPage } from '@/actions/matchingRequestAction';
 import { getBookingRequestHistoryPage, getRescheduleProposalHistoryPage } from '@/actions/sessionAction';
-import { IncomingMatchingRequestItem } from '@gabby/types/matching';
-import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
-import { IncomingRescheduleProposalGroup } from '@gabby/types/session';
+import { type IncomingMatchingRequestItem } from '@gabby/types/matching';
+import { type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { type IncomingRescheduleProposalGroup } from '@gabby/types/session';
 
 const HISTORY_PAGE_SIZE = 10;
 

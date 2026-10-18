@@ -1,7 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { QUESTION_TYPES, SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { QUESTION_TYPES, type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 import type { TableInsert, TableUpdate } from '@gabby/types/db';
 import type { TTSAdjustmentData } from '@gabby/types/word';
 import { revalidatePath } from 'next/cache';
@@ -147,7 +147,7 @@ async function removeSprintVoiceFiles(
         { event: 'sprint:delete_audio_failed', ctx, payload },
       );
     } catch (err) {
-      logger.error('sprint:delete_audio_failed', err instanceof Error ? err.message : 'Unknown error', {
+      logger.error('sprint:delete_audio_failed', getErrorMessage(err), {
         ...ctx,
         err,
         payload: { ...payload, paths: chunk },
@@ -327,7 +327,7 @@ export async function moveSprintQuestionsLevel(
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = getErrorMessage(err);
     logger.error('sprint:move_level_failed', message, { ...ctx, payload: { contentId, type, questionIds, toLevel } });
     return { success: false, message };
   }

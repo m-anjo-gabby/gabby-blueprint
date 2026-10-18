@@ -4,6 +4,7 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { USER_STATUS, USER_TYPES } from '@gabby/types/user';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -129,7 +130,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
 
     return { success: true, url: impersonateUrl.toString() };
   } catch (error) {
-    logger.error('impersonation:start_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('impersonation:start_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { targetUserId },

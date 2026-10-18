@@ -5,9 +5,9 @@ import { BookingRequestCard } from '@/components/requests/BookingRequestCard';
 import { RescheduleProposalRequestCard } from '@/components/requests/RescheduleProposalRequestCard';
 import { RequestHistoryTabs } from './RequestHistoryTabs';
 import { useCoachPendingRequests } from '@/hooks/useCoachPendingRequests';
-import { CoachIncomingRequestItem, IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
-import { IncomingMatchingRequestItem } from '@gabby/types/matching';
-import { IncomingRescheduleProposalGroup } from '@gabby/types/session';
+import { type CoachIncomingRequestItem, type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { type IncomingMatchingRequestItem } from '@gabby/types/matching';
+import { type IncomingRescheduleProposalGroup } from '@gabby/types/session';
 
 interface HistoryPage<T> {
   items: T[];

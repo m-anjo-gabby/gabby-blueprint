@@ -1,14 +1,15 @@
 'use server';
 
 import { createServerClient } from '@gabby/lib/supabase/server';
-import { CONTENT_STATUS, ContentItem, ContentRecord, ContentTagSummary } from '@gabby/types/content';
-import { ResumeContentResponse, ResumeMetadata } from '@gabby/types/training';
+import { CONTENT_STATUS, type ContentItem, type ContentRecord, type ContentTagSummary } from '@gabby/types/content';
+import { type ResumeContentResponse, type ResumeMetadata } from '@gabby/types/training';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getMyDialogueAssignments } from './dialogueAction';
 import { toggleFavoriteRow } from '@/lib/favoriteToggle';
 import type { FavoriteToggleResult } from '@/constants/favorites';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('student');
 
@@ -86,7 +87,7 @@ export async function getAllContent(): Promise<ContentItem[]> {
 
     return [...normalContents, ...dialogueContents];
   } catch (err) {
-    logger.error('content:get_all_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('content:get_all_unexpected', getErrorMessage(err), { ...ctx, err });
     return [];
   }
 }
@@ -134,7 +135,7 @@ export async function saveResumeContent<T extends ResumeMetadata>(contentId: str
 
     logger.info('training:save_resume_success', 'Resume point saved', { ...ctx, payload: { contentId, itemId } });
   } catch (err) {
-    logger.error('training:save_resume_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('training:save_resume_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { contentId, itemId },
@@ -162,7 +163,7 @@ export async function clearResumeContent() {
 
     logger.info('training:clear_resume_success', 'Resume point cleared', ctx);
   } catch (err) {
-    logger.error('training:clear_resume_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('training:clear_resume_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -200,7 +201,7 @@ export async function takeResumeContent(contentId: string): Promise<string | nul
     }
     return data?.item_id ?? null;
   } catch (err) {
-    logger.error('training:take_resume_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('training:take_resume_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { contentId },
@@ -260,7 +261,7 @@ export async function getLatestResumeContent(): Promise<ResumeContentResponse | 
 
     return data as unknown as ResumeContentResponse;
   } catch (err) {
-    logger.error('training:get_resume_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('training:get_resume_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

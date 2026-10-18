@@ -8,7 +8,8 @@ import {
   getCoachSpecialtyCodesCore,
   getCoachSpecialtyListCore,
 } from '@gabby/lib/coachSpecialty/actions/coachSpecialtyActions';
-import { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -70,7 +71,7 @@ export async function setCoachSpecialties(coachId: string, codes: string[]): Pro
     });
     return { success: true, codes: savedCodes };
   } catch (err) {
-    logger.error('coach_specialty:admin_set_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coach_specialty:admin_set_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { coachId },

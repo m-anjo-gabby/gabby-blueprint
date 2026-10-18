@@ -18,6 +18,7 @@ import {
   recordLicenseHistory,
   resolvePerformedBy,
 } from '@gabby/lib/license/issue';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -106,7 +107,7 @@ export async function getContractPlans() {
 
     return data || [];
   } catch (error) {
-    logger.error('contract:get_contract_plans_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:get_contract_plans_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -166,7 +167,7 @@ export async function upsertContractPlan(payload: {
     revalidatePath('/contracts');
     return { success: true, data };
   } catch (error) {
-    logger.error('contract:upsert_contract_plan_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:upsert_contract_plan_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload,
@@ -197,7 +198,7 @@ export async function deleteContractPlan(planId: string) {
     revalidatePath('/contracts');
     return { success: true };
   } catch (error) {
-    logger.error('contract:delete_contract_plan_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:delete_contract_plan_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { planId },
@@ -258,7 +259,7 @@ export async function getContracts(params: ListParams<'clientId'>): Promise<List
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('contract:get_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:get_contracts_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { clientId },
@@ -318,7 +319,7 @@ export async function getActiveContractsByClient(clientId: string, userId?: stri
 
     return formatContracts(contracts);
   } catch (error) {
-    logger.error('contract:get_active_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:get_active_contracts_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { clientId, userId },
@@ -417,7 +418,7 @@ export async function createContract(params: {
     revalidatePath('/contracts');
     return { success: true, contract: newContract };
   } catch (error) {
-    logger.error('contract:create_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:create_contract_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: params,
@@ -545,7 +546,7 @@ export async function updateContract(
     revalidatePath('/contracts');
     return { success: true, contract: data[0] };
   } catch (error) {
-    logger.error('contract:update_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:update_contract_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { contractId, ...params },
@@ -602,7 +603,7 @@ export async function deleteContract(contractId: string) {
     revalidatePath('/contracts');
     return { success: true };
   } catch (error) {
-    logger.error('contract:delete_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:delete_contract_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { contractId },
@@ -673,11 +674,11 @@ export async function purgeContractWithHistory(contractId: string) {
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
-    logger.error(
-      'contract:purge_contract_with_history_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      { ...ctx, err: error, payload: { contractId } },
-    );
+    logger.error('contract:purge_contract_with_history_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { contractId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -752,11 +753,11 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
       unassignedUsers: (allUsers || []).filter((u) => !assignmentByUserId.has(u.id)),
     };
   } catch (error) {
-    logger.error(
-      'contract:get_license_assignment_users_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      { ...ctx, err: error, payload: { contractId, clientId } },
-    );
+    logger.error('contract:get_license_assignment_users_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { contractId, clientId },
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -872,7 +873,7 @@ export async function assignLicenseToUser(
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
-    logger.error('contract:assign_license_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:assign_license_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { contractId, userId },
@@ -948,7 +949,7 @@ export async function invalidateUserLicense(licenseId: string) {
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
-    logger.error('contract:invalidate_license_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:invalidate_license_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { licenseId },
@@ -1084,7 +1085,7 @@ export async function updateUserLicense(
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
-    logger.error('contract:update_user_license_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:update_user_license_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { licenseId, updates },
@@ -1234,7 +1235,7 @@ export async function bulkAssignLicenses(
       skippedForCapacity,
     };
   } catch (error) {
-    logger.error('contract:bulk_assign_licenses_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:bulk_assign_licenses_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { contractId, userIds },
@@ -1318,7 +1319,7 @@ export async function getLicenseTimeline(userId: string) {
 
     return [...liveLicenses, ...removedLicenses];
   } catch (error) {
-    logger.error('contract:get_license_timeline_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('contract:get_license_timeline_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { userId },

@@ -5,7 +5,7 @@ import {
   markNoticesAsReadBatchAction,
   recordNoticeCtaClickAction,
 } from '@gabby/lib/notice/actions/noticeActions';
-import { NoticeItem } from '@gabby/types/notice';
+import { type NoticeItem } from '@gabby/types/notice';
 import { clientLogger } from '../logger/client';
 
 interface NoticeState {

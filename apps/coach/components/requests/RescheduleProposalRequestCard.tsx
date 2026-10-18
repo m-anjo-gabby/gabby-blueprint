@@ -9,7 +9,7 @@ import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { acceptRescheduleProposal, declineRescheduleProposals } from '@/actions/sessionAction';
-import { IncomingRescheduleProposalGroup, RESCHEDULE_PROPOSAL_STATUS } from '@gabby/types/session';
+import { type IncomingRescheduleProposalGroup, RESCHEDULE_PROPOSAL_STATUS } from '@gabby/types/session';
 import { cn } from '@/lib/utils';
 import { RequestKindTag } from './RequestKindTag';
 

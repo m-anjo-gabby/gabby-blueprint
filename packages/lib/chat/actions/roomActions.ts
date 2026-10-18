@@ -4,21 +4,22 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { USER_STATUS, USER_TYPES, UserType } from '@gabby/types/user';
+import { USER_STATUS, USER_TYPES, type UserType } from '@gabby/types/user';
 import {
-  AddChatRoomMemberPayload,
+  type AddChatRoomMemberPayload,
   CHAT_ROOM_TYPES,
-  ChatMessage,
-  ChatRoom,
-  ChatRoomListItem,
-  ChatRoomMemberSummary,
-  ChatTargetUser,
-  CreateChatRoomPayload,
-  RemoveChatRoomMemberPayload,
+  type ChatMessage,
+  type ChatRoom,
+  type ChatRoomListItem,
+  type ChatRoomMemberSummary,
+  type ChatTargetUser,
+  type CreateChatRoomPayload,
+  type RemoveChatRoomMemberPayload,
 } from '@gabby/types/chat';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@gabby/types/db';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 // ルーム作成で選択可能なuser_type
 const HUMAN_USER_TYPES: readonly UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
@@ -80,7 +81,7 @@ export async function getChatRoomTargetUsers(): Promise<{
 
     return { success: true, data: (data || []) as ChatTargetUser[] };
   } catch (err) {
-    logger.error('chat:get_target_users_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('chat:get_target_users_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -116,7 +117,7 @@ export async function createChatRoom(
     }
     return createOneOnOneChatRoom(payload, ctx);
   } catch (err) {
-    logger.error('chat:create_room_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('chat:create_room_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -323,7 +324,7 @@ export async function addChatRoomMember(
       },
     };
   } catch (err) {
-    logger.error('chat:add_member_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('chat:add_member_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -393,7 +394,7 @@ export async function removeChatRoomMember(
 
     return { success: true };
   } catch (err) {
-    logger.error('chat:remove_member_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('chat:remove_member_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -558,7 +559,7 @@ export async function getChatRooms(): Promise<{
     const data = await buildChatRoomListItems(supabase, rooms, user.id, myMembershipByRoom);
     return { success: true, data };
   } catch (err) {
-    logger.error('chat:get_rooms_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('chat:get_rooms_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, data: [], error: 'Unexpected error' };
   }
 }
@@ -608,7 +609,7 @@ export async function getAllChatRoomsForAdmin(): Promise<{
     );
     return { success: true, data };
   } catch (err) {
-    logger.error('chat:get_all_rooms_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('chat:get_all_rooms_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -704,7 +705,7 @@ export async function getChatRoomDetail(roomId: string): Promise<{
       },
     };
   } catch (err) {
-    logger.error('chat:get_room_detail_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('chat:get_room_detail_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { roomId },

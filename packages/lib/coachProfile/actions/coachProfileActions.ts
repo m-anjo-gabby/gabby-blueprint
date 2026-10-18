@@ -4,13 +4,14 @@ import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import {
-  CoachProfileFormValues,
-  CoachZoomSettingsFormValues,
-  GetMyCoachProfileResult,
-  UpdateMyCoachProfileResult,
-  UpdateMyCoachZoomSettingsResult,
+  type CoachProfileFormValues,
+  type CoachZoomSettingsFormValues,
+  type GetMyCoachProfileResult,
+  type UpdateMyCoachProfileResult,
+  type UpdateMyCoachZoomSettingsResult,
 } from '@gabby/types/coachProfile';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -43,7 +44,7 @@ export async function getMyCoachProfileCore(): Promise<GetMyCoachProfileResult> 
 
     return { success: true, profile: data };
   } catch (err) {
-    logger.error('coachProfile:get_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachProfile:get_my_profile_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -73,11 +74,7 @@ export async function getCoachProfileByUserIdCore(userId: string): Promise<GetMy
 
     return { success: true, profile: data };
   } catch (err) {
-    logger.error(
-      'coachProfile:get_profile_by_user_id_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachProfile:get_profile_by_user_id_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -143,7 +140,7 @@ export async function updateMyCoachProfileCore(values: CoachProfileFormValues): 
     logger.info('coachProfile:update_my_profile_success', 'Coach profile updated', { ...ctx, userId: user.id });
     return { success: true, profile: data };
   } catch (err) {
-    logger.error('coachProfile:update_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coachProfile:update_my_profile_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -195,11 +192,7 @@ export async function updateMyCoachZoomSettingsCore(
     });
     return { success: true, profile: data };
   } catch (err) {
-    logger.error(
-      'coachProfile:update_my_zoom_settings_unexpected',
-      err instanceof Error ? err.message : 'Unknown error',
-      { ...ctx, err },
-    );
+    logger.error('coachProfile:update_my_zoom_settings_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

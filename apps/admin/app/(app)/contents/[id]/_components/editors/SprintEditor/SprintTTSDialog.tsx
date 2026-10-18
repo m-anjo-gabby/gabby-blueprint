@@ -22,11 +22,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, Copy } from 'lucide-react';
-import { SprintQuestion } from '@gabby/types/sprint';
-import { TTSAdjustmentData, WordAdjustment } from '@gabby/types/word';
-import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { type SprintQuestion } from '@gabby/types/sprint';
+import { type TTSAdjustmentData, type WordAdjustment } from '@gabby/types/word';
+import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
+import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
 import { saveSprintAudio } from '@/actions/adminSprintAction';
 import { buildSSML } from '@gabby/lib/azure/ssml';
 

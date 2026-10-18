@@ -7,6 +7,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { LEGAL_NAME_SELECT } from '@gabby/lib/userLegal/fetchLegalName';
 import { LEGAL_NAME_MAX_LENGTH, type LegalName } from '@gabby/types/userLegal';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -103,7 +104,7 @@ export async function saveUserLegalName(input: {
     logger.info('user_legal:save_success', 'User legal name saved', { ...ctx, payload: { userId } });
     return { success: true, legalName };
   } catch (err) {
-    logger.error('user_legal:save_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('user_legal:save_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { userId },

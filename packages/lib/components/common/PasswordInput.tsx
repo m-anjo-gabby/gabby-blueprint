@@ -3,7 +3,7 @@
 
 import { Eye, EyeOff, Lock } from 'lucide-react';
 import { usePasswordVisibility } from '@gabby/lib/hooks/usePasswordVisibility';
-import { InputHTMLAttributes, useId } from 'react';
+import { type InputHTMLAttributes, useId } from 'react';
 
 interface PasswordInputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;

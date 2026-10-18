@@ -1,4 +1,4 @@
-import { ContentMetadata } from './content';
+import { type ContentMetadata } from './content';
 
 /**
  * UI（再開カード）で共通して使用する表示用プロパティ

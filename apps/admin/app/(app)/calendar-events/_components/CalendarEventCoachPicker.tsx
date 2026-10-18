@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { CalendarEventCoachOption } from '@gabby/types/calendarEvent';
+import { type CalendarEventCoachOption } from '@gabby/types/calendarEvent';
 
 interface CalendarEventCoachPickerProps {
   coaches: CalendarEventCoachOption[];

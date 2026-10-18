@@ -4,7 +4,7 @@ import Header from '@/components/common/Header';
 import Sidebar from '@/components/common/Sidebar';
 import ToastContainer from '@gabby/lib/components/common/ToastContainer';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
-import { UserAppMetadata } from '@gabby/lib/stores/useUserStore';
+import { type UserAppMetadata } from '@gabby/lib/stores/useUserStore';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { loadCommonShellData } from '@gabby/lib/shell/loadCommonShellData';
 import { ShellDataLoader } from '@/components/common/ShellDataLoader';

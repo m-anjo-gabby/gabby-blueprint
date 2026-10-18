@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import {
   streamChatResponse,
   searchKnowledgeBase,
@@ -7,6 +7,7 @@ import {
   type KnowledgeSourceType,
 } from '@gabby/lib/ai';
 import { createLogger } from '@gabby/lib/logger';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
         }
       } catch (ragError) {
         // RAG検索の失敗はチャット自体を止めず、コンテキストなしで継続する
-        const message = ragError instanceof Error ? ragError.message : 'Unknown error';
+        const message = getErrorMessage(ragError);
         logger.warn('aiChat:rag_search_failed', message, { err: ragError });
       }
     }
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = getErrorMessage(error);
     logger.error('aiChat:request_failed', message, { err: error });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

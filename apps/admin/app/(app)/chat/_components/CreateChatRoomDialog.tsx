@@ -9,11 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { CHAT_ROOM_TYPES, ChatRoomType, ChatTargetUser } from '@gabby/types/chat';
-import { ClientOption } from '@gabby/types/client';
+import { CHAT_ROOM_TYPES, type ChatRoomType, type ChatTargetUser } from '@gabby/types/chat';
+import { type ClientOption } from '@gabby/types/client';
 import { getChatRoomTargetUsers, createChatRoom } from '@gabby/lib/chat/actions/roomActions';
 import { getClientsFilter } from '@/actions/adminClientAction';
-import { ParticipantPicker, ParticipantSelection, EMPTY_PARTICIPANT_SELECTION } from './ParticipantPicker';
+import { ParticipantPicker, type ParticipantSelection, EMPTY_PARTICIPANT_SELECTION } from './ParticipantPicker';
 import { GroupParticipantsPicker } from './GroupParticipantsPicker';
 
 interface CreateChatRoomDialogProps {

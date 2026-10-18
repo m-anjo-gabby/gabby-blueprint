@@ -9,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   QUESTION_TYPES,
   SPRINT_TIME_OPTIONS,
-  SprintQuestionType,
-  SprintAnswerType,
-  SprintQuestion,
+  type SprintQuestionType,
+  type SprintAnswerType,
+  type SprintQuestion,
   toSprintType,
 } from '@gabby/types/sprint';
 import {

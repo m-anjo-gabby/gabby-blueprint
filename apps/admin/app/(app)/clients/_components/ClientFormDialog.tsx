@@ -16,7 +16,13 @@ import { createClient, updateClient } from '@/actions/adminClientAction';
 import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { PurgeClientSection } from './PurgeClientSection';
-import { CLIENT_STATUS, ClientRecord, ClientPayload, type ClientStatus, type ClientType } from '@gabby/types/client';
+import {
+  CLIENT_STATUS,
+  type ClientRecord,
+  type ClientPayload,
+  type ClientStatus,
+  type ClientType,
+} from '@gabby/types/client';
 
 // --- 1. スキーマ定義 ---
 type FormT = ReturnType<typeof useTranslations<'clients.form'>>;

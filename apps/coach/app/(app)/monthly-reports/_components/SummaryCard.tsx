@@ -1,5 +1,5 @@
 import { CalendarCheck, Download, TriangleAlert } from 'lucide-react';
-import { CoachMonthlyReport } from '@gabby/types/monthlyReport';
+import { type CoachMonthlyReport } from '@gabby/types/monthlyReport';
 
 /** timezoneName: the coach's timezone as its master display name (e.g. "Japan (Tokyo)") */
 export function SummaryCard({ report, timezoneName }: { report: CoachMonthlyReport; timezoneName: string }) {

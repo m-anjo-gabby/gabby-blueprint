@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import type { TermAgreementTarget, TermDocument, TermType } from '@gabby/types/term';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('student');
 
@@ -90,7 +91,7 @@ export async function getLatestTerms(): Promise<TermDocument[]> {
 
     return await attachLatestRevision(supabase, pickLatestByType(terms ?? []));
   } catch (err) {
-    logger.error('term:get_latest_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('term:get_latest_unexpected', getErrorMessage(err), { ...ctx, err });
     return [];
   }
 }
@@ -140,7 +141,7 @@ export async function checkPendingAgreements(userId: string): Promise<TermDocume
 
     return await attachLatestRevision(supabase, pendingTerms);
   } catch (err) {
-    logger.error('term:check_pending_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('term:check_pending_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { userId },
@@ -212,7 +213,7 @@ export async function agreeToTerms(userId: string, targets: TermAgreementTarget[
     revalidatePath('/', 'layout'); // レイアウトを再検証してモーダルを消す
     return { success: true };
   } catch (err) {
-    logger.error('term:agree_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('term:agree_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { userId, targets },

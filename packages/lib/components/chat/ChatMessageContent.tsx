@@ -5,7 +5,7 @@ import { Ban, FileText, Loader2 } from 'lucide-react';
 import { getChatAttachmentUrl } from '../../chat/actions/attachmentActions';
 import { formatFileSize } from '../../chat/formatFileSize';
 import { linkifyText } from '../../chat/linkifyText';
-import { ChatAttachmentRecord, ChatMessage } from '@gabby/types/chat';
+import { type ChatAttachmentRecord, type ChatMessage } from '@gabby/types/chat';
 import { useChatUi } from './ChatUiContext';
 import { ChatImageViewer } from './ChatImageViewer';
 

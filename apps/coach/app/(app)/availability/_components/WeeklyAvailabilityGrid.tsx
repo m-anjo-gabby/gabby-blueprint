@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
+import { type DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
 
 /** Grid granularity: one cell = 30 minutes, covering a full day (48 cells). */

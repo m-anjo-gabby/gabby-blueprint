@@ -2,13 +2,14 @@
 'use server';
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { ClientOption, ClientPayload, ClientResponse, ClientRecord } from '@gabby/types/client';
+import { type ClientOption, type ClientPayload, type ClientResponse, type ClientRecord } from '@gabby/types/client';
 import { revalidatePath } from 'next/cache';
 import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { containsPattern } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -35,7 +36,7 @@ export async function getClientsFilter(): Promise<ClientOption[]> {
 
     return (data || []) as ClientOption[];
   } catch (error) {
-    logger.error('client:get_filter_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('client:get_filter_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -77,7 +78,7 @@ export async function getClients(params: ListParams): Promise<ListResult<ClientR
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('client:get_clients_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('client:get_clients_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
     });
@@ -109,7 +110,7 @@ export async function createClient(payload: ClientPayload): Promise<ClientRespon
     revalidatePath('/clients');
     return { success: true, client: newClient };
   } catch (error) {
-    logger.error('client:create_client_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('client:create_client_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload,
@@ -153,7 +154,7 @@ export async function updateClient(clientId: string, payload: ClientPayload): Pr
     revalidatePath('/clients');
     return { success: true, client: updatedClient };
   } catch (error) {
-    logger.error('client:update_client_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('client:update_client_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { clientId, ...payload },
@@ -187,7 +188,7 @@ export async function deleteClient(clientId: string): Promise<ClientResponse> {
     revalidatePath('/clients');
     return { success: true };
   } catch (error) {
-    logger.error('client:delete_client_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('client:delete_client_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { clientId },

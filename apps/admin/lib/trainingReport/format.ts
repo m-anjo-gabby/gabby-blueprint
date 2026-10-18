@@ -1,4 +1,4 @@
-import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
+import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import { computeStage } from '@gabby/lib/sprint/stageProgression';
 import type { SprintLevelSnapshot, TrainingReportData } from '@gabby/types/trainingReport';
 

@@ -1,7 +1,7 @@
 // packages/lib/assessment/native-speech.ts
-import { AnalysisResult, WordMatch } from '@gabby/types/speechAssessment';
-import { getScoreTier, ScoreTier } from './feedbackConfig';
-import { detectPhoneticConfusion, PhoneticConfusionRule } from './phoneticConfusions';
+import { type AnalysisResult, type WordMatch } from '@gabby/types/speechAssessment';
+import { getScoreTier, type ScoreTier } from './feedbackConfig';
+import { detectPhoneticConfusion, type PhoneticConfusionRule } from './phoneticConfusions';
 import { preprocessInputWords } from './inputNormalization';
 import { isArticle } from './wordClassification';
 

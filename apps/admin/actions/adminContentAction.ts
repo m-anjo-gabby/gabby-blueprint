@@ -2,7 +2,13 @@
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
-import { CONTENT_TYPES, Content, ContentRecord, ContentTagSummary, type ContentType } from '@gabby/types/content';
+import {
+  CONTENT_TYPES,
+  type Content,
+  type ContentRecord,
+  type ContentTagSummary,
+  type ContentType,
+} from '@gabby/types/content';
 import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { CLIENT_STATUS } from '@gabby/types/client';
 import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
@@ -10,6 +16,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -86,7 +93,7 @@ export async function getContents(params: ListParams<'type'>): Promise<ListResul
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('content:get_contents_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('content:get_contents_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { contentType },
@@ -112,7 +119,7 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
 
     return data as ContentRecord;
   } catch (err) {
-    logger.error('content:get_content_by_id_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('content:get_content_by_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { contentId },
@@ -193,7 +200,7 @@ export async function upsertContent(payload: ContentUpsertInput) {
     revalidatePath('/contents');
     return { success: true, data: savedContent };
   } catch (error) {
-    logger.error('content:upsert_content_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('content:upsert_content_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload,
@@ -270,7 +277,7 @@ export async function deleteContent(contentId: string) {
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:delete_content_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('content:delete_content_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { contentId },
@@ -329,11 +336,11 @@ export async function getTagAssignmentData(contentId: string) {
 
     return { assignedTags, unassignedTags };
   } catch (error) {
-    logger.error(
-      'content:get_tag_assignment_data_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      { ...ctx, err: error, payload: { contentId } },
-    );
+    logger.error('content:get_tag_assignment_data_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { contentId },
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -363,7 +370,7 @@ export async function assignTag(contentId: string, tagId: string) {
 
     return { success: true };
   } catch (error) {
-    logger.error('content:assign_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('content:assign_tag_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { contentId, tagId },
@@ -398,7 +405,7 @@ export async function removeTag(contentId: string, tagId: string) {
 
     return { success: true };
   } catch (error) {
-    logger.error('content:remove_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('content:remove_tag_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { contentId, tagId },
@@ -450,11 +457,11 @@ export async function getContentAccessData(contentId: string) {
 
     return { assignedClients, unassignedClients };
   } catch (error) {
-    logger.error(
-      'content:get_content_access_data_unexpected',
-      error instanceof Error ? error.message : 'Unknown error',
-      { ...ctx, err: error, payload: { contentId } },
-    );
+    logger.error('content:get_content_access_data_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { contentId },
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -487,7 +494,7 @@ export async function assignAccess(contentId: string, clientId: string) {
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:assign_access_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('content:assign_access_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { contentId, clientId },
@@ -526,7 +533,7 @@ export async function removeAccess(contentId: string, clientId: string) {
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:remove_access_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('content:remove_access_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { contentId, clientId },

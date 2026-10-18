@@ -1,12 +1,13 @@
 'use server';
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { PhraseRecord, WordRecord } from '@gabby/types/word';
+import { type PhraseRecord, type WordRecord } from '@gabby/types/word';
 import type { TableInsert } from '@gabby/types/db';
 import { revalidatePath } from 'next/cache';
 import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -51,7 +52,7 @@ export async function getWordsByContentId(contentId: string): Promise<WordRecord
 
     return data as WordRecord[];
   } catch (err) {
-    logger.error('word:get_words_by_content_id_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('word:get_words_by_content_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { contentId },
@@ -115,7 +116,7 @@ export async function upsertWord(payload: WordInput) {
     revalidatePath('/contents/[id]/words', 'page');
     return { success: true };
   } catch (error) {
-    logger.error('word:upsert_word_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('word:upsert_word_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload,
@@ -165,7 +166,7 @@ export async function deleteWord(wordId: string) {
     logger.info('word:delete_word_success', `Word deleted`, { ...ctx, payload: { wordId } });
     return { success: true };
   } catch (error) {
-    logger.error('word:delete_word_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('word:delete_word_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { wordId },
@@ -193,7 +194,7 @@ export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]
     }
     return data as PhraseRecord[];
   } catch (err) {
-    logger.error('word:get_phrases_by_word_id_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('word:get_phrases_by_word_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { wordId },
@@ -252,7 +253,7 @@ export async function getPhrasesByContentId(contentId: string): Promise<PhraseRe
 
     return allData as PhraseRecord[];
   } catch (err) {
-    logger.error('word:get_phrases_by_content_id_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('word:get_phrases_by_content_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { contentId },
@@ -315,7 +316,7 @@ export async function upsertPhrase(payload: PhraseInput) {
     revalidatePath('/contents/[id]/words', 'page');
     return { success: true };
   } catch (error) {
-    logger.error('word:upsert_phrase_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('word:upsert_phrase_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload,
@@ -354,12 +355,12 @@ export async function deletePhrase(phraseId: string) {
     logger.info('word:delete_phrase_success', `Phrase deleted`, { ...ctx, payload: { phraseId } });
     return { success: true };
   } catch (error) {
-    logger.error('word:delete_phrase_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+    logger.error('word:delete_phrase_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { phraseId },
     });
-    return { success: false, message: error instanceof Error ? error.message : '予期せぬエラーが発生しました' };
+    return { success: false, message: getErrorMessage(error, '予期せぬエラーが発生しました') };
   }
 }
 
@@ -465,7 +466,7 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: Word
     revalidatePath(`/contents/${contentId}/words`);
     return { success: true };
   } catch (err) {
-    logger.error('word:bulk_upsert_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('word:bulk_upsert_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { contentId },

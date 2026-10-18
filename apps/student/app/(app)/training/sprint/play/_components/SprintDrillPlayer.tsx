@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
-import { SPRINT_FLOW_TIMING, SprintQuestion } from '@gabby/types/sprint';
-import { AnalysisResult } from '@gabby/types/speechAssessment';
+import { SPRINT_FLOW_TIMING, type SprintQuestion } from '@gabby/types/sprint';
+import { type AnalysisResult } from '@gabby/types/speechAssessment';
 import { QuestionCard } from './QuestionCard';
 import { SprintDrillPlayerControls } from './SprintDrillPlayerControls';
 import { SprintFeedback } from './SprintFeedback';
@@ -33,12 +33,12 @@ interface SprintDrillPlayerProps {
   onExit?: () => void;
 }
 
-export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
+export function SprintDrillPlayer({
   questions = [],
   initialQuestionId,
   initialStarted,
   onExit,
-}) => {
+}: SprintDrillPlayerProps) {
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
 
@@ -665,4 +665,4 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       <ExitProcessingOverlay visible={exitLoading} />
     </ImmersivePanel>
   );
-};
+}

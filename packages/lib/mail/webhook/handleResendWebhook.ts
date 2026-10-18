@@ -3,6 +3,7 @@ import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
 import { verifyResendWebhook } from '../core';
 import { mailEnvironmentTag, toMailEventRecord, type MailWebhookEvent } from './mailEvent';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('mail');
 
@@ -33,7 +34,7 @@ export async function handleResendWebhook(req: Request): Promise<Response> {
       webhookSecret: secret,
     }) as MailWebhookEvent;
   } catch (err) {
-    logger.warn('mail:webhook_invalid_signature', err instanceof Error ? err.message : 'Invalid signature', { err });
+    logger.warn('mail:webhook_invalid_signature', getErrorMessage(err, 'Invalid signature'), { err });
     return Response.json({ error: 'unauthorized' }, { status: 401 });
   }
 

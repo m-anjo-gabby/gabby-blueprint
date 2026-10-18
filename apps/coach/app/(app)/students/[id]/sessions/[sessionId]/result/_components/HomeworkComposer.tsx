@@ -20,9 +20,9 @@ import {
 import { getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
 import {
   HOMEWORK_ATTACHMENT_MAX_SIZE,
-  PendingHomeworkAttachment,
-  SessionHomeworkAttachment,
-  SessionHomeworkEntry,
+  type PendingHomeworkAttachment,
+  type SessionHomeworkAttachment,
+  type SessionHomeworkEntry,
 } from '@gabby/types/sessionHomework';
 
 interface Props {

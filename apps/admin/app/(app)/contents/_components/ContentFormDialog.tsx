@@ -16,17 +16,17 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
 import {
-  Content,
+  type Content,
   CONTENT_SCOPES,
   CONTENT_STATUS,
   CONTENT_TYPES,
-  ContentScope,
+  type ContentScope,
   type ContentStatus,
-  ContentType,
+  type ContentType,
   CEFR_CONFIG,
 } from '@gabby/types/content';
 import { SPRINT_TYPES } from '@gabby/types/sprint';
-import { DIALOGUE_CATEGORIES, DialogueCategory } from '@gabby/types/dialogue';
+import { DIALOGUE_CATEGORIES, type DialogueCategory } from '@gabby/types/dialogue';
 import { upsertContent, type ContentUpsertInput } from '@/actions/adminContentAction';
 import { useRouter } from 'next/navigation';
 

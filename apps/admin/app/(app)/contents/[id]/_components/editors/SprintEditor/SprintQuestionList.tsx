@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

@@ -24,6 +24,7 @@ import {
   type AuthErrorCode,
   type AuthErrorMessageResolver,
 } from './errors';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 type GuardResult = { ok: true } | { ok: false };
 
@@ -130,11 +131,11 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       if (isRedirectError(error)) {
         throw error; // redirect() internal error
       }
-      logger.error(
-        `auth:${config.appName}_login_unexpected`,
-        error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, err: error, payload: { email } },
-      );
+      logger.error(`auth:${config.appName}_login_unexpected`, getErrorMessage(error), {
+        ...ctx,
+        err: error,
+        payload: { email },
+      });
       return errorResponse('unexpected');
     }
   }
@@ -158,11 +159,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       if (isRedirectError(error)) {
         throw error;
       }
-      logger.error(
-        `auth:${config.appName}_logout_unexpected`,
-        error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, err: error },
-      );
+      logger.error(`auth:${config.appName}_logout_unexpected`, getErrorMessage(error), { ...ctx, err: error });
       // ログアウト失敗してもリダイレクトを試みる
       redirect(loginPath);
     }
@@ -189,11 +186,11 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       if (isRedirectError(error)) {
         throw error;
       }
-      logger.error(
-        `auth:${config.appName}_forgot_password_unexpected`,
-        error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, err: error, payload: { email } },
-      );
+      logger.error(`auth:${config.appName}_forgot_password_unexpected`, getErrorMessage(error), {
+        ...ctx,
+        err: error,
+        payload: { email },
+      });
       return errorResponse('unexpected');
     }
   }
@@ -221,11 +218,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       if (isRedirectError(error)) {
         throw error;
       }
-      logger.error(
-        `auth:${config.appName}_reset_password_unexpected`,
-        error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, err: error },
-      );
+      logger.error(`auth:${config.appName}_reset_password_unexpected`, getErrorMessage(error), { ...ctx, err: error });
       return errorResponse('unexpected');
     }
   }
@@ -251,11 +244,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       if (isRedirectError(error)) {
         throw error;
       }
-      logger.error(
-        `auth:${config.appName}_update_password_unexpected`,
-        error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, err: error },
-      );
+      logger.error(`auth:${config.appName}_update_password_unexpected`, getErrorMessage(error), { ...ctx, err: error });
       return errorResponse('unexpected');
     }
   }

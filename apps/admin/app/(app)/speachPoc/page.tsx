@@ -5,7 +5,7 @@ import * as SpeechSDK from 'microsoft-cognitiveservices-speech-sdk';
 import { useAzureSpeechTest } from '@/hooks/useAzureSpeechTest';
 import { useSpeechSynthesis } from '@gabby/lib/speech/useSpeechSynthesis';
 import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
-import { AnalysisResult } from '@gabby/types/speechAssessment'; // AnalysisResultの型をインポート
+import { type AnalysisResult } from '@gabby/types/speechAssessment'; // AnalysisResultの型をインポート
 
 const samplePhrases = [
   'We start fermenting the soy.',

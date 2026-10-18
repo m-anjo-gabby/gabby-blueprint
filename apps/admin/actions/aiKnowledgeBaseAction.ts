@@ -7,6 +7,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 const TOOL_PATH = '/tools/ai-knowledge-base';
@@ -67,7 +68,7 @@ export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<L
 
     return { rows: data as KnowledgeEntry[], totalCount: count || 0 };
   } catch (err) {
-    logger.error('aiKb:list_unexpected', err instanceof Error ? err.message : 'Unknown', {
+    logger.error('aiKb:list_unexpected', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
       payload: { sourceType },
@@ -108,7 +109,7 @@ export async function saveKnowledgeEntryAction(payload: {
     revalidatePath(TOOL_PATH);
     return { success: true, message: '保存しました', data: entry };
   } catch (err) {
-    logger.error('aiKb:save_failed', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload });
+    logger.error('aiKb:save_failed', getErrorMessage(err, 'Unknown'), { ...ctx, err, payload });
     return { success: false, message: '保存に失敗しました' };
   }
 }
@@ -126,7 +127,7 @@ export async function deleteKnowledgeEntryAction(knowledgeId: string) {
     revalidatePath(TOOL_PATH);
     return { success: true, message: '削除しました' };
   } catch (err) {
-    logger.error('aiKb:delete_failed', err instanceof Error ? err.message : 'Unknown', {
+    logger.error('aiKb:delete_failed', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
       payload: { knowledgeId },

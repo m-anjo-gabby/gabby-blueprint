@@ -1,6 +1,11 @@
 import { create } from 'zustand';
-import { SprintQuestion, SprintQuestionType, SprintAnswerType, SprintType } from '@gabby/types/sprint';
-import { MetadataSprint } from '@gabby/types/content';
+import {
+  type SprintQuestion,
+  type SprintQuestionType,
+  type SprintAnswerType,
+  type SprintType,
+} from '@gabby/types/sprint';
+import { type MetadataSprint } from '@gabby/types/content';
 
 interface LessonSprintSessionResult {
   questionId: string;

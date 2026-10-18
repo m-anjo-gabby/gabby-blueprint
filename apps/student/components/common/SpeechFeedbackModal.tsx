@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { X, Lightbulb, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
+import { type AnalysisResult, type FeedbackConfig } from '@gabby/types/speechAssessment';
 import { getWordMatchStyle } from '@gabby/lib/assessment/wordMatchStyle';
 import { cn } from '@/lib/utils';
 
@@ -60,7 +60,7 @@ const VARIANT_STYLES = {
  * 呼び出し元ごとの見た目の差分（z-index・角丸・ツールチップ有無等）は variant / interactive で吸収する。
  * ヘッダーは常時固定し、本文のみスクロールさせることで、長いフレーズでもモーダルが画面からはみ出さないようにする。
  */
-export const SpeechFeedbackModal: React.FC<SpeechFeedbackModalProps> = ({
+export function SpeechFeedbackModal({
   feedback,
   analysis,
   onClose,
@@ -68,7 +68,7 @@ export const SpeechFeedbackModal: React.FC<SpeechFeedbackModalProps> = ({
   adviceTitle,
   interactive = false,
   variant = 'word',
-}) => {
+}: SpeechFeedbackModalProps) {
   const [activeTooltipIndex, setActiveTooltipIndex] = useState<number>(-1);
   const [showHeard, setShowHeard] = useState(false);
   const s = VARIANT_STYLES[variant];
@@ -268,4 +268,4 @@ export const SpeechFeedbackModal: React.FC<SpeechFeedbackModalProps> = ({
       </motion.div>
     </AnimatePresence>
   );
-};
+}

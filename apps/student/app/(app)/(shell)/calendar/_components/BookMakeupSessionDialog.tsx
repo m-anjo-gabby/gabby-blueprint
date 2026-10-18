@@ -24,8 +24,8 @@ import {
 } from '@gabby/lib/date/date';
 import { CounterpartLocalTime } from '@gabby/lib/components/common/CounterpartLocalTime';
 import { createSessionBookingRequest, checkSessionConflict } from '@/actions/sessionAction';
-import { BookableTicketSlot } from '@gabby/types/matching';
-import { SESSION_BOOKING_REQUEST_STATUS, MyBookingRequestItem } from '@gabby/types/session';
+import { type BookableTicketSlot } from '@gabby/types/matching';
+import { SESSION_BOOKING_REQUEST_STATUS, type MyBookingRequestItem } from '@gabby/types/session';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import type { DayOfWeek } from '@gabby/types/coachAvailability';
 

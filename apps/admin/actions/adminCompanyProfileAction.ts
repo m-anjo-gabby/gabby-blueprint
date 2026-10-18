@@ -11,8 +11,8 @@ import { USER_TYPES } from '@gabby/types/user';
 import {
   COMPANY_CODE_ORDER,
   COMPANY_LOGO_BUCKET,
-  CompanyCode,
-  CompanyProfile,
+  type CompanyCode,
+  type CompanyProfile,
   isCompanyCode,
 } from '@gabby/types/companyProfile';
 

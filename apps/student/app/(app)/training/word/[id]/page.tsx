@@ -13,7 +13,7 @@ import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordA
 import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
 import { saveResumeContent, takeResumeContent } from '@/actions/contentAction';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
-import { WordResumeMetadata } from '@gabby/types/training';
+import { type WordResumeMetadata } from '@gabby/types/training';
 import { getFeedbackConfig } from '@gabby/lib';
 
 // Components
@@ -23,12 +23,13 @@ import { WordControls } from './_components/WordControls';
 import { WordFeedback } from './_components/WordFeedback';
 import { WordIndex } from './_components/WordIndex';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
-import { PhraseItem } from '@gabby/types/word';
+import { type PhraseItem } from '@gabby/types/word';
 import { ContentLoading } from '@/components/common/ContentLoading';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
 import { ImmersivePanel } from '@/components/shell/PageFrames';
 import { cancelSpeech } from '@gabby/lib/speech/synthesis';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 export default function WordTrainingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: sectionId } = use(params);
@@ -204,7 +205,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         play(phrase.audio_path, {
           id: phrase.phrase_id,
           restart: true,
-          onError: (err) => handleAudioUnavailable(phrase, err instanceof Error ? err.message : String(err)),
+          onError: (err) => handleAudioUnavailable(phrase, getErrorMessage(err, String(err))),
         });
       } else {
         handleAudioUnavailable(phrase, 'tts_not_ready');

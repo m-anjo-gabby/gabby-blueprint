@@ -3,7 +3,8 @@
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { GetCoachSpecialtyListResult } from '@gabby/types/coachSpecialty';
+import { type GetCoachSpecialtyListResult } from '@gabby/types/coachSpecialty';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -28,7 +29,7 @@ export async function getCoachSpecialtyListCore(): Promise<GetCoachSpecialtyList
 
     return { success: true, specialties: data ?? [] };
   } catch (err) {
-    logger.error('coach_specialty:get_list_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coach_specialty:get_list_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -63,7 +64,7 @@ export async function getCoachSpecialtyCodesCore(coachIds: string[]): Promise<Ma
     }
     return codesById;
   } catch (err) {
-    logger.error('coach_specialty:get_codes_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('coach_specialty:get_codes_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });

@@ -5,7 +5,7 @@ import { getSprintQuestionsAction, getLastSprintSessionAction, getContentAction 
 import { SprintSelect } from './_components/SprintSelect';
 import { SprintDrillPlayer } from './_components/SprintDrillPlayer';
 import { SprintTimePlayer } from './_components/SprintTimePlayer';
-import { SprintQuestionType, SprintAnswerType, QUESTION_TYPES, toSprintType } from '@gabby/types/sprint';
+import { type SprintQuestionType, type SprintAnswerType, QUESTION_TYPES, toSprintType } from '@gabby/types/sprint';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useSprintStore } from '@/stores/useSprintStore';
 import { AlertCircle, Volume2, BookOpen } from 'lucide-react';

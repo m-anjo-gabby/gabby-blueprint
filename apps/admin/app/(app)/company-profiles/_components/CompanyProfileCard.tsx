@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { updateCompanyProfile, uploadCompanyLogo } from '@/actions/adminCompanyProfileAction';
 import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
-import { COMPANY_CODES, CompanyProfile } from '@gabby/types/companyProfile';
+import { COMPANY_CODES, type CompanyProfile } from '@gabby/types/companyProfile';
 
 /** 法人1社分の会社情報の編集カード（書面の発行元として印字される内容） */
 export function CompanyProfileCard({ initialProfile }: { initialProfile: CompanyProfile }) {

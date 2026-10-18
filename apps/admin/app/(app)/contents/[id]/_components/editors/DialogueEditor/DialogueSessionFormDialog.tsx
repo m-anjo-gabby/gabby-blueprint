@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PlusCircle, Edit, MessagesSquare, CheckCircle2 } from 'lucide-react';
-import { DialogueSession } from '@gabby/types/dialogue';
+import { type DialogueSession } from '@gabby/types/dialogue';
 import { upsertDialogueSession } from '@/actions/adminDialogueAction';
 
 type FormT = ReturnType<typeof useTranslations<'contents.editor.dialogue.sessionFormDialog'>>;

@@ -3,8 +3,9 @@
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { NoticeItem } from '@gabby/types/notice';
+import { type NoticeItem } from '@gabby/types/notice';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 
@@ -50,7 +51,7 @@ export async function getNoticesAction(): Promise<{
 
     return { success: true, data: notices };
   } catch (err) {
-    logger.error('notice:get_all_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('notice:get_all_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, data: [], error: 'Unexpected error' };
   }
 }
@@ -85,7 +86,7 @@ export async function getUnreadNoticeCountAction(): Promise<number> {
     const readIds = new Set((readData || []).map((r) => r.notice_id));
     return noticeIds.filter((id: string) => !readIds.has(id)).length;
   } catch (err) {
-    logger.error('notice:unread_count_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('notice:unread_count_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -124,7 +125,7 @@ export async function markNoticeAsReadAction(noticeId: string): Promise<{
 
     return { success: true };
   } catch (err) {
-    logger.error('notice:mark_read_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('notice:mark_read_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -164,7 +165,7 @@ export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise
 
     return { success: true };
   } catch (err) {
-    logger.error('notice:mark_read_batch_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('notice:mark_read_batch_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
     });
@@ -218,7 +219,7 @@ export async function recordNoticeCtaClickAction(noticeId: string): Promise<{
 
     return { success: true };
   } catch (err) {
-    logger.error('notice:cta_click_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('notice:cta_click_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { noticeId },
@@ -249,7 +250,7 @@ export async function getNoticeAttachmentUrlAction(path: string): Promise<{ url:
     });
     return { url: null, error: 'Failed to generate public URL' };
   } catch (err) {
-    logger.error('notice:get_attachment_url_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('notice:get_attachment_url_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { path },

@@ -1,7 +1,7 @@
 'use client';
 
 import { Circle, Info, Triangle, X } from 'lucide-react';
-import { DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
+import { type DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

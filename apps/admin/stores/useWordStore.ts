@@ -1,5 +1,5 @@
 // src/stores/useWordStore.ts
-import { WordRecord } from '@gabby/types/word';
+import { type WordRecord } from '@gabby/types/word';
 import { create } from 'zustand';
 
 interface WordState {

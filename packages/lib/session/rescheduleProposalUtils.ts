@@ -1,4 +1,4 @@
-import { SessionRescheduleProposal, SessionRescheduleProposalGroup } from '@gabby/types/session';
+import { type SessionRescheduleProposal, type SessionRescheduleProposalGroup } from '@gabby/types/session';
 
 /**
  * 振替候補の一覧(SessionRescheduleProposal[])を、同一セッション(=同一キャンセル)単位で

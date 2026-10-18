@@ -1,4 +1,4 @@
-import { TimezoneMaster } from './timezone';
+import { type TimezoneMaster } from './timezone';
 
 /**
  * ----------------------------------------------

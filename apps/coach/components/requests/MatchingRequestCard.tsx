@@ -25,12 +25,12 @@ import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
 import {
-  IncomingMatchingRequestItem,
+  type IncomingMatchingRequestItem,
   MATCHING_REQUEST_STATUS,
   getMatchingUnbookedBreakdown,
 } from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
-import { DayOfWeek } from '@gabby/types/coachAvailability';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
 import { RequestKindTag, WebTrialTag } from './RequestKindTag';
 
 const STATUS_BADGE: Record<number, { label: string; className: string }> = {

@@ -13,20 +13,20 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { withdrawSessionBookingRequest } from '@/actions/sessionAction';
 import {
-  MyBookingRequestItem,
-  MyRescheduleProposalGroup,
-  SessionListItem,
+  type MyBookingRequestItem,
+  type MyRescheduleProposalGroup,
+  type SessionListItem,
   SESSION_RESULT_STATUSES,
   isSelfInitiatedCancel,
 } from '@gabby/types/session';
 import {
-  BookableTicketSlot,
-  LiveSessionContractSummary,
-  LiveSessionOverview,
-  NextContractMatching,
+  type BookableTicketSlot,
+  type LiveSessionContractSummary,
+  type LiveSessionOverview,
+  type NextContractMatching,
 } from '@gabby/types/matching';
 import type { PendingCoachRating } from '@gabby/types/coachRating';
-import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
+import { SessionActionDialog, type SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
 import { RescheduleProposalCard } from './RescheduleProposalCard';
 import { NextSessionPanel } from './NextSessionPanel';
@@ -34,7 +34,7 @@ import { ContractOverviewCard } from './ContractOverviewCard';
 import { UpcomingSessionList } from './UpcomingSessionList';
 import { SessionHistoryList } from './SessionHistoryList';
 import { CoachRatingDialog } from './CoachRatingDialog';
-import { PreviousSessionLink, PreviousSessionSummary } from './PreviousSessionLink';
+import { PreviousSessionLink, type PreviousSessionSummary } from './PreviousSessionLink';
 
 // 履歴に出すのは、結果画面へ進める実施済みと、生徒・コーチ本人起因のキャンセルのみ
 // （ライセンス無効化・コーチ交代等の運用都合のキャンセルは表示しない。isSelfInitiatedCancel参照）
