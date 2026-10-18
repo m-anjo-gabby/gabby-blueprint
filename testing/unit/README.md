@@ -29,14 +29,7 @@
 
 ### 高（誤ると権限・お金・利用者の評価に関わる）
 
-| ファイル | 確かめること |
-|---|---|
-| `sprint/availableLevels.ts`・`sprint/stageProgression.ts` | スプリントのレベル・段階の選び方と進み方 |
-| `sprint/answeredHistory.ts` | 解答の履歴（JSON）の検証で、壊れた要素を除けること |
-| `assessment/inputNormalization.ts`・`native-speech.ts`・`wordClassification.ts`・`phoneticConfusions.ts` | 発話の評価（正規化・語の分類・聞き違えやすい音）の判定 |
-| `session/outcome.ts`・`session/rescheduleProposalUtils.ts` | セッションの結果・振替の候補の扱い |
-| `coachProfile/matchingReadiness.ts` | コーチを検索に出すための必須項目の判定 |
-| `calendar/monthGridRange.ts` | 月のカレンダーの取得範囲がどのタイムゾーンでも表示の範囲を覆うこと（前後8日）・`?month=` の形の判定 |
+今は無し（2026-10-18 に全件を足した）。新しく見つけたらここに足す。
 
 ### 中（表示の文字の組み立て）
 
