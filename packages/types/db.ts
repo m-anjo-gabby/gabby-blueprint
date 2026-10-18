@@ -9,6 +9,7 @@
 import type { Database as GeneratedDatabase, Json } from './database';
 import type { CalendarEventMessageAttachment, CalendarEventType } from './calendarEvent';
 import type { ChatMessageType } from './chat';
+import type { AdminCoachRatingsRpcResult } from './coachRating';
 import type { DayOfWeek } from './coachAvailability';
 import type { ContentMetadata } from './content';
 import type { PurgeClientResult, WithdrawUserResult } from './dataDeletion';
@@ -130,6 +131,7 @@ interface PublicOverrides extends SchemaOverrides {
   };
   // jsonb を返す RPC の中身
   Functions: {
+    admin_get_coach_ratings: { Returns: AdminCoachRatingsRpcResult | null };
     fn_purge_client: { Returns: PurgeClientResult };
     get_monitor_sprint_drill_history: { Returns: MonitorSprintDrillHistoryRow[] };
     get_monitor_sprint_history: { Returns: MonitorSprintHistoryRow[] };

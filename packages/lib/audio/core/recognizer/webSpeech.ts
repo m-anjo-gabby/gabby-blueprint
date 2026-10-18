@@ -10,10 +10,10 @@ interface RecognitionErrorEventLike extends Event {
 
 function getSpeechRecognitionClass(): SpeechRecognitionConstructor | null {
   if (typeof window === 'undefined') return null;
-  const w = window as unknown as {
+  const w: {
     SpeechRecognition?: SpeechRecognitionConstructor;
     webkitSpeechRecognition?: SpeechRecognitionConstructor;
-  };
+  } = window;
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 

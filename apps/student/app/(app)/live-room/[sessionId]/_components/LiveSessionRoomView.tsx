@@ -34,6 +34,7 @@ import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/vi
 import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
 import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 interface LiveSessionRoomViewProps {
   access: LiveSessionRoomAccess;
@@ -99,7 +100,7 @@ export function LiveSessionRoomView({ access }: LiveSessionRoomViewProps) {
     if (phase !== 'preview' || previewRequested.current || !previewCanvasRef.current) return;
     previewRequested.current = true;
     preview.startPreview(previewCanvasRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- プレビューは条件がそろった時に1回だけ始める（preview の参照の変化で始め直さない。二重の開始は previewRequested で防ぐ）
   }, [phase]);
 
   useEffect(() => {
@@ -129,7 +130,7 @@ export function LiveSessionRoomView({ access }: LiveSessionRoomViewProps) {
     untrackSelf();
     recordLeaveIfNeeded();
     setPhase('ended');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- コーチが終了した時に1回だけ退室の処理をする（関数の参照の変化では動かさない）
   }, [wasEndedByHost, phase]);
 
   useEffect(() => {
@@ -140,7 +141,7 @@ export function LiveSessionRoomView({ access }: LiveSessionRoomViewProps) {
       recordLeaveIfNeeded();
       leave();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 退室の後片付けは画面を離れる時だけ行う（関数の参照が変わっても途中で退室しない）
   }, []);
 
   const handleStartCall = async () => {
@@ -308,8 +309,7 @@ export function LiveSessionRoomView({ access }: LiveSessionRoomViewProps) {
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-ink-soft overflow-hidden flex items-center justify-center text-ink-subtle shrink-0">
             {peerIconUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
+              <ExternalImage src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
             ) : (
               <User size={16} />
             )}
@@ -371,8 +371,7 @@ export function LiveSessionRoomView({ access }: LiveSessionRoomViewProps) {
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
                   <div className="w-14 h-14 rounded-full bg-ink-soft overflow-hidden flex items-center justify-center text-ink-subtle shrink-0">
                     {peerIconUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
+                      <ExternalImage src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
                     ) : (
                       <User size={24} />
                     )}

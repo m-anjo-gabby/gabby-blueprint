@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createLogger, type LogContext, type LogEventName } from '../logger';
@@ -34,6 +35,7 @@ export async function removeStorageFiles(
       const { error } = await supabase.storage.from(bucket).remove(chunk);
       if (error) throw error;
     } catch (err) {
+      unstable_rethrow(err);
       logger.error(event, getErrorMessage(err), {
         ...ctx,
         err,

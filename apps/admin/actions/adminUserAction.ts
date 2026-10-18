@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import {
   type UserRecord,
@@ -90,6 +93,7 @@ async function checkEmailAvailable(
  * ユーザ情報の一覧取得（ページネーション・氏名/メール/顧客名の部分一致検索・顧客/区分での絞り込み）
  */
 export async function getUsers(params: ListParams<'clientId' | 'userType'>): Promise<ListResult<UserRecord>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const {
     q,
@@ -138,6 +142,7 @@ export async function getUsers(params: ListParams<'clientId' | 'userType'>): Pro
       totalCount: count || 0,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('user:get_users_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -151,6 +156,7 @@ export async function getUsers(params: ListParams<'clientId' | 'userType'>): Pro
  * ユーザー1件の取得（詳細画面用。一覧と同じ項目）。見つからない場合は null
  */
 export async function getUserById(id: string): Promise<UserRecord | null> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   if (!z.uuid().safeParse(id).success) return null;
 
@@ -176,6 +182,7 @@ export async function getUserById(id: string): Promise<UserRecord | null> {
 export async function createUser(
   payload: CreateUserPayload & { roles?: string[]; contract_id?: string },
 ): Promise<CreateUserResponse> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   const { email, user_name, client_id, user_type, roles = [], contract_id } = payload;
@@ -286,6 +293,7 @@ export async function createUser(
       message: mailResult.success ? null : mailResult.error || t('users.errors.inviteMailFailed'),
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('user:create_user_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -303,6 +311,7 @@ export async function createUser(
 export async function createUserDirect(
   payload: CreateUserPayload & { roles?: string[]; contract_id?: string; password: string },
 ): Promise<CreateUserResponse> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   const { email, user_name, client_id, user_type, roles = [], contract_id, password } = payload;
@@ -430,6 +439,7 @@ export async function createUserDirect(
     revalidatePath('/users', 'layout');
     return { success: true, user_id: userId, errorType: null, message: null };
   } catch (err) {
+    unstable_rethrow(err);
     // セキュリティ: payloadには平文パスワードが含まれるため、ログにはそのまま渡さない
     logger.error('user:create_user_direct_unexpected', getErrorMessage(err), {
       ...ctx,
@@ -444,6 +454,7 @@ export async function createUserDirect(
  * ユーザー再招待招待アクション
  */
 export async function resendInvite(email: string, userType?: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -513,6 +524,7 @@ export async function resendInvite(email: string, userType?: string): Promise<Ac
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('user:resend_invite_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -526,6 +538,7 @@ export async function resendInvite(email: string, userType?: string): Promise<Ac
  * ユーザー更新アクション
  */
 export async function updateUser(id: string, payload: CreateUserPayload & { roles?: string[] }): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   const { email, user_name, client_id, user_type, roles = [] } = payload;
@@ -604,6 +617,7 @@ export async function updateUser(id: string, payload: CreateUserPayload & { role
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('user:update_user_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -617,6 +631,7 @@ export async function updateUser(id: string, payload: CreateUserPayload & { role
  * ユーザー一括登録アクション
  */
 export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): Promise<BulkImportResponse> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   const results: BulkImportResultDetail[] = [];
@@ -650,6 +665,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
         });
       }
     } catch (err) {
+      unstable_rethrow(err);
       logger.error('user:bulk_create_users_loop_unexpected', getErrorMessage(err), {
         ...ctx,
         err,
@@ -673,6 +689,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
  * ロールマスタの一覧取得
  */
 export async function getRoles(): Promise<RoleDefinition[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -689,6 +706,7 @@ export async function getRoles(): Promise<RoleDefinition[]> {
 
     return data as RoleDefinition[];
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('user:get_roles_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

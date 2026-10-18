@@ -1,5 +1,6 @@
 'use server';
 
+import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import { getMyProfileCore } from '@gabby/lib/profile/actions/profileActions';
 import { uploadProfileIconCore, removeProfileIconCore } from '@gabby/lib/profile/actions/profileIconActions';
 import { getTimezoneListCore, updateMyTimezoneCore } from '@gabby/lib/profile/actions/timezoneActions';
@@ -34,6 +35,7 @@ const TIMEZONE_ERROR_KEYS = {
  * 自分自身のプロフィール情報を取得する
  */
 export async function getMyProfile(): Promise<MyProfile | null> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const result = await getMyProfileCore();
   if (!result.success) {
     const ctx = await getLogContext();
@@ -47,6 +49,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
  * プロフィールアイコンのアップロード
  */
 export async function uploadProfileIcon(formData: FormData): Promise<ActionResult<{ iconPath: string }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   const result = await uploadProfileIconCore(formData);
 
@@ -63,6 +66,7 @@ export async function uploadProfileIcon(formData: FormData): Promise<ActionResul
  * プロフィールアイコンの削除
  */
 export async function removeProfileIcon(): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   const result = await removeProfileIconCore();
 
@@ -79,6 +83,7 @@ export async function removeProfileIcon(): Promise<ActionResult> {
  * タイムゾーン選択肢一覧の取得
  */
 export async function getTimezoneList(): Promise<TimezoneMaster[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const result = await getTimezoneListCore();
   if (!result.success) {
     const ctx = await getLogContext();
@@ -92,6 +97,7 @@ export async function getTimezoneList(): Promise<TimezoneMaster[]> {
  * 自分自身のタイムゾーンの更新
  */
 export async function updateMyTimezone(timezone: string): Promise<ActionResult<{ timezone: string }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   const result = await updateMyTimezoneCore(timezone);
 

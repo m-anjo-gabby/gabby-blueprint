@@ -11,6 +11,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { updateCompanyProfile, uploadCompanyLogo } from '@/actions/adminCompanyProfileAction';
 import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
 import { COMPANY_CODES, type CompanyProfile } from '@gabby/types/companyProfile';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 /** 法人1社分の会社情報の編集カード（書面の発行元として印字される内容） */
 export function CompanyProfileCard({ initialProfile }: { initialProfile: CompanyProfile }) {
@@ -112,8 +113,7 @@ export function CompanyProfileCard({ initialProfile }: { initialProfile: Company
         <Label>{t('logoLabel')}</Label>
         <div className="flex items-center gap-4">
           {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage上の画像URLのプレビュー表示
-            <img
+            <ExternalImage
               src={logoUrl}
               alt={t('logoAlt')}
               className="h-16 w-auto max-w-[160px] object-contain border border-slate-100 rounded-md p-2"

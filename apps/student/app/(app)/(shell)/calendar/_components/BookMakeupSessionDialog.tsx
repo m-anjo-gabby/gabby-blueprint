@@ -85,7 +85,7 @@ export function BookMakeupSessionDialog({
       setReason('');
       setConflictMessage(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 開いた時だけ入力を空に戻す
   }, [open]);
 
   const selectedSlot = slots.find((s) => s.schedule_id === selectedScheduleId) ?? null;

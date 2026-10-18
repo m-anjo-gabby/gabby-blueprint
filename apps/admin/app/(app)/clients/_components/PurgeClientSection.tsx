@@ -31,7 +31,6 @@ const BLOCKERS = [
   'has_admin',
   'linked_to_other_client',
   'client_not_found',
-  'forbidden',
   'name_mismatch',
 ] as const;
 

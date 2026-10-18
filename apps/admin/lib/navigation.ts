@@ -211,7 +211,13 @@ export function getAllLeafItems(config: readonly NavItem[]): NavLeaf[] {
 }
 
 /**
- * 特定のパスに対して権限があるか判定する共通ロジック
+ * メニューに無いが、どのロールでも開ける画面。/api は各 Route Handler がロールを確かめる（lib/adminAuth.ts）
+ */
+const SHARED_PATH_PREFIXES = ['/profile', '/notification', '/api/'] as const;
+
+/**
+ * 特定のパスに対して権限があるか判定する共通ロジック。メニューにも上の一覧にも無いパスは、システム管理者だけにする
+ * （画面を足した時にメニューへの登録を忘れても、限られたロールに開かないようにする）
  */
 export function canAccessPath(pathname: string, userRoles: string[]): boolean {
   if (userRoles.includes('admin')) return true;
@@ -219,7 +225,8 @@ export function canAccessPath(pathname: string, userRoles: string[]): boolean {
   const leaves = getAllLeafItems(ADMIN_NAV_CONFIG);
   const config = leaves.find((item) => pathname.startsWith(item.href));
 
-  if (!config || config.requiredRoles.length === 0) return true;
+  if (!config) return SHARED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  if (config.requiredRoles.length === 0) return true;
 
   return config.requiredRoles.some((role) => userRoles.includes(role));
 }

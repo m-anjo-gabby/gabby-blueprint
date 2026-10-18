@@ -92,11 +92,7 @@ export function createAudioOwnerId(): number {
 
 function getAudioContextClass(): typeof AudioContext | null {
   if (typeof window === 'undefined') return null;
-  return (
-    window.AudioContext ||
-    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext ||
-    null
-  );
+  return window.AudioContext || window.webkitAudioContext || null;
 }
 
 /**
@@ -569,9 +565,7 @@ function getChimeBuffer(): Promise<AudioBuffer | null> {
   if (chimePromise) return chimePromise;
   if (typeof window === 'undefined') return Promise.resolve(null);
 
-  const OfflineCtxClass =
-    window.OfflineAudioContext ||
-    (window as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext }).webkitOfflineAudioContext;
+  const OfflineCtxClass = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   if (!OfflineCtxClass) return Promise.resolve(null);
 
   const sampleRate = 44100;

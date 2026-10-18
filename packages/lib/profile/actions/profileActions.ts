@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
@@ -40,7 +42,7 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
       return { success: false, errorCode: 'not_found' };
     }
 
-    const client = data.com_m_client as unknown as { client_name: string } | null;
+    const client = data.com_m_client;
 
     return {
       success: true,
@@ -56,6 +58,7 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
       },
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('profile:get_my_profile_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

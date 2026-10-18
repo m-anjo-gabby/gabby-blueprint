@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { USER_STATUS } from '@gabby/types/user';
@@ -63,6 +66,7 @@ function jstDateTimeToUtcIso(dateStr: string, timeStr: string): string | null {
  * 管理画面の一覧は getCalendarEventList でページ分けして取得する）
  */
 export async function getCalendarEvents(options: { seriesId?: string } = {}): Promise<CalendarEventItem[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -87,6 +91,7 @@ export async function getCalendarEvents(options: { seriesId?: string } = {}): Pr
       coaches: coachesByEventId.get(row.calendar_event_id) ?? [],
     })) as CalendarEventItem[];
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:get_calendar_events_unexpected', getErrorMessage(error), { ...ctx, err: error });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
@@ -102,6 +107,7 @@ const PUBLISH_STATUS_FILTER = { published: true, draft: false } as const;
 export async function getCalendarEventList(
   params: ListParams<'type' | 'status'>,
 ): Promise<ListResult<CalendarEventItem>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const { q, filters } = params;
   // 種別・公開状態は既知の値だけを条件にする（不正な値は「すべて」として扱う）
@@ -158,6 +164,7 @@ export async function getCalendarEventList(
 
     return { rows, totalCount: count || 0 };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:get_calendar_event_list_unexpected', getErrorMessage(error), { ...ctx, err: error });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
@@ -167,6 +174,7 @@ export async function getCalendarEventList(
  * 担当コーチの候補一覧取得（選択肢用・軽量・全件）
  */
 export async function getCoachesFilter(): Promise<CalendarEventCoachOption[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -184,6 +192,7 @@ export async function getCoachesFilter(): Promise<CalendarEventCoachOption[]> {
 
     return (data ?? []).map((row) => ({ coach_id: row.id, user_name: row.user_name }));
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:get_coaches_filter_unexpected', getErrorMessage(error), { ...ctx, err: error });
     return [];
   }
@@ -260,6 +269,7 @@ async function syncCalendarEventCoaches(calendarEventId: string, coachIds: strin
 export async function upsertCalendarEvent(
   formData: CalendarEventFormData,
 ): Promise<ActionResult<{ data: CalendarEventItem }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -313,6 +323,7 @@ export async function upsertCalendarEvent(
     revalidatePath('/calendar-events');
     return { success: true, data: saved };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:upsert_calendar_event_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -327,6 +338,7 @@ export async function upsertCalendarEvent(
  * 開催済み（開始日時を過ぎた）イベントは参加の記録を残すため削除せず、非公開にするよう案内する。
  */
 export async function deleteCalendarEvent(calendarEventId: string): Promise<ActionResult<object, 'held'>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -376,6 +388,7 @@ export async function deleteCalendarEvent(calendarEventId: string): Promise<Acti
     revalidatePath('/calendar-events');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:delete_calendar_event_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -393,6 +406,7 @@ export async function deleteCalendarEvent(calendarEventId: string): Promise<Acti
 export async function getCalendarEventParticipants(
   calendarEventId: string,
 ): Promise<{ event: CalendarEventItem | null; participants: CalendarEventParticipant[]; totalCount: number }> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -445,6 +459,7 @@ export async function getCalendarEventParticipants(
       totalCount: participants.length,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:get_participants_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -465,6 +480,7 @@ export interface CalendarEventMessageFormData {
  * カレンダーイベント単位のアナウンス配信履歴を取得（新しい順）
  */
 export async function getCalendarEventMessages(calendarEventId: string): Promise<CalendarEventMessageItem[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -485,6 +501,7 @@ export async function getCalendarEventMessages(calendarEventId: string): Promise
 
     return (data ?? []).map((row) => ({ ...row, attachments: Array.isArray(row.attachments) ? row.attachments : [] }));
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:get_messages_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -501,6 +518,7 @@ export async function createCalendarEventMessage(
   calendarEventId: string,
   formData: CalendarEventMessageFormData,
 ): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -534,6 +552,7 @@ export async function createCalendarEventMessage(
     revalidatePath(`/calendar-events/${calendarEventId}/participants`);
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:create_message_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -551,6 +570,7 @@ export async function updateCalendarEventMessage(
   calendarEventId: string,
   formData: CalendarEventMessageFormData,
 ): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -586,6 +606,7 @@ export async function updateCalendarEventMessage(
     revalidatePath(`/calendar-events/${calendarEventId}/participants`);
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:update_message_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -602,6 +623,7 @@ export async function deleteCalendarEventMessage(
   calendarEventMessageId: string,
   calendarEventId: string,
 ): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -651,6 +673,7 @@ export async function deleteCalendarEventMessage(
     revalidatePath(`/calendar-events/${calendarEventId}/participants`);
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:delete_message_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -668,6 +691,7 @@ export async function uploadCalendarEventMessageFile(
   calendarEventMessageId: string,
   formData: FormData,
 ): Promise<ActionResult<{ attachment: CalendarEventMessageAttachment }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -711,6 +735,7 @@ export async function uploadCalendarEventMessageFile(
 
     return { success: true, attachment: newAttachment };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:upload_message_file_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -724,6 +749,7 @@ export async function uploadCalendarEventMessageFile(
  * アナウンス添付ファイルの公開URLを取得（"calendar-event-message" はPublicバケット）
  */
 export async function getCalendarEventMessageAttachmentUrl(path: string): Promise<{ url: string | null }> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const supabase = createAdminClient();
   const { data } = supabase.storage.from('calendar-event-message').getPublicUrl(path);
   return { url: data?.publicUrl ?? null };
@@ -733,6 +759,7 @@ export async function getCalendarEventMessageAttachmentUrl(path: string): Promis
  * アナウンス添付ファイルの削除（Storageから物理削除。送信前の差し替え用）
  */
 export async function deleteCalendarEventMessageFile(storagePath: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -752,6 +779,7 @@ export async function deleteCalendarEventMessageFile(storagePath: string): Promi
 
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEvent:delete_message_file_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
@@ -92,6 +94,7 @@ export async function uploadSessionHomeworkAttachmentCore(
 
     return { success: true, attachment };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('sessionHomework:upload_attachment_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -121,6 +124,7 @@ export async function getSessionHomeworkAttachmentUrl(path: string): Promise<{ u
 
     return { url: data.signedUrl };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('sessionHomework:get_attachment_url_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

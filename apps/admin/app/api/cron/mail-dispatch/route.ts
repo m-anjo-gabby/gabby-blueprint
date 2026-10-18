@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import { timingSafeEqual } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { dispatchMail } from '@gabby/lib/mail/dispatch/dispatchMail';
@@ -27,7 +28,8 @@ async function readTask(req: NextRequest): Promise<string | null> {
   try {
     const body: unknown = await req.json();
     return body && typeof body === 'object' && 'task' in body && typeof body.task === 'string' ? body.task : null;
-  } catch {
+  } catch (thrown) {
+    unstable_rethrow(thrown);
     return null;
   }
 }
@@ -51,6 +53,7 @@ async function handle(req: NextRequest) {
     const summary = await dispatchMail();
     return NextResponse.json(summary);
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('mail:dispatch_route_failed', getErrorMessage(err), { err });
     return NextResponse.json({ error: 'dispatch_failed' }, { status: 500 });
   }

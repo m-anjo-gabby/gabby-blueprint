@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { QUESTION_TYPES, type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 import type { TableInsert, TableUpdate } from '@gabby/types/db';
@@ -26,6 +29,7 @@ export async function getSprintQuestionsByFilter(
   type: SprintQuestionType,
   level: number,
 ): Promise<SprintQuestion[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -42,6 +46,7 @@ export async function getSprintQuestionsByFilter(
     if (error) throw error;
     return data as SprintQuestion[];
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('sprint:get_questions_failed', getErrorMessage(err), {
       ...ctx,
       err,
@@ -55,6 +60,7 @@ export async function getSprintQuestionsByFilter(
  * スプリント問題の複数一括登録・更新
  */
 export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -78,6 +84,7 @@ export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('sprint:bulk_upsert_failed', getErrorMessage(err), { ...ctx, err, payload: questions });
     return { success: false, message: t('common.errors.unexpected') };
   }
@@ -88,6 +95,7 @@ export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]
  * 回答の履歴（JSON）は問題IDだけを持つため残り、画面では「削除された問題」と表示する）
  */
 export async function deleteSprintQuestion(questionId: string): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -96,15 +104,16 @@ export async function deleteSprintQuestion(questionId: string): Promise<ActionRe
       .from('com_m_sprint_questions')
       .delete()
       .eq('question_id', questionId)
-      .select(SPRINT_VOICE_COLUMNS.join(', '))
+      .select(SPRINT_VOICE_SELECT)
       .maybeSingle();
 
     if (error) throw error;
 
     // 音声ファイルの削除は問題の削除の後に行い、失敗しても削除は取り消さない（エラーのログで気付けるようにする）
-    if (deleted) await removeSprintVoiceFiles(supabase, [deleted as unknown as SprintVoiceRow], ctx, { questionId });
+    if (deleted) await removeSprintVoiceFiles(supabase, [deleted], ctx, { questionId });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('sprint:delete_failed', getErrorMessage(err), { ...ctx, err, payload: { questionId } });
     return { success: false, message: t('common.errors.unexpected') };
   }
@@ -118,6 +127,8 @@ const SPRINT_VOICE_COLUMNS = [
   'answer_sentence_no_voice',
 ] as const;
 type SprintVoiceRow = Record<(typeof SPRINT_VOICE_COLUMNS)[number], string | null>;
+/** select に渡す形（Supabase の型が項目を読み取れるよう、連結せずに文字列で持つ。上の配列と同じ並び） */
+const SPRINT_VOICE_SELECT = 'statement_voice, question_voice, answer_sentence_yes_voice, answer_sentence_no_voice';
 
 /** 一度に照合・削除するパスの数（PostgREST の URL の長さと Storage の一括削除の上限に収める） */
 const VOICE_REMOVE_CHUNK = 50;
@@ -142,12 +153,10 @@ async function removeSprintVoiceFiles(
       const list = chunk.map((p) => `"${p.replace(/"/g, '\\"')}"`).join(',');
       const { data: sharing, error: sharingError } = await supabase
         .from('com_m_sprint_questions')
-        .select(SPRINT_VOICE_COLUMNS.join(', '))
+        .select(SPRINT_VOICE_SELECT)
         .or(SPRINT_VOICE_COLUMNS.map((col) => `${col}.in.(${list})`).join(','));
       if (sharingError) throw sharingError;
-      const inUse = new Set(
-        ((sharing ?? []) as unknown as SprintVoiceRow[]).flatMap((r) => SPRINT_VOICE_COLUMNS.map((col) => r[col])),
-      );
+      const inUse = new Set((sharing ?? []).flatMap((r) => SPRINT_VOICE_COLUMNS.map((col) => r[col])));
       await removeStorageFiles(
         supabase,
         'audio',
@@ -155,6 +164,7 @@ async function removeSprintVoiceFiles(
         { event: 'sprint:delete_audio_failed', ctx, payload },
       );
     } catch (err) {
+      unstable_rethrow(err);
       logger.error('sprint:delete_audio_failed', getErrorMessage(err), {
         ...ctx,
         err,
@@ -178,6 +188,7 @@ export async function saveSprintAudio(
   adjustmentData: TTSAdjustmentData,
   currentPath?: string | null,
 ): Promise<ActionResult<{ path: string }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -254,6 +265,7 @@ export async function saveSprintAudio(
 
     return { success: true, path: filePath };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('sprint:save_audio_failed', getErrorMessage(err), { ...ctx, err, payload: { questionId, section } });
     return { success: false, message: t('common.errors.unexpected') };
   }
@@ -271,6 +283,7 @@ export async function moveSprintQuestionsLevel(
   questionIds: string[],
   toLevel: number,
 ): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -337,6 +350,7 @@ export async function moveSprintQuestionsLevel(
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('sprint:move_level_failed', getErrorMessage(err), {
       ...ctx,
       err,
@@ -354,6 +368,7 @@ export async function updateGroupStatement(
   statementEn: string,
   statementJa: string | null,
 ): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   const supabase = await createAdminClient();
@@ -378,6 +393,7 @@ export async function bulkImportSprintQuestions(
   level: number,
   questions: Omit<SprintQuestionInput, 'content_id' | 'question_type' | 'difficulty_level'>[],
 ): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -391,13 +407,13 @@ export async function bulkImportSprintQuestions(
       .eq('content_id', contentId)
       .eq('question_type', type)
       .eq('difficulty_level', level)
-      .select(SPRINT_VOICE_COLUMNS.join(', '));
+      .select(SPRINT_VOICE_SELECT);
 
     if (deleteError) throw deleteError;
     // 消した問題の音声ファイルは、新しい行の登録の後に消す（取り込むデータが同じパスを持つ場合は残す）。
     // 登録に失敗しても消した問題は戻らないため、成否にかかわらず消す
     const removeDeletedVoices = () =>
-      removeSprintVoiceFiles(supabase, (deletedRows ?? []) as unknown as SprintVoiceRow[], ctx, {
+      removeSprintVoiceFiles(supabase, deletedRows ?? [], ctx, {
         contentId,
         type,
         level,
@@ -431,6 +447,7 @@ export async function bulkImportSprintQuestions(
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('sprint:bulk_import_failed', getErrorMessage(err), {
       ...ctx,
       err,

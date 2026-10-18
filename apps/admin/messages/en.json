@@ -301,8 +301,7 @@
           "active_license": "The user has an active license. Stop the license first",
           "scheduled_session": "The user has upcoming sessions. Cancel them first",
           "active_matching": "The user has a pending request or an active schedule. End it first",
-          "name_mismatch": "The display name does not match",
-          "forbidden": "Only system administrators can do this"
+          "name_mismatch": "The display name does not match"
         }
       }
     },
@@ -737,7 +736,6 @@
         "has_admin": "An administrator belongs to this client, so it cannot be deleted",
         "linked_to_other_client": "It has sessions or assignments with users of other clients, so it cannot be deleted",
         "client_not_found": "Client not found",
-        "forbidden": "Only system administrators can do this",
         "name_mismatch": "The client name does not match",
         "unexpected": "Failed to delete"
       }
@@ -2619,7 +2617,6 @@
     "toastUpdated": "Company information updated",
     "toastLogoUpdated": "Logo image updated",
     "errors": {
-      "forbidden": "You do not have permission to perform this action.",
       "invalidCompany": "Invalid legal entity.",
       "required": "Company name (English) and address are required.",
       "updateFailed": "Failed to update company information.",

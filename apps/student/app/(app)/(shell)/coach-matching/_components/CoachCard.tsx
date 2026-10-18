@@ -19,6 +19,7 @@ import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
 import { toCoachRatingDisplay } from '@/constants/coachRating';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 const VISIBLE_SLOT_COUNT = 3;
 
@@ -131,8 +132,11 @@ export function CoachCard({
       >
         <div className="w-11 h-11 rounded-control bg-brand-soft overflow-hidden flex items-center justify-center text-brand-500 shrink-0">
           {coach.icon_path ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={getProfileIconUrl(coach.icon_path) ?? ''} alt="" className="w-full h-full object-cover" />
+            <ExternalImage
+              src={getProfileIconUrl(coach.icon_path) ?? ''}
+              alt=""
+              className="w-full h-full object-cover"
+            />
           ) : (
             <GraduationCap size={20} />
           )}
@@ -143,8 +147,7 @@ export function CoachCard({
             {country && (
               <span className="flex items-center gap-1 min-w-0">
                 {country.icon_path && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <ExternalImage
                     src={getCountryFlagUrl(country.icon_path) ?? ''}
                     alt=""
                     className="w-3.5 h-3.5 rounded-full object-cover shrink-0"

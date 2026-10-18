@@ -8,6 +8,9 @@ declare global {
   interface Window {
     SpeechRecognition: typeof SpeechRecognition;
     webkitSpeechRecognition: typeof SpeechRecognition;
+    /** 古い Safari は接頭辞付きの名前だけを持つ（無いブラウザもある） */
+    webkitAudioContext?: typeof AudioContext;
+    webkitOfflineAudioContext?: typeof OfflineAudioContext;
   }
 
   // クラス（コンストラクタ）としての定義

@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
@@ -79,6 +81,7 @@ export async function getChatRoomTargetUsers(): Promise<CoreResult<{ data: ChatT
 
     return { success: true, data: (data || []) as ChatTargetUser[] };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:get_target_users_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -115,6 +118,7 @@ export async function createChatRoom(
     }
     return createOneOnOneChatRoom(payload, ctx);
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:create_room_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -322,6 +326,7 @@ export async function addChatRoomMember(
       },
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:add_member_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -392,6 +397,7 @@ export async function removeChatRoomMember(
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:remove_member_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -553,6 +559,7 @@ export async function getChatRooms(): Promise<CoreResult<{ data: ChatRoomListIte
     const data = await buildChatRoomListItems(supabase, rooms, user.id, myMembershipByRoom);
     return { success: true, data };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:get_rooms_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -601,6 +608,7 @@ export async function getAllChatRoomsForAdmin(): Promise<
     );
     return { success: true, data };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:get_all_rooms_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -688,6 +696,7 @@ export async function getChatRoomDetail(
       },
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:get_room_detail_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
@@ -98,6 +100,7 @@ export async function uploadProfileIconCore(formData: FormData): Promise<UploadP
     logger.info('profile:upload_icon_success', `Profile icon updated: ${newIconPath}`, { ...ctx, userId: user.id });
     return { success: true, iconPath: newIconPath };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('profile:upload_icon_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -151,6 +154,7 @@ export async function removeProfileIconCore(): Promise<RemoveProfileIconResult> 
     logger.info('profile:remove_icon_success', 'Profile icon removed', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('profile:remove_icon_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

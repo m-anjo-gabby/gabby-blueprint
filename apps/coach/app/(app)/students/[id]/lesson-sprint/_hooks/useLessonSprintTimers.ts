@@ -98,6 +98,5 @@ export function useAutoRedirectCountdown(
     }, redirectDelayMs);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger, onRedirect]);
+  }, [trigger, onRedirect, redirectDelayMs]);
 }

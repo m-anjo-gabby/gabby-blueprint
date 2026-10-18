@@ -1,27 +1,20 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
+import { joinColumns } from '@gabby/lib/supabase/select';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getSprintTitle, resolveSprintHasLevel } from '@gabby/lib';
 import { CONTENT_STATUS, type ContentMetadata } from '@gabby/types/content';
-import {
-  FAVORITE_SPRINT_QUESTION_COLUMNS,
-  type FavoriteSprintQuestionFields,
-  type FavoriteSprintQuestionItem,
-} from '@gabby/types/sprint';
+import { FAVORITE_SPRINT_QUESTION_COLUMNS, type FavoriteSprintQuestionItem } from '@gabby/types/sprint';
 import { toggleFavoriteRow } from '@/lib/favoriteToggle';
 import { FAVORITE_LIMIT, type FavoriteToggleResult } from '@/constants/favorites';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('student');
-
-interface FavoriteSprintQuestionRow {
-  favorite_id: string;
-  insert_date: string;
-  question: FavoriteSprintQuestionFields;
-}
 
 interface SprintContentRow {
   content_id: string;
@@ -43,7 +36,7 @@ export async function getFavoriteSprintQuestions(): Promise<FavoriteSprintQuesti
     const { data, error } = await supabase
       .from('com_t_favorite_sprint_question')
       .select(
-        `favorite_id, insert_date, question:com_m_sprint_questions!inner(${FAVORITE_SPRINT_QUESTION_COLUMNS.join(', ')})`,
+        `favorite_id, insert_date, question:com_m_sprint_questions!inner(${joinColumns(FAVORITE_SPRINT_QUESTION_COLUMNS)})` as const,
       )
       .eq('user_id', user.id)
       .order('insert_date', { ascending: false })
@@ -54,7 +47,7 @@ export async function getFavoriteSprintQuestions(): Promise<FavoriteSprintQuesti
       return [];
     }
 
-    const rows = (data ?? []) as unknown as FavoriteSprintQuestionRow[];
+    const rows = data ?? [];
     if (rows.length === 0) return [];
 
     // 問題マスタは教材への外部キーを持たないため、出典の教材は別に取得する
@@ -90,6 +83,7 @@ export async function getFavoriteSprintQuestions(): Promise<FavoriteSprintQuesti
       ];
     });
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('sprint:get_favorite_questions_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -121,6 +115,7 @@ export async function getFavoriteSprintQuestionIds(questionIds: string[]): Promi
     }
     return (data ?? []).map((r) => r.question_id as string);
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('sprint:get_favorite_question_ids_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

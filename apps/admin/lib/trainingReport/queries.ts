@@ -1,22 +1,14 @@
 import { renderToBuffer } from '@react-pdf/renderer';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { reportingMonthRange } from '@gabby/lib/date/reporting';
 import { createLogger } from '@gabby/lib/logger';
 import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfile';
 import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
 import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
-import { USER_TYPES } from '@gabby/types/user';
 import type { TrainingReportData, TrainingReportTarget } from '@gabby/types/trainingReport';
 import { TrainingReportDocument } from '@/lib/pdf/TrainingReportDocument';
 
 const logger = createLogger('admin');
-
-/** 呼び出し元が管理者か（PDFのダウンロードURLで使う。画面遷移は proxy.ts でも弾いている） */
-export async function isAdminRequest(): Promise<boolean> {
-  const user = await getAuthUser();
-  return user?.app_metadata?.user_type === USER_TYPES.ADMIN;
-}
 
 /**
  * 満了日が指定月（集計期間のタイムゾーン＝日本時間）にあるライセンスの一覧。fetchedAt は取得時刻（期限を過ぎたかの判定に使う）

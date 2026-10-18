@@ -6,6 +6,13 @@ import type { RecognitionCallbacks, RecognitionHandle, RecognitionStartOptions, 
  * テストは addInitScript 等で window.__gabbyFakeSpeech を設定する。文字起こしは transcript、
  * 未設定なら参照文をそのまま返す（＝満点の発話）。
  */
+declare global {
+  interface Window {
+    /** E2E が addInitScript で入れる偽の認識器の設定（本番では無い） */
+    __gabbyFakeSpeech?: FakeSpeechConfig;
+  }
+}
+
 interface FakeSpeechConfig {
   transcript?: string;
   /** 認識開始から文字起こしを返すまでの時間（ms） */
@@ -16,7 +23,7 @@ interface FakeSpeechConfig {
 
 function readRawConfig(): FakeSpeechConfig | undefined {
   if (typeof window === 'undefined') return undefined;
-  return (window as unknown as { __gabbyFakeSpeech?: FakeSpeechConfig }).__gabbyFakeSpeech;
+  return window.__gabbyFakeSpeech;
 }
 
 function readConfig(): FakeSpeechConfig {

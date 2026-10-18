@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { type TimezoneMaster } from '@gabby/types/timezone';
 import type { TableInsert } from '@gabby/types/db';
@@ -17,6 +20,7 @@ const logger = createLogger('admin');
  * タイムゾーン一覧取得
  */
 export async function getTimezones(): Promise<TimezoneMaster[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -28,6 +32,7 @@ export async function getTimezones(): Promise<TimezoneMaster[]> {
     }
     return data as TimezoneMaster[];
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('timezone:get_timezones_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -44,6 +49,7 @@ export async function getTimezones(): Promise<TimezoneMaster[]> {
 export async function upsertTimezone(
   payload: TableInsert<'com_m_timezone'>,
 ): Promise<ActionResult<{ data: TimezoneMaster }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -75,6 +81,7 @@ export async function upsertTimezone(
     revalidatePath('/timezones');
     return { success: true, data: savedTimezone };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('timezone:upsert_timezone_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -89,6 +96,7 @@ export async function upsertTimezone(
  * 使用停止（is_active = false）にするよう案内する
  */
 export async function deleteTimezone(timezone: string): Promise<ActionResult<object, 'in_use'>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -107,6 +115,7 @@ export async function deleteTimezone(timezone: string): Promise<ActionResult<obj
     revalidatePath('/timezones');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('timezone:delete_timezone_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

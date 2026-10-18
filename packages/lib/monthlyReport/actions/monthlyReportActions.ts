@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
@@ -215,6 +217,7 @@ export async function getCoachMonthlyReportCore(reportMonth: string): Promise<Ge
 
     return await buildMonthlyReport(supabase, user.id, reportMonth);
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('monthlyReport:get_coach_report_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -235,6 +238,7 @@ export async function getAdminCoachMonthlyReportCore(
     const supabase = createAdminClient();
     return await buildMonthlyReport(supabase, coachId, reportMonth);
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('monthlyReport:get_admin_report_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -274,6 +278,7 @@ export async function approveCoachMonthlyReportCore(
     });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('monthlyReport:approve_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -312,6 +317,7 @@ export async function revokeCoachMonthlyReportApprovalCore(
     });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('monthlyReport:revoke_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

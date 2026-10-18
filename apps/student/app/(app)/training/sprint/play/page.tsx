@@ -151,7 +151,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     };
 
     initializeConfigAndView();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- URL の値が変わった時だけ設定を読み直す（読み込み中の状態の変化では読み直さない）
   }, [resolvedParams, contentId]);
 
   // ⚙ セッション開始ハンドラー

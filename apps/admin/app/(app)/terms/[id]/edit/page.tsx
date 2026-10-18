@@ -2,7 +2,7 @@
 import { getTranslations } from 'next-intl/server';
 import { getTermDetail } from '@/actions/adminTermAction';
 import { TermEditor } from './_components/TermEditor';
-import { notFound } from 'next/navigation';
+import { unstable_rethrow, notFound } from 'next/navigation';
 import { PageHeader } from '@/components/common/PageHeader';
 import type { TermDetail } from '@gabby/types/term';
 import { createLogger } from '@gabby/lib/logger';
@@ -19,6 +19,7 @@ export default async function TermEditPage({ params }: { params: Promise<{ id: s
   try {
     term = await getTermDetail(id);
   } catch (error) {
+    unstable_rethrow(error);
     // データ取得中にエラーが発生した場合
     logger.error('term:get_term_detail_failed', 'Failed to load term data', { err: error });
     return (

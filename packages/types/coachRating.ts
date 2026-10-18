@@ -47,3 +47,25 @@ export type CoachRatingErrorCode =
   'unauthorized' | 'invalid_input' | 'already_rated' | 'not_eligible' | 'unexpected_error';
 
 export type SubmitCoachRatingResult = { success: true } | { success: false; errorCode: CoachRatingErrorCode };
+
+/** com_t_coach_rating.source（1:生徒アプリ 2:移行元システム 3:新人コーチの初期値） */
+export type CoachRatingSource = 1 | 2 | 3;
+
+/** admin_get_coach_ratings の戻り値（jsonb）。平均・件数は numeric のため文字列で返ることがある */
+export interface AdminCoachRatingsRpcResult {
+  coach: { id: string; name: string | null; email: string | null };
+  stats: Record<'count' | 'overall' | 'coaching' | 'friendliness' | 'recommendation', number | string> | null;
+  ratings: {
+    rating_id: string;
+    source: CoachRatingSource;
+    rated_at: string;
+    coaching: number | string;
+    friendliness: number | string;
+    recommendation: number | string;
+    feedback: string | null;
+    student: { id: string; name: string | null; email: string | null } | null;
+    plan_name: string | null;
+    license_start: string | null;
+    license_end: string | null;
+  }[];
+}

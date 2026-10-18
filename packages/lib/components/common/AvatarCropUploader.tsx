@@ -6,6 +6,7 @@ import Cropper, { type Area, type Point } from 'react-easy-crop';
 import { User, Camera, Trash2, Loader2, X } from 'lucide-react';
 import { getCroppedImageBlob } from '../../profile/cropImage';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { ExternalImage } from './ExternalImage';
 
 export interface AvatarCropUploaderLabels {
   /** モーダルのタイトル */
@@ -136,8 +137,7 @@ export function AvatarCropUploader({
           style={{ width: size, height: size }}
         >
           {currentImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={currentImageUrl} alt="" className="w-full h-full object-cover" />
+            <ExternalImage src={currentImageUrl} alt="" className="w-full h-full object-cover" />
           ) : (
             <User size={size * 0.5} className="text-slate-400" />
           )}

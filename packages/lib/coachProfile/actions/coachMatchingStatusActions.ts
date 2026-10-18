@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
@@ -75,6 +77,7 @@ export async function getCoachMatchingStatusCore(coachId: string): Promise<GetCo
       },
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachProfile:get_matching_status_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -121,6 +124,7 @@ export async function updateMyAcceptingStudentsCore(
     });
     return { success: true, acceptingStudents: data.accepting_students };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachProfile:update_accepting_students_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }

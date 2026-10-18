@@ -1,6 +1,9 @@
 // apps/admin/actions/adminNoticeAction.ts
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
@@ -119,6 +122,7 @@ function jstToUtcIso(jstStr: string | null | undefined): string | null {
  * UTCの日時文字列を JST の <input type="date"> 用文字列 (YYYY-MM-DD) に変換
  */
 export async function utcToJstInputStr(utcStr: string | null | undefined): Promise<string> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   if (!utcStr) return '';
   const d = new Date(utcStr);
   if (isNaN(d.getTime())) return '';
@@ -131,6 +135,7 @@ export async function utcToJstInputStr(utcStr: string | null | undefined): Promi
  * お知らせ一覧取得（ページネーション・タイトルの部分一致検索・種別での絞り込み・顧客名結合付き）
  */
 export async function getNotices(params: ListParams<'type'>): Promise<ListResult<AdminNoticeListItem>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const { q, filters } = params;
   // 種別は既知の値だけを条件にする（旧URLの type=ALL・不正な値は「すべて」として扱う）
@@ -182,6 +187,7 @@ export async function getNotices(params: ListParams<'type'>): Promise<ListResult
       totalCount: count || 0,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('notice:get_notices_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -195,6 +201,7 @@ export async function getNotices(params: ListParams<'type'>): Promise<ListResult
  * お知らせ詳細の取得
  */
 export async function getNoticeById(noticeId: string) {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -221,6 +228,7 @@ export async function getNoticeById(noticeId: string) {
       client_name: data.com_m_client?.client_name || null,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('notice:get_by_id_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -267,6 +275,7 @@ export async function getNoticeReadStatus(
   noticeId: string,
   params: ListParams<'clientId' | 'userType'>,
 ): Promise<NoticeReadStatusResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const {
     q,
@@ -398,6 +407,7 @@ export async function getNoticeReadStatus(
       ctaClickCount,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('notice:read_status_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -411,6 +421,7 @@ export async function getNoticeReadStatus(
  * お知らせの新規作成
  */
 export async function createNotice(formData: NoticeFormData): Promise<ActionResult<{ noticeId: string }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -458,6 +469,7 @@ export async function createNotice(formData: NoticeFormData): Promise<ActionResu
     revalidatePath('/notice');
     return { success: true, noticeId: data.notice_id };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('notice:create_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -471,6 +483,7 @@ export async function createNotice(formData: NoticeFormData): Promise<ActionResu
  * お知らせの更新
  */
 export async function updateNotice(noticeId: string, formData: NoticeFormData): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -519,6 +532,7 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData): 
     revalidatePath(`/notice/${noticeId}/edit`);
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('notice:update_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -532,6 +546,7 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData): 
  * お知らせの削除（既読の記録も一緒に消える）。削除の後に画像・添付のファイルを消す
  */
 export async function deleteNotice(noticeId: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -566,6 +581,7 @@ export async function deleteNotice(noticeId: string): Promise<ActionResult> {
     revalidatePath('/notice');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('notice:delete_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -584,6 +600,7 @@ const NOTICE_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
  * Storageバケット "notices" に notices/{notice_id}/image/{uuid}.{拡張子} で保存し、パスを返す
  */
 export async function uploadNoticeImage(noticeId: string, formData: FormData): Promise<ActionResult<{ path: string }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -616,6 +633,7 @@ export async function uploadNoticeImage(noticeId: string, formData: FormData): P
     });
     return { success: true, path: storagePath };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('notice:upload_image_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -633,6 +651,7 @@ export async function uploadNoticeFile(
   noticeId: string,
   formData: FormData,
 ): Promise<ActionResult<{ attachment: NoticeAttachment }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -678,6 +697,7 @@ export async function uploadNoticeFile(
 
     return { success: true, attachment: newAttachment };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('notice:upload_file_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -691,6 +711,7 @@ export async function uploadNoticeFile(
  * 添付ファイルの削除 (Storageから物理削除)
  */
 export async function deleteNoticeFile(storagePath: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -707,6 +728,7 @@ export async function deleteNoticeFile(storagePath: string): Promise<ActionResul
     logger.info('notice:delete_file_success', `Attachment removed: ${cleanPath}`, { ...ctx, payload: { storagePath } });
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('notice:delete_file_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

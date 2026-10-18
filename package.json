@@ -23,6 +23,7 @@
     "env:export": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-env/export.ps1"
   },
   "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "catalog:",
     "eslint": "catalog:",
     "eslint-config-next": "catalog:",
     "prettier": "catalog:",

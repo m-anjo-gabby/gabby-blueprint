@@ -1,14 +1,15 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import type { CoachRatingSource } from '@gabby/types/coachRating';
 
 const logger = createLogger('admin');
-
-/** com_t_coach_rating.source（1:生徒アプリ 2:移行元システム 3:新人コーチの初期値） */
-export type CoachRatingSource = 1 | 2 | 3;
 
 export interface AdminCoachRatingRow {
   ratingId: string;
@@ -41,29 +42,12 @@ export interface AdminCoachRatings {
   ratings: AdminCoachRatingRow[];
 }
 
-interface RpcResult {
-  coach: { id: string; name: string | null; email: string | null };
-  stats: Record<keyof AdminCoachRatingStats, number | string> | null;
-  ratings: {
-    rating_id: string;
-    source: CoachRatingSource;
-    rated_at: string;
-    coaching: number | string;
-    friendliness: number | string;
-    recommendation: number | string;
-    feedback: string | null;
-    student: { id: string; name: string | null; email: string | null } | null;
-    plan_name: string | null;
-    license_start: string | null;
-    license_end: string | null;
-  }[];
-}
-
 /**
  * コーチの評価（集計・評価の行・運営へのコメント）を取得する（admin_get_coach_ratings。アドミン以外はDB側で拒否）。
  * コーチが見つからない場合は null。
  */
 export async function getCoachRatings(coachId: string): Promise<AdminCoachRatings | null> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     // RPC がアドミンかどうかを JWT で判定するため、service_role ではなくログイン中のクライアントで呼ぶ
@@ -75,20 +59,18 @@ export async function getCoachRatings(coachId: string): Promise<AdminCoachRating
     }
     if (!data) return null;
 
-    // jsonb の戻り値は Json 型のため、RPC が返す形として読み替える
-    const result = data as unknown as RpcResult;
     return {
-      coach: result.coach,
-      stats: result.stats
+      coach: data.coach,
+      stats: data.stats
         ? {
-            count: Number(result.stats.count),
-            overall: Number(result.stats.overall),
-            coaching: Number(result.stats.coaching),
-            friendliness: Number(result.stats.friendliness),
-            recommendation: Number(result.stats.recommendation),
+            count: Number(data.stats.count),
+            overall: Number(data.stats.overall),
+            coaching: Number(data.stats.coaching),
+            friendliness: Number(data.stats.friendliness),
+            recommendation: Number(data.stats.recommendation),
           }
         : null,
-      ratings: result.ratings.map((r) => ({
+      ratings: data.ratings.map((r) => ({
         ratingId: r.rating_id,
         source: r.source,
         ratedAt: r.rated_at,
@@ -103,6 +85,7 @@ export async function getCoachRatings(coachId: string): Promise<AdminCoachRating
       })),
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coach_rating:admin_get_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

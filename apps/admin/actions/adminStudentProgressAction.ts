@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
@@ -61,6 +64,7 @@ async function fetchProgress(
  * 指定生徒のスプリント進捗（ステージ・レベル）を取得する（管理者向け）
  */
 export async function getStudentSprintProgress(userId: string): Promise<StudentSprintProgress> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const supabase = createAdminClient();
   return fetchProgress(supabase, userId);
 }
@@ -75,6 +79,7 @@ export async function updateStudentSprintLevel(
   questionType: SprintQuestionType,
   newLevel: number,
 ): Promise<StudentProgressActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
 
@@ -118,6 +123,7 @@ export async function updateStudentSprintLevel(
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('admin:update_student_level_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -133,6 +139,7 @@ export async function updateStudentSprintLevel(
  *   （到達条件マスタは種別ごとに単調増加のため、この値は必ず目標ステージちょうどに一致する）。
  */
 export async function setStudentSprintStage(userId: string, targetStage: number): Promise<StudentProgressActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
 
@@ -175,6 +182,7 @@ export async function setStudentSprintStage(userId: string, targetStage: number)
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('admin:set_student_stage_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -191,6 +199,7 @@ export async function setStudentSprintLevelManaged(
   userId: string,
   levelManaged: boolean,
 ): Promise<StudentProgressActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
 
@@ -219,6 +228,7 @@ export async function setStudentSprintLevelManaged(
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('admin:set_student_level_managed_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

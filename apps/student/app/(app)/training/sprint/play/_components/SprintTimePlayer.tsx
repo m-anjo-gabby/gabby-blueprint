@@ -626,7 +626,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
     })();
 
     // 毎秒変わるステートによる再トリガーを避けるため、問題IDを基準に限定（recoveries: 中断からの復旧でやり直す）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 問題が変わった時だけ流れを始める（毎秒変わる値で始め直さない。上のコメント）
   }, [currentIndex, currentQuestion?.question_id, showTimeUpOverlay, isSaving, exitLoading, recoveries]);
 
   // ⏸ iOS の中断（画面が隠れた・通話等）では、流れ・発話は useSpeakingPlayer が止めるため、表示（フェーズ・録音中）を戻す

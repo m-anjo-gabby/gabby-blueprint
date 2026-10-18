@@ -16,6 +16,7 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { signOut } from '@/actions/coachAuthAction';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 export function Header() {
   const user = useUserStore((state) => state.user);
@@ -66,8 +67,7 @@ export function Header() {
             <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100 hover:bg-slate-100 transition-all outline-none active:scale-95">
               <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-brand-500 overflow-hidden shrink-0">
                 {profileIconUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
+                  <ExternalImage src={profileIconUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <UserIcon size={14} />
                 )}
@@ -84,8 +84,7 @@ export function Header() {
             <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-400 overflow-hidden shrink-0">
                 {profileIconUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
+                  <ExternalImage src={profileIconUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <UserIcon size={18} />
                 )}

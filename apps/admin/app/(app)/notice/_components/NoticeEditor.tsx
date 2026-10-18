@@ -47,6 +47,7 @@ import {
   type NoticeFormData,
 } from '@/actions/adminNoticeAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 interface PendingAttachment {
   id: string;
@@ -584,8 +585,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                 <Label className="text-xs font-black text-slate-700">{t('imageLabel')}</Label>
                 {imagePreviewUrl ? (
                   <div className="space-y-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- Storage の公開URL・選択中のファイルのプレビュー */}
-                    <img
+                    <ExternalImage
                       src={imagePreviewUrl}
                       alt={t('imageAlt')}
                       className="aspect-video w-full rounded-xl border border-slate-200 object-cover"

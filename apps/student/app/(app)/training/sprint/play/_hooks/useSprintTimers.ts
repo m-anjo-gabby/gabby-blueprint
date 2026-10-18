@@ -51,44 +51,21 @@ export function useSprintCountdown(timeLimitSec: number, onTimeUp: () => void, o
 }
 
 /**
- * タイムアップ完了オーバーレイ表示中、数秒後に自動で結果画面へ遷移するカウントダウン。
- * trigger が true になった瞬間から countdownSeconds 秒のカウントダウン表示を開始し、
- * redirectDelayMs 後に onRedirect を呼び出す。
+ * タイムアップ完了オーバーレイ表示中、数秒後に自動で結果画面へ遷移する。
+ * trigger が true になってから redirectDelayMs 後に onRedirect を呼び出す。
  */
 export function useAutoRedirectCountdown(
   trigger: boolean,
   onRedirect: () => void,
-  opts?: { countdownSeconds?: number; redirectDelayMs?: number },
+  opts?: { redirectDelayMs?: number },
 ) {
-  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
-  const countdownSeconds = opts?.countdownSeconds ?? 3;
   const redirectDelayMs = opts?.redirectDelayMs ?? 3500;
 
   useEffect(() => {
     if (!trigger) return;
-
-    setRedirectCountdown(countdownSeconds);
-
-    const interval = setInterval(() => {
-      setRedirectCountdown((prev) => {
-        if (prev === null || prev <= 0) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
     const timer = setTimeout(() => {
       onRedirect();
     }, redirectDelayMs);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger, onRedirect]);
-
-  return redirectCountdown;
+    return () => clearTimeout(timer);
+  }, [trigger, onRedirect, redirectDelayMs]);
 }

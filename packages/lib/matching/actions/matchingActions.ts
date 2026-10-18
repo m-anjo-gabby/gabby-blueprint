@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
@@ -141,6 +143,7 @@ export async function getMyLiveSessionTicketsCore(): Promise<
 
     return { success: true, tickets: activeTickets };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:get_my_tickets_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -221,6 +224,7 @@ export async function getMyLiveSessionContractsCore(): Promise<GetMyLiveSessionC
 
     return { success: true, contracts };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:get_my_contracts_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -384,6 +388,7 @@ export async function getMySlotStatusCore(
 
     return { success: true, slots };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:get_slot_status_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -498,6 +503,7 @@ export async function getMyLiveSessionOverviewCore(ticketId: string): Promise<Ge
       },
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:get_overview_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -599,6 +605,7 @@ export async function getMyBookableTicketsCore(): Promise<GetMyBookableTicketsRe
 
     return { success: true, slots };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:get_my_bookable_tickets_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -720,6 +727,7 @@ export async function getCoachBrowseListCore(
 
     return { success: true, coaches };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:get_coach_list_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -892,6 +900,7 @@ export async function createMatchingRequestCore(
     logger.info('matching:create_request_success', 'Matching request created', { ...ctx, userId: user.id });
     return { success: true, request: data };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:create_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -932,6 +941,7 @@ export async function getMatchingSlotOptionsCore(
     }
     return { success: true, options: options ?? [] };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:get_slot_options_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -973,6 +983,7 @@ export async function withdrawMatchingRequestCore(requestId: string): Promise<Wi
     logger.info('matching:withdraw_request_success', 'Matching request withdrawn', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:withdraw_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -1096,6 +1107,7 @@ export async function getPendingIncomingRequestsAsCoachCore(): Promise<
 
     return { success: true, requests: await attachRequestDetails(supabase, requests ?? []) };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:get_pending_incoming_requests_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -1141,6 +1153,7 @@ export async function getMatchingRequestHistoryPageAsCoachCore(
 
     return { success: true, items: await attachRequestDetails(supabase, page), nextCursor };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:get_request_history_page_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -1193,6 +1206,7 @@ export async function approveMatchingRequestCore(requestId: string): Promise<App
     logger.info('matching:approve_request_success', 'Matching request approved', { ...ctx, userId: user.id });
     return { success: true, scheduleId: data as string };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:approve_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -1241,6 +1255,7 @@ export async function rejectMatchingRequestCore(
     logger.info('matching:reject_request_success', 'Matching request rejected', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('matching:reject_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
@@ -83,6 +85,7 @@ export async function getPublishedCalendarEventsCore(
 
     return { success: true, events };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('calendarEvent:get_published_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -110,11 +113,7 @@ async function getAssignedCoachesByEventId(
     logger.error('calendarEvent:get_assigned_coaches_failed', error.message, { err: error });
     return map;
   }
-  for (const row of (data ?? []) as unknown as {
-    calendar_event_id: string;
-    coach_id: string;
-    com_m_user: { user_name: string | null } | null;
-  }[]) {
+  for (const row of data ?? []) {
     const list = map.get(row.calendar_event_id) ?? [];
     list.push({ coach_id: row.coach_id, user_name: row.com_m_user?.user_name ?? null });
     map.set(row.calendar_event_id, list);
@@ -156,6 +155,7 @@ export async function joinCalendarEventCore(
     });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('calendarEvent:join_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -227,6 +227,7 @@ export async function joinCalendarEventSeriesCore(
     });
     return { success: true, joinedIds: targetIds };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('calendarEvent:join_series_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -271,6 +272,7 @@ export async function cancelCalendarEventParticipationCore(
     });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('calendarEvent:cancel_participation_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -311,6 +313,7 @@ export async function getCalendarEventMessagesCore(
 
     return { success: true, messages: toMessageItems(data) };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('calendarEvent:get_messages_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

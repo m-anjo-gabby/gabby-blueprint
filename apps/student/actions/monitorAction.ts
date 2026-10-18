@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -120,6 +122,7 @@ export async function getMonitorUserList(
     logger.debug('monitor:get_user_list_success', `Fetched ${data?.length || 0} users`, ctx);
     return { success: true, data: data || [] };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('monitor:get_user_list_failed', 'Failed to fetch monitor user list', {
       ...ctx,
       err: error,
@@ -173,6 +176,7 @@ export async function getMonitorWordHistory(
 
     return { success: true, data: formattedData as MonitorWordSummaryHistoryItem[] };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('monitor:get_word_history_failed', 'Failed to fetch monitor word history', {
       ...ctx,
       err: error,
@@ -280,6 +284,7 @@ export async function getMonitorSprintHistory(
       },
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('monitor:get_sprint_history_failed', 'Error in getMonitorSprintHistory via RPC', {
       ...ctx,
       err: error,

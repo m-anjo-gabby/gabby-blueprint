@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { generateAzureAudioBuffer, generateTTSFileName } from '@gabby/lib/azure/tts';
 import { revalidatePath } from 'next/cache';
@@ -27,6 +30,7 @@ export async function savePhrase(
   adjustmentData: TTSAdjustmentData,
   currentAudioPath?: string | null, // フロントから現在のパスを受け取る
 ): Promise<ActionResult<{ message: string; path: string }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -107,6 +111,7 @@ export async function savePhrase(
       path: newFilePath,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('tts:save_phrase_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -127,6 +132,7 @@ export async function saveTTSAsset(payload: {
   mode: 'auto' | 'manual';
   adjustments: TTSAssetAdjustments;
 }): Promise<ActionResult<{ message: string; data: TableRow<'com_t_tts_asset'> }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -194,6 +200,7 @@ export async function saveTTSAsset(payload: {
       data,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('tts:save_asset_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -216,6 +223,7 @@ export interface TTSAssetListItem {
  * 汎用音声の一覧取得（ページネーション・フレーズ/コメントの部分一致検索。新しい順）
  */
 export async function getTTSAssets(params: ListParams): Promise<ListResult<TTSAssetListItem>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   const { q } = params;
   try {
@@ -238,6 +246,7 @@ export async function getTTSAssets(params: ListParams): Promise<ListResult<TTSAs
     }
     return { rows: data ?? [], totalCount: count || 0 };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('tts:get_assets_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -251,6 +260,7 @@ export async function getTTSAssets(params: ListParams): Promise<ListResult<TTSAs
  * DBレコードの削除 + Storage上の物理ファイル削除（削除するファイルは画面から受け取らず、削除したレコードのパスを使う）
  */
 export async function deleteTTSAsset(assetId: string): Promise<ActionResult<{ message: string }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -291,6 +301,7 @@ export async function deleteTTSAsset(assetId: string): Promise<ActionResult<{ me
     revalidatePath('/tools/tts-designer');
     return { success: true, message: t('common.results.deleted') };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('tts:delete_asset_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

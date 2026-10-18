@@ -141,7 +141,7 @@ export function LiveSessionRoom({ access }: LiveSessionRoomProps) {
       return;
     previewRequested.current = true;
     preview.startPreview(previewCanvasRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- プレビューは条件がそろった時に1回だけ始める（preview の参照の変化で始め直さない。二重の開始は previewRequested で防ぐ）
   }, [phase, lockStatus]);
 
   useEffect(() => {
@@ -169,7 +169,7 @@ export function LiveSessionRoom({ access }: LiveSessionRoomProps) {
       recordLeaveIfNeeded();
       leave();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 退室の後片付けは画面を離れる時だけ行う（関数の参照が変わっても途中で退室しない）
   }, []);
 
   const handleStartCall = async () => {

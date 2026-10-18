@@ -1,8 +1,10 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
@@ -32,14 +34,7 @@ export type WithdrawBlocker = (typeof WITHDRAW_BLOCKERS)[number];
 export type PurgeBlocker = (typeof PURGE_BLOCKERS)[number];
 
 export type DataDeletionResult<E extends string> =
-  { success: true } | { success: false; errorCode: E | 'forbidden' | 'name_mismatch' | 'unexpected_error' };
-
-/** システム管理者（admin ロール）か */
-async function requireSystemAdmin(): Promise<string | null> {
-  const user = await getAuthUser();
-  const roles = user?.app_metadata?.roles;
-  return user && Array.isArray(roles) && roles.includes('admin') ? user.id : null;
-}
+  { success: true } | { success: false; errorCode: E | 'name_mismatch' | 'unexpected_error' };
 
 function pickBlocker<T extends readonly string[]>(message: string | undefined, codes: T): T[number] | null {
   return codes.find((code) => message?.includes(code)) ?? null;
@@ -75,9 +70,9 @@ export async function setUserSuspended(
   userId: string,
   suspended: boolean,
 ): Promise<DataDeletionResult<'user_not_found' | 'withdrawn'>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
-    if (!(await requireSystemAdmin())) return { success: false, errorCode: 'forbidden' };
     const supabase = createAdminClient();
 
     const { data: user, error: fetchError } = await supabase
@@ -108,6 +103,7 @@ export async function setUserSuspended(
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error(suspended ? 'user:suspend_unexpected' : 'user:resume_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -122,10 +118,9 @@ export async function setUserSuspended(
  * DB の消去（fn_withdraw_user）→ Storage のファイル → 認証のアカウントの順に消す。途中で失敗しても再実行で続きから終わる。
  */
 export async function withdrawUser(userId: string, confirmName: string): Promise<DataDeletionResult<WithdrawBlocker>> {
+  const { id: adminId } = await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
-    const adminId = await requireSystemAdmin();
-    if (!adminId) return { success: false, errorCode: 'forbidden' };
     const supabase = createAdminClient();
 
     const { data: user, error: fetchError } = await supabase
@@ -158,6 +153,7 @@ export async function withdrawUser(userId: string, confirmName: string): Promise
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('user:withdraw_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -171,13 +167,11 @@ export async function withdrawUser(userId: string, confirmName: string): Promise
 export async function previewPurgeClient(
   clientId: string,
 ): Promise<
-  | { success: true; counts: PurgeClientCounts }
-  | { success: false; errorCode: PurgeBlocker | 'forbidden' | 'unexpected_error' }
+  { success: true; counts: PurgeClientCounts } | { success: false; errorCode: PurgeBlocker | 'unexpected_error' }
 > {
+  const { id: adminId } = await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
-    const adminId = await requireSystemAdmin();
-    if (!adminId) return { success: false, errorCode: 'forbidden' };
     const { data, error } = await createAdminClient().rpc('fn_purge_client', {
       p_client_id: clientId,
       p_dry_run: true,
@@ -190,6 +184,7 @@ export async function previewPurgeClient(
     }
     return { success: true, counts: data.counts };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('client:purge_preview_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -204,10 +199,9 @@ export async function previewPurgeClient(
  * DB の削除（fn_purge_client）→ Storage のファイル → 所属していたユーザーの認証のアカウントの順に消す。
  */
 export async function purgeClient(clientId: string, confirmName: string): Promise<DataDeletionResult<PurgeBlocker>> {
+  const { id: adminId } = await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
-    const adminId = await requireSystemAdmin();
-    if (!adminId) return { success: false, errorCode: 'forbidden' };
     const supabase = createAdminClient();
 
     const { data: client, error: fetchError } = await supabase
@@ -243,6 +237,7 @@ export async function purgeClient(clientId: string, confirmName: string): Promis
     revalidatePath('/contracts');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('client:purge_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

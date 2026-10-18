@@ -4,9 +4,9 @@ import { TRAINING_REPORT_BULK_LIMIT } from '@gabby/types/trainingReport';
 import {
   fetchContractLicenseIds,
   fetchTrainingReportData,
-  isAdminRequest,
   renderTrainingReportPdfs,
 } from '@/lib/trainingReport/queries';
+import { checkAdminRoleForRoute, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import {
   buildContentDisposition,
   buildTrainingReportFileBase,
@@ -27,9 +27,8 @@ export async function GET(request: NextRequest) {
   if (!contractId) {
     return NextResponse.json({ error: 'contractId query parameter is required' }, { status: 400 });
   }
-  if (!(await isAdminRequest())) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  }
+  const { denied } = await checkAdminRoleForRoute(SYSTEM_ADMIN_ONLY);
+  if (denied) return denied;
 
   const contract = await fetchContractLicenseIds(contractId);
   if (!contract) {

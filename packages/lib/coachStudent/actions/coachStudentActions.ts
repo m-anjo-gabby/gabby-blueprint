@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
@@ -277,6 +279,7 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
 
     return { success: true, students };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:get_assigned_students_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -375,6 +378,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
       },
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:get_overview_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -483,6 +487,7 @@ export async function getStudentLiveSessionContractsCore(
 
     return { success: true, contracts };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:get_student_contracts_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -543,6 +548,7 @@ export async function getStudentSessionsByTicketCore(
       sessions: rows.map((s) => ({ ...s, coach_name: nameById.get(s.coach_id) ?? '(Unknown)' })),
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:get_student_sessions_by_ticket_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -591,6 +597,7 @@ export async function getStudentUpcomingSessionCore(studentId: string): Promise<
 
     return { success: true, session: session ?? null };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:get_upcoming_session_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -696,6 +703,7 @@ export async function getStudentLiveSessionShortfallsCore(
 
     return { success: true, shortfalls: result.shortfalls };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:get_session_shortfalls_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -820,6 +828,7 @@ export async function getStudentNotesCore(studentId: string): Promise<GetStudent
 
     return { success: true, notes: notes ?? [] };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:get_notes_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -877,6 +886,7 @@ export async function getSelfTrainingWeekSummaryCore(
       summary: { days, active_days: activeDays, total_questions: totalQuestions, total_assessments: totalAssessments },
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:get_self_training_summary_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -917,6 +927,7 @@ export async function addCoachStudentNoteCore(studentId: string, noteText: strin
     logger.info('coachStudent:add_note_success', 'Coach student note created', { ...ctx, userId: user.id });
     return { success: true, note: data as CoachStudentNote };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:add_note_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -974,6 +985,7 @@ export async function getContractTrainingReportsCore(studentId: string): Promise
     const reports = await attachCoachNames(supabase, (data ?? []) as Omit<ContractTrainingReport, 'coach_name'>[]);
     return { success: true, reports };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:get_training_reports_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -1058,6 +1070,7 @@ export async function saveContractTrainingReportDraftCore(
     });
     return { success: true, report };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:save_training_report_draft_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -1110,6 +1123,7 @@ export async function finalizeContractTrainingReportCore(
     });
     return { success: true, report };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:finalize_training_report_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -1203,6 +1217,7 @@ export async function updateStudentSprintLevelCore(
     });
     return { success: true, progress: updated as StudentSprintProgress };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:update_level_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -1294,6 +1309,7 @@ export async function forceStageUpStudentCore(
     });
     return { success: true, progress: updated as StudentSprintProgress };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachStudent:force_stage_up_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

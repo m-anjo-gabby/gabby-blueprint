@@ -109,7 +109,7 @@ test('通知の登録ですぐ送るメールが積まれ、送信処理で届�
   const mail = await waitForEmail({ to: emailA, since });
   expect(mail.subject).toBe('【Gabby Blueprint】予約が承認されました（10月8日(木) 19:00）');
   expect(mail.html).toContain('E2Eコーチがセッションの予約を承認しました。');
-  expect(mail.text).toContain('【予約されたセッション】\n10月8日(木) 19:00〜（日本時間）');
+  expect(mail.text).toContain('【予約されたセッション】\n10月8日(木) 19:00〜（日本時間・UTC+9）');
   expect(mail.html).toContain('/live-room');
   // ロゴは公開 URL の画像、テキスト版も同じ内容で送る
   expect(mail.html).toMatch(/<img src="https:\/\/[^"]+\/mail-logo\.png"/);

@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { getPendingIncomingRequestsAsCoachCore } from '../../matching/actions/matchingActions';
@@ -53,6 +55,7 @@ export async function getPendingIncomingRequestsForCoachCore(): Promise<GetIncom
 
     return { success: true, requests: items };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachInbox:get_pending_incoming_requests_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }

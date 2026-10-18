@@ -108,7 +108,7 @@ export function LessonSprintSetup({
     } else if (hasLevel && !isSprintLevelAvailable(availableLevels, questionType, Number(level))) {
       setLevel(String(pickSprintLevel(questionType, { hasLevel, availableLevels, preferred: Number(level) })));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 教材が変わった時だけ、選べるレベルに合わせて選択を直す（選択の変更そのもので直し続けない）
   }, [contentId]);
 
   const levelItems = useMemo(() => {

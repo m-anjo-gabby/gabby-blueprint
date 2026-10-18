@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { z } from 'zod';
 import { createLogger, extractIpFromRequest, type LogService } from './index';
@@ -57,7 +58,8 @@ export function createClientLogHandler(service: LogService) {
     let json: unknown;
     try {
       json = JSON.parse(text);
-    } catch {
+    } catch (thrown) {
+      unstable_rethrow(thrown);
       return new Response(null, { status: 400 });
     }
     const parsed = bodySchema.safeParse(json);

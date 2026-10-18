@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
@@ -90,6 +92,7 @@ export async function uploadChatAttachment(
 
     return { success: true, attachment };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:upload_attachment_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -120,6 +123,7 @@ export async function getChatAttachmentUrl(path: string): Promise<{ url: string 
 
     return { url: data.signedUrl };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:get_attachment_url_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

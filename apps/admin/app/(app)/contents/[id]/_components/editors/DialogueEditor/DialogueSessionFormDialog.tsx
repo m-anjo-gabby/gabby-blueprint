@@ -80,7 +80,7 @@ export function DialogueSessionFormDialog({
     if (open) {
       form.reset(buildDefaults(initialData, nextSessionNo));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 開いた時だけ初期値を入れ直す（開いている間に親の値が変わっても入力中の内容を上書きしない）
   }, [open]);
 
   const { isSubmitting } = form.formState;

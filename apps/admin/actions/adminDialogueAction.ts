@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { type DialogueSession } from '@gabby/types/dialogue';
@@ -16,6 +19,7 @@ const logger = createLogger('admin');
  * 指定教材（ダイアログプラクティスのセット）配下のセッション明細一覧を取得する
  */
 export async function getDialogueSessions(contentId: string): Promise<DialogueSession[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -33,6 +37,7 @@ export async function getDialogueSessions(contentId: string): Promise<DialogueSe
 
     return (data || []) as DialogueSession[];
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('dialogue:get_sessions_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -59,6 +64,7 @@ interface UpsertDialogueSessionPayload {
 export async function upsertDialogueSession(
   payload: UpsertDialogueSessionPayload,
 ): Promise<ActionResult<{ data: DialogueSession }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -107,6 +113,7 @@ export async function upsertDialogueSession(
     revalidatePath(`/contents/${payload.content_id}`);
     return { success: true, data: data as DialogueSession };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('dialogue:upsert_session_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -124,6 +131,7 @@ export async function deleteDialogueSession(
   dialogueSessionId: string,
   contentId: string,
 ): Promise<ActionResult<object, 'in_use'>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -153,6 +161,7 @@ export async function deleteDialogueSession(
     revalidatePath(`/contents/${contentId}`);
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('dialogue:delete_session_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

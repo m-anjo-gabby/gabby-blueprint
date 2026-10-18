@@ -180,7 +180,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
       commitScoreResult(current.question_id, DEFAULT_LESSON_SPRINT_SCORE);
     }
     void handleSave(pausedSecondsRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSave は毎回の描画で作り直されるため含めない（時間切れの判定に使う状態はストアから直接読む）
   }, [commitScoreResult]);
 
   const { secondsLeft, isPaused, togglePause, pausedSecondsRef } = useLessonSprintCountdown(

@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { headers } from 'next/headers';
 import type { LogContext } from './index';
@@ -38,7 +39,8 @@ export async function getLogContext(): Promise<LogContext> {
       requestId: requestId ?? undefined,
       ...(impersonation ? { impersonation } : {}),
     };
-  } catch {
+  } catch (thrown) {
+    unstable_rethrow(thrown);
     // Server Actions 以外（ビルド時や Edge Runtime 以外の特殊な文脈）でのフォールバック
     return { userId: 'system' };
   }

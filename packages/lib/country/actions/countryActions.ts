@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
@@ -29,6 +31,7 @@ export async function getCountryListCore(): Promise<GetCountryListResult> {
 
     return { success: true, countries: data ?? [] };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('country:get_country_list_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

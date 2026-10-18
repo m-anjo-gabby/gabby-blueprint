@@ -119,7 +119,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
         }));
 
       if (data.adjust) {
-        const adjData = data.adjust as unknown as TTSAdjustmentData;
+        const adjData = data.adjust;
         if (adjData.settings) {
           setParams({
             voice: (adjData.settings.voice as AzureVoice) || DEFAULT_PARAMS.voice,

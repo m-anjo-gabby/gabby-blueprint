@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -46,6 +48,7 @@ export async function getMyActivePlans(): Promise<MyPlan[]> {
       end_date: row.end_date,
     }));
   } catch (err) {
+    unstable_rethrow(err);
     // ホームの補助表示のため、失敗時は契約なしと同じ扱いにして画面全体は表示させる
     logger.error('dashboard:get_active_plans_failed', getErrorMessage(err, String(err)), {
       ...ctx,

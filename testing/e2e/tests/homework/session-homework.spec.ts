@@ -304,7 +304,8 @@ test('Session Tasks の「Homework not posted」に、生徒の欠席の回と�
       expect(data?.homework_not_needed).toBe(true);
 
       await coachPage.goto('/dashboard');
-      await expect(coachPage.getByText('Session Tasks', { exact: true })).toBeVisible();
+      // 骨組みにも同じ見出しがあるため、本番のパネルにしか無い表示を待ってから数える（KJ-2026-1015-01）
+      await expect(coachPage.getByText("You're all caught up").or(coachPage.getByText(/^\d+ open$/))).toBeVisible();
       await expect(homeworkTasks()).toHaveCount(0);
     });
 

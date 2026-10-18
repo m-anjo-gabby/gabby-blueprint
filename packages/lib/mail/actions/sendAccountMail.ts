@@ -1,4 +1,5 @@
 // packages/lib/mail/actions/sendAccountMail.ts
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { USER_TYPES } from '@gabby/types/user';
 import { sendCore } from '../core';
@@ -47,6 +48,7 @@ export async function sendAccountMail({
     logger.info(`mail:${logName}_success`, `${label}を送信しました: ${to}`, { payload: { messageId: data?.id } });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error(`mail:${logName}_failed`, getErrorMessage(err), {
       err,
       payload: { to },

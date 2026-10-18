@@ -1,5 +1,6 @@
 import { ShieldCheck, User as UserIcon, Users as UsersIcon } from 'lucide-react';
 import { getProfileIconUrl } from '../../profile/getProfileIconUrl';
+import { ExternalImage } from '../common/ExternalImage';
 
 type ChatAvatarKind = 'user' | 'group' | 'review';
 
@@ -23,8 +24,7 @@ export function ChatAvatar({ kind = 'user', iconPath, name, size = 32 }: ChatAva
   const url = kind === 'user' ? getProfileIconUrl(iconPath) : null;
   if (url) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <ExternalImage
         src={url}
         alt={name ?? ''}
         style={{ width: size, height: size }}

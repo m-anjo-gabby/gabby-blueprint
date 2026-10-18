@@ -4,6 +4,7 @@
  * 秘密鍵（TURNSTILE_SECRET_KEY）が未設定の場合は受け付けない（設定漏れで素通りさせない）。
  * dev・staging・手元は Cloudflare のテスト用の鍵（常に成功する）を使う（scripts/vercel-env/manifest.mjs）。
  */
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { createLogger, type LogContext } from '../logger';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
@@ -41,6 +42,7 @@ export async function verifyTurnstileToken(token: string, ctx: LogContext): Prom
     }
     return result.success;
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('security:turnstile_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

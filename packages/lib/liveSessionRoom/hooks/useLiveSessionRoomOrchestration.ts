@@ -105,7 +105,7 @@ export function useLiveSessionRoomOrchestration({
     endTimeoutRef.current = setTimeout(() => {
       onTimeLimitReached();
     }, LIVE_SESSION_END_AFTER_MS);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 時間制限のタイマーは開始できるようになった時に1回だけ掛ける（コールバックの参照の変化では掛け直さない）
   }, [canStartTimer]);
 
   useEffect(() => {

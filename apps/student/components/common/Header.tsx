@@ -26,6 +26,7 @@ import type { TermDocument } from '@gabby/types/term';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { clientLogger } from '@gabby/lib/logger/client';
 import { reloadTo } from '@gabby/lib/navigation/reloadTo';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 export function Header() {
   const user = useUserStore((state) => state.user);
@@ -89,8 +90,7 @@ export function Header() {
               >
                 <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-sm text-brand-500 overflow-hidden shrink-0">
                   {profileIconUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
+                    <ExternalImage src={profileIconUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <UserIcon size={18} />
                   )}
@@ -109,8 +109,7 @@ export function Header() {
               <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-canvas border border-line text-ink-subtle overflow-hidden shrink-0">
                   {profileIconUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
+                    <ExternalImage src={profileIconUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <UserIcon size={18} />
                   )}

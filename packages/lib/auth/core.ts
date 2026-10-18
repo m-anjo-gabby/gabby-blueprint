@@ -5,6 +5,7 @@
  * エンドポイントになり、ポータルごとの利用者チェック等を迂回されるため。
  * ブラウザから呼ぶ入口は、各アプリの *AuthAction.ts（createPortalAuthActions）だけにする。
  */
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { createServerClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
@@ -293,6 +294,7 @@ export async function forgotPasswordCore(
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('auth:forgot_password_unexpected', getErrorMessage(err), {
       err,
       payload: { email },
@@ -519,6 +521,7 @@ export async function verifyInvitationCore(token: string): Promise<VerifyInvitat
     if (!result.invite) return { valid: false, ...authErrorFields(result.errorCode) };
     return { valid: true, invitation: { email: result.invite.email, userName: result.invite.user_name } };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('auth:verify_invitation_unexpected', getErrorMessage(err), { err });
     return { valid: false, ...authErrorFields('unexpected') };
   }
@@ -654,6 +657,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('auth:accept_invite_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

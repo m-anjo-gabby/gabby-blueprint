@@ -1,10 +1,12 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
+import { joinColumns } from '@gabby/lib/supabase/select';
 import {
   FAVORITE_PHRASE_COLUMNS,
   type FavoritePhraseItem,
-  type FavoriteResponse,
   type TrainingWord,
   type TrainingWordResponse,
 } from '@gabby/types/word';
@@ -99,6 +101,7 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
       cefr: cefrData, // 戻り値にCEFR情報を追加
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('word:get_training_data_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -137,6 +140,7 @@ export async function getFavoriteCount(): Promise<number> {
 
     return count || 0;
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('word:get_favorite_count_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -164,7 +168,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
         phrase_id,
         insert_date,
         com_m_phrase!inner (
-          ${FAVORITE_PHRASE_COLUMNS.join(', ')},
+          ${joinColumns(FAVORITE_PHRASE_COLUMNS)},
           com_m_word!inner (
             word_en,
             com_m_contents!inner (
@@ -173,7 +177,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
             )
           )
         )
-      `,
+      ` as const,
       )
       .eq('user_id', user.id)
       .eq('com_m_phrase.com_m_word.com_m_contents.status', CONTENT_STATUS.PUBLISHED)
@@ -185,7 +189,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
       throw new Error(`取得失敗: ${error.message}`);
     }
 
-    return (data as unknown as FavoriteResponse[]).map(({ com_m_phrase: { com_m_word, ...phrase }, ...item }) => ({
+    return data.map(({ com_m_phrase: { com_m_word, ...phrase }, ...item }) => ({
       ...phrase,
       favorite_id: item.favorite_id,
       insert_date: item.insert_date, // お気に入り登録日
@@ -194,6 +198,7 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
       content_name: com_m_word.com_m_contents.content_name,
     }));
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('word:get_favorite_phrases_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -233,6 +238,7 @@ export async function reportWordProgress(
       { ...ctx, payload: { contentId, wordCount, phraseCount, assessmentCount } },
     );
   } catch (err) {
+    unstable_rethrow(err);
     // 記録処理の失敗が学習体験を阻害しないよう、エラーは捕捉してログに留める（学習継続を優先）
     logger.error('word:report_progress_failed', getErrorMessage(err), {
       ...ctx,
@@ -312,6 +318,7 @@ export async function getUserWordHistory(
 
     return { success: true, data: formattedData as WordSummaryHistoryItem[] };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('word:get_history_failed', 'Failed to fetch word summary history', {
       ...ctx,
       err: error,

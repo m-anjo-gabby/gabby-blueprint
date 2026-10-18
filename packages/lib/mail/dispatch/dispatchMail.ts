@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { USER_STATUS, USER_TYPES } from '@gabby/types/user';
@@ -191,6 +192,7 @@ async function processRow(
     });
     return 'sent';
   } catch (err) {
+    unstable_rethrow(err);
     const message = getErrorMessage(err);
     const action = classifySendError(err instanceof MailSendError ? err.code : null);
     logger.error('mail:dispatch_row_failed', message, {

@@ -42,7 +42,7 @@
 # 3. コード品質と設計原則
 
 - クリーンコード: DRY原則（Don't Repeat Yourself）を徹底し、関心の分離（Separation of Concerns）を意識したコンポーネント設計を行うこと。
-- コーディング規約: 書式・命名・ファイル構成・型・エラーの返し方・コメントは `docs/CODING.md` が正本。書式は Prettier（`pnpm format`）に任せる。サーバーアクションは `ActionResult`（`packages/types/action.ts`）を返し、失敗の `message` はアプリの言語の文言にする（admin は next-intl。DB・例外の本文を入れずログに残す）。共通部分の `*Core` は `errorCode` だけを返す。コメントは日本語の常体で「なぜ」を書き、変更の経緯・絵文字・区切り線・コメントアウトしたコードを残さない。
+- コーディング規約: 書式・命名・ファイル構成・型・エラーの返し方・コメントは `docs/CODING.md` が正本。書式は Prettier（`pnpm format`）に任せる。サーバーアクションは `ActionResult`（`packages/types/action.ts`）を返し、失敗の `message` はアプリの言語の文言にする（admin は next-intl。DB・例外の本文を入れずログに残す）。共通部分の `*Core` は `errorCode` だけを返す。admin のアクションは先頭で `requireAdminRole`（`apps/admin/lib/adminAuth.ts`）を呼び、サーバー側の `catch` は先頭で `unstable_rethrow` を呼ぶ（どちらも単体テストで検査）。コメントは日本語の常体で「なぜ」を書き、変更の経緯・絵文字・区切り線・コメントアウトしたコードを残さない。
 - 共通化: 複数アプリ（admin/coach/student）にまたがるロジック・型定義は `packages/types` や `packages/lib` に集約し、アプリごとの重複実装を避けること。
 - ブランド色（全アプリ共通）: 画面・共通UIのブランド色は `brand` / `brand-strong` / `brand-soft` / `brand-N`（および `gold`）トークンで書き、パレット名（`indigo-*` 等）を直接書かない。詳細は `docs/UI.md`「ブランド色」。
 - 画面の作り方: 正本は `docs/UI.md`（全アプリ共通: ブランド色・ローディング表示・初期表示のデータ取得・ダイアログのフォーカス・チャット）、`docs/UI-ADMIN.md`（admin: 一覧・next-intl）、`docs/UI-STUDENT.md`（student: UI実装規約）。各アプリと `packages/lib` の `CLAUDE.md` が読み込むため、そのファイルを触ると自動で読まれる。要点: 画面の枠は本物にし、データに依存する区画だけを本番と同じ形の骨組みにする。初期表示に必要なデータは表示後にブラウザからサーバーアクションで取りに行かず、サーバーで取得する。

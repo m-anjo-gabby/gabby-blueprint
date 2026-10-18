@@ -9,6 +9,7 @@ import { isExternalNoticeCtaUrl } from '../../notice/links';
 import type { NoticeLabels } from '../../notice/labels';
 import { clientLogger } from '../../logger/client';
 import { cn } from '../../utils';
+import { ExternalImage } from '../common/ExternalImage';
 
 type NoticeCtaSource = Pick<NoticeItem, 'notice_id' | 'cta_label' | 'cta_url'>;
 
@@ -75,7 +76,10 @@ export function NoticeCtaLink({ notice, labels, onClick, preview = false, classN
 export function NoticeImage({ src, className }: { src: string | null; className?: string }) {
   if (!src) return null;
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- Storage の公開URL・アドミンで選択中のファイル（サイズはお知らせごとに異なる）
-    <img src={src} alt="" className={cn('aspect-video w-full rounded-card bg-canvas object-cover', className)} />
+    <ExternalImage
+      src={src}
+      alt=""
+      className={cn('aspect-video w-full rounded-card bg-canvas object-cover', className)}
+    />
   );
 }

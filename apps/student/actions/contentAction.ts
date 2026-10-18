@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { CONTENT_STATUS, type ContentItem, type ContentRecord, type ContentTagSummary } from '@gabby/types/content';
 import { type ResumeContentResponse, type ResumeMetadata } from '@gabby/types/training';
@@ -87,6 +89,7 @@ export async function getAllContent(): Promise<ContentItem[]> {
 
     return [...normalContents, ...dialogueContents];
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('content:get_all_unexpected', getErrorMessage(err), { ...ctx, err });
     return [];
   }
@@ -139,6 +142,7 @@ export async function saveResumeContent<T extends ResumeMetadata>(
 
     logger.info('training:save_resume_success', 'Resume point saved', { ...ctx, payload: { contentId, itemId } });
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('training:save_resume_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -167,6 +171,7 @@ export async function clearResumeContent(): Promise<void> {
 
     logger.info('training:clear_resume_success', 'Resume point cleared', ctx);
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('training:clear_resume_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -205,6 +210,7 @@ export async function takeResumeContent(contentId: string): Promise<string | nul
     }
     return data?.item_id ?? null;
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('training:take_resume_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -263,8 +269,9 @@ export async function getLatestResumeContent(): Promise<ResumeContentResponse | 
       return null;
     }
 
-    return data as unknown as ResumeContentResponse;
+    return data;
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('training:get_resume_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
@@ -186,6 +188,7 @@ export async function getMySessionsCore(
 
     return { success: true, sessions: await toSessionListItems(supabase, user.id, sessions ?? []) };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_my_sessions_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -224,6 +227,7 @@ export async function getMyUpcomingSessionsCore(
 
     return { success: true, sessions: await toSessionListItems(supabase, user.id, sessions ?? []) };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_my_upcoming_sessions_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -267,6 +271,7 @@ export async function getMyPastSessionsCore(
 
     return { success: true, sessions: await toSessionListItems(supabase, user.id, sessions ?? []) };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_my_past_sessions_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -317,6 +322,7 @@ export async function cancelSessionCore(
     logger.info('session:cancel_success', 'Session cancelled', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:cancel_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -365,6 +371,7 @@ export async function getMyRescheduleProposalsCore(
 
     return { success: true, proposals: (data ?? []) as SessionRescheduleProposal[] };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_reschedule_proposals_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -418,6 +425,7 @@ export async function getMyRescheduleProposalGroupsCore(
       }),
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_my_reschedule_proposal_groups_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -483,6 +491,7 @@ export async function getPendingIncomingRescheduleProposalGroupsForCoachCore(): 
     const groups = groupRescheduleProposals((data ?? []) as SessionRescheduleProposal[]);
     return { success: true, groups: await enrichRescheduleProposalGroups(supabase, groups) };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_pending_incoming_reschedule_proposal_groups_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -547,6 +556,7 @@ export async function getRescheduleProposalHistoryPageForCoachCore(
 
     return { success: true, items: await enrichRescheduleProposalGroups(supabase, page), nextCursor };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_reschedule_proposal_history_page_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -583,6 +593,7 @@ export async function acceptRescheduleProposalCore(proposalId: string): Promise<
     });
     return { success: true, newSessionId: data as string };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:accept_reschedule_proposal_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -648,6 +659,7 @@ export async function declineRescheduleProposalsCore(sessionId: string): Promise
     });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:decline_reschedule_proposals_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -697,6 +709,7 @@ export async function checkSessionConflictCore(
     const row = data[0] as { coach_conflict: boolean; student_conflict: boolean };
     return { success: true, coachConflict: row.coach_conflict, studentConflict: row.student_conflict };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:check_conflict_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -748,6 +761,7 @@ export async function createSessionBookingRequestCore(
     });
     return { success: true, requestId: data as string };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:create_booking_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -788,6 +802,7 @@ export async function approveSessionBookingRequestCore(requestId: string): Promi
     });
     return { success: true, newSessionId: data as string };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:approve_booking_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -834,6 +849,7 @@ export async function rejectSessionBookingRequestCore(
     });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:reject_booking_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -875,6 +891,7 @@ export async function withdrawSessionBookingRequestCore(
     });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:withdraw_booking_request_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -929,6 +946,7 @@ export async function getMyBookingRequestsCore(): Promise<
       requests: requests.map((r) => ({ ...r, coach_name: nameById.get(r.coach_id) ?? '(Unknown)' })),
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_my_booking_requests_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -988,6 +1006,7 @@ export async function getPendingIncomingBookingRequestsForCoachCore(): Promise<
       requests: await attachBookingRequestStudentNames(supabase, (data ?? []) as SessionBookingRequest[]),
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_pending_incoming_booking_requests_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -1037,6 +1056,7 @@ export async function getBookingRequestHistoryPageForCoachCore(
 
     return { success: true, items: await attachBookingRequestStudentNames(supabase, page), nextCursor };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_booking_request_history_page_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -1084,6 +1104,7 @@ export async function recordSessionOutcomeCore(
     });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:record_outcome_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -1133,6 +1154,7 @@ export async function getSessionOutcomeEvidenceCore(sessionId: string): Promise<
       },
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_outcome_evidence_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -1327,6 +1349,7 @@ export async function getSessionResultSummaryCore(sessionId: string): Promise<Ge
       },
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_result_summary_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

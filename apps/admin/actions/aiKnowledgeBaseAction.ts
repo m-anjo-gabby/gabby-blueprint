@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import {
   upsertKnowledgeEntry,
@@ -38,6 +41,7 @@ export interface KnowledgeEntry {
  * 本文全文を含むがembeddingベクトル自体は返さない。
  */
 export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<ListResult<KnowledgeEntry>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   const {
     q,
@@ -71,6 +75,7 @@ export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<L
 
     return { rows: data as KnowledgeEntry[], totalCount: count || 0 };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('aiKb:list_unexpected', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
@@ -92,6 +97,7 @@ export async function saveKnowledgeEntry(payload: {
   title: string;
   body: string;
 }): Promise<ActionResult<{ message: string; data: KnowledgeBaseEntry }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -111,6 +117,7 @@ export async function saveKnowledgeEntry(payload: {
     revalidatePath(TOOL_PATH);
     return { success: true, message: t('common.results.saved'), data: entry };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('aiKb:save_failed', getErrorMessage(err, 'Unknown'), { ...ctx, err, payload });
     return { success: false, message: t('common.errors.saveFailed') };
   }
@@ -120,6 +127,7 @@ export async function saveKnowledgeEntry(payload: {
  * ナレッジの論理削除
  */
 export async function deleteKnowledgeEntry(knowledgeId: string): Promise<ActionResult<{ message: string }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -130,6 +138,7 @@ export async function deleteKnowledgeEntry(knowledgeId: string): Promise<ActionR
     revalidatePath(TOOL_PATH);
     return { success: true, message: t('common.results.deleted') };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('aiKb:delete_failed', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,

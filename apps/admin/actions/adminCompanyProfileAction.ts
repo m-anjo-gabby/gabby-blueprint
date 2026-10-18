@@ -1,13 +1,12 @@
 'use server';
 
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { COMPANY_PROFILE_SELECT } from '@gabby/lib/companyProfile/fetchCompanyProfile';
-import { USER_TYPES } from '@gabby/types/user';
 import {
   COMPANY_CODE_ORDER,
   COMPANY_LOGO_BUCKET,
@@ -26,14 +25,9 @@ export type CompanyProfileInput = Pick<
   'company_name' | 'company_name_ja' | 'address' | 'tax_registration_number'
 >;
 
-/** service_role で書き込むため、呼び出し元が管理者であることをここでも確認する */
-async function isAdmin(): Promise<boolean> {
-  const user = await getAuthUser();
-  return user?.app_metadata?.user_type === USER_TYPES.ADMIN;
-}
-
 /** 会社情報（法人ごと）を画面の表示順で取得する。取得に失敗した場合はnull */
 export async function getCompanyProfiles(): Promise<CompanyProfile[] | null> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const supabase = createAdminClient();
   const { data, error } = await supabase.from('com_m_company_profile').select(COMPANY_PROFILE_SELECT);
@@ -50,9 +44,9 @@ export async function updateCompanyProfile(
   companyCode: CompanyCode,
   input: CompanyProfileInput,
 ): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const t = await getTranslations('companyProfiles.errors');
-  if (!(await isAdmin())) return { success: false, message: t('forbidden') };
   if (!isCompanyCode(companyCode)) return { success: false, message: t('invalidCompany') };
 
   const companyName = input.company_name.trim();
@@ -94,9 +88,9 @@ export async function uploadCompanyLogo(
   companyCode: CompanyCode,
   file: File,
 ): Promise<ActionResult<{ logoPath: string }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const t = await getTranslations('companyProfiles.errors');
-  if (!(await isAdmin())) return { success: false, message: t('forbidden') };
   if (!isCompanyCode(companyCode)) return { success: false, message: t('invalidCompany') };
   if (!file || file.size === 0) {
     return { success: false, message: t('logoRequired') };

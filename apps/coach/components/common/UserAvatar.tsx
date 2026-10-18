@@ -1,5 +1,6 @@
 import { User as UserIcon } from 'lucide-react';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 interface UserAvatarProps {
   userName: string;
@@ -17,8 +18,7 @@ export function UserAvatar({ userName, iconPath, size = 40, className = '' }: Us
       style={{ width: size, height: size }}
     >
       {iconUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={iconUrl} alt={userName} className="w-full h-full object-cover" />
+        <ExternalImage src={iconUrl} alt={userName} className="w-full h-full object-cover" />
       ) : (
         <UserIcon size={Math.round(size * 0.45)} />
       )}

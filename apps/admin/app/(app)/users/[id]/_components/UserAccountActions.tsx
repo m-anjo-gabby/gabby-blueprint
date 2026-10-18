@@ -53,7 +53,7 @@ export function UserAccountActions({ user }: { user: UserRecord }) {
         router.refresh();
         return;
       }
-      const known = ['active_license', 'scheduled_session', 'active_matching', 'name_mismatch', 'forbidden'] as const;
+      const known = ['active_license', 'scheduled_session', 'active_matching', 'name_mismatch'] as const;
       const code = known.find((c) => c === result.errorCode);
       setWithdrawError(code ? t(`withdrawErrors.${code}`) : t('toastFailed'));
     });

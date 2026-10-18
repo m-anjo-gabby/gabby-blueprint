@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
@@ -34,6 +35,7 @@ export async function handleResendWebhook(req: Request): Promise<Response> {
       webhookSecret: secret,
     }) as MailWebhookEvent;
   } catch (err) {
+    unstable_rethrow(err);
     logger.warn('mail:webhook_invalid_signature', getErrorMessage(err, 'Invalid signature'), { err });
     return Response.json({ error: 'unauthorized' }, { status: 401 });
   }

@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import type { LogContext } from '../../logger';
@@ -122,6 +124,7 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
 
     return { success: true, contents: result };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('dialogue:get_contents_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -237,6 +240,7 @@ export async function assignDialogueContentCore(
     });
     return { success: true, assignment_id: data.assignment_id };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('dialogue:assign_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -315,6 +319,7 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('dialogue:unassign_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -444,6 +449,7 @@ async function fetchDialogueAssignmentSummaries(
 
     return { success: true, assignments: result };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('dialogue:get_assignments_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -471,6 +477,7 @@ export async function getStudentDialogueAssignmentsCore(
 
     return await fetchDialogueAssignmentSummaries(supabase, studentId, user.id, ctx);
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('dialogue:get_assignments_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -494,6 +501,7 @@ export async function getMyDialogueAssignmentsCore(): Promise<GetStudentDialogue
 
     return await fetchDialogueAssignmentSummaries(supabase, user.id, user.id, ctx);
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('dialogue:get_assignments_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -588,6 +596,7 @@ export async function updateDialogueSessionProgressCore(
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('dialogue:update_progress_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -649,6 +658,7 @@ export async function logSessionDialogueOpenCore(
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('dialogue:log_open_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }

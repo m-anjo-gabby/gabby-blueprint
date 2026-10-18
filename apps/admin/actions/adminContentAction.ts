@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import {
@@ -27,6 +30,7 @@ const logger = createLogger('admin');
  * 種別順(content_type)・セット分類順(category_id)・表示順(seq_no)で並べる。
  */
 export async function getContents(params: ListParams<'type'>): Promise<ListResult<Content>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   const { q, filters } = params;
   // 種別は既知の値だけを条件にする（不正な値は「すべて」として扱う）
@@ -95,6 +99,7 @@ export async function getContents(params: ListParams<'type'>): Promise<ListResul
       totalCount: count || 0,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('content:get_contents_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -108,6 +113,7 @@ export async function getContents(params: ListParams<'type'>): Promise<ListResul
  * IDを指定して教材情報を取得する
  */
 export async function getContentById(contentId: string): Promise<ContentRecord | null> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -121,6 +127,7 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
 
     return data as ContentRecord;
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('content:get_content_by_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -138,6 +145,7 @@ export type ContentUpsertInput = Pick<ContentRecord, 'content_name' | 'content_l
   Partial<Omit<ContentRecord, 'content_name' | 'content_label'>>;
 
 export async function upsertContent(payload: ContentUpsertInput): Promise<ActionResult<{ data: Content }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -203,6 +211,7 @@ export async function upsertContent(payload: ContentUpsertInput): Promise<Action
     revalidatePath('/contents');
     return { success: true, data: savedContent };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('content:upsert_content_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -217,6 +226,7 @@ export async function upsertContent(payload: ContentUpsertInput): Promise<Action
  * 非公開（status = 0）にするよう案内する
  */
 export async function deleteContent(contentId: string): Promise<ActionResult<object, 'in_use'>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -282,6 +292,7 @@ export async function deleteContent(contentId: string): Promise<ActionResult<obj
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('content:delete_content_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -297,6 +308,7 @@ export async function deleteContent(contentId: string): Promise<ActionResult<obj
 export async function getTagAssignmentData(
   contentId: string,
 ): Promise<{ assignedTags: ContentTagSummary[]; unassignedTags: ContentTagSummary[] }> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -343,6 +355,7 @@ export async function getTagAssignmentData(
 
     return { assignedTags, unassignedTags };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('content:get_tag_assignment_data_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -356,6 +369,7 @@ export async function getTagAssignmentData(
  * 教材にタグを割り当てる
  */
 export async function assignTag(contentId: string, tagId: string): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -378,6 +392,7 @@ export async function assignTag(contentId: string, tagId: string): Promise<Actio
 
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('content:assign_tag_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -391,6 +406,7 @@ export async function assignTag(contentId: string, tagId: string): Promise<Actio
  * 教材からタグの割当を解除する
  */
 export async function removeTag(contentId: string, tagId: string): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -414,6 +430,7 @@ export async function removeTag(contentId: string, tagId: string): Promise<Actio
 
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('content:remove_tag_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -430,6 +447,7 @@ export async function getContentAccessData(contentId: string): Promise<{
   assignedClients: { client_id: string; client_name: string }[];
   unassignedClients: { client_id: string; client_name: string }[];
 }> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -469,6 +487,7 @@ export async function getContentAccessData(contentId: string): Promise<{
 
     return { assignedClients, unassignedClients };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('content:get_content_access_data_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -482,6 +501,7 @@ export async function getContentAccessData(contentId: string): Promise<{
  * クライアントに教材アクセス権を付与
  */
 export async function assignAccess(contentId: string, clientId: string): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -507,6 +527,7 @@ export async function assignAccess(contentId: string, clientId: string): Promise
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('content:assign_access_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -520,6 +541,7 @@ export async function assignAccess(contentId: string, clientId: string): Promise
  * クライアントの教材アクセス権を解除
  */
 export async function removeAccess(contentId: string, clientId: string): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -547,6 +569,7 @@ export async function removeAccess(contentId: string, clientId: string): Promise
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('content:remove_access_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

@@ -82,7 +82,7 @@ export function RequestDialog({
   useEffect(() => {
     setSelectedCell(null);
     setSelectedSlotNo(unmatchedSlots[0]?.slot_no ?? null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- コーチが変わった時（＝ダイアログを開くたび）だけ選択を戻す（枠の一覧の参照の変化では戻さない）
   }, [coach?.user_id]);
 
   // コーチの対応可能時間ブロック（UTC）を、25分セッションの開始候補（30分刻み）に展開し、

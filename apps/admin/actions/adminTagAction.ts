@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { type ContentTag } from '@gabby/types/content';
 import type { TableInsert } from '@gabby/types/db';
@@ -15,6 +18,7 @@ const logger = createLogger('admin');
 /** * タグ一覧取得
  */
 export async function getTags(): Promise<ContentTag[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -30,6 +34,7 @@ export async function getTags(): Promise<ContentTag[]> {
     }
     return data as ContentTag[];
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('tag:get_tags_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -43,6 +48,7 @@ export async function getTags(): Promise<ContentTag[]> {
 export async function upsertTag(
   payload: TableInsert<'com_m_contents_tag'>,
 ): Promise<ActionResult<{ data: ContentTag }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -72,6 +78,7 @@ export async function upsertTag(
     revalidatePath('/contents/tags');
     return { success: true, data: savedTag };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('tag:upsert_tag_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -85,6 +92,7 @@ export async function upsertTag(
  * タグの削除（教材との紐付けも一緒に消える）
  */
 export async function deleteTag(tagId: string): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -104,6 +112,7 @@ export async function deleteTag(tagId: string): Promise<ActionResult> {
     revalidatePath('/contents/tags');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('tag:delete_tag_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

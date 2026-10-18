@@ -301,8 +301,7 @@
           "active_license": "有効なライセンスがあります。先にライセンスを停止してください",
           "scheduled_session": "今後のセッションがあります。先にキャンセルしてください",
           "active_matching": "回答待ちの申請または稼働中の定期予定があります。先に終了してください",
-          "name_mismatch": "表示名が一致しません",
-          "forbidden": "システム管理者だけが実行できます"
+          "name_mismatch": "表示名が一致しません"
         }
       }
     },
@@ -737,7 +736,6 @@
         "has_admin": "管理者が所属しているため削除できません",
         "linked_to_other_client": "他の顧客のユーザーとのセッション・担当関係等があるため削除できません",
         "client_not_found": "顧客が見つかりません",
-        "forbidden": "システム管理者だけが実行できます",
         "name_mismatch": "顧客名が一致しません",
         "unexpected": "削除に失敗しました"
       }
@@ -2619,7 +2617,6 @@
     "toastUpdated": "会社情報を更新しました",
     "toastLogoUpdated": "ロゴ画像を更新しました",
     "errors": {
-      "forbidden": "この操作を行う権限がありません。",
       "invalidCompany": "対象の法人が正しくありません。",
       "required": "会社名（英語）と住所は必須です。",
       "updateFailed": "会社情報の更新に失敗しました。",

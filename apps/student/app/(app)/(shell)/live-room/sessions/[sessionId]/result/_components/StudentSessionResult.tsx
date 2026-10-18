@@ -23,6 +23,7 @@ import { SectionHeading, SessionResultPageHeader } from './SessionResultParts';
 import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
 import type { SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkAttachment, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 interface StudentSessionResultProps {
   session: SessionResultSummary;
@@ -55,8 +56,11 @@ export function StudentSessionResult({ session, homework }: StudentSessionResult
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-control bg-brand-soft overflow-hidden flex items-center justify-center text-brand-500 shrink-0">
                 {coachIconUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={coachIconUrl} alt={session.counterpart_name} className="w-full h-full object-cover" />
+                  <ExternalImage
+                    src={coachIconUrl}
+                    alt={session.counterpart_name}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <GraduationCap size={20} />
                 )}
@@ -287,8 +291,7 @@ function HomeworkAttachmentView({ attachment }: { attachment: SessionHomeworkAtt
   if (isImage) {
     return (
       <a href={url} target="_blank" rel="noopener noreferrer">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt={attachment.file_name} className="max-w-60 max-h-60 rounded-lg object-cover" />
+        <ExternalImage src={url} alt={attachment.file_name} className="max-w-60 max-h-60 rounded-lg object-cover" />
       </a>
     );
   }

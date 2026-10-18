@@ -22,6 +22,7 @@ import {
 } from '@gabby/types/coachRating';
 import { submitCoachRating } from '@/actions/coachRatingAction';
 import { COACH_RATING_ITEMS, ratingOptionLabel } from '@/constants/coachRating';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 type Scores = Record<CoachRatingItem, number | null>;
 const EMPTY_SCORES: Scores = { coaching: null, friendliness: null, recommendation: null };
@@ -101,8 +102,11 @@ function CoachRatingForm({
       <div className="flex items-center gap-3">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-soft text-brand-500">
           {target.coachIconPath ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={getProfileIconUrl(target.coachIconPath) ?? ''} alt="" className="h-full w-full object-cover" />
+            <ExternalImage
+              src={getProfileIconUrl(target.coachIconPath) ?? ''}
+              alt=""
+              className="h-full w-full object-cover"
+            />
           ) : (
             <GraduationCap size={22} />
           )}

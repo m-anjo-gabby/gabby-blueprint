@@ -143,8 +143,7 @@ export type SessionActionErrorCode =
 export type CancelSessionResult = { success: true } | { success: false; errorCode: SessionActionErrorCode };
 
 /** cancel_session RPCに渡す、候補提案する時間1件分（最大3件まで。コーチ・生徒どちらのキャンセルでも使う） */
-// JSON として RPC に渡すため interface ではなく type にする（interface は Json に代入できない）
-// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions -- JSON として RPC に渡すため type にする（interface は Json に代入できない）
 export type ProposedSlotInput = {
   start_datetime: string; // UTC ISO文字列
   end_datetime: string;

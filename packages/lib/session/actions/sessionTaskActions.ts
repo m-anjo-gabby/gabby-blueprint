@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
@@ -84,7 +86,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
     // 配列ではなく単一オブジェクト(またはnull)として返す（1宿題=1セッションの1:1関係）。
     // 生成済みDB型定義がこのUNIQUE制約適用前のもの（配列型）である間はas unknownで橋渡しする。
     const missingHomeworkRows = (candidateRows ?? []).filter((row) => {
-      const attached = row.com_t_session_homework as unknown as { homework_id: string } | null;
+      const attached = row.com_t_session_homework;
       return !attached;
     });
 
@@ -166,6 +168,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
     const tasks: CoachSessionTasksSummary = { unfinalizedSessions, missingHomeworkSessions, shortfalls };
     return { success: true, tasks };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('session:get_coach_tasks_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

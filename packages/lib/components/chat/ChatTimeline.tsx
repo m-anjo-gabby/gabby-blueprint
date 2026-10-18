@@ -164,7 +164,7 @@ export function ChatTimeline({
       bottomRef.current?.scrollIntoView({ block: 'end' });
     }
     // 初回マウント時のみ実行（ルーム切り替え時は親コンポーネントごと再マウントされる）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 初めて表示した時だけ最新の位置へ寄せる（ルームを切り替えると部品ごと作り直される。上のコメント）
   }, []);
 
   // タブを裏から戻したときに、裏にいる間に届いたメッセージを既読にする

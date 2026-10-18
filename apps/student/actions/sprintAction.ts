@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import {
   QUESTION_TYPES,
@@ -208,6 +210,7 @@ export async function getSprintQuestions(
 
     return { success: true, data: finalData };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('sprint:fetch_failed', 'getSprintQuestions error', {
       ...ctx,
       err: error,
@@ -271,6 +274,7 @@ export async function createSprintScore(
 
     return { success: true, data: { self_sprint_id: data.self_sprint_id } };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('sprint:create_score_failed', 'Failed to create sprint score', {
       ...ctx,
       err: error,
@@ -384,6 +388,7 @@ export async function getSprintResult(self_sprint_id: string): Promise<SprintRes
       },
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('sprint:get_result_failed', 'Failed to recover sprint result', {
       ...ctx,
       err: error,
@@ -516,6 +521,7 @@ export async function getUserSprintHistory(
       },
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('sprint:get_history_failed', 'Failed to fetch sprint history', {
       ...ctx,
       err: error,
@@ -560,6 +566,7 @@ export async function getLastSprintSession(
 
     return { success: true, data };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('sprint:get_last_session_failed', 'Failed to fetch last session info', {
       ...ctx,
       err: error,
@@ -592,6 +599,7 @@ export async function getSprintProgress(): Promise<
     // データが存在しない場合は null を返し、呼び出し側でデフォルト値を扱う
     return { success: true, data };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('sprint:get_progress_failed', 'Failed to fetch sprint progress', {
       ...ctx,
       err: error,
@@ -640,6 +648,7 @@ export async function reportSprintProgress(
       { ...ctx, payload: { contentId, questionCount, assessmentCount, questionType } },
     );
   } catch (err) {
+    unstable_rethrow(err);
     // 記録処理の失敗（ネットワーク一時不通など）が、ユーザーのドリル学習継続を阻害しないよう、
     // エラーは捕捉してログに留めるソフトランディング構造を維持
     logger.error('sprint:report_progress_failed', getErrorMessage(err), {
@@ -680,6 +689,7 @@ export async function getContent(
       : null;
     return { success: true, data, availableLevels };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('sprint:get_content_failed', getErrorMessage(error), { ...ctx, err: error });
     return { success: false, errorCode: 'unexpected_error' };
   }

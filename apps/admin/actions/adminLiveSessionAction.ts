@@ -1,6 +1,9 @@
 // apps/admin/actions/adminLiveSessionAction.ts
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
@@ -36,6 +39,7 @@ const logger = createLogger('admin');
  * 指定顧客配下の生徒一覧を取得する（ライブセッション管理画面の生徒選択用）
  */
 export async function getClientStudents(clientId: string): Promise<GetClientStudentsResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -63,6 +67,7 @@ export async function getClientStudents(clientId: string): Promise<GetClientStud
 
     return { success: true, students };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:get_client_students_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -80,6 +85,7 @@ export async function getClientStudents(clientId: string): Promise<GetClientStud
  * 追加で持たせ、「対象の選択」セクションのプラン情報表示に使う。
  */
 export async function getStudentLiveSessionContractsForAdmin(studentId: string): Promise<AdminContractSummary[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -160,6 +166,7 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
       .filter((c): c is AdminContractSummary => c !== null)
       .sort((a, b) => b.start_date.localeCompare(a.start_date));
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:get_student_contracts_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -174,6 +181,7 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
  * 稼働中(1)・一時停止(0)・終了済み(9)を問わず全件返す。
  */
 export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetScheduleSlotsForTicketResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -228,6 +236,7 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
 
     return { success: true, slots };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:get_schedule_slots_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -241,6 +250,7 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
  * 指定契約(チケット)のセッション一覧を取得する（アドミン向け、担当コーチを問わず全件）。
  */
 export async function getSessionsForTicket(ticketId: string): Promise<AdminSessionListItem[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -272,6 +282,7 @@ export async function getSessionsForTicket(ticketId: string): Promise<AdminSessi
 
     return rows.map((s) => ({ ...s, coach_name: nameById.get(s.coach_id) ?? '(Unknown)' }));
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:get_sessions_for_ticket_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -287,6 +298,7 @@ export async function getSessionsForTicket(ticketId: string): Promise<AdminSessi
  * セッション結果・チャット・宿題は変更されない。
  */
 export async function releaseLessonScheduleSlot(scheduleId: string): Promise<ReleaseLessonScheduleSlotResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -311,6 +323,7 @@ export async function releaseLessonScheduleSlot(scheduleId: string): Promise<Rel
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:release_schedule_slot_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -324,6 +337,7 @@ export async function releaseLessonScheduleSlot(scheduleId: string): Promise<Rel
  * コーチ一覧を取得する（アドミンの直接マッチング画面のコーチ選択用）
  */
 export async function getCoachesForMatching(): Promise<AdminCoachSummary[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -340,6 +354,7 @@ export async function getCoachesForMatching(): Promise<AdminCoachSummary[]> {
 
     return (data ?? []).map((c) => ({ id: c.id, user_name: c.user_name ?? '(Unknown)' }));
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:get_coaches_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -366,6 +381,7 @@ export async function cancelSessionAsAdmin(
   refundTicket: boolean,
   reason?: string,
 ): Promise<AdminSessionActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -390,6 +406,7 @@ export async function cancelSessionAsAdmin(
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:cancel_as_admin_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -416,6 +433,7 @@ export async function bookMakeupSessionAsAdmin(
   startIso: string,
   endIso: string,
 ): Promise<AdminSessionActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -438,6 +456,7 @@ export async function bookMakeupSessionAsAdmin(
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:book_makeup_as_admin_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -459,6 +478,7 @@ export async function matchStudentWithCoachAsAdmin(params: {
   startTime: string;
   endTime: string;
 }): Promise<AdminSessionActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -496,6 +516,7 @@ export async function matchStudentWithCoachAsAdmin(params: {
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:admin_match_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -521,6 +542,7 @@ export async function adjustTargetSessionsAsAdmin(
   newTargetSessions: number,
   reason: string,
 ): Promise<AdminSessionActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -548,6 +570,7 @@ export async function adjustTargetSessionsAsAdmin(
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:adjust_target_sessions_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -568,6 +591,7 @@ export async function adjustTargetSessionsAsAdmin(
 export async function getSessionOutcomeEvidenceAsAdmin(
   sessionId: string,
 ): Promise<ActionResult<{ evidence: SessionOutcomeEvidence }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const result = await getSessionOutcomeEvidenceCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -579,6 +603,7 @@ export async function getSessionOutcomeEvidenceAsAdmin(
 
 /** 実施結果の記録・修正の履歴（新しい順。結果の修正ダイアログを開いた時に取得する） */
 export async function getSessionOutcomeHistory(sessionId: string): Promise<AdminSessionOutcomeHistoryEntry[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -616,6 +641,7 @@ export async function getSessionOutcomeHistory(sessionId: string): Promise<Admin
       performed_at: r.performed_at,
     }));
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:get_outcome_history_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -635,6 +661,7 @@ export async function correctSessionOutcomeAsAdmin(
   conductedVia: ConductedVia | null,
   reason: string,
 ): Promise<AdminSessionActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -662,6 +689,7 @@ export async function correctSessionOutcomeAsAdmin(
     revalidatePath('/live-sessions', 'layout');
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSession:correct_outcome_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -693,6 +721,7 @@ type SessionRecordRpcRow = AdminSessionRecord & { total_count: number };
 export async function getSessionRecordList(
   params: ListParams<'month' | 'coach' | 'result' | 'via' | 'review'>,
 ): Promise<ListResult<AdminSessionRecord>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const { q, filters } = params;
   const range = MONTH_PATTERN.test(filters.month) ? reportingMonthRange(filters.month) : null;

@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
@@ -144,6 +146,7 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
       })),
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('lessonSprint:get_contents_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -215,6 +218,7 @@ export async function getLessonSprintQuestionsCore(
 
     return { success: true, questions: finalData };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('lessonSprint:get_questions_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -332,6 +336,7 @@ export async function createLessonSprintResultCore(
     });
     return { success: true, lesson_sprint_id: data.lesson_sprint_id };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('lessonSprint:create_result_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -420,6 +425,7 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
 
     return { success: true, records: (data ?? []).map(mapLessonSprintHistoryRow) };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('lessonSprint:get_history_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -472,6 +478,7 @@ export async function getLessonSprintHistoryPageCore(
 
     return { success: true, items: page.map(mapLessonSprintHistoryRow), nextCursor };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('lessonSprint:get_history_page_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -539,6 +546,7 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
 
     return { success: true, record: record as LessonSprintRecord, questions: sortedQuestions };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('lessonSprint:get_result_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -584,6 +592,7 @@ export async function updateLessonSprintSessionNoteCore(
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('lessonSprint:update_session_note_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

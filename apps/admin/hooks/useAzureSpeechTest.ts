@@ -48,8 +48,7 @@ export function useAzureSpeechTest() {
     // 終了コールバック内で ref を null にする
     synth.speakSsmlAsync(
       ssml,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      (result) => {
+      () => {
         setIsSpeaking(false);
         synth.close();
         if (synthRef.current === synth) {

@@ -7,11 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ensureZoomClientInitialized } from '../client';
 import { describeZoomError } from '../errors';
 import { clientLogger } from '../../logger/client';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LocalAudioTrack = any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LocalVideoTrack = any;
+import type { LocalAudioTrack, LocalVideoTrack } from '@zoom/videosdk';
 
 const VOLUME_POLL_INTERVAL_MS = 200;
 // LocalAudioTrack.getCurrentVolume()の戻り値スケールはSDKの型定義に明記されていない。

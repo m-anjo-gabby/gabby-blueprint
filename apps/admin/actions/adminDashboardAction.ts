@@ -1,6 +1,9 @@
 // apps/admin/actions/adminDashboardAction.ts
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -30,6 +33,7 @@ const DEFAULT_MODULE_ORDER: DashboardModuleKey[] = ['clients', 'contracts', 'use
  * allowedKeys を渡した場合、権限のないモジュールのクエリ自体を発行しない（サイドバーの表示権限と揃える）。
  */
 export async function getDashboardSummary(allowedKeys?: DashboardModuleKey[]): Promise<DashboardModuleSummary[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const keys = allowedKeys && allowedKeys.length > 0 ? allowedKeys : DEFAULT_MODULE_ORDER;
   const supabase = createAdminClient();
   const now = new Date();
@@ -78,6 +82,7 @@ async function getClientsSummary(
       alertCount,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('dashboard:get_clients_summary_failed', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -113,6 +118,7 @@ async function getContractsSummary(
       alertCount: alertIds.size,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('dashboard:get_contracts_summary_failed', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -145,6 +151,7 @@ async function getUsersSummary(supabase: ReturnType<typeof createAdminClient>): 
       alertCount: pendingCount || 0,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('dashboard:get_users_summary_failed', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -175,6 +182,7 @@ async function getContentsSummary(supabase: ReturnType<typeof createAdminClient>
       alertCount: privateCount || 0,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('dashboard:get_contents_summary_failed', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -217,6 +225,7 @@ async function getNoticeSummary(
       alertCount: (draftCount || 0) + (expiredButPublishedCount || 0),
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('dashboard:get_notice_summary_failed', getErrorMessage(error), {
       ...ctx,
       err: error,

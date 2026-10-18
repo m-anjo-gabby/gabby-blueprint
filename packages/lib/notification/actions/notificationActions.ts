@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -34,6 +36,7 @@ export async function getNotifications(): Promise<CoreResult<{ data: Notificatio
 
     return { success: true, data: (data || []) as NotificationItem[] };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('notification:get_all_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -64,6 +67,7 @@ export async function getUnreadNotificationCount(): Promise<number> {
 
     return count ?? 0;
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('notification:unread_count_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -95,6 +99,7 @@ export async function markNotificationAsRead(notificationId: string): Promise<Co
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('notification:mark_read_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -126,6 +131,7 @@ export async function markAllNotificationsAsRead(): Promise<CoreResult<object, B
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('notification:mark_all_read_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

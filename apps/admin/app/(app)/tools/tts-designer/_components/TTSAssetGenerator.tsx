@@ -89,7 +89,7 @@ export function TTSAssetGenerator() {
       setSsml('');
     }
     // 原文が変わった時だけ作り直す（声・速さの変更は下の effect が SSML に反映する。ここで作り直すと単語ごとの調整が消える）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 原文が変わった時だけ SSML を作り直す（声・速さの変更は下の effect が反映する）
   }, [phraseEn, generateSsml]);
 
   const rebuildSsml = useCallback(

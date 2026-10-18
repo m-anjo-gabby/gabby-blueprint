@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -20,6 +23,7 @@ type StartImpersonationResult = ActionResult<{ url: string }>;
  * 発行のたびに監査ログ(com_t_admin_impersonation_log)へ理由付きで記録する。
  */
 export async function startImpersonation(targetUserId: string, reason: string): Promise<StartImpersonationResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
 
@@ -129,6 +133,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
 
     return { success: true, url: impersonateUrl.toString() };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('impersonation:start_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

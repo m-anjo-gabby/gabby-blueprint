@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../supabase/server';
 import { getAuthUser } from '../supabase/authUser';
 import { createLogger } from '../logger';
@@ -36,6 +38,7 @@ export async function getMyMailSettingsCore(): Promise<MailSettings | null> {
     }
     return settings;
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('mail:get_settings_unexpected', getErrorMessage(err), { ...ctx, err });
     return null;
   }
@@ -77,6 +80,7 @@ export async function updateMyMailSettingCore(
     });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('mail:update_setting_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

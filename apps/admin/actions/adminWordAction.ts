@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { type PhraseRecord, type WordRecord } from '@gabby/types/word';
 import type { TableInsert } from '@gabby/types/db';
@@ -33,6 +36,7 @@ export type PhraseInput = Pick<PhraseRecord, 'word_id' | 'phrase_en' | 'phrase_j
  * 特定の教材に紐づく単語一覧を取得する
  */
 export async function getWordsByContentId(contentId: string): Promise<WordRecord[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -54,6 +58,7 @@ export async function getWordsByContentId(contentId: string): Promise<WordRecord
 
     return data as WordRecord[];
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('word:get_words_by_content_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -67,6 +72,7 @@ export async function getWordsByContentId(contentId: string): Promise<WordRecord
  * 単語の登録または更新 (Upsert)
  */
 export async function upsertWord(payload: WordInput): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -119,6 +125,7 @@ export async function upsertWord(payload: WordInput): Promise<ActionResult> {
     revalidatePath('/contents/[id]/words', 'page');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('word:upsert_word_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -132,6 +139,7 @@ export async function upsertWord(payload: WordInput): Promise<ActionResult> {
  * 単語の物理削除（関連するStorage内の音声ファイルも含む）
  */
 export async function deleteWord(wordId: string): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -170,6 +178,7 @@ export async function deleteWord(wordId: string): Promise<ActionResult> {
     logger.info('word:delete_word_success', `Word deleted`, { ...ctx, payload: { wordId } });
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('word:delete_word_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -183,6 +192,7 @@ export async function deleteWord(wordId: string): Promise<ActionResult> {
  * 特定の単語に紐づくフレーズ一覧を取得する
  */
 export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -198,6 +208,7 @@ export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]
     }
     return data as PhraseRecord[];
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('word:get_phrases_by_word_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -211,6 +222,7 @@ export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]
  * 特定のコンテンツに紐づくすべてのフレーズを取得する
  */
 export async function getPhrasesByContentId(contentId: string): Promise<PhraseRecord[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -257,6 +269,7 @@ export async function getPhrasesByContentId(contentId: string): Promise<PhraseRe
 
     return allData as PhraseRecord[];
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('word:get_phrases_by_content_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -270,6 +283,7 @@ export async function getPhrasesByContentId(contentId: string): Promise<PhraseRe
  * フレーズの登録または更新 (Upsert)
  */
 export async function upsertPhrase(payload: PhraseInput): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -321,6 +335,7 @@ export async function upsertPhrase(payload: PhraseInput): Promise<ActionResult> 
     revalidatePath('/contents/[id]/words', 'page');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('word:upsert_phrase_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -334,6 +349,7 @@ export async function upsertPhrase(payload: PhraseInput): Promise<ActionResult> 
  * フレーズの物理削除
  */
 export async function deletePhrase(phraseId: string): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -361,6 +377,7 @@ export async function deletePhrase(phraseId: string): Promise<ActionResult> {
     logger.info('word:delete_phrase_success', `Phrase deleted`, { ...ctx, payload: { phraseId } });
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('word:delete_phrase_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -377,6 +394,7 @@ export async function bulkUpsertWordsAndPhrases(
   contentId: string,
   payload: WordBulkImportItem[],
 ): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -476,6 +494,7 @@ export async function bulkUpsertWordsAndPhrases(
     revalidatePath(`/contents/${contentId}/words`);
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('word:bulk_upsert_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

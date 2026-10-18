@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 /**
  * 教材一覧（/contents）の検索・絞り込み・ページ条件（クエリ文字列）を、
  * エディタ画面から一覧へ戻る際に復元するための保存領域。
@@ -12,7 +13,8 @@ export const CONTENTS_LIST_PATH = '/contents';
 export function saveContentsListQuery(query: string): void {
   try {
     sessionStorage.setItem(STORAGE_KEY, query);
-  } catch {
+  } catch (thrown) {
+    unstable_rethrow(thrown);
     // ストレージ無効環境では保持しない（一覧は初期条件で表示される）
   }
 }
@@ -21,7 +23,8 @@ export function getContentsListHref(): string {
   try {
     const query = sessionStorage.getItem(STORAGE_KEY);
     return query ? `${CONTENTS_LIST_PATH}?${query}` : CONTENTS_LIST_PATH;
-  } catch {
+  } catch (thrown) {
+    unstable_rethrow(thrown);
     return CONTENTS_LIST_PATH;
   }
 }

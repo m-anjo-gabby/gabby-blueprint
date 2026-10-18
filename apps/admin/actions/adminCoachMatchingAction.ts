@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { z } from 'zod';
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
@@ -24,6 +27,7 @@ const setSuspensionInput = z.object({
  * コーチが生徒の「専属コーチを探す」に出るかどうかの内訳（足りない項目・本人の受付・休止とその理由）。取得に失敗した場合は null。
  */
 export async function getCoachMatchingStatus(coachId: string): Promise<CoachMatchingStatus | null> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const result = await getCoachMatchingStatusCore(coachId);
   return result.success ? result.status : null;
 }
@@ -37,6 +41,7 @@ export async function setCoachMatchingSuspension(
   suspended: boolean,
   note: string | null,
 ): Promise<SetCoachMatchingSuspensionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const parsed = setSuspensionInput.safeParse({ coachId, suspended, note });
   if (!parsed.success) return { success: false };
@@ -64,6 +69,7 @@ export async function setCoachMatchingSuspension(
     });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coach_matching:admin_set_suspension_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

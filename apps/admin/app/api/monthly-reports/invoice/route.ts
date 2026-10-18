@@ -6,9 +6,8 @@ import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfi
 import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
 import { buildInvoiceNumber } from '@gabby/lib/monthlyReport/buildInvoiceNumber';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { USER_TYPES } from '@gabby/types/user';
 import { InvoiceDocument } from '@/lib/pdf/InvoiceDocument';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { checkAdminRoleForRoute, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { fetchLegalName } from '@gabby/lib/userLegal/fetchLegalName';
 import { formatLegalName } from '@gabby/lib/userLegal/formatLegalName';
 
@@ -31,13 +30,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'coachId and month query parameters are required' }, { status: 400 });
   }
 
-  const user = await getAuthUser();
-  if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
-  if (user.app_metadata?.user_type !== USER_TYPES.ADMIN) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  }
+  const { denied } = await checkAdminRoleForRoute(SYSTEM_ADMIN_ONLY);
+  if (denied) return denied;
 
   const result = await getAdminCoachMonthlyReportCore(coachId, reportMonth);
   if (!result.success) {

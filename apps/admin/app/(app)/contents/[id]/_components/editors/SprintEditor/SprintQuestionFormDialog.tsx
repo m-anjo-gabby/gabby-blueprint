@@ -109,7 +109,7 @@ export function SprintQuestionFormDialog({
             ],
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 開いた時・初期値が変わった時だけ入れ直す（それ以外の値の変化で入力中の内容を上書きしない）
   }, [open, initialData, initialGroupId, initialStatement, initialStatementJa, isSpeed]);
 
   const form = useForm<FormValues>({

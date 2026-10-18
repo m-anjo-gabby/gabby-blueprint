@@ -48,7 +48,7 @@ export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: Weekly
     if (container) {
       container.scrollTop = Math.max(0, targetSlot * rowHeight - rowHeight * 2);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 初めて表示した時だけ、今の時間帯の位置までスクロールする
   }, []);
 
   const paintCell = useCallback(

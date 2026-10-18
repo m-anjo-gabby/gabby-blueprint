@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { formatToJstDate, formatToJstDateTime, getUtcRangeFromJstDate } from '@gabby/lib/date/date';
@@ -36,6 +39,7 @@ function pickOne<T>(value: T | T[] | null): T | null {
  * 規約情報の一覧取得（ページネーション・バージョン名の部分一致検索）
  */
 export async function getTerms(params: ListParams): Promise<ListResult<TermListItem>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const { q } = params;
   try {
@@ -96,6 +100,7 @@ export async function getTerms(params: ListParams): Promise<ListResult<TermListI
       totalCount: listResult.count || 0,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('term:get_terms_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -108,6 +113,7 @@ export async function getTerms(params: ListParams): Promise<ListResult<TermListI
  * 規約の削除（公開前のバージョンのみ。リビジョンはON DELETE CASCADEで削除される）
  */
 export async function deleteTerm(termId: string): Promise<TermActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -137,6 +143,7 @@ export async function deleteTerm(termId: string): Promise<TermActionResult> {
     revalidatePath('/terms');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('term:delete_term_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -150,6 +157,7 @@ export async function deleteTerm(termId: string): Promise<TermActionResult> {
  * 編集画面用: 規約バージョンとリビジョン履歴（新しい順）の取得。存在しない場合は null。
  */
 export async function getTermDetail(termId: string): Promise<TermDetail | null> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -196,6 +204,7 @@ export async function getTermDetail(termId: string): Promise<TermDetail | null> 
       })),
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('term:get_term_detail_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -210,6 +219,7 @@ export async function getTermDetail(termId: string): Promise<TermDetail | null> 
  * 公開済みバージョンへの修正は修正理由（changeNote）が必須（RPC側でも検証）。
  */
 export async function addTermRevision(termId: string, content: string, changeNote: string): Promise<TermActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -234,6 +244,7 @@ export async function addTermRevision(termId: string, content: string, changeNot
     revalidatePath(`/terms/${termId}/edit`);
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('term:add_revision_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -253,6 +264,7 @@ export async function createTerm(params: {
   is_required: boolean;
   content: string;
 }): Promise<TermActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -284,6 +296,7 @@ export async function createTerm(params: {
     revalidatePath('/terms');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('term:create_term_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

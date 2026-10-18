@@ -1,5 +1,6 @@
 'use server';
 
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
@@ -15,6 +16,7 @@ const logger = createLogger('admin');
 const SESSION_PAY_RATE_ID = '00000000-0000-0000-0000-000000000001';
 
 export async function getSessionPayRate(): Promise<SessionPayRate | null> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -31,6 +33,7 @@ export async function getSessionPayRate(): Promise<SessionPayRate | null> {
 }
 
 export async function updateSessionPayRate(input: SessionPayRate): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   if (!(input.rate_amount >= 0)) {

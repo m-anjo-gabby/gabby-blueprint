@@ -8,9 +8,10 @@ import { ensureZoomClientInitialized } from '../client';
 import { describeZoomError } from '../errors';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 import { clientLogger } from '../../logger/client';
+import type ZoomVideo from '@zoom/videosdk';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ZoomClient = any;
+// SDK は画面で使う時だけ読み込む（import()）ため、型だけを参照する
+type ZoomClient = ReturnType<typeof ZoomVideo.createClient>;
 
 // VideoQuality.Video_720P（@zoom/videosdkのランタイムをSSRバンドルに巻き込まないよう、値を直接指定）
 const VIDEO_QUALITY_720P = 3;

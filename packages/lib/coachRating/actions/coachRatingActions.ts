@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { z } from 'zod';
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
@@ -61,6 +63,7 @@ export async function getCoachRatingStatsCore(coachIds: string[]): Promise<Map<s
     }
     return statsById;
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coach_rating:get_stats_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -104,6 +107,7 @@ export async function getMyPendingCoachRatingsCore(): Promise<PendingCoachRating
       completedCount: row.completed_count,
     }));
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coach_rating:get_pending_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -165,6 +169,7 @@ export async function submitCoachRatingCore(input: SubmitCoachRatingInput): Prom
     });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coach_rating:submit_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

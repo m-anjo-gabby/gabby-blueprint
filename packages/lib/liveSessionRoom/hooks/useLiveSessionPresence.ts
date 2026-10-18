@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserClient } from '../../supabase/client';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type RealtimeChannel = any;
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 type LiveSessionRole = 'coach' | 'student';
 

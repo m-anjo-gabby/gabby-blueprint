@@ -1,6 +1,9 @@
 // apps/admin/actions/adminClientAction.ts
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { type ClientOption, type ClientPayload, type ClientResponse, type ClientRecord } from '@gabby/types/client';
 import { revalidatePath } from 'next/cache';
@@ -18,6 +21,7 @@ const logger = createLogger('admin');
  * 顧客一覧取得 フィルター・選択肢用（軽量・全件）
  */
 export async function getClientsFilter(): Promise<ClientOption[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -37,6 +41,7 @@ export async function getClientsFilter(): Promise<ClientOption[]> {
 
     return (data || []) as ClientOption[];
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('client:get_filter_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -49,6 +54,7 @@ export async function getClientsFilter(): Promise<ClientOption[]> {
  * 顧客一覧取得（ページネーション・顧客名の部分一致検索。取引終了の顧客も含む）
  */
 export async function getClients(params: ListParams): Promise<ListResult<ClientRecord>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const { q } = params;
   try {
@@ -79,6 +85,7 @@ export async function getClients(params: ListParams): Promise<ListResult<ClientR
       totalCount: count || 0,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('client:get_clients_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -91,6 +98,7 @@ export async function getClients(params: ListParams): Promise<ListResult<ClientR
  * 顧客新規作成
  */
 export async function createClient(payload: ClientPayload): Promise<ClientResponse> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -112,6 +120,7 @@ export async function createClient(payload: ClientPayload): Promise<ClientRespon
     revalidatePath('/clients');
     return { success: true, client: newClient };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('client:create_client_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -125,6 +134,7 @@ export async function createClient(payload: ClientPayload): Promise<ClientRespon
  * 顧客情報の更新
  */
 export async function updateClient(clientId: string, payload: ClientPayload): Promise<ClientResponse> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -157,6 +167,7 @@ export async function updateClient(clientId: string, payload: ClientPayload): Pr
     revalidatePath('/clients');
     return { success: true, client: updatedClient };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('client:update_client_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -171,6 +182,7 @@ export async function updateClient(clientId: string, payload: ClientPayload): Pr
  * 取引の終了（status）か、DangerZone の一括削除（purgeClient）を案内する
  */
 export async function deleteClient(clientId: string): Promise<ClientResponse> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -192,6 +204,7 @@ export async function deleteClient(clientId: string): Promise<ClientResponse> {
     revalidatePath('/clients');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('client:delete_client_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

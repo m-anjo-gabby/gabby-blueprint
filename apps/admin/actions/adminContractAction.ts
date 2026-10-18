@@ -1,6 +1,9 @@
 // apps/admin/actions/adminContractAction.ts
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { formatToJstDate, getUtcRangeFromJstDate } from '@gabby/lib/date/date';
 import { revalidatePath } from 'next/cache';
@@ -70,11 +73,7 @@ async function findOverlappingLicense(
   const { data, error } = await query;
   if (error || !data || data.length === 0) return null;
 
-  const row = data[0] as unknown as {
-    start_date: string;
-    end_date: string;
-    com_m_contract: { contract_name: string } | null;
-  };
+  const row = data[0];
   return {
     start_date: row.start_date,
     end_date: row.end_date,
@@ -100,6 +99,7 @@ const UNIQUE_VIOLATION = '23505';
  * 契約プランマスタの一覧取得（契約登録フォームの選択肢・プランマスタ管理画面の両方で使用）
  */
 export async function getContractPlans() {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -117,6 +117,7 @@ export async function getContractPlans() {
 
     return data || [];
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:get_contract_plans_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -145,6 +146,7 @@ export async function upsertContractPlan(payload: {
   sort_no: number;
   is_active: boolean;
 }): Promise<ActionResult<{ data: TableRow<'com_m_contract_plan'> }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -178,6 +180,7 @@ export async function upsertContractPlan(payload: {
     revalidatePath('/contracts');
     return { success: true, data };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:upsert_contract_plan_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -192,6 +195,7 @@ export async function upsertContractPlan(payload: {
  * 契約で使われているプランは外部キー（RESTRICT）で止まり、販売終了（is_active = false）にするよう案内する。
  */
 export async function deleteContractPlan(planId: string): Promise<ActionResult<object, 'in_use'>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -211,6 +215,7 @@ export async function deleteContractPlan(planId: string): Promise<ActionResult<o
     revalidatePath('/contracts');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:delete_contract_plan_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -224,6 +229,7 @@ export async function deleteContractPlan(planId: string): Promise<ActionResult<o
  * 契約情報の一覧取得（ページネーション・顧客名/契約名の部分一致検索・顧客での絞り込み）
  */
 export async function getContracts(params: ListParams<'clientId'>): Promise<ListResult<ContractDetail>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const {
     q,
@@ -272,6 +278,7 @@ export async function getContracts(params: ListParams<'clientId'>): Promise<List
       totalCount: count || 0,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:get_contracts_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -285,6 +292,7 @@ export async function getContracts(params: ListParams<'clientId'>): Promise<List
  * 特定顧客の「現在有効かつ枠がある」契約一覧を取得
  */
 export async function getActiveContractsByClient(clientId: string, userId?: string) {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -332,6 +340,7 @@ export async function getActiveContractsByClient(clientId: string, userId?: stri
 
     return formatContracts(contracts);
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:get_active_contracts_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -372,6 +381,7 @@ export async function createContract(params: {
   total_sessions?: number | null;
   has_dialogue_practice: boolean;
 }): Promise<ActionResult<{ contract: TableRow<'com_m_contract'> }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -433,6 +443,7 @@ export async function createContract(params: {
     revalidatePath('/contracts');
     return { success: true, contract: newContract };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:create_contract_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -463,6 +474,7 @@ export async function updateContract(
     has_dialogue_practice: boolean;
   },
 ): Promise<ActionResult<{ contract: TableRow<'com_m_contract'> }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -562,6 +574,7 @@ export async function updateContract(
     revalidatePath('/contracts');
     return { success: true, contract: data[0] };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:update_contract_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -578,6 +591,7 @@ export async function updateContract(
  * 残る外部キー参照により、アプリ側のチェックをすり抜けてもDB制約(23503)で削除が拒否される。
  */
 export async function deleteContract(contractId: string): Promise<ActionResult<object, 'has_history'>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -620,6 +634,7 @@ export async function deleteContract(contractId: string): Promise<ActionResult<o
     revalidatePath('/contracts');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:delete_contract_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -637,6 +652,7 @@ export async function deleteContract(contractId: string): Promise<ActionResult<o
  * 別の強い確認UI（対象名の入力等）を経由させる。
  */
 export async function purgeContractWithHistory(contractId: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -692,6 +708,7 @@ export async function purgeContractWithHistory(contractId: string): Promise<Acti
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:purge_contract_with_history_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -705,6 +722,7 @@ export async function purgeContractWithHistory(contractId: string): Promise<Acti
  * ライセンス割当用のユーザーリスト取得
  */
 export async function getLicenseAssignmentUsers(contractId: string, clientId: string) {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -771,6 +789,7 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
       unassignedUsers: (allUsers || []).filter((u) => !assignmentByUserId.has(u.id)),
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:get_license_assignment_users_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -789,6 +808,7 @@ export async function assignLicenseToUser(
   startDateJst: string,
   endDateJst: string,
 ): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -891,6 +911,7 @@ export async function assignLicenseToUser(
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:assign_license_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -914,6 +935,7 @@ export async function assignLicenseToUser(
  * 無効化前の状態を変更履歴（action = invalidated）に残す。
  */
 export async function invalidateUserLicense(licenseId: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -968,6 +990,7 @@ export async function invalidateUserLicense(licenseId: string): Promise<ActionRe
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:invalidate_license_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -994,6 +1017,7 @@ export async function updateUserLicense(
     note?: string | null;
   },
 ): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -1104,6 +1128,7 @@ export async function updateUserLicense(
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:update_user_license_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -1133,6 +1158,7 @@ export async function bulkAssignLicenses(
   startDateJst: string,
   endDateJst: string,
 ): Promise<BulkAssignLicensesResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -1265,6 +1291,7 @@ export async function bulkAssignLicenses(
       skippedForCapacity,
     };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:bulk_assign_licenses_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -1278,6 +1305,7 @@ export async function bulkAssignLicenses(
  * ユーザーのライセンス履歴
  */
 export async function getLicenseTimeline(userId: string) {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -1350,6 +1378,7 @@ export async function getLicenseTimeline(userId: string) {
 
     return [...liveLicenses, ...removedLicenses];
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('contract:get_license_timeline_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

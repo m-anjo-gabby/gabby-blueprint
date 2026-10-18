@@ -24,6 +24,7 @@ import {
   type SessionHomeworkAttachment,
   type SessionHomeworkEntry,
 } from '@gabby/types/sessionHomework';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 interface HomeworkComposerProps {
   sessionId: string;
@@ -484,8 +485,7 @@ function HomeworkAttachmentView({ attachment }: { attachment: SessionHomeworkAtt
   if (isImage) {
     return (
       <a href={url} target="_blank" rel="noopener noreferrer">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt={attachment.file_name} className="max-w-60 max-h-60 rounded-lg object-cover" />
+        <ExternalImage src={url} alt={attachment.file_name} className="max-w-60 max-h-60 rounded-lg object-cover" />
       </a>
     );
   }

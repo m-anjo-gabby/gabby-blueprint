@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
@@ -121,6 +122,7 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
       },
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSessionRoom:coach_access_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -206,6 +208,7 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
       },
     };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSessionRoom:student_access_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -253,6 +256,7 @@ export async function checkStudentLiveSessionJoinableCore(sessionId: string): Pr
     }
     return { success: true, joinable: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSessionRoom:student_joinable_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -293,6 +297,7 @@ export async function recordSessionCallJoinCore(
 
     return { success: true, callLogId: data as string };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSessionRoom:record_call_join_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -327,6 +332,7 @@ export async function recordSessionCallLeaveCore(callLogId: string): Promise<{ s
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSessionRoom:record_call_leave_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -395,6 +401,7 @@ export async function recordSessionChatMessageCore(sessionId: string, message: s
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('liveSessionRoom:record_chat_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

@@ -12,8 +12,13 @@
 | `any`・未使用の変数・`console.*` | ESLint | `pnpm lint` |
 | 型の書き方・`import type`・`React.FC`・`catch` のメッセージの取り出し方（5章・6章） | ESLint | `pnpm lint` |
 | admin の翻訳のキー（6章） | TypeScript（`apps/admin/i18n/messages.d.ts`）と単体テスト（`testing/unit/admin-messages.test.ts`） | `pnpm typecheck` / `pnpm test` |
+| `eslint-disable` の理由（`-- 理由` を必須）・使われなくなった指示 | ESLint（`@eslint-community/eslint-comments`・`reportUnusedDisableDirectives`） | `pnpm lint` |
+| admin のアクションのロールの確認・サーバー側の `catch` の `unstable_rethrow`（6章） | 単体テスト（`testing/unit/admin-action-guard.test.ts`・`server-catch-rethrow.test.ts`） | `pnpm test` |
 
-まとめて `pnpm check`（push のたびに GitHub Actions の `CI` も同じ内容を実行する）。道具で止められない決まり（命名・コメント等）は、レビューで見る。
+まとめて `pnpm check`（push のたびに GitHub Actions の `CI` も同じ内容を実行する）。
+
+- React の hooks の検査（`react-hooks/*`）を `eslint-disable` で止めると、React Compiler はその部品・フックを最適化せず、他の hooks の検査も効かなくなる。依存の一覧を絞りたい場合も、まず依存に加えられないか（値が固定なら加える）、不要な state でないかを確かめ、止める場合は理由を書く。
+- `next/image` を使わない画像（大きさを CSS で決める Storage の画像・選択中のファイルのプレビュー等）は `ExternalImage`（`packages/lib/components/common/`）で出す。`<img>` を直接書いて `no-img-element` を止めない。道具で止められない決まり（命名・コメント等）は、レビューで見る。
 
 ## 2. 書式
 
@@ -112,6 +117,7 @@ export async function updateNotice(input: NoticeInput): Promise<ActionResult<{ n
 - 画面で分岐が必要な失敗（使用中で消せない・期限切れ等）だけ `errorCode` も返す（`ActionResult<T, 'in_use'>`）。画面は `errorCode` で分岐し、文言は画面側で出してもよい。
 - 想定内の失敗（入力の誤り・権限なし・見つからない等）は `throw` せず、結果で返す（本番の Next.js はアクションで投げたエラーの本文を画面に渡さない）。
 - 共通部分の実装（`*Core`）は `CoreResult<T, C>` を返す。失敗は `{ success: false, errorCode }` だけで、文言は持たない。各アプリのアクションが `errorCode` を自分の言語の文言に変える（例: admin の `Record<ProfileIconErrorCode, MessageKey>`、coach の `Record<CoachAvailabilityErrorCode, string>`）。`XxxErrorCode` の型は `packages/types/<domain>.ts` に置く。種別を分けない場合は `BasicErrorCode`（`'unauthorized' | 'unexpected_error'`）。
+- admin のアクションは、先頭で `requireAdminRole(SYSTEM_ADMIN_ONLY | ADMIN_OR_CONTENT_MANAGER)`（`apps/admin/lib/adminAuth.ts`）を呼ぶ。サーバーアクションはどの画面からでも呼べ、入口の proxy は画面のパスでしかロールを判定できないため（多くは service_role で RLS も通らない）。ロールが足りなければ例外を投げる（通常の画面操作では起きない経路のため、画面の文言は用意しない）。admin の Route Handler は `checkAdminRoleForRoute` を使う。付け忘れは単体テスト（`testing/unit/admin-action-guard.test.ts`）で止める。
 - 3アプリから直接呼ぶ共通のアクション（chat・お知らせ・通知）も `CoreResult` を返し、画面の文言は呼び出す側（共通の部品は各アプリが渡すラベル）で出す（例: `ChatActionErrorCode` と admin の `useChatErrorMessage`）。
 
 ### 画面のデータの取得（Server Component）
@@ -123,6 +129,7 @@ export async function updateNotice(input: NoticeInput): Promise<ActionResult<{ n
 ### `catch`
 
 - `catch (err)` の値は型注記を付けずに受け（`unknown`）、メッセージは `getErrorMessage(err)`（`@gabby/lib/logger/errorMessage`）で取り出す。`err instanceof Error ? err.message : ...` は書かない（ESLint）。
+- サーバー側のコード（`'use server'`・`server-only`・`app/` 配下の `'use client'` でないファイル等）の `catch` は、先頭で `unstable_rethrow(err)`（`next/navigation`）を呼ぶ。Next の制御用のエラー（`redirect`・`notFound`・動的な描画の判定）を飲み込むと、遷移が止まったり、ビルド時に誤ったエラーのログが出たりするため。値を使わない場合も `catch (thrown) { unstable_rethrow(thrown); … }` と書く。付け忘れは単体テスト（`testing/unit/server-catch-rethrow.test.ts`）で止める。
 
 ## 7. コメント
 

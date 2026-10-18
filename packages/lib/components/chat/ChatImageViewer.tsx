@@ -4,6 +4,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { focusDialogContent } from '../common/dialogFocus';
 import { ExternalLink, X } from 'lucide-react';
 import { useChatUi } from './ChatUiContext';
+import { ExternalImage } from '../common/ExternalImage';
 
 interface ChatImageViewerProps {
   url: string;
@@ -41,8 +42,7 @@ export function ChatImageViewer({ url, fileName, children }: ChatImageViewerProp
             {/* 画像の外側（余白）を押しても閉じる */}
             <button type="button" aria-hidden tabIndex={-1} className="absolute inset-0 cursor-zoom-out" />
           </DialogPrimitive.Close>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <ExternalImage
             src={url}
             alt={fileName}
             className="relative max-h-[calc(100dvh-8rem)] max-w-full rounded-lg object-contain shadow-2xl"

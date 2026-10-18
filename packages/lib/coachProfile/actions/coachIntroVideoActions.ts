@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
@@ -109,6 +111,7 @@ export async function uploadCoachIntroVideoCore(formData: FormData): Promise<Upl
     });
     return { success: true, introVideoPath: newVideoPath };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachProfile:upload_intro_video_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -166,6 +169,7 @@ export async function removeCoachIntroVideoCore(): Promise<RemoveCoachIntroVideo
     logger.info('coachProfile:remove_intro_video_success', 'Coach intro video removed', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coachProfile:remove_intro_video_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

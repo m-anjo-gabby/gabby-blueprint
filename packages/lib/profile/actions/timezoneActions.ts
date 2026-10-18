@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
@@ -30,6 +32,7 @@ export async function getTimezoneListCore(): Promise<GetTimezoneListResult> {
 
     return { success: true, timezones: data ?? [] };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('profile:get_timezone_list_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -79,6 +82,7 @@ export async function updateMyTimezoneCore(timezone: string): Promise<UpdateTime
     logger.info('profile:update_timezone_success', `Timezone updated: ${timezone}`, { ...ctx, userId: user.id });
     return { success: true, timezone };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('profile:update_timezone_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

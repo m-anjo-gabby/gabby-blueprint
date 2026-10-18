@@ -138,7 +138,7 @@ export function LiveSessionManagementView({ clients }: LiveSessionManagementView
     // showToast/tはrevalidatePath後のルート再フェッチで参照が変わりうるため依存から除外する
     // （selectedClientId自体が変わっていないのに顧客選択後の状態がリセットされる不具合を防ぐ。
     // 他の2つのuseEffectと同じくトリガーは対象IDの変化のみとする）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 対象の顧客が変わった時だけ読み直す（showToast・t は再取得で参照が変わり、選択がリセットされるため。上のコメント）
   }, [selectedClientId]);
 
   // 生徒が変わったら契約・以降の選択状態をリセットして再取得
@@ -178,7 +178,7 @@ export function LiveSessionManagementView({ clients }: LiveSessionManagementView
       return;
     }
     loadTicketDetail(selectedTicketId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 対象のチケットが変わった時だけ読み直す（上と同じ理由）
   }, [selectedTicketId]);
 
   const handleReleaseSlot = async (scheduleId: string) => {

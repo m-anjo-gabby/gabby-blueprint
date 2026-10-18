@@ -505,7 +505,7 @@ export function SprintDrillPlayer({
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
     };
     // 依存関係を厳密に制限。毎秒変わる state などによる再トリガーを防ぐ（recoveries: 中断からの復旧で問題を再生し直す）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 問題の切り替え等の時だけ流れを始める（毎秒変わる値で始め直さない。上のコメント）
   }, [currentIndex, currentQuestion?.question_id, isStarted, exitLoading, recoveries]);
 
   // ⏸ iOS の中断（画面が隠れた・通話等）では、流れ・発話は useSpeakingPlayer が止めるため、表示（フェーズ・録音中・自動再生のタイマー）を戻す
@@ -559,7 +559,7 @@ export function SprintDrillPlayer({
       // タイマーのクリアは stopAllAudio や handleToggleAutoPlay で適切に管理されています。
     };
     // 依存をインデックス、オープン状態、評価結果、および録音状態に絞り、タイマー副作用から切り離し
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 表示・評価・録音の状態が変わった時だけ自動再生を判定する（上のコメント）
   }, [isRevealed, currentIndex, analysis, isRecording]);
 
   // フルスクリーン固定およびiOSオーディオセッション固定化

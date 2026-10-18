@@ -1,5 +1,6 @@
 'use server';
 
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { revalidatePath } from 'next/cache';
 import {
   getAdminCoachMonthlyReportCore,
@@ -18,6 +19,7 @@ const logger = createLogger('admin');
 
 /** コーチ選択セレクタ用の一覧を取得する（既存のライブセッション管理画面のコーチ一覧を再利用） */
 export async function getCoachesForMonthlyReport(): Promise<AdminCoachSummary[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   return getCoachesForMatching();
 }
 
@@ -25,6 +27,7 @@ export async function getCoachMonthlyReportForAdmin(
   coachId: string,
   reportMonth: string,
 ): Promise<ActionResult<{ report: CoachMonthlyReport }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   const result = await getAdminCoachMonthlyReportCore(coachId, reportMonth);
@@ -38,6 +41,7 @@ export async function getCoachMonthlyReportForAdmin(
 }
 
 export async function approveMonthlyReport(coachId: string, reportMonth: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   const result = await approveCoachMonthlyReportCore(coachId, reportMonth);
@@ -56,6 +60,7 @@ export async function approveMonthlyReport(coachId: string, reportMonth: string)
 }
 
 export async function revokeMonthlyReportApproval(coachId: string, reportMonth: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   const result = await revokeCoachMonthlyReportApprovalCore(coachId, reportMonth);

@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -115,6 +117,7 @@ export async function sendChatMessage(
 
     return { success: true, data: { ...chatRow, attachments: [] } as ChatMessage };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:send_message_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -169,6 +172,7 @@ export async function getChatMessages(params: {
 
     return { success: true, data: rows.slice(0, limit).map((m) => maskIfDeleted(normalizeMessageRow(m))), hasMore };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:get_messages_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -206,6 +210,7 @@ export async function getChatMessageById(
 
     return { success: true, data: maskIfDeleted(normalizeMessageRow(data)) };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:get_message_by_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -280,6 +285,7 @@ export async function markAsRead(params: {
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:mark_read_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -321,6 +327,7 @@ export async function deleteChatMessage(params: { chatId: string }): Promise<Cor
     logger.info('chat:delete_message_success', `Chat message deleted: ${params.chatId}`, { ...ctx, payload: params });
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('chat:delete_message_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

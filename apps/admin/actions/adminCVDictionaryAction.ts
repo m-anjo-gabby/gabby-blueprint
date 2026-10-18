@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
 import { revalidatePath } from 'next/cache';
@@ -43,6 +46,7 @@ export interface CVWordSummary {
  * 単語一覧の取得（word_en でグルーピングしたサマリー）
  */
 export async function getCVDictionaryWords(): Promise<CVWordSummary[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -74,6 +78,7 @@ export async function getCVDictionaryWords(): Promise<CVWordSummary[]> {
       has_audio_count: counts.hasAudio,
     }));
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('cvDict:get_words_unexpected', getErrorMessage(err, 'Unknown'), { ...ctx, err });
     return [];
   }
@@ -83,6 +88,7 @@ export async function getCVDictionaryWords(): Promise<CVWordSummary[]> {
  * 指定単語の品詞別エントリ一覧を取得
  */
 export async function getCVDictionaryByWord(wordEn: string): Promise<CVDictionaryEntry[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -100,6 +106,7 @@ export async function getCVDictionaryByWord(wordEn: string): Promise<CVDictionar
 
     return data as CVDictionaryEntry[];
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('cvDict:get_by_word_unexpected', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
@@ -122,6 +129,7 @@ export async function upsertCVDictionaryEntry(
       'word_en' | 'part_of_speech' | 'syllables' | 'stress_vowel_spelling' | 'cv_id'
     >,
 ): Promise<ActionResult<{ message: string }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -155,6 +163,7 @@ export async function upsertCVDictionaryEntry(
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: t('common.results.registered') };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('cvDict:upsert_unexpected', getErrorMessage(err, 'Unknown'), { ...ctx, err, payload });
     return { success: false, message: t('common.errors.unexpected') };
   }
@@ -167,6 +176,7 @@ export async function deleteCVDictionaryEntry(
   wordEn: string,
   partOfSpeech: string,
 ): Promise<ActionResult<{ message: string }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -199,6 +209,7 @@ export async function deleteCVDictionaryEntry(
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: t('common.results.deleted') };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('cvDict:delete_unexpected', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
@@ -219,6 +230,7 @@ export interface CVDictionaryKey extends CVImportAudioState {
  * PostgRESTの1リクエスト上限（1000行）を超えるため range でページングする
  */
 export async function getCVDictionaryKeys(): Promise<CVDictionaryKey[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const supabase = await createAdminClient();
   const PAGE_SIZE = 1000;
   const keys: CVDictionaryKey[] = [];
@@ -248,6 +260,7 @@ export async function bulkUpsertCVDictionary(
   entries: CVImportEntry[],
   mode: CVImportMode,
 ): Promise<ActionResult<{ message: string; inserted: number; updated: number; skipped: number }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -317,6 +330,7 @@ export async function bulkUpsertCVDictionary(
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: '', inserted: insertCount, updated: updateCount, skipped: skipCount };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('cvDict:bulk_upsert_unexpected', getErrorMessage(err, 'Unknown'), { ...ctx, err });
     return { success: false, message: t('common.errors.unexpected') };
   }
@@ -336,6 +350,7 @@ export async function saveCVDictionaryAudio(
   adjustmentData: TTSAdjustmentData,
   currentAudioPath?: string | null,
 ): Promise<ActionResult<{ message: string; path: string }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -409,6 +424,7 @@ export async function saveCVDictionaryAudio(
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: t('common.results.audioUpdated'), path: newFilePath };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('cvDict:audio_save_unexpected', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
@@ -422,6 +438,7 @@ export async function saveCVDictionaryAudio(
  * 全エントリ一覧の取得（一括音声生成用）
  */
 export async function getAllCVDictionaryEntries(): Promise<CVDictionaryEntry[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -438,6 +455,7 @@ export async function getAllCVDictionaryEntries(): Promise<CVDictionaryEntry[]> 
 
     return data as CVDictionaryEntry[];
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('cvDict:get_all_unexpected', getErrorMessage(err, 'Unknown'), { ...ctx, err });
     return [];
   }

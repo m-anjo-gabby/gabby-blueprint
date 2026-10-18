@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -22,6 +25,7 @@ const logger = createLogger('admin');
 export async function getTrialApplications(
   params: ListParams<'status' | 'occupation'>,
 ): Promise<ListResult<TrialApplicationRow>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const { q, filters } = params;
   // 既知の値だけを条件にする（不正な値は「すべて」として扱う）
@@ -53,6 +57,7 @@ export async function getTrialApplications(
     }
     return { rows: (data ?? []) as TrialApplicationRow[], totalCount: count ?? 0 };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('trial:get_trial_applications_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,

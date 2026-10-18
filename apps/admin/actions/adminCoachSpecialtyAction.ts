@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { z } from 'zod';
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
@@ -32,6 +35,7 @@ const setCoachSpecialtiesInput = z.object({
  * コーチの専門の設定ダイアログ用に、専門マスタとコーチの現在の設定を取得する。取得に失敗した場合は null。
  */
 export async function getCoachSpecialtySettings(coachId: string): Promise<CoachSpecialtySettings | null> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const [listResult, codesByCoachId] = await Promise.all([
     getCoachSpecialtyListCore(),
     getCoachSpecialtyCodesCore([coachId]),
@@ -44,6 +48,7 @@ export async function getCoachSpecialtySettings(coachId: string): Promise<CoachS
  * コーチの専門を、渡したコードの集合に置き換える（admin_set_coach_specialties。アドミン以外・分野が上限を超える場合はDB側で拒否）。
  */
 export async function setCoachSpecialties(coachId: string, codes: string[]): Promise<SetCoachSpecialtiesResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const parsed = setCoachSpecialtiesInput.safeParse({ coachId, codes });
   if (!parsed.success) return { success: false, errorCode: 'failed' };
@@ -71,6 +76,7 @@ export async function setCoachSpecialties(coachId: string, codes: string[]): Pro
     });
     return { success: true, codes: savedCodes };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coach_specialty:admin_set_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

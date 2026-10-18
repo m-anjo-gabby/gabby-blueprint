@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
@@ -56,6 +59,7 @@ function jstDateTimeToUtcIso(dateStr: string, timeStr: string): string | null {
  * シリーズの一覧（回の数・これからの直近の回の開始日時つき。新しく作ったものから）
  */
 export async function getCalendarEventSeriesList(): Promise<CalendarEventSeriesItem[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -91,6 +95,7 @@ export async function getCalendarEventSeriesList(): Promise<CalendarEventSeriesI
 export async function getCalendarEventSeries(
   seriesId: string,
 ): Promise<{ series: CalendarEventSeriesSummary | null; sessions: CalendarEventItem[] }> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -115,6 +120,7 @@ export async function updateCalendarEventSeries(
   seriesId: string,
   formData: CalendarEventSeriesFormData,
 ): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -140,6 +146,7 @@ export async function updateCalendarEventSeries(
     revalidatePath('/calendar-events');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEventSeries:update_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -152,6 +159,7 @@ export async function updateCalendarEventSeries(
  * シリーズの削除。属する回は削除せず、単発のイベントとして残す（series_id は ON DELETE SET NULL で外れる）
  */
 export async function deleteCalendarEventSeries(seriesId: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -169,6 +177,7 @@ export async function deleteCalendarEventSeries(seriesId: string): Promise<Actio
     revalidatePath('/calendar-events');
     return { success: true };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEventSeries:delete_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -217,6 +226,7 @@ export async function createCalendarEventSeries(
   common: SeriesSessionCommon,
   rows: SeriesSessionRow[],
 ): Promise<ActionResult<{ seriesId: string }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -246,6 +256,7 @@ export async function createCalendarEventSeries(
     revalidatePath('/calendar-events');
     return { success: true, seriesId: data };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEventSeries:create_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
@@ -262,6 +273,7 @@ export async function addCalendarEventSeriesSessions(
   common: SeriesSessionCommon,
   rows: SeriesSessionRow[],
 ): Promise<ActionResult<{ count: number }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -290,6 +302,7 @@ export async function addCalendarEventSeriesSessions(
     revalidatePath('/calendar-events');
     return { success: true, count };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('calendarEventSeries:add_sessions_unexpected', getErrorMessage(error), { ...ctx, err: error });
     return { success: false, message: t('common.errors.unexpected') };
   }

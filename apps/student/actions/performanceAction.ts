@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -43,6 +45,7 @@ export async function getUserTrainingPerformance(
     );
     return { success: true, data: resData };
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('performance:get_user_performance_failed', getErrorMessage(error), { ...ctx, err: error });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -85,6 +88,7 @@ export async function getMyTrainingLifetimeStats(): Promise<TrainingLifetimeStat
     if (error) throw error;
     return data;
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('performance:get_lifetime_stats_failed', 'Failed to fetch training lifetime stats', {
       ...ctx,
       err: error,

@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -48,6 +50,7 @@ export async function getNotices(): Promise<CoreResult<{ data: NoticeItem[] }, B
 
     return { success: true, data: notices };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('notice:get_all_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -83,6 +86,7 @@ export async function getUnreadNoticeCount(): Promise<number> {
     const readIds = new Set((readData || []).map((r) => r.notice_id));
     return noticeIds.filter((id: string) => !readIds.has(id)).length;
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('notice:unread_count_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -119,6 +123,7 @@ export async function markNoticeAsRead(noticeId: string): Promise<CoreResult<obj
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('notice:mark_read_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
@@ -156,6 +161,7 @@ export async function markNoticesAsReadBatch(noticeIds: string[]): Promise<CoreR
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('notice:mark_read_batch_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -207,6 +213,7 @@ export async function recordNoticeCtaClick(noticeId: string): Promise<CoreResult
 
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('notice:cta_click_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -238,6 +245,7 @@ export async function getNoticeAttachmentUrl(path: string): Promise<{ url: strin
     });
     return { url: null };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('notice:get_attachment_url_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

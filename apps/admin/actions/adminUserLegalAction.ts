@@ -1,5 +1,8 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { z } from 'zod';
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
@@ -39,6 +42,7 @@ const saveUserLegalNameInput = z
  * RLS でアドミンだけが他人の行を読めるため、ログイン中のクライアントで読む。
  */
 export async function getUserLegalName(userId: string): Promise<GetUserLegalNameResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   if (!z.uuid().safeParse(userId).success) return { success: false };
 
@@ -66,6 +70,7 @@ export async function saveUserLegalName(input: {
   last_name_latin: string;
   first_name_latin: string;
 }): Promise<SaveUserLegalNameResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const parsed = saveUserLegalNameInput.safeParse(input);
   if (!parsed.success) return { success: false };
@@ -104,6 +109,7 @@ export async function saveUserLegalName(input: {
     logger.info('user_legal:save_success', 'User legal name saved', { ...ctx, payload: { userId } });
     return { success: true, legalName };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('user_legal:save_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

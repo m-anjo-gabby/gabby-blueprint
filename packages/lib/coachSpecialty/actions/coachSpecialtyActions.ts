@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '../../supabase/server';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
@@ -29,6 +31,7 @@ export async function getCoachSpecialtyListCore(): Promise<GetCoachSpecialtyList
 
     return { success: true, specialties: data ?? [] };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coach_specialty:get_list_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -64,6 +67,7 @@ export async function getCoachSpecialtyCodesCore(coachIds: string[]): Promise<Ma
     }
     return codesById;
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('coach_specialty:get_codes_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

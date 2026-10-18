@@ -1,5 +1,7 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
@@ -92,6 +94,7 @@ export async function getLatestTerms(): Promise<TermDocument[]> {
 
     return await attachLatestRevision(supabase, pickLatestByType(terms ?? []));
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('term:get_latest_unexpected', getErrorMessage(err), { ...ctx, err });
     return [];
   }
@@ -142,6 +145,7 @@ export async function checkPendingAgreements(userId: string): Promise<TermDocume
 
     return await attachLatestRevision(supabase, pendingTerms);
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('term:check_pending_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -214,6 +218,7 @@ export async function agreeToTerms(userId: string, targets: TermAgreementTarget[
     revalidatePath('/', 'layout'); // レイアウトを再検証してモーダルを消す
     return { success: true };
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('term:agree_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

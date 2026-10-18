@@ -1,4 +1,6 @@
+import { unstable_rethrow } from 'next/navigation';
 import { type NextRequest, NextResponse } from 'next/server';
+import { checkAdminRoleForRoute, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import {
   streamChatResponse,
   searchKnowledgeBase,
@@ -28,6 +30,8 @@ export interface KnowledgeSourceRef {
 }
 
 export async function POST(request: NextRequest) {
+  const { denied } = await checkAdminRoleForRoute(ADMIN_OR_CONTENT_MANAGER);
+  if (denied) return denied;
   try {
     const body: ChatRequestBody = await request.json();
 
@@ -50,6 +54,7 @@ export async function POST(request: NextRequest) {
           sources = matches.map((m) => ({ title: m.title, similarity: m.similarity }));
         }
       } catch (ragError) {
+        unstable_rethrow(ragError);
         // RAG検索の失敗はチャット自体を止めず、コンテキストなしで継続する
         const message = getErrorMessage(ragError);
         logger.warn('aiChat:rag_search_failed', message, { err: ragError });
@@ -68,6 +73,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    unstable_rethrow(error);
     const message = getErrorMessage(error);
     logger.error('aiChat:request_failed', message, { err: error });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

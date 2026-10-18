@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import { NextResponse } from 'next/server';
 import { createServerClient } from '../supabase/server';
 import { createLogger } from '../logger';
@@ -60,6 +61,7 @@ export function createAuthCallbackHandler(
 
       return NextResponse.redirect(`${origin}/login`);
     } catch (err) {
+      unstable_rethrow(err);
       logger.error('auth:callback_unexpected', getErrorMessage(err), { err });
       return NextResponse.redirect(`${origin}/login?error=callback`);
     }

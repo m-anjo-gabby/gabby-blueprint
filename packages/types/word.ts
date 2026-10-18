@@ -143,21 +143,3 @@ export type FavoritePhraseItem = Pick<PhraseRecord, (typeof FAVORITE_PHRASE_COLU
   content_id: string;
   content_name: string;
 };
-
-/**
- * サーバーアクションからの生レスポンス型 (Join結果)
- */
-export interface FavoriteResponse {
-  favorite_id: string;
-  phrase_id: string;
-  insert_date: string;
-  com_m_phrase: Pick<PhraseRecord, (typeof FAVORITE_PHRASE_COLUMNS)[number]> & {
-    com_m_word: {
-      word_en: string;
-      com_m_contents: {
-        content_id: string;
-        content_name: string;
-      };
-    };
-  };
-}

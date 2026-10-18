@@ -1,6 +1,8 @@
 // apps/student/actions/colorVowelAction.ts
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -164,6 +166,7 @@ export async function lookupColorVowelDictionary(rawWord: string): Promise<Color
 
     return results;
   } catch (err) {
+    unstable_rethrow(err);
     logger.error('cvDict:lookup_unexpected', getErrorMessage(err), {
       ...ctx,
       err,

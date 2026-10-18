@@ -1,6 +1,7 @@
 import { defineConfig, globalIgnores } from 'eslint/config';
 import nextVitals from 'eslint-config-next/core-web-vitals';
 import nextTs from 'eslint-config-next/typescript';
+import eslintComments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -57,6 +58,17 @@ const eslintConfig = defineConfig([
           message: 'getErrorMessage(err)（@gabby/lib/logger/errorMessage）を使ってください（docs/LOGGING.md）',
         },
       ],
+    },
+  },
+
+  // eslint-disable には理由を書く（`// eslint-disable-next-line <ルール> -- 理由`）。使われなくなった指示も止める。docs/CODING.md「道具で止めるもの」
+  eslintComments.recommended,
+  {
+    linterOptions: { reportUnusedDisableDirectives: 'error' },
+    rules: {
+      '@eslint-community/eslint-comments/require-description': 'error',
+      // ファイル全体を対象にする指示（メールの HTML 等）は閉じなくてよい
+      '@eslint-community/eslint-comments/disable-enable-pair': ['error', { allowWholeFile: true }],
     },
   },
 
