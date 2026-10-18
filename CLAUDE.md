@@ -21,12 +21,11 @@
 - 実行環境: Node.js 24 / pnpm 10（Turborepo）
 - フロントエンド: Next.js 16 (App Router前提) / React 19 / TypeScript 6
   - 型安全性を徹底し、`any` は使わない（ESLint でエラー）。外から来る値（URL・CSV・`catch` の値等）は `unknown` や判定関数（`isUserType` 等）で確かめてから使う。
-  - React 19 / Next.js 16 の最新API（Server Actions、新しいHooks、React Compiler等）を考慮したコードを生成すること。React Compiler と併用するため、react-hook-form の値の購読は `form.watch` ではなく `useWatch` を使う。
+  - 3アプリとも React Compiler を有効にしている（`next.config.ts` の `reactCompiler`）。react-hook-form の値の購読は `form.watch` ではなく `useWatch` を使う。
 - スタイリング・UI: Tailwind CSS v4 / @tailwindcss/postcss / framer-motion 14 / lucide-react 1
-  - shadcn/uiの設計思想に基づき、Radix UI（Alert-Dialog, Dialog, Dropdown-Menu, Label, Popover, Progress, Scroll-Area, Select, Slider, Slot, Switch, Tabs, vaul等）、clsx、tailwind-mergeを組み合わせたコンポーネント設計を行うこと。
-  - アニメーションには framer-motion を使用すること。
-- バックエンド・インフラ: Supabase（@supabase/ssr 0.12 / @supabase/supabase-js 2）
-  - 効率的なデータ管理、認証（Auth）、Edge Functionsを実装すること。
+  - 基本の部品は shadcn/ui の方式（Radix UI ＋ clsx・tailwind-merge）で各アプリの `components/ui` に置き、画面はそれを使う。2つ以上のアプリで使う部品は `packages/lib/components` に置く。
+  - アニメーションは framer-motion で書く。
+- バックエンド・インフラ: Supabase（@supabase/ssr 0.12 / @supabase/supabase-js 2）。Auth・Postgres（RLS・RPC）・Storage・Realtime を使い、Edge Functions は使っていない（定期処理は pg_cron から admin の Route Handler を呼ぶ）。
   - クライアント（`packages/lib/supabase/*`）は DB の型（`packages/types/db.ts`。実DBから生成した `database.ts` に、JSON の列等を上書きしたもの）で問い合わせを型検査する。行の型は画面ごとに手で書かず `TableRow<'表'>` / `TableInsert<'表'>` / `ViewRow<'ビュー'>` から作る。テーブル・関数を変えたら `node supabase/release/types.mjs --env=dev --write` で作り直す（`supabase/DDL/README.md`「アプリの DB の型」）。
 - フォーム・バリデーション: react-hook-form (v7) / zod (v4) / @hookform/resolvers (v5)
 - データ表示: @tanstack/react-table (v9) / react-resizable-panels
@@ -37,10 +36,8 @@
 - 音声（読み上げ・聞き取り・発話の評価）:
   - 教材の音声は admin で Azure Speech（`packages/lib/azure/tts.ts`）で事前に作って保存し、student は保存した音声を再生する（無い場合は Web Speech の読み上げ）。
   - 聞き取りは Web Speech API を `packages/lib/audio/core`（共有の AudioContext・発話の区間の確保・認識器の差し替え。E2E では偽の認識器）経由で使い、画面から直接呼ばない。発話の評価は `analyzePhrase`（`packages/lib/assessment/`）。自主トレーニングは無料の範囲（Web Speech）で行い、有料の評価サービスはスピーキングテストに限って検討する。
-- 状態管理:
-  - グローバルな状態管理には `zustand` (v5) を、コンポーネント単位や局所的な管理には React Context または React標準の State を適切に使い分けること。
-- リッチテキスト・マークダウン:
-  - マークダウンの描画には `react-markdown` (v10) および `remark-gfm` (v4) を使用すること。
+- 状態管理: アプリ全体で共有する状態（シェルの未読・件数等）は `zustand` のストア、画面内だけの状態は React の state / Context で持つ。画面のデータは開くたびにサーバーで取得し、原則として画面をまたいでブラウザに持ち越さない。
+- マークダウンの描画は `react-markdown` ＋ `remark-gfm`。
 
 # 3. コード品質と設計原則
 
