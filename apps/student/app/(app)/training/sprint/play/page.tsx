@@ -19,12 +19,12 @@ interface PageProps {
   searchParams: Promise<{
     mode?: string;
     type?: string;
-    answer_type?: string; // ⚡ Speed用の回答タイプ
+    answer_type?: string; // Speed用の回答タイプ
     level?: string;
     content_id?: string;
     resume_id?: string;
-    resume?: string; // 🔖 栞判定用のクエリ
-    time_limit_sec?: string; // ⏱️ スプリント制限時間
+    resume?: string; // 栞判定用のクエリ
+    time_limit_sec?: string; // スプリント制限時間
     sprint_type?: string;
   }>;
 }
@@ -33,9 +33,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   const resolvedParams = use(searchParams);
   const contentId = resolvedParams.content_id || '';
 
-  // ────────────────────────────────────────────────────────────
-  // 📦 状態管理（Zustandストアへ一元化、ローカルuseStateは排除）
-  // ────────────────────────────────────────────────────────────
+  // 状態管理（Zustandストアへ一元化、ローカルuseStateは排除）
   const {
     config,
     ui,
@@ -50,16 +48,14 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   } = useSprintStore();
   const { showToast } = useToast();
 
-  // ────────────────────────────────────────────────────────────
-  // 🧭 初期値のサーバー・DB連動フェッチ（競合解消のコアロジック）
-  // ────────────────────────────────────────────────────────────
+  // 初期値のサーバー・DB連動フェッチ（競合解消のコアロジック）
   useEffect(() => {
     const initializeConfigAndView = async () => {
       // プレイヤーから「戻ってきた」場合はストアのセッション状態が最優先
-      // 💡 体系化された session オブジェクトの有無でクリーンに判定
+      // 体系化された session オブジェクトの有無でクリーンに判定
       const isReturningFromSession = session?.isActive && config.contentId === contentId;
 
-      // 🌟 教材切り替え時（戻りセッションでない場合）はストアに前回の教材情報が残っているため、
+      // 教材切り替え時（戻りセッションでない場合）はストアに前回の教材情報が残っているため、
       // config/contentMetadataの再取得が完了するまでSprintSelectをマウントさせない
       if (!isReturningFromSession) {
         setUiView('loading');
@@ -68,9 +64,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       let targetConfig;
 
       if (isReturningFromSession) {
-        // =========================================================================
-        // 🌟 修正のコア箇所：プレイヤーからの戻り時はストアの実施設定を100%完全復元する
-        // =========================================================================
+        // 修正のコア箇所：プレイヤーからの戻り時はストアの実施設定を100%完全復元する
         targetConfig = {
           mode: config.mode,
           questionType: (config.questionType || '0') as SprintQuestionType,
@@ -88,7 +82,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
           dbConfig = res.data;
         }
 
-        // ⚡ URLパラメータに content_id が無い場合は、最新 of DB履歴からフォールバック
+        // URLパラメータに content_id が無い場合は、最新 of DB履歴からフォールバック
         const fallbackContentId = contentId || dbConfig?.content_id || '';
 
         // 優先順位: 1. DB履歴(dbConfig) > 2. URLパラメータ > 3. システムデフォルト
@@ -146,7 +140,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
         setUiView('no_content');
       } else if (isReturningFromSession) {
         setUiView('selecting');
-        // 💡 configをセットしてからフラグをクリアする。
+        // configをセットしてからフラグをクリアする。
         // SprintSelect は props 経由で完全に初期化されるため、フラグをクリアしても安全
         clearSessionProgress();
       } else if (isResume || hasLevel) {
@@ -160,9 +154,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedParams, contentId]);
 
-  // ────────────────────────────────────────────────────────────
-  // ⚙️ セッション開始ハンドラー
-  // ────────────────────────────────────────────────────────────
+  // ⚙ セッション開始ハンドラー
   const handleStartSession = async (selectedConfig: {
     mode: 'drill' | 'sprint';
     questionType: SprintQuestionType;
@@ -193,7 +185,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       const isAssessmentMode =
         selectedConfig.isAssessmentMode !== undefined ? selectedConfig.isAssessmentMode : config.isAssessmentMode;
 
-      // 💡 ストア側のアクションに集約してセッション情報・初期化を一撃で適用
+      // ストア側のアクションに集約してセッション情報・初期化を一撃で適用
       startSession({
         questions: response.data,
         mode: selectedConfig.mode,
@@ -227,9 +219,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     }
   };
 
-  // ────────────────────────────────────────────────────────────
-  // 🏎️ ビューレンダリング
-  // ────────────────────────────────────────────────────────────
+  // ビューレンダリング
 
   if (ui.view === 'loading') {
     return <ContentLoading title="トレーニングを準備しています" subtitle="少々お待ちください" />;

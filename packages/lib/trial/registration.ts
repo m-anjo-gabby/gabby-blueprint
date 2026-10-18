@@ -3,7 +3,7 @@
  * 招待からの本登録（acceptInvitationCore）が、招待にトライアルの申込（com_t_trial_application）が
  * 紐づいている場合に呼ぶ。契約は申込時ではなく本登録の月で決め、ライセンスは本登録の日から14日間にする。
  *
- * 💡 'use server' は付けない（外部から直接呼べるエンドポイントにしないため）。
+ * 'use server' は付けない（外部から直接呼べるエンドポイントにしないため）。
  */
 import 'server-only';
 import { WEB_TRIAL_LICENSE_DAYS } from '@gabby/types/trialApplication';

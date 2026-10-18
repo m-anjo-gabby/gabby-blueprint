@@ -87,28 +87,28 @@ export function SprintHistoryView({ initialData, targetMonth }: SprintHistoryVie
   const searchParams = useSearchParams();
   const focusId = searchParams.get('focus');
 
-  // 🌍 ユーザーマスタからタイムゾーンを取得（未設定時は Asia/Tokyo にフォールバック）
+  // ユーザーマスタからタイムゾーンを取得（未設定時は Asia/Tokyo にフォールバック）
   const timezone = useTimezone();
 
-  // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算・当月判定等）はWord履歴画面と共通のためフック化
+  // 月ナビゲーション（前月/翌月の年またぎ計算・当月判定等）はWord履歴画面と共通のためフック化
   const monthNavigator = useMonthNavigator({
     targetMonth,
     basePath: '/training/sprint/history',
   });
 
-  // 🎯 初期レンダリング時に URL パラメータから展開すべき日付を特定する
+  // 初期レンダリング時に URL パラメータから展開すべき日付を特定する
   const [expandedDates, setExpandedDates] = useState<string[]>(() => {
     const sessions = initialData?.sessions || [];
     if (!focusId || !sessions.length) return [];
     const targetSession = sessions.find((s) => s.self_sprint_id === focusId);
     if (targetSession) {
-      // 💡 外部関数を呼ばず、直接タイムゾーン関数を使用
+      // 外部関数を呼ばず、直接タイムゾーン関数を使用
       return [formatZonedDate(targetSession.insert_date, timezone)];
     }
     return [];
   });
 
-  // 🎯 スクロール処理のみを Effect で行う（expandedDates は初期化時点で同期的に確定済みのため、
+  // スクロール処理のみを Effect で行う（expandedDates は初期化時点で同期的に確定済みのため、
   // 対象要素は通常は次の描画で存在する。requestAnimationFrame でペイント後の存在確認を
   // 数フレームだけリトライし、100ms間隔のポーリングより軽量かつ高速に解決する）
   useEffect(() => {
@@ -132,7 +132,7 @@ export function SprintHistoryView({ initialData, targetMonth }: SprintHistoryVie
     return () => cancelAnimationFrame(rafId);
   }, [focusId]);
 
-  // 💡 日付ごとにグループ化（React Compiler が確実に自動追随できるよう最適化）
+  // 日付ごとにグループ化（React Compiler が確実に自動追随できるよう最適化）
   const groupedData = useMemo(() => {
     const groups: Record<string, { sessions: HistorySession[]; drills: HistoryDrillSummary[] }> = {};
 

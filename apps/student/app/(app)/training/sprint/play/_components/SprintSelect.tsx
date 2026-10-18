@@ -93,7 +93,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
 
   const { micStatus, requestMicPermission } = useMicPermission();
 
-  // 🚀 改修: メインエリアのスクロール残量を検知し、上下フェードマスクの表示を制御
+  // 改修: メインエリアのスクロール残量を検知し、上下フェードマスクの表示を制御
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [mainScrollState, setMainScrollState] = useState({ top: false, bottom: false });
 
@@ -106,7 +106,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
     });
   }, []);
 
-  // 🚀 改修: 設定ドロワー内スクロールエリア(Radix ScrollArea)のフェードマスク制御
+  // 改修: 設定ドロワー内スクロールエリア(Radix ScrollArea)のフェードマスク制御
   const drawerScrollWrapRef = useRef<HTMLDivElement>(null);
   const [drawerScrollState, setDrawerScrollState] = useState({ top: false, bottom: false });
 
@@ -244,7 +244,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
   };
 
   const handleStartSubmit = async (answerType: SprintAnswerType = '0') => {
-    // 🔊 開始のタップの中で音声をアンロック・復旧する（結果画面での放置等で中断したままでも、1問目から鳴らす）。
+    // 開始のタップの中で音声をアンロック・復旧する（結果画面での放置等で中断したままでも、1問目から鳴らす）。
     // iOS はタップの同期区間でしか AudioContext を確実に再開・作り直しできないため、await より前に呼ぶ
     void unlockAudio();
     // 選べない種別・レベルのまま開始しない（すべて未到達の種別等）
@@ -276,7 +276,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
 
   return (
     <ImmersivePanel as="main" className="overscroll-none select-none">
-      {/* 🌟 完全中央集約型のノイズレス・ヒーローヘッダー */}
+      {/* 完全中央集約型のノイズレス・ヒーローヘッダー */}
       <div
         onClick={() => setIsSettingsOpen(true)}
         className="shrink-0 pt-4 pb-5 w-full bg-white z-20 border-b border-line/60 shadow-[0_1px_3px_rgba(0,0,0,0.01)] relative flex flex-col items-center cursor-pointer hover:bg-canvas/70 active:bg-canvas/50 transition-colors duration-150 select-none group"
@@ -327,7 +327,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
 
         {/* コア情報を完全に中央へ数珠つなぎ配置 */}
         <div className="w-full relative mt-3.5 min-h-[32px] flex items-center justify-center px-6">
-          {/* 🚀 改修: motion.divに layout 属性を持たせ、バッジ消失・出現時の横シフトを滑らかに補間 */}
+          {/* 改修: motion.divに layout 属性を持たせ、バッジ消失・出現時の横シフトを滑らかに補間 */}
           <motion.div
             layout
             className="w-max max-w-full flex items-center justify-center gap-2 text-center pointer-events-none px-2"
@@ -336,7 +336,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
               {getSprintTitle(selectedType, Number(selectedLevel), hasLevel)}
             </h2>
 
-            {/* 🚀 改修: ドリルモード切り替え時にフェード＆横スライドしながら消滅するインタラクション */}
+            {/* 改修: ドリルモード切り替え時にフェード＆横スライドしながら消滅するインタラクション */}
             <AnimatePresence mode="popLayout">
               {mode === 'sprint' && (
                 <motion.span
@@ -359,7 +359,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
       <div
         className={cn('flex-1 min-h-0 flex flex-col relative', mode === 'sprint' ? 'bg-brand-50/30' : 'bg-canvas/50')}
       >
-        {/* 🚀 改修: スクロール上端フェードマスク(残量がある時のみ表示) */}
+        {/* 改修: スクロール上端フェードマスク(残量がある時のみ表示) */}
         <div
           aria-hidden
           className={cn(
@@ -375,7 +375,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
           className="overflow-y-scroll px-6 py-4 stable-gutter"
         >
           <div className="w-full max-w-xl mx-auto space-y-4 pt-1 pb-6">
-            {/* 🚀 改修: モード選択カードを役割ごとに分割し、タップ対象の境界を明確化 */}
+            {/* 改修: モード選択カードを役割ごとに分割し、タップ対象の境界を明確化 */}
             <div className="space-y-3">
               {/* カードA: トレーニングモード */}
               <div className="bg-white border border-line/60 rounded-card p-3 shadow-3xs space-y-2">
@@ -467,7 +467,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
 
               {/* カードB: 発話評価 */}
               <div className="bg-white border border-line/60 rounded-card p-3 shadow-3xs space-y-2">
-                {/* 🚀 改修①: チェックアイコン ＋ 視認性を高めたテキストメッセージ（マイク権限OK）でアプリ設定との混同を完全に防ぐ */}
+                {/* 改修①: チェックアイコン ＋ 視認性を高めたテキストメッセージ（マイク権限OK）でアプリ設定との混同を完全に防ぐ */}
                 <div className="flex items-center gap-2 pl-1 h-5">
                   <span className="text-xs font-bold text-ink-muted whitespace-nowrap">発話評価</span>
                   {micStatus === 'granted' && (
@@ -497,7 +497,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
                       />
                     )}
 
-                    {/* 🚀 改修②: 下部警告エリアのシグナルカラーと動的に同期。有効感・警告・ブロック状態を直感的に伝える */}
+                    {/* 改修②: 下部警告エリアのシグナルカラーと動的に同期。有効感・警告・ブロック状態を直感的に伝える */}
                     <Mic
                       size={12}
                       className={cn(
@@ -696,7 +696,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
             </div>
           </div>
         </ImmersiveBody>
-        {/* 🚀 改修: スクロール下端フェードマスク(残量がある時のみ表示) */}
+        {/* 改修: スクロール下端フェードマスク(残量がある時のみ表示) */}
         <div
           aria-hidden
           className={cn(
@@ -836,7 +836,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
             className="flex-1 relative min-h-0 overflow-hidden border-t border-line/40 mt-6"
             data-vaul-no-drag
           >
-            {/* 🚀 改修: ユーザー状況ロード中（null時）のガタつき（レイアウトシフト）を完全に抑制する美しいスケルトンをマッピング */}
+            {/* 改修: ユーザー状況ロード中（null時）のガタつき（レイアウトシフト）を完全に抑制する美しいスケルトンをマッピング */}
             {userProgress === undefined ? (
               <div className="px-8 py-6 space-y-6 animate-pulse">
                 <div className="space-y-2">
@@ -978,7 +978,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
                 <ScrollBar orientation="vertical" className="w-2.5 bg-canvas/30" data-vaul-no-drag />
               </ScrollArea>
             )}
-            {/* 🚀 改修: 設定ドロワーのスクロール上下フェードマスク(残量がある時のみ表示) */}
+            {/* 改修: 設定ドロワーのスクロール上下フェードマスク(残量がある時のみ表示) */}
             <div
               aria-hidden
               className={cn(

@@ -60,7 +60,7 @@ export default function Header() {
   return (
     <>
       <header className="h-14 md:h-16 bg-white/70 backdrop-blur-xl border-b border-line/50 px-4 md:px-6 flex items-center justify-between sticky top-0 z-50 shrink-0">
-        {/* 👑 ロゴエリア（クリックでダッシュボードへ遷移）。PCではサイドナビ側にロゴを表示するため非表示 */}
+        {/* ロゴエリア（クリックでダッシュボードへ遷移）。PCではサイドナビ側にロゴを表示するため非表示 */}
         <Link
           href="/dashboard"
           className="flex md:invisible items-center hover:opacity-80 transition-opacity cursor-pointer select-none"

@@ -42,9 +42,7 @@ import { buildSSML } from '@gabby/lib/azure/ssml';
 import { saveCVDictionaryAudio, type CVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
 import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
 
-// ============================================================
 // 定数
-// ============================================================
 
 const DEFAULT_PARAMS: TTSParameters = {
   voice: 'en-US-JennyNeural',
@@ -53,9 +51,7 @@ const DEFAULT_PARAMS: TTSParameters = {
   pitch: 0,
 };
 
-// ============================================================
 // Props
-// ============================================================
 
 interface CVTTSDialogProps {
   entry: CVDictionaryEntry;
@@ -63,9 +59,7 @@ interface CVTTSDialogProps {
   children: React.ReactNode;
 }
 
-// ============================================================
 // Component
-// ============================================================
 
 export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
   const [open, setOpen] = useState(false);

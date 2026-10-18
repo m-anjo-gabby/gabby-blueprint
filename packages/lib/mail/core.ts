@@ -42,7 +42,7 @@ interface SendCoreParams extends RenderedEmail {
 const DEFAULT_FROM_AUTH = 'Gabby Academy <noreply@mail.gabbyacademy.com>';
 
 /**
- * 🛠️ メール送信の共通基盤（コア）関数
+ * メール送信の共通基盤（コア）関数
  * HTML 版とテキスト版（render.ts で同じ元データから作ったもの）の両方を送る。
  */
 export async function sendCore({

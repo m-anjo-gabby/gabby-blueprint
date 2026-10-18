@@ -40,7 +40,7 @@ export function LessonSprintApp({ studentId, sessionId, profile, lessonSprints, 
   };
 
   const handleComplete = (lessonSprintId: string) => {
-    // 🚀 store のリセットはプレイヤー側の完了ダイアログ遷移時（handleGoToResult）で行う。
+    // store のリセットはプレイヤー側の完了ダイアログ遷移時（handleGoToResult）で行う。
     // ここで先にリセットすると、まだ画面遷移が完了する前にヘッダーのタイトル等が
     // 初期値（Speed）へ一瞬切り替わって見えるノイズが発生するため。
     // ハブ発の実施(sessionIdあり)であれば、結果画面へもその文脈を引き継ぎ、没入表示＋

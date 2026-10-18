@@ -356,7 +356,7 @@ export async function createUserDirect(
 
     const userId = authData.user.id;
 
-    // 💡 各サブステップの失敗はthrowせず処理を継続するため、最終ログで欠落なく可視化できるよう記録しておく
+    // 各サブステップの失敗はthrowせず処理を継続するため、最終ログで欠落なく可視化できるよう記録しておく
     const partialFailures: string[] = [];
 
     // トリガーで自動作成されたマスタレコード(com_m_user)を確定情報でアップデート
@@ -432,7 +432,7 @@ export async function createUserDirect(
     revalidatePath('/users', 'layout');
     return { success: true, user_id: userId, errorType: null, message: null };
   } catch (err) {
-    // 💡 セキュリティ: payloadには平文パスワードが含まれるため、ログにはそのまま渡さない
+    // セキュリティ: payloadには平文パスワードが含まれるため、ログにはそのまま渡さない
     logger.error('user:create_user_direct_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
@@ -451,10 +451,10 @@ export async function resendInvite(email: string, userType?: string) {
   try {
     const supabase = await createAdminClient();
 
-    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え -> 💡 共通ヘルパーへ移譲
+    // ユーザ種別に応じてリダイレクト先（招待画面のベースURL）を切り替え -> 共通ヘルパーへ移譲
     // const redirectBase = userType === USER_TYPES.ADMIN ? process.env.NEXT_PUBLIC_SITE_URL : process.env.NEXT_PUBLIC_STUDENT_URL;
 
-    // 💡 改善: 既存の承認待ち(accepted_at IS NULL)の招待状を取得します
+    // 改善: 既存の承認待ち(accepted_at IS NULL)の招待状を取得します
     const { data: currentInvite, error: fetchError } = await supabase
       .from('com_t_invitation')
       .select('*')
@@ -467,7 +467,7 @@ export async function resendInvite(email: string, userType?: string) {
       return { success: false, message: t('users.errors.invitationNotFound') };
     }
 
-    // 💡 改善: 安全性の向上として有効期限を送信時点から付け直し、新しいワンタイムトークンを再生成します -> 💡 共通ヘルパーを利用
+    // 改善: 安全性の向上として有効期限を送信時点から付け直し、新しいワンタイムトークンを再生成します -> 共通ヘルパーを利用
     const newExpiresAt = getInvitationExpiry();
     const newWeightToken = randomBytes(32).toString('hex');
 
@@ -485,8 +485,8 @@ export async function resendInvite(email: string, userType?: string) {
       throw updateError;
     }
 
-    // 💡 改善: 再生成したトークンで Resend 経由でメールを再送 -> 💡 共通ヘルパーを利用してURLを解決・種別ごとのテンプレートを送り分け
-    // 💡 考慮点: 引数の userType が省略されて渡された場合でも、DBから取得した一貫性のある currentInvite.user_type をフォールバックとして優先適用
+    // 改善: 再生成したトークンで Resend 経由でメールを再送 -> 共通ヘルパーを利用してURLを解決・種別ごとのテンプレートを送り分け
+    // 考慮点: 引数の userType が省略されて渡された場合でも、DBから取得した一貫性のある currentInvite.user_type をフォールバックとして優先適用
     const resolvedUserType = userType || currentInvite.user_type;
     const inviteUrl = getInvitationUrl(resolvedUserType, newWeightToken);
     const mailResult = await sendInvitationEmail({
@@ -497,7 +497,7 @@ export async function resendInvite(email: string, userType?: string) {
       expiresDays: INVITATION_EXPIRES_DAYS,
     });
 
-    // 💡 改善: 再送結果をDBに記録（成功時はエラーをクリア）
+    // 改善: 再送結果をDBに記録（成功時はエラーをクリア）
     await supabase
       .from('com_t_invitation')
       .update({
@@ -630,7 +630,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
 
   for (const user of users) {
     try {
-      // 💡 改善: メールAPI (Resend) のレートリミット(2req/s)を考慮し、2人目以降は少し待機する
+      // 改善: メールAPI (Resend) のレートリミット(2req/s)を考慮し、2人目以降は少し待機する
       if (results.length > 0) {
         await new Promise((resolve) => setTimeout(resolve, 600)); // 0.6秒待機
       }

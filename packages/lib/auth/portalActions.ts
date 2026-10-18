@@ -207,7 +207,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
           `${config.appName} user successfully reset password via email link`,
           ctx,
         );
-        // 💡 クライアント側で完了表示を見せてから安全に遷移させるため、ここではリダイレクトしない
+        // クライアント側で完了表示を見せてから安全に遷移させるため、ここではリダイレクトしない
         return { success: true };
       }
 

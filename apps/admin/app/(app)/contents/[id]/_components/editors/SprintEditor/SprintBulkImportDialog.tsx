@@ -30,7 +30,7 @@ interface SprintBulkImportDialogProps {
   onSuccess?: () => void;
 }
 
-// 💡 TSVヘッダーの定義
+// TSVヘッダーの定義
 const REQUIRED_HEADERS = [
   'seq_no',
   'tsv_group_id', // グループを識別するための仮の番号（Speed以外で必須）
@@ -70,9 +70,9 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
     setLayoutError(null);
     Papa.parse<TsvRow>(file, {
       header: true,
-      delimiter: '\t', // 💡 タブ区切り (TSV) を明示
-      quoteChar: '', // 💡 ダブルクォーテーションをフィールド囲み文字として処理しない
-      escapeChar: '', // 💡 エスケープ文字の処理を無効化
+      delimiter: '\t', // タブ区切り (TSV) を明示
+      quoteChar: '', // ダブルクォーテーションをフィールド囲み文字として処理しない
+      escapeChar: '', // エスケープ文字の処理を無効化
       skipEmptyLines: true,
       error: (error) => {
         setLayoutError(t('tsvParseError', { message: error.message }));

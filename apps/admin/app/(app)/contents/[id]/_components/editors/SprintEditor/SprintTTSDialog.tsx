@@ -58,7 +58,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
   const { speak, isSpeaking, error } = usePlayAzureSpeech();
   const { showToast } = useToast();
 
-  // 💡 修正: セクションに応じたテキストとメタデータの取得を _en スキーマに対応
+  // 修正: セクションに応じたテキストとメタデータの取得を _en スキーマに対応
   const getSectionData = useCallback(() => {
     switch (section) {
       case 'statement':
@@ -240,7 +240,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
                         </Button>
                       </div>
 
-                      {/* 💡 改善: ロジック上存在していた IPA (発音記号) 調整用の UI 入力欄を追加 */}
+                      {/* 改善: ロジック上存在していた IPA (発音記号) 調整用の UI 入力欄を追加 */}
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
                           <Mic2 size={12} className={adj.ipa ? 'text-brand-500' : ''} /> IPA Pronunciation

@@ -5,26 +5,20 @@ import { CVWordList } from './_components/CVWordList';
 import { CVEntryList } from './_components/CVEntryList';
 import { BookOpenText } from 'lucide-react';
 
-// ============================================================
 // メタデータ
-// ============================================================
 
 export const metadata = {
   title: 'CV Dictionary | Gabby Blueprint Admin',
   description: 'ColorVowel辞書の管理画面。単語・品詞別エントリの登録・編集・音声作成を行います。',
 };
 
-// ============================================================
 // Props
-// ============================================================
 
 interface CVDictionaryPageProps {
   searchParams: Promise<{ word?: string }>;
 }
 
-// ============================================================
 // Page
-// ============================================================
 
 export default async function CVDictionaryPage({ searchParams }: CVDictionaryPageProps) {
   const t = await getTranslations('tools.cvDictionary.page');

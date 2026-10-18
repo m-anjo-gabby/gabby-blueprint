@@ -1286,7 +1286,7 @@ export async function getLicenseTimeline(userId: string) {
       throw error;
     }
 
-    // 💡 解除済み（物理削除済み）のライセンスは履歴テーブル側から補完し、
+    // 解除済み（物理削除済み）のライセンスは履歴テーブル側から補完し、
     // 「解除すると履歴が消える」問題を解消する。現行のライセンス一覧の並び・形状には影響しない。
     const { data: removedHistory, error: historyError } = await supabase
       .from('com_t_user_license_history')

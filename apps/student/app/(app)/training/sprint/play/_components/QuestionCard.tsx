@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 import { Eye, CircleDot, Headphones, Mic, MicOff } from 'lucide-react';
 
-// 🔌 Zustand ストアのインポート
+// Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
 import { cn } from '@/lib/utils';
 import { CircularProgressRing } from '@/components/common/CircularProgressRing';
@@ -20,10 +20,10 @@ interface QuestionCardProps {
   groupCurrentIndex?: number;
   groupTotalCount?: number;
   onPlayAudio?: (voiceUrl: string | null, text: string) => void;
-  audioPhase?: 'idle' | 'statement' | 'question' | 'thinking' | 'answer'; // 🛠️ 親の 'thinking' フェーズに追従
-  isRecording?: boolean; // 🎙️ 親から渡される録音中フラグ
-  timeLeft?: number; // ⏱️ 親から渡される残り時間（秒）
-  maxTime?: number; // ⏱️ 円形プログレス計算用の最大制限時間（デフォルト: 10）
+  audioPhase?: 'idle' | 'statement' | 'question' | 'thinking' | 'answer'; // 親の 'thinking' フェーズに追従
+  isRecording?: boolean; // 親から渡される録音中フラグ
+  timeLeft?: number; // 親から渡される残り時間（秒）
+  maxTime?: number; // 円形プログレス計算用の最大制限時間（デフォルト: 10）
 }
 
 const SPRINT_LABELS: Record<SprintQuestionType, { sectionTitle: string; instruction: string; phaseLabel: string }> = {
@@ -42,7 +42,7 @@ export function QuestionCard({
   timeLeft = 0,
   maxTime = 10,
 }: QuestionCardProps) {
-  // 📦 1. まず必要なストアの値をすべて取得
+  // 1. まず必要なストアの値をすべて取得
   const questions = useSprintStore((state) => state.session.questions) ?? NO_QUESTIONS;
   const currentIndex = useSprintStore((state) => state.session.currentIndex);
   const mode = useSprintStore((state) => state.config.mode);
@@ -51,13 +51,13 @@ export function QuestionCard({
   const isAutoPlaying = useSprintStore((state) => state.drill.isAutoPlaying);
   const setDrillEvalType = useSprintStore((state) => state.setDrillEvalType);
   const drillEvalType = useSprintStore((state) => state.drill.evalType);
-  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
+  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 追加：発話評価ON/OFFフラグの取得
 
-  // 🎯 安全に現在の問題データを特定 (Zustand内部の同期ラグ対策)
-  // 💡 フック群（useMemo等）よりも前に宣言することで、配下のフック内から安全に変数を参照させエラーを解決します
+  // 安全に現在の問題データを特定 (Zustand内部の同期ラグ対策)
+  // フック群（useMemo等）よりも前に宣言することで、配下のフック内から安全に変数を参照させエラーを解決します
   const question = questions[currentIndex] || null;
 
-  // 📦 2. すべての useState フックを「無条件」で最上部に配置
+  // 2. すべての useState フックを「無条件」で最上部に配置
   const [isProblemVisible, setIsProblemVisible] = useState(false);
   const [showJaStatement, setShowJaStatement] = useState(false);
   const [showJaQuestion, setShowJaQuestion] = useState(false);
@@ -65,7 +65,7 @@ export function QuestionCard({
   const [prevIndex, setPrevIndex] = useState(currentIndex);
   const [prevIsRecording, setPrevIsRecording] = useState(isRecording);
 
-  // 🔄 インデックスや録音状態変化時のステートリセット
+  // インデックスや録音状態変化時のステートリセット
   if (currentIndex !== prevIndex) {
     setPrevIndex(currentIndex);
     setIsProblemVisible(false);
@@ -84,7 +84,7 @@ export function QuestionCard({
     }
   }
 
-  // 📦 3. useMemo などのフックもすべて無条件で実行される位置にまとめる
+  // 3. useMemo などのフックもすべて無条件で実行される位置にまとめる
   const config = SPRINT_LABELS[(questionType || '0') as SprintQuestionType] || {
     sectionTitle: '問題',
     instruction: '',
@@ -130,7 +130,7 @@ export function QuestionCard({
         return { text: `${config.phaseLabel}を再生中...`, color: 'text-brand' };
       case 'thinking':
       case 'answer':
-        // 🚀 改修：ご指定に基づき、評価モードの状態に関わらずメインメッセージは「回答しましょう」で完全統一
+        // 改修：ご指定に基づき、評価モードの状態に関わらずメインメッセージは「回答しましょう」で完全統一
         return { text: '回答しましょう', color: 'text-amber-500' };
       default:
         return { text: '待機中', color: 'text-ink-subtle' };
@@ -148,7 +148,7 @@ export function QuestionCard({
     return Math.max(0, Math.min(timeLeft, maxTime)) / maxTime;
   }, [timeLeft, maxTime]);
 
-  // 🔊 オーディオトリガー
+  // オーディオトリガー
   const triggerAudio = (e: React.MouseEvent, voiceUrl: string | null, text: string) => {
     e.stopPropagation();
     if (isAutoPlaying || isRecording) return;
@@ -157,7 +157,7 @@ export function QuestionCard({
 
   const isHidingProblemText = isDrillMode && !isProblemVisible;
 
-  // 🚧 4. すべてのフック定義が完了した「一番最後」で、データ不在時の早期リターンを行う
+  // 4. すべてのフック定義が完了した「一番最後」で、データ不在時の早期リターンを行う
   if (!question) {
     return (
       <div className="flex-1 w-full min-h-[300px] flex items-center justify-center bg-canvas/50 rounded-panel border border-dashed border-line">
@@ -169,9 +169,7 @@ export function QuestionCard({
     );
   }
 
-  // ────────────────────────────────────────────────────────────
-  // 🌟 ここから下が本番のレンダリング
-  // ────────────────────────────────────────────────────────────
+  // ここから下が本番のレンダリング
   return (
     <div className="w-full flex flex-col items-stretch text-left select-none gap-y-2 sm:gap-y-4">
       {/* 【ヘッダー領域】 */}
@@ -314,7 +312,7 @@ export function QuestionCard({
               <h3 className={cn('text-xs font-bold leading-none whitespace-nowrap', statusMessage.color)}>
                 {statusMessage.text}
               </h3>
-              {/* 🚀 改修：回答・シンキング状態で未オープン・未録音状態の場合のサブテキストを、発話評価ON/OFFの状態に応じて動的に分岐 */}
+              {/* 改修：回答・シンキング状態で未オープン・未録音状態の場合のサブテキストを、発話評価ON/OFFの状態に応じて動的に分岐 */}
               {(audioPhase === 'answer' || audioPhase === 'thinking') && !isRevealed && !isRecording && (
                 <div className="flex items-center gap-1 mt-1 text-ink-subtle">
                   {isAssessmentMode ? (
@@ -450,7 +448,7 @@ export function QuestionCard({
               >
                 <div className="absolute inset-0 rounded-card sm:rounded-panel bg-rose-50/30 border border-rose-100/70" />
                 <div className="relative z-10 flex flex-col items-center text-center space-y-4">
-                  {/* ⏱️ 滑らかな円形プログレスHUD */}
+                  {/* 滑らかな円形プログレスHUD */}
                   <CircularProgressRing
                     size={56}
                     radius={24}

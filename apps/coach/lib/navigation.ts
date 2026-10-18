@@ -1,9 +1,7 @@
 // apps/coach/lib/navigation.ts
 import { LayoutDashboard, MessageCircle, Calendar, CalendarRange, GraduationCap, type LucideIcon } from 'lucide-react';
 
-// ============================================================
 // 型定義（admin アプリと同一構造。今後の画面追加に備えて group にも対応）
-// ============================================================
 
 export interface NavLeaf {
   type?: 'leaf';
@@ -23,9 +21,7 @@ export interface NavGroup {
 
 export type NavItem = NavLeaf | NavGroup;
 
-// ============================================================
 // ナビゲーション定義
-// ============================================================
 // 初期構築時点ではダッシュボードのみ。担当生徒管理・レッスン管理等は今後追加予定。
 
 export const COACH_NAV_CONFIG: readonly NavItem[] = [
@@ -61,9 +57,7 @@ export const COACH_NAV_CONFIG: readonly NavItem[] = [
   },
 ] as const;
 
-// ============================================================
 // ユーティリティ
-// ============================================================
 
 /** 全リーフアイテムをフラットに取得 */
 export function getAllLeafItems(config: readonly NavItem[]): NavLeaf[] {

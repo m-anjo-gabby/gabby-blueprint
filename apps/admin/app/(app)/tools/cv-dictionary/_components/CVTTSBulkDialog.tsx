@@ -41,9 +41,7 @@ import {
 } from '@/actions/adminCVDictionaryAction';
 import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
 
-// ============================================================
 // 定数
-// ============================================================
 
 const DEFAULT_PARAMS: TTSParameters = {
   voice: 'en-US-JennyNeural',
@@ -54,18 +52,14 @@ const DEFAULT_PARAMS: TTSParameters = {
 
 const SAMPLE_TEXT = 'This is a sample sentence to check the voice settings.';
 
-// ============================================================
 // Props
-// ============================================================
 
 interface CVTTSBulkDialogProps {
   onComplete?: () => void;
   children: React.ReactNode;
 }
 
-// ============================================================
 // Component
-// ============================================================
 
 export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) {
   const t = useTranslations('tools.cvDictionary.ttsBulkDialog');
@@ -85,18 +79,14 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
   const { showToast } = useToast();
   const triggerRefresh = useCVDictionaryStore((s) => s.triggerRefresh);
 
-  // ----------------------------------------------------------
   // 対象エントリの絞り込み
-  // ----------------------------------------------------------
 
   const filteredEntries = useMemo(() => {
     if (targetMode === 'all') return rawEntries;
     return rawEntries.filter((e) => !e.audio_path);
   }, [rawEntries, targetMode]);
 
-  // ----------------------------------------------------------
   // データ取得
-  // ----------------------------------------------------------
 
   const fetchEntries = useCallback(async () => {
     setIsLoadingData(true);
@@ -110,9 +100,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
     }
   }, [showToast, t]);
 
-  // ----------------------------------------------------------
   // ダイアログ開閉
-  // ----------------------------------------------------------
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isProcessing) return;
@@ -127,18 +115,14 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
     }
   };
 
-  // ----------------------------------------------------------
   // プレビュー
-  // ----------------------------------------------------------
 
   const handlePreview = () => {
     const ssml = buildSSML(SAMPLE_TEXT, { settings: params, words: [] });
     speak(ssml);
   };
 
-  // ----------------------------------------------------------
   // エラーアラートを閉じる
-  // ----------------------------------------------------------
 
   const handleCloseErrorAlert = () => {
     setShowErrorAlert(false);
@@ -147,9 +131,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
     onComplete?.();
   };
 
-  // ----------------------------------------------------------
   // 一括生成
-  // ----------------------------------------------------------
 
   const handleBulkGenerate = async () => {
     setShowConfirm(false);
@@ -203,9 +185,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
     }
   };
 
-  // ============================================================
   // Render
-  // ============================================================
 
   return (
     <>

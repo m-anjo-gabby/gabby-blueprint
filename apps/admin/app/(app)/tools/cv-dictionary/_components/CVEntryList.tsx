@@ -32,9 +32,7 @@ import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
 import { getPartOfSpeechTailwindColor } from '@gabby/types/colorVowel';
 import { ipaToPhonemes } from '@gabby/lib/colorVowel/phonemes';
 
-// ============================================================
 // 定数
-// ============================================================
 
 function createTtsStatusConfig(
   t: ReturnType<typeof useTranslations<'tools.cvDictionary.entryList'>>,
@@ -66,17 +64,13 @@ function phonemeText(ipa: string): React.ReactNode | null {
   );
 }
 
-// ============================================================
 // Props
-// ============================================================
 
 interface CVEntryListProps {
   wordEn: string;
 }
 
-// ============================================================
 // Component
-// ============================================================
 
 export function CVEntryList({ wordEn }: CVEntryListProps) {
   const t = useTranslations('tools.cvDictionary.entryList');
@@ -88,9 +82,7 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
 
   const lastUpdated = useCVDictionaryStore((s) => s.lastUpdated);
 
-  // ----------------------------------------------------------
   // データ取得
-  // ----------------------------------------------------------
 
   const fetchEntries = useCallback(async () => {
     setIsLoading(true);
@@ -108,9 +100,7 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
     fetchEntries();
   }, [fetchEntries, lastUpdated]);
 
-  // ----------------------------------------------------------
   // 削除
-  // ----------------------------------------------------------
 
   const handleDelete = async (wordEn: string, partOfSpeech: string) => {
     try {
@@ -126,9 +116,7 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
     }
   };
 
-  // ----------------------------------------------------------
   // TTS ステータスバッジ
-  // ----------------------------------------------------------
 
   const renderStatusBadge = (status: number) => {
     const config = ttsStatusConfig[status] ?? {
@@ -144,9 +132,7 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
     );
   };
 
-  // ============================================================
   // Render
-  // ============================================================
 
   return (
     <div className="flex flex-col h-full bg-slate-50/50 min-w-0 overflow-hidden">

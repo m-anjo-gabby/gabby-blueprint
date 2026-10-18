@@ -29,14 +29,14 @@ export function WordHistoryView({ initialData, targetMonth }: WordHistoryViewPro
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
   const timezone = useTimezone();
 
-  // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算等）はSprint履歴画面と共通のためフック化
+  // 月ナビゲーション（前月/翌月の年またぎ計算等）はSprint履歴画面と共通のためフック化
   const monthNavigator = useMonthNavigator({
     targetMonth,
     basePath: '/training/word/history',
     navigate: 'replace',
   });
 
-  // 📊 ヘッダーの月次サマリー用集計（追加のAPIコールなしで算出）
+  // ヘッダーの月次サマリー用集計（追加のAPIコールなしで算出）
   const monthlyTotals = useMemo(() => {
     return items.reduce(
       (acc, s) => {
@@ -48,12 +48,12 @@ export function WordHistoryView({ initialData, targetMonth }: WordHistoryViewPro
     );
   }, [items]);
 
-  // 🎯 日付ごとにグループ化（React Compiler が確実に追随できるよう外部関数参照を排除し、依存配列を修正）
+  // 日付ごとにグループ化（React Compiler が確実に追随できるよう外部関数参照を排除し、依存配列を修正）
   const groupedData = useMemo(() => {
     const groups: GroupedWordHistory = {};
 
     items.forEach((session) => {
-      // 💡 外部関数を通さず、直接インラインでタイムゾーン付きフォーマットを実行
+      // 外部関数を通さず、直接インラインでタイムゾーン付きフォーマットを実行
       const dateStr = formatZonedDate(session.training_date, timezone);
       if (!groups[dateStr]) groups[dateStr] = [];
       groups[dateStr].push(session);
@@ -68,7 +68,7 @@ export function WordHistoryView({ initialData, targetMonth }: WordHistoryViewPro
     });
 
     return groups;
-  }, [items, timezone]); // 💡 静的解析が一致するよう `timezone` を依存配列にしっかり追加
+  }, [items, timezone]); // 静的解析が一致するよう `timezone` を依存配列にしっかり追加
 
   const toggleDate = (date: string) => {
     setExpandedDates((prev) => (prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date]));

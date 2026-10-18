@@ -16,7 +16,7 @@ export function useSprintCountdown(timeLimitSec: number, onTimeUp: () => void, o
   }, [secondsLeft]);
 
   // 全体の残り制限時間カウント。
-  // 💡 interval はマウント時に一度だけ生成し、functional update で毎秒デクリメントする
+  // interval はマウント時に一度だけ生成し、functional update で毎秒デクリメントする
   // （secondsLeft を依存配列に入れて毎秒 setInterval/clearInterval を繰り返す実装は不要な再生成コストになる）
   useEffect(() => {
     const interval = setInterval(() => {
@@ -39,7 +39,7 @@ export function useSprintCountdown(timeLimitSec: number, onTimeUp: () => void, o
   }, [secondsLeft, onTimeUp]);
 
   // アンマウント時のクリーンアップ。
-  // 💡 timeLimitSec は useState の初期化子で既に反映済み（このフックは呼び出し元の
+  // timeLimitSec は useState の初期化子で既に反映済み（このフックは呼び出し元の
   // プレイヤーが毎セッションごとに新規マウントされる前提のため、マウント中の再同期は不要）
   useEffect(() => {
     return () => {

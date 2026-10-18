@@ -77,7 +77,7 @@ export function LicenseFormDialog({ user, children }: Props) {
 
   // バリデーション：全項目必須・期間の前後関係・契約期間内かどうか
   const isDateInvalid = !!(startDate && endDate && new Date(startDate) > new Date(endDate));
-  // 💡 「ライセンスの有効期間は契約期間に準じます」という運用と実制御を一致させるためのチェック
+  // 「ライセンスの有効期間は契約期間に準じます」という運用と実制御を一致させるためのチェック
   // （編集時は既存ライセンスの契約が availableContracts に含まれないため対象外。サーバー側では常に検証される）
   const isOutOfContractRange = !!(
     !editingLicense &&

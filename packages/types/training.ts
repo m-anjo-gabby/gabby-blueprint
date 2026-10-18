@@ -64,9 +64,7 @@ export interface ResumeContentResponse {
   };
 }
 
-// ---------------------------------------------------------------------------
 // 月ごとのトレーニング実績（get_user_training_performance の戻り値）
-// ---------------------------------------------------------------------------
 
 export interface PerformanceWordSummary {
   content_id: string;

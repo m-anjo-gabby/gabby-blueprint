@@ -84,7 +84,7 @@ export function TrainingPerformance({ initialData, targetMonth }: TrainingPerfor
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const timezone = useTimezone();
 
-  // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算・当月判定・ペンディング状態）は
+  // 月ナビゲーション（前月/翌月の年またぎ計算・当月判定・ペンディング状態）は
   // 単語履歴・スプリント履歴画面と共通のためフック化
   const monthNavigator = useMonthNavigator({
     targetMonth,

@@ -2,9 +2,7 @@ import type { TTSAdjustmentData, TtsStatus } from './word';
 
 // packages/types/colorVowel.ts
 
-// -----------------------------------------------------------------------
 // 定数・区分値 (品詞: Part of Speech)
-// -----------------------------------------------------------------------
 export const PART_OF_SPEECH_TYPES = {
   NOUN: 'NOUN',
   VERB: 'VERB',
@@ -125,9 +123,7 @@ export const PART_OF_SPEECH_OPTIONS = (Object.entries(PART_OF_SPEECH_MAP) as [Pa
   .sort((a, b) => a[1].seqNo - b[1].seqNo)
   .map(([value, detail]) => ({ value, label: detail.adminLabel }));
 
-// -----------------------------------------------------------------------
 // 定数・区分値 (Color Vowel カラーマッピング)
-// -----------------------------------------------------------------------
 export const COLOR_VOWEL_COLORS: Record<string, string> = {
   auburn_dog: '#822315', // 濃いオーバーン
   black_cat: '#000000', // 黒
@@ -152,9 +148,7 @@ export const getColorVowelBorderColor = (cvId: string | null | undefined): strin
   return COLOR_VOWEL_COLORS[cvId] ?? '#D1D5DB';
 };
 
-// -----------------------------------------------------------------------
 // com_m_color_vowel テーブル行型
-// -----------------------------------------------------------------------
 export interface ColorVowelRow {
   cv_id: string;
   cv_name: string;
@@ -167,10 +161,8 @@ export interface ColorVowelRow {
   update_date: string;
 }
 
-// -----------------------------------------------------------------------
 // com_m_color_vowel_dictionary テーブル行型
 // 管理画面・生徒側で共通して使用する DB スキーマ対応型
-// -----------------------------------------------------------------------
 export interface ColorVowelDictionaryRow {
   word_en: string;
   part_of_speech: PartOfSpeechType | string; // DB値は PartOfSpeechType の value
@@ -192,9 +184,7 @@ export interface ColorVowelDictionaryRow {
   update_date: string | null;
 }
 
-// -----------------------------------------------------------------------
 // Server Action & Client 返却型（生徒向けルックアップ結果）
-// -----------------------------------------------------------------------
 export interface ColorVowelDicResult {
   dicId: string;
   wordEn: string;

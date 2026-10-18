@@ -55,7 +55,7 @@ export const webSpeechRecognizer: SpeechRecognizerEngine = {
 
     recognition.onend = () => {
       if (!active) return;
-      // 🚀 止められていなければ自動的に再開して認識を継続する（Edge/Safari等で途中終了するため）
+      // 止められていなければ自動的に再開して認識を継続する（Edge/Safari等で途中終了するため）
       try {
         recognition.start();
       } catch (e) {

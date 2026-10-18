@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 interface ContentCardProps {
   content: ContentItem;
   onToggleFavorite: (id: string, current: boolean) => void;
-  onStart: (content: ContentItem) => void; // 🔄 常に新規のため第2引数のフラグは不要に
+  onStart: (content: ContentItem) => void; // 常に新規のため第2引数のフラグは不要に
 }
 
 export const ContentCard = ({ content, onToggleFavorite, onStart }: ContentCardProps) => {

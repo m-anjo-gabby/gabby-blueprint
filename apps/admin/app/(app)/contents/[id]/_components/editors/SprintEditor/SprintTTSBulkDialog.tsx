@@ -57,7 +57,7 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
   const { speak, isSpeaking, generateSSML } = usePlayAzureSpeech();
   const { showToast } = useToast();
 
-  // 💡 修正: 実行タスク（問題×セクション）のリストを _en スキーマのカラムの存在を元に作成
+  // 修正: 実行タスク（問題×セクション）のリストを _en スキーマのカラムの存在を元に作成
   const allTasks = useMemo(() => {
     const tasks: { q: SprintQuestion; section: 'statement' | 'question' | 'answer_yes' | 'answer_no' }[] = [];
     const isSpeed = type === '0';
@@ -110,7 +110,7 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
       setProgress((prev) => ({ ...prev, current: i + 1 }));
 
       try {
-        // 💡 修正: マッピング先を _en スキーマの英語テキストフィールドに変更
+        // 修正: マッピング先を _en スキーマの英語テキストフィールドに変更
         const textMap = {
           statement: task.q.statement_en,
           question: task.q.question_en,

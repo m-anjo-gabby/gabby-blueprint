@@ -134,8 +134,6 @@ function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLText
 const INPUT_CLASS =
   'flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm';
 
-// ----------------------------------------------
-
 const PROPOSED_TIME_OPTIONS = generateLessonStartTimeOptions('00:00', '23:59');
 const MAX_PROPOSED_SLOTS = 3;
 

@@ -17,9 +17,7 @@ import { getTranslations } from 'next-intl/server';
 const logger = createLogger('admin');
 const TOOL_PATH = '/tools/ai-knowledge-base';
 
-// ============================================================
 // 型定義
-// ============================================================
 
 export interface KnowledgeEntry {
   knowledge_id: string;
@@ -31,9 +29,7 @@ export interface KnowledgeEntry {
   update_date: string;
 }
 
-// ============================================================
 // 取得系
-// ============================================================
 
 /**
  * ナレッジ一覧の取得（サーバーサイドページネーション）。
@@ -82,9 +78,7 @@ export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<L
   }
 }
 
-// ============================================================
 // 更新系
-// ============================================================
 
 /**
  * ナレッジの新規登録/更新。

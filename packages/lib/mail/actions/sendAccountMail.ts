@@ -12,7 +12,7 @@ import { createLogger } from '../../logger';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 /*
- * 🔒 アカウント関連のメール（招待・パスワード再設定）を組み立てて Resend 経由ですぐ送る。
+ * アカウント関連のメール（招待・パスワード再設定）を組み立てて Resend 経由ですぐ送る。
  * 送信待ち（dispatch/）を通らず、配信停止の対象外。
  */
 

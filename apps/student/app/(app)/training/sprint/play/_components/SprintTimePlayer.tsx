@@ -106,7 +106,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
   const router = useRouter();
   const { showToast } = useToast();
 
-  // ────────────── 🔌 Zustand ストア ──────────────
+  // ────────────── Zustand ストア ──────────────
   const {
     session,
     config,
@@ -123,7 +123,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
   const { currentIndex } = session;
   const { questionType, answerType, level, timeLimitSec, isAssessmentMode } = config;
 
-  // ────────────── 📦 ローカル管理ステート ──────────────
+  // ────────────── ローカル管理ステート ──────────────
   const [exitLoading, setExitLoading] = useState<boolean>(false);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
   // 🆕 直近の非idleフェーズを保持するref。2問目以降の問題切替時に発生する短い idle 区間（クッション）で
@@ -152,7 +152,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
   // 表示中ずっと発話セッションを借り、最初の発話以降は出力経路を切り替えない
   useSpeakingSession();
   // 再生・発話（単語帳・スプリント共通のプレイヤー）。流れの中断は beginFlow の AbortSignal で行う
-  // 💡 Sprintモードは再生速度変更UIを持たないため、常に等速で再生する
+  // Sprintモードは再生速度変更UIを持たないため、常に等速で再生する
   const {
     beginFlow,
     stopAll,
@@ -171,7 +171,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
   const currentQuestion = questions?.[currentIndex];
 
   const skippedQuestionIdsRef = useRef<Set<string>>(new Set());
-  // 🛠️ 音声再生に失敗した問題のID。回答履歴（answered_history）から除外するために使用
+  // 音声再生に失敗した問題のID。回答履歴（answered_history）から除外するために使用
   const audioFailedQuestionIdsRef = useRef<Set<string>>(new Set());
   const isPersistedRef = useRef<boolean>(false);
   // 🆕 タイムアップ経由での確定処理かどうか。true の間は発話評価完了時の演出（結果表示ウェイト）をスキップし、即座に保存へ進む
@@ -224,7 +224,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
   }, [currentQuestion, questions, isSpeedMode]);
 
   // 全てのオーディオ・発話を安全に即時ストップする
-  // 🚀 進行中の流れ（再生・待ち・チャイム・発話）をすべて中断する。発話の結果は出さないため、
+  // 進行中の流れ（再生・待ち・チャイム・発話）をすべて中断する。発話の結果は出さないため、
   // スキップ・終了・保存の後に古い評価が反映されることはない（タイムアップ時は finishListening で確定させる）
   const stopAllAudio = useCallback(() => {
     stopAll();
@@ -241,7 +241,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
       isPersistedRef.current = true;
       setIsSaving(true);
 
-      // 🚀 保存/リダイレクト処理に入った瞬間に再生・録音をすべて即時停止し、マイクを確実に解放する
+      // 保存/リダイレクト処理に入った瞬間に再生・録音をすべて即時停止し、マイクを確実に解放する
       stopAllAudio();
 
       const storeState = useSprintStore.getState();
@@ -267,7 +267,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
             ? Math.min(currentIndex + 1, questions.length)
             : currentIndex
           : Math.min(currentIndex + 1, questions.length);
-      // 🛠️ 音声再生に失敗した問題は回答履歴（answered_history）から完全に除外する
+      // 音声再生に失敗した問題は回答履歴（answered_history）から完全に除外する
       const slicedQuestions = questions
         .slice(0, answeredCount)
         .filter((q) => !audioFailedQuestionIdsRef.current.has(q.question_id));
@@ -330,7 +330,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
           } else {
             stopAllAudio();
             resetStore();
-            // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
+            // iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
             // 実施の終了から移動するため、結果画面で「全て再生」を自動で始める
             const targetUrl = getSprintResultHref(res.data.self_sprint_id, { autoplay: true });
             setTimeout(() => {
@@ -371,7 +371,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
       await unlockAudioContext();
       stopAllAudio(); // 再生・発話の流れをすべて中断する
       resetStore();
-      // 🚀 iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
+      // iOSのマイク解放・オーディオセッション切り替え完了を待つために安全バッファを置いてから遷移する
       setTimeout(() => {
         router.replace(getSprintResultHref(resultId, { autoplay: true }));
       }, SPRINT_FLOW_TIMING.sprint.resultRedirectBufferMs);
@@ -421,7 +421,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
   // 発話評価の対象文（Speed は YES/NO の回答タイプに応じた解答文）。評価OFF・対象文なしの場合は null
   const getAssessmentTarget = useCallback(
     (question: SprintQuestion) => {
-      // 🚀 安全ガード：発話評価がOFFの場合は録音プロセスを実行しない
+      // 安全ガード：発話評価がOFFの場合は録音プロセスを実行しない
       if (!isAssessmentMode) return null;
 
       const targetText = isSpeedMode
@@ -540,7 +540,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
           preChimeGapMs: SPRINT_FLOW_TIMING.sprint.preChimeGapMs,
           onPrompt: (key) => setAudioPhase(key),
           // answer フェーズ表示 + 待機フラグ（isRecording=false の間は MicOff で待機中を示す）
-          // 🚀 発話評価OFFモードの場合はマイクアクティブ（チャイム・録音）をバイパスして、ユーザーの手動スキップ回答待機にする
+          // 発話評価OFFモードの場合はマイクアクティブ（チャイム・録音）をバイパスして、ユーザーの手動スキップ回答待機にする
           onAnswerPhase: () => {
             setAudioPhase('answer');
             setIsAwaitingRecording(target !== null);
@@ -557,7 +557,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
 
         if (outcome.status === 'aborted') return;
         if (outcome.status === 'promptFailed') {
-          // 🛠️ 問題文が聞こえないまま回答フェーズへ進まないよう、この問題はスキップして履歴からも除外する
+          // 問題文が聞こえないまま回答フェーズへ進まないよう、この問題はスキップして履歴からも除外する
           const { prompt, error } = outcome.failures[0];
           await handleAudioFailureSkip(question, { text: prompt.text ?? '', audioPath: prompt.audioPath, error });
           return;
@@ -604,7 +604,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
     secondsLeftRef,
   ]);
 
-  // ────────────── 🔄 副作用 (Effects) ──────────────
+  // ────────────── 副作用 (Effects) ──────────────
   // 制限時間カウントダウン・タイムアップ後の結果画面自動遷移は useSprintCountdown / useAutoRedirectCountdown へ集約済み
 
   // インデックス（問題ID）変更時にフローを最初から走らせる
@@ -616,7 +616,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
 
     const signal = beginFlow();
     (async () => {
-      // 🚀 初回（1問目）の場合は開始アナウンスとの余白（クッション）を取るため、2問目以降より長く待つ
+      // 初回（1問目）の場合は開始アナウンスとの余白（クッション）を取るため、2問目以降より長く待つ
       const initialDelay =
         currentIndex === 0
           ? SPRINT_FLOW_TIMING.shared.initialCushionFirstMs
@@ -629,16 +629,16 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, currentQuestion?.question_id, showTimeUpOverlay, isSaving, exitLoading, recoveries]);
 
-  // ⏸️ iOS の中断（画面が隠れた・通話等）では、流れ・発話は useSpeakingPlayer が止めるため、表示（フェーズ・録音中）を戻す
+  // ⏸ iOS の中断（画面が隠れた・通話等）では、流れ・発話は useSpeakingPlayer が止めるため、表示（フェーズ・録音中）を戻す
   useEffect(() => {
     if (interruptions > 0) stopAllAudio();
   }, [interruptions, stopAllAudio]);
 
   // DOM/オーディオの強制クリーンアップおよびiOSオーディオセッション固定化
-  // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
+  // 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
   useFullscreenAudioLifecycle(stopAllAudio);
 
-  // 🚀 終了確認→ローディング表示→強制クリーンアップ→iOSのマイク解放待ちバッファ→
+  // 終了確認→ローディング表示→強制クリーンアップ→iOSのマイク解放待ちバッファ→
   // 実際の離脱、という一連の流れは Word/Sprint 共通のためフック化（進捗同期は不要なため sync 未指定）
   const handleExit = useExitConfirmFlow({
     confirmTitle: 'タイムアタックを終了しますか？',
@@ -655,10 +655,10 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
   // 発話評価OFFモードの場合は、回答時間中のマイク操作ウェイト（WAIT表現）を発生させない
   const isControlDisabled = isAssessmentMode ? audioPhase !== 'answer' || isAwaitingRecording : false;
 
-  // 🚀 マイク拒否、またはそもそも発話評価OFFモードの場合を共通の「脳内で回答」ステート条件としてマッピング
+  // マイク拒否、またはそもそも発話評価OFFモードの場合を共通の「脳内で回答」ステート条件としてマッピング
   const isBrainAnswerMode = micStatus === 'denied' || !isAssessmentMode;
 
-  // 🚀 追加：回答フェーズ以外（再生中等）の時は、発話評価OFFモード時のスキップボタンを非活性（disabled）に倒す制御フラグ[cite: 1]
+  // 追加：回答フェーズ以外（再生中等）の時は、発話評価OFFモード時のスキップボタンを非活性（disabled）に倒す制御フラグ[cite: 1]
   const isBrainActionDisabled = audioPhase !== 'answer';
 
   // 🆕 直前の非idleフェーズを記録（idle区間中のメッセージ表示継続に使用）
@@ -848,7 +848,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
                   ? '※発話評価をOFFにしています'
                   : '※マイク権限が拒否されています'
                 : '※開始音の後に発話してください'}
-              {/* 🚀 iOS判定を削除し、どのデバイスでも開始音のアナウンスが流れるように統一 */}
+              {/* iOS判定を削除し、どのデバイスでも開始音のアナウンスが流れるように統一 */}
             </p>
           </div>
 
@@ -865,7 +865,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
                   className="flex flex-col items-center gap-4 w-full"
                 >
                   {isBrainAnswerMode ? (
-                    // 🚀 改修：発話評価OFF、またはマイク拒否状態の場合：回答フェーズに関わらず常にこのボタンレイアウトへ統一[cite: 1]
+                    // 改修：発話評価OFF、またはマイク拒否状態の場合：回答フェーズに関わらず常にこのボタンレイアウトへ統一[cite: 1]
                     // 回答フェーズ（audioPhase === 'answer'）以外ではdisabled（非活性）として振る舞います[cite: 1]
                     <div className="flex flex-col items-center gap-4 py-4 w-full">
                       <div className="flex items-center gap-2 text-rose-500">

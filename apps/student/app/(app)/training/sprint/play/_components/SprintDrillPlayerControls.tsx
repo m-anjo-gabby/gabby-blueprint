@@ -6,18 +6,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { PlaybackRateControl } from '@/components/common/PlaybackRateControl';
 
-// 🔌 Zustand ストアのインポート
+// Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
 
 interface SprintDrillPlayerControlsProps {
   onNext: () => void;
   onPrev: () => void;
-  onPlayAudio: () => void; // 💡 Listen 押下（プレイヤー側で制御）
+  onPlayAudio: () => void; // Listen 押下（プレイヤー側で制御）
   onStartRecord: () => void;
   onStopRecord: () => void;
   onToggleAutoPlay?: () => void;
   playbackRate: number;
-  // 🛠️ 修正点：引数で選択された rate（数値）を取るシグネチャに統一
+  // 修正点：引数で選択された rate（数値）を取るシグネチャに統一
   onChangePlaybackRate: (rate: number) => void;
   isStarted?: boolean;
 }
@@ -36,19 +36,19 @@ export function SprintDrillPlayerControls({
   onChangePlaybackRate,
   isStarted = true,
 }: SprintDrillPlayerControlsProps) {
-  // 🔌 Zustand ストアから状態を直接マッピング
+  // Zustand ストアから状態を直接マッピング
   const currentIndex = useSprintStore((state) => state.session.currentIndex);
   const totalQuestions = useSprintStore((state) => state.session.questions.length);
   const isRecording = useSprintStore((state) => state.session.isRecording);
   const isAutoPlaying = useSprintStore((state) => state.drill.isAutoPlaying);
   const isPlayingQuestionSequence = useSprintStore((state) => state.drill.isPlayingQuestionSequence);
   const isPlayingAnswerSequence = useSprintStore((state) => state.drill.isPlayingAnswerSequence);
-  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 🚀 追加：発話評価ON/OFFフラグの取得
+  const isAssessmentMode = useSprintStore((state) => state.config.isAssessmentMode) !== false; // 追加：発話評価ON/OFFフラグの取得
 
-  // 📝 速度ポップオーバーの開閉ステート
+  // 速度ポップオーバーの開閉ステート
   const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
 
-  // 🤖 内部合成フラグ
+  // 内部合成フラグ
   const isFirstStep = currentIndex === 0;
   const isLastStep = currentIndex === totalQuestions - 1;
   const isPlaying = isPlayingQuestionSequence || isPlayingAnswerSequence;
@@ -117,7 +117,7 @@ export function SprintDrillPlayerControls({
         )}
       >
         <div className={cn('h-full bg-canvas border-line overflow-visible', unitBase)}>
-          {/* ⏱️ 再生速度セクション */}
+          {/* 再生速度セクション */}
           <PlaybackRateControl
             playbackRate={playbackRate}
             onChangePlaybackRate={onChangePlaybackRate}
@@ -143,7 +143,7 @@ export function SprintDrillPlayerControls({
           </button>
         </div>
 
-        {/* 🚀 改修：発話評価OFFモード（isAssessmentMode === false）の場合、マイクボタンを恒久的に disabled（非活性）化 */}
+        {/* 改修：発話評価OFFモード（isAssessmentMode === false）の場合、マイクボタンを恒久的に disabled（非活性）化 */}
         <button
           onClick={isRecording ? onStopRecord : onStartRecord}
           disabled={(isInteractionDisabled && !isRecording) || isManualPlaying || !isAssessmentMode}

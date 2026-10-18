@@ -1,7 +1,7 @@
 /**
  * 認証の共通処理（サーバー専用）
  *
- * 💡 このモジュールは 'use server' を付けない。付けると export した関数がすべて外部から直接呼べる
+ * このモジュールは 'use server' を付けない。付けると export した関数がすべて外部から直接呼べる
  * エンドポイントになり、ポータルごとの利用者チェック等を迂回されるため。
  * ブラウザから呼ぶ入口は、各アプリの *AuthAction.ts（createPortalAuthActions）だけにする。
  */
@@ -21,7 +21,7 @@ import { AUTH_ERROR_MESSAGES_JA, formatAuthErrorMessage, type AuthErrorCode } fr
 import { clearRecoveryMarker, hasValidRecoveryMarker, setRecoveryMarker } from './recovery';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
-// 💡 共通認証モジュールとしてのロガーを生成
+// 共通認証モジュールとしてのロガーを生成
 const logger = createLogger('common');
 
 /**
@@ -52,7 +52,7 @@ function authErrorFields(code: AuthErrorCode): { errorCode: AuthErrorCode; error
 }
 
 /**
- * 🔒 Supabaseからのエラーメッセージをエラー種別に振り分ける共通関数
+ * Supabaseからのエラーメッセージをエラー種別に振り分ける共通関数
  */
 function translateAuthError(message: string): AuthResponse {
   const lowerMsg = message.toLowerCase();
@@ -101,9 +101,7 @@ export async function signInCore(
   const supabase = await createServerClient(); // ブラウザ・セッション管理（クッキー操作用）
   const supabaseAdmin = createAdminClient(); // ロック制御用（SQLでanon権限を剥奪したRPCを叩く用）
 
-  // -------------------------------------------------------------
-  // 🔒 1. ログイン試行前のロックアウトチェック
-  // -------------------------------------------------------------
+  // 1. ログイン試行前のロックアウトチェック
   // セキュアなRPC（get_user_lock_status_by_email）経由で、
   // auth.usersのemailを元に com_m_user のロック状態を取得
   // SQL側でanon権限を剥奪したため、ここだけ supabaseAdmin を使用してセキュアに実行します
@@ -120,7 +118,7 @@ export async function signInCore(
   } | null;
 
   if (masterError) {
-    // 💡 console.error から共通ロガーへ統合
+    // console.error から共通ロガーへ統合
     logger.error('auth:master_fetch_failed', masterError.message, { err: masterError, payload: { email } });
   }
 
@@ -133,19 +131,15 @@ export async function signInCore(
     return authErrorResponse('account_locked');
   }
 
-  // -------------------------------------------------------------
   // 2. Supabase Authでサインイン試行
-  // -------------------------------------------------------------
   const { data, error: authError } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  // -------------------------------------------------------------
-  // 🔒 3. ログイン失敗時のハンドル（カウントアップ & ロック適用）
-  // -------------------------------------------------------------
+  // 3. ログイン失敗時のハンドル（カウントアップ & ロック適用）
   if (authError || !data.user) {
-    // 💡 エラーログをロガー経由で出力。機密情報（パスワード）を避けてエラーメッセージのみ追跡
+    // エラーログをロガー経由で出力。機密情報（パスワード）を避けてエラーメッセージのみ追跡
     logger.warn('auth:supabase_signin_failed', authError?.message || 'Invalid credentials', {
       err: authError,
       payload: { email },
@@ -185,11 +179,9 @@ export async function signInCore(
     return authErrorResponse('invalid_credentials');
   }
 
-  // -------------------------------------------------------------
-  // 🔒 4. ログイン成功時のハンドル（失敗カウント・ロックのリセット）
-  // -------------------------------------------------------------
+  // 4. ログイン成功時のハンドル（失敗カウント・ロックのリセット）
   // 過去に失敗履歴がある、またはロック日時が残っている場合はクリーンにクリアする
-  // 💡 login_failed_count / locked_until は権限昇格防止のため authenticated ロールの
+  // login_failed_count / locked_until は権限昇格防止のため authenticated ロールの
   // 列単位UPDATE権限から除外している（com_m_user.sql参照）。セッションクライアント(supabase)
   // では更新できないため、ここは supabaseAdmin(service_role) 経由で実行する。
   if (userMaster && (userMaster.login_failed_count > 0 || userMaster.locked_until)) {
@@ -211,9 +203,7 @@ export async function signInCore(
     }
   }
 
-  // -------------------------------------------------------------
   // 5. ライセンスチェックが必要な場合のガード
-  // -------------------------------------------------------------
   if (options.checkLicense) {
     const isLicensed = await checkLicense(data.user.id);
     if (!isLicensed) {
@@ -260,19 +250,19 @@ export async function forgotPasswordCore(
   }
 
   try {
-    // 💡 改善: メール自体は独自で送るため、Supabase側からは「送信」ではなく「認証リンク（トークン）」のみを行政権限で発行させる
+    // 改善: メール自体は独自で送るため、Supabase側からは「送信」ではなく「認証リンク（トークン）」のみを行政権限で発行させる
     const supabaseAdmin = await createAdminClient();
 
     const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email: email,
       options: {
-        // 💡 既存のリダイレクト設定をそのまま引き継ぐ（認証後のパスワード入力画面パス）
+        // 既存のリダイレクト設定をそのまま引き継ぐ（認証後のパスワード入力画面パス）
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/update-password`,
       },
     });
 
-    // 💡 未登録のメールアドレスでも成功と同じ応答を返す（登録の有無を外部から判別させない）。
+    // 未登録のメールアドレスでも成功と同じ応答を返す（登録の有無を外部から判別させない）。
     // 失敗の内容はログにだけ残す。
     if (linkError) {
       logger.warn('auth:reset_email_link_generation_failed', linkError.message, { err: linkError, payload: { email } });
@@ -284,7 +274,7 @@ export async function forgotPasswordCore(
       return { success: true };
     }
 
-    // 💡 修正: Supabase内部の verify エンドポイントを経由すると、非PKCE時はセッションが
+    // 修正: Supabase内部の verify エンドポイントを経由すると、非PKCE時はセッションが
     // フラグメント (#) で返りサーバーサイドの callback で取得できなくなるため、
     // 直接アプリのコールバック URL を生成してトークン (hashed_token) を渡します。
     const tokenHash = data.properties.hashed_token;
@@ -323,7 +313,7 @@ async function getCurrentSessionId(
 
 /**
  * 再設定リンク（recovery トークン）をサーバーで確認し、再設定用のセッションを確立する
- * 💡 メーラーの事前読み込みでトークンが消費されないよう、画面のボタン操作から呼ぶ（GETでは確認しない）
+ * メーラーの事前読み込みでトークンが消費されないよう、画面のボタン操作から呼ぶ（GETでは確認しない）
  */
 export async function verifyRecoveryCore(tokenHash: string): Promise<AuthResponse> {
   if (!tokenHash) return authErrorResponse('reset_link_required');
@@ -359,7 +349,7 @@ export async function hasRecoverySessionCore(): Promise<boolean> {
 export async function resetPasswordCore(formData: FormData): Promise<AuthResponse> {
   const password = formData.get('password') as string;
 
-  // 💡 共通の強度バリデーションを適用（8文字以上、英数混在）
+  // 共通の強度バリデーションを適用（8文字以上、英数混在）
   const validationError = getPasswordStrengthErrorCode(password);
   if (validationError) {
     return authErrorResponse(validationError);
@@ -367,7 +357,7 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
 
   const supabase = await createServerClient();
 
-  // 💡 再設定リンクを確認したセッションに限る。ログイン中の利用者がこの画面から
+  // 再設定リンクを確認したセッションに限る。ログイン中の利用者がこの画面から
   // 現在のパスワード確認（updatePasswordCore）を迂回して変更できないようにする。
   if (!(await hasValidRecoveryMarker(await getCurrentSessionId(supabase)))) {
     logger.warn('auth:reset_password_without_recovery', 'Password reset attempted without a verified recovery link');
@@ -378,7 +368,7 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
 
   if (error) {
     logger.error('auth:reset_password_submission_failed', error.message, { err: error });
-    // 💡 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
+    // 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
     return translateAuthError(error.message);
   }
 
@@ -395,7 +385,7 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
   }
 
   // 本人確認（再設定リンク）が済んだため、ログイン失敗の回数とロックを解除する
-  // 💡 login_failed_count / locked_until はセッションクライアントでは更新できないため service_role で行う
+  // login_failed_count / locked_until はセッションクライアントでは更新できないため service_role で行う
   if (updated.user?.id) {
     const { error: unlockError } = await createAdminClient()
       .from('com_m_user')
@@ -420,7 +410,7 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
   const currentPassword = formData.get('currentPassword') as string;
   const newPassword = formData.get('newPassword') as string;
 
-  // 💡 共通の強度バリデーションを適用（8文字以上、英数混在）
+  // 共通の強度バリデーションを適用（8文字以上、英数混在）
   const validationError = getPasswordStrengthErrorCode(newPassword);
   if (validationError) {
     return authErrorResponse(validationError);
@@ -433,7 +423,7 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
   } = await supabase.auth.getUser();
   if (!user || !user.email) return authErrorResponse('session_timeout');
 
-  // 💡 ログイン済みなのでログコンテキスト（IP、UAなど）を取得して紐付け
+  // ログイン済みなのでログコンテキスト（IP、UAなど）を取得して紐付け
   const ctx = await getLogContext();
 
   const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -461,7 +451,7 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
       ...ctx,
       payload: { email: user.email },
     });
-    // 💡 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
+    // 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
     return translateAuthError(updateError.message);
   }
 
@@ -480,7 +470,7 @@ export async function checkLicense(userId: string): Promise<boolean> {
     .select('license_id')
     .eq('user_id', userId)
     .eq('status', 1)
-    .gte('end_date', new Date().toISOString()) // 💡 'now()'文字列ではなく実際のISO日時を渡す（他箇所の実装と統一）
+    .gte('end_date', new Date().toISOString()) // 'now()'文字列ではなく実際のISO日時を渡す（他箇所の実装と統一）
     .limit(1) // 現在有効なものと未来のものが複数ある場合を考慮し、1件でもあればOKとする
     .maybeSingle();
 
@@ -491,9 +481,7 @@ export async function checkLicense(userId: string): Promise<boolean> {
   return !!data && !error;
 }
 
-// =============================================================
 // 独自招待テーブル（com_t_invitation）
-// =============================================================
 
 /** 招待画面に返す情報（画面に必要な項目だけ。client_id・roles 等は返さない） */
 export interface InvitationSummary {
@@ -566,7 +554,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
       user_metadata: {
         user_name: inviteRecord.user_name,
         user_type: inviteRecord.user_type,
-        client_id: inviteRecord.client_id, // 🚀 修正: ここで client_id をメタデータに渡すことで、トリガー側が初期テナントにフォールバックするのを防ぎます
+        client_id: inviteRecord.client_id, // 修正: ここで client_id をメタデータに渡すことで、トリガー側が初期テナントにフォールバックするのを防ぎます
         roles: inviteRecord.roles, // 招待時のロールをメタデータにも同期
       },
     });
@@ -586,7 +574,7 @@ export async function acceptInvitationCore(token: string, password: string): Pro
     const { error: dbUserError } = await supabase
       .from('com_m_user')
       .update({
-        client_id: inviteRecord.client_id, // 🚀 修正: トリガーだけでなく、念のためここでも確定した client_id で上書き同期を保証します
+        client_id: inviteRecord.client_id, // 修正: トリガーだけでなく、念のためここでも確定した client_id で上書き同期を保証します
         user_name: inviteRecord.user_name,
         user_type: inviteRecord.user_type,
         update_date: new Date().toISOString(),

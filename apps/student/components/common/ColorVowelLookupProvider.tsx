@@ -16,9 +16,7 @@ import {
   type DictionaryLookupStatus,
 } from './ColorVowelDictionarySheet';
 
-// -----------------------------------------------------------------------
 // Context & 型定義
-// -----------------------------------------------------------------------
 
 export interface ColorVowelLookupContextType {
   openTooltip: (word: string, rect: DOMRect, wordKey: string) => void;
@@ -53,9 +51,7 @@ interface TooltipState {
   placement: 'top' | 'bottom';
 }
 
-// -----------------------------------------------------------------------
 // ユーティリティ
-// -----------------------------------------------------------------------
 
 /**
  * 単語要素の DOMRect からツールチップ表示位置を計算する。
@@ -76,9 +72,7 @@ function resolveTooltipPositionFromRect(rect: DOMRect): Omit<TooltipState, 'text
   }
 }
 
-// -----------------------------------------------------------------------
 // メインコンポーネント
-// -----------------------------------------------------------------------
 
 export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderProps) {
   const [mounted, setMounted] = React.useState(false);

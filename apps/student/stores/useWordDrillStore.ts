@@ -159,7 +159,7 @@ export const useWordDrillStore = create<WordDrillState>((set, get) => ({
     }
   },
 
-  // 💡 修正点：モジュール空間の変数を排除し、Zustand内のステートから安全に抽出・初期化
+  // 修正点：モジュール空間の変数を排除し、Zustand内のステートから安全に抽出・初期化
   clearPendingCounts: () => {
     const { pendingWordCount, pendingPhraseCount, pendingAssessmentCount } = get();
 

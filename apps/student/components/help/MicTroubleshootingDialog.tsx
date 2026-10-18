@@ -58,7 +58,7 @@ export function MicTroubleshootingDialog({ open, onOpenChange }: MicTroubleshoot
             </p>
           </div>
 
-          {/* 🌟 滑らかにスライド移動（バウンドなし）するタブエリア */}
+          {/* 滑らかにスライド移動（バウンドなし）するタブエリア */}
           <div className="bg-canvas p-1 rounded-xl grid grid-cols-3 gap-1 relative overflow-hidden isolate">
             {(['ios', 'android', 'pc'] as DeviceTab[]).map((tab) => {
               const isActive = activeTab === tab;
@@ -87,7 +87,7 @@ export function MicTroubleshootingDialog({ open, onOpenChange }: MicTroubleshoot
             })}
           </div>
 
-          {/* 🌟 高さを完全固定し、絶対配置でフェードさせることで全体の揺れを完全に排除したコンテンツエリア */}
+          {/* 高さを完全固定し、絶対配置でフェードさせることで全体の揺れを完全に排除したコンテンツエリア */}
           <div className="bg-canvas/60 border border-line/50 rounded-control p-4 h-[220px] relative overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.div

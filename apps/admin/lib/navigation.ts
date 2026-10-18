@@ -27,9 +27,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 
-// ============================================================
 // 型定義
-// ============================================================
 
 /** メニューの表示名の翻訳キー（messages の nav） */
 export type NavLabelKey = keyof Messages['nav'];
@@ -54,9 +52,7 @@ export interface NavGroup {
 
 export type NavItem = NavLeaf | NavGroup;
 
-// ============================================================
 // ナビゲーション定義
-// ============================================================
 
 // label は "nav" 名前空間の翻訳キー（next-intl の useTranslations('nav') で解決する）
 export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
@@ -207,9 +203,7 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
   },
 ] as const;
 
-// ============================================================
 // ユーティリティ
-// ============================================================
 
 /** 全リーフアイテムをフラットに取得 */
 export function getAllLeafItems(config: readonly NavItem[]): NavLeaf[] {

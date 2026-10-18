@@ -16,9 +16,7 @@ import { PlusCircle, CheckCircle2, Edit, Languages } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { PART_OF_SPEECH_OPTIONS, PART_OF_SPEECH_MAP, type PartOfSpeechType } from '@gabby/types/colorVowel';
 
-// ============================================================
 // バリデーションスキーマ
-// ============================================================
 
 type FormT = ReturnType<typeof useTranslations<'tools.cvDictionary.formDialog'>>;
 
@@ -38,9 +36,7 @@ function createEntrySchema(t: FormT) {
 
 type EntryFormValues = z.infer<ReturnType<typeof createEntrySchema>>;
 
-// ============================================================
 // Props
-// ============================================================
 
 interface CVWordFormDialogProps {
   mode?: 'create' | 'edit';
@@ -50,9 +46,7 @@ interface CVWordFormDialogProps {
   onSuccess?: () => void;
 }
 
-// ============================================================
 // Component
-// ============================================================
 
 export function CVWordFormDialog({ mode = 'create', initialData, fixedWordEn, onSuccess }: CVWordFormDialogProps) {
   const t = useTranslations('tools.cvDictionary.formDialog');

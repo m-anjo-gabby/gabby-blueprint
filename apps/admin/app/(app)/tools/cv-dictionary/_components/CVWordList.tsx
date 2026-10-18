@@ -27,9 +27,7 @@ import {
 import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
 import { deleteCVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
 
-// ============================================================
 // Component
-// ============================================================
 
 export function CVWordList() {
   const t = useTranslations('tools.cvDictionary.wordList');
@@ -46,9 +44,7 @@ export function CVWordList() {
   const lastUpdated = useCVDictionaryStore((s) => s.lastUpdated);
   const setSelectedWordStore = useCVDictionaryStore((s) => s.setSelectedWord);
 
-  // ----------------------------------------------------------
   // データ取得
-  // ----------------------------------------------------------
 
   const fetchWords = useCallback(async () => {
     setIsLoading(true);
@@ -76,18 +72,14 @@ export function CVWordList() {
     }
   }, [selectedWord, words, setSelectedWordStore]);
 
-  // ----------------------------------------------------------
   // 選択
-  // ----------------------------------------------------------
 
   const handleSelect = (word: CVWordSummary) => {
     router.push(`${pathname}?word=${encodeURIComponent(word.word_en)}`);
     setSelectedWordStore(word);
   };
 
-  // ----------------------------------------------------------
   // 単語ごと削除（その単語の全品詞エントリを一括削除）
-  // ----------------------------------------------------------
 
   const handleDeleteWord = async (wordEn: string) => {
     // その単語の全エントリを取得して順次削除
@@ -110,15 +102,11 @@ export function CVWordList() {
     }
   };
 
-  // ----------------------------------------------------------
   // フィルター
-  // ----------------------------------------------------------
 
   const filteredWords = words.filter((w) => w.word_en.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  // ============================================================
   // Render
-  // ============================================================
 
   return (
     <div className="flex flex-col h-full bg-white min-w-0 overflow-hidden border-r border-slate-200">

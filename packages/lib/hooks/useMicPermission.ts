@@ -72,7 +72,7 @@ export function useMicPermission(): UseMicPermissionReturn {
   const startMicTest = useCallback(() => {
     stopMicTest();
 
-    // 🚀 マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
+    // マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
     warmupAudioSession();
     requestPlayAndRecordSession();
 
@@ -171,17 +171,17 @@ export function useMicPermission(): UseMicPermissionReturn {
       // getUserMedia より前に録音再生モードへ切り替える（同期処理のため、タップの同期区間は崩れない）
       requestPlayAndRecordSession();
 
-      // 🚀 【最重要】iOS Safariの User Gesture Policy を完全にクリアするため、
+      // 【最重要】iOS Safariの User Gesture Policy を完全にクリアするため、
       // ユーザータップ同期コールスタック内（あらゆる await の前）で getUserMedia を実行する。
       const streamPromise = navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // 🚀 マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
+      // マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
       warmupAudioSession();
 
       const stream = await streamPromise;
       stream.getTracks().forEach((track) => track.stop());
       setMicStatus('granted');
-      // 🚀 本番への play-and-record 状態引き継ぎのため、ここでの playback への切り戻しは行わない
+      // 本番への play-and-record 状態引き継ぎのため、ここでの playback への切り戻しは行わない
       return true;
     } catch (err: unknown) {
       const name = err instanceof Error ? err.name : '';

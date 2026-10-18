@@ -317,7 +317,7 @@ export function UserBulkImportDialog() {
               <Select
                 value={selectedContractId}
                 onValueChange={setSelectedContractId}
-                // 💡 生徒が含まれる場合は「割り当てない」を無効化するため、selectedClientId のみで判断
+                // 生徒が含まれる場合は「割り当てない」を無効化するため、selectedClientId のみで判断
                 // disabled={isProcessing || hasCompleted || !selectedClientId || isLoadingContracts || contracts.length === 0}
                 disabled={isProcessing || hasCompleted || !selectedClientId || isLoadingContracts}
               >

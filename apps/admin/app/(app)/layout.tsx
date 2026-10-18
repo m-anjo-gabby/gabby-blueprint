@@ -23,7 +23,7 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
     redirect('/login');
   }
 
-  // 💡 user_type/roles に基づく詳細なアクセス制御は apps/admin/proxy.ts (Middleware) で
+  // user_type/roles に基づく詳細なアクセス制御は apps/admin/proxy.ts (Middleware) で
   // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。
 
   // ヘッダー・サイドバーの未読（通知・チャット）はサーバーで並列に取得し、await せず Promise のまま渡す

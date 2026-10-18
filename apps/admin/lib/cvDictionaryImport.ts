@@ -2,9 +2,7 @@
 import { PART_OF_SPEECH_TYPES, COLOR_VOWEL_COLORS } from '@gabby/types/colorVowel';
 import type { TtsStatus } from '@gabby/types/word';
 
-// ============================================================
 // 定数
-// ============================================================
 
 export const CV_IMPORT_REQUIRED_HEADERS = [
   'word_en',
@@ -21,9 +19,7 @@ export const CV_IMPORT_OPTIONAL_HEADERS = ['phonetic_spelling', 'lemma'] as cons
 const VALID_POS: ReadonlySet<string> = new Set(Object.values(PART_OF_SPEECH_TYPES));
 const VALID_CV_IDS: ReadonlySet<string> = new Set(Object.keys(COLOR_VOWEL_COLORS));
 
-// ============================================================
 // 型
-// ============================================================
 
 /**
  * 取込モード
@@ -71,9 +67,7 @@ export type CVImportRowErrorCode =
   | 'cvIdInvalid'
   | 'lemmaInvalid';
 
-// ============================================================
 // 関数
-// ============================================================
 
 /** 重複判定キー（生徒側の検索が ilike のため大文字小文字を区別しない） */
 export const toCVEntryKey = (wordEn: string, partOfSpeech: string): string =>

@@ -107,7 +107,7 @@ export async function getMonitorUserList(
     const user = await getAuthUser();
     if (!user) throw new Error('Unauthorized');
 
-    // 💡 _start_date/_end_date は必須。対象期間に有効な契約（status=1かつ期間が重なる）を
+    // _start_date/_end_date は必須。対象期間に有効な契約（status=1かつ期間が重なる）を
     //    持つ生徒のみを対象にする（private.get_monitor_target_users に判定ロジックを集約）
     const { data, error } = await supabase.rpc('get_monitor_user_list', {
       _start_date: startDate,
@@ -135,7 +135,7 @@ export async function getMonitorWordHistory(
   startDate: string,
   endDate: string,
   userIds?: string[],
-  includeMonitor: boolean = false, // 💡 引数を追加
+  includeMonitor: boolean = false, // 引数を追加
 ): Promise<{ success: boolean; data: MonitorWordSummaryHistoryItem[]; error?: string }> {
   const ctx = await getLogContext();
 
@@ -148,7 +148,7 @@ export async function getMonitorWordHistory(
       _start_date: startDate,
       _end_date: endDate,
       _user_ids: userIds && userIds.length > 0 ? userIds : null,
-      _include_monitor: includeMonitor, // 💡 パラメータを追加
+      _include_monitor: includeMonitor, // パラメータを追加
     });
 
     if (error) throw error;
@@ -198,10 +198,10 @@ export async function getMonitorSprintHistory(
     const user = await getAuthUser();
     if (!user) throw new Error('Unauthorized');
 
-    // 💡 _user_ids パラメータに渡すために、空配列なら null にする
+    // _user_ids パラメータに渡すために、空配列なら null にする
     const queryUserIds = userIds && userIds.length > 0 ? userIds : null;
 
-    // 💡 sessions と drills の RPC を並行で呼び出し
+    // sessions と drills の RPC を並行で呼び出し
     const [sessionsRes, drillsRes] = await Promise.all([
       supabase.rpc('get_monitor_sprint_history', {
         _start_date: startDate,

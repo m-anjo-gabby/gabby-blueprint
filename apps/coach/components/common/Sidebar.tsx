@@ -10,9 +10,7 @@ import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
 import { useRequestsStore } from '@/stores/useRequestsStore';
 import { COACH_NAV_CONFIG, type NavItem, type NavLeaf, type NavGroup } from '@/lib/navigation';
 
-// ============================================================
 // サブコンポーネント
-// ============================================================
 
 interface LeafItemProps {
   item: NavLeaf;
@@ -87,8 +85,6 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
     </li>
   );
 }
-
-// ------------------------------------------------------------
 
 interface GroupItemProps {
   item: NavGroup;
@@ -179,9 +175,7 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
   );
 }
 
-// ============================================================
 // メインコンポーネント
-// ============================================================
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);

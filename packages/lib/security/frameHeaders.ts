@@ -5,7 +5,7 @@
  * frame-ancestors は新しいブラウザ向け、X-Frame-Options は古いブラウザ向け（両方を返す）。
  * こちらが他のサイトを埋め込む向き（CAPTCHA の iframe 等）には影響しない。
  *
- * 💡 next.config.ts から相対パスで読み込むため、このファイルは他のモジュールを import しない。
+ * next.config.ts から相対パスで読み込むため、このファイルは他のモジュールを import しない。
  */
 export const FRAME_DENY_HEADERS = [
   { key: 'X-Frame-Options', value: 'DENY' },

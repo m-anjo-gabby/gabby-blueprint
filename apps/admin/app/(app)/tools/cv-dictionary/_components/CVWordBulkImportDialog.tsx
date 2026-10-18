@@ -25,9 +25,7 @@ import {
 } from '@/lib/cvDictionaryImport';
 import { cn } from '@/lib/utils';
 
-// ============================================================
 // 型
-// ============================================================
 
 type RowErrorCode = CVImportRowErrorCode | 'duplicateConflict';
 
@@ -51,9 +49,7 @@ interface CVWordBulkImportDialogProps {
 
 const MODES: CVImportMode[] = ['insertOnly', 'overwriteDataOnly', 'overwrite'];
 
-// ============================================================
 // Component
-// ============================================================
 
 export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProps) {
   const t = useTranslations('tools.cvDictionary.bulkImportDialog');
@@ -71,9 +67,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ----------------------------------------------------------
   // ファイル解析
-  // ----------------------------------------------------------
 
   const analyzeRows = async (rawRows: Record<string, string>[]) => {
     setIsAnalyzing(true);
@@ -146,9 +140,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
     return `${prefix}${t(`errors.${row.errorCode ?? 'wordEnEmpty'}`)}`;
   };
 
-  // ----------------------------------------------------------
   // 集計
-  // ----------------------------------------------------------
 
   const errorItems = data.filter((d) => d.status === 'error');
   const newCount = data.filter((d) => d.status === 'new').length;
@@ -160,9 +152,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
       ? 0
       : data.filter((d) => d.audio && nextTTSStatusOnOverwrite(d.audio, mode) !== d.audio.tts_status).length;
 
-  // ----------------------------------------------------------
   // インポート実行
-  // ----------------------------------------------------------
 
   const handleImport = async () => {
     setIsProcessing(true);
@@ -200,9 +190,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // ============================================================
   // Render
-  // ============================================================
 
   return (
     <Dialog

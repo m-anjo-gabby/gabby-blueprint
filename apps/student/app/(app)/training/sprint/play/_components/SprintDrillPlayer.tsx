@@ -46,7 +46,7 @@ export function SprintDrillPlayer({
   const [exitLoading, setExitLoading] = useState<boolean>(false);
   const [audioPhase, setAudioPhase] = useState<'idle' | 'statement' | 'question' | 'answer'>('idle');
 
-  // ────────────── 🔌 Zustand ストア ──────────────
+  // ────────────── Zustand ストア ──────────────
   const {
     session,
     config,
@@ -70,7 +70,7 @@ export function SprintDrillPlayer({
   const { contentId, questionType } = config;
   const { isRevealed, isAutoPlaying, feedback, analysis, evalType: drillEvalType } = drill;
 
-  // ────────────── 🔊 音声・発話カスタムフック ──────────────
+  // ────────────── 音声・発話カスタムフック ──────────────
   // 表示中ずっと発話セッションを借り、最初の発話以降は出力経路を切り替えない
   useSpeakingSession();
   // 再生・発話（単語帳・スプリント共通のプレイヤー）。流れの中断は beginFlow / currentFlow の AbortSignal で行う
@@ -103,7 +103,7 @@ export function SprintDrillPlayer({
   const isAutoPlayingRef = useRef(isAutoPlaying);
   const isRevealedRef = useRef(isRevealed);
   const wasRecordingRef = useRef<boolean>(false);
-  // 🛠️ 解答再生時のスピードモード判定用。進捗同期フック（useSprintProgressSync）とは
+  // 解答再生時のスピードモード判定用。進捗同期フック（useSprintProgressSync）とは
   // 無関係な用途のため、自前で保持する（同期タイミングの変更に影響されないようにする）
   const questionTypeRef = useRef(questionType);
 
@@ -137,8 +137,8 @@ export function SprintDrillPlayer({
     };
   }, [currentQuestion, questions]);
 
-  // 🔊 音声再生コアロジック
-  // 💡 進行中の流れ（再生・待ち・発話）をすべて中断し、古い非同期処理の完了が後から反映されないようにする
+  // 音声再生コアロジック
+  // 進行中の流れ（再生・待ち・発話）をすべて中断し、古い非同期処理の完了が後から反映されないようにする
   const stopAllAudio = useCallback(() => {
     if (autoPlayTimerRef.current) {
       clearTimeout(autoPlayTimerRef.current);
@@ -189,7 +189,7 @@ export function SprintDrillPlayer({
     [play, exitLoading, handleAudioUnavailable],
   );
 
-  // 💡 流れの signal を受け取り、中断されたら以降の再生・表示切替を行わない
+  // 流れの signal を受け取り、中断されたら以降の再生・表示切替を行わない
   const playQuestionSequence = useCallback(
     async (question: SprintQuestion, signal: AbortSignal) => {
       if (!question || exitLoading) return;
@@ -216,7 +216,7 @@ export function SprintDrillPlayer({
     [playPrompts, exitLoading, handleAudioUnavailable, setPlayingQuestionSequence],
   );
 
-  // 💡 解答フェーズ（流れの signal で中断を判定）
+  // 解答フェーズ（流れの signal で中断を判定）
   const playAnswerSequence = useCallback(
     async (question: SprintQuestion, signal: AbortSignal) => {
       if (!question) return;
@@ -250,7 +250,7 @@ export function SprintDrillPlayer({
 
         setAudioPhase('idle');
 
-        // 🚀 解答再生完了後に、自動再生中であれば次のカードに進む
+        // 解答再生完了後に、自動再生中であれば次のカードに進む
         if (isAutoPlayingRef.current) {
           autoPlayTimerRef.current = setTimeout(() => {
             handleNextRef.current();
@@ -267,7 +267,7 @@ export function SprintDrillPlayer({
     [playSingleTrack, setPlayingAnswerSequence],
   );
 
-  // 🎮 操作ハンドラー
+  // 操作ハンドラー
   const handleReveal = useCallback(async () => {
     if (!isStarted || !currentQuestion || isRevealed) return;
     await unlockAudioContext();
@@ -460,7 +460,7 @@ export function SprintDrillPlayer({
     }
   }, [questions, initialQuestionId, initSprint, showToast, syncProgressNow]);
 
-  // 🚀 終了確認→ローディング表示→マイク録音/再生の強制クリーンアップ→進捗同期→
+  // 終了確認→ローディング表示→マイク録音/再生の強制クリーンアップ→進捗同期→
   // iOSのマイク解放待ちバッファ→実際の離脱、という一連の流れは Word/Sprint 共通のためフック化
   const handleExitWithSync = useExitConfirmFlow({
     guard: () => isAutoPlaying,
@@ -482,7 +482,7 @@ export function SprintDrillPlayer({
     const signal = beginFlow();
 
     const runQuestionFlow = async () => {
-      // 🚀 初回（1問目）の場合は開始アナウンスとの余白（クッション）を取るため、2問目以降より長く待つ
+      // 初回（1問目）の場合は開始アナウンスとの余白（クッション）を取るため、2問目以降より長く待つ
       const initialDelay =
         currentIndex === 0
           ? SPRINT_FLOW_TIMING.shared.initialCushionFirstMs
@@ -504,11 +504,11 @@ export function SprintDrillPlayer({
     return () => {
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
     };
-    // ✨ 依存関係を厳密に制限。毎秒変わる state などによる再トリガーを防ぐ（recoveries: 中断からの復旧で問題を再生し直す）
+    // 依存関係を厳密に制限。毎秒変わる state などによる再トリガーを防ぐ（recoveries: 中断からの復旧で問題を再生し直す）
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, currentQuestion?.question_id, isStarted, exitLoading, recoveries]);
 
-  // ⏸️ iOS の中断（画面が隠れた・通話等）では、流れ・発話は useSpeakingPlayer が止めるため、表示（フェーズ・録音中・自動再生のタイマー）を戻す
+  // ⏸ iOS の中断（画面が隠れた・通話等）では、流れ・発話は useSpeakingPlayer が止めるため、表示（フェーズ・録音中・自動再生のタイマー）を戻す
   useEffect(() => {
     if (interruptions > 0) stopAllAudio();
   }, [interruptions, stopAllAudio]);
@@ -535,7 +535,7 @@ export function SprintDrillPlayer({
     const signal = currentFlow();
 
     const runAnswerFlow = async () => {
-      // 🚀 直前に録音していた場合（自動解答オープン）のみ、iOSセッション移行時間を考慮して待機。
+      // 直前に録音していた場合（自動解答オープン）のみ、iOSセッション移行時間を考慮して待機。
       // 手動で解答を表示した場合は待機なし（0ms）で即時に再生する。
       const delay = wasRecordingRef.current ? SPRINT_FLOW_TIMING.drill.postRecordingAnswerDelayMs : 0;
       wasRecordingRef.current = false; // 判定したらフラグを下ろす
@@ -558,15 +558,15 @@ export function SprintDrillPlayer({
       // タイムライン2の再トリガーによる不要なタイマー消失を防ぐため、ここでの自動クリアは行いません。
       // タイマーのクリアは stopAllAudio や handleToggleAutoPlay で適切に管理されています。
     };
-    // ✨ 依存をインデックス、オープン状態、評価結果、および録音状態に絞り、タイマー副作用から切り離し
+    // 依存をインデックス、オープン状態、評価結果、および録音状態に絞り、タイマー副作用から切り離し
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRevealed, currentIndex, analysis, isRecording]);
 
   // フルスクリーン固定およびiOSオーディオセッション固定化
-  // 🚀 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
+  // 開始タップ同期内で既に play-and-record に移行しているため、マウント時の再設定は不要
   useFullscreenAudioLifecycle(stopAllAudio);
 
-  // 🛡️ View 層：問題が1件も無い場合の空状態ガード（戻る手段の無い無限ローディングを防ぐ）
+  // View 層：問題が1件も無い場合の空状態ガード（戻る手段の無い無限ローディングを防ぐ）
   if (!questions || questions.length === 0 || !currentQuestion) {
     return (
       <ImmersiveNotice
@@ -607,7 +607,7 @@ export function SprintDrillPlayer({
         </div>
       </div>
 
-      {/* 🎴 中央：メイン教材カードセクション */}
+      {/* 中央：メイン教材カードセクション */}
       <ImmersiveBody className="flex items-start justify-center p-6 pt-6" onClick={handleReveal}>
         <div className="w-full max-w-xl mx-auto">
           <QuestionCard
@@ -622,7 +622,7 @@ export function SprintDrillPlayer({
         </div>
       </ImmersiveBody>
 
-      {/* 🎮 下部：操作パネル */}
+      {/* 下部：操作パネル */}
       <div className="px-6 pb-8 shrink-0 relative">
         <div className="w-full max-w-md mx-auto">
           <SprintDrillPlayerControls

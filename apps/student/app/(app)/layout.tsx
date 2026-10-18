@@ -31,7 +31,7 @@ export default async function StudentAppLayout({ children }: { children: React.R
     redirect('/login');
   }
 
-  // 💡 ライセンス期限切れの補正は、都度リクエストではなく日次cron
+  // ライセンス期限切れの補正は、都度リクエストではなく日次cron
   // (touch_expired_user_licenses / supabase/DDL/function/touch_expired_user_licenses.sql)
   // で行う。通信量を増やさないため、ここでの都度チェックは行わない。
 
@@ -53,7 +53,7 @@ export default async function StudentAppLayout({ children }: { children: React.R
   // （画面の表示を待たせず、ブラウザからのサーバーアクションの往復も発生させない）
   const shellData = loadCommonShellData({ includeChat: navContext.hasLiveSession });
 
-  // 💡 user_type/ライセンスに基づく詳細なアクセス制御は apps/student/proxy.ts (Middleware) で
+  // user_type/ライセンスに基づく詳細なアクセス制御は apps/student/proxy.ts (Middleware) で
   // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。
 
   return (

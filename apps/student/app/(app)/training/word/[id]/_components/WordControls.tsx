@@ -41,7 +41,7 @@ export function WordControls({
 }: WordControlsProps) {
   const { isAutoPlaying, words, wordIdx, phraseIdx } = useWordDrillStore();
 
-  // 📝 再生速度ポップオーバーの開閉ローカルステート
+  // 再生速度ポップオーバーの開閉ローカルステート
   const [isRateMenuOpen, setIsRateMenuOpen] = useState(false);
 
   // --- 状態判定ロジック ---
@@ -60,7 +60,7 @@ export function WordControls({
   // --- 共通スタイル定義 ---
   const sideBtnBase =
     'w-11 h-11 shrink-0 flex items-center justify-center rounded-control transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-line/60 bg-canvas';
-  // 💡 ポップオーバーが枠外に突き出るため overflow-hidden から overflow-visible に調整
+  // ポップオーバーが枠外に突き出るため overflow-hidden から overflow-visible に調整
   const unitBase = 'flex items-center rounded-control border shadow-sm transition-all overflow-visible';
   const splitLeftBase =
     'w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-control';
@@ -185,7 +185,7 @@ export function WordControls({
       >
         {/* スプリット・オーディオユニット（速度設定 + 再生） */}
         <div className={cn('h-full bg-canvas border-line', unitBase)}>
-          {/* ⏱️ 再生速度セクション（ポップオーバー開閉ボタン） */}
+          {/* 再生速度セクション（ポップオーバー開閉ボタン） */}
           <PlaybackRateControl
             playbackRate={playbackRate}
             onChangePlaybackRate={onChangePlaybackRate}

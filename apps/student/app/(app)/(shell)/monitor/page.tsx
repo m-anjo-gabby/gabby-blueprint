@@ -33,7 +33,7 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
   const { startDate, endDate, userIds, includeMonitor } = query;
   const filterUserIds = userIds && userIds.length > 0 ? userIds : undefined;
 
-  // 💡 対象期間(start/end)を渡し、「その期間に有効な契約を持っていた生徒」を一覧・絞り込み候補の対象にする
+  // 対象期間(start/end)を渡し、「その期間に有効な契約を持っていた生徒」を一覧・絞り込み候補の対象にする
   const [userListResult, wordHistoryResult, sprintHistoryResult] = await Promise.all([
     getMonitorUserList(startDate, endDate, includeMonitor),
     getMonitorWordHistory(startDate, endDate, filterUserIds, includeMonitor),

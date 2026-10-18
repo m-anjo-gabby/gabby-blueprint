@@ -295,7 +295,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   };
 
   /**
-   * 💡 確実な離脱アクション2：学習進捗を保存してダッシュボードへ戻る
+   * 確実な離脱アクション2：学習進捗を保存してダッシュボードへ戻る
    */
   const handleSaveAndExit = async () => {
     if (!currentWord || !currentPhrase) return;
@@ -321,7 +321,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     try {
       await saveResumeContent(sectionId, currentPhrase.phrase_id, metadata);
 
-      // 💡 ブックマークして終了時は、即座に進捗の溜まりを同期
+      // ブックマークして終了時は、即座に進捗の溜まりを同期
       await syncProgressNow();
 
       showToast('ブックマークしました', 'success');

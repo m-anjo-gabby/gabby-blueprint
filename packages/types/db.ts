@@ -26,9 +26,7 @@ export type { Json };
 type Generated = GeneratedDatabase;
 type SchemaName = Exclude<keyof Generated, '__InternalSupabase'>;
 
-// ---------------------------------------------------------------------------
 // 上書きの仕組み
-// ---------------------------------------------------------------------------
 
 /** T の列 K の型を C[K] に差し替える（optional の印は T のまま） */
 type ReplaceColumns<T, C> = { [K in keyof T]: K extends keyof C ? C[K] : T[K] };
@@ -66,9 +64,7 @@ interface SchemaOverrides {
   Functions: object;
 }
 
-// ---------------------------------------------------------------------------
 // 上書きする列（スキーマ → 表・ビュー・関数 → 列）
-// ---------------------------------------------------------------------------
 
 type GeneratedRow<T extends keyof Generated['public']['Tables']> = Generated['public']['Tables'][T]['Row'];
 type GeneratedReturnRow<F extends keyof Generated['public']['Functions']> =
@@ -164,9 +160,7 @@ interface PrivateOverrides extends SchemaOverrides {
   Functions: object;
 }
 
-// ---------------------------------------------------------------------------
 // 公開する型
-// ---------------------------------------------------------------------------
 
 export type Database = Omit<Generated, 'public' | 'private'> & {
   public: OverrideSchema<Generated['public'], PublicOverrides>;

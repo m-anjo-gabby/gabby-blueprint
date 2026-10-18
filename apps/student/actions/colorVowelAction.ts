@@ -9,9 +9,7 @@ import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('student');
 
-// -----------------------------------------------------------------------
 // 型定義
-// -----------------------------------------------------------------------
 
 /** Supabase JOIN クエリの返却型 */
 interface ColorVowelJoinRow {
@@ -22,9 +20,7 @@ interface ColorVowelJoinRow {
   audio_path: string;
 }
 
-// -----------------------------------------------------------------------
 // Server Action
-// -----------------------------------------------------------------------
 
 /**
  * 選択された英単語から Color Vowel 辞書データを検索し、

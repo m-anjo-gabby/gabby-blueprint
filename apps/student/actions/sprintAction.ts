@@ -26,9 +26,7 @@ const logger = createLogger('student');
 const SPRINT_LIMIT_COUNT = 10;
 const SPRINT_SPEED_LIMIT_COUNT = 30;
 
-// ========================================================================
-// 📊 型定義（Types）
-// ========================================================================
+// 型定義（Types）
 
 /**
  * 発話評価の詳細レコード型
@@ -49,7 +47,7 @@ export interface SprintHistoryItem {
   group_id: string | null;
   seq_no: number;
 
-  // 🌟 追加拡張フィールド
+  // 追加拡張フィールド
   is_skipped: boolean; // スキップされたかどうか
   assessment?: SprintAssessmentResult | null; // 発話評価が含まれる場合のリレーションオブジェクト
 }
@@ -66,7 +64,7 @@ export interface CreateSprintScoreInput {
   time_limit_sec: number;
   total_answered: number;
   total_assessments: number;
-  history: SprintHistoryItem[]; // 🌟 拡張された answered_history 配列が入る
+  history: SprintHistoryItem[]; // 拡張された answered_history 配列が入る
 }
 
 /**
@@ -85,14 +83,14 @@ export interface SprintResultResponse {
       difficulty_level: number;
       time_limit_sec: number;
       total_answered: number;
-      answered_history: SprintHistoryItem[]; // 🌟 拡張された履歴
+      answered_history: SprintHistoryItem[]; // 拡張された履歴
       insert_date: string;
       update_date: string;
     };
     questions: SprintQuestion[];
     totalAssessmentCount: number;
     averageAssessmentScore: number;
-    // 🛠️ 教材メタデータから解決した「レベル概念の有無」。
+    // 教材メタデータから解決した「レベル概念の有無」。
     // 呼び出し側（page.tsx）が別途 getContent で再取得する必要がないよう、
     // self_t_sprint と com_m_contents を1クエリでJOINして解決した値をここに含める。
     hasLevel: boolean;
@@ -100,9 +98,7 @@ export interface SprintResultResponse {
   error?: string;
 }
 
-// ========================================================================
-// 🛠️ ユーティリティ・ヘルパー
-// ========================================================================
+// ユーティリティ・ヘルパー
 function shuffleArray<T>(array: T[]): T[] {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i--) {
@@ -112,9 +108,7 @@ function shuffleArray<T>(array: T[]): T[] {
   return result;
 }
 
-// ========================================================================
-// 🚀 Server Actions
-// ========================================================================
+// Server Actions
 
 /**
  * スプリント教材データをフェッチ・サンプリングするServer Action
@@ -264,7 +258,7 @@ export async function createSprintScore(
           time_limit_sec: Number(input.time_limit_sec),
           total_answered: Number(input.total_answered),
           total_assessments: Number(input.total_assessments),
-          answered_history: input.history, // 🌟 評価やスキップ情報がそのままJSONBとして保存されます
+          answered_history: input.history, // 評価やスキップ情報がそのままJSONBとして保存されます
         },
       ])
       .select('self_sprint_id')
@@ -301,7 +295,7 @@ export async function getSprintResult(self_sprint_id: string): Promise<SprintRes
     if (!user) throw new Error('Unauthorized');
 
     // ① スコア・履歴レコードを1件取得（本人のレコードのみ）
-    // 🛠️ hasLevel 解決に必要な教材メタデータ（com_m_contents.metadata）を同一クエリでJOIN取得し、
+    // hasLevel 解決に必要な教材メタデータ（com_m_contents.metadata）を同一クエリでJOIN取得し、
     // 呼び出し側（page.tsx）での直列2回目のDB往復（getContent）を不要にする
     const { data: scoreRecord, error: scoreError } = await supabase
       .from('self_t_sprint')
