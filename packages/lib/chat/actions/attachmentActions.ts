@@ -11,6 +11,8 @@ import {
 } from '@gabby/types/chat';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import type { CoreResult } from '@gabby/types/action';
+import type { ChatAttachmentErrorCode } from '@gabby/types/chat';
 
 const logger = createLogger('common');
 
@@ -22,27 +24,27 @@ const logger = createLogger('common');
 export async function uploadChatAttachment(
   roomId: string,
   formData: FormData,
-): Promise<{ success: boolean; attachment?: PendingChatAttachment; message?: string }> {
+): Promise<CoreResult<{ attachment: PendingChatAttachment }, ChatAttachmentErrorCode>> {
   const ctx = await getLogContext();
   try {
     const file = formData.get('file') as File | null;
     if (!file) {
-      return { success: false, message: 'ファイルが選択されていません' };
+      return { success: false, errorCode: 'no_file' };
     }
 
     if (file.size > CHAT_ATTACHMENT_MAX_SIZE) {
-      return { success: false, message: 'ファイルサイズは10MBまでです' };
+      return { success: false, errorCode: 'file_too_large' };
     }
 
     const mimeType = file.type || 'application/octet-stream';
     if (!CHAT_ATTACHMENT_ALLOWED_MIME_TYPES.includes(mimeType as (typeof CHAT_ATTACHMENT_ALLOWED_MIME_TYPES)[number])) {
-      return { success: false, message: 'サポートされていないファイル形式です' };
+      return { success: false, errorCode: 'unsupported_type' };
     }
 
     // ルーム参加権限の確認（RLS: is_chat_room_member）
     const serverSupabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, message: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: membership, error: membershipError } = await serverSupabase
       .from('com_t_chat_room_user')
@@ -53,7 +55,7 @@ export async function uploadChatAttachment(
       .maybeSingle();
 
     if (membershipError || !membership) {
-      return { success: false, message: 'このルームへのアクセス権限がありません' };
+      return { success: false, errorCode: 'forbidden' };
     }
 
     const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -71,7 +73,7 @@ export async function uploadChatAttachment(
         err: uploadError,
         payload: { roomId, fileName: file.name },
       });
-      return { success: false, message: `アップロードに失敗しました: ${uploadError.message}` };
+      return { success: false, errorCode: 'upload_failed' };
     }
 
     const attachment: PendingChatAttachment = {
@@ -93,7 +95,7 @@ export async function uploadChatAttachment(
       err,
       payload: { roomId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -101,7 +103,7 @@ export async function uploadChatAttachment(
  * チャット添付ファイルの公開URL（署名付きURL）を取得
  * "chat" バケットはPrivate運用のため、有効期限付きの署名URLを返す。
  */
-export async function getChatAttachmentUrl(path: string): Promise<{ url: string | null; error?: string }> {
+export async function getChatAttachmentUrl(path: string): Promise<{ url: string | null }> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -113,7 +115,7 @@ export async function getChatAttachmentUrl(path: string): Promise<{ url: string 
         err: error,
         payload: { path },
       });
-      return { url: null, error: error?.message || 'Failed to generate signed URL' };
+      return { url: null };
     }
 
     return { url: data.signedUrl };
@@ -123,6 +125,6 @@ export async function getChatAttachmentUrl(path: string): Promise<{ url: string 
       err,
       payload: { path },
     });
-    return { url: null, error: 'Unexpected error' };
+    return { url: null };
   }
 }

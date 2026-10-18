@@ -1693,6 +1693,21 @@
       "toastDeleteFailed": "Failed to delete the message",
       "deleteTooltip": "Delete",
       "yesterdayLabel": "Yesterday"
+    },
+    "errors": {
+      "unauthorized": "Your session has expired. Please sign in again.",
+      "forbidden": "You don't have permission to do this.",
+      "not_found": "The item was not found.",
+      "invalid_input": "Please check your input.",
+      "two_users_required": "Please select two different users.",
+      "room_name_required": "Please enter a room name.",
+      "participants_required": "Please select at least two participants.",
+      "invalid_members": "A room cannot be created with this combination of participants.",
+      "min_participants": "This group room cannot have fewer participants.",
+      "already_member": "This user is already a participant.",
+      "not_member": "This user is not a participant in this room.",
+      "not_group_room": "Participants can only be managed in group rooms.",
+      "unexpected_error": "An unexpected error occurred."
     }
   },
   "contracts": {

@@ -1693,6 +1693,21 @@
       "toastDeleteFailed": "メッセージの削除に失敗しました",
       "deleteTooltip": "削除する",
       "yesterdayLabel": "昨日"
+    },
+    "errors": {
+      "unauthorized": "セッションが切れています。再度ログインしてください。",
+      "forbidden": "この操作を行う権限がありません",
+      "not_found": "対象が見つかりませんでした",
+      "invalid_input": "入力内容を確認してください",
+      "two_users_required": "異なる2人のユーザーを選択してください",
+      "room_name_required": "ルーム名を入力してください",
+      "participants_required": "参加者を2人以上選択してください",
+      "invalid_members": "この組み合わせの参加者ではルームを作成できません",
+      "min_participants": "グループルームの参加者をこれ以上減らせません",
+      "already_member": "このユーザーは既に参加しています",
+      "not_member": "このユーザーはこのルームに参加していません",
+      "not_group_room": "参加者を管理できるのはグループルームだけです",
+      "unexpected_error": "予期せぬエラーが発生しました"
     }
   },
   "contracts": {

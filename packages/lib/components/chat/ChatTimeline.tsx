@@ -306,7 +306,7 @@ export function ChatTimeline({
 
     const res = await deleteChatMessage({ chatId });
     if (!res.success) {
-      showToast(res.error || labels.deleteMessageFailed, 'error');
+      showToast(labels.deleteMessageFailed, 'error');
       return;
     }
     setMessages((prev) =>

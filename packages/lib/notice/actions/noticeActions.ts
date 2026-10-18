@@ -6,6 +6,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { type NoticeItem } from '@gabby/types/notice';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
 
 const logger = createLogger('common');
 
@@ -15,16 +16,12 @@ const logger = createLogger('common');
  * - 既読状態 (is_read) を LEFT JOIN で付与
  * - RLS により target_type / user_type に応じた対象のみ返る（生徒/コーチ共通で利用可能）
  */
-export async function getNotices(): Promise<{
-  success: boolean;
-  data: NoticeItem[];
-  error?: string;
-}> {
+export async function getNotices(): Promise<CoreResult<{ data: NoticeItem[] }, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, data: [], error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
       .from('com_m_notice')
@@ -39,7 +36,7 @@ export async function getNotices(): Promise<{
 
     if (error) {
       logger.error('notice:get_all_failed', error.message, { ...ctx, err: error });
-      return { success: false, data: [], error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     const notices: NoticeItem[] = (data || []).map((row) => ({
@@ -52,7 +49,7 @@ export async function getNotices(): Promise<{
     return { success: true, data: notices };
   } catch (err) {
     logger.error('notice:get_all_unexpected', getErrorMessage(err), { ...ctx, err });
-    return { success: false, data: [], error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -97,15 +94,12 @@ export async function getUnreadNoticeCount(): Promise<number> {
 /**
  * 指定のお知らせを既読にする（UPSERT）
  */
-export async function markNoticeAsRead(noticeId: string): Promise<{
-  success: boolean;
-  error?: string;
-}> {
+export async function markNoticeAsRead(noticeId: string): Promise<CoreResult<object, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { error } = await supabase.from('com_t_notice_read').upsert(
       {
@@ -120,30 +114,27 @@ export async function markNoticeAsRead(noticeId: string): Promise<{
 
     if (error) {
       logger.error('notice:mark_read_failed', error.message, { ...ctx, err: error });
-      return { success: false, error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
   } catch (err) {
     logger.error('notice:mark_read_unexpected', getErrorMessage(err), { ...ctx, err });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * 複数のお知らせをまとめて既読にする（ダイアログ表示後の一括既読化）
  */
-export async function markNoticesAsReadBatch(noticeIds: string[]): Promise<{
-  success: boolean;
-  error?: string;
-}> {
+export async function markNoticesAsReadBatch(noticeIds: string[]): Promise<CoreResult<object, BasicErrorCode>> {
   const ctx = await getLogContext();
   if (noticeIds.length === 0) return { success: true };
 
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const now = new Date().toISOString();
     const rows = noticeIds.map((notice_id) => ({
@@ -160,7 +151,7 @@ export async function markNoticesAsReadBatch(noticeIds: string[]): Promise<{
 
     if (error) {
       logger.error('notice:mark_read_batch_failed', error.message, { ...ctx, err: error });
-      return { success: false, error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
@@ -169,7 +160,7 @@ export async function markNoticesAsReadBatch(noticeIds: string[]): Promise<{
       ...ctx,
       err,
     });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -177,15 +168,12 @@ export async function markNoticesAsReadBatch(noticeIds: string[]): Promise<{
  * 行動ボタンを押したことを記録する（既読も兼ねる）。
  * 押した日時は最初の1回だけを残す（2回目以降は更新しない）。
  */
-export async function recordNoticeCtaClick(noticeId: string): Promise<{
-  success: boolean;
-  error?: string;
-}> {
+export async function recordNoticeCtaClick(noticeId: string): Promise<CoreResult<object, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const now = new Date().toISOString();
     // 未読なら既読の行を作る（押した日時も同時に入れる）
@@ -202,7 +190,7 @@ export async function recordNoticeCtaClick(noticeId: string): Promise<{
     );
     if (upsertError) {
       logger.error('notice:cta_click_failed', upsertError.message, { ...ctx, err: upsertError, payload: { noticeId } });
-      return { success: false, error: upsertError.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     // 既読済みでまだ押していなければ、押した日時を入れる
@@ -214,7 +202,7 @@ export async function recordNoticeCtaClick(noticeId: string): Promise<{
       .is('cta_clicked_at', null);
     if (updateError) {
       logger.error('notice:cta_click_failed', updateError.message, { ...ctx, err: updateError, payload: { noticeId } });
-      return { success: false, error: updateError.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
@@ -224,7 +212,7 @@ export async function recordNoticeCtaClick(noticeId: string): Promise<{
       err,
       payload: { noticeId },
     });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -232,7 +220,7 @@ export async function recordNoticeCtaClick(noticeId: string): Promise<{
  * Supabase Storage (notices バケット) から添付ファイルの公開URLを取得
  * @param path Storageパス (例: notices/c7aaeab6.../file.pdf)
  */
-export async function getNoticeAttachmentUrl(path: string): Promise<{ url: string | null; error?: string }> {
+export async function getNoticeAttachmentUrl(path: string): Promise<{ url: string | null }> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -248,13 +236,13 @@ export async function getNoticeAttachmentUrl(path: string): Promise<{ url: strin
       ...ctx,
       payload: { path },
     });
-    return { url: null, error: 'Failed to generate public URL' };
+    return { url: null };
   } catch (err) {
     logger.error('notice:get_attachment_url_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { path },
     });
-    return { url: null, error: 'Unexpected error' };
+    return { url: null };
   }
 }

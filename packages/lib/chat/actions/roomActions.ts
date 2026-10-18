@@ -20,6 +20,8 @@ import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@gabby/types/db';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import type { CoreResult } from '@gabby/types/action';
+import type { ChatActionErrorCode, ChatRoomDetail } from '@gabby/types/chat';
 
 // ルーム作成で選択可能なuser_type
 const HUMAN_USER_TYPES: readonly UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
@@ -54,16 +56,12 @@ export async function getCurrentUserWithType(): Promise<{ id: string; user_type:
  * Admin-Coach / Admin-Student / Coach-Student のいずれの組み合わせも作成できるよう、
  * Admin自身を含む全ユーザー種別を候補として返す。
  */
-export async function getChatRoomTargetUsers(): Promise<{
-  success: boolean;
-  data: ChatTargetUser[];
-  error?: string;
-}> {
+export async function getChatRoomTargetUsers(): Promise<CoreResult<{ data: ChatTargetUser[] }, ChatActionErrorCode>> {
   const ctx = await getLogContext();
   try {
     const currentUser = await getCurrentUserWithType();
     if (!currentUser || currentUser.user_type !== USER_TYPES.ADMIN) {
-      return { success: false, data: [], error: 'Unauthorized' };
+      return { success: false, errorCode: 'unauthorized' };
     }
 
     const supabase = createAdminClient();
@@ -76,7 +74,7 @@ export async function getChatRoomTargetUsers(): Promise<{
 
     if (error) {
       logger.error('chat:get_target_users_failed', error.message, { ...ctx, err: error });
-      return { success: false, data: [], error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, data: (data || []) as ChatTargetUser[] };
@@ -85,7 +83,7 @@ export async function getChatRoomTargetUsers(): Promise<{
       ...ctx,
       err,
     });
-    return { success: false, data: [], error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -98,18 +96,18 @@ export async function getChatRoomTargetUsers(): Promise<{
  */
 export async function createChatRoom(
   payload: CreateChatRoomPayload,
-): Promise<{ success: boolean; roomId?: string; error?: string }> {
+): Promise<CoreResult<{ roomId: string }, ChatActionErrorCode>> {
   const ctx = await getLogContext();
   try {
     const currentUser = await getCurrentUserWithType();
-    if (!currentUser) return { success: false, error: 'Unauthorized' };
+    if (!currentUser) return { success: false, errorCode: 'unauthorized' };
 
     if (currentUser.user_type !== USER_TYPES.ADMIN) {
       logger.warn('chat:create_room_forbidden', 'Non-admin user attempted to create a chat room', {
         ...ctx,
         payload,
       });
-      return { success: false, error: 'Only admins can create chat rooms' };
+      return { success: false, errorCode: 'forbidden' };
     }
 
     if (payload.roomType === CHAT_ROOM_TYPES.GROUP) {
@@ -118,17 +116,17 @@ export async function createChatRoom(
     return createOneOnOneChatRoom(payload, ctx);
   } catch (err) {
     logger.error('chat:create_room_unexpected', getErrorMessage(err), { ...ctx, err });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 async function createOneOnOneChatRoom(
   payload: CreateChatRoomPayload,
   ctx: Awaited<ReturnType<typeof getLogContext>>,
-): Promise<{ success: boolean; roomId?: string; error?: string }> {
+): Promise<CoreResult<{ roomId: string }, ChatActionErrorCode>> {
   const [memberIdA, memberIdB] = payload.memberIds;
   if (!memberIdA || !memberIdB || payload.memberIds.length !== 2 || memberIdA === memberIdB) {
-    return { success: false, error: 'Please select two different users' };
+    return { success: false, errorCode: 'two_users_required' };
   }
 
   // Admin操作のためRLSをバイパスして相手ユーザー行のINSERT等を確実に行う
@@ -143,11 +141,11 @@ async function createOneOnOneChatRoom(
   const profileB = profiles?.find((p) => p.id === memberIdB);
 
   if (profileError || !profileA || !profileB) {
-    return { success: false, error: 'Target user not found' };
+    return { success: false, errorCode: 'not_found' };
   }
 
   if (!isHumanUserType(profileA.user_type) || !isHumanUserType(profileB.user_type)) {
-    return { success: false, error: 'Invalid member combination' };
+    return { success: false, errorCode: 'invalid_members' };
   }
 
   // 既存ルームの検索・開設はマッチング成立時の自動開設と共通のRPCに任せる
@@ -162,7 +160,7 @@ async function createOneOnOneChatRoom(
       err: ensureError,
       payload,
     });
-    return { success: false, error: ensureError?.message || 'Failed to create chat room' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 
   if (ensured.created) {
@@ -178,15 +176,15 @@ async function createOneOnOneChatRoom(
 async function createGroupChatRoom(
   payload: CreateChatRoomPayload,
   ctx: Awaited<ReturnType<typeof getLogContext>>,
-): Promise<{ success: boolean; roomId?: string; error?: string }> {
+): Promise<CoreResult<{ roomId: string }, ChatActionErrorCode>> {
   const roomName = payload.roomName?.trim();
   if (!roomName) {
-    return { success: false, error: 'Please enter a room name' };
+    return { success: false, errorCode: 'room_name_required' };
   }
 
   const memberIds = Array.from(new Set(payload.memberIds));
   if (memberIds.length < 2) {
-    return { success: false, error: 'Please select at least two participants' };
+    return { success: false, errorCode: 'participants_required' };
   }
 
   // Admin操作のためRLSをバイパスして参加者行のINSERT等を確実に行う
@@ -198,12 +196,12 @@ async function createGroupChatRoom(
     .in('id', memberIds);
 
   if (profileError || !profiles || profiles.length !== memberIds.length) {
-    return { success: false, error: 'Target user not found' };
+    return { success: false, errorCode: 'not_found' };
   }
 
   const members = profiles.flatMap((p) => (isHumanUserType(p.user_type) ? [{ id: p.id, user_type: p.user_type }] : []));
   if (members.length !== profiles.length) {
-    return { success: false, error: 'Invalid member combination' };
+    return { success: false, errorCode: 'invalid_members' };
   }
 
   const { data: newRoom, error: roomError } = await supabase
@@ -214,7 +212,7 @@ async function createGroupChatRoom(
 
   if (roomError || !newRoom) {
     logger.error('chat:create_room_failed', roomError?.message || 'Unknown error', { ...ctx, err: roomError, payload });
-    return { success: false, error: roomError?.message || 'Failed to create chat room' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 
   const { error: memberError } = await supabase
@@ -227,7 +225,7 @@ async function createGroupChatRoom(
       err: memberError,
       payload: { roomId: newRoom.room_id },
     });
-    return { success: false, error: memberError.message };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 
   logger.info('chat:create_room_success', `Chat room created: ${newRoom.room_id}`, {
@@ -244,18 +242,18 @@ async function createGroupChatRoom(
  */
 export async function addChatRoomMember(
   payload: AddChatRoomMemberPayload,
-): Promise<{ success: boolean; member?: ChatRoomMemberSummary; error?: string }> {
+): Promise<CoreResult<{ member: ChatRoomMemberSummary }, ChatActionErrorCode>> {
   const ctx = await getLogContext();
   try {
     const currentUser = await getCurrentUserWithType();
-    if (!currentUser) return { success: false, error: 'Unauthorized' };
+    if (!currentUser) return { success: false, errorCode: 'unauthorized' };
 
     if (currentUser.user_type !== USER_TYPES.ADMIN) {
       logger.warn('chat:add_member_forbidden', 'Non-admin user attempted to add a chat room member', {
         ...ctx,
         payload,
       });
-      return { success: false, error: 'Only admins can manage chat room participants' };
+      return { success: false, errorCode: 'forbidden' };
     }
 
     // Admin操作のためRLSをバイパスして参加者行のINSERT/UPDATEを確実に行う
@@ -267,9 +265,9 @@ export async function addChatRoomMember(
       .eq('room_id', payload.roomId)
       .maybeSingle();
 
-    if (!room) return { success: false, error: 'Room not found' };
+    if (!room) return { success: false, errorCode: 'not_found' };
     if (room.room_type !== CHAT_ROOM_TYPES.GROUP) {
-      return { success: false, error: 'Participants can only be managed for group rooms' };
+      return { success: false, errorCode: 'not_group_room' };
     }
 
     const { data: profile } = await supabase
@@ -279,7 +277,7 @@ export async function addChatRoomMember(
       .maybeSingle();
 
     if (!profile || profile.status !== USER_STATUS.ACTIVE || !isHumanUserType(profile.user_type)) {
-      return { success: false, error: 'Target user not found' };
+      return { success: false, errorCode: 'not_found' };
     }
 
     const { data: existingRow } = await supabase
@@ -290,7 +288,7 @@ export async function addChatRoomMember(
       .maybeSingle();
 
     if (existingRow && existingRow.left_at === null) {
-      return { success: false, error: 'User is already a member of this room' };
+      return { success: false, errorCode: 'already_member' };
     }
 
     const { error: memberError } = existingRow
@@ -305,7 +303,7 @@ export async function addChatRoomMember(
 
     if (memberError) {
       logger.error('chat:add_member_failed', memberError.message, { ...ctx, err: memberError, payload });
-      return { success: false, error: memberError.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     logger.info('chat:add_member_success', `Member added to room: ${payload.roomId}`, { ...ctx, payload });
@@ -325,7 +323,7 @@ export async function addChatRoomMember(
     };
   } catch (err) {
     logger.error('chat:add_member_unexpected', getErrorMessage(err), { ...ctx, err });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -335,18 +333,18 @@ export async function addChatRoomMember(
  */
 export async function removeChatRoomMember(
   payload: RemoveChatRoomMemberPayload,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<CoreResult<object, ChatActionErrorCode>> {
   const ctx = await getLogContext();
   try {
     const currentUser = await getCurrentUserWithType();
-    if (!currentUser) return { success: false, error: 'Unauthorized' };
+    if (!currentUser) return { success: false, errorCode: 'unauthorized' };
 
     if (currentUser.user_type !== USER_TYPES.ADMIN) {
       logger.warn('chat:remove_member_forbidden', 'Non-admin user attempted to remove a chat room member', {
         ...ctx,
         payload,
       });
-      return { success: false, error: 'Only admins can manage chat room participants' };
+      return { success: false, errorCode: 'forbidden' };
     }
 
     // Admin操作のためRLSをバイパスして参加者行のUPDATEを確実に行う
@@ -358,9 +356,9 @@ export async function removeChatRoomMember(
       .eq('room_id', payload.roomId)
       .maybeSingle();
 
-    if (!room) return { success: false, error: 'Room not found' };
+    if (!room) return { success: false, errorCode: 'not_found' };
     if (room.room_type !== CHAT_ROOM_TYPES.GROUP) {
-      return { success: false, error: 'Participants can only be managed for group rooms' };
+      return { success: false, errorCode: 'not_group_room' };
     }
 
     const { count: activeCount } = await supabase
@@ -370,7 +368,7 @@ export async function removeChatRoomMember(
       .is('left_at', null);
 
     if ((activeCount ?? 0) <= MIN_GROUP_ROOM_MEMBERS) {
-      return { success: false, error: `Group rooms need at least ${MIN_GROUP_ROOM_MEMBERS} participants` };
+      return { success: false, errorCode: 'min_participants' };
     }
 
     const { data: updatedRows, error: updateError } = await supabase
@@ -383,11 +381,11 @@ export async function removeChatRoomMember(
 
     if (updateError) {
       logger.error('chat:remove_member_failed', updateError.message, { ...ctx, err: updateError, payload });
-      return { success: false, error: updateError.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     if (!updatedRows || updatedRows.length === 0) {
-      return { success: false, error: 'User is not an active member of this room' };
+      return { success: false, errorCode: 'not_member' };
     }
 
     logger.info('chat:remove_member_success', `Member removed from room: ${payload.roomId}`, { ...ctx, payload });
@@ -398,7 +396,7 @@ export async function removeChatRoomMember(
       ...ctx,
       err,
     });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -515,16 +513,12 @@ async function buildChatRoomListItems(
 /**
  * ログインユーザーが参加中のルーム一覧を、最新メッセージ・未読件数・参加者情報付きで取得
  */
-export async function getChatRooms(): Promise<{
-  success: boolean;
-  data: ChatRoomListItem[];
-  error?: string;
-}> {
+export async function getChatRooms(): Promise<CoreResult<{ data: ChatRoomListItem[] }, ChatActionErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, data: [], error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: myMemberships, error: memberError } = await supabase
       .from('com_t_chat_room_user')
@@ -534,7 +528,7 @@ export async function getChatRooms(): Promise<{
 
     if (memberError) {
       logger.error('chat:get_rooms_failed', memberError.message, { ...ctx, err: memberError });
-      return { success: false, data: [], error: memberError.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     const myMembershipByRoom = new Map(
@@ -551,7 +545,7 @@ export async function getChatRooms(): Promise<{
 
       if (roomsError) {
         logger.error('chat:get_rooms_failed', roomsError.message, { ...ctx, err: roomsError });
-        return { success: false, data: [], error: roomsError.message };
+        return { success: false, errorCode: 'unexpected_error' };
       }
       rooms = (roomRows || []) as RoomBase[];
     }
@@ -560,24 +554,22 @@ export async function getChatRooms(): Promise<{
     return { success: true, data };
   } catch (err) {
     logger.error('chat:get_rooms_unexpected', getErrorMessage(err), { ...ctx, err });
-    return { success: false, data: [], error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * 【Admin専用】非参加ルームも含む全チャットルームを査閲用に取得する
  */
-export async function getAllChatRoomsForAdmin(): Promise<{
-  success: boolean;
-  data: ChatRoomListItem[];
-  error?: string;
-}> {
+export async function getAllChatRoomsForAdmin(): Promise<
+  CoreResult<{ data: ChatRoomListItem[] }, ChatActionErrorCode>
+> {
   const ctx = await getLogContext();
   try {
     const currentUser = await getCurrentUserWithType();
-    if (!currentUser) return { success: false, data: [], error: 'Unauthorized' };
+    if (!currentUser) return { success: false, errorCode: 'unauthorized' };
     if (currentUser.user_type !== USER_TYPES.ADMIN) {
-      return { success: false, data: [], error: 'Only admins can view all chat rooms' };
+      return { success: false, errorCode: 'forbidden' };
     }
 
     const supabase = await createServerClient();
@@ -588,7 +580,7 @@ export async function getAllChatRoomsForAdmin(): Promise<{
 
     if (roomsError) {
       logger.error('chat:get_all_rooms_failed', roomsError.message, { ...ctx, err: roomsError });
-      return { success: false, data: [], error: roomsError.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     const { data: myMemberships } = await supabase
@@ -613,7 +605,7 @@ export async function getAllChatRoomsForAdmin(): Promise<{
       ...ctx,
       err,
     });
-    return { success: false, data: [], error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -625,23 +617,14 @@ export async function getAllChatRoomsForAdmin(): Promise<{
  * - myLastReadAt: 自分が最後に読んだメッセージの送信時刻（「ここから未読」の位置。参加者でなければ null）
  * - counterpartLastReadAt: 自分が参加している1対1ルームの相手の既読位置（既読表示用。グループ・査閲では null）
  */
-export async function getChatRoomDetail(roomId: string): Promise<{
-  success: boolean;
-  data?: {
-    room: ChatRoom;
-    members: ChatRoomListItem['members'];
-    isMember: boolean;
-    viewerUserId: string;
-    myLastReadAt: string | null;
-    counterpartLastReadAt: string | null;
-  };
-  error?: string;
-}> {
+export async function getChatRoomDetail(
+  roomId: string,
+): Promise<CoreResult<{ data: ChatRoomDetail }, ChatActionErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: room, error: roomError } = await supabase
       .from('com_t_chat_room')
@@ -650,7 +633,7 @@ export async function getChatRoomDetail(roomId: string): Promise<{
       .maybeSingle();
 
     if (roomError || !room) {
-      return { success: false, error: 'Room not found' };
+      return { success: false, errorCode: 'not_found' };
     }
 
     const { data: members } = await supabase
@@ -710,6 +693,6 @@ export async function getChatRoomDetail(roomId: string): Promise<{
       err,
       payload: { roomId },
     });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }

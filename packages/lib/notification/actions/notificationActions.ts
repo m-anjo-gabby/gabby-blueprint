@@ -6,6 +6,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { type NotificationItem } from '@gabby/types/notification';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
 
 const logger = createLogger('common');
 
@@ -13,16 +14,12 @@ const logger = createLogger('common');
  * ログインユーザー宛の通知一覧を取得する（最新発生順）。
  * RLSにより自身(user_id = auth.uid())の行のみが返る。
  */
-export async function getNotifications(): Promise<{
-  success: boolean;
-  data: NotificationItem[];
-  error?: string;
-}> {
+export async function getNotifications(): Promise<CoreResult<{ data: NotificationItem[] }, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, data: [], error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
       .from('com_t_notification')
@@ -32,7 +29,7 @@ export async function getNotifications(): Promise<{
 
     if (error) {
       logger.error('notification:get_all_failed', error.message, { ...ctx, err: error });
-      return { success: false, data: [], error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, data: (data || []) as NotificationItem[] };
@@ -41,7 +38,7 @@ export async function getNotifications(): Promise<{
       ...ctx,
       err,
     });
-    return { success: false, data: [], error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -78,15 +75,12 @@ export async function getUnreadNotificationCount(): Promise<number> {
 /**
  * 指定の通知を既読にする
  */
-export async function markNotificationAsRead(notificationId: string): Promise<{
-  success: boolean;
-  error?: string;
-}> {
+export async function markNotificationAsRead(notificationId: string): Promise<CoreResult<object, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { error } = await supabase
       .from('com_t_notification')
@@ -96,7 +90,7 @@ export async function markNotificationAsRead(notificationId: string): Promise<{
 
     if (error) {
       logger.error('notification:mark_read_failed', error.message, { ...ctx, err: error });
-      return { success: false, error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
@@ -105,22 +99,19 @@ export async function markNotificationAsRead(notificationId: string): Promise<{
       ...ctx,
       err,
     });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * 未読の通知をまとめて既読にする
  */
-export async function markAllNotificationsAsRead(): Promise<{
-  success: boolean;
-  error?: string;
-}> {
+export async function markAllNotificationsAsRead(): Promise<CoreResult<object, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { error } = await supabase
       .from('com_t_notification')
@@ -130,7 +121,7 @@ export async function markAllNotificationsAsRead(): Promise<{
 
     if (error) {
       logger.error('notification:mark_all_read_failed', error.message, { ...ctx, err: error });
-      return { success: false, error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
@@ -139,6 +130,6 @@ export async function markAllNotificationsAsRead(): Promise<{
       ...ctx,
       err,
     });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }

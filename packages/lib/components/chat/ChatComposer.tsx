@@ -124,8 +124,8 @@ export function ChatComposer({ roomId, onSent, isUploading, onAddFiles }: ChatCo
     setIsSending(true);
     try {
       const res = await sendChatMessage({ roomId, message: text.trim(), attachments });
-      if (!res.success || !res.data) {
-        showToast(res.error || labels.sendFailed, 'error');
+      if (!res.success) {
+        showToast(labels.sendFailed, 'error');
         return;
       }
       clearDraft(roomId);

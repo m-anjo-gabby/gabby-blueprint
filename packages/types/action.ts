@@ -20,3 +20,6 @@ export type ActionResult<T extends object = object, C extends string = never> =
 /** 共通部分の実装（*Core）の結果。失敗は errorCode だけを返す */
 export type CoreResult<T extends object = object, C extends string = string> =
   ({ success: true } & T) | { success: false; errorCode: C };
+
+/** 種別を細かく分けない共通部分の失敗（未ログイン・想定外） */
+export type BasicErrorCode = 'unauthorized' | 'unexpected_error';

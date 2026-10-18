@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useChatErrorMessage } from './useChatErrorMessage';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ interface CreateChatRoomDialogProps {
 export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
   const t = useTranslations('chat.createRoomDialog');
   const tCommon = useTranslations('common');
+  const chatErrorMessage = useChatErrorMessage();
   const ROOM_TYPE_LABELS: Record<ChatRoomType, string> = {
     [CHAT_ROOM_TYPES.ONE_ON_ONE]: t('roomTypeOneOnOne'),
     [CHAT_ROOM_TYPES.GROUP]: t('roomTypeGroup'),
@@ -61,7 +63,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
       if (usersRes.success) {
         setCandidateUsers(usersRes.data);
       } else {
-        showToast(usersRes.error || t('toastUsersFetchFailed'), 'error');
+        showToast(chatErrorMessage(usersRes.errorCode, t('toastUsersFetchFailed')), 'error');
       }
       setClients(clientsRes);
     } finally {
@@ -87,8 +89,8 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
         ? await createChatRoom({ roomType, memberIds: [memberIdA, memberIdB] })
         : await createChatRoom({ roomType, memberIds: groupMemberIds, roomName: roomName.trim() });
 
-      if (!res.success || !res.roomId) {
-        showToast(res.error || t('toastCreateFailed'), 'error');
+      if (!res.success) {
+        showToast(chatErrorMessage(res.errorCode, t('toastCreateFailed')), 'error');
         return;
       }
 

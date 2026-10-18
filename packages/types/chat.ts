@@ -173,3 +173,39 @@ export interface ChatTargetUser {
   user_type: UserType;
   client_id: string | null;
 }
+
+/** ルームの詳細（getChatRoomDetail） */
+export interface ChatRoomDetail {
+  room: ChatRoom;
+  members: ChatRoomListItem['members'];
+  isMember: boolean;
+  viewerUserId: string;
+  myLastReadAt: string | null;
+  counterpartLastReadAt: string | null;
+}
+
+/** チャットのアクション（packages/lib/chat/actions）の失敗の種別。文言は各アプリが出す */
+export type ChatActionErrorCode =
+  | 'unauthorized'
+  | 'forbidden'
+  | 'not_found'
+  | 'invalid_input'
+  | 'two_users_required'
+  | 'room_name_required'
+  | 'participants_required'
+  | 'invalid_members'
+  | 'min_participants'
+  | 'already_member'
+  | 'not_member'
+  | 'not_group_room'
+  | 'unexpected_error';
+
+/** チャットの添付のアップロードの失敗の種別 */
+export type ChatAttachmentErrorCode =
+  | 'unauthorized'
+  | 'forbidden'
+  | 'no_file'
+  | 'file_too_large'
+  | 'unsupported_type'
+  | 'upload_failed'
+  | 'unexpected_error';

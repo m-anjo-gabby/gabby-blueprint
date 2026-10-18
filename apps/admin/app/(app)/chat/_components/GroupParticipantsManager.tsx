@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useChatErrorMessage } from './useChatErrorMessage';
 import { Loader2, Trash2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -32,6 +33,7 @@ interface GroupParticipantsManagerProps {
 export function GroupParticipantsManager({ roomId, members, onChanged }: GroupParticipantsManagerProps) {
   const t = useTranslations('chat.manageParticipantsDialog');
   const tCommon = useTranslations('chat.common');
+  const chatErrorMessage = useChatErrorMessage();
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
@@ -54,7 +56,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
       if (usersRes.success) {
         setCandidateUsers(usersRes.data);
       } else {
-        showToast(usersRes.error || t('toastUsersFetchFailed'), 'error');
+        showToast(chatErrorMessage(usersRes.errorCode, t('toastUsersFetchFailed')), 'error');
       }
       setClients(clientsRes);
     } finally {
@@ -86,8 +88,8 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
     setIsAdding(true);
     try {
       const res = await addChatRoomMember({ roomId, userId: addUserId });
-      if (!res.success || !res.member) {
-        showToast(res.error || t('toastAddFailed'), 'error');
+      if (!res.success) {
+        showToast(chatErrorMessage(res.errorCode, t('toastAddFailed')), 'error');
         return;
       }
       setAddUserId('');
@@ -114,7 +116,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
     try {
       const res = await removeChatRoomMember({ roomId, userId: member.user_id });
       if (!res.success) {
-        showToast(res.error || t('toastRemoveFailed'), 'error');
+        showToast(chatErrorMessage(res.errorCode, t('toastRemoveFailed')), 'error');
         return;
       }
       onChanged();

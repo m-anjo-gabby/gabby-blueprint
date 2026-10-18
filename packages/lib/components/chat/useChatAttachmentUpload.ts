@@ -42,8 +42,12 @@ export function useChatAttachmentUpload(roomId: string, labels: ChatLabels) {
           const formData = new FormData();
           formData.append('file', file);
           const uploadRes = await uploadChatAttachment(roomId, formData);
-          if (!uploadRes.success || !uploadRes.attachment) {
-            showToast(uploadRes.message || labels.uploadFailed(file.name), 'error');
+          if (!uploadRes.success) {
+            const message =
+              uploadRes.errorCode === 'file_too_large'
+                ? labels.fileTooLarge(file.name)
+                : labels.uploadFailed(file.name);
+            showToast(message, 'error');
             continue;
           }
           const uploaded = uploadRes.attachment;

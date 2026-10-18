@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   const [{ assignments, activities, lifetimeStats, timezoneNames, resume, plans }, liveContracts, notices] =
     await Promise.all([fetchHomeData(), getMyLiveSessionContractsCached(), getNoticesCached()]);
   // 取得順（重要→公開日の新しい順）のまま先頭を出す
-  const homeNotices = notices.data.filter((n) => n.display_mode === 'HOME' && !n.is_read);
+  const homeNotices = (notices.success ? notices.data : []).filter((n) => n.display_mode === 'HOME' && !n.is_read);
   const liveContract = liveContracts.find((c) => c.is_current) ?? liveContracts.find((c) => c.is_active);
 
   return (
