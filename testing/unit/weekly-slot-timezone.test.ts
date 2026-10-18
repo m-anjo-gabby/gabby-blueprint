@@ -14,8 +14,9 @@ import {
  */
 
 test('時差（分）: ミリ秒の端数がある時点でも整数の分で返す（夏時間の前後）', () => {
-  assert.equal(getUtcOffsetMinutes('America/Vancouver', new Date('2026-10-06T12:34:56.789Z')), -420);
-  assert.equal(getUtcOffsetMinutes('America/Vancouver', new Date('2026-11-06T12:34:56.789Z')), -480);
+  // 夏時間の例はロサンゼルスにする（バンクーバーは tzdata 2026b から 2026-11-01 以降も UTC-7 のまま。手元と CI で tzdata が違うと結果が変わる）
+  assert.equal(getUtcOffsetMinutes('America/Los_Angeles', new Date('2026-10-06T12:34:56.789Z')), -420);
+  assert.equal(getUtcOffsetMinutes('America/Los_Angeles', new Date('2026-11-06T12:34:56.789Z')), -480);
   assert.equal(getUtcOffsetMinutes('Asia/Tokyo', new Date('2026-10-06T12:34:56.789Z')), 540);
   assert.equal(getUtcOffsetMinutes('Asia/Kolkata', new Date('2026-10-06T12:34:56.789Z')), 330);
 });
