@@ -1,4 +1,4 @@
-# 型チェック・lint・単体テストを、push と PR のたびに自動で実行する（手元の `pnpm check` と同じ内容）。
+# 型チェック・lint・書式・単体テストを、push と PR のたびに自動で実行する（手元の `pnpm check` と同じ内容）。
 # デプロイ（deploy.yml）とは独立しており、ここが失敗してもデプロイは止まらない。
 # 依存関係の更新（.github/dependabot.yml）の PR も、このワークフローの結果で取り込めるかを判断する。
 name: CI
@@ -42,6 +42,9 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Format
+        run: pnpm format:check
 
       - name: Unit tests
         run: pnpm test

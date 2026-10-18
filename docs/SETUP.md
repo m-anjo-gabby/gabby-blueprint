@@ -205,7 +205,7 @@ Get-NetTCPConnection -LocalPort 3000,3001,3002 -State Listen -ErrorAction Silent
 変更後のチェックは次のとおりです（`CLAUDE.md` の完了条件）。push すると GitHub Actions の `CI` でも同じ内容を実行します。
 
 ```powershell
-pnpm check                                                  # 型チェック・lint・単体テスト（全パッケージ。CI と同じ）
+pnpm check                                                  # 型チェック・lint・書式・単体テスト（全パッケージ。CI と同じ）
 pnpm --filter gabby-blueprint-student exec tsc --noEmit     # 1つのアプリだけ型チェックする場合
 pnpm exec eslint <変更したファイル>                           # 変更したファイルだけ lint する場合
 ```
