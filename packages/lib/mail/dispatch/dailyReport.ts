@@ -134,6 +134,8 @@ export async function sendMailDailyReport(nowMs = Date.now()): Promise<MailDaily
       failed: failed.length,
       deliveryProblems: deliveryProblems.length,
       overdue: props.overdueCount,
+      // Vercel は Node のマイナー版を自動で上げるため、時差の計算に使う tzdata の版を毎日の記録で確かめられるようにする
+      runtime: { node: process.version, tz: process.versions.tz },
     },
   });
   return { sent: recipients.length, issues };
