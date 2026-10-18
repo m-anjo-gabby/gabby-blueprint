@@ -25,6 +25,8 @@ Claude がリリースを進める場合は `.claude/skills/release` に従い�
 - ブランチの流れ: 開発ブランチ → staging（ステージングPR）→ main（本番PR）。次の開発ブランチは staging から作ります。
 - `Deploy` ワークフローの staging・本番は **main のワークフロー定義**で動きます。`.github/workflows/deploy.yml` を変えた場合は、
   リリースより先にその変更だけを main へ入れます（例: #89）。
+- `Deploy` は、出すコミットの CI（`ci.yml`）が成功していないと、staging・本番では止まります（失敗・実行中・未実行。dev は警告だけ）。
+  マージの直後は、そのマージで動いた CI が終わってから実行します（約2分。`gh run watch` で待てます）。確かめたコミットそのものをデプロイします。
 - リリースの状況は `pnpm release:status --env=<dev|staging|prod>` でいつでも確かめられます（読み取りのみ。
   DB のリリーススクリプトの適用状況と、Vercel に出ているコミットがブランチの最新かを表示します）。
 
@@ -52,6 +54,7 @@ Claude がリリースを進める場合は `.claude/skills/release` に従い�
    ```bash
    gh workflow run deploy.yml -f environment=staging
    ```
+   ステージングPRのマージで動いた CI が成功してから実行する（成功していないと止まる）。
 5. [ ] `pnpm release:status --env=staging` で「DB・アプリとも反映済み」を確かめる。
 6. [ ] 変更した機能を確かめる。E2E は対象を絞って実行する（`-- <ファイル名>` の形は全件が走るため使わない）。
    ```bash
@@ -79,6 +82,7 @@ Claude がリリースを進める場合は `.claude/skills/release` に従い�
    ```bash
    gh workflow run deploy.yml -f environment=production -f confirm=prod
    ```
+   本番PRのマージで動いた CI が成功してから実行する（成功していないと止まる）。
 6. [ ] `pnpm release:status --env=prod` で「DB・アプリとも反映済み」を確かめ、各アプリのログイン画面が開くことを確かめる。
 7. [ ] 一時トークンを Supabase で削除する。
 
@@ -86,3 +90,24 @@ Claude がリリースを進める場合は `.claude/skills/release` に従い�
 
 - [ ] 使い捨てのQAデータの期限は main へのマージまで。残りがあれば一括削除する（`testing/FIXTURES.md`「アカウントの種類と使い分け」）。
 - [ ] Claude が進めた場合は、`.claude/skills/release/HISTORY.md` にリリースの記録と、つまずき・手順の改善を残す。
+
+## 5. 切り戻し（リリース後に問題が起きた場合）
+
+まず、問題がアプリだけか、DB の変更にも関わるかを分けます。DB のリリーススクリプトは戻しません（戻すスクリプトは書かない）。
+
+### アプリを前の版に戻す
+
+1. [ ] 戻した後の前の版のアプリが、今の DB で動くかを確かめる。このリリースで列・テーブルの削除、RPC の引数・戻り値の変更をした場合は、
+   前の版のアプリは動かないことがあるため、戻さずに直した版を出す（下の「直して前へ進める」）。
+2. [ ] すぐに戻す場合: Vercel の画面で対象のプロジェクト（`blueprint-<app>-prod` 等）の Deployments を開き、直前の本番のデプロイで
+   **Instant Rollback** を行う。アプリごとに行う。
+   - ロールバックの後は、新しい本番のデプロイにドメインが自動で付かなくなる（Vercel の仕様）。直した版を Deploy した後、
+     Vercel の画面でその版を本番に Promote し（Promote すると自動の割り当ても元に戻る）、`pnpm release:status --env=prod` で最新のコミットが出ていることを確かめる。
+3. [ ] ブランチも戻す場合: 問題のコミットを `git revert` したコミットを `main`（staging なら `staging`）に入れ、CI の成功を待ってから
+   Deploy で出し直す（`main` を本番に出ている版と同じに保つ）。
+
+### 直して前へ進める（DB に関わる場合・基本はこちら）
+
+- [ ] DB の不具合は、直す内容を新しいセクションとしてリリーススクリプトに足し、`run.mjs` で適用する（適用済みのセクションは書き換えない）。
+- [ ] アプリの不具合は、直したコミットを開発ブランチ → staging → main の順に入れ、通常のリリースの手順で出す。急ぐ場合も CI の成功は待つ。
+- [ ] 何が起き、どう戻した・直したかを `.claude/skills/release/HISTORY.md` に残す（Claude が進めた場合）。
