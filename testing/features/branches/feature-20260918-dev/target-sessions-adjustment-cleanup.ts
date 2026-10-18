@@ -9,7 +9,7 @@
  *
  * 削除順序（FK依存関係に基づく。session-lifecycle-refactor-cleanup.tsと同型）:
  *   1. com_t_session (ticket_idはcom_t_user_session_ticketへのFKにCASCADEが無いため、
- *      ticket/license削除前に明示的に削除する必要がある。KJ-2026-0914-02参照)
+ *      ticket/license削除前に明示的に削除する必要がある)
  *   2. com_t_user_license (CASCADE: ticket→schedule→matching_requestまで連鎖。sessionは1で削除済み)
  *   3. com_m_coach_student_relationship (coach_id/student_idにFKあり、CASCADEなし)
  *   4. com_m_contract (client_id経由でスコープ)

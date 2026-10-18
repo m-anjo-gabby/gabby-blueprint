@@ -4,7 +4,7 @@
  * 削除は本タグで作成した顧客(client_id)・コーチ・生徒5名(RA〜RE)のIDに絞ったスコープで、FK依存順に行う
  * （冪等: 対象が無ければ何もしない。共有フィクスチャの qa-admin は削除しない）。
  *   0. com_t_coach_rating（coach_id/student_id/ticket_id のFKにCASCADEが無いため最初に削除する）
- *   1. com_t_session_slot_proposal / com_t_session（ticket削除前に明示的に削除する。KJ-2026-0914-02）
+ *   1. com_t_session_slot_proposal / com_t_session（ticket削除前に明示的に削除する）
  *   2. com_t_user_license（CASCADE: ticket→schedule→matching_request）
  *   3. com_m_coach_student_relationship
  *   4. com_m_contract（client_id経由）

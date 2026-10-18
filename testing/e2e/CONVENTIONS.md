@@ -27,7 +27,7 @@
 | Zoom Video SDK（ライブセッション通話） | 通話の前後の業務フロー（セッションハブ・End Session による実施結果の判定・結果画面・宿題）。通話ルームは開かず、ルームが記録する入退室ログ（`com_t_session_call_log`）を直接入れて「通話した」状態にする（`support/liveSessionFixtures.ts`） | 通話ルーム（`/students/[id]/room/[sessionId]`）の入室・退室の操作、実際の映像/音声の疎通、通話品質 |
 | Resend（メール送信） | メール送信トリガーとなる操作が成功すること（画面上の成功表示・送信履歴の記録）。文面（件名・言語・期限・リンク）は送信せずにテンプレートの描画結果で検証する（`testing/unit/`）。受信は Resend のテスト用アドレス宛に送り、送信済みメールを API で読んでリンクを開くまで検証できる（下記） | 実在の宛先への配信、メールソフトでの見た目 |
 | Azure Speech SDK（音声認識・TTS） | 音声入力UIの表示・録音開始/停止操作 | 認識精度・実際の音声合成品質 |
-| 音声認識（Web Speech API。単語帳・スプリントの発話） | 発話の流れ（問題の再生 → チャイム → 認識 → 評価の表示・停止での確定）。テスト用の認識方式（`packages/lib/audio/core/recognizer/fake.ts`）に切り替えて検証する（dev のみ。`KJ-2026-1003-04`） | 実際のマイク入力・認識精度・iOS の音声の聞こえ方（実機で確認する） |
+| 音声認識（Web Speech API。単語帳・スプリントの発話） | 発話の流れ（問題の再生 → チャイム → 認識 → 評価の表示・停止での確定）。テスト用の認識方式（`packages/lib/audio/core/recognizer/fake.ts`）に切り替えて検証する（dev のみ。本番ビルドのステージングでは切り替わらないため、発話のテストは dev だけで実行する） | 実際のマイク入力・認識精度・iOS の音声の聞こえ方（実機で確認する） |
 
 外部サービス呼び出しをモックする方式（APIレイヤーでスタブ化する、テスト用エンドポイントを
 用意する等）は、Playwright導入時に機能ごとに実装方針を決める。本ファイルには
@@ -96,7 +96,7 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
 - 設定: `testing/playwright.config.ts`。テスト: `testing/e2e/tests/`（`*.setup.ts` はログイン準備、機能ごとにディレクトリを分ける）。
   共通の操作・ロケーター: `testing/e2e/support/`（`studentApp.ts` の `test` / `expect` / `mainNav` / `navTab` を使う）。
 - 接続先は dev（既定）。student の `dev:ssl`（https://localhost:3000）が起動中なら再利用し、未起動なら Playwright が起動・停止する
-  （Next.js 16 は同一アプリの dev サーバーを二重起動できないため。`KJ-2026-0926-02`）。
+  （Next.js 16 は同一アプリの dev サーバーを、ポートを変えても二重起動できないため。検証のために dev サーバーを自前で起動しない）。
   admin の `dev:ssl`（https://localhost:3001）も同じ扱いで、アドミンの画面操作を含むジャーニー（`tests/journeys/`）だけが使う。
   admin は別のブラウザコンテキストで開き、`support/adminApp.ts` の `openAdminContext`（`qa-admin` でログイン・表示言語を日本語に固定）を使う。
   coach の `dev:ssl`（https://localhost:3002）も同じ扱いで、コーチの画面操作を含むテスト（`tests/coach/` 等）だけが使う。
@@ -106,7 +106,7 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
   使い捨てのコーチは `support/authFixtures.ts` の `createDisposableCoach`（空き時間は UTC で渡す）で作る。
 - ステージングでの実行（リリース前の確認）: `pnpm --filter @gabby/testing e2e:staging`（`E2E_ENV=staging`）。Vercel のデプロイ済みサイトに接続し、
   対象を絞る場合は `pnpm --filter @gabby/testing exec cross-env E2E_ENV=staging playwright test <ファイル名の一部> --project=desktop`
-  （`e2e:staging -- <ファイル名>` の形は全件が staging で走る。`KJ-2026-1005-01`）。
+  （`e2e:staging -- <ファイル名>` の形は全件が staging で走る）。
   ローカルの dev サーバーは起動しない。DB・固定アカウントは `apps/student/.env.staging`（ステージングの Supabase）を使う。
   接続先の定義は `e2e/support/targets.ts`（URL は `E2E_BASE_URL` / `E2E_ADMIN_BASE_URL` / `E2E_COACH_BASE_URL` で上書きできる）。
   - 生徒: https://blueprint-student-stg.vercel.app/
@@ -115,8 +115,9 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
   - リリースSQLをステージングに適用してから実行する（アプリだけ先にデプロイされると、新しい列・RPCが無く失敗する）。
   - コーチのテスト（`tests/coach/`・`tests/journeys/coach-live-session.spec.ts`）は、先に `pnpm --filter @gabby/testing e2e:preflight:coach:staging` で
     テストが使う RPC・列、固定コーチ、プラン、教材、コーチのサイトの応答を確かめる（読み取りのみ。`support/coachE2e.preflight.ts`）。
-  - 本番ビルドは部品が動き出す前の押下が無視されるため、ダイアログ・確認画面を開く操作は `support/hydration.ts` の `clickUntilVisible`
-    （アドミンは `openDialogBy`）で、表示されたことを確かめて押し直す（`KJ-2026-1003-03`）。
+  - 本番ビルドは部品が動き出す前の押下が無視されるため、ダイアログ・確認画面を開く操作は9章の待ち方に従う。
+  - 環境によって固定アカウントの未読数・教材の公開範囲等が違う。件数の付いたナビは `navTab` で取り、教材は使い捨ての顧客に公開してから使う（`prepareWordContent`）。
+  - 失敗したら `--last-failed` で再実行し、毎回落ちるもの（前提の違い）と初回だけのもの（デプロイ直後の遅さ）を分ける。
   - 使い捨てデータはステージングのDBに作られ、各テストの後始末で消える。
 - ログインはペルソナごとに `auth.setup.ts` で1回だけ行い、ログイン状態を `testing/e2e/.auth/`（git管理外）に保存して各テストで使い回す。
   ペルソナは `testing/e2e/support/personas.ts` に定義する（`FIXTURES.md` の固定アカウント）。
@@ -127,7 +128,8 @@ CLAUDE.md 3章の`tsc --noEmit`/`eslint`に加えて、以下を満たすこと�
   同じテストがすべてのプロジェクトで動くよう、表示中のナビだけを取得する `mainNav` / `navTab` を使う。
 - 実行: `pnpm --filter @gabby/testing e2e`（全件）。対象を絞る場合は
   `pnpm --filter @gabby/testing exec playwright test <ファイル名の一部> --project=desktop`
-  （`pnpm ... e2e -- <ファイル名>` の形は `--` がそのまま Playwright に渡って絞り込みが効かず、全件が走る。`KJ-2026-1005-01`）。
+  （`pnpm ... e2e -- <ファイル名>` の形は `--` がそのまま Playwright に渡って絞り込みが効かず、全件が走る）。
+  絞り込んだつもりの実行は、最初の要約行（「Running N tests」）の件数を確かめる（出力を `tail` で絞ると見えない）。
   Android（Chromium）も含める場合は `pnpm --filter @gabby/testing e2e:android`（`--project=mobile-android` で単独実行も可）。
   初回・Playwright更新時はブラウザ取得が必要: `pnpm --filter @gabby/testing exec playwright install chromium webkit`。
   結果レポート（人が見る用）: `pnpm --filter @gabby/testing e2e:report`。成果物は `testing/e2e/.artifacts/`（git管理外）。
@@ -149,3 +151,31 @@ E2E 実行自体はトークンを消費しない。消費するのは結果・�
 6. **見た目の回帰チェックを常用する場合は、画素比較（`toHaveScreenshot`）を Playwright に任せ、AI は差分が出たときだけ画像を見る。**
    日付・件数など変動する部分はマスクする（導入時に対象画面を決める）。
 
+## 9. 待ち方（ハイドレーション・非同期の処理）
+
+サーバーで描いた画面は、部品が動き出す（ハイドレーション）前の操作を無視する。dev・WebKit・並列実行では動き出すまで10秒を超えることがある。
+
+| 場面 | 待ち方 |
+|---|---|
+| 画面を開いた直後にリンク・ボタンを押して、別の画面・ダイアログへ移る | `support/hydration.ts` の `clickUntilVisible`（移った先の表示が出るまで押し直す。アドミンのダイアログは `support/adminApp.ts` の `openDialogBy`）。`networkidle` だけでは足りない |
+| 制御コンポーネントの入力欄への入力・状態だけが変わるボタン（閉じる等） | ハイドレーション後に付く `data-ready="true"` を待つ（チャットの入力欄・ログインのフォーム・ホームのお知らせのカード。待ち時間は30秒） |
+| 骨組みと本番が同じ部品（検索欄・タブ等）を描く画面 | `goto` の直後に操作せず、本番にしか無い表示が見えるまで待つ（入れ替わりの間は同じ要素が2つあり strict mode で落ちる） |
+| 開いた後にデータを取りに行くダイアログ | 取得が終わったと分かる表示を待ってから操作する。保存で `revalidatePath` するダイアログは、保存の後に閉じる前提で書く |
+| 「出ること」自体を確かめるモーダル | `expect(dialog).toBeVisible()` で待つ。「出ていれば閉じる」型の補助関数で代用しない。閉じた後は `toHaveCount(0)` を待ってから次へ移る（モーダルが開いている間は背後が `aria-hidden` になり、ロールで取得できない） |
+| 「出ないこと」の確認 | 即時の `isVisible()` で判定しない。通信が落ち着いてから判定する |
+| Realtime の反映 | 「画面に件数が出た」を購読の完了の合図にしない。ページを開く前に `support/realtime.ts` の `watchRealtime(page)` を呼び、送信の前に戻り値の `waitForSubscribed("<チャンネルの接頭辞>")` を待つ |
+| 楽観的に表示を切り替える操作の後の DB | 画面の表示は保存の完了を意味しない。`expect.poll` で DB の値を待つ |
+| CAPTCHA（Turnstile）付きのフォーム | 隠し項目 `input[name="cf-turnstile-response"]` に値が入ってから送る（中身は iframe のため `error-context.md` には出ない） |
+| 新しい画面への最初の遷移（dev） | 初回のコンパイルで10秒を超える。遷移の待ち（`waitForURL`）だけを60秒にする。推測で他の待ち時間を延ばさない |
+
+- 遷移の操作そのものを確かめないテストは、別のテストで確かめた画面へ URL で直接移る（一覧から押す操作は並列実行の負荷で不安定になりやすい）。
+- 30秒押し直しても何も起きない場合は、待ち方ではなく画面の不具合（検証は動いたのに表示が描き直されない等）を疑い、フォーカスの移動・コンソール・通信の有無を先に確かめる。
+
+## 10. 使い捨てデータの後始末
+
+- 使い捨ての顧客・ユーザーは `support/authFixtures.ts`（`createAuthFixture` / `createDisposableCoach`）で作り、`cleanupAuthFixture` で消す。業務の記録（セッション・担当枠・チケット・ライセンス・評価・担当関係等）は `deleteBusinessRecords` が参照する側から順に消す（`fn_purge_client` と同じ順序）。
+- `createAuthFixture` の接頭辞は英小文字だけにする（タグの先頭に `e2e` が付き、残骸の確認が `e2e<英小文字><数字>-` で探す）。
+- 後始末の失敗は警告だけでテストは成功する。テストを足した・変えた後と、外部キーの `ON DELETE` を変えた後は、`pnpm exec tsx e2e/support/authFixtures.leftovers.ts` で残骸が0件かを確かめる（`--delete` で片付ける）。
+- `com_m_user` を参照するテーブル・トリガー、業務の記録のテーブル（`RESTRICT` で参照するもの）を追加したら、同じタスクで `deleteBusinessRecords`・`authFixtures.leftovers.ts`・`fn_purge_client` に削除の順序を足す。
+- テストから実JWTでデータを書き換えた後のログアウトは `signOutRole`（`scope: 'local'`）。既定の `signOut()`（global）は同じユーザーのブラウザ・保存済みのログイン状態まで切る。
+- メールアドレスからユーザーを探すときは `auth.admin.listUsers` を使う（`com_m_user` にメールアドレスは無い）。

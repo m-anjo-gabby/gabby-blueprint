@@ -1,5 +1,5 @@
 /**
- * 2026-09-17のstaging検証で、fn_cancel_future_sessions未反映(KJ-2026-0917-02)により
+ * 2026-09-17のstaging検証で、fn_cancel_future_sessions未反映(KJ-2026-0917-01)により
  * session-lifecycle-refactor-verify.tsの5-6節(release_lesson_schedule_slot/生徒SE、
  * invalidate_user_license/生徒SF)がNGになった。fn_cancel_future_sessionsのstaging反映後、
  * 同じseedデータ(生徒SE/SF)に対してこの2節だけを再実行するための補助スクリプト。

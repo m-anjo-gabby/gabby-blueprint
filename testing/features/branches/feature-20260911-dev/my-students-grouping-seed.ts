@@ -185,7 +185,7 @@ async function seedSchedule(params: {
       end_date: params.endDate.toISOString().slice(0, 10),
       // target_sessions(2026-09-14追加、NOT NULL)は本シナリオ(My Studentsグルーピング)では
       // 検証対象外のため、fn_generate_sessions_for_schedule/fn_schedule_shortfallの上限に
-      // 引っかからない十分大きな固定値を設定する(KJ-2026-0916-01参照)。
+      // 引っかからない十分大きな固定値を設定する。
       target_sessions: 999,
     })
     .select('schedule_id')

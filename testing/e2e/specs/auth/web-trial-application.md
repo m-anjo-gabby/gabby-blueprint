@@ -21,7 +21,7 @@
 - 使い捨ての顧客には所属させられないため、テストは**この申込で作った行だけ**を後始末で消す（申込・招待・通知・ユーザーとそのライセンス/チケット/履歴、
   テスト中にできた月の契約）。
 - CAPTCHA は dev・staging では Cloudflare のテスト用の鍵（常に通る）。トークンはウィジェットの表示から数秒遅れて入るため、
-  隠し項目 `cf-turnstile-response` に値が入ってから送信する（`KJ-2026-1016-02`）。
+  隠し項目 `cf-turnstile-response` に値が入ってから送信する（`e2e/CONVENTIONS.md` 9章）。
 - 宛先は Resend のテスト用アドレス `delivered+<tag>@resend.dev`（実際に送る）。`RESEND_TEST_READ_API_KEY` があれば届いた招待メールのリンクを使い、
   無ければ招待のトークンから同じリンクを組み立てる。
 - サポート窓口へのメールの宛先は student の `MAIL_TRIAL_APPLICATION_TO`（dev・staging は開発者のアドレス）。テストを流すたびに1通届く。

@@ -97,7 +97,7 @@ console.log('Preflight OK: 対象RPCはすべて反映済みです。');
 
 // スロット提案統合(com_t_session_reschedule_proposal+com_t_session_booking_request→
 // com_t_session_slot_proposal)により廃止されたRPCが、本当に削除されているかも確認する
-// （KJ-2026-0912-01: 42883だけでなくPGRST202も見る必要がある。assertRpcRemovedはその対応済み）
+// （42883だけでなくPGRST202も見る必要がある。assertRpcRemovedはその対応済み）
 await assertRpcRemoved(admin, [
   { name: 'approve_session_booking_request', dummyArgs: { p_request_id: '00000000-0000-0000-0000-000000000000' } },
   { name: 'reject_session_booking_request', dummyArgs: { p_request_id: '00000000-0000-0000-0000-000000000000' } },

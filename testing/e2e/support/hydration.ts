@@ -3,7 +3,7 @@ import { expect, type Locator } from '@playwright/test';
 /**
  * 押すと何かが表示される操作（ダイアログ・確認画面・次の段階の画面）を、表示されるまで押す。
  * 本番ビルド（ステージングの Vercel）はサーバーで描いた画面が先に表示されるため、画面の部品が動き出す前（ハイドレーション前）に
- * 押すと操作が無視される（KJ-2026-1003-03）。表示されたことを確かめ、表示されなければ押し直す。
+ * 押すと操作が無視される（testing/e2e/CONVENTIONS.md 9章）。表示されたことを確かめ、表示されなければ押し直す。
  * 押した結果が別の画面への移動など「押し直すと二重になる」操作には使わない。
  */
 export async function clickUntilVisible(trigger: Locator, target: Locator, timeout = 30_000): Promise<void> {

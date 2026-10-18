@@ -8,7 +8,7 @@
  * IDに厳密に絞ったスコープで、FK依存順に1テーブルずつ行う(冪等: 対象が無ければ何もしない)。
  * 共有フィクスチャであるqa-admin@gabby-qa-test.exampleアカウントは削除しない。
  * 削除順序はsession-lifecycle-refactor-cleanup.tsと同じFK依存関係に基づく
- * （KJ-2026-0914-02: com_t_session.ticket_idはCASCADE無し、KJ-2026-0915-01も参照）。
+ * （com_t_session.ticket_idはCASCADE無し）。
  *
  * 使い方:
  *   pnpm exec tsx testing/features/branches/feature-20260911-dev/coach-no-show-resolution-cleanup.ts --env=dev --tag=noshow01

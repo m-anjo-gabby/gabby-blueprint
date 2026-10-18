@@ -217,7 +217,7 @@ async function seedSchedule(params: {
       start_date: toDateOnlyString(params.startDate),
       end_date: toDateOnlyString(params.endDate),
       // target_sessions(2026-09-14追加、NOT NULL)は本シナリオ(月次コーチングレポート)では
-      // 検証対象外のため、十分大きな固定値を設定する(KJ-2026-0916-01参照)。
+      // 検証対象外のため、十分大きな固定値を設定する。
       target_sessions: 999,
     })
     .select('schedule_id')
@@ -412,7 +412,7 @@ const sessionUnresolved = await seedSessionRow({
 // 引数名・値は当初p_resolved_status(2/6/7)だったが、その後p_completion_result(1/2/3)→
 // 2026-09-17にp_resolution(1/2/3/4)へ2段階で変更されている。値の意味は
 // 1=normal(完了)/2=early_ended(早期終了)/3=no_show の対応関係で変わっていない
-// (KJ-2026-0916-01・session-lifecycle-refactor-seed.tsの修正と同種の追従漏れ)。
+// (session-lifecycle-refactor-seed.tsの修正と同種の追従漏れ)。
 {
   const { error } = await coachClient.rpc('resolve_stale_session', {
     p_session_id: sessionCompleted,

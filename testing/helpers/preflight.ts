@@ -10,7 +10,7 @@ export interface RpcCheck {
 const UNDEFINED_FUNCTION = '42883'; // Postgres: undefined_function
 // PostgRESTがRPCをスキーマキャッシュ上で解決できない場合に返すコード。関数が本当に
 // 存在しない場合、PostgRESTはPostgresにクエリを投げる前にこの時点で弾くため、
-// 実際には42883よりもこちらが返ってくるケースが多い（KJ-2026-0912-01参照）。
+// 実際には42883よりもこちらが返ってくるケースが多い。
 const POSTGREST_FUNCTION_NOT_FOUND = 'PGRST202';
 
 function isFunctionNotFoundError(code: string | undefined): boolean {

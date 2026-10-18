@@ -12,7 +12,7 @@
  * (com_t_session_slot_proposal.resulting_session_id、非CASCADE)への対応を追加）:
  *   1. com_t_user_session_ticket_history
  *   2. com_t_session_slot_proposal (resulting_session_idがcom_t_sessionへの非CASCADE FKの
- *      ため、com_t_sessionより先に削除する必要がある。KJ-2026-0915-01参照。統合後は
+ *      ため、com_t_sessionより先に削除する必要がある。統合後は
  *      振替候補・自由予約リクエスト両方がこのテーブルに含まれる)
  *   3. com_t_session (ticket_id経由で明示削除。CASCADEでcall_logも連鎖)
  *   4. com_t_user_license (CASCADE: ticket→schedule→matching_requestまで連鎖)
@@ -93,7 +93,7 @@ console.log(`対象クライアント特定: clientId=${clientId}, 対象ユー�
 //    resulting_session_id が com_t_session への非CASCADE FKのため、com_t_sessionより
 //    先に消さないと「update or delete on table "com_t_session" violates foreign key
 //    constraint "com_t_session_slot_proposal_resulting_session_id_fkey"」で失敗する
-//    (KJ-2026-0915-01。schedule_id/student_id/coach_id、振替候補のsource_session_idへの
+//    (schedule_id/student_id/coach_id、振替候補のsource_session_idへの
 //    FKはCASCADEだが、resulting_session_idだけ非CASCADEのため、com_t_session側からの
 //    連鎖に任せられない)。
 {
@@ -105,7 +105,7 @@ console.log(`対象クライアント特定: clientId=${clientId}, 対象ユー�
   console.log(`2. com_t_session_slot_proposal削除: ${count ?? 0}件`);
 }
 
-// 3. セッション実体（ticket_id経由の直接FKにCASCADEが無いため明示削除。KJ-2026-0914-02参照）
+// 3. セッション実体（ticket_id経由の直接FKにCASCADEが無いため明示削除）
 {
   const { data: tickets, error: tErr } = await admin
     .from('com_t_user_session_ticket')
