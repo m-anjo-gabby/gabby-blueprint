@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { TrainingReportEntry } from './TrainingReportEntry';
 import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
 
-interface Props {
+interface TrainingReportContractRowProps {
   studentId: string;
   contract: StudentLiveSessionContractSummary;
   contractLabel: string;
@@ -18,7 +18,14 @@ interface Props {
  * 場合は分担コーチのfinalized済みレポートも並ぶ（TrainingReportCard/TrainingReportHistoryListで共用）。
  * 各レポートはダイアログではなくこの場でアコーディオン展開して編集する。
  */
-export function TrainingReportContractRow({ studentId, contract, contractLabel, reports, myId, onSaved }: Props) {
+export function TrainingReportContractRow({
+  studentId,
+  contract,
+  contractLabel,
+  reports,
+  myId,
+  onSaved,
+}: TrainingReportContractRowProps) {
   const myReport = reports.find((r) => r.coach_id === myId) ?? null;
   const otherReports = reports.filter((r) => r.coach_id !== myId);
 

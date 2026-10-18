@@ -24,7 +24,7 @@ import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
 import type { SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkAttachment, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 
-interface Props {
+interface StudentSessionResultProps {
   session: SessionResultSummary;
   homework: SessionHomeworkEntry | null;
 }
@@ -35,7 +35,7 @@ interface Props {
  * 画面を開くと、宿題を開いたことがサーバー側で記録される（page.tsx。コーチの画面の「見たか」に使う）。
  * セクションは優先度順（サマリー→宿題→トレーニング→チャット履歴）に並べる。
  */
-export function StudentSessionResult({ session, homework }: Props) {
+export function StudentSessionResult({ session, homework }: StudentSessionResultProps) {
   const timezone = useTimezone();
   const [showCallLog, setShowCallLog] = useState(false);
   const coachIconUrl = getProfileIconUrl(session.counterpart_icon_path);

@@ -210,7 +210,7 @@ export async function reportWordProgress(
   wordCount: number,
   phraseCount: number,
   assessmentCount: number,
-) {
+): Promise<void> {
   const ctx = await getLogContext();
   if (!contentId || (wordCount === 0 && phraseCount === 0 && assessmentCount === 0)) return;
 

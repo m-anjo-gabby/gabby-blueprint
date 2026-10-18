@@ -10,7 +10,7 @@ import { formatDateEn } from '@gabby/lib/date/dateEn';
 import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
 import { TrainingReportContractRow } from './TrainingReportContractRow';
 
-interface Props {
+interface TrainingReportCardProps {
   studentId: string;
   /** 表示対象の契約一覧。直近5件に絞る等のスコープ判断は呼び出し側(page.tsx)で行う */
   contracts: StudentLiveSessionContractSummary[];
@@ -21,7 +21,7 @@ export function contractSummaryLabel(contract: StudentLiveSessionContractSummary
   return `${contract.plan_name_en} · ${formatDateEn(contract.start_date, timezone)} – ${formatDateEn(contract.end_date, timezone)}`;
 }
 
-export function TrainingReportCard({ studentId, contracts, initialReports }: Props) {
+export function TrainingReportCard({ studentId, contracts, initialReports }: TrainingReportCardProps) {
   const timezone = useTimezone();
   const myId = useUserStore((state) => state.user?.id);
   const [reports, setReports] = useState<ContractTrainingReport[]>(initialReports);

@@ -34,7 +34,7 @@ import { type TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlay
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
 import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
-import { buildSSML } from '@gabby/lib/azure/ssml';
+import { buildSsml } from '@gabby/lib/azure/ssml';
 import { type PhraseRecord, type TTSAdjustmentData } from '@gabby/types/word';
 import { getPhrasesByContentId } from '@/actions/adminWordAction';
 import { useWordStore } from '@/stores/useWordStore';
@@ -160,7 +160,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
 
       try {
         const adjustmentData: TTSAdjustmentData = { settings: params, words: [] };
-        const ssml = buildSSML(phrase.phrase_en, adjustmentData);
+        const ssml = buildSsml(phrase.phrase_en, adjustmentData);
 
         // サーバーアクションを通じてAzure TTS生成とStorage保存、DB更新を実行
         const result = await save(

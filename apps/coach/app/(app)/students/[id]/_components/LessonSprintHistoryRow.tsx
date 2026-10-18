@@ -22,7 +22,7 @@ type LessonSprintHistoryRecord = Pick<
   | 'insert_date'
 >;
 
-interface Props {
+interface LessonSprintHistoryRowProps {
   studentId: string;
   record: LessonSprintHistoryRecord;
   /** この行から結果画面へ遷移した際、戻り先として引き継ぐ画面（概要カード／履歴一覧画面など呼び出し元ごとに異なる） */
@@ -36,7 +36,13 @@ interface Props {
  * Lesson Sprint実施履歴1件分の行。受講生概要カード（直近10件）・履歴一覧画面（全件）・
  * セッションハブ（Prep）・セッション結果画面の間で共有され、見た目の重複実装を避ける。
  */
-export function LessonSprintHistoryRow({ studentId, record, backHref, backLabel, liveSessionId = null }: Props) {
+export function LessonSprintHistoryRow({
+  studentId,
+  record,
+  backHref,
+  backLabel,
+  liveSessionId = null,
+}: LessonSprintHistoryRowProps) {
   const timezone = useTimezone();
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const href = withLiveSessionParam(

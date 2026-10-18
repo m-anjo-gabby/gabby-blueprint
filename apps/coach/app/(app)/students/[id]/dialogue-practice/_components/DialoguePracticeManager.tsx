@@ -10,7 +10,7 @@ import { useDialoguePracticeAssignments } from '../../_hooks/useDialoguePractice
 import { AssignDialogueDialog } from '../../_components/AssignDialogueDialog';
 import { DialogueAssignmentCard } from './DialogueAssignmentCard';
 
-interface Props {
+interface DialoguePracticeManagerProps {
   studentId: string;
   availableContents: DialogueContentSummary[];
   initialAssignments: DialogueAssignmentSummary[];
@@ -23,7 +23,11 @@ function filterLabel(filter: CategoryFilter): string {
   return filter === 'all' ? 'All' : DIALOGUE_CATEGORIES[filter].label;
 }
 
-export function DialoguePracticeManager({ studentId, availableContents, initialAssignments }: Props) {
+export function DialoguePracticeManager({
+  studentId,
+  availableContents,
+  initialAssignments,
+}: DialoguePracticeManagerProps) {
   const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<CategoryFilter>('all');
   const { assignments, assignedContentIds, isRefreshing, handleAssigned, handleUnassign, handleProgressChange } =

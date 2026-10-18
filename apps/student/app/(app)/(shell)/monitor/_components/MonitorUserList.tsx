@@ -115,7 +115,7 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
 
   const formatDate = (value: string | null) => formatZonedDate(value, REPORTING_TIMEZONE) || '—';
 
-  const handleExportCSV = () => {
+  const handleExportCsv = () => {
     clientLogger.info('monitor:user_summary_csv_exported', `User summary CSV exported: ${targetMonth}`, {
       payload: { month: targetMonth, targetUserIds: users.map((u) => u.id), rowCount: users.length },
     });
@@ -162,7 +162,7 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
         </div>
         <Button
           variant="outline"
-          onClick={handleExportCSV}
+          onClick={handleExportCsv}
           disabled={users.length === 0}
           icon={<Download />}
           className="h-10 rounded-control border-line bg-surface px-4 text-sm font-semibold text-ink-soft shadow-none"

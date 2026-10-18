@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import type { DialogueAssignmentSessionView, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
 
-interface Props {
+interface DialogueSessionRowProps {
   assignmentId: string;
   session: DialogueAssignmentSessionView;
   onProgressChange: (input: UpdateDialogueSessionProgressInput) => Promise<void>;
@@ -18,7 +18,7 @@ interface Props {
   onSlidesOpen?: () => void;
 }
 
-export function DialogueSessionRow({ assignmentId, session, onProgressChange, onSlidesOpen }: Props) {
+export function DialogueSessionRow({ assignmentId, session, onProgressChange, onSlidesOpen }: DialogueSessionRowProps) {
   const [notesDraft, setNotesDraft] = useState(session.notes ?? '');
   const [isSaving, setIsSaving] = useState(false);
 

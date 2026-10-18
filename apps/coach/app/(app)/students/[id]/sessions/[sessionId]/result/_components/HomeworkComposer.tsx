@@ -25,7 +25,7 @@ import {
   type SessionHomeworkEntry,
 } from '@gabby/types/sessionHomework';
 
-interface Props {
+interface HomeworkComposerProps {
   sessionId: string;
   initialHomework: SessionHomeworkEntry | null;
   /** 実施済み(status=COMPLETED)の回か。「今回は宿題なし」はこの場合だけ選べる */
@@ -34,7 +34,7 @@ interface Props {
   initialNotNeeded: boolean;
 }
 
-export function HomeworkComposer({ sessionId, initialHomework, isCompleted, initialNotNeeded }: Props) {
+export function HomeworkComposer({ sessionId, initialHomework, isCompleted, initialNotNeeded }: HomeworkComposerProps) {
   const [homework, setHomework] = useState(initialHomework);
   const [notNeeded, setNotNeeded] = useState(initialNotNeeded);
 

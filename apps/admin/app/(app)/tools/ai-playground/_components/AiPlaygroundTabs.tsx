@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChatPlayground } from './ChatPlayground';
 import { TranslatePlayground } from './TranslatePlayground';
 
-export function AIPlaygroundTabs() {
+export function AiPlaygroundTabs() {
   const t = useTranslations('tools.aiPlayground.tabs');
   return (
     <Tabs defaultValue="chat" className="w-full max-w-[1200px]">

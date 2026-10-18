@@ -7,11 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import type { DashboardModuleSummary } from '@/actions/adminDashboardAction';
 import { DASHBOARD_MODULE_CONFIG } from './moduleConfig';
 
-interface Props {
+interface ModuleCardProps {
   summary: DashboardModuleSummary;
 }
 
-export async function ModuleCard({ summary }: Props) {
+export async function ModuleCard({ summary }: ModuleCardProps) {
   const config = DASHBOARD_MODULE_CONFIG[summary.key];
   const Icon = config.icon;
   const hasAlert = summary.alertCount > 0;

@@ -7,7 +7,7 @@ import { MonthlyReportGrid } from './MonthlyReportGrid';
 import { ExportCsvButton } from './ExportCsvButton';
 import { InvoiceDownloadButton } from './InvoiceDownloadButton';
 
-interface Props {
+interface MonthlyReportSectionProps {
   coachId: string;
   yearMonth: string;
   coachName: string;
@@ -17,7 +17,7 @@ interface Props {
  * 月次レポート本体（承認バー・出力ボタン・明細グリッド）。
  * page.tsx がコーチ・月ごとに key を変えた <Suspense> で包み、切り替え時に骨組みを表示する。
  */
-export async function MonthlyReportSection({ coachId, yearMonth, coachName }: Props) {
+export async function MonthlyReportSection({ coachId, yearMonth, coachName }: MonthlyReportSectionProps) {
   const [result, timezoneNames, locale] = await Promise.all([
     getCoachMonthlyReportForAdmin(coachId, yearMonth),
     getTimezoneNameMap(),

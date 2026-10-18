@@ -9,7 +9,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { COACH_SPECIALTY_FIELD_MAX, type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
 import { setCoachSpecialties, type CoachSpecialtySettings } from '@/actions/adminCoachSpecialtyAction';
 
-interface Props {
+interface CoachSpecialtyPanelProps {
   coachId: string;
   settings: CoachSpecialtySettings;
 }
@@ -18,7 +18,7 @@ interface Props {
  * コーチの専門の設定（アドミンのみ）。分野は COACH_SPECIALTY_FIELD_MAX 個まで、
  * 得意分野（発音プロ）は別枠で上限に数えない。保存はコーチ1人分をまとめて置き換える。
  */
-export function CoachSpecialtyPanel({ coachId, settings }: Props) {
+export function CoachSpecialtyPanel({ coachId, settings }: CoachSpecialtyPanelProps) {
   const t = useTranslations('users.specialty');
   const tCommon = useTranslations('common');
   const locale = useLocale();

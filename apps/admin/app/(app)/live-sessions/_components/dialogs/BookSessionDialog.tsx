@@ -17,14 +17,14 @@ import { bookMakeupSessionAsAdmin } from '@/actions/adminLiveSessionAction';
 import { ADMIN_TIME_OPTIONS } from './adminTimeOptions';
 import type { AdminScheduleSlotSummary } from '@gabby/types/adminLiveSession';
 
-interface Props {
+interface BookSessionDialogProps {
   target: AdminScheduleSlotSummary | null;
   onClose: () => void;
   onBooked: () => Promise<void> | void;
 }
 
 /** 未割当チケットの新規予約（アドミン代理操作）。コーチの空き時間内である必要がある。 */
-export function BookSessionDialog({ target, onClose, onBooked }: Props) {
+export function BookSessionDialog({ target, onClose, onBooked }: BookSessionDialogProps) {
   const t = useTranslations('liveSessions.bookDialog');
   const { showToast } = useToast();
   const [date, setDate] = useState('');

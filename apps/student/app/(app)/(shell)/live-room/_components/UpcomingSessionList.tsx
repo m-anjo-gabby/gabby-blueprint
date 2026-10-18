@@ -14,7 +14,7 @@ type UpcomingItem =
   | { kind: 'request'; startIso: string; request: MyBookingRequestItem }
   | { kind: 'proposal'; startIso: string; group: MyRescheduleProposalGroup };
 
-interface Props {
+interface UpcomingSessionListProps {
   sessions: SessionListItem[];
   requests: MyBookingRequestItem[];
   /** 自分がキャンセル時に提案し、コーチの回答待ちの振替候補（キャンセル単位） */
@@ -37,7 +37,7 @@ export function UpcomingSessionList({
   withdrawingRequestId,
   onCancelSession,
   onWithdrawRequest,
-}: Props) {
+}: UpcomingSessionListProps) {
   const items: UpcomingItem[] = [
     ...sessions.map((session) => ({ kind: 'session' as const, startIso: session.start_datetime, session })),
     ...requests.map((request) => ({ kind: 'request' as const, startIso: request.requested_start_datetime, request })),

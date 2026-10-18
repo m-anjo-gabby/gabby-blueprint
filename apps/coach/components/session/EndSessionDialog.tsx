@@ -18,7 +18,7 @@ import { isConductedOutcome, type SessionOutcome } from '@gabby/types/session';
 import { getSessionOutcomeEvidence, recordSessionOutcome } from '@/actions/sessionAction';
 import { COACH_OUTCOME_REASON_HINTS, COACH_SESSION_OUTCOME_LABELS } from '@/constants/sessionOutcome';
 
-interface Props {
+interface EndSessionDialogProps {
   open: boolean;
   sessionId: string;
   studentName: string;
@@ -34,7 +34,7 @@ interface Props {
  * 理由を必須にする（packages/lib/session/outcome.ts の getOutcomeReasonKind。RPC と同じ条件）。
  * 中身（EndSessionForm）は開いている間だけ描かれ、開くたびに推定を取り直して初期状態から始める。
  */
-export function EndSessionDialog({ open, onClose, ...formProps }: Props) {
+export function EndSessionDialog({ open, onClose, ...formProps }: EndSessionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
@@ -51,7 +51,12 @@ export function EndSessionDialog({ open, onClose, ...formProps }: Props) {
   );
 }
 
-function EndSessionForm({ sessionId, onClose, onRecorded, onNotActionable }: Omit<Props, 'open' | 'studentName'>) {
+function EndSessionForm({
+  sessionId,
+  onClose,
+  onRecorded,
+  onNotActionable,
+}: Omit<EndSessionDialogProps, 'open' | 'studentName'>) {
   const { showToast } = useToast();
   const [isSubmitting, startSubmit] = useTransition();
   const { evidence, evidenceFailed, draft, setDraft } = useSessionOutcomeDraft({

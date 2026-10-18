@@ -21,6 +21,7 @@ import {
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
 import type { ServerTranslator } from '@/i18n/types';
+import type { ActionFailure, ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -143,7 +144,7 @@ export async function upsertContractPlan(payload: {
   has_dialogue_practice: boolean;
   sort_no: number;
   is_active: boolean;
-}) {
+}): Promise<ActionResult<{ data: TableRow<'com_m_contract_plan'> }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -190,7 +191,7 @@ export async function upsertContractPlan(payload: {
  * 契約プランの削除（誤登録の取り消し。プランマスタ管理画面用）
  * 契約で使われているプランは外部キー（RESTRICT）で止まり、販売終了（is_active = false）にするよう案内する。
  */
-export async function deleteContractPlan(planId: string) {
+export async function deleteContractPlan(planId: string): Promise<ActionResult<object, 'in_use'>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -370,7 +371,7 @@ export async function createContract(params: {
   weekly_frequency?: number | null;
   total_sessions?: number | null;
   has_dialogue_practice: boolean;
-}) {
+}): Promise<ActionResult<{ contract: TableRow<'com_m_contract'> }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -461,7 +462,7 @@ export async function updateContract(
     total_sessions?: number | null;
     has_dialogue_practice: boolean;
   },
-) {
+): Promise<ActionResult<{ contract: TableRow<'com_m_contract'> }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -576,7 +577,7 @@ export async function updateContract(
  * 過去に一度でも割当実績がある契約は、履歴テーブル（com_t_user_license_history等）に
  * 残る外部キー参照により、アプリ側のチェックをすり抜けてもDB制約(23503)で削除が拒否される。
  */
-export async function deleteContract(contractId: string) {
+export async function deleteContract(contractId: string): Promise<ActionResult<object, 'has_history'>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -635,7 +636,7 @@ export async function deleteContract(contractId: string) {
  * 実運用契約には絶対に使用しないこと。呼び出し元では、通常の削除ボタンとは
  * 別の強い確認UI（対象名の入力等）を経由させる。
  */
-export async function purgeContractWithHistory(contractId: string) {
+export async function purgeContractWithHistory(contractId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -787,7 +788,7 @@ export async function assignLicenseToUser(
   userId: string,
   startDateJst: string,
   endDateJst: string,
-) {
+): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -912,7 +913,7 @@ export async function assignLicenseToUser(
  * 実施済みのセッション結果・チャット・宿題は一切変更されない。
  * 無効化前の状態を変更履歴（action = invalidated）に残す。
  */
-export async function invalidateUserLicense(licenseId: string) {
+export async function invalidateUserLicense(licenseId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -992,7 +993,7 @@ export async function updateUserLicense(
     status?: TableRow<'com_t_user_license'>['status'];
     note?: string | null;
   },
-) {
+): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -1115,12 +1116,23 @@ export async function updateUserLicense(
 /**
  * ライセンスの一括割当
  */
+/** 一括割当の結果。期間の重なり・上限で割り当てなかった生徒は、成功・失敗のどちらでも返す */
+export type BulkAssignLicensesResult =
+  | {
+      success: true;
+      successCount: number;
+      assignedUserIds: string[];
+      skippedForOverlap: string[];
+      skippedForCapacity: string[];
+    }
+  | (ActionFailure & { errorCount: number; skippedForOverlap?: string[]; skippedForCapacity?: string[] });
+
 export async function bulkAssignLicenses(
   contractId: string,
   userIds: string[],
   startDateJst: string,
   endDateJst: string,
-) {
+): Promise<BulkAssignLicensesResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

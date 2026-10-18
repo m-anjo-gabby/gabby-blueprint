@@ -37,14 +37,14 @@ import { SprintThemeDialog } from './SprintThemeDialog';
 import type { LessonSprintHistoryItem } from '@gabby/types/lessonSprint';
 import { DEFAULT_LESSON_SPRINT_SCORE } from '@gabby/types/lessonSprint';
 
-interface Props {
+interface LessonSprintPlayerProps {
   studentId: string;
   sessionId: string | null;
   onExit: () => void;
   onComplete: (lessonSprintId: string) => void;
 }
 
-export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }: Props) {
+export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }: LessonSprintPlayerProps) {
   const { showToast } = useToast();
   const {
     session,

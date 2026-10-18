@@ -26,7 +26,7 @@ function HomeworkLabel({ homework }: { homework: PreviousHomeworkStatus }) {
   }
 }
 
-interface Props {
+interface PreviousSessionLinkProps {
   previous: PreviousSessionSummary;
   timezone: string;
   /** embedded: 次回のセッションカードの下部に入れる / card: 次回の予定が無い時に単独のカードとして出す */
@@ -34,7 +34,7 @@ interface Props {
 }
 
 /** 前回のセッション結果（宿題・内容の振り返り）への導線 */
-export function PreviousSessionLink({ previous, timezone, variant }: Props) {
+export function PreviousSessionLink({ previous, timezone, variant }: PreviousSessionLinkProps) {
   const slot = formatSessionSlot(previous.session.start_datetime, previous.session.end_datetime, timezone);
 
   return (

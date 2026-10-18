@@ -11,11 +11,11 @@ import { getTagAssignmentData, assignTag, removeTag } from '@/actions/adminConte
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { type Content, type ContentTagSummary } from '@gabby/types/content';
 
-interface Props {
+interface ContentTagDialogProps {
   content: Content;
 }
 
-export function ContentTagDialog({ content }: Props) {
+export function ContentTagDialog({ content }: ContentTagDialogProps) {
   const t = useTranslations('contents.tagDialog');
   const [open, setOpen] = useState(false);
   const [isAddMode, setIsAddMode] = useState(false);

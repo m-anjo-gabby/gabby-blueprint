@@ -12,13 +12,13 @@ import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import { HomeworkComposer } from './HomeworkComposer';
 import { LessonSprintHistoryRow } from '../../../../_components/LessonSprintHistoryRow';
 
-interface Props {
+interface SessionResultProps {
   studentId: string;
   session: SessionResultSummary;
   homework: SessionHomeworkEntry | null;
 }
 
-export function SessionResult({ studentId, session, homework }: Props) {
+export function SessionResult({ studentId, session, homework }: SessionResultProps) {
   const timezone = useTimezone();
   const badge = getSessionStatusBadge(session);
 

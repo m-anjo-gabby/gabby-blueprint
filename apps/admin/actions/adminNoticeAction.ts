@@ -410,7 +410,7 @@ export async function getNoticeReadStatus(
 /**
  * お知らせの新規作成
  */
-export async function createNotice(formData: NoticeFormData) {
+export async function createNotice(formData: NoticeFormData): Promise<ActionResult<{ noticeId: string }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -470,7 +470,7 @@ export async function createNotice(formData: NoticeFormData) {
 /**
  * お知らせの更新
  */
-export async function updateNotice(noticeId: string, formData: NoticeFormData) {
+export async function updateNotice(noticeId: string, formData: NoticeFormData): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -531,7 +531,7 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData) {
 /**
  * お知らせの削除（既読の記録も一緒に消える）。削除の後に画像・添付のファイルを消す
  */
-export async function deleteNotice(noticeId: string) {
+export async function deleteNotice(noticeId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

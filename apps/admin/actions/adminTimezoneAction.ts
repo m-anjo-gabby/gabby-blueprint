@@ -9,13 +9,14 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
 /**
  * タイムゾーン一覧取得
  */
-export async function getTimezones() {
+export async function getTimezones(): Promise<TimezoneMaster[]> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -40,7 +41,9 @@ export async function getTimezones() {
  * timezone（IANAタイムゾーン名）を主キーとしてupsertする。
  * IANA形式として不正な値はDB側のトリガー（validate_iana_timezone）で拒否される。
  */
-export async function upsertTimezone(payload: TableInsert<'com_m_timezone'>) {
+export async function upsertTimezone(
+  payload: TableInsert<'com_m_timezone'>,
+): Promise<ActionResult<{ data: TimezoneMaster }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -85,7 +88,7 @@ export async function upsertTimezone(payload: TableInsert<'com_m_timezone'>) {
  * タイムゾーンの削除（誤登録の取り消し）。ユーザー等が使っているタイムゾーンは外部キー（RESTRICT）で止まり、
  * 使用停止（is_active = false）にするよう案内する
  */
-export async function deleteTimezone(timezone: string) {
+export async function deleteTimezone(timezone: string): Promise<ActionResult<object, 'in_use'>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

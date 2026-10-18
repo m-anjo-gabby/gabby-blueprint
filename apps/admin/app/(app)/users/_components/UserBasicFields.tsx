@@ -21,7 +21,7 @@ export function filterRolesByUserType(roles: RoleDefinition[], userType: string)
   return roles.filter((role) => role.target_user_type === userType || role.target_user_type === null);
 }
 
-interface Props {
+interface UserBasicFieldsProps {
   clients: ClientOption[];
   roles: RoleDefinition[];
   /** 顧客の選択肢を取得中（新規登録ダイアログは開いた時に取得する） */
@@ -45,7 +45,7 @@ export function UserBasicFields({
   readOnly = false,
   disabled = false,
   emailLocked = false,
-}: Props) {
+}: UserBasicFieldsProps) {
   const t = useTranslations('users.form');
   const tCommon = useTranslations('common');
   const form = useFormContext<UserBaseValues>();

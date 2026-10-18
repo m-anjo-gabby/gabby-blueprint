@@ -32,7 +32,7 @@ function addMinutesToTime(time: string, minutes: number): string {
   return `${hh}:${mm}`;
 }
 
-interface Props {
+interface MatchCoachDialogProps {
   open: boolean;
   initialSlotNo: number;
   ticketId: string;
@@ -45,7 +45,14 @@ interface Props {
  * コーチとの直接マッチング（アドミン代理操作）。生徒のリクエスト・コーチの承認を経ずに、
  * その場でマッチングを成立させ、セッションも自動で予約する（24時間ルールの対象外）。
  */
-export function MatchCoachDialog({ open, initialSlotNo, ticketId, coaches, onClose, onMatched }: Props) {
+export function MatchCoachDialog({
+  open,
+  initialSlotNo,
+  ticketId,
+  coaches,
+  onClose,
+  onMatched,
+}: MatchCoachDialogProps) {
   const t = useTranslations('liveSessions.matchDialog');
   const tDay = useTranslations('liveSessions.day');
   const { showToast } = useToast();

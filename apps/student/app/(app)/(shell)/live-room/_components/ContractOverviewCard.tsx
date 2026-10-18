@@ -80,7 +80,7 @@ function SlotRow({
   );
 }
 
-interface Props {
+interface ContractOverviewCardProps {
   contract: LiveSessionContractSummary;
   overview: LiveSessionOverview;
   timezone: string;
@@ -89,7 +89,7 @@ interface Props {
 }
 
 /** 契約の状況（プラン名・期間・週の回数、回数の内訳バーと、コマごとの担当コーチ・曜日時刻） */
-export function ContractOverviewCard({ contract, overview, timezone, adjustingCount }: Props) {
+export function ContractOverviewCard({ contract, overview, timezone, adjustingCount }: ContractOverviewCardProps) {
   return (
     <div>
       <ShellSectionTitle>{contract.is_current ? '契約の状況' : '契約の実績'}</ShellSectionTitle>

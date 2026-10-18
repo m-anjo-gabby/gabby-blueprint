@@ -7,13 +7,13 @@ import { DialogueEditor } from './_components/editors/DialogueEditor';
 import { EditorHeader } from './_components/EditorHeader';
 import { type SprintQuestionType } from '@gabby/types/sprint';
 
-interface Props {
+interface ContentDetailPageProps {
   // Next.js 15 では params と searchParams は Promise になります
   params: Promise<{ id: string }>;
   searchParams: Promise<{ wordId?: string; type?: string }>;
 }
 
-export default async function ContentDetailPage({ params, searchParams }: Props) {
+export default async function ContentDetailPage({ params, searchParams }: ContentDetailPageProps) {
   // params と searchParams を await して取り出す
   const { id: contentId } = await params;
   const { wordId, type } = await searchParams;

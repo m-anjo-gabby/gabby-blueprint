@@ -11,13 +11,13 @@ import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
 import type { DialogueAssignmentSummary, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
 import { DialogueSessionRow } from './DialogueSessionRow';
 
-interface Props {
+interface DialogueAssignmentCardProps {
   assignment: DialogueAssignmentSummary;
   onUnassign: () => Promise<void>;
   onProgressChange: (input: UpdateDialogueSessionProgressInput) => Promise<void>;
 }
 
-export function DialogueAssignmentCard({ assignment, onUnassign, onProgressChange }: Props) {
+export function DialogueAssignmentCard({ assignment, onUnassign, onProgressChange }: DialogueAssignmentCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isUnassigning, setIsUnassigning] = useState(false);
   const { showConfirm } = useConfirm();

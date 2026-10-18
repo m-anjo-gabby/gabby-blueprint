@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 /** 基本情報タブの並び（左: 基本情報 / 右: ライセンス・アカウント）。骨組みと共有する */
 export const BASIC_TAB_GRID = 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]';
 
-interface Props {
+interface DetailSectionProps {
   title: ReactNode;
   description?: ReactNode;
   /** 見出しの右に置く操作 */
@@ -15,7 +15,7 @@ interface Props {
 }
 
 /** ユーザー詳細の各タブで使う区画（白いカード＋見出し） */
-export function DetailSection({ title, description, action, className, children }: Props) {
+export function DetailSection({ title, description, action, className, children }: DetailSectionProps) {
   return (
     <section className={cn('rounded-lg border border-slate-200 bg-white p-5 shadow-sm', className)}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">

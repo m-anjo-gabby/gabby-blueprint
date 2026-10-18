@@ -5,14 +5,14 @@ import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 
-interface Props {
+interface ModuleSummaryGridProps {
   // ModuleCard は next-intl/server の getTranslations を使う Server Component のため、
   // Client Component であるここでは import・直接レンダリングせず、親（page.tsx）で
   // 描画済みのノードを children として受け取る（Server/Client 境界の合成パターン）
   cards: { key: string; node: ReactNode }[];
 }
 
-export function ModuleSummaryGrid({ cards }: Props) {
+export function ModuleSummaryGrid({ cards }: ModuleSummaryGridProps) {
   const t = useTranslations('dashboard');
 
   if (cards.length === 0) {

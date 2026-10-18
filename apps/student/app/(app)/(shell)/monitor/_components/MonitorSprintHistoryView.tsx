@@ -107,7 +107,7 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
     navigate(patch);
   };
 
-  const handleExportCSV = () => {
+  const handleExportCsv = () => {
     const rows = sortedDates.flatMap((date) =>
       (groups.get(date) ?? []).map((item) => [
         toDayLabel(date),
@@ -142,7 +142,7 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
         selectedUserIds={userIds}
         onApply={applyFilters}
         isPending={isPending}
-        onExport={handleExportCSV}
+        onExport={handleExportCsv}
         exportDisabled={totalItems === 0}
       />
 

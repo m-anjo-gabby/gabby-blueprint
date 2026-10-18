@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 
-interface Props {
+interface WordHighlightAnswerProps {
   words: string[];
   highlighted: number[];
   onToggle: (index: number) => void;
@@ -12,7 +12,7 @@ interface Props {
  * 解答文を単語単位でクリック可能にし、クリックした単語をハイライト表示する。
  * 生徒の発音・脱落フィードバック用にコーチが記録するためのUI。
  */
-export function WordHighlightAnswer({ words, highlighted, onToggle }: Props) {
+export function WordHighlightAnswer({ words, highlighted, onToggle }: WordHighlightAnswerProps) {
   return (
     <div className="flex flex-wrap gap-x-1 gap-y-1.5 justify-center">
       {words.map((word, idx) => {

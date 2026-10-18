@@ -11,7 +11,7 @@ import { CorrectOutcomeDialog } from '../../_components/dialogs/CorrectOutcomeDi
 import { SESSION_RECORD_LIST_FILTERS, SESSION_RECORD_RESULT_VALUES, SESSION_RECORD_VIA_VALUES } from '../_lib/list';
 import { createColumns } from './columns';
 
-interface Props {
+interface SessionRecordDataTableProps {
   data: AdminSessionRecord[];
   totalCount: number;
   pageCount: number;
@@ -20,7 +20,7 @@ interface Props {
   months: string[];
 }
 
-export function SessionRecordDataTable({ data, totalCount, pageCount, coaches, months }: Props) {
+export function SessionRecordDataTable({ data, totalCount, pageCount, coaches, months }: SessionRecordDataTableProps) {
   const t = useTranslations('liveSessions.records');
   const tStatus = useTranslations('liveSessions.status');
   const query = useListQuery(SESSION_RECORD_LIST_FILTERS);

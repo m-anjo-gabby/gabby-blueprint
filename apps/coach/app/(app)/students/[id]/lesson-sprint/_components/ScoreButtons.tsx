@@ -3,14 +3,14 @@
 import { cn } from '@/lib/utils';
 import { LESSON_SPRINT_SCORE_META, DEFAULT_LESSON_SPRINT_SCORE } from '@gabby/types/lessonSprint';
 
-interface Props {
+interface ScoreButtonsProps {
   onScore: (score: number) => void;
   disabled?: boolean;
 }
 
 const SCORES = [1, 2, 3, 4, 5];
 
-export function ScoreButtons({ onScore, disabled }: Props) {
+export function ScoreButtons({ onScore, disabled }: ScoreButtonsProps) {
   return (
     <div className="grid grid-cols-5 gap-2 w-full max-w-lg mx-auto">
       {SCORES.map((score) => {

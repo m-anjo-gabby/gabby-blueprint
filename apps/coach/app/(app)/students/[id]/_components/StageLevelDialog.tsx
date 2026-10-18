@@ -16,7 +16,7 @@ import { formatAcquiredSprintLevelLabel } from '@gabby/lib/sprint/utils';
 import { SPRINT_LEVEL_NOT_REACHED } from './sprintLevelLabels';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 
-interface Props {
+interface StageLevelDialogProps {
   studentId: string;
   progress: StudentSprintProgress;
   open: boolean;
@@ -40,7 +40,7 @@ function levelLabel(questionType: SprintQuestionType, level: number): string {
   return formatAcquiredSprintLevelLabel(questionType, level, SPRINT_LEVEL_NOT_REACHED);
 }
 
-export function StageLevelDialog({ studentId, progress, open, onOpenChange, onUpdated }: Props) {
+export function StageLevelDialog({ studentId, progress, open, onOpenChange, onUpdated }: StageLevelDialogProps) {
   const { showToast } = useToast();
   const levels = toStageLevels(progress);
   const [levelSelections, setLevelSelections] = useState<Partial<Record<SprintQuestionType, number>>>({});

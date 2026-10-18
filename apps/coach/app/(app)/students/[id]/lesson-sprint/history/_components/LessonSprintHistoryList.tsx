@@ -10,7 +10,7 @@ import { LessonSprintHistoryRow } from '../../../_components/LessonSprintHistory
 const HISTORY_PAGE_SIZE = 20;
 const HISTORY_BACK_LABEL = 'Back to History';
 
-interface Props {
+interface LessonSprintHistoryListProps {
   studentId: string;
   initialItems: LessonSprintHistoryListItem[];
   initialCursor: string | null;
@@ -32,7 +32,7 @@ function summarizeMonth(items: LessonSprintHistoryListItem[], monthLabel: string
   return { count: monthItems.length, avgScore };
 }
 
-export function LessonSprintHistoryList({ studentId, initialItems, initialCursor }: Props) {
+export function LessonSprintHistoryList({ studentId, initialItems, initialCursor }: LessonSprintHistoryListProps) {
   const timezone = useTimezone();
 
   return (

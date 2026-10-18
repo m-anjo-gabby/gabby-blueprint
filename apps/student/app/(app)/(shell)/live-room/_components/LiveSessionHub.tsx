@@ -68,7 +68,7 @@ function ActionNotice({
   );
 }
 
-interface Props {
+interface LiveSessionHubProps {
   contracts: LiveSessionContractSummary[];
   selectedContract: LiveSessionContractSummary;
   overview: LiveSessionOverview | null;
@@ -105,7 +105,7 @@ export function LiveSessionHub({
   proposedGroups,
   bookingRequests,
   pendingRatings,
-}: Props) {
+}: LiveSessionHubProps) {
   const timezone = useTimezone();
   const router = useRouter();
   const { showToast } = useToast();

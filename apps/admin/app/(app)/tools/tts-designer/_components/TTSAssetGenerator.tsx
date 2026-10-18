@@ -26,7 +26,7 @@ import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlay
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { AZURE_GENERAL_VOICES, AZURE_STYLES } from '@gabby/types/azure';
 import { saveTTSAsset } from '@/actions/adminTTSAction';
-import { buildSSML } from '@gabby/lib/azure/ssml';
+import { buildSsml } from '@gabby/lib/azure/ssml';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_PARAMS: TTSParameters = {
@@ -47,7 +47,7 @@ export function TTSAssetGenerator() {
   const [showModeAlert, setShowModeAlert] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const { speak, generateSSML, isSpeaking, error, setError } = usePlayAzureSpeech();
+  const { speak, generateSsml, isSpeaking, error, setError } = usePlayAzureSpeech();
   const { showToast } = useToast();
 
   // --- リセット処理 ---
@@ -82,7 +82,7 @@ export function TTSAssetGenerator() {
     setAdjustments(words);
 
     if (phraseEn.trim()) {
-      const initialSsml = generateSSML(phraseEn, params);
+      const initialSsml = generateSsml(phraseEn, params);
       setSsml(initialSsml);
       setError(null);
     } else {
@@ -90,12 +90,12 @@ export function TTSAssetGenerator() {
     }
     // 原文が変わった時だけ作り直す（声・速さの変更は下の effect が SSML に反映する。ここで作り直すと単語ごとの調整が消える）
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phraseEn, generateSSML]);
+  }, [phraseEn, generateSsml]);
 
-  const rebuildSSML = useCallback(
+  const rebuildSsml = useCallback(
     (currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
       if (!phraseEn) return '';
-      return buildSSML(phraseEn, {
+      return buildSsml(phraseEn, {
         settings: currentParams,
         words: currentAdjs,
       });
@@ -105,9 +105,9 @@ export function TTSAssetGenerator() {
 
   useEffect(() => {
     if (ssmlMode === 'auto' && phraseEn) {
-      setSsml(rebuildSSML(params, adjustments));
+      setSsml(rebuildSsml(params, adjustments));
     }
-  }, [params, adjustments, ssmlMode, phraseEn, rebuildSSML]);
+  }, [params, adjustments, ssmlMode, phraseEn, rebuildSsml]);
 
   const updateAdjustment = (id: string, updates: Partial<WordAdjustment>) => {
     if (ssmlMode === 'manual') return;
@@ -125,7 +125,7 @@ export function TTSAssetGenerator() {
 
   const confirmReturnToAuto = () => {
     setSsmlMode('auto');
-    setSsml(rebuildSSML(params, adjustments));
+    setSsml(rebuildSsml(params, adjustments));
     setShowModeAlert(false);
   };
 

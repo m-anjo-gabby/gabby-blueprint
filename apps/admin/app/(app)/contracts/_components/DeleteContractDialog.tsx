@@ -21,7 +21,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { deleteContract, purgeContractWithHistory } from '@/actions/adminContractAction';
 import { type ContractDetail } from '@gabby/types/contract';
 
-interface Props {
+interface DeleteContractDialogProps {
   contract: ContractDetail;
 }
 
@@ -36,7 +36,7 @@ type Stage = 'confirm' | 'blocked_by_history' | 'confirm_purge';
  * 「履歴含めて完全に削除する」エスカレーションを提示する。誤操作防止のため、
  * 対象の契約名を入力させてから実行させる。
  */
-export function DeleteContractDialog({ contract }: Props) {
+export function DeleteContractDialog({ contract }: DeleteContractDialogProps) {
   const t = useTranslations('contracts.deleteDialog');
   const [open, setOpen] = useState(false);
   const [stage, setStage] = useState<Stage>('confirm');

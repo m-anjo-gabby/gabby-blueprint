@@ -23,7 +23,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { type LicenseUserItem, type ContractDetail } from '@gabby/types/contract';
 import { startOfDay } from 'date-fns';
 
-interface Props {
+interface ContractLicenseDialogProps {
   contract: ContractDetail;
   children: React.ReactNode;
 }
@@ -32,7 +32,7 @@ interface Props {
  * ライセンス割当管理ダイアログ
  * 特定の契約に対して、ユーザーの割当（追加）および解除（削除）を行う
  */
-export function ContractLicenseDialog({ contract, children }: Props) {
+export function ContractLicenseDialog({ contract, children }: ContractLicenseDialogProps) {
   const t = useTranslations('contracts.licenseDialog');
   const tCommon = useTranslations('common');
   // --- 状態管理 ---

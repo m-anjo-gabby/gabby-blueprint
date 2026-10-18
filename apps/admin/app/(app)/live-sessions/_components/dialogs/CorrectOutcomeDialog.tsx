@@ -79,7 +79,7 @@ export function useOutcomeFieldLabels(): SessionOutcomeFieldsLabels {
   };
 }
 
-interface Props {
+interface CorrectOutcomeDialogProps {
   target: AdminOutcomeTarget | null;
   onClose: () => void;
   onCorrected: () => Promise<void> | void;
@@ -92,7 +92,7 @@ interface Props {
  * ライブセッション管理（生徒・契約単位）と実施記録の一覧の両方から開く。
  * 中身（CorrectOutcomeForm）は開いている間だけ描かれ、開くたびに推定・履歴を取り直す。
  */
-export function CorrectOutcomeDialog({ target, onClose, onCorrected }: Props) {
+export function CorrectOutcomeDialog({ target, onClose, onCorrected }: CorrectOutcomeDialogProps) {
   const t = useTranslations('liveSessions.outcomeDialog');
   const locale = useLocale();
   const isUnrecorded = target?.status === SESSION_STATUS.SCHEDULED;
@@ -117,7 +117,11 @@ export function CorrectOutcomeDialog({ target, onClose, onCorrected }: Props) {
   );
 }
 
-function CorrectOutcomeForm({ target, onClose, onCorrected }: Props & { target: AdminOutcomeTarget }) {
+function CorrectOutcomeForm({
+  target,
+  onClose,
+  onCorrected,
+}: CorrectOutcomeDialogProps & { target: AdminOutcomeTarget }) {
   const t = useTranslations('liveSessions.outcomeDialog');
   const tOutcome = useTranslations('liveSessions.outcome');
   const locale = useLocale();

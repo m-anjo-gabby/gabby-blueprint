@@ -28,7 +28,7 @@ import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlay
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
 import { saveSprintAudio } from '@/actions/adminSprintAction';
-import { buildSSML } from '@gabby/lib/azure/ssml';
+import { buildSsml } from '@gabby/lib/azure/ssml';
 
 interface SprintTTSDialogProps {
   question: SprintQuestion;
@@ -144,9 +144,9 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
     }
   }, [open, getSectionData]);
 
-  const rebuildSSML = useCallback(
+  const rebuildSsml = useCallback(
     (currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
-      return buildSSML(currentData.text, {
+      return buildSsml(currentData.text, {
         settings: currentParams,
         words: currentAdjs,
       });
@@ -156,9 +156,9 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
 
   useEffect(() => {
     if (ssmlMode === 'auto' && open) {
-      setSsml(rebuildSSML(params, adjustments));
+      setSsml(rebuildSsml(params, adjustments));
     }
-  }, [params, adjustments, ssmlMode, rebuildSSML, open]);
+  }, [params, adjustments, ssmlMode, rebuildSsml, open]);
 
   const updateAdjustment = (id: string, updates: Partial<WordAdjustment>) => {
     if (ssmlMode === 'manual') return;

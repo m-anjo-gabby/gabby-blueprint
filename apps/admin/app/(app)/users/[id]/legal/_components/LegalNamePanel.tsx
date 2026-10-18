@@ -55,7 +55,7 @@ function toLegalName(v: Partial<LegalNameFormValues>): LegalName | null {
   };
 }
 
-interface Props {
+interface LegalNamePanelProps {
   userId: string;
   legalName: LegalName | null;
 }
@@ -65,7 +65,7 @@ interface Props {
  * 入力欄は日本語の順（姓 → 名）に並べ、書面での並べ方（日本語・英語）を下に表示して確認できるようにする。
  * すべて空欄で保存すると未登録に戻る（書面には画面の名前が載る）。
  */
-export function LegalNamePanel({ userId, legalName }: Props) {
+export function LegalNamePanel({ userId, legalName }: LegalNamePanelProps) {
   const t = useTranslations('users.legal');
   const tCommon = useTranslations('common');
   const { showToast } = useToast();

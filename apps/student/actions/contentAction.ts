@@ -103,7 +103,11 @@ export async function toggleContentFavorite(contentId: string, isFavorite: boole
  * コンテンツの再開地点を保存する (栞を挟む)
  * metadata は ResumeMetadata (WordResumeMetadata | VideoResumeMetadata) を想定
  */
-export async function saveResumeContent<T extends ResumeMetadata>(contentId: string, itemId: string, metadata: T) {
+export async function saveResumeContent<T extends ResumeMetadata>(
+  contentId: string,
+  itemId: string,
+  metadata: T,
+): Promise<void> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -147,7 +151,7 @@ export async function saveResumeContent<T extends ResumeMetadata>(contentId: str
 /**
  * 再開地点を削除する (栞を抜く)
  */
-export async function clearResumeContent() {
+export async function clearResumeContent(): Promise<void> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();

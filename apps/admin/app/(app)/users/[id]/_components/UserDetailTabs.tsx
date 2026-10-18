@@ -7,13 +7,13 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUserDetailPath, getUserDetailTabFromPath, type UserDetailTab } from '../_lib/tabs';
 
-interface Props {
+interface UserDetailTabsProps {
   userId: string;
   tabs: UserDetailTab[];
 }
 
 /** ユーザー詳細のタブ（各タブは子ルート。URL で直接開ける） */
-export function UserDetailTabs({ userId, tabs }: Props) {
+export function UserDetailTabs({ userId, tabs }: UserDetailTabsProps) {
   const t = useTranslations('users.detail.tabs');
   const active = getUserDetailTabFromPath(usePathname());
 

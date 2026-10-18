@@ -11,7 +11,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import type { LessonSprintRecord, LessonSprintContentSummary } from '@gabby/types/lessonSprint';
 import type { SprintQuestionType, SprintAnswerType } from '@gabby/types/sprint';
 
-interface Props {
+interface RepeatSprintButtonProps {
   studentId: string;
   record: LessonSprintRecord;
   content: LessonSprintContentSummary | undefined;
@@ -19,7 +19,7 @@ interface Props {
   sessionId: string | null;
 }
 
-export function RepeatSprintButton({ studentId, record, content, sessionId }: Props) {
+export function RepeatSprintButton({ studentId, record, content, sessionId }: RepeatSprintButtonProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const { setConfig, setContentName, setContentMetadata, startSession } = useLessonSprintStore();

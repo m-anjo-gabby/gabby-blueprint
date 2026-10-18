@@ -38,7 +38,7 @@ import { type TTSAdjustmentData, type WordAdjustment } from '@gabby/types/word';
 import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
-import { buildSSML } from '@gabby/lib/azure/ssml';
+import { buildSsml } from '@gabby/lib/azure/ssml';
 import { saveCVDictionaryAudio, type CVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
 import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
 
@@ -72,7 +72,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
   const [showSaveAlert, setShowSaveAlert] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const { speak, generateSSML, isSpeaking, error, setError } = usePlayAzureSpeech();
+  const { speak, generateSsml, isSpeaking, error, setError } = usePlayAzureSpeech();
   const { showToast } = useToast();
   const triggerRefresh = useCVDictionaryStore((s) => s.triggerRefresh);
 
@@ -99,14 +99,14 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
   // 初期状態でのプレーン再生
   const playOriginal = () => {
     if (isSpeaking || !readText) return;
-    const originalSsml = generateSSML(readText, DEFAULT_PARAMS);
+    const originalSsml = generateSsml(readText, DEFAULT_PARAMS);
     speak(originalSsml);
   };
 
   // SSML再構築ロジック
-  const rebuildSSML = useCallback(
+  const rebuildSsml = useCallback(
     (currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
-      return buildSSML(readText, {
+      return buildSsml(readText, {
         settings: currentParams,
         words: currentAdjs,
       });
@@ -117,10 +117,10 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
   // Autoモード時のみ、設定変更をSSMLに反映
   useEffect(() => {
     if (ssmlMode === 'auto') {
-      const newSsml = rebuildSSML(params, adjustments);
+      const newSsml = rebuildSsml(params, adjustments);
       setSsml(newSsml);
     }
-  }, [params, adjustments, ssmlMode, rebuildSSML]);
+  }, [params, adjustments, ssmlMode, rebuildSsml]);
 
   const updateAdjustment = (id: string, updates: Partial<WordAdjustment>) => {
     if (ssmlMode === 'manual') return;
@@ -141,7 +141,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
   // 手動編集を破棄してAutoに戻す
   const confirmReturnToAuto = () => {
     setSsmlMode('auto');
-    const resetSsml = rebuildSSML(params, adjustments);
+    const resetSsml = rebuildSsml(params, adjustments);
     setSsml(resetSsml);
     setShowModeAlert(false);
     showToast('Switched to auto mode. Settings synced.', 'success');

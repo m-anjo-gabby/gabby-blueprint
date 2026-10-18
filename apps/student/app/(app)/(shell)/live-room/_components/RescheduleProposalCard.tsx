@@ -12,7 +12,7 @@ import { formatSessionSlot, formatTimeUntil } from '@/lib/sessionFormat';
 import { acceptRescheduleProposal, declineRescheduleProposals } from '@/actions/sessionAction';
 import { type MyRescheduleProposalGroup } from '@gabby/types/session';
 
-interface Props {
+interface RescheduleProposalCardProps {
   group: MyRescheduleProposalGroup;
   timezone: string;
   onAccepted: () => void;
@@ -24,7 +24,7 @@ interface Props {
  * コーチ都合のキャンセルで届いた振替候補。何が起きたか（元の予定）・回答期限・候補を1枚にまとめ、
  * 候補を選んでその場で確定できるようにする。候補が合わない場合は見送って自分でリクエストする導線を出す。
  */
-export function RescheduleProposalCard({ group, timezone, onAccepted, onDeclined }: Props) {
+export function RescheduleProposalCard({ group, timezone, onAccepted, onDeclined }: RescheduleProposalCardProps) {
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
   const nowMs = useNow();

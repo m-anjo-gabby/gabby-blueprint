@@ -77,11 +77,11 @@ function canCorrectOutcome(session: AdminSessionListItem, now: Date): boolean {
   return session.cancel_category === CANCEL_CATEGORY.TECHNICAL || session.cancel_category === CANCEL_CATEGORY.COACH;
 }
 
-interface Props {
+interface LiveSessionManagementViewProps {
   clients: ClientOption[];
 }
 
-export function LiveSessionManagementView({ clients }: Props) {
+export function LiveSessionManagementView({ clients }: LiveSessionManagementViewProps) {
   const t = useTranslations('liveSessions.view');
   const tDay = useTranslations('liveSessions.day');
   const tStatus = useTranslations('liveSessions.status');

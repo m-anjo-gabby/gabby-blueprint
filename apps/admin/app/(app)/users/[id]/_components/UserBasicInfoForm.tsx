@@ -15,7 +15,7 @@ import type { ClientOption } from '@gabby/types/client';
 import { UserBasicFields } from '../../_components/UserBasicFields';
 import { createUserBaseSchema, isRegisteredUser, toUserBaseValues, type UserBaseValues } from '../../_lib/userSchema';
 
-interface Props {
+interface UserBasicInfoFormProps {
   user: UserRecord;
   clients: ClientOption[];
   roles: RoleDefinition[];
@@ -25,7 +25,7 @@ interface Props {
  * 基本情報の編集（詳細画面の基本情報タブ）。入力欄は新規登録ダイアログと共通（UserBasicFields）。
  * 種別・所属顧客の変更は影響が大きいため、その場合だけ確認を挟む。招待中のユーザーは編集できず、招待メールの再送だけを行う。
  */
-export function UserBasicInfoForm({ user, clients, roles }: Props) {
+export function UserBasicInfoForm({ user, clients, roles }: UserBasicInfoFormProps) {
   const t = useTranslations('users.form');
   const tDetail = useTranslations('users.detail.basic');
   const tCommon = useTranslations('common');

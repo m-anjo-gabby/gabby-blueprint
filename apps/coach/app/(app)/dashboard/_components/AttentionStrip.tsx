@@ -8,7 +8,7 @@ import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
 
-interface Props {
+interface AttentionStripProps {
   pendingRequestCount: number;
 }
 
@@ -76,7 +76,7 @@ export function AttentionStripSkeleton() {
   return <AttentionTiles tiles={buildTiles({ requests: null, chat: null, updates: null })} />;
 }
 
-export function AttentionStrip({ pendingRequestCount }: Props) {
+export function AttentionStrip({ pendingRequestCount }: AttentionStripProps) {
   const totalUnreadChat = useChatStore((state) => state.totalUnreadCount);
   const fetchChatRooms = useChatStore((state) => state.fetchRooms);
   const noticeUnread = useNoticeStore((state) => state.unreadCount);

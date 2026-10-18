@@ -17,7 +17,7 @@ import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
 
-interface Props {
+interface StudentSnapshotPanelProps {
   profile: StudentOverviewProfile;
   lessonSprints: LessonSprintHistoryListItem[];
   highlightedType: SprintQuestionType;
@@ -25,7 +25,7 @@ interface Props {
 
 const TYPE_ORDER = Object.values(QUESTION_TYPES).sort((a, b) => a.seq_no - b.seq_no);
 
-export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }: Props) {
+export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }: StudentSnapshotPanelProps) {
   const timezone = useTimezone();
   const { sprint_progress } = profile;
   const recentSprints = lessonSprints.slice(0, 3);

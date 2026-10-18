@@ -10,6 +10,8 @@ import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import type { TTSAdjustmentData, TTSAssetAdjustments } from '@gabby/types/word';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
+import type { TableRow } from '@gabby/types/db';
 
 const logger = createLogger('admin');
 
@@ -24,7 +26,7 @@ export async function savePhrase(
   mode: 'auto' | 'manual',
   adjustmentData: TTSAdjustmentData,
   currentAudioPath?: string | null, // フロントから現在のパスを受け取る
-) {
+): Promise<ActionResult<{ message: string; path: string }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -124,7 +126,7 @@ export async function saveTTSAsset(payload: {
   ssml: string;
   mode: 'auto' | 'manual';
   adjustments: TTSAssetAdjustments;
-}) {
+}): Promise<ActionResult<{ message: string; data: TableRow<'com_t_tts_asset'> }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -248,7 +250,7 @@ export async function getTTSAssets(params: ListParams): Promise<ListResult<TTSAs
  * 汎用音声ファイル削除
  * DBレコードの削除 + Storage上の物理ファイル削除（削除するファイルは画面から受け取らず、削除したレコードのパスを使う）
  */
-export async function deleteTTSAsset(assetId: string) {
+export async function deleteTTSAsset(assetId: string): Promise<ActionResult<{ message: string }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

@@ -10,12 +10,12 @@ import { getContentAccessData, assignAccess, removeAccess } from '@/actions/admi
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { type Content, type ContentAccessSummary } from '@gabby/types/content';
 
-interface Props {
+interface ContentAccessDialogProps {
   content: Content;
   children: React.ReactNode;
 }
 
-export function ContentAccessDialog({ content, children }: Props) {
+export function ContentAccessDialog({ content, children }: ContentAccessDialogProps) {
   const t = useTranslations('contents.accessDialog');
   const [open, setOpen] = useState(false);
   const [isAddMode, setIsAddMode] = useState(false);

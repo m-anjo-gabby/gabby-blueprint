@@ -22,6 +22,8 @@ import { toIsoMonthInZone } from '@gabby/lib/date/date';
 import { getMyTimezone } from '@/lib/userTimezone';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
+import type { TableRow } from '@gabby/types/db';
+import type { QueryData } from '@supabase/supabase-js';
 
 const logger = createLogger('student');
 const SPRINT_LIMIT_COUNT = 10;
@@ -390,11 +392,78 @@ export async function getSprintResult(self_sprint_id: string): Promise<SprintRes
   }
 }
 
+type ServerClient = Awaited<ReturnType<typeof createServerClient>>;
+
+/** 月のスプリントのセッションの問い合わせ（生徒のタイムゾーンの月を覆うよう、前後1日広げた範囲で取る） */
+function selectSprintSessions(supabase: ServerClient, userId: string, startDate: string, endDate: string) {
+  return supabase
+    .from('self_t_sprint')
+    .select(
+      `
+        self_sprint_id,
+        sprint_type,
+        content_id,
+        question_type,
+        answer_type,
+        difficulty_level,
+        time_limit_sec,
+        total_answered,
+        insert_date,
+        com_m_contents (
+          content_name,
+          metadata
+        )
+      `,
+    )
+    .eq('user_id', userId)
+    .gte('insert_date', startDate)
+    .lte('insert_date', endDate)
+    .order('insert_date', { ascending: false });
+}
+
+/** 月のドリルの日ごとのまとめの問い合わせ */
+function selectSprintDrillSummaries(supabase: ServerClient, userId: string, startDay: string, endDay: string) {
+  return supabase
+    .from('self_t_sprint_summary')
+    .select(
+      `
+        summary_id,
+        user_id,
+        content_id,
+        training_date,
+        question_count,
+        assessment_count,
+        speed_count,
+        structure_count,
+        builders_count,
+        mastery_count,
+        com_m_contents (
+          content_name
+        )
+      `,
+    )
+    .eq('user_id', userId)
+    .gte('training_date', startDay)
+    .lte('training_date', endDay)
+    .order('training_date', { ascending: false });
+}
+
+export type SprintHistorySession = QueryData<ReturnType<typeof selectSprintSessions>>[number];
+export type SprintHistoryDrill = QueryData<ReturnType<typeof selectSprintDrillSummaries>>[number];
+
+/** 月のスプリントの履歴（getUserSprintHistory） */
+export interface SprintMonthHistory {
+  sessions: SprintHistorySession[];
+  drills: SprintHistoryDrill[];
+}
+
 /**
  * ユーザーの特定月のスプリント履歴一覧を取得する
  * @param yearMonth 'YYYY-MM' 形式の文字列
  */
-export async function getUserSprintHistory(yearMonth: string) {
+export async function getUserSprintHistory(
+  yearMonth: string,
+): Promise<CoreResult<{ data: SprintMonthHistory }, BasicErrorCode>> {
   const ctx = await getLogContext();
 
   try {
@@ -410,29 +479,12 @@ export async function getUserSprintHistory(yearMonth: string) {
     const endDate = new Date(Date.UTC(year, month, 1, 23, 59, 59, 999)).toISOString();
 
     // 1. スプリントセッション履歴の取得
-    const { data: sessionsData, error: sessionsError } = await supabase
-      .from('self_t_sprint')
-      .select(
-        `
-        self_sprint_id,
-        sprint_type,
-        content_id,
-        question_type,
-        answer_type,
-        difficulty_level,
-        time_limit_sec,
-        total_answered,
-        insert_date,
-        com_m_contents (
-          content_name,
-          metadata
-        )
-      `,
-      )
-      .eq('user_id', user.id)
-      .gte('insert_date', startDate)
-      .lte('insert_date', endDate)
-      .order('insert_date', { ascending: false });
+    const { data: sessionsData, error: sessionsError } = await selectSprintSessions(
+      supabase,
+      user.id,
+      startDate,
+      endDate,
+    );
 
     if (sessionsError) throw sessionsError;
     const sessionsInMonth = (sessionsData ?? []).filter((s) => toIsoMonthInZone(s.insert_date, timezone) === yearMonth);
@@ -442,29 +494,12 @@ export async function getUserSprintHistory(yearMonth: string) {
     const lastDay = new Date(year, month, 0).getDate();
     const endDayStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-    const { data: drillsData, error: drillsError } = await supabase
-      .from('self_t_sprint_summary')
-      .select(
-        `
-        summary_id,
-        user_id,
-        content_id,
-        training_date,
-        question_count,
-        assessment_count,
-        speed_count,
-        structure_count,
-        builders_count,
-        mastery_count,
-        com_m_contents (
-          content_name
-        )
-      `,
-      )
-      .eq('user_id', user.id)
-      .gte('training_date', startDayStr)
-      .lte('training_date', endDayStr)
-      .order('training_date', { ascending: false });
+    const { data: drillsData, error: drillsError } = await selectSprintDrillSummaries(
+      supabase,
+      user.id,
+      startDayStr,
+      endDayStr,
+    );
 
     if (drillsError) throw drillsError;
 
@@ -489,11 +524,19 @@ export async function getUserSprintHistory(yearMonth: string) {
   }
 }
 
+/** 最後のスプリントの設定（getLastSprintSession） */
+export type LastSprintSession = Pick<
+  TableRow<'self_t_sprint'>,
+  'sprint_type' | 'content_id' | 'question_type' | 'difficulty_level' | 'time_limit_sec'
+>;
+
 /**
  * ユーザーの最後のスプリントセッション設定（種別・レベル・制限時間）を取得する
  * 目的: セッション開始前の設定画面での初期値復元
  */
-export async function getLastSprintSession(contentId?: string) {
+export async function getLastSprintSession(
+  contentId?: string,
+): Promise<CoreResult<{ data: LastSprintSession | null }, BasicErrorCode>> {
   const ctx = await getLogContext();
 
   try {
@@ -528,7 +571,9 @@ export async function getLastSprintSession(contentId?: string) {
 /**
  * ユーザーのスプリント進捗状況（各種別の到達レベル）を取得する
  */
-export async function getSprintProgress() {
+export async function getSprintProgress(): Promise<
+  CoreResult<{ data: TableRow<'student_m_sprint_progress'> | null }, BasicErrorCode>
+> {
   const ctx = await getLogContext();
 
   try {
@@ -608,7 +653,11 @@ export async function reportSprintProgress(
 /**
  * 教材情報を取得するServer Action
  */
-export async function getContent(contentId: string) {
+export async function getContent(
+  contentId: string,
+): Promise<
+  CoreResult<{ data: TableRow<'com_m_contents'>; availableLevels: SprintAvailableLevels | null }, BasicErrorCode>
+> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();

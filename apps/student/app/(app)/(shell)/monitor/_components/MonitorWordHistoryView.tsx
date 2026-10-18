@@ -43,7 +43,7 @@ export function MonitorWordHistoryView({ initialData, users, query }: MonitorWor
     navigate(patch);
   };
 
-  const handleExportCSV = () => {
+  const handleExportCsv = () => {
     clientLogger.info('monitor:word_history_csv_exported', `Word history CSV exported: ${startDate}~${endDate}`, {
       payload: { startDate, endDate, targetUserIds: userIds, rowCount: initialData.length },
     });
@@ -76,7 +76,7 @@ export function MonitorWordHistoryView({ initialData, users, query }: MonitorWor
         selectedUserIds={userIds}
         onApply={applyFilters}
         isPending={isPending}
-        onExport={handleExportCSV}
+        onExport={handleExportCsv}
         exportDisabled={initialData.length === 0}
       />
 

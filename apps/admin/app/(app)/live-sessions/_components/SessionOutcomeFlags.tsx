@@ -6,7 +6,7 @@ import { CONDUCTED_VIA, type ConductedVia } from '@gabby/types/session';
 
 const FLAG_CLASS = 'inline-flex items-center rounded border px-1.5 py-px text-[10px] font-bold';
 
-interface Props {
+interface SessionOutcomeFlagsProps {
   conductedVia: ConductedVia | null;
   outcomeMismatch: boolean;
   /** アドミンが修正・確認済み（実施記録の一覧のみ） */
@@ -15,7 +15,12 @@ interface Props {
 }
 
 /** 実施結果の補足の印（外部のZoomで実施・推定と違う結果・アドミンが確認済み）。どれも無ければ何も描かない */
-export function SessionOutcomeFlags({ conductedVia, outcomeMismatch, isCorrected = false, className }: Props) {
+export function SessionOutcomeFlags({
+  conductedVia,
+  outcomeMismatch,
+  isCorrected = false,
+  className,
+}: SessionOutcomeFlagsProps) {
   const t = useTranslations('liveSessions.outcome');
   const isExternal = conductedVia === CONDUCTED_VIA.EXTERNAL_ZOOM;
   if (!isExternal && !outcomeMismatch && !isCorrected) return null;

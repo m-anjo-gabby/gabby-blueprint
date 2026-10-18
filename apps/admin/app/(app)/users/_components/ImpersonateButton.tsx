@@ -10,7 +10,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { startImpersonation } from '@/actions/adminImpersonationAction';
 import { type UserRecord, USER_TYPES } from '@gabby/types/user';
 
-interface Props {
+interface ImpersonateButtonProps {
   user: UserRecord;
   /** 狭い画面ではアイコンだけにする（一覧の操作列用） */
   compact?: boolean;
@@ -20,7 +20,7 @@ interface Props {
  * 障害対応・問合せ調査のため、対象ユーザーとして生徒／コーチポータルへ代理ログインするボタン。
  * 理由の入力を必須とし、実行内容は監査ログ(com_t_admin_impersonation_log)に記録される。
  */
-export function ImpersonateButton({ user, compact = false }: Props) {
+export function ImpersonateButton({ user, compact = false }: ImpersonateButtonProps) {
   const t = useTranslations('users.impersonate');
   const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);

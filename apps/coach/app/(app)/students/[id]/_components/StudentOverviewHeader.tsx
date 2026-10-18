@@ -10,7 +10,7 @@ import type {
 import { SprintProgressRadar } from './SprintProgressRadar';
 import { TodaysLessonPanel } from './TodaysLessonPanel';
 
-interface Props {
+interface StudentOverviewHeaderProps {
   profile: StudentOverviewProfile;
   /** The student's timezone as its master display name (e.g. "Japan (Tokyo)") */
   timezoneName: string;
@@ -62,7 +62,7 @@ function ContractSessionSummaryStats({ summary }: { summary: StudentContractSess
   );
 }
 
-export function StudentOverviewHeader({ profile, timezoneName, upcomingSession }: Props) {
+export function StudentOverviewHeader({ profile, timezoneName, upcomingSession }: StudentOverviewHeaderProps) {
   const { active_contract } = profile;
 
   return (

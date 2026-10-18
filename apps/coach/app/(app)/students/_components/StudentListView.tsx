@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { StudentCard } from './StudentCard';
 import type { AssignedStudentSummary } from '@gabby/types/coachStudent';
 
-interface Props {
+interface StudentListViewProps {
   students: AssignedStudentSummary[];
 }
 
@@ -22,7 +22,7 @@ function StudentGrid({ students }: { students: AssignedStudentSummary[] }) {
   );
 }
 
-export function StudentListView({ students }: Props) {
+export function StudentListView({ students }: StudentListViewProps) {
   const [showAllPast, setShowAllPast] = useState(false);
 
   if (students.length === 0) {

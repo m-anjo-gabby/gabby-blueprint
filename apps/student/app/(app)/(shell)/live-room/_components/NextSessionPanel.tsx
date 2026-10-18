@@ -7,7 +7,7 @@ import { type SessionListItem } from '@gabby/types/session';
 import { ShellSectionTitle } from '@/components/shell/ShellPage';
 import { PreviousSessionLink, type PreviousSessionSummary } from './PreviousSessionLink';
 
-interface Props {
+interface NextSessionPanelProps {
   session: SessionListItem;
   timezone: string;
   /** 前回のセッション（宿題の再確認・内容の振り返り用の導線をカード下部に出す） */
@@ -19,7 +19,7 @@ interface Props {
  * 次回のセッション。入室ボタンは常に押せる状態で表示し、押した時に入室できるかを判定する（JoinSessionButton）。
  * 次回に向けた準備として、前回のセッション結果（宿題・内容）への導線を同じカードの下部に置く
  */
-export function NextSessionPanel({ session, timezone, previous, onCancel }: Props) {
+export function NextSessionPanel({ session, timezone, previous, onCancel }: NextSessionPanelProps) {
   return (
     <div>
       <ShellSectionTitle>次回のセッション</ShellSectionTitle>

@@ -8,14 +8,14 @@ type LicenseUser = Pick<
   'license_state' | 'contract_name' | 'plan_name' | 'license_start_date' | 'license_end_date'
 >;
 
-interface Props {
+interface LicenseSummaryProps {
   user: LicenseUser;
   /** 一覧用の詰めた表示（契約名を省略し、期間は終了日だけにする） */
   compact?: boolean;
 }
 
 /** 生徒の現在のライセンス（契約名・状態・期間）。一覧のライセンス欄と詳細画面で共通 */
-export function LicenseSummary({ user, compact = false }: Props) {
+export function LicenseSummary({ user, compact = false }: LicenseSummaryProps) {
   const t = useTranslations('users.table');
   const { license_state, contract_name, plan_name, license_start_date, license_end_date } = user;
 

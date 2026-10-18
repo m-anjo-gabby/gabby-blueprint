@@ -10,7 +10,7 @@ import { assignDialogueContent } from '@/actions/dialogueAction';
 import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
 import type { DialogueCategory, DialogueContentSummary } from '@gabby/types/dialogue';
 
-interface Props {
+interface AssignDialogueDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   studentId: string;
@@ -32,7 +32,7 @@ export function AssignDialogueDialog({
   availableContents,
   assignedContentIds,
   onAssigned,
-}: Props) {
+}: AssignDialogueDialogProps) {
   const [activeCategory, setActiveCategory] = useState<DialogueCategory>(1);
   const [assigningContentId, setAssigningContentId] = useState<string | null>(null);
   const { showToast } = useToast();

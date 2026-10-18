@@ -15,7 +15,7 @@ import { useDialoguePracticeAssignments } from '../_hooks/useDialoguePracticeAss
 import { AssignDialogueDialog } from './AssignDialogueDialog';
 import { DialogueSessionRow } from '../dialogue-practice/_components/DialogueSessionRow';
 
-interface Props {
+interface DialoguePracticeCardProps {
   studentId: string;
   assignments: DialogueAssignmentSummary[];
   availableContents: DialogueContentSummary[];
@@ -34,7 +34,7 @@ export function DialoguePracticeCard({
   availableContents,
   manageHref,
   liveSessionId,
-}: Props) {
+}: DialoguePracticeCardProps) {
   const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const { assignments, assignedContentIds, handleAssigned, handleProgressChange } = useDialoguePracticeAssignments(

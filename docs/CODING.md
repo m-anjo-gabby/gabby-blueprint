@@ -2,7 +2,7 @@
 
 アプリ（admin / coach / student）と共通パッケージ（`packages/*`）のコードの書き方。画面の作り方（シェル・骨組み・ブランド色等）は `CLAUDE.md`、ログは [LOGGING.md](./LOGGING.md)、依存パッケージは [DEPENDENCIES.md](./DEPENDENCIES.md)、DB は `supabase/DDL/README.md` が正本。
 
-既存のコードには、この規約より前の書き方が残っている（8章）。新しく書くコードはこの規約に従い、既存のコードは改修のついでに寄せる。
+既存のコードもこの規約に寄せてある（2026-10）。道具で止められない決まりからずれた箇所を見つけたら、その箇所を改修するついでに直す。
 
 ## 1. 道具で止めるもの
 
@@ -41,7 +41,7 @@
 - 関数名の動詞: サーバーでの取得は `get`、ブラウザのストアが通信して取り込むものは `fetch`（例: `fetchNotices`）。作成・更新・削除は `create` / `update` / `delete`、両方を兼ねるものは `upsert`。
 - サーバーアクションの関数名に `Action` を付けない（ファイル名の `xxxAction.ts` で分かる）。
 - 共通部分の実装（`packages/lib` の、アプリのアクションから呼ばれるもの）は末尾を `Core` にする（例: `getMyProfileCore`）。アプリのアクションが `Core` を呼び、文言・アプリ固有の処理を足す。
-- 略語は1語として扱い、先頭だけ大文字にする（`Id` / `Url` / `Csv` / `Pdf`）。機能名として定着している `CVDictionary`（ColorVowel 辞書）・`TTS` は例外としてこのまま使う。
+- 略語は1語として扱い、先頭だけ大文字にする（`Id` / `Url` / `Csv` / `Pdf` / `Ssml` / `Ai`）。機能名として定着している `CVDictionary`（ColorVowel 辞書）・`TTS` は例外としてこのまま使う。ブラウザ・ライブラリの名前（`HTMLDivElement` / `URLSearchParams` 等）はそのまま。
 - 名前は日本語のローマ字にしない。業務の用語の英語名は、既存のコード・DB の名前に合わせる（ライセンス = `license`、チケット = `ticket` 等）。
 
 ## 4. ファイル構成
@@ -103,6 +103,7 @@ export async function updateNotice(input: NoticeInput): Promise<ActionResult<{ n
 }
 ```
 
+- export するアクションには戻り値の型を書く（書かないと `success` が `boolean` に広がり、成否で絞り込めない）。取得した行をそのまま返す取得関数は、推論に任せてよい。
 - 画面から呼ぶアクションは `ActionResult<T, C>` を返す。成功は `{ success: true, ...値 }`（値は名前付きの項目で並べる）、失敗は `{ success: false, message }`。
 - `message` はそのアプリの言語で、画面にそのまま出せる文言にする。
   - admin は `getTranslations()`（`next-intl/server`）で取り出す。キーは `messages/{ja,en}.json` の `<画面>.errors.<キー>`、複数の画面で使うものは `common.errors.*`（`unexpected` / `sessionExpired` / `fileRequired` / `uploadFailed` 等）。補助関数に渡す場合の型は `ServerTranslator`、キーの型は `MessageKey`（`apps/admin/i18n/types.ts`）。
@@ -132,13 +133,3 @@ export async function updateNotice(input: NoticeInput): Promise<ActionResult<{ n
 - 絵文字・区切り線（`// -----`・`// =====`）・飾りの見出しは書かない。区切りが必要なほど長いファイルは分ける。
 - コメントアウトしたコードを残さない（消しても git に残る）。
 - `TODO` を残さない。残す課題は、タスクの報告やメモに書く。
-
-## 8. 既存のコードに残っている形
-
-新しいコードでは使わず、その箇所を改修するついでに直すもの。
-
-| 残っている形 | 直し方 |
-|---|---|
-| 戻り値の型を書いていないアクション（student の `sprintAction.ts` の一部等。成否が `boolean` に広がる） | 戻り値の型（`CoreResult` / `ActionResult`）を書く |
-| 略語を全部大文字にした名前（`URL` 等。`CV`・`TTS` を除く） | 1語の扱い（`Url`）にする |
-| props の型名が `Props` | `XxxProps` にする |

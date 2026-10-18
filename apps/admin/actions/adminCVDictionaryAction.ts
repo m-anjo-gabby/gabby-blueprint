@@ -18,6 +18,7 @@ import {
 } from '@/lib/cvDictionaryImport';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -120,7 +121,7 @@ export async function upsertCVDictionaryEntry(
       TableRow<'com_m_color_vowel_dictionary'>,
       'word_en' | 'part_of_speech' | 'syllables' | 'stress_vowel_spelling' | 'cv_id'
     >,
-) {
+): Promise<ActionResult<{ message: string }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -162,7 +163,10 @@ export async function upsertCVDictionaryEntry(
 /**
  * エントリの削除
  */
-export async function deleteCVDictionaryEntry(wordEn: string, partOfSpeech: string) {
+export async function deleteCVDictionaryEntry(
+  wordEn: string,
+  partOfSpeech: string,
+): Promise<ActionResult<{ message: string }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -240,7 +244,10 @@ export async function getCVDictionaryKeys(): Promise<CVDictionaryKey[]> {
  * - overwriteDataOnly : 既存キーも上書きするが、音声はそのまま（発音を個別調整した手動の音声だけ「要再生成」にする）
  * ファイル内の重複キーは先勝ちで除外する（内容差異の検出はクライアント側プレビューで行う）
  */
-export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVImportMode) {
+export async function bulkUpsertCVDictionary(
+  entries: CVImportEntry[],
+  mode: CVImportMode,
+): Promise<ActionResult<{ message: string; inserted: number; updated: number; skipped: number }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -328,7 +335,7 @@ export async function saveCVDictionaryAudio(
   mode: 'auto' | 'manual',
   adjustmentData: TTSAdjustmentData,
   currentAudioPath?: string | null,
-) {
+): Promise<ActionResult<{ message: string; path: string }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

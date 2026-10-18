@@ -18,6 +18,7 @@ import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -136,7 +137,7 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
 export type ContentUpsertInput = Pick<ContentRecord, 'content_name' | 'content_label'> &
   Partial<Omit<ContentRecord, 'content_name' | 'content_label'>>;
 
-export async function upsertContent(payload: ContentUpsertInput) {
+export async function upsertContent(payload: ContentUpsertInput): Promise<ActionResult<{ data: Content }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -215,7 +216,7 @@ export async function upsertContent(payload: ContentUpsertInput) {
  * 教材の削除（誤登録の取り消し）。学習の履歴・割当がある教材は外部キー（RESTRICT）で止まり、
  * 非公開（status = 0）にするよう案内する
  */
-export async function deleteContent(contentId: string) {
+export async function deleteContent(contentId: string): Promise<ActionResult<object, 'in_use'>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -293,7 +294,9 @@ export async function deleteContent(contentId: string) {
 /**
  * タグ割当用データの取得
  */
-export async function getTagAssignmentData(contentId: string) {
+export async function getTagAssignmentData(
+  contentId: string,
+): Promise<{ assignedTags: ContentTagSummary[]; unassignedTags: ContentTagSummary[] }> {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -352,7 +355,7 @@ export async function getTagAssignmentData(contentId: string) {
 /**
  * 教材にタグを割り当てる
  */
-export async function assignTag(contentId: string, tagId: string) {
+export async function assignTag(contentId: string, tagId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -387,7 +390,7 @@ export async function assignTag(contentId: string, tagId: string) {
 /**
  * 教材からタグの割当を解除する
  */
-export async function removeTag(contentId: string, tagId: string) {
+export async function removeTag(contentId: string, tagId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -423,7 +426,10 @@ export async function removeTag(contentId: string, tagId: string) {
 /**
  * 教材のアクセス権限（クライアント割当）データ取得
  */
-export async function getContentAccessData(contentId: string) {
+export async function getContentAccessData(contentId: string): Promise<{
+  assignedClients: { client_id: string; client_name: string }[];
+  unassignedClients: { client_id: string; client_name: string }[];
+}> {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -475,7 +481,7 @@ export async function getContentAccessData(contentId: string) {
 /**
  * クライアントに教材アクセス権を付与
  */
-export async function assignAccess(contentId: string, clientId: string) {
+export async function assignAccess(contentId: string, clientId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -513,7 +519,7 @@ export async function assignAccess(contentId: string, clientId: string) {
 /**
  * クライアントの教材アクセス権を解除
  */
-export async function removeAccess(contentId: string, clientId: string) {
+export async function removeAccess(contentId: string, clientId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

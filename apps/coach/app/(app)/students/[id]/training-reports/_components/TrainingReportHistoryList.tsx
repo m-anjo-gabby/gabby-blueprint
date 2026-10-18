@@ -8,13 +8,13 @@ import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '
 import { TrainingReportContractRow } from '../../_components/TrainingReportContractRow';
 import { contractSummaryLabel } from '../../_components/TrainingReportCard';
 
-interface Props {
+interface TrainingReportHistoryListProps {
   studentId: string;
   contracts: StudentLiveSessionContractSummary[];
   initialReports: ContractTrainingReport[];
 }
 
-export function TrainingReportHistoryList({ studentId, contracts, initialReports }: Props) {
+export function TrainingReportHistoryList({ studentId, contracts, initialReports }: TrainingReportHistoryListProps) {
   const timezone = useTimezone();
   const myId = useUserStore((state) => state.user?.id);
   const [reports, setReports] = useState<ContractTrainingReport[]>(initialReports);

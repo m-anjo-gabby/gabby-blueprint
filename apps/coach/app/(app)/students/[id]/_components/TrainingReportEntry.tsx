@@ -12,7 +12,7 @@ import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { saveContractTrainingReportDraft, finalizeContractTrainingReport } from '@/actions/studentAction';
 import { TRAINING_REPORT_STATUS, type ContractTrainingReport } from '@gabby/types/coachStudent';
 
-interface Props {
+interface TrainingReportEntryProps {
   studentId: string;
   ticketId: string;
   /** null は「自分のレポートがまだ無い」プレースホルダー行（isMine=trueの場合のみ想定） */
@@ -26,7 +26,13 @@ interface Props {
  * ダイアログではなくこの場に展開して編集することで、同じ契約の他コーチのコメントや
  * 前後の契約の内容を見比べながら書けるようにする。
  */
-export function TrainingReportEntry({ studentId, ticketId, report: initialReport, isMine, onSaved }: Props) {
+export function TrainingReportEntry({
+  studentId,
+  ticketId,
+  report: initialReport,
+  isMine,
+  onSaved,
+}: TrainingReportEntryProps) {
   const timezone = useTimezone();
   const { showConfirm } = useConfirm();
   const { showToast } = useToast();

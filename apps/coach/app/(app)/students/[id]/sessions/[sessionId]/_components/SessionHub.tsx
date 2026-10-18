@@ -36,7 +36,7 @@ import {
   type SessionResultSummary,
 } from '@gabby/types/session';
 
-interface Props {
+interface SessionHubProps {
   studentId: string;
   session: SessionResultSummary;
   /*
@@ -78,7 +78,7 @@ interface Props {
  * どうかで出し分けず常時没入表示にする）。Live Sprint等コンテンツ側の没入判定（URLの
  * ?session_id=の有無）とは独立しており、混同しないこと（apps/coach/lib/liveSession/context.ts参照）。
  */
-export function SessionHub({ studentId, session, dialoguePractice, prep, selfTraining }: Props) {
+export function SessionHub({ studentId, session, dialoguePractice, prep, selfTraining }: SessionHubProps) {
   const router = useRouter();
   const user = useUserStore((state) => state.user);
   const timezone = user?.timezone || 'Asia/Tokyo';

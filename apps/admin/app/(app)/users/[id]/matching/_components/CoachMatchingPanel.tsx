@@ -13,7 +13,7 @@ import { isCoachMatchable } from '@gabby/lib/coachProfile/matchingReadiness';
 import { type CoachMatchingStatus } from '@gabby/types/coachProfile';
 import { setCoachMatchingSuspension } from '@/actions/adminCoachMatchingAction';
 
-interface Props {
+interface CoachMatchingPanelProps {
   coachId: string;
   status: CoachMatchingStatus;
 }
@@ -22,7 +22,7 @@ interface Props {
  * コーチのマッチング対象（アドミンのみ）。生徒の「専属コーチを探す」に出るかどうかの内訳
  * （必須項目・コーチ本人の受付）を表示し、アドミンによる休止（理由のメモ付き）を設定する。
  */
-export function CoachMatchingPanel({ coachId, status }: Props) {
+export function CoachMatchingPanel({ coachId, status }: CoachMatchingPanelProps) {
   const t = useTranslations('users.matching');
   const tCommon = useTranslations('common');
   const { showToast } = useToast();

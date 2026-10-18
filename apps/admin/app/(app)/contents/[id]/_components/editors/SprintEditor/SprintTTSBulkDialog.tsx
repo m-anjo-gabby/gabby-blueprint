@@ -54,7 +54,7 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
   const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'error'>('idle');
   const [, setResultCounts] = useState({ success: 0, error: 0 }); // 未使用の変数を名前なし、または状態保持用に残す
 
-  const { speak, isSpeaking, generateSSML } = usePlayAzureSpeech();
+  const { speak, isSpeaking, generateSsml } = usePlayAzureSpeech();
   const { showToast } = useToast();
 
   // 実行する作業（問題×セクション）の一覧を、英語の列（*_en）に値がある所から作る
@@ -118,7 +118,7 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
           answer_no: task.q.answer_sentence_no_en,
         };
         const text = textMap[task.section] || '';
-        const ssml = generateSSML(text, params);
+        const ssml = generateSsml(text, params);
         const voiceKey =
           `${task.section === 'answer_yes' || task.section === 'answer_no' ? `answer_sentence_${task.section.split('_')[1]}` : task.section}_voice` as keyof SprintQuestion;
         const currentPath = task.q[voiceKey] as string | null;

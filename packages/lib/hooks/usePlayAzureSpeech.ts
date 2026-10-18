@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import * as SpeechSDK from 'microsoft-cognitiveservices-speech-sdk';
-import { buildSSML } from '../azure/ssml';
+import { buildSsml } from '../azure/ssml';
 import { clientLogger } from '../logger/client';
 
 export interface TTSParameters {
@@ -34,9 +34,9 @@ export function usePlayAzureSpeech() {
   /**
    * パラメータに基づいて SSML 文字列を生成するヘルパー関数
    */
-  const generateSSML = useCallback((text: string, params: TTSParameters) => {
+  const generateSsml = useCallback((text: string, params: TTSParameters) => {
     // 再生フックからの呼び出し時は、単語ごとの個別調整（words）は空で実行
-    return buildSSML(text, {
+    return buildSsml(text, {
       settings: params,
       words: [],
     });
@@ -80,7 +80,7 @@ export function usePlayAzureSpeech() {
 
         // 5. 入力が SSML かプレーンテキストかを判定して最終的な再生用文字列を確定
         const isSsml = input.trim().startsWith('<speak');
-        const finalSsml = isSsml ? input : params ? generateSSML(input, params) : input;
+        const finalSsml = isSsml ? input : params ? generateSsml(input, params) : input;
 
         setIsSpeaking(true);
 
@@ -129,7 +129,7 @@ export function usePlayAzureSpeech() {
         }
       }
     },
-    [generateSSML],
+    [generateSsml],
   );
 
   /**
@@ -143,5 +143,5 @@ export function usePlayAzureSpeech() {
     };
   }, []);
 
-  return { speak, generateSSML, isSpeaking, error, setError };
+  return { speak, generateSsml, isSpeaking, error, setError };
 }

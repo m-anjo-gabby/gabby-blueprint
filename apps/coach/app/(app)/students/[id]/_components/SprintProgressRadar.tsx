@@ -23,7 +23,7 @@ import {
 } from 'recharts';
 import { StageLevelDialog } from './StageLevelDialog';
 
-interface Props {
+interface SprintProgressRadarProps {
   studentId: string;
   progress: StudentSprintProgress;
 }
@@ -73,7 +73,7 @@ function AngleTick({ x, y, textAnchor, payload }: BaseTickContentProps) {
   );
 }
 
-export function SprintProgressRadar({ studentId, progress: initialProgress }: Props) {
+export function SprintProgressRadar({ studentId, progress: initialProgress }: SprintProgressRadarProps) {
   const [progress, setProgress] = useState(initialProgress);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const data = buildRadarData(progress);

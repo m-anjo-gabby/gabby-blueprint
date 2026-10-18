@@ -35,13 +35,13 @@ import { ImmersiveNotice, noticeActionClass } from '@/components/shell/Immersive
 import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
-interface Props {
+interface LiveSessionRoomViewProps {
   access: LiveSessionRoomAccess;
 }
 
 type RoomPhase = 'preview' | 'in-call' | 'ended';
 
-export function LiveSessionRoomView({ access }: Props) {
+export function LiveSessionRoomView({ access }: LiveSessionRoomViewProps) {
   const router = useRouter();
   const preview = useZoomDevicePreview();
   const {

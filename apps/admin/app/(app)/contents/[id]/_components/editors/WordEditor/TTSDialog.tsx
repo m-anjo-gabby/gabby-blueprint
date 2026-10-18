@@ -40,7 +40,7 @@ import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlay
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
 import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
-import { buildSSML } from '@gabby/lib/azure/ssml';
+import { buildSsml } from '@gabby/lib/azure/ssml';
 
 interface TTSDialogProps {
   phrase: PhraseRecord;
@@ -68,7 +68,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
   const [showSaveAlert, setShowSaveAlert] = useState(false); // 保存確認用
   const [copied, setCopied] = useState(false);
 
-  const { speak, generateSSML, isSpeaking, error, setError } = usePlayAzureSpeech();
+  const { speak, generateSsml, isSpeaking, error, setError } = usePlayAzureSpeech();
   const { save } = useSaveAzureSpeech();
   const { showToast } = useToast();
 
@@ -91,14 +91,14 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
   const playOriginal = () => {
     if (isSpeaking) return;
     // 調整（adjustments）を一切適用しない、素のテキストでのSSMLを生成
-    const originalSsml = generateSSML(phrase.phrase_en, DEFAULT_PARAMS);
+    const originalSsml = generateSsml(phrase.phrase_en, DEFAULT_PARAMS);
     speak(originalSsml);
   };
 
   // SSML再構築ロジック
-  const rebuildSSML = useCallback(
+  const rebuildSsml = useCallback(
     (currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
-      return buildSSML(phrase.phrase_en, {
+      return buildSsml(phrase.phrase_en, {
         settings: currentParams,
         words: currentAdjs,
       });
@@ -109,10 +109,10 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
   // Autoモード時のみ、設定変更をSSMLに反映
   useEffect(() => {
     if (ssmlMode === 'auto') {
-      const newSsml = rebuildSSML(params, adjustments);
+      const newSsml = rebuildSsml(params, adjustments);
       setSsml(newSsml);
     }
-  }, [params, adjustments, ssmlMode, rebuildSSML]);
+  }, [params, adjustments, ssmlMode, rebuildSsml]);
 
   const updateAdjustment = (id: string, updates: Partial<WordAdjustment>) => {
     if (ssmlMode === 'manual') return; // 手動モード時はガード
@@ -135,7 +135,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
   // 手動編集を破棄してAutoに戻す
   const confirmReturnToAuto = () => {
     setSsmlMode('auto');
-    const resetSsml = rebuildSSML(params, adjustments);
+    const resetSsml = rebuildSsml(params, adjustments);
     setSsml(resetSsml);
     setShowModeAlert(false);
     showToast(t('toastAutoMode'), 'success');

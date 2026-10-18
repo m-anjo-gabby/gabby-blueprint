@@ -33,7 +33,7 @@ import {
 import { type TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
-import { buildSSML } from '@gabby/lib/azure/ssml';
+import { buildSsml } from '@gabby/lib/azure/ssml';
 import {
   getAllCVDictionaryEntries,
   saveCVDictionaryAudio,
@@ -118,7 +118,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
   // プレビュー
 
   const handlePreview = () => {
-    const ssml = buildSSML(SAMPLE_TEXT, { settings: params, words: [] });
+    const ssml = buildSsml(SAMPLE_TEXT, { settings: params, words: [] });
     speak(ssml);
   };
 
@@ -150,7 +150,7 @@ export function CVTTSBulkDialog({ onComplete, children }: CVTTSBulkDialogProps) 
 
       try {
         const adjustmentData = { settings: params, words: [] };
-        const ssml = buildSSML(entry.word_en, adjustmentData);
+        const ssml = buildSsml(entry.word_en, adjustmentData);
 
         const result = await saveCVDictionaryAudio(
           entry.word_en,

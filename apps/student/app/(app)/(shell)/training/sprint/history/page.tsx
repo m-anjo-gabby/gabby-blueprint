@@ -16,5 +16,7 @@ export default async function SprintHistoryPage({ searchParams }: PageProps) {
 
   const res = await getUserSprintHistory(targetMonth);
 
-  return <SprintHistoryView initialData={res.data || { sessions: [], drills: [] }} targetMonth={targetMonth} />;
+  return (
+    <SprintHistoryView initialData={res.success ? res.data : { sessions: [], drills: [] }} targetMonth={targetMonth} />
+  );
 }

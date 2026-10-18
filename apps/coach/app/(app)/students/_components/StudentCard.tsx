@@ -8,11 +8,11 @@ import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { AssignedStudentSummary } from '@gabby/types/coachStudent';
 
-interface Props {
+interface StudentCardProps {
   student: AssignedStudentSummary;
 }
 
-export function StudentCard({ student }: Props) {
+export function StudentCard({ student }: StudentCardProps) {
   const { latest_contract, next_session } = student;
   const isCurrent = latest_contract?.is_current ?? false;
   const timezone = useTimezone();

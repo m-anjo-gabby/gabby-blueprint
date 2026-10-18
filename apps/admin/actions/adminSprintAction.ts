@@ -11,6 +11,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -20,7 +21,11 @@ export type SprintQuestionInput = Omit<TableInsert<'com_m_sprint_questions'>, 'i
 /**
  * 種別とレベルを指定してスプリント問題一覧を取得
  */
-export async function getSprintQuestionsByFilter(contentId: string, type: SprintQuestionType, level: number) {
+export async function getSprintQuestionsByFilter(
+  contentId: string,
+  type: SprintQuestionType,
+  level: number,
+): Promise<SprintQuestion[]> {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -49,7 +54,7 @@ export async function getSprintQuestionsByFilter(contentId: string, type: Sprint
 /**
  * スプリント問題の複数一括登録・更新
  */
-export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]) {
+export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -82,7 +87,7 @@ export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]
  * スプリント問題の削除（検証・誤登録の片付け用。お気に入りも一緒に消える。
  * 回答の履歴（JSON）は問題IDだけを持つため残り、画面では「削除された問題」と表示する）
  */
-export async function deleteSprintQuestion(questionId: string) {
+export async function deleteSprintQuestion(questionId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -172,7 +177,7 @@ export async function saveSprintAudio(
   mode: 'auto' | 'manual',
   adjustmentData: TTSAdjustmentData,
   currentPath?: string | null,
-) {
+): Promise<ActionResult<{ path: string }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -265,7 +270,7 @@ export async function moveSprintQuestionsLevel(
   type: SprintQuestionType,
   questionIds: string[],
   toLevel: number,
-) {
+): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -344,7 +349,11 @@ export async function moveSprintQuestionsLevel(
 /**
  * 同一グループの基本文を一括更新
  */
-export async function updateGroupStatement(groupId: string, statementEn: string, statementJa: string | null) {
+export async function updateGroupStatement(
+  groupId: string,
+  statementEn: string,
+  statementJa: string | null,
+): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   const supabase = await createAdminClient();
@@ -368,7 +377,7 @@ export async function bulkImportSprintQuestions(
   type: SprintQuestionType,
   level: number,
   questions: Omit<SprintQuestionInput, 'content_id' | 'question_type' | 'difficulty_level'>[],
-) {
+): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

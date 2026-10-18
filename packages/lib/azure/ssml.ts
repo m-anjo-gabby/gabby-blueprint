@@ -20,7 +20,7 @@ function escapeXml(unsafe: string): string {
   });
 }
 
-export function buildSSML(phraseText: string, data: TTSAdjustmentData): string {
+export function buildSsml(phraseText: string, data: TTSAdjustmentData): string {
   const { settings, words } = data;
   const { voice, style, rate, pitch } = settings;
   const pitchStr = pitch >= 0 ? `+${pitch}%` : `${pitch}%`;

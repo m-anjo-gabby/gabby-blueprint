@@ -8,6 +8,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -55,7 +56,9 @@ interface UpsertDialogueSessionPayload {
 /**
  * ダイアログプラクティス セッション明細の登録・更新 (Upsert)
  */
-export async function upsertDialogueSession(payload: UpsertDialogueSessionPayload) {
+export async function upsertDialogueSession(
+  payload: UpsertDialogueSessionPayload,
+): Promise<ActionResult<{ data: DialogueSession }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -117,7 +120,10 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
  * ダイアログプラクティス セッション明細の削除（誤登録の取り消し）。
  * 進捗・会話ログがあるセッションは外部キー（RESTRICT）で止まる
  */
-export async function deleteDialogueSession(dialogueSessionId: string, contentId: string) {
+export async function deleteDialogueSession(
+  dialogueSessionId: string,
+  contentId: string,
+): Promise<ActionResult<object, 'in_use'>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

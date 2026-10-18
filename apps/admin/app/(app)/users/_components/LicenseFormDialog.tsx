@@ -34,12 +34,12 @@ import { type UserRecord } from '@gabby/types/user';
 /** ライセンスの履歴の1件（getLicenseTimeline の戻り値） */
 type LicenseTimelineItem = Awaited<ReturnType<typeof getLicenseTimeline>>[number];
 
-interface Props {
+interface LicenseFormDialogProps {
   user: UserRecord;
   children: React.ReactNode;
 }
 
-export function LicenseFormDialog({ user, children }: Props) {
+export function LicenseFormDialog({ user, children }: LicenseFormDialogProps) {
   const t = useTranslations('users.license');
   const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);

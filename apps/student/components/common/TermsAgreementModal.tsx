@@ -11,7 +11,7 @@ import { agreeToTerms } from '@/actions/termAction';
 import { TermViewer } from '@gabby/lib/components/term/TermViewer';
 import type { TermDocument } from '@gabby/types/term';
 
-interface Props {
+interface TermsAgreementModalProps {
   userId: string;
   terms?: TermDocument[];
   mode?: 'agreement' | 'reference';
@@ -29,7 +29,7 @@ export const TermsAgreementModal = ({
   mode = 'agreement',
   onClose,
   isOpen = true,
-}: Props) => {
+}: TermsAgreementModalProps) => {
   const [readTerms, setReadTerms] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 

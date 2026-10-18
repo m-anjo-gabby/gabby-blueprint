@@ -11,7 +11,7 @@ import type { LessonSprintContentSummary, LessonSprintHistoryListItem } from '@g
 import type { SprintQuestion } from '@gabby/types/sprint';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
 
-interface Props {
+interface LessonSprintAppProps {
   studentId: string;
   /** 実施中のライブセッション (com_t_session.session_id)。ハブ画面経由でない単独実施の場合はnull */
   sessionId: string | null;
@@ -20,7 +20,7 @@ interface Props {
   contents: LessonSprintContentSummary[];
 }
 
-export function LessonSprintApp({ studentId, sessionId, profile, lessonSprints, contents }: Props) {
+export function LessonSprintApp({ studentId, sessionId, profile, lessonSprints, contents }: LessonSprintAppProps) {
   const router = useRouter();
   // 「Repeat Same Settings」（結果画面）から遷移してきた場合、既にセッションが開始済みのことがあるため、
   // マウント時点のストア状態を見て初期ビューを決める（常に'selecting'から始めない）。

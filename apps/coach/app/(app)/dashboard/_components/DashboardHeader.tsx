@@ -1,7 +1,7 @@
 // apps/coach/app/(app)/dashboard/_components/DashboardHeader.tsx
 import { Skeleton } from '@/components/ui/skeleton';
 
-interface Props {
+interface DashboardHeaderProps {
   greeting: string;
   firstName: string;
   dateLabel: string;
@@ -9,7 +9,7 @@ interface Props {
 
 const SUBTITLE = <p className="text-xs text-slate-500 mt-1">Here&apos;s what needs your attention today.</p>;
 
-export function DashboardHeader({ greeting, firstName, dateLabel }: Props) {
+export function DashboardHeader({ greeting, firstName, dateLabel }: DashboardHeaderProps) {
   return (
     <div>
       <p className="text-xs font-bold text-brand-500">{dateLabel}</p>

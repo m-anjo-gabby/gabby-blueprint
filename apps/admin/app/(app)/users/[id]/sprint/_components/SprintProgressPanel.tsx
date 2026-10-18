@@ -19,7 +19,7 @@ import { getStageGaps, getStageGoals } from '@gabby/lib/sprint/stageProgression'
 import { formatAcquiredSprintLevelLabel } from '@gabby/lib/sprint/utils';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 
-interface Props {
+interface SprintProgressPanelProps {
   userId: string;
   initialProgress: StudentSprintProgress;
 }
@@ -39,7 +39,7 @@ function toStageLevels(progress: StudentSprintProgress): StageLevels {
  * 生徒のスプリントのステージ・レベル管理（コーチの誤操作補正も含め、上げ下げ両方に対応）。
  * 問題種別ごとのレベルと、ステージの強制変更・レベル管理のオン/オフを行う。
  */
-export function SprintProgressPanel({ userId, initialProgress }: Props) {
+export function SprintProgressPanel({ userId, initialProgress }: SprintProgressPanelProps) {
   const t = useTranslations('users.sprint');
   const tCommon = useTranslations('common');
   const [progress, setProgress] = useState<StudentSprintProgress>(initialProgress);

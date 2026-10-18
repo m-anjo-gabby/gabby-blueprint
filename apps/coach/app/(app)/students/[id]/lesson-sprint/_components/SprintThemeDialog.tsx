@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { SprintThemeEntry } from '@gabby/lib';
 
-interface Props {
+interface SprintThemeDialogProps {
   entry: SprintThemeEntry | undefined;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,7 +35,7 @@ function MultilineBoldText({ text }: { text: string }) {
   );
 }
 
-export function SprintThemeDialog({ entry, open, onOpenChange }: Props) {
+export function SprintThemeDialog({ entry, open, onOpenChange }: SprintThemeDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md border-none bg-white p-6 shadow-2xl rounded-2xl text-slate-900 max-h-[85vh] overflow-y-auto">

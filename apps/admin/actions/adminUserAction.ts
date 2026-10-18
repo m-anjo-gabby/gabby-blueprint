@@ -25,6 +25,7 @@ import { randomBytes } from 'crypto'; // 暗号トークン生成用
 import { getPortalBaseUrl } from '@gabby/lib/navigation/portalUrl';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -442,7 +443,7 @@ export async function createUserDirect(
 /**
  * ユーザー再招待招待アクション
  */
-export async function resendInvite(email: string, userType?: string) {
+export async function resendInvite(email: string, userType?: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -524,7 +525,7 @@ export async function resendInvite(email: string, userType?: string) {
 /**
  * ユーザー更新アクション
  */
-export async function updateUser(id: string, payload: CreateUserPayload & { roles?: string[] }) {
+export async function updateUser(id: string, payload: CreateUserPayload & { roles?: string[] }): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   const { email, user_name, client_id, user_type, roles = [] } = payload;
@@ -576,7 +577,7 @@ export async function updateUser(id: string, payload: CreateUserPayload & { role
         err: authError,
         payload: { id, payload },
       });
-      return { success: false, errorType: 'update_error', message: t('users.errors.authUpdateFailed') };
+      return { success: false, message: t('users.errors.authUpdateFailed') };
     }
 
     // 3. ユーザマスタ (public.com_m_user) の更新
@@ -592,7 +593,7 @@ export async function updateUser(id: string, payload: CreateUserPayload & { role
 
     if (dbError) {
       logger.error('user:update_user_db_failed', dbError.message, { ...ctx, err: dbError, payload: { id, payload } });
-      return { success: false, errorType: 'update_error', message: t('users.errors.userUpdateFailed') };
+      return { success: false, message: t('users.errors.userUpdateFailed') };
     }
 
     logger.info('user:update_user_success', `User updated: ${email}`, {
@@ -608,7 +609,7 @@ export async function updateUser(id: string, payload: CreateUserPayload & { role
       err,
       payload: { id, payload },
     });
-    return { success: false, errorType: 'unexpected_error', message: t('common.errors.unexpected') };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 

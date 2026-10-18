@@ -6,7 +6,7 @@ import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import type { CoachStudentNote } from '@gabby/types/coachStudent';
 
-interface Props {
+interface CoachNoteEntryProps {
   note: CoachStudentNote;
 }
 
@@ -15,7 +15,7 @@ interface Props {
  * TrainingReportEntryと違い編集操作は持たず、折りたたみ時は内容の1行プレビュー、
  * 展開時は全文+登録日時を表示するだけのシンプルな構成にする。
  */
-export function CoachNoteEntry({ note }: Props) {
+export function CoachNoteEntry({ note }: CoachNoteEntryProps) {
   const timezone = useTimezone();
   const [isExpanded, setIsExpanded] = useState(false);
 

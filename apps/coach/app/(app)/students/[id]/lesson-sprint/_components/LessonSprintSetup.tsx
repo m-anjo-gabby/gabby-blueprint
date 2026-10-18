@@ -30,7 +30,7 @@ import type { LessonSprintContentSummary, LessonSprintHistoryListItem } from '@g
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
 import { StudentSnapshotPanel } from './StudentSnapshotPanel';
 
-interface Props {
+interface LessonSprintSetupProps {
   studentId: string;
   /** 実施中のライブセッション。ハブ経由でない単独実施の場合はnull */
   sessionId: string | null;
@@ -43,7 +43,14 @@ interface Props {
 const sortedTypes = Object.values(QUESTION_TYPES).sort((a, b) => a.seq_no - b.seq_no);
 const sortedTimes = Object.values(SPRINT_TIME_OPTIONS).sort((a, b) => a.seq_no - b.seq_no);
 
-export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints, contents, onStart }: Props) {
+export function LessonSprintSetup({
+  studentId,
+  sessionId,
+  profile,
+  lessonSprints,
+  contents,
+  onStart,
+}: LessonSprintSetupProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const { setConfig, setContentName, setContentMetadata } = useLessonSprintStore();

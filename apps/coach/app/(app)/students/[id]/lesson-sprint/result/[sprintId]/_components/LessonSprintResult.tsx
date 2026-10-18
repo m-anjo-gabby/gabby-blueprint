@@ -17,7 +17,7 @@ import type { SprintQuestion } from '@gabby/types/sprint';
 import { SessionNoteCard } from './SessionNoteCard';
 import { RepeatSprintButton } from './RepeatSprintButton';
 
-interface Props {
+interface LessonSprintResultProps {
   studentId: string;
   studentName: string;
   studentIconPath: string | null;
@@ -56,7 +56,7 @@ export function LessonSprintResult({
   sessionId,
   backHref: backHrefParam,
   backLabel: backLabelParam,
-}: Props) {
+}: LessonSprintResultProps) {
   const timezone = useTimezone();
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const isQuestionBased = record.question_type === '0' || record.question_type === '6';

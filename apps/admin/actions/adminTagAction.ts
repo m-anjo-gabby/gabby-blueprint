@@ -8,12 +8,13 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
 /** * タグ一覧取得
  */
-export async function getTags() {
+export async function getTags(): Promise<ContentTag[]> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -39,7 +40,9 @@ export async function getTags() {
 
 /** * タグの保存（新規・更新）
  */
-export async function upsertTag(payload: TableInsert<'com_m_contents_tag'>) {
+export async function upsertTag(
+  payload: TableInsert<'com_m_contents_tag'>,
+): Promise<ActionResult<{ data: ContentTag }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -81,7 +84,7 @@ export async function upsertTag(payload: TableInsert<'com_m_contents_tag'>) {
 /**
  * タグの削除（教材との紐付けも一緒に消える）
  */
-export async function deleteTag(tagId: string) {
+export async function deleteTag(tagId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

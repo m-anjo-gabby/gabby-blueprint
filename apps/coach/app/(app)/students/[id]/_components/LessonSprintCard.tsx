@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
 import { LessonSprintHistoryRow } from './LessonSprintHistoryRow';
 
-interface Props {
+interface LessonSprintCardProps {
   studentId: string;
   history: LessonSprintHistoryListItem[];
 }
@@ -14,7 +14,7 @@ interface Props {
 const OVERVIEW_BACK_HREF_PREFIX = '/students/';
 const OVERVIEW_BACK_LABEL = 'Back to Overview';
 
-export function LessonSprintCard({ studentId, history }: Props) {
+export function LessonSprintCard({ studentId, history }: LessonSprintCardProps) {
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">

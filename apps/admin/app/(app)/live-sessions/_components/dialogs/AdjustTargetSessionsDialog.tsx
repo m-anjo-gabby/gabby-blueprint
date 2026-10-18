@@ -18,7 +18,7 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { adjustTargetSessionsAsAdmin } from '@/actions/adminLiveSessionAction';
 import type { AdminScheduleSlotSummary } from '@gabby/types/adminLiveSession';
 
-interface Props {
+interface AdjustTargetSessionsDialogProps {
   target: AdminScheduleSlotSummary | null;
   onClose: () => void;
   onAdjusted: () => Promise<void> | void;
@@ -28,7 +28,7 @@ interface Props {
  * 定期スケジュール枠のtarget_sessions個別引き上げ（アドミン代理操作）。
  * total_sessions（契約全体）は変更しない例外措置のため、理由(reason)入力を必須とする。
  */
-export function AdjustTargetSessionsDialog({ target, onClose, onAdjusted }: Props) {
+export function AdjustTargetSessionsDialog({ target, onClose, onAdjusted }: AdjustTargetSessionsDialogProps) {
   const t = useTranslations('liveSessions.adjustTargetSessionsDialog');
   const { showToast } = useToast();
   const [newValue, setNewValue] = useState('');

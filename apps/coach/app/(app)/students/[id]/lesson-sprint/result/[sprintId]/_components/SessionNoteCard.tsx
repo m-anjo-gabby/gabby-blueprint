@@ -8,12 +8,12 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { updateLessonSprintSessionNote } from '@/actions/lessonSprintAction';
 
-interface Props {
+interface SessionNoteCardProps {
   lessonSprintId: string;
   initialNote: string | null;
 }
 
-export function SessionNoteCard({ lessonSprintId, initialNote }: Props) {
+export function SessionNoteCard({ lessonSprintId, initialNote }: SessionNoteCardProps) {
   const [note, setNote] = useState(initialNote ?? '');
   const [draft, setDraft] = useState(initialNote ?? '');
   const [isEditing, setIsEditing] = useState(false);

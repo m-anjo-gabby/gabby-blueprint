@@ -34,7 +34,7 @@ import { UserAvatar } from '@/components/common/UserAvatar';
 import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
-interface Props {
+interface LiveSessionRoomProps {
   access: LiveSessionRoomAccess;
 }
 
@@ -45,7 +45,7 @@ type LockStatus = 'checking' | 'granted' | 'denied';
 // （生徒A/生徒Bを問わず、コーチアカウント単位で共有する）
 const COACH_LIVE_SESSION_LOCK_NAME = 'gabby-coach-live-session-room';
 
-export function LiveSessionRoom({ access }: Props) {
+export function LiveSessionRoom({ access }: LiveSessionRoomProps) {
   const preview = useZoomDevicePreview();
   const {
     isJoined,

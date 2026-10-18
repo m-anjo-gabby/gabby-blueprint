@@ -7,6 +7,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import type { TermAgreementTarget, TermDocument, TermType } from '@gabby/types/term';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('student');
 
@@ -153,7 +154,7 @@ export async function checkPendingAgreements(userId: string): Promise<TermDocume
 /**
  * 規約への同意を記録する（同意時点で表示していたリビジョンも併せて記録する）
  */
-export async function agreeToTerms(userId: string, targets: TermAgreementTarget[]) {
+export async function agreeToTerms(userId: string, targets: TermAgreementTarget[]): Promise<ActionResult> {
   const ctx = await getLogContext();
   const termIds = targets.map((target) => target.term_id);
   try {

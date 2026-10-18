@@ -19,7 +19,7 @@ import { cancelSessionAsAdmin } from '@/actions/adminLiveSessionAction';
 import { formatSessionDateTime } from './formatSessionDateTime';
 import type { AdminSessionListItem } from '@gabby/types/adminLiveSession';
 
-interface Props {
+interface CancelSessionDialogProps {
   target: AdminSessionListItem | null;
   onClose: () => void;
   onCancelled: () => Promise<void> | void;
@@ -30,7 +30,7 @@ interface Props {
  * 12時間ルール等の自動判定は行わず、チケット返還可否を管理者が明示的にチェックボックスで指定する
  * （cancel_session RPCのp_admin_refund_ticketにそのまま渡る）。
  */
-export function CancelSessionDialog({ target, onClose, onCancelled }: Props) {
+export function CancelSessionDialog({ target, onClose, onCancelled }: CancelSessionDialogProps) {
   const t = useTranslations('liveSessions.cancelDialog');
   const locale = useLocale();
   const { showToast } = useToast();

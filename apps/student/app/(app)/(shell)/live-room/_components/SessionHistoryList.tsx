@@ -62,7 +62,7 @@ function HistoryRow({ session, timezone }: { session: SessionListItem; timezone:
   );
 }
 
-interface Props {
+interface SessionHistoryListProps {
   /** 実施済みと、生徒・コーチ本人によるキャンセルを開始日時の降順で渡す */
   sessions: SessionListItem[];
   timezone: string;
@@ -72,7 +72,7 @@ interface Props {
  * 履歴。既定では結果画面へ進める実施済みだけを表示し、キャンセルはスイッチで同じ時系列に重ねて表示する
  * （キャンセルが積み重なっても、結果画面へのアクセスの邪魔にならないようにする）。
  */
-export function SessionHistoryList({ sessions, timezone }: Props) {
+export function SessionHistoryList({ sessions, timezone }: SessionHistoryListProps) {
   const switchId = useId();
   const hydrated = useHydrated();
   const [showCancelled, setShowCancelled] = useState(false);

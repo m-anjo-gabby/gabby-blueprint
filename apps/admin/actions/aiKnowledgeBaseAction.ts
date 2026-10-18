@@ -5,6 +5,7 @@ import {
   upsertKnowledgeEntry,
   deleteKnowledgeEntry as deleteKnowledgeEntryCore,
   type KnowledgeSourceType,
+  type KnowledgeBaseEntry,
 } from '@gabby/lib/ai';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
@@ -13,6 +14,7 @@ import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 const TOOL_PATH = '/tools/ai-knowledge-base';
@@ -89,7 +91,7 @@ export async function saveKnowledgeEntry(payload: {
   sourceType: KnowledgeSourceType;
   title: string;
   body: string;
-}) {
+}): Promise<ActionResult<{ message: string; data: KnowledgeBaseEntry }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -117,7 +119,7 @@ export async function saveKnowledgeEntry(payload: {
 /**
  * ナレッジの論理削除
  */
-export async function deleteKnowledgeEntry(knowledgeId: string) {
+export async function deleteKnowledgeEntry(knowledgeId: string): Promise<ActionResult<{ message: string }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

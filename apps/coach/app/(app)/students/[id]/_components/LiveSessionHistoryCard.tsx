@@ -66,7 +66,7 @@ function formatContractDate(iso: string, timezone: string): string {
   }).format(new Date(iso));
 }
 
-interface Props {
+interface LiveSessionHistoryCardProps {
   studentId: string;
   studentName: string;
   studentTimezone: string;
@@ -84,7 +84,7 @@ export function LiveSessionHistoryCard({
   initialTicketId,
   initialSessions,
   shortfalls,
-}: Props) {
+}: LiveSessionHistoryCardProps) {
   const timezone = useTimezone();
   const myId = useUserStore((state) => state.user?.id);
   const router = useRouter();

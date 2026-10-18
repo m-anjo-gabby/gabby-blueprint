@@ -4,11 +4,11 @@ import { StickyNote } from 'lucide-react';
 import type { CoachStudentNote } from '@gabby/types/coachStudent';
 import { CoachNoteEntry } from '../../_components/CoachNoteEntry';
 
-interface Props {
+interface CoachNotesHistoryListProps {
   notes: CoachStudentNote[];
 }
 
-export function CoachNotesHistoryList({ notes }: Props) {
+export function CoachNotesHistoryList({ notes }: CoachNotesHistoryListProps) {
   if (notes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">

@@ -265,7 +265,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
       const result = await upsertContent(payload);
 
-      if (result.success && result.data) {
+      if (result.success) {
         showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success');
         setOpen(false);
         if (mode === 'create') {

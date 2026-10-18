@@ -9,6 +9,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -65,7 +66,7 @@ export async function getWordsByContentId(contentId: string): Promise<WordRecord
 /**
  * 単語の登録または更新 (Upsert)
  */
-export async function upsertWord(payload: WordInput) {
+export async function upsertWord(payload: WordInput): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -130,7 +131,7 @@ export async function upsertWord(payload: WordInput) {
 /**
  * 単語の物理削除（関連するStorage内の音声ファイルも含む）
  */
-export async function deleteWord(wordId: string) {
+export async function deleteWord(wordId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -268,7 +269,7 @@ export async function getPhrasesByContentId(contentId: string): Promise<PhraseRe
 /**
  * フレーズの登録または更新 (Upsert)
  */
-export async function upsertPhrase(payload: PhraseInput) {
+export async function upsertPhrase(payload: PhraseInput): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -332,7 +333,7 @@ export async function upsertPhrase(payload: PhraseInput) {
 /**
  * フレーズの物理削除
  */
-export async function deletePhrase(phraseId: string) {
+export async function deletePhrase(phraseId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -372,7 +373,10 @@ export async function deletePhrase(phraseId: string) {
 /**
  * 単語とフレーズの一括Upsert
  */
-export async function bulkUpsertWordsAndPhrases(contentId: string, payload: WordBulkImportItem[]) {
+export async function bulkUpsertWordsAndPhrases(
+  contentId: string,
+  payload: WordBulkImportItem[],
+): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

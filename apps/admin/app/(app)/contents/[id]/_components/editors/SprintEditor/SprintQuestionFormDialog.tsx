@@ -42,7 +42,7 @@ function createSprintQuestionSchema(t: FormT) {
 
 type FormValues = z.infer<ReturnType<typeof createSprintQuestionSchema>>;
 
-interface Props {
+interface SprintQuestionFormDialogProps {
   mode: 'create' | 'edit';
   initialData?: SprintQuestion;
   type: SprintQuestionType;
@@ -64,7 +64,7 @@ export function SprintQuestionFormDialog({
   initialStatementJa,
   onSuccess,
   contentId,
-}: Props) {
+}: SprintQuestionFormDialogProps) {
   const t = useTranslations('contents.editor.sprint.questionFormDialog');
   const sprintSchema = useMemo(() => createSprintQuestionSchema(t), [t]);
   const [open, setOpen] = useState(false);

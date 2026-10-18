@@ -2,7 +2,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 
-interface Props {
+interface HomeworkViewedStatusProps {
   homework: Pick<SessionHomeworkEntry, 'student_viewed_at' | 'comments'>;
   timezone: string;
 }
@@ -11,7 +11,7 @@ interface Props {
  * 生徒が宿題を開いたか（student_viewed_at。生徒がセッション結果画面を開いた時に記録される）。
  * 最新の追記コメントより後に開いていなければ、その旨も出す。結果画面の宿題とハブの前回の宿題で共用する。
  */
-export function HomeworkViewedStatus({ homework, timezone }: Props) {
+export function HomeworkViewedStatus({ homework, timezone }: HomeworkViewedStatusProps) {
   const viewedAt = homework.student_viewed_at;
   if (!viewedAt) {
     return (
