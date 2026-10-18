@@ -21,6 +21,9 @@ import {
 } from '@/actions/adminContractAction';
 import { UserRecord } from '@gabby/types/user';
 
+/** ライセンスの履歴の1件（getLicenseTimeline の戻り値） */
+type LicenseTimelineItem = Awaited<ReturnType<typeof getLicenseTimeline>>[number];
+
 interface Props {
   user: UserRecord;
   children: React.ReactNode;
@@ -35,10 +38,10 @@ export function LicenseFormDialog({ user, children }: Props) {
   
   // 保持データ
   const [availableContracts, setAvailableContracts] = useState<ContractDetail[]>([]);
-  const [licenses, setLicenses] = useState<any[]>([]);
+  const [licenses, setLicenses] = useState<LicenseTimelineItem[]>([]);
   
   // フォームState
-  const [editingLicense, setEditingLicense] = useState<any | null>(null);
+  const [editingLicense, setEditingLicense] = useState<LicenseTimelineItem | null>(null);
   const [selectedContractId, setSelectedContractId] = useState<string>("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -96,9 +99,9 @@ export function LicenseFormDialog({ user, children }: Props) {
     setNote("");
   };
 
-  const handleEdit = (license: any) => {
+  const handleEdit = (license: LicenseTimelineItem) => {
     setEditingLicense(license);
-    setSelectedContractId(license.contract_id);
+    setSelectedContractId(license.contract_id ?? '');
     setStartDate(license.start_date);
     setEndDate(license.end_date);
     setNote(license.note || "");

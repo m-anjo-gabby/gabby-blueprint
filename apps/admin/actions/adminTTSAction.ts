@@ -7,6 +7,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
+import type { TTSAdjustmentData, TTSAssetAdjustments } from '@gabby/types/word';
 
 const logger = createLogger('admin');
 
@@ -19,7 +20,7 @@ export async function savePhrase(
   wordId: string,
   ssml: string,
   mode: 'auto' | 'manual',
-  adjustmentData: any,           // TTSAdjustmentData
+  adjustmentData: TTSAdjustmentData,
   currentAudioPath?: string | null // フロントから現在のパスを受け取る
 ) {
   const ctx = await getLogContext();
@@ -103,7 +104,7 @@ export async function saveTTSAssetAction(payload: {
   comment?: string;
   ssml: string;
   mode: 'auto' | 'manual';
-  adjustments: any;
+  adjustments: TTSAssetAdjustments;
 }) {
   const ctx = await getLogContext();
   try {

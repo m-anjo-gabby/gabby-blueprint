@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
-import { Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, XCircle, PencilLine, Check, Copy } from 'lucide-react';
+import { Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, Copy } from 'lucide-react';
 import { SprintQuestion } from '@gabby/types/sprint';
 import { TTSAdjustmentData, WordAdjustment } from '@gabby/types/word';
 import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
@@ -46,7 +46,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
   const [showModeAlert, setShowModeAlert] = useState(false);
   const [showSaveAlert, setShowSaveAlert] = useState(false);
 
-  const { speak, generateSSML, isSpeaking, error } = usePlayAzureSpeech();
+  const { speak, isSpeaking, error } = usePlayAzureSpeech();
   const { showToast } = useToast();
 
   // 💡 修正: セクションに応じたテキストとメタデータの取得を _en スキーマに対応
@@ -177,7 +177,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
       } else {
         showToast(result.message || t('toastSaveFailed'), "error");
       }
-    } catch (e) {
+    } catch {
       showToast(t('toastError'), "error");
     } finally {
       setIsProcessing(false);

@@ -11,9 +11,8 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { Upload, AlertCircle, Loader2, CheckCircle2, UserPlus, RefreshCcw, Download } from 'lucide-react';
 import { RawCsvRow, BulkUser, BulkImportResponse, USER_TYPES } from '@gabby/types/user';
 import { bulkCreateUsers } from '@/actions/adminUserAction';
-import { getActiveContractsByClient, bulkAssignLicenses } from '@/actions/adminContractAction';
+import { getActiveContractsByClient } from '@/actions/adminContractAction';
 import { getClientsFilter } from '@/actions/adminClientAction'; // 追加
-import { useRouter } from 'next/navigation';
 import { ContractDetail } from '@gabby/types/contract';
 import { Badge } from '@/components/ui/badge';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
@@ -25,7 +24,6 @@ const MAX_BULK_COUNT = 30;
 export function UserBulkImportDialog() {
   const t = useTranslations('users.bulkImport');
   const tCommon = useTranslations('common');
-  const router = useRouter();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   
@@ -42,7 +40,6 @@ export function UserBulkImportDialog() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
-  const hasStudentsLoaded = data.length > 0 && data.some(user => user.user_type === '1');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedClient = clients.find(c => c.client_id === selectedClientId);
@@ -66,7 +63,7 @@ export function UserBulkImportDialog() {
       try {
         const res = await getClientsFilter();
         setClients(res);
-      } catch (error) {
+      } catch {
         showToast(t('toastClientFetchFailed'), "error");
       } finally {
         setIsLoadingClients(false);
@@ -96,7 +93,7 @@ export function UserBulkImportDialog() {
     try {
       const activeContracts = await getActiveContractsByClient(clientId);
       setContracts(activeContracts);
-    } catch (error) {
+    } catch {
       showToast(t('toastContractFetchFailed'), "error");
     } finally {
       setIsLoadingContracts(false);
@@ -167,7 +164,7 @@ export function UserBulkImportDialog() {
         throw new Error("ユーザー登録のレスポンスが不正です");
       }
 
-    } catch (error) {
+    } catch {
       showToast(t('toastProcessError'), "error");
       if (!userResult) {
         setIsProcessing(false);

@@ -7,17 +7,19 @@
  * - 行の型は TableRow<'com_t_session'> 等で参照する（画面ごとに行の型を手で書き直さない）。
  */
 import type { Database as GeneratedDatabase, Json } from './database';
-import type { CalendarEventMessageAttachment } from './calendarEvent';
+import type { CalendarEventMessageAttachment, CalendarEventType } from './calendarEvent';
 import type { ChatMessageType } from './chat';
 import type { DayOfWeek } from './coachAvailability';
 import type { ContentMetadata } from './content';
 import type { PurgeClientResult, WithdrawUserResult } from './dataDeletion';
+import type { MonitorSprintDrillHistoryRow, MonitorSprintHistoryRow, MonitorWordHistoryRow } from './monitor';
 import type { NoticeAttachment, NoticeType } from './notice';
 import type { SessionOutcome } from './session';
+import type { TtsSsmlMode } from './sprint';
 import type { ResumeMetadata, UserTrainingPerformanceResponse } from './training';
 import type { TrainingReportData } from './trainingReport';
 import type { LicenseState, UserType } from './user';
-import type { TTSAdjustmentData } from './word';
+import type { PhraseType, TTSAdjustmentData, TTSAssetAdjustments } from './word';
 
 export type { Json };
 
@@ -75,21 +77,27 @@ interface PublicOverrides extends SchemaOverrides {
     com_m_coach_availability: { day_of_week: DayOfWeek };
     com_m_lesson_schedule: { day_of_week: DayOfWeek };
     com_t_matching_request: { requested_day_of_week: DayOfWeek };
+    // 値が増える前提で CHECK 制約を付けていない区分値（正本はアプリの型。DDL のコメントに明記）
+    com_m_calendar_event: { event_type: CalendarEventType };
     // CHECK 制約が無い区分値の列（DDL の規約では CHECK 制約を付ける。付けたらここから消す）。
-    // com_m_notice.notice_type も同じ（上の com_m_notice に含める）
+    // com_m_notice.notice_type・com_m_phrase.phrase_type・各表の *tts_ssml_mode も同じ（上の各表に含める）
     com_t_chat: { message_type: ChatMessageType };
 
     // JSON の列の中身
     // TTS の調整（声・速さと単語ごとの強調・間）。管理画面の TTS の作成ダイアログが保存する
-    com_m_color_vowel_dictionary: { tts_adjustments: TTSAdjustmentData | null };
-    com_m_phrase: { tts_adjustments: TTSAdjustmentData | null };
+    com_m_color_vowel_dictionary: { tts_adjustments: TTSAdjustmentData | null; tts_ssml_mode: TtsSsmlMode };
+    com_m_phrase: { tts_adjustments: TTSAdjustmentData | null; tts_ssml_mode: TtsSsmlMode; phrase_type: PhraseType };
     com_m_sprint_questions: {
       statement_tts_adjustments: TTSAdjustmentData | null;
       question_tts_adjustments: TTSAdjustmentData | null;
       answer_sentence_yes_tts_adjustments: TTSAdjustmentData | null;
       answer_sentence_no_tts_adjustments: TTSAdjustmentData | null;
+      statement_tts_ssml_mode: TtsSsmlMode;
+      question_tts_ssml_mode: TtsSsmlMode;
+      answer_sentence_yes_tts_ssml_mode: TtsSsmlMode;
+      answer_sentence_no_tts_ssml_mode: TtsSsmlMode;
     };
-    com_t_tts_asset: { tts_adjustments: TTSAdjustmentData | null };
+    com_t_tts_asset: { tts_adjustments: TTSAssetAdjustments | null; tts_ssml_mode: TtsSsmlMode };
     com_m_ai_knowledge_base: { metadata: Record<string, unknown> };
     com_m_contents: { metadata: ContentMetadata };
     com_m_notice: { attachments: NoticeAttachment[]; notice_type: NoticeType };
@@ -123,6 +131,9 @@ interface PublicOverrides extends SchemaOverrides {
   // jsonb を返す RPC の中身
   Functions: {
     fn_purge_client: { Returns: PurgeClientResult };
+    get_monitor_sprint_drill_history: { Returns: MonitorSprintDrillHistoryRow[] };
+    get_monitor_sprint_history: { Returns: MonitorSprintHistoryRow[] };
+    get_monitor_word_history: { Returns: MonitorWordHistoryRow[] };
     get_monitor_user_list: { Returns: ReplaceColumns<GeneratedReturnRow<'get_monitor_user_list'>, { license_state: LicenseState }>[] };
     get_training_report_data: { Returns: TrainingReportData[] | null };
     get_user_training_performance: { Returns: UserTrainingPerformanceResponse | null };

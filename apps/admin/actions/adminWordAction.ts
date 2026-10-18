@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@gabby/lib/supabase/admin";
 import { PhraseRecord, WordRecord } from '@gabby/types/word';
+import type { TableInsert } from '@gabby/types/db';
 import { revalidatePath } from 'next/cache';
 import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { createLogger } from '@gabby/lib/logger';
@@ -11,6 +12,14 @@ const logger = createLogger('admin');
 
 /** 単語の登録・更新の入力（word_id があれば更新） */
 export type WordInput = Pick<WordRecord, 'content_id' | 'word_en' | 'word_ja'> & Partial<Pick<WordRecord, 'word_id' | 'frequency_rank' | 'status'>>;
+
+/** 単語・フレーズの一括登録の1語分（CSV の同じ単語の行をまとめたもの） */
+export interface WordBulkImportItem {
+  word_en: string;
+  word_ja: string;
+  frequency_rank: number;
+  phrases: Pick<PhraseRecord, 'phrase_en' | 'phrase_ja' | 'phrase_type'>[];
+}
 
 /** フレーズの登録・更新の入力（phrase_id があれば更新） */
 export type PhraseInput = Pick<PhraseRecord, 'word_id' | 'phrase_en' | 'phrase_ja' | 'phrase_type'> & Partial<Pick<PhraseRecord, 'phrase_id' | 'seq_no' | 'status'>>;
@@ -172,7 +181,7 @@ export async function getPhrasesByContentId(contentId: string): Promise<PhraseRe
   try {
     const supabase = createAdminClient();
     const PAGE_SIZE = 1000;
-    let allData: any[] = [];
+    let allData: PhraseRecord[] = [];
     let from = 0;
     let hasMore = true;
 
@@ -310,7 +319,7 @@ export async function deletePhrase(phraseId: string) {
 /**
  * 単語とフレーズの一括Upsert
  */
-export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[]) {
+export async function bulkUpsertWordsAndPhrases(contentId: string, payload: WordBulkImportItem[]) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -352,8 +361,8 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: any[
       throw deleteError;
     }
 
-    const allPhrasesToInsert = results.flatMap((res) => {
-      return res.phrases.map((p: any, index: number) => ({
+    const allPhrasesToInsert: TableInsert<'com_m_phrase'>[] = results.flatMap((res) => {
+      return res.phrases.map((p, index) => ({
         word_id: res.word_id,
         phrase_en: p.phrase_en,
         phrase_ja: p.phrase_ja,

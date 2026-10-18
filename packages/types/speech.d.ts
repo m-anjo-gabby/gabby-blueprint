@@ -28,7 +28,7 @@ declare global {
     maxAlternatives: number;
     onstart: (event: Event) => void;
     onend: (event: Event) => void;
-    onerror: (event: any) => void;
+    onerror: (event: Event) => void;
     onresult: (event: SpeechRecognitionEvent) => void;
     start(): void;
     stop(): void;

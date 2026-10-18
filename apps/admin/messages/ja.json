@@ -2311,6 +2311,7 @@
           "errorWordEnEmpty": "単語(word_en)が空です。",
           "errorWordJaEmpty": "和訳(word_ja)が空です。",
           "errorRankInvalid": "ランクに数値以外が入力されています: \"{value}\"",
+          "errorPhraseTypeInvalid": "フレーズ種別は1〜5で入力してください: \"{value}\"",
           "toastImported": "{count}件の単語を処理しました",
           "toastSaveFailed": "保存中にエラーが発生しました",
           "toastSystemError": "システムエラーが発生しました",

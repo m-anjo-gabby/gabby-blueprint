@@ -100,7 +100,7 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
       } else {
         setServerError(result.message || t('serverErrorDefault'));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('systemError'));
     }
   };

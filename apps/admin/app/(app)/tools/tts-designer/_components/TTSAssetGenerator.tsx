@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { 
-  Play, Save, Loader2, Volume2, Sparkles, 
-  RotateCcw, Mic2, Check, Copy, Settings2, Trash2, MousePointer2
+  Play, Save, Loader2, 
+  RotateCcw, Mic2, Check, Copy, Trash2, MousePointer2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,7 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { WordAdjustment } from '@gabby/types/word';
 import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { AZURE_GENERAL_VOICES, AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
+import { AZURE_GENERAL_VOICES, AZURE_STYLES } from '@gabby/types/azure';
 import { saveTTSAssetAction } from '@/actions/adminTTSAction';
 import { buildSSML } from '@gabby/lib/azure/ssml';
 import { cn } from '@/lib/utils';
@@ -79,6 +79,8 @@ export default function TTSAssetGenerator() {
     } else {
       setSsml('');
     }
+    // 原文が変わった時だけ作り直す（声・速さの変更は下の effect が SSML に反映する。ここで作り直すと単語ごとの調整が消える）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phraseEn, generateSSML]); 
 
   const rebuildSSML = useCallback((currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
@@ -136,7 +138,7 @@ export default function TTSAssetGenerator() {
         showToast("Asset saved successfully", "success");
         handleReset();
       }
-    } catch (err) {
+    } catch {
       showToast("Failed to save asset", "error");
     } finally {
       setIsProcessing(false);
@@ -244,7 +246,7 @@ export default function TTSAssetGenerator() {
             <div className="space-y-2">
               <Select 
                 value={params.voice} 
-                onValueChange={(v) => setParams(p => ({...p, voice: v as any}))}
+                onValueChange={(v) => setParams(p => ({...p, voice: v}))}
               >
                 <SelectTrigger className="h-12 bg-slate-50 border-slate-200 font-bold focus:ring-brand-500 shadow-sm">
                   <SelectValue placeholder="Select a voice profile" />
@@ -310,7 +312,7 @@ export default function TTSAssetGenerator() {
             </div>
             
             {/* Style Select はシンプルに維持 */}
-            <Select value={params.style} onValueChange={(v) => setParams(p => ({...p, style: v as any}))}>
+            <Select value={params.style} onValueChange={(v) => setParams(p => ({...p, style: v}))}>
               <SelectTrigger className="h-12 bg-slate-50 border-slate-200 font-bold focus:ring-brand-500 shadow-sm text-sm">
                 <SelectValue placeholder="Style (Neutral by default)" />
               </SelectTrigger>

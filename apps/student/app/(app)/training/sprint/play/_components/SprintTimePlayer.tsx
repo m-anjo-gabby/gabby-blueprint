@@ -420,7 +420,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       : SPRINT_FLOW_TIMING.sprint.visualFeedbackHoldPoorMs;
     pendingCommitRef.current = commitAndNext;
     setTimeout(() => { commitAndNext(); }, displayDelay);
-  }, [setIsRecording, incrementAssessmentCount, commitAssessmentResult, showToast, handlePersistAndRedirect]);
+  }, [setIsRecording, incrementAssessmentCount, commitAssessmentResult, showToast, handlePersistAndRedirect, secondsLeftRef]);
 
   /**
    * 問題文（statement/question）の音声が再生できなかった場合のハンドラ。
@@ -518,7 +518,7 @@ export const SprintTimePlayer: React.FC<SprintTimePlayerProps> = ({
       showToast("タイムアタックを終了します。", "success");
       handlePersistAndRedirect(secondsLeftRef.current);
     }
-  }, [commitSkipResult, showToast, handlePersistAndRedirect, currentQuestion, stopAllAudio, unlockAudioContext]);
+  }, [commitSkipResult, showToast, handlePersistAndRedirect, currentQuestion, stopAllAudio, unlockAudioContext, secondsLeftRef]);
 
   // ────────────── 🔄 副作用 (Effects) ──────────────
   // 制限時間カウントダウン・タイムアップ後の結果画面自動遷移は useSprintCountdown / useAutoRedirectCountdown へ集約済み

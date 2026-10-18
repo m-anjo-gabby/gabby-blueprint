@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Lock, Plus, X, Loader2, ArrowLeft, Building2, ShieldCheck, AlertCircle } from 'lucide-react'
+import { Plus, X, Loader2, ArrowLeft, Building2, ShieldCheck, AlertCircle } from 'lucide-react'
 import { getContentAccessData, assignAccess, removeAccess } from '@/actions/adminContentAction'
 import { useToast } from '@gabby/lib/hooks/useToast'
 import { Content, ContentAccessSummary } from '@gabby/types/content'
@@ -36,7 +36,7 @@ export function ContentAccessDialog({ content, children }: Props) {
       const data = await getContentAccessData(content.content_id)
       setAssignedClients(data.assignedClients)
       setUnassignedClients(data.unassignedClients)
-    } catch (error) {
+    } catch {
       showToast(t('toastFetchFailed'), 'error')
     } finally {
       setLoading(false)

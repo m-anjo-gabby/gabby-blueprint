@@ -68,10 +68,10 @@ export async function getContents(params: ListParams<'type'>): Promise<ListResul
       throw new Error(error.message);
     }
 
-    const contents: Content[] = (data || []).map((item: any) => ({
+    const contents: Content[] = (data || []).map((item) => ({
       ...item,
-      tags: item.tags?.map((t: any) => t.tag).filter(Boolean) || [],
-      access_clients: item.access?.map((a: any) => a.client).filter(Boolean) || []
+      tags: item.tags?.map((t) => t.tag).filter(Boolean) || [],
+      access_clients: item.access?.map((a) => a.client).filter(Boolean) || []
     }));
 
     return {
@@ -274,11 +274,11 @@ export async function getTagAssignmentData(contentId: string) {
       throw new Error(relError.message);
     }
 
-    const assignedTagIds = new Set((relData as any[]).map(r => r.tag_id));
+    const assignedTagIds = new Set(relData.map(r => r.tag_id));
     const assignedTags: ContentTagSummary[] = [];
     const unassignedTags: ContentTagSummary[] = [];
 
-    (allTags as any[]).forEach(tag => {
+    allTags.forEach(tag => {
       if (assignedTagIds.has(tag.tag_id)) {
         assignedTags.push(tag);
       } else {
@@ -385,17 +385,9 @@ export async function getContentAccessData(contentId: string) {
       throw new Error(accessError.message);
     }
 
-    const assignedClientIds = new Set((accessData as any[]).map(a => a.client_id));
-    const assignedClients: any[] = [];
-    const unassignedClients: any[] = [];
-
-    (allClients as any[]).forEach(client => {
-      if (assignedClientIds.has(client.client_id)) {
-        assignedClients.push(client);
-      } else {
-        unassignedClients.push(client);
-      }
-    });
+    const assignedClientIds = new Set(accessData.map(a => a.client_id));
+    const assignedClients = allClients.filter(client => assignedClientIds.has(client.client_id));
+    const unassignedClients = allClients.filter(client => !assignedClientIds.has(client.client_id));
 
     return { assignedClients, unassignedClients };
   } catch (error) {

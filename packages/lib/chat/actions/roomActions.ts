@@ -17,6 +17,8 @@ import {
   RemoveChatRoomMemberPayload,
 } from '@gabby/types/chat';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@gabby/types/db';
 
 // ルーム作成で選択可能なuser_type
 const HUMAN_USER_TYPES: readonly UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
@@ -420,8 +422,8 @@ interface RoomBase {
  * is_member=false・unread_count=0 を返す。
  */
 async function buildChatRoomListItems(
-  // createServerClient / createAdminClient のいずれでも呼べるよう緩く型付け
-  supabase: any,
+  // createServerClient / createAdminClient のいずれでも呼べる
+  supabase: SupabaseClient<Database>,
   rooms: RoomBase[],
   currentUserId: string,
   myMembershipByRoom: Map<string, { last_read_chat_id: string | null }>
@@ -478,7 +480,7 @@ async function buildChatRoomListItems(
   }
 
   const membersByRoom = new Map<string, ChatRoomListItem['members']>();
-  for (const m of (allMembers || []) as any[]) {
+  for (const m of allMembers || []) {
     const list = membersByRoom.get(m.room_id) || [];
     const userInfo = Array.isArray(m.com_m_user) ? m.com_m_user[0] : m.com_m_user;
     const clientInfo = Array.isArray(userInfo?.com_m_client) ? userInfo.com_m_client[0] : userInfo?.com_m_client;
@@ -650,7 +652,7 @@ export async function getChatRoomDetail(roomId: string): Promise<{
       .eq('room_id', roomId)
       .is('left_at', null);
 
-    const memberList = ((members || []) as any[]).map((m) => {
+    const memberList = (members || []).map((m) => {
       const userInfo = Array.isArray(m.com_m_user) ? m.com_m_user[0] : m.com_m_user;
       const clientInfo = Array.isArray(userInfo?.com_m_client) ? userInfo.com_m_client[0] : userInfo?.com_m_client;
       return {

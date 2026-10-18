@@ -13,9 +13,10 @@ import {
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { 
   Upload, AlertCircle, Loader2, CheckCircle2, FileUp, 
-  RefreshCcw, Download, Info
+  RefreshCcw, Download
 } from 'lucide-react';
-import { bulkUpsertWordsAndPhrases } from '@/actions/adminWordAction';
+import { bulkUpsertWordsAndPhrases, type WordBulkImportItem } from '@/actions/adminWordAction';
+import { PHRASE_TYPES, type PhraseType } from '@gabby/types/word';
 import { cn } from '@/lib/utils';
 import { useWordStore } from '@/stores/useWordStore';
 
@@ -26,11 +27,19 @@ interface WordBulkImportDialogProps {
 
 const REQUIRED_HEADERS = ['word_en', 'word_ja', 'rank', 'phrase_en', 'phrase_ja', 'phrase_type'];
 
+/** CSV の1行（ヘッダー名 → 値） */
+type CsvRow = Partial<Record<string, string>>;
+
+/** 単語ごとにまとめた行と、検証の結果 */
+type ImportWord = WordBulkImportItem & { isValid: boolean; error?: string };
+
+const isPhraseType = (value: number): value is PhraseType => Object.hasOwn(PHRASE_TYPES, value);
+
 export function WordBulkImportDialog({ contentId, onSuccess }: WordBulkImportDialogProps) {
   const t = useTranslations('contents.editor.word.bulkImportDialog');
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
-  const [data, setData] = useState<any[]>([]); 
+  const [data, setData] = useState<ImportWord[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
@@ -41,7 +50,7 @@ export function WordBulkImportDialog({ contentId, onSuccess }: WordBulkImportDia
 
   const processFile = (file: File) => {
     setLayoutError(null);
-    Papa.parse(file, {
+    Papa.parse<CsvRow>(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
@@ -53,10 +62,10 @@ export function WordBulkImportDialog({ contentId, onSuccess }: WordBulkImportDia
           return;
         }
 
-        const groupedMap = new Map();
+        const groupedMap = new Map<string, ImportWord>();
 
-        results.data.forEach((row: any, index: number) => {
-          const wordEn = row.word_en?.trim();
+        results.data.forEach((row, index) => {
+          const wordEn = row.word_en?.trim() ?? '';
           if (!wordEn && !row.word_ja) return;
 
           const error = validateRow(row, index);
@@ -64,23 +73,26 @@ export function WordBulkImportDialog({ contentId, onSuccess }: WordBulkImportDia
           if (!groupedMap.has(wordEn)) {
             groupedMap.set(wordEn, {
               word_en: wordEn,
-              word_ja: row.word_ja?.trim(),
+              word_ja: row.word_ja?.trim() ?? '',
               frequency_rank: Number(row.rank) || 999,
               phrases: [],
               isValid: !error,
               error: error || undefined
             });
           } else if (error) {
-            const existing = groupedMap.get(wordEn);
+            const existing = groupedMap.get(wordEn)!;
             existing.isValid = false;
             existing.error = existing.error ? `${existing.error} / ${error}` : error;
           }
 
-          if (row.phrase_en?.trim()) {
-            groupedMap.get(wordEn).phrases.push({
-              phrase_en: row.phrase_en.trim(),
-              phrase_ja: row.phrase_ja?.trim(),
-              phrase_type: Number(row.phrase_type) || 1,
+          const phraseEn = row.phrase_en?.trim();
+          const phraseType = Number(row.phrase_type) || 1;
+          // 種別が範囲外の行は validateRow でエラーにしている
+          if (phraseEn && isPhraseType(phraseType)) {
+            groupedMap.get(wordEn)!.phrases.push({
+              phrase_en: phraseEn,
+              phrase_ja: row.phrase_ja?.trim() ?? '',
+              phrase_type: phraseType,
             });
           }
         });
@@ -92,7 +104,7 @@ export function WordBulkImportDialog({ contentId, onSuccess }: WordBulkImportDia
     });
   };
 
-  const validateRow = (row: any, index: number): string | null => {
+  const validateRow = (row: CsvRow, index: number): string | null => {
     const lineNum = index + 2;
     const prefix = t('rowErrorPrefix', { line: lineNum });
     if (row.word_en === undefined || row.phrase_type === undefined) {
@@ -106,13 +118,17 @@ export function WordBulkImportDialog({ contentId, onSuccess }: WordBulkImportDia
     if (rankRaw && isNaN(Number(rankRaw))) {
       return `${prefix}${t('errorRankInvalid', { value: rankRaw })}`;
     }
+    const phraseTypeRaw = row.phrase_type?.trim();
+    if (row.phrase_en?.trim() && phraseTypeRaw && !isPhraseType(Number(phraseTypeRaw))) {
+      return `${prefix}${t('errorPhraseTypeInvalid', { value: phraseTypeRaw })}`;
+    }
     return null;
   };
 
   const handleImport = async () => {
     setIsProcessing(true);
     try {
-      const result = await bulkUpsertWordsAndPhrases(contentId, data);
+      const result = await bulkUpsertWordsAndPhrases(contentId, data.map(({ isValid: _isValid, error: _error, ...word }) => word));
       if (result.success) {
         showToast(t('toastImported', { count: data.length }), "success");
         setHasCompleted(true);
@@ -121,7 +137,7 @@ export function WordBulkImportDialog({ contentId, onSuccess }: WordBulkImportDia
       } else {
         showToast(result.message || t('toastSaveFailed'), "error");
       }
-    } catch (error) {
+    } catch {
       showToast(t('toastSystemError'), "error");
     } finally {
       setIsProcessing(false);

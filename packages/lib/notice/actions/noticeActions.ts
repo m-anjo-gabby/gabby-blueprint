@@ -39,7 +39,7 @@ export async function getNoticesAction(): Promise<{
       return { success: false, data: [], error: error.message };
     }
 
-    const notices: NoticeItem[] = (data || []).map((row: any) => ({
+    const notices: NoticeItem[] = (data || []).map((row) => ({
       ...row,
       attachments: Array.isArray(row.attachments) ? row.attachments : [],
       // read配列に要素があれば既読
@@ -70,7 +70,7 @@ export async function getUnreadNoticeCountAction(): Promise<number> {
 
     if (noticeError || !allNotices) return 0;
 
-    const noticeIds = allNotices.map((n: any) => n.notice_id);
+    const noticeIds = allNotices.map((n) => n.notice_id);
     if (noticeIds.length === 0) return 0;
 
     // 既読済み notice_id
@@ -82,7 +82,7 @@ export async function getUnreadNoticeCountAction(): Promise<number> {
 
     if (readError) return 0;
 
-    const readIds = new Set((readData || []).map((r: any) => r.notice_id));
+    const readIds = new Set((readData || []).map((r) => r.notice_id));
     return noticeIds.filter((id: string) => !readIds.has(id)).length;
   } catch (err) {
     logger.error("notice:unread_count_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });

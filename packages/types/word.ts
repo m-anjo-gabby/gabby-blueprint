@@ -79,6 +79,9 @@ export interface TTSAdjustmentData {
   words: WordAdjustment[];
 }
 
+/** TTS アセット（com_t_tts_asset）の調整内容。手動の SSML で作った場合は調整を持たない */
+export type TTSAssetAdjustments = TTSAdjustmentData | { isManual: true };
+
 // TTS用の単語ごとのカスタマイズ状態
 export interface WordAdjustment {
   id: string;

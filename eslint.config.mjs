@@ -18,8 +18,18 @@ const eslintConfig = defineConfig([
 
   {
     rules: {
-      // any乱用防止（境界のみ許可）
-      "@typescript-eslint/no-explicit-any": "warn",
+      // any は使わない（DB の値は packages/types/db.ts の型、外部の値は unknown で受けて検証する）
+      "@typescript-eslint/no-explicit-any": "error",
+      // 使わない変数は消す。分割代入で残りを取り出すための変数と、_ で始まる名前（意図して使わない引数等）は許可する
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
     },
   },
 

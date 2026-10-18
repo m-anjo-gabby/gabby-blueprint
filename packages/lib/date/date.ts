@@ -75,7 +75,7 @@ export const formatDateTimeByZone = (
       ...(withSeconds ? { second: '2-digit' as const } : {}),
       timeZone: timeZone,
     }).format(date);
-  } catch (e) {
+  } catch {
     return formatDateTimeByZone(dateString, 'Asia/Tokyo', withSeconds);
   }
 };

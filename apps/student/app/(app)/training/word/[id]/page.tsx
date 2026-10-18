@@ -22,7 +22,7 @@ import { WordCard } from './_components/WordCard';
 import { WordControls } from './_components/WordControls';
 import { WordFeedback } from './_components/WordFeedback';
 import { WordIndex } from './_components/WordIndex';
-import { BookOpen, ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { PhraseItem } from '@gabby/types/word';
 import { ContentLoading } from '@/components/common/ContentLoading';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
@@ -80,6 +80,17 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const currentPhrase = currentWord?.phrases[phraseIdx];
 
   /**
+   * 手動同期関数
+   * 溜まっている進捗があればサーバーへ報告し、ストアをクリアする
+   */
+  const syncProgressNow = useCallback(async () => {
+    const { wordCount, phraseCount, assessmentCount } = useWordDrillStore.getState().clearPendingCounts();
+    if (wordCount > 0 || phraseCount > 0 || assessmentCount > 0) {
+      await reportWordProgress(sectionIdRef.current, wordCount, phraseCount, assessmentCount);
+    }
+  }, []);
+
+  /**
    * 教材データの読み込みとレジューム（再開）処理
    */
   useEffect(() => {
@@ -120,25 +131,14 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         await syncProgressNow();
 
         if (isResumed) showToast("続きから再開しました", "success");
-      } catch (e) {
+      } catch {
         showToast("データの読み込みに失敗しました", "error");
       } finally {
         setLoading(false);
       }
     }
     init();
-  }, [sectionId, searchParams, showToast, initDrill, setLoading, reset]);
-
-  /**
-   * 手動同期関数
-   * 溜まっている進捗があればサーバーへ報告し、ストアをクリアする
-   */
-  const syncProgressNow = useCallback(async () => {
-    const { wordCount, phraseCount, assessmentCount } = useWordDrillStore.getState().clearPendingCounts();
-    if (wordCount > 0 || phraseCount > 0 || assessmentCount > 0) {
-      await reportWordProgress(sectionIdRef.current, wordCount, phraseCount, assessmentCount);
-    }
-  }, []);
+  }, [sectionId, searchParams, showToast, initDrill, setLoading, reset, syncProgressNow]);
 
   /**
    * 5分ごとの定期自動保存
@@ -294,7 +294,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
       showToast("ブックマークしました", "success");
       router.push('/dashboard');
-    } catch (e) {
+    } catch {
       showToast("保存に失敗しました", "error");
     }
   };

@@ -106,7 +106,7 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
       } else {
         setServerError(result.message || t('toastGenericFailed'));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('toastSystemError'));
     }
   };

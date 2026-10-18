@@ -40,7 +40,7 @@ export function ContentTagDialog({ content }: Props) {
       const data = await getTagAssignmentData(content.content_id)
       setAssignedTags(data.assignedTags)
       setUnassignedTags(data.unassignedTags)
-    } catch (error) {
+    } catch {
       showToast(t('toastFetchFailed'), 'error')
     } finally {
       setLoading(false)

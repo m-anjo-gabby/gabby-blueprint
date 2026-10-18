@@ -5,6 +5,7 @@ import { createLogger } from "@gabby/lib/logger";
 import { getLogContext } from "@gabby/lib/logger/context";
 import { WordSummaryHistoryItem } from "./wordAction"; // Re-use type
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('monitor');
 
@@ -119,12 +120,12 @@ export async function getMonitorUserList(
     logger.debug("monitor:get_user_list_success", `Fetched ${data?.length || 0} users`, ctx);
     return { success: true, data: data || [] };
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error("monitor:get_user_list_failed", "Failed to fetch monitor user list", {
       ...ctx,
       err: error,
     });
-    return { success: false, data: [], error: error.message };
+    return { success: false, data: [], error: getErrorMessage(error) };
   }
 }
 
@@ -153,7 +154,7 @@ export async function getMonitorWordHistory(
 
     if (error) throw error;
 
-    const formattedData = (data as any[])?.map(item => ({
+    const formattedData = data?.map(item => ({
       summary_id: item.summary_id,
       content_id: item.content_id,
       user_id: item.user_id,
@@ -171,13 +172,13 @@ export async function getMonitorWordHistory(
     })) || [];
 
     return { success: true, data: formattedData as MonitorWordSummaryHistoryItem[] };
-  } catch (error: any) {
+  } catch (error) {
     logger.error("monitor:get_word_history_failed", "Failed to fetch monitor word history", {
       ...ctx,
       err: error,
       payload: { startDate, endDate, userIds, includeMonitor },
     });
-    return { success: false, data: [], error: error.message };
+    return { success: false, data: [], error: getErrorMessage(error) };
   }
 }
 
@@ -219,7 +220,7 @@ export async function getMonitorSprintHistory(
     if (sessionsRes.error) throw sessionsRes.error;
     if (drillsRes.error) throw drillsRes.error;
 
-    const formattedSessions = (sessionsRes.data as any[] || []).map(item => ({
+    const formattedSessions = (sessionsRes.data || []).map(item => ({
       self_sprint_id: item.self_sprint_id,
       user_id: item.user_id,
       sprint_type: item.sprint_type || '0',
@@ -241,7 +242,7 @@ export async function getMonitorSprintHistory(
       }
     }));
 
-    const formattedDrills = (drillsRes.data as any[] || []).map(item => ({
+    const formattedDrills = (drillsRes.data || []).map(item => ({
       summary_id: item.summary_id,
       user_id: item.user_id,
       content_id: item.content_id,
@@ -270,7 +271,7 @@ export async function getMonitorSprintHistory(
         drills: formattedDrills as MonitorSprintDrillHistoryItem[]
       }
     };
-  } catch (error: any) {
+  } catch (error) {
     logger.error("monitor:get_sprint_history_failed", "Error in getMonitorSprintHistory via RPC", {
       ...ctx,
       err: error,
@@ -278,7 +279,7 @@ export async function getMonitorSprintHistory(
     return { 
       success: false, 
       data: { sessions: [], drills: [] }, 
-      error: error.message 
+      error: getErrorMessage(error) 
     };
   }
 }

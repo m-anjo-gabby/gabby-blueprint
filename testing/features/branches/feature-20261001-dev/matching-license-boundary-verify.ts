@@ -16,7 +16,6 @@
  */
 import { loadTestEnv, resolveTestEnvFromArgs } from "../../../helpers/env.ts";
 import { createAdminClient, signInAsRole, signOutRole } from "../../../helpers/auth.ts";
-import { addDays } from "../../../helpers/dates.ts";
 import { writeResultLog, type CheckResult } from "../../../helpers/results.ts";
 
 const env = resolveTestEnvFromArgs();

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 import { useAzureSpeechTest } from "@/hooks/useAzureSpeechTest";
 import { useSpeechSynthesis } from "@gabby/lib/speech/useSpeechSynthesis";
 import { useSpeakingPlayer } from "@gabby/lib/audio/react/useSpeakingPlayer";
-import { AssessmentWord } from "@gabby/types/azure";
 import { AnalysisResult } from "@gabby/types/speechAssessment"; // AnalysisResultの型をインポート
 
 const samplePhrases = [
@@ -62,29 +61,20 @@ export default function SpeechPoCPage() {
   const [evalText, setEvalText] = useState(samplePhrases[0]);
   const [voice, setVoice] = useState(voiceOptions[0].id);
   const [style, setStyle] = useState("general");
-  const [rate, setRate] = useState(1.0);
-  const [pitch, setPitch] = useState(0);
-  const [granularity, setGranularity] = useState(SpeechSDK.PronunciationAssessmentGranularity.Phoneme);
+  const [rate] = useState(1.0);
+  const [pitch] = useState(0);
+  const [granularity] = useState(SpeechSDK.PronunciationAssessmentGranularity.Phoneme);
   const [activeTab, setActiveTab] = useState<'tts' | 'assessment'>('tts');
 
   // WebSpeechの結果を保持するためのPOC専用ステート
   const [webSpeechResult, setWebSpeechResult] = useState<AnalysisResult | null>(null);
 
-  const { speak: speakAzure, startAssessment, stopAssessment, resetResult, isSpeaking: isAzureSpeaking, isRecording, result, rawResult, timeLeft: timeLeftAzure, recordedAudioUrl } = useAzureSpeechTest();
+  const { speak: speakAzure, startAssessment, stopAssessment, resetResult, isSpeaking: isAzureSpeaking, isRecording, result, timeLeft: timeLeftAzure } = useAzureSpeechTest();
   
   // 生徒の単語帳・スプリントと同じ読み上げ・発話評価（自作評価）をそのまま使用
   const { speak: speakWebSpeech, isSpeaking: isWebSpeaking } = useSpeechSynthesis();
   const { listen, beginFlow, finishListening, isListening, timeLeft: timeLeftWeb } = useSpeakingPlayer({ urlResolution: 'sdk' });
 
-  const assessmentData = useMemo(() => {
-    if (!rawResult) return null;
-    const jsonString = rawResult.properties.getProperty(SpeechSDK.PropertyId.SpeechServiceResponse_JsonResult);
-    if (!jsonString) return null;
-    try {
-      const parsed = JSON.parse(jsonString) as { NBest: { Words: AssessmentWord[] }[] };
-      return parsed?.NBest?.[0] ? { Words: parsed.NBest[0].Words } : null;
-    } catch { return null; }
-  }, [rawResult]);
 
   return (
     <div className="p-8 mx-auto max-w-6xl space-y-8 text-slate-900">

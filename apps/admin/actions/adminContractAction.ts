@@ -10,7 +10,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import type { ContractDetail, ContractStatus, ContractType } from '@gabby/types/contract';
-import type { TableInsert } from '@gabby/types/db';
+import type { TableInsert, TableRow, TableUpdate, ViewRow } from '@gabby/types/db';
 import { USER_TYPES } from '@gabby/types/user';
 import {
   ISSUED_LICENSE_COLUMNS,
@@ -289,7 +289,7 @@ export async function getActiveContractsByClient(clientId: string, userId?: stri
   }
 }
 
-function formatContracts(contracts: any[]) {
+function formatContracts(contracts: ViewRow<'vw_contract_details'>[]) {
   return contracts.map(contract => ({
     ...contract,
     start_date: contract.start_date ? formatToJstDate(contract.start_date) : '',
@@ -820,7 +820,7 @@ export async function updateUserLicense(
   updates: {
     start_date?: string;
     end_date?: string;
-    status?: number;
+    status?: TableRow<'com_t_user_license'>['status'];
     note?: string | null;
   }
 ) {
@@ -840,7 +840,7 @@ export async function updateUserLicense(
       return { success: false, message: '対象のライセンスが見つかりませんでした' };
     }
 
-    const payload: any = { ...updates };
+    const payload: TableUpdate<'com_t_user_license'> = { ...updates };
 
     if (updates.start_date || updates.end_date) {
       const tempStart = updates.start_date || "2000-01-01";
@@ -1088,8 +1088,8 @@ export async function getLicenseTimeline(userId: string) {
       is_removed: false,
       start_date: formatToJstDate(l.start_date),
       end_date: formatToJstDate(l.end_date),
-      contract_name: (l as any).com_m_contract?.contract_name || '不明な契約',
-      plan_name: (l as any).com_m_contract?.plan_name || '不明なプラン'
+      contract_name: l.com_m_contract?.contract_name || '不明な契約',
+      plan_name: l.com_m_contract?.plan_name || '不明なプラン'
     }));
 
     const removedLicenses = (removedHistory || []).map(h => ({
@@ -1101,8 +1101,8 @@ export async function getLicenseTimeline(userId: string) {
       removed_at: h.performed_at,
       start_date: formatToJstDate(h.start_date),
       end_date: formatToJstDate(h.end_date),
-      contract_name: (h as any).com_m_contract?.contract_name || '不明な契約',
-      plan_name: (h as any).com_m_contract?.plan_name || '不明なプラン'
+      contract_name: h.com_m_contract?.contract_name || '不明な契約',
+      plan_name: h.com_m_contract?.plan_name || '不明なプラン'
     }));
 
     return [...liveLicenses, ...removedLicenses];

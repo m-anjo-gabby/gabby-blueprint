@@ -14,9 +14,9 @@ import {
   Paperclip, 
   Trash2, 
   Upload, 
-  CheckCircle2, 
-  Clock, 
-  Globe, 
+  
+  
+  
   Building2,
   FileText,
   X,
@@ -142,7 +142,6 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
 
   const [clientOptions, setClientOptions] = React.useState<ClientOption[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
-  const [isUploading, setIsUploading] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<'edit' | 'preview'>('edit');
 
   // 初期日時のセット (UTC → JST <input type="date"> 形式へ変換)
@@ -348,7 +347,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
       } else {
         showToast(res.message || t('toastSaveFailed'), 'error');
       }
-    } catch (error) {
+    } catch {
       showToast(t('toastSaveError'), 'error');
     } finally {
       setIsSaving(false);
@@ -380,7 +379,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
           {/* 保存ボタン */}
           <Button
             onClick={handleSave}
-            disabled={isSaving || isUploading}
+            disabled={isSaving}
             className="h-10 px-6 bg-brand hover:bg-brand-strong text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-brand/20 active:scale-95 transition-all"
           >
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -642,13 +641,12 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                 <Paperclip size={14} /> {t('attachmentsTitle')}
               </h3>
               <label className="cursor-pointer h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
-                {isUploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                <Upload size={13} />
                 {t('addButton')}
                 <input
                   type="file"
                   multiple
                   onChange={handleFileUpload}
-                  disabled={isUploading}
                   className="hidden"
                 />
               </label>

@@ -10,7 +10,7 @@
     "dev": "turbo dev",
     "dev:ssl": "turbo run dev:ssl",
     "build": "turbo build",
-    "lint": "node scripts/check-catalog.mjs && eslint --cache --cache-location node_modules/.cache/eslint/ .",
+    "lint": "node scripts/check-catalog.mjs && eslint --cache --cache-location node_modules/.cache/eslint/ --max-warnings 0 .",
     "typecheck": "turbo typecheck",
     "test": "pnpm test:vercel-env && pnpm --filter @gabby/testing unit",
     "check": "pnpm typecheck && pnpm lint && pnpm test",

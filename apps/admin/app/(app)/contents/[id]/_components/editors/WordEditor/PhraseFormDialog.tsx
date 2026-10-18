@@ -14,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertPhrase, type PhraseInput } from '@/actions/adminWordAction';
 import { PlusCircle, CheckCircle2, Edit, MessageSquare, XCircle } from 'lucide-react';
-import { Alert } from '@/components/ui/alert';
 import { PhraseRecord, WORD_STATUS, WordStatus, PHRASE_TYPES, PhraseType } from '@gabby/types/word';
 
 /**
@@ -97,7 +96,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
         setIsConfirming(false);
         setServerError(result.message || t('toastError'));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('systemError'));
     }
   };

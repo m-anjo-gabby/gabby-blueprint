@@ -12,6 +12,7 @@ import type { AnalysisResult } from "@gabby/types/speechAssessment";
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { toIsoMonthInZone } from '@gabby/lib/date/date';
 import { getMyTimezone } from '@/lib/userTimezone';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger("student");
 const SPRINT_LIMIT_COUNT = 10;
@@ -205,7 +206,7 @@ export async function getSprintQuestionsAction(
     
     return { success: true, data: finalData };
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error("sprint:fetch_failed", "getSprintQuestionsAction error", {
       ...ctx,
       err: error,
@@ -214,7 +215,7 @@ export async function getSprintQuestionsAction(
     return {
       success: false,
       data: null,
-      error: error.message || "Failed to fetch sprint questions"
+      error: getErrorMessage(error, "Failed to fetch sprint questions")
     };
   }
 }
@@ -273,12 +274,12 @@ export async function createSprintScoreAction(
 
     return { success: true, data: { self_sprint_id: data.self_sprint_id } };
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error("sprint:create_score_failed", "Failed to create sprint score", {
       ...ctx,
       err: error,
     });
-    return { success: false, data: null, error: error.message || "Failed to save sprint results" };
+    return { success: false, data: null, error: getErrorMessage(error, "Failed to save sprint results") };
   }
 }
 
@@ -334,6 +335,9 @@ export async function getSprintResultAction(
       }
     });
 
+    // 結果画面に返す記録（解答履歴は検証済みの形に置き換える）
+    const resultRecord = { ...scoreRecord, answered_history: history };
+
     // 平均スコアの算出（0割りを防ぐ・四捨五入で整数に丸める）
     const averageAssessmentScore = scoredQuestionsCount > 0 
       ? Math.round(totalScoreSum / scoredQuestionsCount) 
@@ -344,7 +348,7 @@ export async function getSprintResultAction(
       return {
         success: true,
         data: {
-          scoreRecord: scoreRecord as any,
+          scoreRecord: resultRecord,
           questions: [],
           totalAssessmentCount: 0,
           averageAssessmentScore: 0,
@@ -364,12 +368,12 @@ export async function getSprintResultAction(
 
     if (qError) throw qError;
 
-    const rawQuestions = (questionsData as any[]) ?? [];
+    const rawQuestions = questionsData ?? [];
 
     // ④ 問題マスタから取得したデータを、保存されていた history 配列のインデックス順に完全に再ソート
     const sortedQuestions = history
       .map(hist => rawQuestions.find(q => q.question_id === hist.question_id))
-      .filter((q): q is any => !!q);
+      .filter((q): q is NonNullable<typeof q> => !!q);
 
     logger.debug("sprint:get_result_success", "Successfully recovered sprint session playlist order", {
       ...ctx,
@@ -380,7 +384,7 @@ export async function getSprintResultAction(
     return {
       success: true,
       data: {
-        scoreRecord: scoreRecord as any,
+        scoreRecord: resultRecord,
         questions: sortedQuestions,
         totalAssessmentCount,
         averageAssessmentScore,
@@ -388,12 +392,12 @@ export async function getSprintResultAction(
       }
     };
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error("sprint:get_result_failed", "Failed to recover sprint result", {
       ...ctx,
       err: error,
     });
-    return { success: false, data: null, error: error.message || "Failed to load session results" };
+    return { success: false, data: null, error: getErrorMessage(error, "Failed to load session results") };
   }
 }
 
@@ -484,7 +488,7 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
       } 
     };
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error("sprint:get_history_failed", "Failed to fetch sprint history", {
       ...ctx,
       err: error,
@@ -492,7 +496,7 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
     return { 
       success: false, 
       data: { sessions: [], drills: [] }, 
-      error: error.message 
+      error: getErrorMessage(error) 
     };
   }
 }
@@ -528,12 +532,12 @@ export async function getLastSprintSessionAction(contentId?: string) {
 
     return { success: true, data };
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error("sprint:get_last_session_failed", "Failed to fetch last session info", {
       ...ctx,
       err: error,
     });
-    return { success: false, data: null, error: error.message };
+    return { success: false, data: null, error: getErrorMessage(error) };
   }
 }
 
@@ -559,12 +563,12 @@ export async function getSprintProgressAction() {
     // データが存在しない場合は null を返し、呼び出し側でデフォルト値を扱う
     return { success: true, data };
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error("sprint:get_progress_failed", "Failed to fetch sprint progress", {
       ...ctx,
       err: error,
     });
-    return { success: false, data: null, error: error.message };
+    return { success: false, data: null, error: getErrorMessage(error) };
   }
 }
 
@@ -641,8 +645,8 @@ export async function getContentAction(contentId: string) {
     }
     const availableLevels: SprintAvailableLevels | null = levelsByContent ? (levelsByContent.get(contentId) ?? {}) : null;
     return { success: true, data, availableLevels };
-  } catch (error: any) {
-    logger.error("sprint:get_content_failed", error.message, { ...ctx, err: error });
-    return { success: false, error: error.message };
+  } catch (error) {
+    logger.error("sprint:get_content_failed", getErrorMessage(error), { ...ctx, err: error });
+    return { success: false, error: getErrorMessage(error) };
   }
 }

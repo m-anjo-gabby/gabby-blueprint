@@ -33,6 +33,7 @@ import { TermsAgreementModal } from './TermsAgreementModal';
 import type { TermDocument } from '@gabby/types/term';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { clientLogger } from '@gabby/lib/logger/client';
+import { reloadTo } from '@gabby/lib/navigation/reloadTo';
 
 
 export default function Header() {
@@ -57,7 +58,7 @@ export default function Header() {
       await signOut();
       // 重要: router.push ではなく window.location.href を使用します。
       // これによりページが完全にリロードされ、Zustandの全メモリキャッシュ(UserAのデータ)が破棄されます。
-      window.location.href = '/login';
+      reloadTo('/login');
     } catch (error) {
       clientLogger.error('auth:sign_out_failed', 'Logout failed', { err: error });
       setIsSigningOut(false);

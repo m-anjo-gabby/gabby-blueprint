@@ -2311,6 +2311,7 @@
           "errorWordEnEmpty": "Word (word_en) is empty.",
           "errorWordJaEmpty": "Japanese translation (word_ja) is empty.",
           "errorRankInvalid": "Rank contains a non-numeric value: \"{value}\"",
+          "errorPhraseTypeInvalid": "Phrase type must be 1 to 5: \"{value}\"",
           "toastImported": "Processed {count} words",
           "toastSaveFailed": "An error occurred while saving",
           "toastSystemError": "A system error occurred",

@@ -59,7 +59,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
     try {
       const data = await getPhrasesByWordId(wordId);
       setPhrases(data);
-    } catch (error) {
+    } catch {
       showToast(t('fetchFailed'), "error");
     } finally {
       setIsLoading(false);
@@ -83,7 +83,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
       } else {
         showToast(result.message || t('deleteFailed'), "error");
       }
-    } catch (error) {
+    } catch {
       showToast(t('systemError'), "error");
     }
   };
@@ -107,7 +107,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
         .toLowerCase();
         
       await download(phrase.audio_path, phrase.phrase_id, safeBaseName);
-    } catch (error) {
+    } catch {
       showToast(t('downloadFailed'), "error");
     }
   }, [download, selectedWord, showToast, t]);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslations } from 'next-intl';
@@ -106,7 +106,7 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
     defaultValues: getInitialValues(initialData),
   });
 
-  const hasCoach = form.watch('has_coach') === HAS_COACH_VALUE.YES;
+  const hasCoach = useWatch({ control: form.control, name: 'has_coach' }) === HAS_COACH_VALUE.YES;
   const { isSubmitting } = form.formState;
 
   const onSubmit = async (data: PlanFormInput) => {
@@ -134,7 +134,7 @@ export function ContractPlanFormDialog({ mode = 'create', initialData }: Contrac
       } else {
         setServerError(result.message || t('toastGenericFailed'));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('toastSystemError'));
     }
   };

@@ -13,7 +13,8 @@ export interface UserStoreInitializerProps {
   user: {
     id: string;
     email?: string;
-    app_metadata?: any;
+    /** JWT の app_metadata（DB のフックが user_type・roles を入れる） */
+    app_metadata?: unknown;
   };
 }
 
@@ -105,7 +106,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
     return () => {
       subscription.unsubscribe();
     };
-  }, [user.id, user.email, setUser, supabase]);
+  }, [user.id, user.email, user.app_metadata, setUser, supabase]);
 
   // このコンポーネントはロジック専用のため、何もレンダリングしません。
   return null;

@@ -66,7 +66,7 @@ export async function getPublishedCalendarEventsCore(
     }
 
     const coachesByEventId = await getAssignedCoachesByEventId((data ?? []).map((row) => row.calendar_event_id as string));
-    const events: CalendarEventItem[] = (data ?? []).map((row: any) => ({
+    const events: CalendarEventItem[] = (data ?? []).map((row) => ({
       ...row,
       is_joined: Array.isArray(row.participant) && row.participant.length > 0,
       is_assigned_coach: Array.isArray(row.assigned_coach) && row.assigned_coach.length > 0,

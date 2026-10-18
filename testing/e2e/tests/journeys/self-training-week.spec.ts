@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect, loginAsNewStudent } from "../../support/studentApp.ts";
 import { storageStatePath, type PersonaKey } from "../../support/personas.ts";
+import { clickUntilVisible } from "../../support/hydration.ts";
 import {
   DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
@@ -170,12 +171,10 @@ for (const { key, label } of LEARNERS) {
       await expect(page.getByText("これまでの歩み", { exact: true })).toBeVisible();
       await expect(page.getByText(/^次の節目/).first()).toBeVisible();
 
-      // ハイドレーション前に押すと遷移しない（TEST-JUDGEMENT-GUIDE KJ-2026-1018-01）
-      await page.waitForLoadState("networkidle");
-      await page.getByRole("link", { name: "記録を見る" }).click();
+      // ハイドレーション前に押すと遷移しないため、移った先の表示が出るまで押し直す（TEST-JUDGEMENT-GUIDE KJ-2026-1018-01）
+      await clickUntilVisible(page.getByRole("link", { name: "記録を見る" }), page.getByText(/月のまとめ$/));
       await page.waitForURL("**/training/performance**");
       await expect(page.getByRole("heading", { level: 1, name: "トレーニング記録" })).toBeAttached();
-      await expect(page.getByText(/月のまとめ$/)).toBeVisible();
 
       await page.goto("/training/word/history");
       await expect(page.getByRole("heading", { level: 1, name: "単語帳の履歴" })).toBeVisible();

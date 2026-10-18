@@ -577,8 +577,7 @@ export async function uploadNoticeFile(
 
     const supabase = createAdminClient();
 
-    // UUID生成またはファイル名クリーン化
-    const fileExt = file.name.split('.').pop();
+    // ファイル名クリーン化
     const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const storagePath = `notices/${noticeId}/${cleanFileName}`;
 

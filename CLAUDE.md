@@ -3,28 +3,30 @@
 - あなたは「Blueprint開発サポート」（シニアエンジニア）として、英語学習アプリ『Gabby Blueprint English』の開発（gabby-blueprint-student）を包括的に支援してください。
 - チャット欄にコードを提示して終わるのではなく、エディタ上の対象ファイルを直接書き換え（インライン編集）、または新規ファイルを直接生成・修正して実装を完了させてください。
 
-# 1. 技術スタックと厳格なバージョン制約
+# 1. 技術スタックとバージョン
 
-package.jsonの依存関係に基づき、以下の技術スタックを完全に遵守してください。
+版の数字の正本は `pnpm-workspace.yaml` の `catalog`（Node.js は `.nvmrc`、pnpm は `package.json` の `packageManager`）。ここにはメジャー版と方針だけを書く。版の決め方・更新の流れ・据え置いているメジャー版は `docs/DEPENDENCIES.md` が正本。パッケージを追加する場合は `--save-catalog` で catalog に入れる（各 `package.json` は `"catalog:"` で参照する）。
 
-- フロントエンド: Next.js 16.1.6 (App Router前提) / React 19.2.3 / TypeScript 5.x
-  - 型安全性を徹底し、anyは原則禁止。適切なInterface・型定義を行い、ESLintルールに準拠させること。
-  - React 19 / Next.js 16 の最新API（Server Actions、新しいHooks、React Compiler等）を考慮したコードを生成すること。
-- スタイリング・UI: Tailwind CSS v4 / @tailwindcss/postcss / framer-motion 12.x / lucide-react
+- 実行環境: Node.js 24 / pnpm 10（Turborepo）
+- フロントエンド: Next.js 16 (App Router前提) / React 19 / TypeScript 6
+  - 型安全性を徹底し、`any` は使わない（ESLint でエラー）。外から来る値（URL・CSV・`catch` の値等）は `unknown` や判定関数（`isUserType` 等）で確かめてから使う。
+  - React 19 / Next.js 16 の最新API（Server Actions、新しいHooks、React Compiler等）を考慮したコードを生成すること。React Compiler と併用するため、react-hook-form の値の購読は `form.watch` ではなく `useWatch` を使う。
+- スタイリング・UI: Tailwind CSS v4 / @tailwindcss/postcss / framer-motion 14 / lucide-react 1
   - shadcn/uiの設計思想に基づき、Radix UI（Alert-Dialog, Dialog, Dropdown-Menu, Label, Popover, Progress, Scroll-Area, Select, Slider, Slot, Switch, Tabs, vaul等）、clsx、tailwind-mergeを組み合わせたコンポーネント設計を行うこと。
   - アニメーションには framer-motion を使用すること。
-- バックエンド・インフラ: Supabase (@supabase/ssr v0.8.0, @supabase/supabase-js v2.94.0)
+- バックエンド・インフラ: Supabase（@supabase/ssr 0.12 / @supabase/supabase-js 2）
   - 効率的なデータ管理、認証（Auth）、Edge Functionsを実装すること。
+  - クライアント（`packages/lib/supabase/*`）は DB の型（`packages/types/db.ts`。実DBから生成した `database.ts` に、JSON の列等を上書きしたもの）で問い合わせを型検査する。行の型は画面ごとに手で書かず `TableRow<'表'>` / `TableInsert<'表'>` / `ViewRow<'ビュー'>` から作る。テーブル・関数を変えたら `node supabase/release/types.mjs --env=dev --write` で作り直す（`supabase/DDL/README.md`「アプリの DB の型」）。
 - フォーム・バリデーション: react-hook-form (v7) / zod (v4) / @hookform/resolvers (v5)
-- データ表示: @tanstack/react-table (v8) / react-resizable-panels
+- データ表示: @tanstack/react-table (v9) / react-resizable-panels
 - ユーティリティ: date-fns (v4) / papaparse (v5)
 
 # 2. 特定機能の実装仕様
 
 - 英語学習（単語帳・フレーズ）機能:
-  - 音声読み上げ（TTS）および文字起こし（STT）の実装には、Web Speech API および Azure Speech SDK (`microsoft-cognitiveservices-speech-sdk` v1.48.0) を使用した最適な実装パターンを提示すること。
+  - 音声読み上げ（TTS）および文字起こし（STT）の実装には、Web Speech API および Azure Speech SDK (`microsoft-cognitiveservices-speech-sdk`) を使用した最適な実装パターンを提示すること。
 - 状態管理:
-  - グローバルな状態管理には `zustand` (v5.0.11) を、コンポーネント単位や局所的な管理には React Context または React標準の State を適切に使い分けること。
+  - グローバルな状態管理には `zustand` (v5) を、コンポーネント単位や局所的な管理には React Context または React標準の State を適切に使い分けること。
 - リッチテキスト・マークダウン:
   - マークダウンの描画には `react-markdown` (v10) および `remark-gfm` (v4) を使用すること。
 
@@ -51,10 +53,10 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
   - D. 没入画面（ドリル・ライブ通話等）の準備中表示は画面専用の実装を許可する。遷移中の汎用表示は `LoadingScreen`（student は `ImmersiveLoading`）。
 - ダイアログ・シートを開いた時のフォーカス（全アプリ共通）: 開いただけで中の要素（×ボタン等）にフォーカスの枠が出ないよう、各アプリの `components/ui`（dialog / alert-dialog / sheet / drawer）の Content は `onOpenAutoFocus` の既定を `focusDialogContent`（`packages/lib/components/common/dialogFocus.ts`。枠そのものにフォーカスする）にしている。画面ごとに `onOpenAutoFocus={(e) => e.preventDefault()}` を書かない。Radix の Dialog を直接使う場合も `onOpenAutoFocus={focusDialogContent}` を渡す。開いた時に特定の要素へフォーカスが必要な場合（入力が主のダイアログ等）だけ、その要素に `autoFocus` を付ける。
 - チャット画面（全アプリ共通）: admin/coach/student のチャットは2ペイン（左: ルーム一覧 / 右: ルーム、狭い画面では一覧とルームを切り替え）で、部品は `packages/lib/components/chat/`（`ChatSplitLayout` / `ChatRoomListPane` / `ChatTimeline` / `ChatComposer` 等）に集約する。各アプリは `chat/layout.tsx` で `ChatSplitLayout` を置き、文言（`ChatLabels`）と2ペインにする画面幅（`CHAT_SPLIT_BREAKPOINT`、`constants/chat.ts`）だけを渡す。アプリ固有の機能（admin の査閲・ルーム作成・参加者管理・顧客フィルター）は `toolbar` / `headerAction` / `headerActions` の差し込み口で足し、共通部品を複製しない。ルームへのリンクは `packages/lib/chat/links.ts`（アプリ内は `getChatRoomPath`、メール等アプリ外からは宛先ユーザーのポータルで組み立てる `getChatRoomUrl`）で作る。未ログインで保護された画面を開いた場合は、proxy が `/login?next=<元のパス>` へ転送し、ログイン後に元の画面へ戻す（`packages/lib/auth/returnTo.ts`。戻り先は必ず `sanitizeReturnTo` を通す）。
-- 管理画面の一覧（admin）: 検索・絞り込み・ページ送りのある一覧は `apps/admin/components/list/`（`useListQuery` / `ListToolbar` / `DataTable` / `ListSelectFilter` / `ClientFilter` / 行の削除の確認 `DeleteConfirmDialog`）と `apps/admin/lib/list.ts` で作り、画面ごとに検索欄・ページ送り・表の外枠・削除の確認を書かない（検索の無い表を単独で置く場合は `DataTable` の `standalone`）。admin の画面の見出しは `components/common/PageHeader.tsx`（親画面へ戻る場合は `back`、見つからない場合の表示は `BackLink`）で統一する（エディタの上部バー等、作業用の固定バーは除く）。条件の正本は URL のクエリ（`q` = 検索語、`page` = ページ、ほかは画面ごとの絞り込み。絞り込みのクエリ名は画面の `_lib/` に `XXX_LIST_FILTERS` として置き、page.tsx と一覧の両方から使う）で、条件を変えたら1ページ目に戻し、「条件をクリア」で全条件を外す。構成は `page.tsx`（`parseListParams` で条件を読み、取得して `PageHeader` と一覧を描く）・`_components/XxxDataTable.tsx`（`useListQuery` ＋ `ListToolbar` ＋ `DataTable`）・`_components/columns.tsx`（`createColumns(t, …)`）・`loading.tsx` に分ける。一覧のサーバーアクションは `ListParams` を受け取り `ListResult<T>`（`rows` / `totalCount`）を返し、範囲は `toRange`、検索語は `packages/lib/supabase/ilike.ts`（`containsPattern` / `ilikeAny`）で条件に入れる（入力をそのまま `.or()` / `.ilike()` に埋め込まない）。件数の少ないマスタを全件取得してブラウザで絞る一覧は `useListQuery(…, { shallow: true })` と `paginateLocally` を使う。tanstack の表のオブジェクトは React Compiler に表示を使い回されるため子部品へ渡さない（`DataTable` に `columns` と `data` を渡す）。
-- ログ（全アプリ共通）: 規約は `docs/LOGGING.md` が正本。サーバーは `createLogger(service)`（`packages/lib/logger/`）、ブラウザは `clientLogger`（`logger/client.ts`。`/api/client-log` へ `sendBeacon` で送る。ログの送信に Server Action を使わない）を使い、`console.*` は使わない（ESLint の `no-console`）。イベント名は `<domain>:<action>_<outcome>`（outcome は `success` / `failed` / `unexpected` / `denied`）。エラーは `err` にエラーそのものを渡し（`error.message` だけを渡さない）、文脈の型（`LogContext`）に無い値は `payload` に入れる。氏名・本文等の個人情報は `payload` に入れない。監査・業務の履歴はログではなく DB に残す。
+- 管理画面の一覧（admin）: 検索・絞り込み・ページ送りのある一覧は `apps/admin/components/list/`（`useListQuery` / `ListToolbar` / `DataTable` / `ListSelectFilter` / `ClientFilter` / 行の削除の確認 `DeleteConfirmDialog`）と `apps/admin/lib/list.ts` で作り、画面ごとに検索欄・ページ送り・表の外枠・削除の確認を書かない（検索の無い表を単独で置く場合は `DataTable` の `standalone`）。admin の画面の見出しは `components/common/PageHeader.tsx`（親画面へ戻る場合は `back`、見つからない場合の表示は `BackLink`）で統一する（エディタの上部バー等、作業用の固定バーは除く）。条件の正本は URL のクエリ（`q` = 検索語、`page` = ページ、ほかは画面ごとの絞り込み。絞り込みのクエリ名は画面の `_lib/` に `XXX_LIST_FILTERS` として置き、page.tsx と一覧の両方から使う）で、条件を変えたら1ページ目に戻し、「条件をクリア」で全条件を外す。構成は `page.tsx`（`parseListParams` で条件を読み、取得して `PageHeader` と一覧を描く）・`_components/XxxDataTable.tsx`（`useListQuery` ＋ `ListToolbar` ＋ `DataTable`）・`_components/columns.tsx`（`createColumns(t, …)`）・`loading.tsx` に分ける。一覧のサーバーアクションは `ListParams` を受け取り `ListResult<T>`（`rows` / `totalCount`）を返し、範囲は `toRange`、検索語は `packages/lib/supabase/ilike.ts`（`containsPattern` / `ilikeAny`）で条件に入れる（入力をそのまま `.or()` / `.ilike()` に埋め込まない）。件数の少ないマスタを全件取得してブラウザで絞る一覧は `useListQuery(…, { shallow: true })` と `paginateLocally` を使う。tanstack の表のオブジェクトは React Compiler に表示を使い回されるため子部品へ渡さない（`DataTable` に `columns` と `data` を渡す）。列の型は `ListColumnDef<T>`（`components/list/listTable.ts`。表の機能・列の追加情報の定義もここだけに置く）。
+- ログ（全アプリ共通）: 規約は `docs/LOGGING.md` が正本。サーバーは `createLogger(service)`（`packages/lib/logger/`）、ブラウザは `clientLogger`（`logger/client.ts`。`/api/client-log` へ `sendBeacon` で送る。ログの送信に Server Action を使わない）を使い、`console.*` は使わない（ESLint の `no-console`）。イベント名は `<domain>:<action>_<outcome>`（outcome は `success` / `failed` / `unexpected` / `denied`）。エラーは `err` にエラーそのものを渡し（`error.message` だけを渡さない）、`catch` の値からメッセージを取り出すときは `getErrorMessage`（`logger/errorMessage.ts`）を使い、文脈の型（`LogContext`）に無い値は `payload` に入れる。氏名・本文等の個人情報は `payload` に入れない。監査・業務の履歴はログではなく DB に残す。
 - 環境変数（全アプリ共通）: アプリの環境変数は `scripts/vercel-env/manifest.mjs` が正本（使うアプリ・環境ごとの値の決め方・秘密かどうか）。`process.env` で新しい変数を使う場合や、使わなくなった場合は同じタスクで定義を追加・廃止（`removed: true`）し、`pnpm vercel-env --write-examples` で `apps/*/.env.example` を作り直す（`.env.example` を直接編集しない）。staging・本番への反映は Vercel の画面ではなく `pnpm vercel-env --env=<staging|prod> --apply` で行い、リリースで追加・変更する変数はリリーススクリプト冒頭の手順にも書く。詳細は `scripts/vercel-env/README.md`。
-- 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラーがない状態にしてから完了とすること。
+- 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラー・警告がない状態にしてから完了とすること（lint は警告も失敗にしている。全体は `pnpm check` で、GitHub Actions の `CI` も同じ内容を push のたびに実行する）。
 - `apps/student` のUI実装規約:
   - 色・角丸は `apps/student/app/globals.css` のデザイントークン（`brand-*` / `gold` / `ink-*` / `line` / `canvas` / `surface`、`rounded-panel` / `rounded-card` / `rounded-control`）で指定し、パレット名（`indigo-*` / `slate-*` 等）や任意値（`rounded-[32px]` 等）を直接書かない。機能ごとの色分けはせず、emerald/amber/rose は成功・警告・エラー等の状態表示に限定する。例外として教材種別・トレーニング指標・CEFRレベルは分類色として扱う。教材種別とトレーニング指標の色は `packages/lib/content/ui.ts` の `getContentTypeConfig()` / `getTrainingMetricConfig()` だけで定義し、アイコンのマスやアイコン単体など小さな部位に限って使う（カードの枠・ボタン・文字には付けない）。指標の色は所属するトレーニングの色を引き継ぐ（単語・フレーズ＝単語帳のsky、タイムアタック・ドリル＝スプリントのorange、種別をまたぐ発話評価＝薄いローズ）。実施日数などの分類でない指標は、ブランド色かグレーで表示する。
   - ブランド色はコーポレートカラー #0e3196（`brand` = `brand-700`）を基準にした段階色。明るさが要る所（進捗バー・フォーカス・濃い面上のアイコン）は `brand-500` を使う。ヒーロー面は `bg-brand-hero`（明るい青→#0e3196のグラデーション）を使い、`brand-deep` は重く見えるため面には使わず文字色に限定する。`gold`（#ffd700）はコーポレートサイトの強調色で、料金ページへのCTA・「おすすめ」・達成演出に限定して少量使い、文字色や警告表示には使わない。

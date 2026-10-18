@@ -60,7 +60,17 @@ pnpm --filter gabby-blueprint-student add <パッケージ> --save-catalog   # c
 
 | パッケージ | 現在 | 最新 | 据え置く理由・上げる条件 |
 |---|---|---|---|
-| — | — | — | — |
+| typescript | 6.0 | 7.0 | typescript-eslint（eslint-config-next が使う）が TypeScript 7 に未対応（peerDependencies が `<6.1.0`）。対応版が出たら上げる |
+| pnpm | 10 | 12 | Vercel が pnpm 11 以降に未対応（§2）。対応が公表されたら上げる |
+| @types/node | 24 | 26 | 実行環境の Node のメジャー版に合わせる方針（§1）。Node を上げる時に一緒に上げる |
+
+### peerDependencies の範囲外で使っている組み合わせ
+
+`pnpm-workspace.yaml` の `peerDependencyRules` に、動作を確かめて使っている組み合わせを書いています。対応版が出たら行を消します。
+
+| 組み合わせ | 確かめたこと・対処 |
+|---|---|
+| ESLint 10 と eslint-config-next 16 のプラグイン（eslint-plugin-react / import / jsx-a11y / react-hooks） | ESLint 9 はサポート終了（2026-08-06）のため 10 を使う。eslint-plugin-react の React の版の自動判定が ESLint 10 で動かないため、`eslint.config.mjs` で `settings.react.version` を明示している（React のメジャー版を上げたら合わせる）。全ファイルの lint が ESLint 9 と同じ結果になることを確かめた |
 
 ## 4. GitHub Actions
 

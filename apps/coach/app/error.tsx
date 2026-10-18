@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { LayoutDashboard, ServerCrash, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { clientLogger } from '@gabby/lib/logger/client';
+import { reloadTo } from '@gabby/lib/navigation/reloadTo';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -20,7 +21,7 @@ export default function Error({ error }: ErrorProps) {
   }, [error]);
 
   const handleBackToDashboard = () => {
-    window.location.href = '/dashboard';
+    reloadTo('/dashboard');
   };
 
   return (

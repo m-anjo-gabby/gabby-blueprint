@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslations } from 'next-intl';
@@ -16,7 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
 import { Content, CONTENT_SCOPES, CONTENT_STATUS, CONTENT_TYPES, ContentScope, type ContentStatus, ContentType, CEFR_CONFIG } from '@gabby/types/content';
-import { QUESTION_TYPES, SPRINT_TYPES } from '@gabby/types/sprint';
+import { SPRINT_TYPES } from '@gabby/types/sprint';
 import { DIALOGUE_CATEGORIES, DialogueCategory } from '@gabby/types/dialogue';
 import { upsertContent, type ContentUpsertInput } from '@/actions/adminContentAction';
 import { useRouter } from 'next/navigation';
@@ -168,8 +168,8 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
   });
 
   const { isSubmitting } = form.formState;
-  const currentContentType = form.watch('content_type');
-  const currentSprintType = form.watch('sprint_type');
+  const currentContentType = useWatch({ control: form.control, name: 'content_type' });
+  const currentSprintType = useWatch({ control: form.control, name: 'sprint_type' });
 
   // 種別が変わったときにスプリント用の値をリセット・制御するためのEffect
   useEffect(() => {
@@ -259,7 +259,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       } else {
         setServerError(result.message || t('serverErrorDefault'));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('systemError'));
     }
   };

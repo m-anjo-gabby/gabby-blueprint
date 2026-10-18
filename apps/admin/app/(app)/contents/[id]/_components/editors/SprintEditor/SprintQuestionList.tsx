@@ -7,8 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  PlayCircle, MessageSquare, HelpCircle, CheckCircle2, 
-  Trash2, Edit, Settings2, MoreVertical, 
+  CheckCircle2, 
+  Trash2, Settings2, 
   AlertCircle, Music4, Headphones, Layout, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

@@ -54,7 +54,7 @@ export function usePlayAzureSpeech() {
     if (synthRef.current) {
       try {
         synthRef.current.close();
-      } catch (e) {
+      } catch {
         // すでに閉じている、あるいは破棄済みの場合は無視
       }
     }

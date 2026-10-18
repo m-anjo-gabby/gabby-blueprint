@@ -8,6 +8,7 @@ import { getLogContext } from "@gabby/lib/logger/context";
 import { toggleFavoriteRow } from "@/lib/favoriteToggle";
 import { FAVORITE_LIMIT, type FavoriteToggleResult } from "@/constants/favorites";
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('student');
 
@@ -46,7 +47,7 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
       throw new Error(`取得失敗: ${error.message}`);
     }
 
-    const rawData = data as any[];
+    const rawData = data;
 
     // データが1件も取得できなかった場合
     if (!rawData || rawData.length === 0) {
@@ -77,7 +78,8 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
     // TrainingWord[] 型に準拠するようにマッピング
     const words: TrainingWord[] = rawData.map((word) => ({
       ...word, // word_id, word_en, word_ja, status, insert_date 等をすべて継承
-      phrases: (word.com_m_phrase || []).map((p: any) => ({
+      content_id: contentId, // この教材で絞り込んでいる（列は NULL を許すため明示する）
+      phrases: (word.com_m_phrase || []).map((p) => ({
         ...p, // phrase_id, phrase_en, phrase_ja, phrase_type, status, tts_status 等をすべて継承
         // UI制御用のプロパティをセット（is_favorite に統一）
         is_favorite: Array.isArray(p.com_t_favorite_phrase) && p.com_t_favorite_phrase.length > 0 
@@ -262,7 +264,7 @@ export async function getUserWordHistoryAction(yearMonth: string): Promise<{ suc
     if (error) throw error;
 
     // Supabaseの結合結果が配列で返るため、インターフェースに合わせて平坦化する
-    const formattedData = (data as any[])?.map(item => ({
+    const formattedData = data?.map(item => ({
       ...item,
       com_m_contents: Array.isArray(item.com_m_contents) ? item.com_m_contents[0] : item.com_m_contents
     })) || [];
@@ -274,11 +276,11 @@ export async function getUserWordHistoryAction(yearMonth: string): Promise<{ suc
 
     return { success: true, data: formattedData as WordSummaryHistoryItem[] };
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error("word:get_history_failed", "Failed to fetch word summary history", {
       ...ctx,
       err: error,
     });
-    return { success: false, data: [], error: error.message };
+    return { success: false, data: [], error: getErrorMessage(error) };
   }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { clientLogger } from '@gabby/lib/logger/client';
+import { reloadTo } from '@gabby/lib/navigation/reloadTo';
 
 export default function GlobalError({
   error,
@@ -23,7 +24,7 @@ export default function GlobalError({
           <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', margin: '0 0 1rem 0' }}>The system is temporarily unavailable</h1>
           <p style={{ fontSize: '0.875rem', color: '#64748b', lineHeight: '1.5', marginBottom: '2rem' }}>A critical error occurred in the application&apos;s base layout. Please refresh your browser or try again later.</p>
           <button
-            onClick={() => window.location.href = '/dashboard'}
+            onClick={() => reloadTo('/dashboard')}
             style={{ backgroundColor: '#0f172a', color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '1rem', fontWeight: 'bold', cursor: 'pointer', width: '100%' }}
           >
             Reload System

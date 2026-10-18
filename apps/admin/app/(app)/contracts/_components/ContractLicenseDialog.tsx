@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -73,7 +73,7 @@ export function ContractLicenseDialog({ contract, children }: Props) {
       const data = await getLicenseAssignmentUsers(contract.contract_id, contract.client_id)
       setAssignedUsers(data.assignedUsers)
       setUnassignedUsers(data.unassignedUsers)
-    } catch (error) {
+    } catch {
       showToast(t('toastFetchFailed'), 'error')
     } finally {
       setLoading(false)

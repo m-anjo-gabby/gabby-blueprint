@@ -23,6 +23,7 @@ import {
 import { SESSION_STATUS } from '@gabby/types/session';
 import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import type { TableRow } from '@gabby/types/db';
 
 type SupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -291,9 +292,18 @@ export async function createLessonSprintResultCore(
 }
 
 const LESSON_SPRINT_HISTORY_SELECT =
-  'lesson_sprint_id, session_id, content_id, question_type, difficulty_level, time_limit_sec, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name, content_name_en)';
+  'lesson_sprint_id, session_id, content_id, question_type, difficulty_level, time_limit_sec, total_answered, total_evaluated, answered_history, insert_date, com_m_contents(content_name, content_name_en)' as const;
 
-function mapLessonSprintHistoryRow(row: any): LessonSprintHistoryListItem {
+/** LESSON_SPRINT_HISTORY_SELECT で取得した1行 */
+type LessonSprintHistoryRow = Pick<
+  TableRow<'lesson_t_sprint'>,
+  | 'lesson_sprint_id' | 'session_id' | 'content_id' | 'question_type' | 'difficulty_level' | 'time_limit_sec'
+  | 'total_answered' | 'total_evaluated' | 'answered_history' | 'insert_date'
+> & {
+  com_m_contents: Pick<TableRow<'com_m_contents'>, 'content_name' | 'content_name_en'> | Pick<TableRow<'com_m_contents'>, 'content_name' | 'content_name_en'>[] | null;
+};
+
+function mapLessonSprintHistoryRow(row: LessonSprintHistoryRow): LessonSprintHistoryListItem {
   const history = readSprintHistory<LessonSprintHistoryItem>(row.answered_history);
   const scored = history.filter((h) => typeof h.score === 'number');
   const averageScore = scored.length > 0

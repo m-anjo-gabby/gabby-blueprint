@@ -31,6 +31,11 @@ export const CALENDAR_EVENT_TYPES = {
 >;
 export type CalendarEventType = keyof typeof CALENDAR_EVENT_TYPES;
 
+/** 画面・URL から受け取った値がイベント種別か */
+export function isCalendarEventType(value: unknown): value is CalendarEventType {
+  return typeof value === 'string' && Object.hasOwn(CALENDAR_EVENT_TYPES, value);
+}
+
 /** 終了時刻を持たないイベントの、開催中とみなす長さ（参加の受付・「開催中」の表示に使う） */
 export const CALENDAR_EVENT_DEFAULT_DURATION_MS = 60 * 60 * 1000;
 

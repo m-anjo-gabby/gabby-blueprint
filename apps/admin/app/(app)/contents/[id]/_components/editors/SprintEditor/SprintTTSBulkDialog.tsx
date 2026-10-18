@@ -125,7 +125,7 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
         );
 
         if (res.success) success++; else errorCount++;
-      } catch (e) {
+      } catch {
         errorCount++;
       }
     }
@@ -158,7 +158,7 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
             <>
               <div className="space-y-3">
                 <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 1: Scope</Label>
-                <Tabs value={targetMode} onValueChange={(v) => setTargetMode(v as any)} className="w-full">
+                <Tabs value={targetMode} onValueChange={(v) => setTargetMode(v === 'missing' ? 'missing' : 'all')} className="w-full">
                   <TabsList className="grid grid-cols-2 w-full bg-slate-100 p-1 h-11 border border-slate-200">
                     <TabsTrigger value="all" className="font-bold gap-2 text-xs">
                       <RefreshCw size={14} /> Re-generate All

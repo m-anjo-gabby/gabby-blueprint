@@ -47,7 +47,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
   const [copied, setCopied] = useState(false);
 
   const { speak, generateSSML, isSpeaking, error, setError } = usePlayAzureSpeech();
-  const { save, isSaving } = useSaveAzureSpeech();
+  const { save } = useSaveAzureSpeech();
   const { showToast } = useToast();
 
   // 単語配列の初期化
@@ -155,7 +155,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
       } else {
         showToast(result.message || t('toastSaveFailed'), "error");
       }
-    } catch (e) {
+    } catch {
       showToast(t('toastError'), "error");
     } finally {
       setIsProcessing(false);
@@ -169,49 +169,6 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
     setTimeout(() => setCopied(false), 2000); // 2秒後にアイコンを戻す
   };
 
-  // --- 初期化・復元ロジック ---
-  const initializeDialog = useCallback(() => {
-    // 1. 基本パラメータのリセット
-    setParams(DEFAULT_PARAMS);
-    setError(null);
-    setCopied(false);
-
-    // 2. モードの同期
-    const mode = phrase.tts_ssml_mode || 'auto';
-    setSsmlMode(mode);
-
-    // 3. SSMLがある場合はそれをセット、なければ空
-    const currentSsml = phrase.tts_ssml || '';
-    setSsml(currentSsml);
-
-    // 4. WordAdjustmentの復元または新規作成
-    if (mode === 'auto' && currentSsml) {
-      const words = phrase.phrase_en.split(' ').map((word, i) => ({
-        id: `word-${i}`,
-        fullText: word,
-        text: word.replace(/[.,!?;:]/g, ''),
-        emphasis: false,
-        emphasisLevel: 'moderate' as const,
-        breakAfter: false,
-        breakDuration: 300,
-        ipa: '',
-      }));
-      setAdjustments(words);
-    } else {
-      // 新規作成時（またはManual時）のデフォルト初期化
-      const words = phrase.phrase_en.split(' ').map((word, i) => ({
-        id: `word-${i}`,
-        fullText: word,
-        text: word.replace(/[.,!?;:]/g, ''),
-        emphasis: false,
-        emphasisLevel: 'moderate' as const,
-        breakAfter: false,
-        breakDuration: 300,
-        ipa: '',
-      }));
-      setAdjustments(words);
-    }
-  }, [phrase]);
 
   /**
    * ダイアログの開閉状態が変更された際の処理

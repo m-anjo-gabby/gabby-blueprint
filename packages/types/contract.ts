@@ -7,7 +7,7 @@ export interface ContractLicenseStats {
   remaining_licenses: number;     // 割当可能数
 }
 
-import type { TableRow } from './db';
+import type { TableRow, ViewRow } from './db';
 
 // 契約タイプ 1: Blueprintのみ, 2: Blueprint+ライブセッション
 export type ContractType = 1 | 2;
@@ -15,32 +15,8 @@ export type ContractType = 1 | 2;
 /** 契約の状態（com_m_contract.status。値は DB の CHECK 制約に従う） */
 export type ContractStatus = NonNullable<TableRow<'com_m_contract'>['status']>;
 
-// 契約情報の型定義（ビュー vw_contract_details に対応）
-export interface ContractDetail {
-  contract_id: string;
-  client_id: string;
-  // アドミン管理用の契約名（顧客内で一意）。生徒・コーチには表示しない
-  contract_name: string;
-  // 生徒・コーチに表示する商品名
-  plan_name: string;
-  plan_name_en: string;
-  max_licenses: number;
-  start_date: string;
-  end_date: string;
-  status: number;
-  note: string | null;
-  insert_date: string;
-  update_date: string;
-  client_name: string;
-  remaining_licenses: number;
-  current_assigned_count: number;
-  current_active_count: number;
-  contract_type: ContractType;
-  plan_id: string;
-  weekly_frequency: number | null;
-  total_sessions: number | null;
-  has_dialogue_practice: boolean;
-}
+// 契約情報の型定義（ビュー vw_contract_details の1行）
+export type ContractDetail = ViewRow<'vw_contract_details'>;
 
 // 契約プランマスタ（com_m_contract_plan）
 export interface ContractPlan {

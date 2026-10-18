@@ -36,10 +36,6 @@ const { data: students } = await admin
   .eq("user_type", "1")
   .order("user_name");
 
-async function ticketsOf(studentId: string) {
-  const { data } = await admin.from("com_t_user_session_ticket").select("*").eq("user_id", studentId);
-  return data ?? [];
-}
 async function sessionsOf(studentId: string) {
   const { data } = await admin.from("com_t_session").select("*").eq("student_id", studentId).order("start_datetime");
   return data ?? [];

@@ -9,6 +9,7 @@ import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('admin');
 
@@ -34,8 +35,8 @@ export async function getSprintQuestionsByFilter(contentId: string, type: Sprint
 
     if (error) throw error;
     return data as SprintQuestion[];
-  } catch (err: any) {
-    logger.error('sprint:get_questions_failed', err.message, { ...ctx, err, payload: { contentId, type, level } });
+  } catch (err) {
+    logger.error('sprint:get_questions_failed', getErrorMessage(err), { ...ctx, err, payload: { contentId, type, level } });
     return [];
   }
 }
@@ -67,9 +68,9 @@ export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]
     logger.info('sprint:bulk_upsert_success', `${questions.length} questions processed`, { ...ctx });
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
-  } catch (err: any) {
-    logger.error('sprint:bulk_upsert_failed', err.message, { ...ctx, err, payload: questions });
-    return { success: false, message: err.message };
+  } catch (err) {
+    logger.error('sprint:bulk_upsert_failed', getErrorMessage(err), { ...ctx, err, payload: questions });
+    return { success: false, message: getErrorMessage(err) };
   }
 }
 
@@ -93,9 +94,9 @@ export async function deleteSprintQuestion(questionId: string) {
     // 音声ファイルの削除は問題の削除の後に行い、失敗しても削除は取り消さない（エラーのログで気付けるようにする）
     if (deleted) await removeSprintVoiceFiles(supabase, [deleted as unknown as SprintVoiceRow], ctx, { questionId });
     return { success: true };
-  } catch (err: any) {
-    logger.error('sprint:delete_failed', err.message, { ...ctx, err, payload: { questionId } });
-    return { success: false, message: err.message };
+  } catch (err) {
+    logger.error('sprint:delete_failed', getErrorMessage(err), { ...ctx, err, payload: { questionId } });
+    return { success: false, message: getErrorMessage(err) };
   }
 }
 
@@ -228,9 +229,9 @@ export async function saveSprintAudio(
     }
 
     return { success: true, path: filePath };
-  } catch (err: any) {
-    logger.error('sprint:save_audio_failed', err.message, { ...ctx, err, payload: { questionId, section } });
-    return { success: false, message: err.message };
+  } catch (err) {
+    logger.error('sprint:save_audio_failed', getErrorMessage(err), { ...ctx, err, payload: { questionId, section } });
+    return { success: false, message: getErrorMessage(err) };
   }
 }
 
@@ -385,8 +386,8 @@ export async function bulkImportSprintQuestions(
     logger.info('sprint:bulk_import_success', `Imported ${questions.length} questions for content ${contentId}, type ${type}, level ${level}`, { ...ctx });
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
-  } catch (err: any) {
-    logger.error('sprint:bulk_import_failed', err.message, { ...ctx, err, payload: { contentId, type, level, count: questions.length } });
-    return { success: false, message: err.message };
+  } catch (err) {
+    logger.error('sprint:bulk_import_failed', getErrorMessage(err), { ...ctx, err, payload: { contentId, type, level, count: questions.length } });
+    return { success: false, message: getErrorMessage(err) };
   }
 }

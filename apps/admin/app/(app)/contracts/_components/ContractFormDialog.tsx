@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { addMonths, format } from 'date-fns'
@@ -131,7 +131,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
     defaultValues: getInitialValues(initialData),
   })
 
-  const selectedPlanId = form.watch('plan_id')
+  const selectedPlanId = useWatch({ control: form.control, name: 'plan_id' })
   const selectedPlan = useMemo(() => plans.find((p) => p.plan_id === selectedPlanId) ?? null, [plans, selectedPlanId])
   const isLivePlan = selectedPlan?.contract_type === 2
 
@@ -219,7 +219,7 @@ export function ContractFormDialog({ mode = 'create', initialData }: ContractFor
       } else {
         setServerError(result.message || t('toastUnexpectedError'))
       }
-    } catch (error) {
+    } catch {
       setServerError(t('toastSystemError'))
     }
   }

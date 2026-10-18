@@ -9,7 +9,7 @@ import 'server-only';
 import { createServerClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
 import { User } from '@supabase/supabase-js';
-import { UserBase, USER_TYPES } from '@gabby/types/user';
+import { USER_TYPES } from '@gabby/types/user';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
 import { issueInitialLicense, resolvePerformedBy } from '../license/issue';

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search, Trash2, Hash, AlertCircle } from 'lucide-react';
+import { Loader2, Search, Trash2, AlertCircle } from 'lucide-react';
 import { getWordsByContentId, deleteWord } from '@/actions/adminWordAction';
 import { WordRecord, WORD_STATUS } from '@gabby/types/word'; 
 import { cn } from '@/lib/utils';
@@ -41,7 +41,7 @@ export function WordList({ contentId }: WordListProps) {
     try {
       const data = await getWordsByContentId(contentId);
       setWords(data);
-    } catch (error) {
+    } catch {
       showToast(t('fetchFailed'), "error");
     } finally {
       setIsLoading(false);

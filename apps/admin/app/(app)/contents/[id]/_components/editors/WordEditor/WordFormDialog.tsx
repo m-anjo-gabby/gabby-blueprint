@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { upsertWord, type WordInput } from '@/actions/adminWordAction';
-import { AlertCircle, PlusCircle, CheckCircle2, Edit, Languages } from 'lucide-react';
+import { PlusCircle, CheckCircle2, Edit, Languages } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { WordRecord, WORD_STATUS, WordStatus } from '@gabby/types/word';
 
@@ -93,7 +93,7 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
       } else {
         setServerError(result.message || t('serverErrorDefault'));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('systemError'));
     }
   };

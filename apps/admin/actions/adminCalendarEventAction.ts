@@ -10,6 +10,7 @@ import { containsPattern, ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import {
   CALENDAR_EVENT_TYPES,
+  isCalendarEventType,
   CalendarEventItem,
   CalendarEventType,
   CalendarEventTargetType,
@@ -99,7 +100,7 @@ export async function getCalendarEventList(params: ListParams<'type' | 'status'>
   const ctx = await getLogContext();
   const { q, filters } = params;
   // 種別・公開状態は既知の値だけを条件にする（不正な値は「すべて」として扱う）
-  const eventType = Object.hasOwn(CALENDAR_EVENT_TYPES, filters.type) ? filters.type : '';
+  const eventType = isCalendarEventType(filters.type) ? filters.type : null;
   const isPublished = Object.hasOwn(PUBLISH_STATUS_FILTER, filters.status)
     ? PUBLISH_STATUS_FILTER[filters.status as keyof typeof PUBLISH_STATUS_FILTER]
     : undefined;
@@ -196,7 +197,7 @@ async function getCoachesByEventId(calendarEventIds: string[]): Promise<Map<stri
     return map;
   }
 
-  for (const row of (data ?? []) as any[]) {
+  for (const row of (data ?? [])) {
     const list = map.get(row.calendar_event_id) ?? [];
     list.push({ coach_id: row.coach_id, user_name: row.com_m_user?.user_name ?? null });
     map.set(row.calendar_event_id, list);
@@ -391,7 +392,7 @@ export async function getCalendarEventParticipants(
       return { event: { ...event, is_joined: false, is_assigned_coach: false } as CalendarEventItem, participants: [], totalCount: 0 };
     }
 
-    const participants: CalendarEventParticipant[] = (data ?? []).map((row: any) => ({
+    const participants: CalendarEventParticipant[] = (data ?? []).map((row) => ({
       participant_id: row.participant_id,
       user_id: row.user_id,
       user_name: row.com_m_user?.user_name ?? null,
@@ -439,7 +440,7 @@ export async function getCalendarEventMessages(calendarEventId: string): Promise
       return [];
     }
 
-    return (data ?? []).map((row: any) => ({ ...row, attachments: Array.isArray(row.attachments) ? row.attachments : [] }));
+    return (data ?? []).map((row) => ({ ...row, attachments: Array.isArray(row.attachments) ? row.attachments : [] }));
   } catch (error) {
     logger.error('calendarEvent:get_messages_unexpected', error instanceof Error ? error.message : 'Unknown error', {
       ...ctx,

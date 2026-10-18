@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslations } from 'next-intl';
@@ -145,9 +145,9 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
   });
 
   const { isSubmitting } = form.formState;
-  const hasEnd = form.watch('has_end');
-  const targetType = form.watch('target_type');
-  const eventType = form.watch('event_type');
+  const hasEnd = useWatch({ control: form.control, name: 'has_end' });
+  const targetType = useWatch({ control: form.control, name: 'target_type' });
+  const eventType = useWatch({ control: form.control, name: 'event_type' });
   const rsvpRequired = CALENDAR_EVENT_TYPES[eventType].rsvpRequired;
 
   const onSubmit = async (values: CalendarEventFormValues) => {
@@ -179,7 +179,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
       } else {
         setServerError(result.message || t('toastGenericFailed'));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('toastSystemError'));
     }
   };

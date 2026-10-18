@@ -381,7 +381,7 @@ export const SprintDrillPlayer: React.FC<SprintDrillPlayerProps> = ({
       }
       toggleAutoPlay(false);
     }
-  }, [isAutoPlaying, showConfirm, toggleAutoPlay, forceRestartQuestionFlow]);
+  }, [isAutoPlaying, showConfirm, toggleAutoPlay, forceRestartQuestionFlow, setIsRevealed]);
 
   // 初期注入と先行同期
   useEffect(() => {

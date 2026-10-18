@@ -81,7 +81,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
     try {
       const phrases = await getPhrasesByContentId(contentId);
       setRawPhrases(phrases || []);
-    } catch (err) {
+    } catch {
       showToast(t('toastFetchFailed'), "error");
     } finally {
       setIsLoadingData(false);
@@ -211,7 +211,7 @@ export function TTSBulkDialog({ contentId, onComplete, children }: TTSBulkDialog
                 {/* ステップ1: 対象範囲の選択 (シンプルな英語タブ) */}
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Step 1: Scope</Label>
-                  <Tabs value={targetMode} onValueChange={(v) => setTargetMode(v as any)} className="w-full">
+                  <Tabs value={targetMode} onValueChange={(v) => setTargetMode(v === 'missing' ? 'missing' : 'all')} className="w-full">
                     <TabsList className="grid grid-cols-2 w-full bg-slate-100 p-1 h-11 border border-slate-200">
                       <TabsTrigger value="all" className="font-bold gap-2 text-xs">
                         <RefreshCw size={14} /> Re-generate All

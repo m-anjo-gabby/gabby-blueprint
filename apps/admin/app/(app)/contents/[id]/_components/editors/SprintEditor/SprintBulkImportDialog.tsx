@@ -207,7 +207,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
       } else {
         showToast(result.message || t('toastSaveFailed'), "error");
       }
-    } catch (error) {
+    } catch {
       showToast(t('toastSystemError'), "error");
     } finally {
       setIsProcessing(false);
