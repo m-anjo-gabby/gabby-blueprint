@@ -11,6 +11,9 @@ on:
       - "feature/**"
   pull_request:
   workflow_dispatch:
+  # push が無い週も流す（依存・実行環境の変化で落ちるものに早く気づく。例: Node の tzdata の更新）。対象は main
+  schedule:
+    - cron: "0 0 * * 1" # 毎週月曜 09:00（日本時間）
 
 permissions:
   contents: read
@@ -48,3 +51,7 @@ jobs:
 
       - name: Unit tests
         run: pnpm test
+
+      # 単体テストの対象になる処理のうち、テストの無いファイルを結果の画面に出す（失敗にはしない。testing/unit/README.md）
+      - name: Unit test coverage
+        run: pnpm --filter @gabby/testing unit:coverage-summary

@@ -140,3 +140,8 @@ export async function updateNotice(input: NoticeInput): Promise<ActionResult<{ n
 - 絵文字・区切り線（`// -----`・`// =====`）・飾りの見出しは書かない。区切りが必要なほど長いファイルは分ける。
 - コメントアウトしたコードを残さない（消しても git に残る）。
 - `TODO` を残さない。残す課題は、タスクの報告やメモに書く。
+
+## 8. テスト
+
+- `packages/lib` の画面・DB に依らない処理（日付・時差、権限・可否の判定、お金・回数の計算、評価・レベルの判定、文面の組み立て等）を作った・変えたときは、同じ作業で単体テスト（`testing/unit/`）を足す。不具合を直したときは、再び起きないことを確かめるテストを足す。
+- 対象・足す候補・カバレッジの見方は [testing/unit/README.md](../testing/unit/README.md)。画面の操作・DB を通す流れは E2E（`testing/e2e/CONVENTIONS.md`）。

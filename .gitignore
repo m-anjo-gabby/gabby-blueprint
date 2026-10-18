@@ -88,3 +88,5 @@ temp_data/
 # Playwright E2E（ログイン状態・実行結果・trace。git管理しない）
 testing/e2e/.auth/
 testing/e2e/.artifacts/
+# 単体テストのカバレッジ（pnpm test が作る。testing/unit/coverage-summary.mjs が読む）
+testing/unit/lcov.info

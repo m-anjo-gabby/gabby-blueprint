@@ -48,7 +48,7 @@
 - 画面の作り方: 正本は `docs/UI.md`（全アプリ共通: ブランド色・ローディング表示・初期表示のデータ取得・ダイアログのフォーカス・チャット）、`docs/UI-ADMIN.md`（admin: 一覧・next-intl）、`docs/UI-STUDENT.md`（student: UI実装規約）。各アプリと `packages/lib` の `CLAUDE.md` が読み込むため、そのファイルを触ると自動で読まれる。要点: 画面の枠は本物にし、データに依存する区画だけを本番と同じ形の骨組みにする。初期表示に必要なデータは表示後にブラウザからサーバーアクションで取りに行かず、サーバーで取得する。
 - ログ（全アプリ共通）: 規約は `docs/LOGGING.md` が正本。サーバーは `createLogger(service)`、ブラウザは `clientLogger` を使い、`console.*` は使わない（ESLint の `no-console`）。イベント名は `<domain>:<action>_<outcome>`。エラーは `err` にエラーそのものを渡す。氏名・本文等の個人情報は `payload` に入れない。監査・業務の履歴はログではなく DB に残す。
 - 環境変数（全アプリ共通）: アプリの環境変数は `scripts/vercel-env/manifest.mjs` が正本（使うアプリ・環境ごとの値の決め方・秘密かどうか）。`process.env` で新しい変数を使う場合や、使わなくなった場合は同じタスクで定義を追加・廃止（`removed: true`）し、`pnpm vercel-env --write-examples` で `apps/*/.env.example` を作り直す（`.env.example` を直接編集しない）。staging・本番への反映は Vercel の画面ではなく `pnpm vercel-env --env=<staging|prod> --apply` で行い、リリースで追加・変更する変数はリリーススクリプト冒頭の手順にも書く。詳細は `scripts/vercel-env/README.md`。
-- 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラー・警告がない状態にしてから完了とすること（lint は警告も失敗にしている。書式は `prettier --check`。全体は `pnpm check` で、GitHub Actions の `CI` も同じ内容を push のたびに実行する）。
+- 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラー・警告がない状態にしてから完了とすること（lint は警告も失敗にしている。書式は `prettier --check`。全体は `pnpm check` で、GitHub Actions の `CI` も同じ内容を push のたびに実行する）。`packages/lib` の画面・DB に依らない処理を作った・変えた場合は、同じ作業で単体テストも足す（`testing/unit/README.md`）。
 
 # 4. コミュニケーション・トーン
 
