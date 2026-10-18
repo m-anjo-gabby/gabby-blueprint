@@ -36,7 +36,7 @@ const DEFAULT_PARAMS: TTSParameters = {
   pitch: 0,
 };
 
-export default function TTSAssetGenerator() {
+export function TTSAssetGenerator() {
   const [phraseEn, setPhraseEn] = useState('');
   const [memo, setMemo] = useState('');
   const [params, setParams] = useState<TTSParameters>(DEFAULT_PARAMS);

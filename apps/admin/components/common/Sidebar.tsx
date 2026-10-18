@@ -186,7 +186,7 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
 
 // メインコンポーネント
 
-export default function Sidebar() {
+export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const tCommon = useTranslations('common');
   const pathname = usePathname();

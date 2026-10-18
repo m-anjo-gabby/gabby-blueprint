@@ -38,7 +38,7 @@ export function TodaysSessionsPanelSkeleton() {
  * サーバーで取得して区画単位で表示する（ブラウザでの後追い取得は、表示後の往復が増えるうえ、
  * 画面共通のサーバーアクション（通知件数等）の後ろに並んで待たされるため行わない）。
  */
-export default async function TodaysSessionsPanel({ timezone }: { timezone: string }) {
+export async function TodaysSessionsPanel({ timezone }: { timezone: string }) {
   const now = new Date();
   // 実施中（開始済みだがまだEnd Session前）のセッションはgetMySessionsCore側の区間重複判定
   // （end_datetime基準）で取りこぼされずに取得できる。ここでの下限の広げ幅は、終了直後の

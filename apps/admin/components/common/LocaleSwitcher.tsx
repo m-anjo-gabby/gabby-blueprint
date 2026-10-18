@@ -15,7 +15,7 @@ import type { AppLocale } from '@/i18n/request';
 
 const LOCALES: AppLocale[] = ['ja', 'en'];
 
-export default function LocaleSwitcher() {
+export function LocaleSwitcher() {
   const locale = useLocale();
   const t = useTranslations('common');
   const router = useRouter();

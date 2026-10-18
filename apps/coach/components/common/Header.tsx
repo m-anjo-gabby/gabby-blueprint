@@ -17,7 +17,7 @@ import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { signOut } from '@/actions/coachAuthAction';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 
-export default function Header() {
+export function Header() {
   const user = useUserStore((state) => state.user);
   const profileIconUrl = getProfileIconUrl(user?.icon_path);
   const isMobileSidebarOpen = useSidebarStore((state) => state.isOpen);

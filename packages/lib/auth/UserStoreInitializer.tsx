@@ -25,7 +25,7 @@ export interface UserStoreInitializerProps {
  * 2. クライアントサイドで DB (com_m_user) から詳細なプロフィールを取得して補完
  * 3. 認証状態の変化（ログアウト等）をリッスンし、ストアの状態を自動同期
  */
-export default function UserStoreInitializer({ user }: UserStoreInitializerProps) {
+export function UserStoreInitializer({ user }: UserStoreInitializerProps) {
   // 共通ストアから更新関数を取得
   const setUser = useUserStore((state) => state.setUser);
   const supabase = createBrowserClient();

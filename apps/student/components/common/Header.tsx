@@ -27,7 +27,7 @@ import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { clientLogger } from '@gabby/lib/logger/client';
 import { reloadTo } from '@gabby/lib/navigation/reloadTo';
 
-export default function Header() {
+export function Header() {
   const user = useUserStore((state) => state.user);
   const profileIconUrl = getProfileIconUrl(user?.icon_path);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);

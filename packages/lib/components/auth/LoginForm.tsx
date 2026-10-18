@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { RETURN_TO_PARAM } from '../../auth/returnTo';
 import { useHydrated } from '../../hooks/useHydrated';
 import { useLoginNotice } from '../../hooks/useLoginNotice';
-import ConfirmContainer from '../common/ConfirmContainer';
+import { ConfirmContainer } from '../common/ConfirmContainer';
 import { LoginNoticeBanner } from '../common/LoginNoticeBanner';
 import { PasswordInput } from '../common/PasswordInput';
 import { SubmitButton } from '../common/SubmitButton';

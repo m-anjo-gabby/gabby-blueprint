@@ -17,9 +17,9 @@ import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { signOut } from '@/actions/adminAuthAction';
 import { NotificationDropdown } from './NotificationDropdown';
-import LocaleSwitcher from './LocaleSwitcher';
+import { LocaleSwitcher } from './LocaleSwitcher';
 
-export default function Header() {
+export function Header() {
   const t = useTranslations('common');
   const user = useUserStore((state) => state.user);
   const profileIconUrl = getProfileIconUrl(user?.icon_path);

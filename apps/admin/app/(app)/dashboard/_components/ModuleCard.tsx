@@ -11,7 +11,7 @@ interface Props {
   summary: DashboardModuleSummary;
 }
 
-export default async function ModuleCard({ summary }: Props) {
+export async function ModuleCard({ summary }: Props) {
   const config = DASHBOARD_MODULE_CONFIG[summary.key];
   const Icon = config.icon;
   const hasAlert = summary.alertCount > 0;

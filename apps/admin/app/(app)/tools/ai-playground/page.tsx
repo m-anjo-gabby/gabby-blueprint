@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/common/PageHeader';
-import AIPlaygroundTabs from './_components/AIPlaygroundTabs';
+import { AIPlaygroundTabs } from './_components/AIPlaygroundTabs';
 
 /**
  * AI Playground メインページ

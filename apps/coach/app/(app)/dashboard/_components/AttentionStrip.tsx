@@ -76,7 +76,7 @@ export function AttentionStripSkeleton() {
   return <AttentionTiles tiles={buildTiles({ requests: null, chat: null, updates: null })} />;
 }
 
-export default function AttentionStrip({ pendingRequestCount }: Props) {
+export function AttentionStrip({ pendingRequestCount }: Props) {
   const totalUnreadChat = useChatStore((state) => state.totalUnreadCount);
   const fetchChatRooms = useChatStore((state) => state.fetchRooms);
   const noticeUnread = useNoticeStore((state) => state.unreadCount);

@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import Header from '@/components/common/Header';
+import { Header } from '@/components/common/Header';
 import { cn } from '@/lib/utils';
 import { getVisibleNavItems, isMobileFocusPath } from '@/constants/navigation';
 import { useShellNavContext } from './ShellNavContext';

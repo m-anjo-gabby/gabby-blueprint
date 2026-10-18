@@ -177,7 +177,7 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
 
 // メインコンポーネント
 
-export default function Sidebar() {
+export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
   const user = useUserStore((state) => state.user);

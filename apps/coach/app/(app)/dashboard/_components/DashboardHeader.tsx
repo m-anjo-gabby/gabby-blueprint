@@ -9,7 +9,7 @@ interface Props {
 
 const SUBTITLE = <p className="text-xs text-slate-500 mt-1">Here&apos;s what needs your attention today.</p>;
 
-export default function DashboardHeader({ greeting, firstName, dateLabel }: Props) {
+export function DashboardHeader({ greeting, firstName, dateLabel }: Props) {
   return (
     <div>
       <p className="text-xs font-bold text-brand-500">{dateLabel}</p>

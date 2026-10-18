@@ -12,7 +12,7 @@ interface Props {
   cards: { key: string; node: ReactNode }[];
 }
 
-export default function ModuleSummaryGrid({ cards }: Props) {
+export function ModuleSummaryGrid({ cards }: Props) {
   const t = useTranslations('dashboard');
 
   if (cards.length === 0) {

@@ -1,11 +1,11 @@
 import { Suspense } from 'react';
 import { getMyProfile } from '@/actions/coachProfileAction';
 import { getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
-import DashboardHeader from './_components/DashboardHeader';
+import { DashboardHeader } from './_components/DashboardHeader';
 import { DashboardLayout } from './_components/DashboardLayout';
-import AttentionStrip from './_components/AttentionStrip';
-import TodaysSessionsPanel, { TodaysSessionsPanelSkeleton } from './_components/TodaysSessionsPanel';
-import SessionTasksPanel, { SessionTasksPanelSkeleton } from './_components/SessionTasksPanel';
+import { AttentionStrip } from './_components/AttentionStrip';
+import { TodaysSessionsPanel, TodaysSessionsPanelSkeleton } from './_components/TodaysSessionsPanel';
+import { SessionTasksPanel, SessionTasksPanelSkeleton } from './_components/SessionTasksPanel';
 import { MyRatingCard, MyRatingCardSkeleton } from '@/components/rating/MyRatingCard';
 import { getMyCoachRatingStats } from '@/actions/coachRatingAction';
 

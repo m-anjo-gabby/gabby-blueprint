@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
+import { ConfirmContainer } from '@gabby/lib/components/common/ConfirmContainer';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 /**

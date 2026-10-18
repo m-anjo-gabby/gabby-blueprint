@@ -19,7 +19,7 @@ interface KnowledgeSourceRef {
   similarity: number;
 }
 
-export default function ChatPlayground() {
+export function ChatPlayground() {
   const t = useTranslations('tools.aiPlayground.chat');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sourcesByIndex, setSourcesByIndex] = useState<Record<number, KnowledgeSourceRef[]>>({});

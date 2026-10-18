@@ -52,7 +52,7 @@ import { useSprintStore } from '@/stores/useSprintStore';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 import { getSprintProgress } from '@/actions/sprintAction';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
+import { ConfirmContainer } from '@gabby/lib/components/common/ConfirmContainer';
 import { AudioTroubleshootingDialog } from '@/components/help/AudioTroubleshootingDialog';
 import { MicTroubleshootingDialog } from '@/components/help/MicTroubleshootingDialog';
 import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';

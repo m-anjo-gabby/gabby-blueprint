@@ -16,7 +16,7 @@ interface TranslateResult {
   explanation?: string;
 }
 
-export default function TranslatePlayground() {
+export function TranslatePlayground() {
   const t = useTranslations('tools.aiPlayground.translate');
   const [inputText, setInputText] = useState('');
   const [includeExplanation, setIncludeExplanation] = useState(true);

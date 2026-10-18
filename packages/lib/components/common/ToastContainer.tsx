@@ -4,7 +4,7 @@ import { useToastStore } from '../../stores/useToastStore'; // Storeから直接
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react'; // アイコン追加で視認性UP
 
-export default function ToastContainer() {
+export function ToastContainer() {
   // Storeから状態と削除アクションを購読
   const toasts = useToastStore((state) => state.toasts);
   const removeToast = useToastStore((state) => state.removeToast);
