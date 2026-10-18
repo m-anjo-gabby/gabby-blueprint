@@ -26,7 +26,14 @@ const COUNT_KEYS: readonly (keyof PurgeClientCounts)[] = [
   'calendar_events',
 ];
 
-const BLOCKERS = ['protected_client', 'has_admin', 'linked_to_other_client', 'client_not_found', 'forbidden', 'name_mismatch'] as const;
+const BLOCKERS = [
+  'protected_client',
+  'has_admin',
+  'linked_to_other_client',
+  'client_not_found',
+  'forbidden',
+  'name_mismatch',
+] as const;
 
 /**
  * 顧客単位の一括削除（DangerZone）。開いた時に予行で消える件数を取得し、顧客名の入力で確認してから実行する。

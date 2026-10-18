@@ -112,7 +112,7 @@ export function HomeView({
 
   // 「今日やること」に出した項目は補助カード側では重複表示しない
   const otherAssignments = pendingAssignments.filter(
-    (a) => !(focus.kind === 'assignment' && focus.assignment.assignment_id === a.assignment_id)
+    (a) => !(focus.kind === 'assignment' && focus.assignment.assignment_id === a.assignment_id),
   );
   const week = nowMs !== null ? buildCurrentWeek(activities, timezone, nowMs) : null;
   const streakDays = nowMs !== null ? resolveStreakDays(lifetimeStats, timezone, nowMs) : 0;
@@ -171,7 +171,9 @@ export function HomeView({
 
         {/* 途中の教材の再開（主役に出ていない場合）とコーチからの課題。両方あるときは半分ずつ、片方だけなら全幅 */}
         {(showContinue || showAssignments) && (
-          <div className={cn('grid grid-cols-1 gap-4 lg:col-span-3', showContinue && showAssignments && 'lg:grid-cols-2')}>
+          <div
+            className={cn('grid grid-cols-1 gap-4 lg:col-span-3', showContinue && showAssignments && 'lg:grid-cols-2')}
+          >
             {showContinue && <ContinueCard resume={resume} onClear={handleClearResume} />}
             {showAssignments && <CoachAssignmentsCard assignments={otherAssignments} />}
           </div>

@@ -3,8 +3,8 @@
 export interface ContractLicenseStats {
   contract_id: string;
   current_assigned_count: number; // 割当済み総数
-  current_active_count: number;   // 現在有効な（期間内かつstatus=1）数
-  remaining_licenses: number;     // 割当可能数
+  current_active_count: number; // 現在有効な（期間内かつstatus=1）数
+  remaining_licenses: number; // 割当可能数
 }
 
 import type { TableRow, ViewRow } from './db';

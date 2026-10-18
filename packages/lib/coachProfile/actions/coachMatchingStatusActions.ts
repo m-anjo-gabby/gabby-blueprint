@@ -38,15 +38,26 @@ export async function getCoachMatchingStatusCore(coachId: string): Promise<GetCo
     const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data, error } = await supabase.rpc('get_coach_matching_status', { p_coach_id: coachId }).maybeSingle<CoachMatchingStatusRow>();
+    const { data, error } = await supabase
+      .rpc('get_coach_matching_status', { p_coach_id: coachId })
+      .maybeSingle<CoachMatchingStatusRow>();
 
     if (error) {
       if (error.message.includes('NOT_AUTHORIZED')) {
-        logger.warn('coachProfile:get_matching_status_denied', error.message, { ...ctx, userId: user.id, payload: { coachId } });
+        logger.warn('coachProfile:get_matching_status_denied', error.message, {
+          ...ctx,
+          userId: user.id,
+          payload: { coachId },
+        });
         return { success: false, errorCode: 'unauthorized' };
       }
       if (error.message.includes('COACH_NOT_FOUND')) return { success: false, errorCode: 'not_found' };
-      logger.error('coachProfile:get_matching_status_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { coachId } });
+      logger.error('coachProfile:get_matching_status_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { coachId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!data) return { success: false, errorCode: 'not_found' };
@@ -63,7 +74,11 @@ export async function getCoachMatchingStatusCore(coachId: string): Promise<GetCo
       },
     };
   } catch (err) {
-    logger.error('coachProfile:get_matching_status_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { coachId } });
+    logger.error('coachProfile:get_matching_status_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { coachId },
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -72,7 +87,9 @@ export async function getCoachMatchingStatusCore(coachId: string): Promise<GetCo
  * ログイン中コーチ自身の新規の生徒の受付を切り替える（ポータル共通）。
  * OFFにしても担当中の生徒・確定済みのセッションはそのまま（生徒の「専属コーチを探す」に出なくなるだけ）。
  */
-export async function updateMyAcceptingStudentsCore(acceptingStudents: boolean): Promise<UpdateMyAcceptingStudentsResult> {
+export async function updateMyAcceptingStudentsCore(
+  acceptingStudents: boolean,
+): Promise<UpdateMyAcceptingStudentsResult> {
   const ctx = await getLogContext();
 
   try {
@@ -88,7 +105,11 @@ export async function updateMyAcceptingStudentsCore(acceptingStudents: boolean):
       .single();
 
     if (error || !data) {
-      logger.error('coachProfile:update_accepting_students_failed', error?.message ?? 'No row updated', { ...ctx, err: error, userId: user.id });
+      logger.error('coachProfile:update_accepting_students_failed', error?.message ?? 'No row updated', {
+        ...ctx,
+        err: error,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
@@ -99,7 +120,11 @@ export async function updateMyAcceptingStudentsCore(acceptingStudents: boolean):
     });
     return { success: true, acceptingStudents: data.accepting_students };
   } catch (err) {
-    logger.error('coachProfile:update_accepting_students_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error(
+      'coachProfile:update_accepting_students_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err },
+    );
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

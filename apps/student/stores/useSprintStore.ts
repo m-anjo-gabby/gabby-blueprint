@@ -1,8 +1,15 @@
 import { create } from 'zustand';
-import { SprintQuestion, SprintQuestionType, SprintAnswerType, QUESTION_TYPES, type SprintAvailableLevels, type SprintType } from "@gabby/types/sprint";
-import { MetadataSprint } from "@gabby/types/content";
-import { AnalysisResult, FeedbackConfig } from "@gabby/types/speechAssessment";
-import { resolveSprintHasLevel, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel } from "@gabby/lib";
+import {
+  SprintQuestion,
+  SprintQuestionType,
+  SprintAnswerType,
+  QUESTION_TYPES,
+  type SprintAvailableLevels,
+  type SprintType,
+} from '@gabby/types/sprint';
+import { MetadataSprint } from '@gabby/types/content';
+import { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
+import { resolveSprintHasLevel, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel } from '@gabby/lib';
 
 export type SprintUiView = 'loading' | 'selecting' | 'gesture_needed' | 'error' | 'drill' | 'sprint' | 'no_content';
 
@@ -72,7 +79,12 @@ interface SprintState {
   // ─── アクション ───
   setUiView: (view: SprintUiView) => void;
   setConfig: (config: Partial<SprintConfigInput>) => void;
-  startSession: (params: { questions: SprintQuestion[]; mode: 'drill' | 'sprint'; config: SprintConfigInput; resumeId?: string }) => void;
+  startSession: (params: {
+    questions: SprintQuestion[];
+    mode: 'drill' | 'sprint';
+    config: SprintConfigInput;
+    resumeId?: string;
+  }) => void;
   clearSessionProgress: () => void;
   setContentMetadata: (metadata: MetadataSprint | null, availableLevels?: SprintAvailableLevels | null) => void;
   /** 開始時に問題が0件だったレベルを、選択肢から外す（画面を開いた後に問題が移動・削除された場合等） */
@@ -85,7 +97,11 @@ interface SprintState {
   nextStep: () => { isLast: boolean };
   prevStep: () => void;
 
-  commitAssessmentResult: (questionId: string, feedback: FeedbackConfig, analysis: AnalysisResult) => { isLast: boolean };
+  commitAssessmentResult: (
+    questionId: string,
+    feedback: FeedbackConfig,
+    analysis: AnalysisResult,
+  ) => { isLast: boolean };
   commitSkipResult: (questionId: string) => { isLast: boolean };
 
   incrementAssessmentCount: () => void;
@@ -143,68 +159,71 @@ export const useSprintStore = create<SprintState>((set, get) => ({
 
   setUiView: (view) => set((state) => ({ ui: { ...state.ui, view } })),
 
-  setContentMetadata: (metadata, availableLevels = null) => set((state) => {
-    let nextType = state.config.questionType;
-    let nextLevel = state.config.level;
+  setContentMetadata: (metadata, availableLevels = null) =>
+    set((state) => {
+      let nextType = state.config.questionType;
+      let nextLevel = state.config.level;
 
-    const isCorpus = metadata?.sprint_type === '1';
-    const hasLevel = resolveSprintHasLevel(metadata);
+      const isCorpus = metadata?.sprint_type === '1';
+      const hasLevel = resolveSprintHasLevel(metadata);
 
-    // 教材の対応種別（コーパスのみ）かつ問題が1件以上ある種別だけを選択可能とする
-    const isTypeUsable = (type: SprintQuestionType) => {
-      if (!hasSprintQuestionsForType(availableLevels, type)) return false;
-      if (!isCorpus || !metadata?.supported_types) return true;
-      const support = metadata.supported_types;
-      return (
-        (type === '0' && support.speed) ||
-        (type === '4' && support.structure) ||
-        (type === '5' && support.builders) ||
-        (type === '6' && support.mastery)
-      );
-    };
+      // 教材の対応種別（コーパスのみ）かつ問題が1件以上ある種別だけを選択可能とする
+      const isTypeUsable = (type: SprintQuestionType) => {
+        if (!hasSprintQuestionsForType(availableLevels, type)) return false;
+        if (!isCorpus || !metadata?.supported_types) return true;
+        const support = metadata.supported_types;
+        return (
+          (type === '0' && support.speed) ||
+          (type === '4' && support.structure) ||
+          (type === '5' && support.builders) ||
+          (type === '6' && support.mastery)
+        );
+      };
 
-    if (!nextType || !isTypeUsable(nextType)) {
-      const firstUsable = Object.values(QUESTION_TYPES)
-        .sort((a, b) => a.seq_no - b.seq_no)
-        .find((t) => isTypeUsable(t.value));
-      if (firstUsable) {
-        nextType = firstUsable.value;
-        nextLevel = String(pickSprintLevel(nextType, { hasLevel, availableLevels }));
+      if (!nextType || !isTypeUsable(nextType)) {
+        const firstUsable = Object.values(QUESTION_TYPES)
+          .sort((a, b) => a.seq_no - b.seq_no)
+          .find((t) => isTypeUsable(t.value));
+        if (firstUsable) {
+          nextType = firstUsable.value;
+          nextLevel = String(pickSprintLevel(nextType, { hasLevel, availableLevels }));
+        }
       }
-    }
 
-    if (!hasLevel) {
-      nextLevel = '1';
-    } else if (nextType && !isSprintLevelAvailable(availableLevels, nextType, Number(nextLevel))) {
-      // 問題の無いレベル（前回の設定・URL指定等）は、問題のあるレベルに寄せる。到達レベルによる鍵は選択画面で補正する
-      nextLevel = String(pickSprintLevel(nextType, { hasLevel, availableLevels, preferred: Number(nextLevel) }));
-    }
-
-    return {
-      contentMetadata: metadata,
-      availableLevels,
-      config: {
-        ...state.config,
-        questionType: nextType,
-        level: nextLevel
+      if (!hasLevel) {
+        nextLevel = '1';
+      } else if (nextType && !isSprintLevelAvailable(availableLevels, nextType, Number(nextLevel))) {
+        // 問題の無いレベル（前回の設定・URL指定等）は、問題のあるレベルに寄せる。到達レベルによる鍵は選択画面で補正する
+        nextLevel = String(pickSprintLevel(nextType, { hasLevel, availableLevels, preferred: Number(nextLevel) }));
       }
-    };
-  }),
+
+      return {
+        contentMetadata: metadata,
+        availableLevels,
+        config: {
+          ...state.config,
+          questionType: nextType,
+          level: nextLevel,
+        },
+      };
+    }),
   setContentName: (name) => set({ contentName: name }),
 
-  markLevelUnavailable: (type, level) => set((state) => {
-    // 未取得（null）の場合は他の種別・レベルの有無が分からないため、絞り込まない
-    if (!state.availableLevels) return {};
-    const levels = (state.availableLevels[type] ?? []).filter((lv) => lv !== level);
-    return { availableLevels: { ...state.availableLevels, [type]: levels } };
-  }),
+  markLevelUnavailable: (type, level) =>
+    set((state) => {
+      // 未取得（null）の場合は他の種別・レベルの有無が分からないため、絞り込まない
+      if (!state.availableLevels) return {};
+      const levels = (state.availableLevels[type] ?? []).filter((lv) => lv !== level);
+      return { availableLevels: { ...state.availableLevels, [type]: levels } };
+    }),
 
-  setConfig: (inputConfig) => set((state) => ({
-    config: {
-      ...state.config,
-      ...inputConfig,
-    },
-  })),
+  setConfig: (inputConfig) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        ...inputConfig,
+      },
+    })),
 
   startSession: ({ questions, mode, config: inputConfig, resumeId }) => {
     set((state) => ({
@@ -227,33 +246,35 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     }));
   },
 
-  clearSessionProgress: () => set((state) => ({
-    session: {
-      ...state.session,
-      isActive: false // 戻り判定フラグをクリア
-    }
-  })),
+  clearSessionProgress: () =>
+    set((state) => ({
+      session: {
+        ...state.session,
+        isActive: false, // 戻り判定フラグをクリア
+      },
+    })),
 
-  initSprint: (questions, mode, startIndex = 0) => set((state) => ({
-    session: {
-      ...state.session,
-      questions,
-      currentIndex: startIndex,
-      sessionResults: [],
-      pendingQuestionCount: 0,
-      pendingAssessmentCount: 0,
-      isRecording: false,
-    },
-    drill: {
-      ...state.drill,
-      isRevealed: mode === 'sprint',
-      isAutoPlaying: false,
-      isPlayingQuestionSequence: false,
-      isPlayingAnswerSequence: false,
-      feedback: null,
-      analysis: null,
-    },
-  })),
+  initSprint: (questions, mode, startIndex = 0) =>
+    set((state) => ({
+      session: {
+        ...state.session,
+        questions,
+        currentIndex: startIndex,
+        sessionResults: [],
+        pendingQuestionCount: 0,
+        pendingAssessmentCount: 0,
+        isRecording: false,
+      },
+      drill: {
+        ...state.drill,
+        isRevealed: mode === 'sprint',
+        isAutoPlaying: false,
+        isPlayingQuestionSequence: false,
+        isPlayingAnswerSequence: false,
+        feedback: null,
+        analysis: null,
+      },
+    })),
 
   nextStep: () => {
     const { session } = get();
@@ -286,7 +307,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     const isLast = session.currentIndex >= session.questions.length - 1;
 
     const newResult: SprintSessionResult = { questionId, isSkipped: false, feedback, analysis };
-    const updatedResults = [...session.sessionResults.filter(r => r.questionId !== questionId), newResult];
+    const updatedResults = [...session.sessionResults.filter((r) => r.questionId !== questionId), newResult];
 
     set((state) => ({
       session: {
@@ -305,7 +326,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     const isLast = session.currentIndex >= session.questions.length - 1;
 
     const newResult: SprintSessionResult = { questionId, isSkipped: true, feedback: null, analysis: null };
-    const updatedResults = [...session.sessionResults.filter(r => r.questionId !== questionId), newResult];
+    const updatedResults = [...session.sessionResults.filter((r) => r.questionId !== questionId), newResult];
 
     set((state) => ({
       session: {
@@ -318,9 +339,10 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     return { isLast };
   },
 
-  incrementAssessmentCount: () => set((state) => ({
-    session: { ...state.session, pendingAssessmentCount: state.session.pendingAssessmentCount + 1 },
-  })),
+  incrementAssessmentCount: () =>
+    set((state) => ({
+      session: { ...state.session, pendingAssessmentCount: state.session.pendingAssessmentCount + 1 },
+    })),
 
   clearPendingCounts: () => {
     const { session } = get();
@@ -333,20 +355,27 @@ export const useSprintStore = create<SprintState>((set, get) => ({
 
   setIsRevealed: (isRevealed) => set((state) => ({ drill: { ...state.drill, isRevealed } })),
   setIsRecording: (isRecording) => set((state) => ({ session: { ...state.session, isRecording } })),
-  setPlayingQuestionSequence: (isPlayingQuestionSequence) => set((state) => ({ drill: { ...state.drill, isPlayingQuestionSequence } })),
-  setPlayingAnswerSequence: (isPlayingAnswerSequence) => set((state) => ({ drill: { ...state.drill, isPlayingAnswerSequence } })),
+  setPlayingQuestionSequence: (isPlayingQuestionSequence) =>
+    set((state) => ({ drill: { ...state.drill, isPlayingQuestionSequence } })),
+  setPlayingAnswerSequence: (isPlayingAnswerSequence) =>
+    set((state) => ({ drill: { ...state.drill, isPlayingAnswerSequence } })),
   setFeedback: (feedback) => set((state) => ({ drill: { ...state.drill, feedback } })),
   setAnalysis: (analysis) => set((state) => ({ drill: { ...state.drill, analysis } })),
-  toggleAutoPlay: (force) => set((state) => ({ drill: { ...state.drill, isAutoPlaying: force !== undefined ? force : !state.drill.isAutoPlaying } })),
+  toggleAutoPlay: (force) =>
+    set((state) => ({
+      drill: { ...state.drill, isAutoPlaying: force !== undefined ? force : !state.drill.isAutoPlaying },
+    })),
   setDrillEvalType: (evalType) => set((state) => ({ drill: { ...state.drill, evalType } })),
 
-  commitDrillRecordingResult: (analysis, feedback) => set((state) => ({
-    drill: { ...state.drill, analysis, feedback, isRevealed: true },
-    session: { ...state.session, isRecording: false },
-  })),
+  commitDrillRecordingResult: (analysis, feedback) =>
+    set((state) => ({
+      drill: { ...state.drill, analysis, feedback, isRevealed: true },
+      session: { ...state.session, isRecording: false },
+    })),
 
-  resetStore: () => set({
-    session: initialSession,
-    ui: { view: 'loading' },
-  }),
+  resetStore: () =>
+    set({
+      session: initialSession,
+      ui: { view: 'loading' },
+    }),
 }));

@@ -46,16 +46,27 @@ interface Props {
   backLabel: string | null;
 }
 
-export function LessonSprintResult({ studentId, studentName, studentIconPath, record, questions, content, sessionId, backHref: backHrefParam, backLabel: backLabelParam }: Props) {
+export function LessonSprintResult({
+  studentId,
+  studentName,
+  studentIconPath,
+  record,
+  questions,
+  content,
+  sessionId,
+  backHref: backHrefParam,
+  backLabel: backLabelParam,
+}: Props) {
   const timezone = useTimezone();
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const isQuestionBased = record.question_type === '0' || record.question_type === '6';
   const isImmersive = isLiveSessionContext(sessionId);
 
   const scoredItems = record.answered_history.filter((h) => !h.is_skipped && typeof h.score === 'number');
-  const averageScore = scoredItems.length > 0
-    ? Math.round((scoredItems.reduce((sum, h) => sum + (h.score ?? 0), 0) / scoredItems.length) * 10) / 10
-    : null;
+  const averageScore =
+    scoredItems.length > 0
+      ? Math.round((scoredItems.reduce((sum, h) => sum + (h.score ?? 0), 0) / scoredItems.length) * 10) / 10
+      : null;
 
   const formattedDate = formatDateTimeEn(record.insert_date, timezone);
 
@@ -69,10 +80,11 @@ export function LessonSprintResult({ studentId, studentName, studentIconPath, re
   // 画面、紐づきが無い(単独実施)場合は受講生概要に戻る、という推測にフォールバックする。
   const backHref = isImmersive
     ? buildLiveSessionHubHref(studentId, sessionId)
-    : backHrefParam ?? (record.session_id ? `/students/${studentId}/sessions/${record.session_id}/result` : `/students/${studentId}`);
+    : (backHrefParam ??
+      (record.session_id ? `/students/${studentId}/sessions/${record.session_id}/result` : `/students/${studentId}`));
   const backLabel = isImmersive
     ? 'Back to Hub'
-    : backLabelParam ?? (record.session_id ? 'Back to Session Result' : 'Back to Overview');
+    : (backLabelParam ?? (record.session_id ? 'Back to Session Result' : 'Back to Overview'));
 
   // ハブ発（isImmersive）は共通のImmersiveHeaderが「戻る」導線とタイトル相当の情報を担うため、
   // 本文側の個別ナビゲーション見出し（Back link + h1）は非没入時のみ表示する
@@ -123,7 +135,10 @@ export function LessonSprintResult({ studentId, studentName, studentIconPath, re
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Answered</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-brand">{averageScore ?? '—'}{averageScore !== null && <span className="text-sm text-slate-400">/5</span>}</p>
+                  <p className="text-2xl font-black text-brand">
+                    {averageScore ?? '—'}
+                    {averageScore !== null && <span className="text-sm text-slate-400">/5</span>}
+                  </p>
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Avg Score</p>
                 </div>
               </div>
@@ -179,7 +194,9 @@ export function LessonSprintResult({ studentId, studentName, studentIconPath, re
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Q{idx + 1}</span>
                     {historyItem?.is_skipped ? (
-                      <span className="text-[11px] font-black text-slate-400 bg-slate-100 rounded-full px-2.5 py-1">Skipped</span>
+                      <span className="text-[11px] font-black text-slate-400 bg-slate-100 rounded-full px-2.5 py-1">
+                        Skipped
+                      </span>
                     ) : scoreMeta ? (
                       <span
                         className="text-[11px] font-black rounded-full px-2.5 py-1"
@@ -207,23 +224,28 @@ export function LessonSprintResult({ studentId, studentName, studentIconPath, re
                   <div
                     className={cn(
                       'border-l-4 pl-3 pr-3 py-2.5 rounded-r-lg',
-                      isSpeedNo ? 'border-amber-500 bg-amber-50/40' : 'border-emerald-500 bg-emerald-50/40'
+                      isSpeedNo ? 'border-amber-500 bg-amber-50/40' : 'border-emerald-500 bg-emerald-50/40',
                     )}
                   >
                     <p
                       className={cn(
                         'text-[10px] font-black uppercase tracking-wider mb-1',
-                        isSpeedNo ? 'text-amber-500' : 'text-emerald-500'
+                        isSpeedNo ? 'text-amber-500' : 'text-emerald-500',
                       )}
                     >
                       Answer
                     </p>
-                    <p className={cn('text-base font-bold leading-relaxed', isSpeedNo ? 'text-amber-700' : 'text-emerald-700')}>
+                    <p
+                      className={cn(
+                        'text-base font-bold leading-relaxed',
+                        isSpeedNo ? 'text-amber-700' : 'text-emerald-700',
+                      )}
+                    >
                       {words.map((word, wIdx) => (
                         <span key={wIdx}>
                           <span
                             className={cn(
-                              highlighted.includes(wIdx) && 'px-1 py-0.5 rounded bg-rose-100 text-rose-700'
+                              highlighted.includes(wIdx) && 'px-1 py-0.5 rounded bg-rose-100 text-rose-700',
                             )}
                           >
                             {word}

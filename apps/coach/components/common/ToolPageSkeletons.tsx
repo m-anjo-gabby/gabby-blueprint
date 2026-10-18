@@ -38,7 +38,8 @@ export function AvailabilitySkeleton() {
           <CardHeader className="space-y-1.5">
             <CardTitle>Weekly Schedule</CardTitle>
             <CardDescription>
-              Click or drag to mark the days and times you are available. Sessions are booked in 30-minute blocks (each lesson runs 25 minutes).
+              Click or drag to mark the days and times you are available. Sessions are booked in 30-minute blocks (each
+              lesson runs 25 minutes).
             </CardDescription>
           </CardHeader>
           <CardContent aria-hidden>

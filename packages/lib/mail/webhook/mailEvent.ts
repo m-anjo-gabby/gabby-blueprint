@@ -80,7 +80,11 @@ function describeDetail(data: MailWebhookEvent['data']): string | null {
 /**
  * 記録しない出来事・メールのIDが無い出来事・他の環境（タグ env が environment と違う、またはタグが無い）で送ったメールの出来事は null
  */
-export function toMailEventRecord(webhookId: string, event: MailWebhookEvent, environment: string | null): MailEventRecord | null {
+export function toMailEventRecord(
+  webhookId: string,
+  event: MailWebhookEvent,
+  environment: string | null,
+): MailEventRecord | null {
   if (!isRecordedEvent(event.type) || !event.data.email_id) return null;
   if (!environment || event.data.tags?.env !== environment) return null;
   const mailId = event.data.tags?.mail_id;

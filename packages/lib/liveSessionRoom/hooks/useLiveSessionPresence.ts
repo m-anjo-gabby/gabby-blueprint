@@ -38,7 +38,11 @@ export function useLiveSessionPresence(sessionName: string): UseLiveSessionPrese
 
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState() as Record<string, Array<{ role: LiveSessionRole }>>;
-      const roles = new Set(Object.values(state).flat().map((entry) => entry.role));
+      const roles = new Set(
+        Object.values(state)
+          .flat()
+          .map((entry) => entry.role),
+      );
       setIsCoachPresent(roles.has('coach'));
       setIsStudentPresent(roles.has('student'));
     });

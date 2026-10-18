@@ -35,7 +35,7 @@ const ATTACHMENT_ERROR_MESSAGES_EN: Record<HomeworkAttachmentErrorCode, string> 
  */
 export async function uploadSessionHomeworkAttachment(
   sessionId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<{ success: true; attachment: PendingHomeworkAttachment } | { success: false; message: string }> {
   const result = await uploadSessionHomeworkAttachmentCore(sessionId, formData);
   if (!result.success) {
@@ -64,7 +64,10 @@ export async function getSessionHomework(sessionId: string): Promise<SessionHome
  * Fetches the most recent homework posts for this student, excluding the given session
  * (used by the session prep/execution hub to show "last homework" without navigating away).
  */
-export async function getRecentSessionHomework(studentId: string, excludeSessionId: string): Promise<SessionHomeworkEntry[]> {
+export async function getRecentSessionHomework(
+  studentId: string,
+  excludeSessionId: string,
+): Promise<SessionHomeworkEntry[]> {
   const result = await getRecentSessionHomeworkCore(studentId, excludeSessionId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -82,14 +85,17 @@ export async function getRecentSessionHomework(studentId: string, excludeSession
 export async function createSessionHomework(
   sessionId: string,
   homeworkText: string,
-  attachments: PendingHomeworkAttachment[] = []
+  attachments: PendingHomeworkAttachment[] = [],
 ): Promise<{ success: true; entry: SessionHomeworkEntry } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await createSessionHomeworkCore(sessionId, homeworkText, attachments);
 
   if (!result.success) {
     logger.error('coach:create_session_homework_failed', result.errorCode, ctx);
-    const message = result.errorCode === 'already_exists' ? 'Homework was already posted for this session.' : 'Failed to post homework. Please try again.';
+    const message =
+      result.errorCode === 'already_exists'
+        ? 'Homework was already posted for this session.'
+        : 'Failed to post homework. Please try again.';
     return { success: false, message };
   }
 
@@ -104,14 +110,17 @@ export async function createSessionHomework(
 export async function addHomeworkComment(
   sessionId: string,
   commentText: string,
-  attachments: PendingHomeworkAttachment[] = []
+  attachments: PendingHomeworkAttachment[] = [],
 ): Promise<{ success: true; comment: SessionHomeworkComment } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await addHomeworkCommentCore(sessionId, commentText, attachments);
 
   if (!result.success) {
     logger.error('coach:add_homework_comment_failed', result.errorCode, ctx);
-    const message = result.errorCode === 'not_found' ? 'Homework has not been posted for this session yet.' : 'Failed to post comment. Please try again.';
+    const message =
+      result.errorCode === 'not_found'
+        ? 'Homework has not been posted for this session yet.'
+        : 'Failed to post comment. Please try again.';
     return { success: false, message };
   }
 
@@ -125,7 +134,7 @@ export async function addHomeworkComment(
  */
 export async function setSessionHomeworkNotNeeded(
   sessionId: string,
-  notNeeded: boolean
+  notNeeded: boolean,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await setSessionHomeworkNotNeededCore(sessionId, notNeeded);

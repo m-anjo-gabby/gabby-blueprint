@@ -15,10 +15,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     getMyProfile(),
   ]);
   // 表示月は ?month= で持つ（無い・不正な場合はコーチのタイムゾーンでの今月）
-  const month =
-    isMonthParam(requestedMonth)
-      ? requestedMonth
-      : toIsoMonthInZone(new Date(), profile?.timezone || 'Asia/Tokyo');
+  const month = isMonthParam(requestedMonth)
+    ? requestedMonth
+    : toIsoMonthInZone(new Date(), profile?.timezone || 'Asia/Tokyo');
 
   return (
     <div className="space-y-6">
@@ -29,7 +28,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           initialRequests={requests}
           board={
             // 月を切り替えると key が変わり、日付の枠を残したまま予定だけを骨組みにして取り直す
-            <Suspense key={month} fallback={<CalendarBoard month={month} initialSessions={null} initialEvents={null} />}>
+            <Suspense
+              key={month}
+              fallback={<CalendarBoard month={month} initialSessions={null} initialEvents={null} />}
+            >
               <CalendarMonthSection month={month} />
             </Suspense>
           }

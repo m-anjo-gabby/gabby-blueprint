@@ -6,7 +6,10 @@ import type { OutcomeReasonKind } from '@gabby/lib/session/outcome';
 export const COACH_SESSION_OUTCOME_LABELS: SessionOutcomeFieldsLabels = {
   outcomeLegend: 'What happened?',
   outcomes: {
-    [SESSION_OUTCOME.COMPLETED]: { label: 'Completed', hint: "The lesson took place. Uses one of the student's sessions." },
+    [SESSION_OUTCOME.COMPLETED]: {
+      label: 'Completed',
+      hint: "The lesson took place. Uses one of the student's sessions.",
+    },
     [SESSION_OUTCOME.STUDENT_LEFT_EARLY]: {
       label: 'Ended early (student’s reason)',
       hint: "The student had to leave early. Uses one of the student's sessions.",

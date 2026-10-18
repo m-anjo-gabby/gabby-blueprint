@@ -76,11 +76,7 @@ export interface UseAudioEngineReturn {
 }
 
 export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
-  const {
-    decodeTimeoutMs,
-    stopBeforeChime = false,
-    urlResolution,
-  } = opts;
+  const { decodeTimeoutMs, stopBeforeChime = false, urlResolution } = opts;
 
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
   const resumeStatus = useAudioResumeStatus();
@@ -117,85 +113,96 @@ export function useAudioEngine(opts: AudioEngineOptions): UseAudioEngineReturn {
 
   const unlock = useCallback(() => unlockAudio(), []);
 
-  const resolveUrl = useCallback((path: string, bucketName?: string): string => {
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    if (urlResolution === 'sdk' && supabaseRef.current) {
-      const { data } = supabaseRef.current.storage.from(bucketName || 'audio').getPublicUrl(path);
-      return data.publicUrl;
-    }
-    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucketName || 'audio'}/${path}`;
-  }, [urlResolution]);
+  const resolveUrl = useCallback(
+    (path: string, bucketName?: string): string => {
+      if (path.startsWith('http://') || path.startsWith('https://')) return path;
+      if (urlResolution === 'sdk' && supabaseRef.current) {
+        const { data } = supabaseRef.current.storage.from(bucketName || 'audio').getPublicUrl(path);
+        return data.publicUrl;
+      }
+      return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucketName || 'audio'}/${path}`;
+    },
+    [urlResolution],
+  );
 
-  const play = useCallback(async (path: string | null, playOpts: AudioEnginePlayOptions = {}): Promise<AudioPlayOutcome> => {
-    const { id, playbackRate = 1.0, restart, skip, bucketName, onError } = playOpts;
+  const play = useCallback(
+    async (path: string | null, playOpts: AudioEnginePlayOptions = {}): Promise<AudioPlayOutcome> => {
+      const { id, playbackRate = 1.0, restart, skip, bucketName, onError } = playOpts;
 
-    if (skip) return 'skipped';
+      if (skip) return 'skipped';
 
-    // 同一idの再タップ（restart指定なし）はトグル停止扱い。idが未指定の呼び出し（スプリントの問題音声等）は
-    // このトグル判定自体を行わず、常に新規再生として扱う。
-    if (id !== undefined && currentPlayingIdRef.current === id && !restart) {
-      stop();
-      return 'stopped';
-    }
+      // 同一idの再タップ（restart指定なし）はトグル停止扱い。idが未指定の呼び出し（スプリントの問題音声等）は
+      // このトグル判定自体を行わず、常に新規再生として扱う。
+      if (id !== undefined && currentPlayingIdRef.current === id && !restart) {
+        stop();
+        return 'stopped';
+      }
 
-    // 取得・デコード中に前の音声が鳴り続けないよう、先に止める
-    const token = ++playTokenRef.current;
-    stopAudioClip();
+      // 取得・デコード中に前の音声が鳴り続けないよう、先に止める
+      const token = ++playTokenRef.current;
+      stopAudioClip();
 
-    if (!path) {
-      currentPlayingIdRef.current = null;
-      setIsPlaying(null);
-      onError?.(new Error('No audio path provided'));
-      return 'failed';
-    }
-
-    const playingId = id ?? null;
-    currentPlayingIdRef.current = playingId;
-
-    let buffer: AudioBuffer;
-    try {
-      buffer = await loadAudioBuffer(resolveUrl(path, bucketName), { decodeTimeoutMs });
-    } catch (err) {
-      clientLogger.warn('audio:load_failed', 'Audio fetch/decode failed', { err, payload: { path } });
-      if (playTokenRef.current === token) {
+      if (!path) {
         currentPlayingIdRef.current = null;
         setIsPlaying(null);
+        onError?.(new Error('No audio path provided'));
+        return 'failed';
       }
-      onError?.(err);
-      return 'failed';
-    }
 
-    // 取得中に停止・別の音声の再生が行われていたら、この再生は取りやめる
-    if (playTokenRef.current !== token) return 'stopped';
+      const playingId = id ?? null;
+      currentPlayingIdRef.current = playingId;
 
-    const result = await playAudioClip(buffer, {
-      ownerId,
-      playbackRate,
-      onStart: () => {
-        if (id !== undefined) setIsPlaying(id);
-      },
-    });
+      let buffer: AudioBuffer;
+      try {
+        buffer = await loadAudioBuffer(resolveUrl(path, bucketName), { decodeTimeoutMs });
+      } catch (err) {
+        clientLogger.warn('audio:load_failed', 'Audio fetch/decode failed', { err, payload: { path } });
+        if (playTokenRef.current === token) {
+          currentPlayingIdRef.current = null;
+          setIsPlaying(null);
+        }
+        onError?.(err);
+        return 'failed';
+      }
 
-    if (playTokenRef.current === token) {
-      currentPlayingIdRef.current = null;
-      if (id !== undefined) setIsPlaying(null);
-    }
-    return result;
-  }, [ownerId, resolveUrl, stop, decodeTimeoutMs]);
+      // 取得中に停止・別の音声の再生が行われていたら、この再生は取りやめる
+      if (playTokenRef.current !== token) return 'stopped';
+
+      const result = await playAudioClip(buffer, {
+        ownerId,
+        playbackRate,
+        onStart: () => {
+          if (id !== undefined) setIsPlaying(id);
+        },
+      });
+
+      if (playTokenRef.current === token) {
+        currentPlayingIdRef.current = null;
+        if (id !== undefined) setIsPlaying(null);
+      }
+      return result;
+    },
+    [ownerId, resolveUrl, stop, decodeTimeoutMs],
+  );
 
   const playChime = useCallback(async (): Promise<void> => {
     if (stopBeforeChime) stop();
     await playChimeSound();
   }, [stopBeforeChime, stop]);
 
-  const preload = useCallback(async (path: string, preloadOpts?: { bucketName?: string }) => {
-    if (!path) return;
-    const url = resolveUrl(path, preloadOpts?.bucketName);
-    if (hasCachedAudioBuffer(url)) return;
-    try {
-      await loadAudioBuffer(url);
-    } catch { /* no-op */ }
-  }, [resolveUrl]);
+  const preload = useCallback(
+    async (path: string, preloadOpts?: { bucketName?: string }) => {
+      if (!path) return;
+      const url = resolveUrl(path, preloadOpts?.bucketName);
+      if (hasCachedAudioBuffer(url)) return;
+      try {
+        await loadAudioBuffer(url);
+      } catch {
+        /* no-op */
+      }
+    },
+    [resolveUrl],
+  );
 
   const setLiveRate = useCallback((rate: number) => {
     setAudioClipRate(rate);

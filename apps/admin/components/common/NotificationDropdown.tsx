@@ -19,9 +19,7 @@ import { formatZonedDate } from '@gabby/lib/date/date';
 import { getNotificationDisplay } from '@gabby/lib/notification/display';
 
 // お知らせ管理(発信側)とは別に、システムが自動発火する通知(現状: チャット新着)を表示するベル
-const UnreadDot = () => (
-  <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 mt-1" />
-);
+const UnreadDot = () => <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 mt-1" />;
 
 export function NotificationDropdown() {
   const { notifications, unreadCount, isLoading, fetchNotifications, markAsRead, markAllAsRead } =
@@ -114,11 +112,7 @@ export function NotificationDropdown() {
                   const Icon = display.icon ?? BellRing;
 
                   return (
-                    <DropdownMenuItem
-                      asChild
-                      key={notification.notification_id}
-                      className="p-0 focus:bg-transparent"
-                    >
+                    <DropdownMenuItem asChild key={notification.notification_id} className="p-0 focus:bg-transparent">
                       <button
                         onClick={() => {
                           if (!notification.is_read) markAsRead(notification.notification_id);
@@ -126,7 +120,7 @@ export function NotificationDropdown() {
                         }}
                         className={cn(
                           'w-full text-left flex items-start gap-2.5 p-3 rounded-2xl transition-all hover:bg-slate-50 cursor-pointer outline-none block',
-                          !notification.is_read && 'bg-brand-50/50'
+                          !notification.is_read && 'bg-brand-50/50',
                         )}
                       >
                         <div className="mt-1">
@@ -140,7 +134,7 @@ export function NotificationDropdown() {
                         <div
                           className={cn(
                             'flex items-center justify-center w-8 h-8 rounded-xl border shrink-0',
-                            display.badgeClass ?? 'bg-slate-50 text-slate-500 border-slate-100'
+                            display.badgeClass ?? 'bg-slate-50 text-slate-500 border-slate-100',
                           )}
                         >
                           <Icon size={14} />
@@ -150,14 +144,12 @@ export function NotificationDropdown() {
                           <p
                             className={cn(
                               'text-xs font-bold text-slate-700 truncate leading-snug',
-                              !notification.is_read && 'text-slate-900 font-black'
+                              !notification.is_read && 'text-slate-900 font-black',
                             )}
                           >
                             {display.title}
                           </p>
-                          <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-snug">
-                            {display.body}
-                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-snug">{display.body}</p>
                           <p className="text-[10px] text-slate-400 mt-1 font-bold">
                             {formatZonedDate(notification.occurred_at, timezone)}
                           </p>

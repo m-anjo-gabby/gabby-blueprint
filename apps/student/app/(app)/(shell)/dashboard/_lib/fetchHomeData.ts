@@ -2,7 +2,11 @@ import { getMyDialogueAssignments } from '@/actions/dialogueAction';
 import { getTimezoneList } from '@/actions/studentProfileAction';
 import { getLatestResumeContent } from '@/actions/contentAction';
 import { getMyActivePlans, type MyPlan } from '@/actions/dashboardAction';
-import { getMyTrainingLifetimeStats, getUserTrainingPerformanceAction, type TrainingLifetimeStats } from '@/actions/performanceAction';
+import {
+  getMyTrainingLifetimeStats,
+  getUserTrainingPerformanceAction,
+  type TrainingLifetimeStats,
+} from '@/actions/performanceAction';
 import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import type { ResumeContentResponse } from '@gabby/types/training';
 import { collectActivities, getMonthKeysCoveringThisWeek, type TrainingActivity } from './weeklyActivity';

@@ -70,7 +70,8 @@ export function buildLiveSessionReminderMail({
   ];
   if (actionUrl) blocks.push({ kind: 'button', label: copy.action[lead], href: actionUrl });
   if (lead === '1h') blocks.push({ kind: 'paragraph', text: copy.joinNote, small: true, muted: true, center: true });
-  if (copy.cancelNote && lead === '24h') blocks.push({ kind: 'paragraph', text: copy.cancelNote, small: true, muted: true });
+  if (copy.cancelNote && lead === '24h')
+    blocks.push({ kind: 'paragraph', text: copy.cancelNote, small: true, muted: true });
 
   return buildNotifyMail({
     language,

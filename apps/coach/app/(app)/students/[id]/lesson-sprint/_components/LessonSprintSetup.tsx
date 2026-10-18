@@ -6,8 +6,23 @@ import { ChevronLeft, ArrowRight, Loader2, Lock, BookOpen, Timer } from 'lucide-
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { QUESTION_TYPES, SPRINT_TIME_OPTIONS, SprintQuestionType, SprintAnswerType, SprintQuestion, toSprintType } from '@gabby/types/sprint';
-import { resolveSprintHasLevel, formatSprintLevelLabel, getSprintTitle, resolveCoachContentName, hasSprintQuestionsForType, isSprintLevelAvailable, pickSprintLevel } from '@gabby/lib';
+import {
+  QUESTION_TYPES,
+  SPRINT_TIME_OPTIONS,
+  SprintQuestionType,
+  SprintAnswerType,
+  SprintQuestion,
+  toSprintType,
+} from '@gabby/types/sprint';
+import {
+  resolveSprintHasLevel,
+  formatSprintLevelLabel,
+  getSprintTitle,
+  resolveCoachContentName,
+  hasSprintQuestionsForType,
+  isSprintLevelAvailable,
+  pickSprintLevel,
+} from '@gabby/lib';
 import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -40,14 +55,16 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
   // RepeatSprintButton.tsx参照）。
   const lastSession = lessonSprints[0];
   const hasLastContent = !!lastSession && contents.some((c) => c.content_id === lastSession.content_id);
-  const initialQuestionType: SprintQuestionType = hasLastContent ? (lastSession.question_type as SprintQuestionType) : '0';
+  const initialQuestionType: SprintQuestionType = hasLastContent
+    ? (lastSession.question_type as SprintQuestionType)
+    : '0';
 
   const [contentId, setContentId] = useState<string>(
-    hasLastContent ? lastSession.content_id : (contents[0]?.content_id ?? '')
+    hasLastContent ? lastSession.content_id : (contents[0]?.content_id ?? ''),
   );
   const [questionType, setQuestionType] = useState<SprintQuestionType>(initialQuestionType);
   const [level, setLevel] = useState<string>(
-    hasLastContent ? String(lastSession.difficulty_level) : String(QUESTION_TYPES['0'].minLevel)
+    hasLastContent ? String(lastSession.difficulty_level) : String(QUESTION_TYPES['0'].minLevel),
   );
   const [timeLimitSec, setTimeLimitSec] = useState<number>(QUESTION_TYPES[initialQuestionType].recommendedTimeSec);
   const [isLoading, setIsLoading] = useState(false);
@@ -143,7 +160,9 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
         <div className="shrink-0 w-full px-6 pt-5 pb-3 border-b border-slate-100/60 bg-white relative z-10">
           <div className="flex items-center justify-between h-10">
             <button
-              onClick={() => router.push(sessionId ? `/students/${studentId}/sessions/${sessionId}` : `/students/${studentId}`)}
+              onClick={() =>
+                router.push(sessionId ? `/students/${studentId}/sessions/${sessionId}` : `/students/${studentId}`)
+              }
               className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200/80 active:scale-95 cursor-pointer transition-all shrink-0"
             >
               <ChevronLeft size={16} strokeWidth={2.5} />
@@ -173,123 +192,141 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
         {/* メイン: 設定エリア */}
         <div className="flex-1 flex flex-col p-6 overflow-y-auto overscroll-contain">
           <div className="w-full max-w-2xl mx-auto flex flex-col gap-5">
-      {contents.length === 0 ? (
-        <Card className="rounded-2xl border-slate-200 shadow-sm">
-          <CardContent className="py-12 flex flex-col items-center text-center gap-2">
-            <BookOpen size={22} className="text-slate-300" />
-            <p className="text-xs font-semibold text-slate-400">No sprint content available</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <Card className="rounded-2xl border-slate-200 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-800">Content</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2">
-              <Select value={contentId} onValueChange={setContentId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select content" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contents.map((c) => (
-                    <SelectItem key={c.content_id} value={c.content_id}>{resolveCoachContentName(c)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
+            {contents.length === 0 ? (
+              <Card className="rounded-2xl border-slate-200 shadow-sm">
+                <CardContent className="py-12 flex flex-col items-center text-center gap-2">
+                  <BookOpen size={22} className="text-slate-300" />
+                  <p className="text-xs font-semibold text-slate-400">No sprint content available</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-bold text-slate-800">Content</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <Select value={contentId} onValueChange={setContentId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select content" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contents.map((c) => (
+                          <SelectItem key={c.content_id} value={c.content_id}>
+                            {resolveCoachContentName(c)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
 
-          <Card className="rounded-2xl border-slate-200 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-800">Question Type</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {sortedTypes.map((type) => {
-                  const isSelected = questionType === type.value;
-                  const isSupported = isTypeSupported(type.value);
-                  return (
-                    <button
-                      key={type.value}
-                      type="button"
-                      disabled={!isSupported}
-                      onClick={() => handleTypeChange(type.value)}
-                      className={cn(
-                        "h-12 rounded-xl border text-xs font-black transition-all disabled:opacity-50 flex flex-col items-center justify-center gap-0.5",
-                        isSelected ? "bg-brand border-brand text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                      )}
-                    >
-                      <span>{type.label}</span>
-                      {!isSupported && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-rose-500"><Lock size={9} />Unavailable</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-bold text-slate-800">Question Type</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {sortedTypes.map((type) => {
+                        const isSelected = questionType === type.value;
+                        const isSupported = isTypeSupported(type.value);
+                        return (
+                          <button
+                            key={type.value}
+                            type="button"
+                            disabled={!isSupported}
+                            onClick={() => handleTypeChange(type.value)}
+                            className={cn(
+                              'h-12 rounded-xl border text-xs font-black transition-all disabled:opacity-50 flex flex-col items-center justify-center gap-0.5',
+                              isSelected
+                                ? 'bg-brand border-brand text-white'
+                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100',
+                            )}
+                          >
+                            <span>{type.label}</span>
+                            {!isSupported && (
+                              <span className="flex items-center gap-0.5 text-[10px] text-rose-500">
+                                <Lock size={9} />
+                                Unavailable
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
 
-          <Card className="rounded-2xl border-slate-200 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-800">Level</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2">
-              {hasLevel ? (
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                  {levelItems.map((item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() => setLevel(item.value)}
-                      className={cn(
-                        "h-10 rounded-xl border text-xs font-black transition-all",
-                        level === item.value ? "bg-brand border-brand text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                      )}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs font-semibold text-slate-400 text-center py-3">This content has no level setting</p>
-              )}
-            </CardContent>
-          </Card>
+                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-bold text-slate-800">Level</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    {hasLevel ? (
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                        {levelItems.map((item) => (
+                          <button
+                            key={item.value}
+                            type="button"
+                            onClick={() => setLevel(item.value)}
+                            className={cn(
+                              'h-10 rounded-xl border text-xs font-black transition-all',
+                              level === item.value
+                                ? 'bg-brand border-brand text-white'
+                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100',
+                            )}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs font-semibold text-slate-400 text-center py-3">
+                        This content has no level setting
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
 
-          <Card className="rounded-2xl border-slate-200 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-800">Time Limit</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {sortedTimes.map((opt) => {
-                  const isRecommended = opt.value === QUESTION_TYPES[questionType].recommendedTimeSec;
-                  return (
-                    <button
-                      key={opt.seq_no}
-                      type="button"
-                      onClick={() => setTimeLimitSec(opt.value)}
-                      className={cn(
-                        "p-3 rounded-xl border text-left transition-all",
-                        timeLimitSec === opt.value ? "bg-brand border-brand text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                      )}
-                    >
-                      <div className="text-xs font-black">{opt.label}</div>
-                      {isRecommended && (
-                        <div className={cn("text-[11px] font-bold", timeLimitSec === opt.value ? "text-amber-300" : "text-brand")}>
-                          Recommended
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
+                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-bold text-slate-800">Time Limit</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {sortedTimes.map((opt) => {
+                        const isRecommended = opt.value === QUESTION_TYPES[questionType].recommendedTimeSec;
+                        return (
+                          <button
+                            key={opt.seq_no}
+                            type="button"
+                            onClick={() => setTimeLimitSec(opt.value)}
+                            className={cn(
+                              'p-3 rounded-xl border text-left transition-all',
+                              timeLimitSec === opt.value
+                                ? 'bg-brand border-brand text-white'
+                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100',
+                            )}
+                          >
+                            <div className="text-xs font-black">{opt.label}</div>
+                            {isRecommended && (
+                              <div
+                                className={cn(
+                                  'text-[11px] font-bold',
+                                  timeLimitSec === opt.value ? 'text-amber-300' : 'text-brand',
+                                )}
+                              >
+                                Recommended
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
         </div>
 
@@ -303,14 +340,28 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
                   disabled={isLoading}
                   className="h-14 rounded-2xl font-black text-xs uppercase tracking-wider bg-brand hover:bg-brand-strong text-white flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : <>Start (YES)<ArrowRight size={14} /></>}
+                  {isLoading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <>
+                      Start (YES)
+                      <ArrowRight size={14} />
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={() => handleStart('1')}
                   disabled={isLoading}
                   className="h-14 rounded-2xl font-black text-xs uppercase tracking-wider bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : <>Start (NO)<ArrowRight size={14} /></>}
+                  {isLoading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <>
+                      Start (NO)
+                      <ArrowRight size={14} />
+                    </>
+                  )}
                 </button>
               </div>
             ) : (
@@ -319,7 +370,14 @@ export function LessonSprintSetup({ studentId, sessionId, profile, lessonSprints
                 disabled={isLoading}
                 className="w-full h-14 rounded-2xl font-black text-xs uppercase tracking-wider bg-brand hover:bg-brand-strong text-white flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                {isLoading ? <Loader2 size={16} className="animate-spin" /> : <>Start Live Sprint<ArrowRight size={14} /></>}
+                {isLoading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <>
+                    Start Live Sprint
+                    <ArrowRight size={14} />
+                  </>
+                )}
               </button>
             )}
           </div>

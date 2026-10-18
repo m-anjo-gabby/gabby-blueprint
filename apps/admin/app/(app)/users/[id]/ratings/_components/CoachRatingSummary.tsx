@@ -30,7 +30,11 @@ export async function CoachRatingSummary({ stats }: { stats: AdminCoachRatingSta
             ) : (
               <div className="mt-1 flex items-center gap-2">
                 <span className="text-2xl font-bold text-slate-800 tabular-nums">{formatRatingValue(value)}</span>
-                <StarRatingDisplay value={value} size={14} label={t('starLabel', { value: formatRatingValue(value) })} />
+                <StarRatingDisplay
+                  value={value}
+                  size={14}
+                  label={t('starLabel', { value: formatRatingValue(value) })}
+                />
               </div>
             )}
             <p className="text-[11px] text-slate-400 mt-1">

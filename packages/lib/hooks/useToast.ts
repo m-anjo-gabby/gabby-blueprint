@@ -22,18 +22,18 @@ export const useToast = () => {
    * const { showToast } = useToast();
    * showToast("保存が完了しました", "success");
    */
-  const showToast = useCallback((
-    message: string, 
-    type: 'info' | 'success' | 'error' = 'info'
-  ) => {
-    // ストアに登録し、一意のIDを取得
-    const id = addToast(message, type);
+  const showToast = useCallback(
+    (message: string, type: 'info' | 'success' | 'error' = 'info') => {
+      // ストアに登録し、一意のIDを取得
+      const id = addToast(message, type);
 
-    // 3000ms（3秒）後に自動削除するロジックをHookで一元管理
-    setTimeout(() => {
-      removeToast(id);
-    }, 3000);
-  }, [addToast, removeToast]);
+      // 3000ms（3秒）後に自動削除するロジックをHookで一元管理
+      setTimeout(() => {
+        removeToast(id);
+      }, 3000);
+    },
+    [addToast, removeToast],
+  );
 
   return { showToast };
 };

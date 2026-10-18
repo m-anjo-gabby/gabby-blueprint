@@ -36,7 +36,12 @@ export default async function CalendarEventsPage({ searchParams }: { searchParam
           </>
         }
       />
-      <CalendarEventDataTable data={rows} totalCount={totalCount} pageCount={toPageCount(totalCount)} formOptions={formOptions} />
+      <CalendarEventDataTable
+        data={rows}
+        totalCount={totalCount}
+        pageCount={toPageCount(totalCount)}
+        formOptions={formOptions}
+      />
     </div>
   );
 }

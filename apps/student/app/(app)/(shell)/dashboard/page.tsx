@@ -21,11 +21,8 @@ import { getNoticesCached } from '@gabby/lib/notice/getNoticesCached';
  */
 export default async function DashboardPage() {
   // 契約一覧は (app)/layout.tsx と同じ取得を使う（1リクエスト内で1回）
-  const [{ assignments, activities, lifetimeStats, timezoneNames, resume, plans }, liveContracts, notices] = await Promise.all([
-    fetchHomeData(),
-    getMyLiveSessionContractsCached(),
-    getNoticesCached(),
-  ]);
+  const [{ assignments, activities, lifetimeStats, timezoneNames, resume, plans }, liveContracts, notices] =
+    await Promise.all([fetchHomeData(), getMyLiveSessionContractsCached(), getNoticesCached()]);
   // 取得順（重要→公開日の新しい順）のまま先頭を出す
   const homeNotices = notices.data.filter((n) => n.display_mode === 'HOME' && !n.is_read);
   const liveContract = liveContracts.find((c) => c.is_current) ?? liveContracts.find((c) => c.is_active);

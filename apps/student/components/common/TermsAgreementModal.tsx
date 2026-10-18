@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import React, { useState, useMemo } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
+import React, { useState, useMemo } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
 import { focusDialogContent } from '@gabby/lib/components/common/dialogFocus';
-import * as Tabs from "@radix-ui/react-tabs";
-import { motion } from "framer-motion";
-import { Loader2, CheckCircle2, X, FileText, ShieldCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { agreeToTerms } from "@/actions/termAction";
-import { TermViewer } from "@gabby/lib/components/term/TermViewer";
-import type { TermDocument } from "@gabby/types/term";
+import * as Tabs from '@radix-ui/react-tabs';
+import { motion } from 'framer-motion';
+import { Loader2, CheckCircle2, X, FileText, ShieldCheck } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { agreeToTerms } from '@/actions/termAction';
+import { TermViewer } from '@gabby/lib/components/term/TermViewer';
+import type { TermDocument } from '@gabby/types/term';
 
 interface Props {
   userId: string;
@@ -22,13 +22,13 @@ interface Props {
 
 const EMPTY_ARRAY: TermDocument[] = [];
 
-export const TermsAgreementModal = ({ 
-  userId, 
-  terms: propsTerms, 
-  pendingTerms, 
-  mode = 'agreement', 
-  onClose, 
-  isOpen = true 
+export const TermsAgreementModal = ({
+  userId,
+  terms: propsTerms,
+  pendingTerms,
+  mode = 'agreement',
+  onClose,
+  isOpen = true,
 }: Props) => {
   const [readTerms, setReadTerms] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,9 +54,12 @@ export const TermsAgreementModal = ({
     setIsSubmitting(true);
     try {
       // 同意時点で表示していたリビジョンを併せて記録する
-      await agreeToTerms(userId, terms.map((t) => ({ term_id: t.term_id, revision_id: t.revision_id })));
+      await agreeToTerms(
+        userId,
+        terms.map((t) => ({ term_id: t.term_id, revision_id: t.revision_id })),
+      );
     } catch {
-      alert("同意処理に失敗しました。通信環境の良い場所で再度お試しください。");
+      alert('同意処理に失敗しました。通信環境の良い場所で再度お試しください。');
     } finally {
       setIsSubmitting(false);
     }
@@ -66,21 +69,25 @@ export const TermsAgreementModal = ({
   const { badgeText, titleText, subText } = useMemo(() => {
     if (isAgreementMode) {
       return {
-        badgeText: "同意のお願い",
-        titleText: isSingleTerm 
-          ? (singleTerm.term_type === "TERMS" ? "利用規約への同意" : "プライバシーポリシーへの同意")
-          : "利用規約・ポリシーへの同意",
+        badgeText: '同意のお願い',
+        titleText: isSingleTerm
+          ? singleTerm.term_type === 'TERMS'
+            ? '利用規約への同意'
+            : 'プライバシーポリシーへの同意'
+          : '利用規約・ポリシーへの同意',
         subText: isSingleTerm
-          ? "安心してサービスをご利用いただくために、新しく更新された内容をご確認の上、同意をお願いいたします。"
-          : "安心してサービスをご利用いただくために、最新の利用規約および個人情報保護方針をご確認の上、同意をお願いいたします。"
+          ? '安心してサービスをご利用いただくために、新しく更新された内容をご確認の上、同意をお願いいたします。'
+          : '安心してサービスをご利用いただくために、最新の利用規約および個人情報保護方針をご確認の上、同意をお願いいたします。',
       };
     } else {
       return {
-        badgeText: "規約・ポリシー",
+        badgeText: '規約・ポリシー',
         titleText: isSingleTerm
-          ? (singleTerm.term_type === "TERMS" ? "利用規約" : "プライバシーポリシー")
-          : "リーガル情報・規定一覧",
-        subText: "現在施行されている本サービスの各種規定をご確認いただけます。"
+          ? singleTerm.term_type === 'TERMS'
+            ? '利用規約'
+            : 'プライバシーポリシー'
+          : 'リーガル情報・規定一覧',
+        subText: '現在施行されている本サービスの各種規定をご確認いただけます。',
       };
     }
   }, [isAgreementMode, isSingleTerm, singleTerm]);
@@ -89,12 +96,12 @@ export const TermsAgreementModal = ({
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose?.()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-ink/40 backdrop-blur-md z-[100] animate-in fade-in duration-300" />
-        
-        <Dialog.Content 
+
+        <Dialog.Content
           onOpenAutoFocus={focusDialogContent}
           className="fixed left-[50%] top-[50%] z-[101] w-[95vw] max-w-2xl translate-x-[-50%] translate-y-[-50%] outline-none"
         >
-          <motion.div 
+          <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="bg-surface rounded-panel shadow-2xl overflow-hidden border border-line flex flex-col max-h-[90vh]"
@@ -104,9 +111,7 @@ export const TermsAgreementModal = ({
             {terms.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-20 gap-4">
                 <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
-                <p className="text-xs font-bold text-ink-subtle animate-pulse">
-                  読み込み中...
-                </p>
+                <p className="text-xs font-bold text-ink-subtle animate-pulse">読み込み中...</p>
               </div>
             ) : (
               <>
@@ -119,24 +124,26 @@ export const TermsAgreementModal = ({
                           {badgeText}
                         </span>
                       </div>
-                      <h2 className="text-xl sm:text-2xl font-bold text-ink">
-                        {titleText}
-                      </h2>
+                      <h2 className="text-xl sm:text-2xl font-bold text-ink">{titleText}</h2>
                     </div>
                     {!isAgreementMode && (
-                      <button onClick={onClose} className="p-2 rounded-control bg-canvas text-ink-muted hover:bg-line/60 transition-all active:scale-95" aria-label="閉じる">
+                      <button
+                        onClick={onClose}
+                        className="p-2 rounded-control bg-canvas text-ink-muted hover:bg-line/60 transition-all active:scale-95"
+                        aria-label="閉じる"
+                      >
                         <X size={20} />
                       </button>
                     )}
                   </div>
-                  <p className="text-xs font-bold text-ink-muted leading-relaxed max-w-xl">
-                    {subText}
-                  </p>
+                  <p className="text-xs font-bold text-ink-muted leading-relaxed max-w-xl">{subText}</p>
                 </div>
 
                 {/* タブおよび本文ドキュメント表示エリア */}
-                <Tabs.Root defaultValue={terms[0]?.term_id} className="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
-                  
+                <Tabs.Root
+                  defaultValue={terms[0]?.term_id}
+                  className="flex-1 flex flex-col min-h-0 w-full overflow-hidden"
+                >
                   {/* termsが2件以上の時だけタブリストを表示 */}
                   {!isSingleTerm && (
                     <div className="px-6 sm:px-8 mb-4">
@@ -147,8 +154,8 @@ export const TermsAgreementModal = ({
                             value={term.term_id}
                             className="rounded-xl font-bold text-xs transition-all data-[state=active]:bg-surface data-[state=active]:text-brand data-[state=active]:shadow-sm text-ink-muted flex items-center justify-center gap-2 outline-none"
                           >
-                            {term.term_type === "TERMS" ? <FileText size={14} /> : <ShieldCheck size={14} />}
-                            {term.term_type === "TERMS" ? "利用規約" : "個人情報保護方針"}
+                            {term.term_type === 'TERMS' ? <FileText size={14} /> : <ShieldCheck size={14} />}
+                            {term.term_type === 'TERMS' ? '利用規約' : '個人情報保護方針'}
                             {isAgreementMode && readTerms[term.term_id] && (
                               <CheckCircle2 size={12} className="text-emerald-500" />
                             )}
@@ -161,16 +168,18 @@ export const TermsAgreementModal = ({
                   {/* 本文ドキュメント表示エリア */}
                   <div className="flex-1 min-h-0 bg-canvas border-y border-line flex flex-col overflow-hidden w-full min-w-0">
                     {terms.map((term) => (
-                      <Tabs.Content 
-                        key={term.term_id} 
-                        value={term.term_id} 
+                      <Tabs.Content
+                        key={term.term_id}
+                        value={term.term_id}
                         className={cn(
-                          "h-full w-full min-w-0 outline-none overflow-hidden",
-                          isSingleTerm ? "flex flex-col" : "data-[state=active]:flex flex-col"
+                          'h-full w-full min-w-0 outline-none overflow-hidden',
+                          isSingleTerm ? 'flex flex-col' : 'data-[state=active]:flex flex-col',
                         )}
                       >
                         <TermViewer
-                          content={term.content || "規約の読み込みに失敗しました。お手数ですが時間をおいて再度お試しください。"}
+                          content={
+                            term.content || '規約の読み込みに失敗しました。お手数ですが時間をおいて再度お試しください。'
+                          }
                           onScrollEnd={() => handleScrollEnd(term.term_id)}
                         />
                       </Tabs.Content>
@@ -185,16 +194,18 @@ export const TermsAgreementModal = ({
                       onClick={handleAgree}
                       disabled={!allRead || isSubmitting}
                       className={cn(
-                        "w-full h-14 rounded-control font-bold text-sm transition-all shadow-lg active:scale-[0.98] flex items-center justify-center",
-                        allRead && !isSubmitting 
-                          ? "bg-brand hover:bg-brand-strong text-white shadow-brand/20" 
-                          : "bg-line/60 text-ink-subtle cursor-not-allowed shadow-none"
+                        'w-full h-14 rounded-control font-bold text-sm transition-all shadow-lg active:scale-[0.98] flex items-center justify-center',
+                        allRead && !isSubmitting
+                          ? 'bg-brand hover:bg-brand-strong text-white shadow-brand/20'
+                          : 'bg-line/60 text-ink-subtle cursor-not-allowed shadow-none',
                       )}
                     >
                       {isSubmitting ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : allRead ? (
+                        '同意して次へ進む'
                       ) : (
-                        allRead ? "同意して次へ進む" : "規約を最下部までスクロールして確認"
+                        '規約を最下部までスクロールして確認'
                       )}
                     </button>
                   ) : (

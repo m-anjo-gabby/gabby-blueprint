@@ -4,12 +4,25 @@ import { getMyProfileCore } from '@gabby/lib/profile/actions/profileActions';
 import { uploadProfileIconCore, removeProfileIconCore } from '@gabby/lib/profile/actions/profileIconActions';
 import { getTimezoneListCore, updateMyTimezoneCore } from '@gabby/lib/profile/actions/timezoneActions';
 import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
-import { getCoachSpecialtyCodesCore, getCoachSpecialtyListCore } from '@gabby/lib/coachSpecialty/actions/coachSpecialtyActions';
+import {
+  getCoachSpecialtyCodesCore,
+  getCoachSpecialtyListCore,
+} from '@gabby/lib/coachSpecialty/actions/coachSpecialtyActions';
 import { toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getMyCoachProfileCore, updateMyCoachProfileCore, updateMyCoachZoomSettingsCore } from '@gabby/lib/coachProfile/actions/coachProfileActions';
-import { uploadCoachIntroVideoCore, removeCoachIntroVideoCore } from '@gabby/lib/coachProfile/actions/coachIntroVideoActions';
-import { getCoachMatchingStatusCore, updateMyAcceptingStudentsCore } from '@gabby/lib/coachProfile/actions/coachMatchingStatusActions';
+import {
+  getMyCoachProfileCore,
+  updateMyCoachProfileCore,
+  updateMyCoachZoomSettingsCore,
+} from '@gabby/lib/coachProfile/actions/coachProfileActions';
+import {
+  uploadCoachIntroVideoCore,
+  removeCoachIntroVideoCore,
+} from '@gabby/lib/coachProfile/actions/coachIntroVideoActions';
+import {
+  getCoachMatchingStatusCore,
+  updateMyAcceptingStudentsCore,
+} from '@gabby/lib/coachProfile/actions/coachMatchingStatusActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { ProfileIconErrorCode, MyProfile, UpdateTimezoneErrorCode } from '@gabby/types/profile';
@@ -78,7 +91,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
  * Uploads a new profile icon image
  */
 export async function uploadProfileIcon(
-  formData: FormData
+  formData: FormData,
 ): Promise<{ success: true; iconPath: string } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await uploadProfileIconCore(formData);
@@ -125,7 +138,7 @@ export async function getTimezoneList(): Promise<TimezoneMaster[]> {
  * Updates the current coach's own timezone
  */
 export async function updateMyTimezone(
-  timezone: string
+  timezone: string,
 ): Promise<{ success: true; timezone: string } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await updateMyTimezoneCore(timezone);
@@ -188,7 +201,7 @@ export async function getMyCoachProfile(): Promise<CoachProfileRecord | null> {
  * Updates the current coach's own public profile
  */
 export async function updateMyCoachProfile(
-  values: CoachProfileFormValues
+  values: CoachProfileFormValues,
 ): Promise<{ success: true; profile: CoachProfileRecord } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await updateMyCoachProfileCore(values);
@@ -222,7 +235,7 @@ export async function getMyCoachMatchingStatus(): Promise<CoachMatchingStatus | 
  * Turns accepting new students on or off for the current coach
  */
 export async function updateMyAcceptingStudents(
-  acceptingStudents: boolean
+  acceptingStudents: boolean,
 ): Promise<{ success: true; acceptingStudents: boolean } | { success: false; message: string }> {
   const result = await updateMyAcceptingStudentsCore(acceptingStudents);
   if (!result.success) {
@@ -235,7 +248,7 @@ export async function updateMyAcceptingStudents(
  * Updates the current coach's live session video call URL (Zoom)
  */
 export async function updateMyCoachZoomSettings(
-  values: CoachZoomSettingsFormValues
+  values: CoachZoomSettingsFormValues,
 ): Promise<{ success: true; profile: CoachProfileRecord } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await updateMyCoachZoomSettingsCore(values);
@@ -253,7 +266,7 @@ export async function updateMyCoachZoomSettings(
  * Uploads a new coach introduction video
  */
 export async function uploadCoachIntroVideo(
-  formData: FormData
+  formData: FormData,
 ): Promise<{ success: true; introVideoPath: string } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await uploadCoachIntroVideoCore(formData);

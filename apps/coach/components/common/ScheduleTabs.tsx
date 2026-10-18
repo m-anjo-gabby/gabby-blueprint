@@ -30,7 +30,7 @@ export function ScheduleTabs({ active }: ScheduleTabsProps) {
             href={tab.href}
             className={cn(
               'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition-colors',
-              isActive ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              isActive ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700',
             )}
           >
             <Icon size={14} />

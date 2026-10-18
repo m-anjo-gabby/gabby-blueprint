@@ -20,8 +20,7 @@ export interface CoachSpecialtySettings {
 }
 
 export type SetCoachSpecialtiesResult =
-  | { success: true; codes: string[] }
-  | { success: false; errorCode: 'too_many_fields' | 'failed' };
+  { success: true; codes: string[] } | { success: false; errorCode: 'too_many_fields' | 'failed' };
 
 const setCoachSpecialtiesInput = z.object({
   coachId: z.uuid(),

@@ -2,12 +2,7 @@
 'use server';
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { 
-  ClientOption, 
-  ClientPayload, 
-  ClientResponse, 
-  ClientRecord 
-} from '@gabby/types/client';
+import { ClientOption, ClientPayload, ClientResponse, ClientRecord } from '@gabby/types/client';
 import { revalidatePath } from 'next/cache';
 import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { createLogger } from '@gabby/lib/logger';
@@ -40,7 +35,10 @@ export async function getClientsFilter(): Promise<ClientOption[]> {
 
     return (data || []) as ClientOption[];
   } catch (error) {
-    logger.error('client:get_filter_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    logger.error('client:get_filter_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+    });
     return [];
   }
 }
@@ -79,7 +77,10 @@ export async function getClients(params: ListParams): Promise<ListResult<ClientR
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('client:get_clients_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    logger.error('client:get_clients_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+    });
     throw error;
   }
 }
@@ -92,10 +93,7 @@ export async function createClient(payload: ClientPayload): Promise<ClientRespon
   try {
     const supabase = await createAdminClient();
 
-    const { data, error } = await supabase
-      .from('com_m_client')
-      .insert([payload])
-      .select();
+    const { data, error } = await supabase.from('com_m_client').insert([payload]).select();
 
     if (error) {
       logger.error('client:create_client_failed', error.message, { ...ctx, err: error, payload });
@@ -103,15 +101,19 @@ export async function createClient(payload: ClientPayload): Promise<ClientRespon
     }
 
     const newClient = data[0] as ClientRecord;
-    logger.info('client:create_client_success', `Client created: ${newClient.client_name}`, { 
+    logger.info('client:create_client_success', `Client created: ${newClient.client_name}`, {
       ...ctx,
-      payload: { clientId: newClient.client_id } 
+      payload: { clientId: newClient.client_id },
     });
 
     revalidatePath('/clients');
     return { success: true, client: newClient };
   } catch (error) {
-    logger.error('client:create_client_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
+    logger.error('client:create_client_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload,
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -119,38 +121,43 @@ export async function createClient(payload: ClientPayload): Promise<ClientRespon
 /**
  * 顧客情報の更新
  */
-export async function updateClient(
-  clientId: string, 
-  payload: ClientPayload
-): Promise<ClientResponse> {
+export async function updateClient(clientId: string, payload: ClientPayload): Promise<ClientResponse> {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
 
     const { data, error } = await supabase
       .from('com_m_client')
-      .update({ 
+      .update({
         ...payload,
-        update_date: new Date().toISOString()
+        update_date: new Date().toISOString(),
       })
       .eq('client_id', clientId)
       .select();
 
     if (error) {
-      logger.error('client:update_client_failed', error.message, { ...ctx, err: error, payload: { clientId, ...payload } });
+      logger.error('client:update_client_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { clientId, ...payload },
+      });
       return { success: false, message: error.message };
     }
 
     const updatedClient = data[0] as ClientRecord;
-    logger.info('client:update_client_success', `Client updated: ${updatedClient.client_name}`, { 
+    logger.info('client:update_client_success', `Client updated: ${updatedClient.client_name}`, {
       ...ctx,
-      payload: { clientId: updatedClient.client_id } 
+      payload: { clientId: updatedClient.client_id },
     });
 
     revalidatePath('/clients');
     return { success: true, client: updatedClient };
   } catch (error) {
-    logger.error('client:update_client_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId, ...payload } });
+    logger.error('client:update_client_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { clientId, ...payload },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -164,10 +171,7 @@ export async function deleteClient(clientId: string): Promise<ClientResponse> {
   try {
     const supabase = await createAdminClient();
 
-    const { error } = await supabase
-      .from('com_m_client')
-      .delete()
-      .eq('client_id', clientId);
+    const { error } = await supabase.from('com_m_client').delete().eq('client_id', clientId);
 
     if (error) {
       if (isInUseError(error)) return { success: false, reason: 'in_use', message: error.message };
@@ -175,15 +179,19 @@ export async function deleteClient(clientId: string): Promise<ClientResponse> {
       return { success: false, message: error.message };
     }
 
-    logger.info('client:delete_client_success', `Client deleted`, {  
+    logger.info('client:delete_client_success', `Client deleted`, {
       ...ctx,
-      payload: { clientId } 
+      payload: { clientId },
     });
 
     revalidatePath('/clients');
     return { success: true };
   } catch (error) {
-    logger.error('client:delete_client_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId } });
+    logger.error('client:delete_client_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { clientId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

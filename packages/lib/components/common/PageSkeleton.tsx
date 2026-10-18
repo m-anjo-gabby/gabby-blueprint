@@ -134,7 +134,11 @@ export function CardSkeleton({ className, rows = 3 }: { className?: string; rows
  */
 export function LoadingScreen({ label, className }: { label: string; className?: string }) {
   return (
-    <div role="status" aria-busy className={cn('flex min-h-dvh w-full flex-col items-center justify-center gap-3 text-slate-500', className)}>
+    <div
+      role="status"
+      aria-busy
+      className={cn('flex min-h-dvh w-full flex-col items-center justify-center gap-3 text-slate-500', className)}
+    >
       <Loader2 className="size-8 animate-spin text-brand-500" aria-hidden />
       <p className="text-sm">{label}</p>
     </div>

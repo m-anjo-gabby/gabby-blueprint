@@ -211,10 +211,14 @@ export function LiveSessionManagementView({ clients }: Props) {
     : [];
 
   const now = new Date();
-  const upcomingSessions = sessions.filter((s) => s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime) > now);
+  const upcomingSessions = sessions.filter(
+    (s) => s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime) > now,
+  );
   // 終了予定を過ぎても記録されていないセッションも、結果を記録できるよう実施済みタブに並べる
   const completedSessions = sessions.filter(
-    (s) => SESSION_RESULT_STATUSES.includes(s.status) || (s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime) <= now)
+    (s) =>
+      SESSION_RESULT_STATUSES.includes(s.status) ||
+      (s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime) <= now),
   );
   // アドミンの変更履歴タブは監査目的のため、コーチ/生徒向けの狭い集合（本人操作の
   // キャンセルのみ）ではなく、起因(cancel_category)を問わず全てのキャンセル済みを見せる
@@ -252,9 +256,15 @@ export function LiveSessionManagementView({ clients }: Props) {
               className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-slate-100 bg-white"
             >
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-700">{formatSessionDateTime(session.start_datetime, locale)}</p>
+                <p className="text-xs font-semibold text-slate-700">
+                  {formatSessionDateTime(session.start_datetime, locale)}
+                </p>
                 <p className="text-[11px] text-slate-400">{t('assignedCoachInline', { name: session.coach_name })}</p>
-                <SessionOutcomeFlags conductedVia={session.conducted_via} outcomeMismatch={session.outcome_mismatch} className="mt-1" />
+                <SessionOutcomeFlags
+                  conductedVia={session.conducted_via}
+                  outcomeMismatch={session.outcome_mismatch}
+                  className="mt-1"
+                />
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {/* 過去の契約は参照のみ（結果の修正は実施記録の一覧から行う） */}
@@ -316,7 +326,10 @@ export function LiveSessionManagementView({ clients }: Props) {
             <div className="space-y-1.5">
               <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('studentLabel')}</Label>
               <SearchableSelect
-                options={students.map((s) => ({ value: s.id, label: t('studentOptionLabel', { name: s.user_name, email: s.email }) }))}
+                options={students.map((s) => ({
+                  value: s.id,
+                  label: t('studentOptionLabel', { name: s.user_name, email: s.email }),
+                }))}
                 value={selectedStudentId}
                 onChange={setSelectedStudentId}
                 placeholder={isLoadingStudents ? t('studentPlaceholderLoading') : t('studentPlaceholder')}
@@ -333,7 +346,11 @@ export function LiveSessionManagementView({ clients }: Props) {
             <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('contractLabel')}</Label>
             {!selectedStudentId ? (
               <>
-                <select disabled value="" className="flex h-9 w-full rounded-md border border-input bg-slate-50 px-3 text-sm text-slate-400 shadow-sm cursor-not-allowed">
+                <select
+                  disabled
+                  value=""
+                  className="flex h-9 w-full rounded-md border border-input bg-slate-50 px-3 text-sm text-slate-400 shadow-sm cursor-not-allowed"
+                >
                   <option value="">{t('selectStudentFirst')}</option>
                 </select>
                 <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 px-3 py-2.5 min-h-13 flex items-center">
@@ -357,7 +374,10 @@ export function LiveSessionManagementView({ clients }: Props) {
                   {contracts.map((c) => (
                     <option key={c.ticket_id} value={c.ticket_id}>
                       {c.is_current ? t('contractCurrent') : t('contractPast')}
-                      {t('contractDateRange', { start: formatContractDate(c.start_date, locale), end: formatContractDate(c.end_date, locale) })}
+                      {t('contractDateRange', {
+                        start: formatContractDate(c.start_date, locale),
+                        end: formatContractDate(c.end_date, locale),
+                      })}
                     </option>
                   ))}
                 </select>
@@ -399,7 +419,9 @@ export function LiveSessionManagementView({ clients }: Props) {
               ) : (
                 <>
                   <div className="space-y-2">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('regularScheduleTitle')}</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('regularScheduleTitle')}
+                    </p>
                     {selectedContract && (
                       <p className="text-[11px] text-slate-500">
                         {t('slotSummary', {
@@ -425,19 +447,37 @@ export function LiveSessionManagementView({ clients }: Props) {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-xs font-bold text-slate-700">
-                                    {t('slotLabel', { slotNo: slot.slot_no, day: tDay(DAY_KEYS[slot.day_of_week]), start: slot.start_time.slice(0, 5), end: slot.end_time.slice(0, 5), timezone: pickTimezoneName(slot.schedule_timezone, slot.schedule_timezone_names, 'short', locale === 'en' ? 'en' : 'ja') })}
+                                    {t('slotLabel', {
+                                      slotNo: slot.slot_no,
+                                      day: tDay(DAY_KEYS[slot.day_of_week]),
+                                      start: slot.start_time.slice(0, 5),
+                                      end: slot.end_time.slice(0, 5),
+                                      timezone: pickTimezoneName(
+                                        slot.schedule_timezone,
+                                        slot.schedule_timezone_names,
+                                        'short',
+                                        locale === 'en' ? 'en' : 'ja',
+                                      ),
+                                    })}
                                   </span>
                                   <Badge variant="outline" className={`${statusInfo.className} text-[10px] font-bold`}>
                                     {statusInfo.label}
                                   </Badge>
                                   {isActive && slot.shortfall > 0 && (
-                                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-100 text-[10px] font-bold">
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-amber-50 text-amber-700 border-amber-100 text-[10px] font-bold"
+                                    >
                                       {t('unassignedShortfall', { count: slot.shortfall })}
                                     </Badge>
                                   )}
                                 </div>
-                                <p className="text-[11px] text-slate-400 mt-0.5">{t('assignedCoach', { name: slot.coach_name })}</p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">{t('targetSessionsLabel', { count: slot.target_sessions })}</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                  {t('assignedCoach', { name: slot.coach_name })}
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                  {t('targetSessionsLabel', { count: slot.target_sessions })}
+                                </p>
                               </div>
                               {isActive && !isPastContract && (
                                 <div className="flex items-center gap-2 shrink-0">
@@ -482,7 +522,9 @@ export function LiveSessionManagementView({ clients }: Props) {
                                     </AlertDialogTrigger>
                                     <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
                                       <AlertDialogHeader className="space-y-3">
-                                        <AlertDialogTitle className="text-lg font-black text-slate-800">{t('reassignDialogTitle')}</AlertDialogTitle>
+                                        <AlertDialogTitle className="text-lg font-black text-slate-800">
+                                          {t('reassignDialogTitle')}
+                                        </AlertDialogTitle>
                                         <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
                                           {t('reassignDialogBody', {
                                             slotNo: slot.slot_no,
@@ -511,42 +553,46 @@ export function LiveSessionManagementView({ clients }: Props) {
                             </div>
                           );
                         })}
-                        {!isPastContract && unassignedSlotNos.map((slotNo) => (
-                          <div
-                            key={`unassigned-${slotNo}`}
-                            data-testid="schedule-slot"
-                            className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-dashed border-slate-200 bg-white"
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-xs font-bold text-slate-400">{t('unassignedSlotLabel', { slotNo })}</span>
-                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-100 text-[10px] font-bold">
-                                  {t('unassignedBadge')}
-                                </Badge>
-                              </div>
-                              <p className="text-[11px] text-slate-400 mt-0.5">{t('unassignedHint')}</p>
-                            </div>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="text-brand-strong border-brand-200 hover:bg-brand-50 shrink-0"
-                              onClick={() => openMatchDialog(slotNo)}
+                        {!isPastContract &&
+                          unassignedSlotNos.map((slotNo) => (
+                            <div
+                              key={`unassigned-${slotNo}`}
+                              data-testid="schedule-slot"
+                              className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-dashed border-slate-200 bg-white"
                             >
-                              <UserPlus size={13} />
-                              {t('directMatchButton')}
-                            </Button>
-                          </div>
-                        ))}
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-bold text-slate-400">
+                                    {t('unassignedSlotLabel', { slotNo })}
+                                  </span>
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-amber-50 text-amber-700 border-amber-100 text-[10px] font-bold"
+                                  >
+                                    {t('unassignedBadge')}
+                                  </Badge>
+                                </div>
+                                <p className="text-[11px] text-slate-400 mt-0.5">{t('unassignedHint')}</p>
+                              </div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="text-brand-strong border-brand-200 hover:bg-brand-50 shrink-0"
+                                onClick={() => openMatchDialog(slotNo)}
+                              >
+                                <UserPlus size={13} />
+                                {t('directMatchButton')}
+                              </Button>
+                            </div>
+                          ))}
                       </div>
                     )}
                   </div>
 
                   <div className="space-y-2">
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('sessionListTitle')}</p>
-                    <p className="text-[10px] text-slate-400">
-                      {t('sessionListHint')}
-                    </p>
+                    <p className="text-[10px] text-slate-400">{t('sessionListHint')}</p>
                     {sessions.length === 0 ? (
                       <p className="text-xs text-slate-400">{t('noSessionsYet')}</p>
                     ) : (

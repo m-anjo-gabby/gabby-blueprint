@@ -22,9 +22,15 @@ export function SessionOutcomeFlags({ conductedVia, outcomeMismatch, isCorrected
 
   return (
     <div className={cn('flex flex-wrap gap-1', className)}>
-      {isExternal && <span className={cn(FLAG_CLASS, 'bg-sky-50 text-sky-700 border-sky-200')}>{t('externalBadge')}</span>}
-      {outcomeMismatch && <span className={cn(FLAG_CLASS, 'bg-amber-50 text-amber-700 border-amber-200')}>{t('mismatchBadge')}</span>}
-      {isCorrected && <span className={cn(FLAG_CLASS, 'bg-slate-50 text-slate-600 border-slate-200')}>{t('correctedBadge')}</span>}
+      {isExternal && (
+        <span className={cn(FLAG_CLASS, 'bg-sky-50 text-sky-700 border-sky-200')}>{t('externalBadge')}</span>
+      )}
+      {outcomeMismatch && (
+        <span className={cn(FLAG_CLASS, 'bg-amber-50 text-amber-700 border-amber-200')}>{t('mismatchBadge')}</span>
+      )}
+      {isCorrected && (
+        <span className={cn(FLAG_CLASS, 'bg-slate-50 text-slate-600 border-slate-200')}>{t('correctedBadge')}</span>
+      )}
     </div>
   );
 }

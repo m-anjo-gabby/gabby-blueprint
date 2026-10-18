@@ -14,11 +14,7 @@ import { getAuthUser } from '@gabby/lib/supabase/authUser';
  * コーチ用 統合アプリケーションレイアウト
  * admin アプリの AdminAppLayout と同じく、認証・State初期化とサイドバー構造を統合しています。
  */
-export default async function CoachAppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function CoachAppLayout({ children }: { children: React.ReactNode }) {
   const user = await getAuthUser();
 
   if (!user) {
@@ -32,7 +28,9 @@ export default async function CoachAppLayout({
   return (
     <>
       {/* Zustandへのデータ流し込みとAuth監視 */}
-      <UserStoreInitializer user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }} />
+      <UserStoreInitializer
+        user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }}
+      />
       <ShellDataLoader data={shellData} />
 
       {/* ヘッダーエリア / サイドメニュー / メインエリアの3ペイン構成 */}
@@ -43,9 +41,7 @@ export default async function CoachAppLayout({
           <Sidebar />
 
           <div className="flex flex-col flex-1 min-w-0 relative">
-            <main className="flex-1 flex flex-col overflow-y-auto min-h-0 p-4 md:p-6 relative">
-              {children}
-            </main>
+            <main className="flex-1 flex flex-col overflow-y-auto min-h-0 p-4 md:p-6 relative">{children}</main>
           </div>
         </div>
       </div>

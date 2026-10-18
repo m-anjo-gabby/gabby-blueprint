@@ -6,7 +6,13 @@ import { useAudioEngine, type AudioEngineOptions, type AudioEnginePlayOptions } 
 import { requestPlayAndRecordSession } from '../core/audioSession';
 import { subscribeAudioLifecycle } from '../core/audioRuntime';
 import { startSpeechAssessment, type SpeechAssessmentHandle } from '../core/speechAssessment';
-import { waitFor, type PlayPromptsResult, type PromptFailure, type SpeakingPrompt, type SpeakingTurnResult } from '../core/flow';
+import {
+  waitFor,
+  type PlayPromptsResult,
+  type PromptFailure,
+  type SpeakingPrompt,
+  type SpeakingTurnResult,
+} from '../core/flow';
 import { cancelSpeech } from '../../speech/synthesis';
 
 export interface ListenOptions {
@@ -110,133 +116,165 @@ export function useSpeakingPlayer(engineOptions: AudioEngineOptions) {
     assessmentRef.current?.finish();
   }, []);
 
-  useEffect(() => () => {
-    flowRef.current?.abort();
-    assessmentRef.current?.abort();
-  }, []);
+  useEffect(
+    () => () => {
+      flowRef.current?.abort();
+      assessmentRef.current?.abort();
+    },
+    [],
+  );
 
   // iOS の中断・復旧（audioRuntime が画面の表示・非表示、AudioContext の状態、再生位置から判定する）
-  useEffect(() => subscribeAudioLifecycle((event) => {
-    if (event === 'interrupted') {
-      // 流れ・発話を止めてマイクを放す（バックグラウンドでマイクを使ったままにするとオーディオセッションが壊れやすい）
-      flowRef.current?.abort();
-      flowRef.current = null;
-      abortAssessment();
-      cancelSpeech();
-      setInterruptions((n) => n + 1);
-    } else {
-      setRecoveries((n) => n + 1);
-    }
-  }), [abortAssessment]);
+  useEffect(
+    () =>
+      subscribeAudioLifecycle((event) => {
+        if (event === 'interrupted') {
+          // 流れ・発話を止めてマイクを放す（バックグラウンドでマイクを使ったままにするとオーディオセッションが壊れやすい）
+          flowRef.current?.abort();
+          flowRef.current = null;
+          abortAssessment();
+          cancelSpeech();
+          setInterruptions((n) => n + 1);
+        } else {
+          setRecoveries((n) => n + 1);
+        }
+      }),
+    [abortAssessment],
+  );
 
-  const changePlaybackRate = useCallback((rate: number) => {
-    setPlaybackRate(rate);
-    playbackRateRef.current = rate;
-    setLiveRate(rate);
-  }, [setLiveRate]);
+  const changePlaybackRate = useCallback(
+    (rate: number) => {
+      setPlaybackRate(rate);
+      playbackRateRef.current = rate;
+      setLiveRate(rate);
+    },
+    [setLiveRate],
+  );
 
   /** 1つの音声を再生する（再生速度は changePlaybackRate の値） */
-  const play = useCallback((path: string | null, opts: AudioEnginePlayOptions = {}) => {
-    return enginePlay(path, { playbackRate: playbackRateRef.current, ...opts });
-  }, [enginePlay]);
+  const play = useCallback(
+    (path: string | null, opts: AudioEnginePlayOptions = {}) => {
+      return enginePlay(path, { playbackRate: playbackRateRef.current, ...opts });
+    },
+    [enginePlay],
+  );
 
   /** 音声を順番に再生する。中断されたら残りは再生しない */
-  const playPrompts = useCallback(async <K extends string>(
-    prompts: SpeakingPrompt<K>[],
-    { signal, gapMs = 0, onPrompt, onPromptError }: PlayPromptsOptions<K>,
-  ): Promise<PlayPromptsResult<K>> => {
-    const failures: PromptFailure<K>[] = [];
-    const stopOnAbort = () => engineStop();
-    signal.addEventListener('abort', stopOnAbort, { once: true });
-    try {
-      for (let i = 0; i < prompts.length; i++) {
-        if (signal.aborted) return { aborted: true, failures };
-        const prompt = prompts[i];
-        onPrompt?.(prompt.key);
-        if (prompt.text) {
-          const outcome: { error: unknown } = { error: null };
-          const result = await play(prompt.audioPath, { onError: (e) => { outcome.error = e; } });
-          // 中断（iOS の中断等）は「再生できなかった問題」ではない。流れを止めて復旧を待つ
-          if (signal.aborted || result === 'interrupted') return { aborted: true, failures };
-          if (result === 'failed') {
-            const failure = { prompt, error: outcome.error };
-            failures.push(failure);
-            onPromptError?.(failure);
+  const playPrompts = useCallback(
+    async <K extends string>(
+      prompts: SpeakingPrompt<K>[],
+      { signal, gapMs = 0, onPrompt, onPromptError }: PlayPromptsOptions<K>,
+    ): Promise<PlayPromptsResult<K>> => {
+      const failures: PromptFailure<K>[] = [];
+      const stopOnAbort = () => engineStop();
+      signal.addEventListener('abort', stopOnAbort, { once: true });
+      try {
+        for (let i = 0; i < prompts.length; i++) {
+          if (signal.aborted) return { aborted: true, failures };
+          const prompt = prompts[i];
+          onPrompt?.(prompt.key);
+          if (prompt.text) {
+            const outcome: { error: unknown } = { error: null };
+            const result = await play(prompt.audioPath, {
+              onError: (e) => {
+                outcome.error = e;
+              },
+            });
+            // 中断（iOS の中断等）は「再生できなかった問題」ではない。流れを止めて復旧を待つ
+            if (signal.aborted || result === 'interrupted') return { aborted: true, failures };
+            if (result === 'failed') {
+              const failure = { prompt, error: outcome.error };
+              failures.push(failure);
+              onPromptError?.(failure);
+            }
+          }
+          if (i < prompts.length - 1 && !(await waitFor(gapMs, signal))) {
+            return { aborted: true, failures };
           }
         }
-        if (i < prompts.length - 1 && !(await waitFor(gapMs, signal))) {
-          return { aborted: true, failures };
-        }
+        return { aborted: signal.aborted, failures };
+      } finally {
+        signal.removeEventListener('abort', stopOnAbort);
       }
-      return { aborted: signal.aborted, failures };
-    } finally {
-      signal.removeEventListener('abort', stopOnAbort);
-    }
-  }, [play, engineStop]);
+    },
+    [play, engineStop],
+  );
 
   /** チャイム → 認識・評価。中断された場合は null */
-  const listen = useCallback(async ({ targetText, mainWords, signal, chime = true, onListening }: ListenOptions): Promise<AnalysisResult | null> => {
-    if (signal.aborted) return null;
-    abortAssessment();
-
-    // マイクを使う前に録音再生モードへ（発話セッション中は、以降画面を離れるまで戻さない）
-    requestPlayAndRecordSession();
-
-    if (chime) {
-      await playChime();
-      if (signal.aborted) return null;
-    }
-
-    const listenId = ++listenIdRef.current;
-    const isCurrent = () => listenIdRef.current === listenId;
-    const handle = startSpeechAssessment({
+  const listen = useCallback(
+    async ({
       targetText,
       mainWords,
-      onListening: () => {
-        if (!isCurrent()) return;
-        setIsListening(true);
-        onListening?.();
-      },
-      onTimeLeft: (seconds) => {
-        if (isCurrent()) setTimeLeft(seconds);
-      },
-    });
-    assessmentRef.current = handle;
+      signal,
+      chime = true,
+      onListening,
+    }: ListenOptions): Promise<AnalysisResult | null> => {
+      if (signal.aborted) return null;
+      abortAssessment();
 
-    const onAbort = () => handle.abort();
-    signal.addEventListener('abort', onAbort, { once: true });
-    const result = await handle.result;
-    signal.removeEventListener('abort', onAbort);
+      // マイクを使う前に録音再生モードへ（発話セッション中は、以降画面を離れるまで戻さない）
+      requestPlayAndRecordSession();
 
-    if (isCurrent()) {
-      assessmentRef.current = null;
-      setIsListening(false);
-      setTimeLeft(0);
-    }
-    return signal.aborted ? null : result;
-  }, [abortAssessment, playChime]);
+      if (chime) {
+        await playChime();
+        if (signal.aborted) return null;
+      }
+
+      const listenId = ++listenIdRef.current;
+      const isCurrent = () => listenIdRef.current === listenId;
+      const handle = startSpeechAssessment({
+        targetText,
+        mainWords,
+        onListening: () => {
+          if (!isCurrent()) return;
+          setIsListening(true);
+          onListening?.();
+        },
+        onTimeLeft: (seconds) => {
+          if (isCurrent()) setTimeLeft(seconds);
+        },
+      });
+      assessmentRef.current = handle;
+
+      const onAbort = () => handle.abort();
+      signal.addEventListener('abort', onAbort, { once: true });
+      const result = await handle.result;
+      signal.removeEventListener('abort', onAbort);
+
+      if (isCurrent()) {
+        assessmentRef.current = null;
+        setIsListening(false);
+        setTimeLeft(0);
+      }
+      return signal.aborted ? null : result;
+    },
+    [abortAssessment, playChime],
+  );
 
   /** 1回分の発話: 音声を順番に再生 → 回答の段階 → （評価ありなら）チャイム → 認識・評価 */
-  const runTurn = useCallback(async <K extends string>({
-    prompts,
-    assessment,
-    preChimeGapMs = 0,
-    onAnswerPhase,
-    ...promptOptions
-  }: RunTurnOptions<K>): Promise<SpeakingTurnResult<AnalysisResult, K>> => {
-    const { signal } = promptOptions;
-    const played = await playPrompts(prompts, promptOptions);
-    if (played.aborted) return { status: 'aborted' };
-    if (played.failures.length > 0) return { status: 'promptFailed', failures: played.failures };
+  const runTurn = useCallback(
+    async <K extends string>({
+      prompts,
+      assessment,
+      preChimeGapMs = 0,
+      onAnswerPhase,
+      ...promptOptions
+    }: RunTurnOptions<K>): Promise<SpeakingTurnResult<AnalysisResult, K>> => {
+      const { signal } = promptOptions;
+      const played = await playPrompts(prompts, promptOptions);
+      if (played.aborted) return { status: 'aborted' };
+      if (played.failures.length > 0) return { status: 'promptFailed', failures: played.failures };
 
-    onAnswerPhase?.();
-    if (!assessment) return { status: 'answered', result: null };
+      onAnswerPhase?.();
+      if (!assessment) return { status: 'answered', result: null };
 
-    if (!(await waitFor(preChimeGapMs, signal))) return { status: 'aborted' };
-    const result = await listen({ ...assessment, signal });
-    if (result === null) return { status: 'aborted' };
-    return { status: 'answered', result };
-  }, [playPrompts, listen]);
+      if (!(await waitFor(preChimeGapMs, signal))) return { status: 'aborted' };
+      const result = await listen({ ...assessment, signal });
+      if (result === null) return { status: 'aborted' };
+      return { status: 'answered', result };
+    },
+    [playPrompts, listen],
+  );
 
   return {
     beginFlow,

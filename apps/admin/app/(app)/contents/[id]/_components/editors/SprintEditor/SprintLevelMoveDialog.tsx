@@ -8,7 +8,15 @@ import { formatSprintLevelLabel } from '@gabby/lib';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { moveSprintQuestionsLevel } from '@/actions/adminSprintAction';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface SprintLevelMoveDialogProps {
@@ -24,7 +32,13 @@ interface SprintLevelMoveDialogProps {
  * スプリント問題を別のレベルへ移動するダイアログ。
  * Speed以外はグループ単位で移動する（グループの一部だけを別レベルに分けない）。
  */
-export function SprintLevelMoveDialog({ contentId, type, currentLevel, questionIds, onSuccess }: SprintLevelMoveDialogProps) {
+export function SprintLevelMoveDialog({
+  contentId,
+  type,
+  currentLevel,
+  questionIds,
+  onSuccess,
+}: SprintLevelMoveDialogProps) {
   const t = useTranslations('contents.editor.sprint.levelMoveDialog');
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
@@ -32,8 +46,9 @@ export function SprintLevelMoveDialog({ contentId, type, currentLevel, questionI
   const [isPending, startTransition] = useTransition();
 
   const meta = QUESTION_TYPES[type];
-  const levelOptions = Array.from({ length: meta.maxLevel - meta.minLevel + 1 }, (_, i) => meta.minLevel + i)
-    .filter((lv) => lv !== currentLevel);
+  const levelOptions = Array.from({ length: meta.maxLevel - meta.minLevel + 1 }, (_, i) => meta.minLevel + i).filter(
+    (lv) => lv !== currentLevel,
+  );
   const isGroup = type !== '0';
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -77,7 +92,9 @@ export function SprintLevelMoveDialog({ contentId, type, currentLevel, questionI
 
         <div className="space-y-3">
           <div className="flex items-center gap-3 text-sm">
-            <span className="text-slate-500">{t('currentLabel', { level: formatSprintLevelLabel(type, currentLevel) })}</span>
+            <span className="text-slate-500">
+              {t('currentLabel', { level: formatSprintLevelLabel(type, currentLevel) })}
+            </span>
             <span className="text-slate-300">→</span>
             <Select value={toLevel} onValueChange={setToLevel}>
               <SelectTrigger className="w-32">

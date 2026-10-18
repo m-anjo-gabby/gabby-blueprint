@@ -29,7 +29,9 @@ export function CoachAssignmentsCard({ assignments }: CoachAssignmentsCardProps)
                 href={`/training/dialogue/${assignment.assignment_id}`}
                 className="group flex items-center gap-3 rounded-control p-2 hover:bg-canvas transition-colors"
               >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control ${DIALOGUE.theme.iconTile}`}>
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control ${DIALOGUE.theme.iconTile}`}
+                >
                   <DIALOGUE.icon size={18} />
                 </div>
                 <div className="min-w-0 flex-1 space-y-1.5">
@@ -41,7 +43,10 @@ export function CoachAssignmentsCard({ assignments }: CoachAssignmentsCardProps)
                     </span>
                   </div>
                 </div>
-                <ChevronRight size={18} className="shrink-0 text-ink-subtle group-hover:text-ink-muted transition-colors" />
+                <ChevronRight
+                  size={18}
+                  className="shrink-0 text-ink-subtle group-hover:text-ink-muted transition-colors"
+                />
               </Link>
             </li>
           );

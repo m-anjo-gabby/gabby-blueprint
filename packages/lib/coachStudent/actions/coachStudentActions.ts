@@ -56,7 +56,7 @@ function toStageLevels(progress: StudentSprintProgress): StageLevels {
 export async function hasCoachStudentRelationship(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   coachId: string,
-  studentId: string
+  studentId: string,
 ): Promise<boolean> {
   const { data } = await supabase
     .from('com_m_coach_student_relationship')
@@ -76,7 +76,7 @@ export async function hasCoachStudentRelationship(
 export async function getStudentAvailableContentIds(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   studentId: string,
-  contentType: number
+  contentType: number,
 ): Promise<Set<string> | null> {
   const { data, error } = await supabase.rpc('get_student_available_content_ids', {
     p_student_id: studentId,
@@ -86,7 +86,8 @@ export async function getStudentAvailableContentIds(
   return new Set((data as string[] | null) ?? []);
 }
 
-type ContractJoinRow = { plan_name: string; plan_name_en: string } | { plan_name: string; plan_name_en: string }[] | null;
+type ContractJoinRow =
+  { plan_name: string; plan_name_en: string } | { plan_name: string; plan_name_en: string }[] | null;
 
 /**
  * 指定した生徒ID群それぞれについて、現在有効・終了済みを問わず最新の契約(ライセンス)1件を取得する。
@@ -96,7 +97,7 @@ type ContractJoinRow = { plan_name: string; plan_name_en: string } | { plan_name
  */
 async function getLatestContractsByStudentIds(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
-  studentIds: string[]
+  studentIds: string[],
 ): Promise<{ data: Map<string, StudentLatestContractSummary> | null; error: string | null }> {
   const { data: licenses, error } = await supabase
     .from('com_t_user_license')
@@ -145,7 +146,7 @@ async function getLatestContractsByStudentIds(
 async function getUpcomingSessionsByStudentIds(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   coachId: string,
-  activeStudentIds: string[]
+  activeStudentIds: string[],
 ): Promise<{ data: Map<string, StudentNextSessionSummary> | null; error: string | null }> {
   if (activeStudentIds.length === 0) {
     return { data: new Map(), error: null };
@@ -228,8 +229,13 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
     if (userError || progressError || scheduleError || contractError || nextSessionError) {
       logger.error(
         'coachStudent:get_assigned_students_join_failed',
-        userError?.message ?? progressError?.message ?? scheduleError?.message ?? contractError ?? nextSessionError ?? 'unknown',
-        { ...ctx, err: userError, userId: user.id }
+        userError?.message ??
+          progressError?.message ??
+          scheduleError?.message ??
+          contractError ??
+          nextSessionError ??
+          'unknown',
+        { ...ctx, err: userError, userId: user.id },
       );
       return { success: false, errorCode: 'unexpected_error' };
     }
@@ -270,7 +276,11 @@ export async function getAssignedStudentsCore(): Promise<GetAssignedStudentsResu
 
     return { success: true, students };
   } catch (err) {
-    logger.error('coachStudent:get_assigned_students_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error(
+      'coachStudent:get_assigned_students_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err },
+    );
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -321,7 +331,7 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
       logger.error(
         'coachStudent:get_overview_failed',
         userError?.message ?? progressError?.message ?? licenseError?.message ?? 'unknown',
-        { ...ctx, err: userError, userId: user.id, payload: { studentId } }
+        { ...ctx, err: userError, userId: user.id, payload: { studentId } },
       );
       return { success: false, errorCode: 'unexpected_error' };
     }
@@ -368,7 +378,10 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
       },
     };
   } catch (err) {
-    logger.error('coachStudent:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coachStudent:get_overview_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -380,7 +393,9 @@ export async function getStudentOverviewCore(studentId: string): Promise<GetStud
  * ticket/licenseへの参照は「担当関係にある生徒であれば、担当した契約かどうかを問わず参照可能」
  * というRLS（com_t_user_session_ticket/com_t_user_licenseに既存）にそのまま乗る。
  */
-export async function getStudentLiveSessionContractsCore(studentId: string): Promise<GetStudentLiveSessionContractsResult> {
+export async function getStudentLiveSessionContractsCore(
+  studentId: string,
+): Promise<GetStudentLiveSessionContractsResult> {
   const ctx = await getLogContext();
 
   try {
@@ -398,7 +413,12 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
       .eq('user_id', studentId);
 
     if (ticketError) {
-      logger.error('coachStudent:get_student_contracts_ticket_failed', ticketError.message, { ...ctx, err: ticketError, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_student_contracts_ticket_failed', ticketError.message, {
+        ...ctx,
+        err: ticketError,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!tickets || tickets.length === 0) {
@@ -408,20 +428,36 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
     const { data: licenses, error: licenseError } = await supabase
       .from('com_t_user_license')
       .select('license_id, status, start_date, end_date')
-      .in('license_id', tickets.map((t) => t.license_id));
+      .in(
+        'license_id',
+        tickets.map((t) => t.license_id),
+      );
 
     if (licenseError) {
-      logger.error('coachStudent:get_student_contracts_license_failed', licenseError.message, { ...ctx, err: licenseError, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_student_contracts_license_failed', licenseError.message, {
+        ...ctx,
+        err: licenseError,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     const { data: contractRows, error: contractError } = await supabase
       .from('com_m_contract')
       .select('contract_id, plan_name_en')
-      .in('contract_id', tickets.map((t) => t.contract_id));
+      .in(
+        'contract_id',
+        tickets.map((t) => t.contract_id),
+      );
 
     if (contractError) {
-      logger.error('coachStudent:get_student_contracts_plan_failed', contractError.message, { ...ctx, err: contractError, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_student_contracts_plan_failed', contractError.message, {
+        ...ctx,
+        err: contractError,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -433,7 +469,8 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
       .map((t) => {
         const license = licenseById.get(t.license_id);
         if (!license) return null;
-        const isCurrent = license.status === 1 && new Date(license.start_date) <= now && now <= new Date(license.end_date);
+        const isCurrent =
+          license.status === 1 && new Date(license.start_date) <= now && now <= new Date(license.end_date);
         return {
           ticket_id: t.ticket_id,
           license_id: t.license_id,
@@ -449,7 +486,11 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
 
     return { success: true, contracts };
   } catch (err) {
-    logger.error('coachStudent:get_student_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error(
+      'coachStudent:get_student_contracts_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err },
+    );
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -462,7 +503,10 @@ export async function getStudentLiveSessionContractsCore(studentId: string): Pro
  * 表示側で「どのコーチが担当したか」を判別できるよう、coach_nameを解決して付与する。
  * 結果の詳細（call_log/chat/homework）は含めない・別途アクセス権が必要。
  */
-export async function getStudentSessionsByTicketCore(studentId: string, ticketId: string): Promise<GetStudentSessionsByTicketResult> {
+export async function getStudentSessionsByTicketCore(
+  studentId: string,
+  ticketId: string,
+): Promise<GetStudentSessionsByTicketResult> {
   const ctx = await getLogContext();
 
   try {
@@ -476,13 +520,20 @@ export async function getStudentSessionsByTicketCore(studentId: string, ticketId
 
     const { data: sessions, error } = await supabase
       .from('com_t_session')
-      .select('session_id, schedule_id, start_datetime, end_datetime, status, completion_result, cancel_category, rescheduled_from, cancel_reason, status_note, coach_id')
+      .select(
+        'session_id, schedule_id, start_datetime, end_datetime, status, completion_result, cancel_category, rescheduled_from, cancel_reason, status_note, coach_id',
+      )
       .eq('student_id', studentId)
       .eq('ticket_id', ticketId)
       .order('start_datetime', { ascending: false });
 
     if (error) {
-      logger.error('coachStudent:get_student_sessions_by_ticket_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId, ticketId } });
+      logger.error('coachStudent:get_student_sessions_by_ticket_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { studentId, ticketId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -499,7 +550,11 @@ export async function getStudentSessionsByTicketCore(studentId: string, ticketId
       sessions: rows.map((s) => ({ ...s, coach_name: nameById.get(s.coach_id) ?? '(Unknown)' })),
     };
   } catch (err) {
-    logger.error('coachStudent:get_student_sessions_by_ticket_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error(
+      'coachStudent:get_student_sessions_by_ticket_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err },
+    );
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -524,7 +579,9 @@ export async function getStudentUpcomingSessionCore(studentId: string): Promise<
 
     const { data: session, error } = await supabase
       .from('com_t_session')
-      .select('session_id, schedule_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note')
+      .select(
+        'session_id, schedule_id, start_datetime, end_datetime, status, rescheduled_from, cancel_reason, status_note',
+      )
       .eq('coach_id', user.id)
       .eq('student_id', studentId)
       .eq('status', SESSION_STATUS.SCHEDULED)
@@ -534,13 +591,21 @@ export async function getStudentUpcomingSessionCore(studentId: string): Promise<
       .maybeSingle();
 
     if (error) {
-      logger.error('coachStudent:get_upcoming_session_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_upcoming_session_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, session: session ?? null };
   } catch (err) {
-    logger.error('coachStudent:get_upcoming_session_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coachStudent:get_upcoming_session_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -565,7 +630,7 @@ async function fetchOwnScheduleShortfalls(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   coachId: string,
   studentId: string,
-  ctx: Awaited<ReturnType<typeof getLogContext>>
+  ctx: Awaited<ReturnType<typeof getLogContext>>,
 ): Promise<{ shortfalls: LiveSessionShortfallItem[] } | { errorMessage: string }> {
   const { data: schedules, error: scheduleError } = await supabase
     .from('com_m_lesson_schedule')
@@ -583,8 +648,8 @@ async function fetchOwnScheduleShortfalls(
 
   const results = await Promise.all(
     schedules.map((schedule) =>
-      supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single()
-    )
+      supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single(),
+    ),
   );
 
   const shortfalls: LiveSessionShortfallItem[] = [];
@@ -592,7 +657,12 @@ async function fetchOwnScheduleShortfalls(
     const { error } = results[index];
     const data = results[index].data as ScheduleShortfallRow | null;
     if (error || !data) {
-      logger.error('coachStudent:get_session_shortfalls_rpc_failed', error?.message ?? 'No row returned', { ...ctx, err: error, userId: coachId, payload: { studentId, scheduleId: schedule.schedule_id } });
+      logger.error('coachStudent:get_session_shortfalls_rpc_failed', error?.message ?? 'No row returned', {
+        ...ctx,
+        err: error,
+        userId: coachId,
+        payload: { studentId, scheduleId: schedule.schedule_id },
+      });
       return;
     }
     if (data.shortfall > 0) {
@@ -611,7 +681,9 @@ async function fetchOwnScheduleShortfalls(
   return { shortfalls };
 }
 
-export async function getStudentLiveSessionShortfallsCore(studentId: string): Promise<GetStudentLiveSessionShortfallsResult> {
+export async function getStudentLiveSessionShortfallsCore(
+  studentId: string,
+): Promise<GetStudentLiveSessionShortfallsResult> {
   const ctx = await getLogContext();
 
   try {
@@ -621,13 +693,21 @@ export async function getStudentLiveSessionShortfallsCore(studentId: string): Pr
 
     const result = await fetchOwnScheduleShortfalls(supabase, user.id, studentId, ctx);
     if ('errorMessage' in result) {
-      logger.error('coachStudent:get_session_shortfalls_schedule_failed', result.errorMessage, { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_session_shortfalls_schedule_failed', result.errorMessage, {
+        ...ctx,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, shortfalls: result.shortfalls };
   } catch (err) {
-    logger.error('coachStudent:get_session_shortfalls_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error(
+      'coachStudent:get_session_shortfalls_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err },
+    );
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -646,7 +726,7 @@ async function computeStudentContractSessionSummary(
   coachId: string,
   studentId: string,
   licenseId: string,
-  ctx: Awaited<ReturnType<typeof getLogContext>>
+  ctx: Awaited<ReturnType<typeof getLogContext>>,
 ): Promise<StudentContractSessionSummary | null> {
   const { data: ticket, error: ticketError } = await supabase
     .from('com_t_user_session_ticket')
@@ -656,7 +736,12 @@ async function computeStudentContractSessionSummary(
 
   if (ticketError || !ticket) {
     if (ticketError) {
-      logger.error('coachStudent:get_overview_ticket_failed', ticketError.message, { ...ctx, err: ticketError, userId: coachId, payload: { studentId, licenseId } });
+      logger.error('coachStudent:get_overview_ticket_failed', ticketError.message, {
+        ...ctx,
+        err: ticketError,
+        userId: coachId,
+        payload: { studentId, licenseId },
+      });
     }
     return null;
   }
@@ -671,11 +756,20 @@ async function computeStudentContractSessionSummary(
   ]);
 
   if (sessionsError) {
-    logger.error('coachStudent:get_overview_sessions_failed', sessionsError.message, { ...ctx, err: sessionsError, userId: coachId, payload: { studentId, ticketId: ticket.ticket_id } });
+    logger.error('coachStudent:get_overview_sessions_failed', sessionsError.message, {
+      ...ctx,
+      err: sessionsError,
+      userId: coachId,
+      payload: { studentId, ticketId: ticket.ticket_id },
+    });
     return null;
   }
   if ('errorMessage' in shortfallResult) {
-    logger.error('coachStudent:get_overview_shortfall_failed', shortfallResult.errorMessage, { ...ctx, userId: coachId, payload: { studentId, ticketId: ticket.ticket_id } });
+    logger.error('coachStudent:get_overview_shortfall_failed', shortfallResult.errorMessage, {
+      ...ctx,
+      userId: coachId,
+      payload: { studentId, ticketId: ticket.ticket_id },
+    });
     return null;
   }
 
@@ -726,13 +820,21 @@ export async function getStudentNotesCore(studentId: string): Promise<GetStudent
       .order('insert_date', { ascending: false });
 
     if (error) {
-      logger.error('coachStudent:get_notes_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_notes_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, notes: notes ?? [] };
   } catch (err) {
-    logger.error('coachStudent:get_notes_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coachStudent:get_notes_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -743,7 +845,10 @@ export async function getStudentNotesCore(studentId: string): Promise<GetStudent
  * 参照せず、self_t_sprint_summary（日次件数のみ）に限定することで、生徒の自主トレの
  * 解答内容そのものはコーチに開示しない。
  */
-export async function getSelfTrainingWeekSummaryCore(studentId: string, days = 7): Promise<GetSelfTrainingWeekSummaryResult> {
+export async function getSelfTrainingWeekSummaryCore(
+  studentId: string,
+  days = 7,
+): Promise<GetSelfTrainingWeekSummaryResult> {
   const ctx = await getLogContext();
 
   try {
@@ -764,7 +869,12 @@ export async function getSelfTrainingWeekSummaryCore(studentId: string, days = 7
       .gte('training_date', sinceDate);
 
     if (error) {
-      logger.error('coachStudent:get_self_training_summary_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_self_training_summary_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -778,7 +888,11 @@ export async function getSelfTrainingWeekSummaryCore(studentId: string, days = 7
       summary: { days, active_days: activeDays, total_questions: totalQuestions, total_assessments: totalAssessments },
     };
   } catch (err) {
-    logger.error('coachStudent:get_self_training_summary_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error(
+      'coachStudent:get_self_training_summary_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err },
+    );
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -806,24 +920,33 @@ export async function addCoachStudentNoteCore(studentId: string, noteText: strin
       .single();
 
     if (error || !data) {
-      logger.error('coachStudent:add_note_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:add_note_failed', error?.message ?? 'No row inserted', {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     logger.info('coachStudent:add_note_success', 'Coach student note created', { ...ctx, userId: user.id });
     return { success: true, note: data as CoachStudentNote };
   } catch (err) {
-    logger.error('coachStudent:add_note_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coachStudent:add_note_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
-const TRAINING_REPORT_SELECT = 'report_id, ticket_id, student_id, coach_id, comment_text, status, finalized_at, insert_date, update_date';
+const TRAINING_REPORT_SELECT =
+  'report_id, ticket_id, student_id, coach_id, comment_text, status, finalized_at, insert_date, update_date';
 
 /** coach_idの並びに対応するuser_nameを解決し、ContractTrainingReport[]へ変換する（見つからない場合は'(Unknown)'） */
 async function attachCoachNames(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
-  rows: Omit<ContractTrainingReport, 'coach_name'>[]
+  rows: Omit<ContractTrainingReport, 'coach_name'>[],
 ): Promise<ContractTrainingReport[]> {
   if (rows.length === 0) return [];
 
@@ -854,14 +977,22 @@ export async function getContractTrainingReportsCore(studentId: string): Promise
       .order('insert_date', { ascending: false });
 
     if (error) {
-      logger.error('coachStudent:get_training_reports_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:get_training_reports_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     const reports = await attachCoachNames(supabase, (data ?? []) as Omit<ContractTrainingReport, 'coach_name'>[]);
     return { success: true, reports };
   } catch (err) {
-    logger.error('coachStudent:get_training_reports_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coachStudent:get_training_reports_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -875,7 +1006,7 @@ export async function getContractTrainingReportsCore(studentId: string): Promise
 export async function saveContractTrainingReportDraftCore(
   ticketId: string,
   studentId: string,
-  commentText: string
+  commentText: string,
 ): Promise<SaveContractTrainingReportDraftResult> {
   const ctx = await getLogContext();
 
@@ -926,15 +1057,27 @@ export async function saveContractTrainingReportDraftCore(
           .single();
 
     if (error || !data) {
-      logger.error('coachStudent:save_training_report_draft_failed', error?.message ?? 'No row returned', { ...ctx, err: error, userId: user.id, payload: { ticketId, studentId } });
+      logger.error('coachStudent:save_training_report_draft_failed', error?.message ?? 'No row returned', {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { ticketId, studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     const [report] = await attachCoachNames(supabase, [data as Omit<ContractTrainingReport, 'coach_name'>]);
-    logger.info('coachStudent:save_training_report_draft_success', 'Training report draft saved', { ...ctx, userId: user.id });
+    logger.info('coachStudent:save_training_report_draft_success', 'Training report draft saved', {
+      ...ctx,
+      userId: user.id,
+    });
     return { success: true, report };
   } catch (err) {
-    logger.error('coachStudent:save_training_report_draft_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error(
+      'coachStudent:save_training_report_draft_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err },
+    );
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -944,7 +1087,9 @@ export async function saveContractTrainingReportDraftCore(
  * RLSの更新ポリシー(status=1のみ更新可)により、すでに確定済みの行や他コーチの行に対しては
  * 0件更新となるため、その場合はalready_finalizedを返す。
  */
-export async function finalizeContractTrainingReportCore(reportId: string): Promise<FinalizeContractTrainingReportResult> {
+export async function finalizeContractTrainingReportCore(
+  reportId: string,
+): Promise<FinalizeContractTrainingReportResult> {
   const ctx = await getLogContext();
 
   try {
@@ -954,13 +1099,22 @@ export async function finalizeContractTrainingReportCore(reportId: string): Prom
 
     const { data, error } = await supabase
       .from('com_t_contract_training_report')
-      .update({ status: TRAINING_REPORT_STATUS.FINALIZED, finalized_at: new Date().toISOString(), update_date: new Date().toISOString() })
+      .update({
+        status: TRAINING_REPORT_STATUS.FINALIZED,
+        finalized_at: new Date().toISOString(),
+        update_date: new Date().toISOString(),
+      })
       .eq('report_id', reportId)
       .select(TRAINING_REPORT_SELECT)
       .maybeSingle();
 
     if (error) {
-      logger.error('coachStudent:finalize_training_report_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { reportId } });
+      logger.error('coachStudent:finalize_training_report_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { reportId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!data) {
@@ -969,10 +1123,17 @@ export async function finalizeContractTrainingReportCore(reportId: string): Prom
     }
 
     const [report] = await attachCoachNames(supabase, [data as Omit<ContractTrainingReport, 'coach_name'>]);
-    logger.info('coachStudent:finalize_training_report_success', 'Training report finalized', { ...ctx, userId: user.id });
+    logger.info('coachStudent:finalize_training_report_success', 'Training report finalized', {
+      ...ctx,
+      userId: user.id,
+    });
     return { success: true, report };
   } catch (err) {
-    logger.error('coachStudent:finalize_training_report_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error(
+      'coachStudent:finalize_training_report_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err },
+    );
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -985,7 +1146,7 @@ export async function finalizeContractTrainingReportCore(reportId: string): Prom
 export async function updateStudentSprintLevelCore(
   studentId: string,
   questionType: SprintQuestionType,
-  newLevel: number
+  newLevel: number,
 ): Promise<UpdateStudentSprintProgressResult> {
   const ctx = await getLogContext();
 
@@ -1005,7 +1166,12 @@ export async function updateStudentSprintLevelCore(
       .maybeSingle();
 
     if (fetchError) {
-      logger.error('coachStudent:update_level_fetch_failed', fetchError.message, { ...ctx, err: fetchError, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:update_level_fetch_failed', fetchError.message, {
+        ...ctx,
+        err: fetchError,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -1030,7 +1196,10 @@ export async function updateStudentSprintLevelCore(
     const newLevels = { ...toStageLevels(currentProgress), [questionType]: newLevel };
     const newStage = computeStage(newLevels);
 
-    const levelUpdate: TableUpdate<'student_m_sprint_progress'> = { stage: newStage, update_date: new Date().toISOString() };
+    const levelUpdate: TableUpdate<'student_m_sprint_progress'> = {
+      stage: newStage,
+      update_date: new Date().toISOString(),
+    };
     levelUpdate[typeMeta.dbKey] = newLevel;
 
     const { data: updated, error: updateError } = await supabase
@@ -1041,14 +1210,26 @@ export async function updateStudentSprintLevelCore(
       .single();
 
     if (updateError || !updated) {
-      logger.error('coachStudent:update_level_failed', updateError?.message ?? 'No row updated', { ...ctx, err: updateError, userId: user.id, payload: { studentId, questionType, newLevel } });
+      logger.error('coachStudent:update_level_failed', updateError?.message ?? 'No row updated', {
+        ...ctx,
+        err: updateError,
+        userId: user.id,
+        payload: { studentId, questionType, newLevel },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    logger.info('coachStudent:update_level_success', 'Student sprint level updated', { ...ctx, userId: user.id, payload: { studentId, questionType, newLevel, newStage } });
+    logger.info('coachStudent:update_level_success', 'Student sprint level updated', {
+      ...ctx,
+      userId: user.id,
+      payload: { studentId, questionType, newLevel, newStage },
+    });
     return { success: true, progress: updated as StudentSprintProgress };
   } catch (err) {
-    logger.error('coachStudent:update_level_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coachStudent:update_level_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -1059,7 +1240,7 @@ export async function updateStudentSprintLevelCore(
  */
 export async function forceStageUpStudentCore(
   studentId: string,
-  targetStage: number
+  targetStage: number,
 ): Promise<UpdateStudentSprintProgressResult> {
   const ctx = await getLogContext();
 
@@ -1079,7 +1260,12 @@ export async function forceStageUpStudentCore(
       .maybeSingle();
 
     if (fetchError) {
-      logger.error('coachStudent:force_stage_up_fetch_failed', fetchError.message, { ...ctx, err: fetchError, userId: user.id, payload: { studentId } });
+      logger.error('coachStudent:force_stage_up_fetch_failed', fetchError.message, {
+        ...ctx,
+        err: fetchError,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -1115,14 +1301,26 @@ export async function forceStageUpStudentCore(
       .single();
 
     if (updateError || !updated) {
-      logger.error('coachStudent:force_stage_up_failed', updateError?.message ?? 'No row updated', { ...ctx, err: updateError, userId: user.id, payload: { studentId, targetStage } });
+      logger.error('coachStudent:force_stage_up_failed', updateError?.message ?? 'No row updated', {
+        ...ctx,
+        err: updateError,
+        userId: user.id,
+        payload: { studentId, targetStage },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    logger.info('coachStudent:force_stage_up_success', 'Student stage forced up', { ...ctx, userId: user.id, payload: { studentId, targetStage, newStage } });
+    logger.info('coachStudent:force_stage_up_success', 'Student stage forced up', {
+      ...ctx,
+      userId: user.id,
+      payload: { studentId, targetStage, newStage },
+    });
     return { success: true, progress: updated as StudentSprintProgress };
   } catch (err) {
-    logger.error('coachStudent:force_stage_up_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coachStudent:force_stage_up_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

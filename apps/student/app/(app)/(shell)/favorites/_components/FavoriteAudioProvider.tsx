@@ -33,16 +33,19 @@ export function FavoriteAudioProvider({ children }: { children: ReactNode }) {
     stopFile();
   }, [stopFile]);
 
-  const play = useCallback((id: string, text: string, path: string | null) => {
-    stop();
-    if (path) {
-      setSpeechId(null);
-      playFile(path, id, { restart: true });
-    } else {
-      setSpeechId(id);
-      speak(text);
-    }
-  }, [playFile, speak, stop]);
+  const play = useCallback(
+    (id: string, text: string, path: string | null) => {
+      stop();
+      if (path) {
+        setSpeechId(null);
+        playFile(path, id, { restart: true });
+      } else {
+        setSpeechId(id);
+        speak(text);
+      }
+    },
+    [playFile, speak, stop],
+  );
 
   // 一覧を離れたら再生を止める
   useEffect(() => stop, [stop]);

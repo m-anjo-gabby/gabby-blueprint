@@ -63,13 +63,13 @@ export async function GET(request: NextRequest) {
   // 同じ内容になるように、承認時点の事実を表示する）。
   const issueDateLabel = approval.approved_at
     ? new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(
-        new Date(approval.approved_at)
+        new Date(approval.approved_at),
       )
     : '';
 
   const [year, month] = result.report.report_month.split('-').map(Number);
   const periodLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
-    new Date(Date.UTC(year, month - 1, 1))
+    new Date(Date.UTC(year, month - 1, 1)),
   );
 
   // 支払通知書と同じく、正式な氏名（未登録の場合は画面の名前）を載せる
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       lateCancelCount: result.report.late_cancel_count,
       noShowCount: result.report.no_show_count,
       totalEarnings,
-    })
+    }),
   );
 
   return new NextResponse(new Uint8Array(buffer), {

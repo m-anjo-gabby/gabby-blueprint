@@ -4,11 +4,7 @@ import { getAvailableDialogueContents, getStudentDialogueAssignments } from '@/a
 import { DialoguePracticeManager } from './_components/DialoguePracticeManager';
 import { StudentChildPageHeader } from '../../_components/StudentsSkeletons';
 
-export default async function DialoguePracticePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function DialoguePracticePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const overview = await getStudentOverview(id);
 
@@ -23,7 +19,12 @@ export default async function DialoguePracticePage({
 
   return (
     <div className="space-y-6">
-      <StudentChildPageHeader studentId={id} title="Dialogue Practice" studentName={overview.profile.user_name} className="max-w-3xl" />
+      <StudentChildPageHeader
+        studentId={id}
+        title="Dialogue Practice"
+        studentName={overview.profile.user_name}
+        className="max-w-3xl"
+      />
 
       <div className="max-w-3xl mx-auto">
         <DialoguePracticeManager

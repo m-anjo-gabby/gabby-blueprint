@@ -16,4 +16,7 @@ export interface TimezoneMaster {
 }
 
 /** タイムゾーンの名称（表示名称: 選択肢・プロフィール等でタイムゾーンそのものを示す / 短い名前: 日時に添える） */
-export type TimezoneNames = Pick<TimezoneMaster, 'display_name_ja' | 'display_name_en' | 'short_name_ja' | 'short_name_en'>;
+export type TimezoneNames = Pick<
+  TimezoneMaster,
+  'display_name_ja' | 'display_name_en' | 'short_name_ja' | 'short_name_en'
+>;

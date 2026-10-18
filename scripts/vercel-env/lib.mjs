@@ -75,7 +75,9 @@ function runValidator(v, value) {
       return undefined;
     }
     case 'email-list':
-      return splitList(value).every((a) => MAIL_ADDRESS.test(a)) ? undefined : 'メールアドレスをカンマ区切りで書いてください';
+      return splitList(value).every((a) => MAIL_ADDRESS.test(a))
+        ? undefined
+        : 'メールアドレスをカンマ区切りで書いてください';
     case 'domain-list':
       return splitList(value).every((d) => DOMAIN.test(d)) ? undefined : 'ドメインをカンマ区切りで書いてください';
     case 'random-secret':
@@ -120,7 +122,8 @@ export function resolveDesired({ env, config, values, manifest = MANIFEST }) {
     const def = known.get(key);
     if (!def) errors.push(`${key}: 定義（manifest.mjs）に無い変数です。打ち間違いか、定義への追加漏れです`);
     else if (def.removed) errors.push(`${key}: 廃止した変数です。値ファイルから削除してください`);
-    else if (!isLocalSpec(specFor(def, env))) errors.push(`${key}: ${env} では定義で値が決まる変数です。値ファイルから削除してください`);
+    else if (!isLocalSpec(specFor(def, env)))
+      errors.push(`${key}: ${env} では定義で値が決まる変数です。値ファイルから削除してください`);
   }
 
   for (const def of manifest) {
@@ -218,7 +221,17 @@ export function diffProject({ desired, records, targets, known, stateHashes }) {
       const shared = extra.length > 0 ? extra : undefined;
       const sameType = record.type === type || (type === 'encrypted' && record.type === 'plain');
       if (!sameType) {
-        changes.push({ action: 'recreate', key, def, value: want.value, type, targets: allTargets, record, shared, from: record.type });
+        changes.push({
+          action: 'recreate',
+          key,
+          def,
+          value: want.value,
+          type,
+          targets: allTargets,
+          record,
+          shared,
+          from: record.type,
+        });
         continue;
       }
       let current = record.value;
@@ -230,7 +243,18 @@ export function diffProject({ desired, records, targets, known, stateHashes }) {
       }
       const targetsMissing = targets.some((t) => !record.target.includes(t));
       if (current === want.value && !targetsMissing) continue;
-      changes.push({ action: 'update', key, def, value: want.value, before: current, unknown, type, targets: allTargets, record, shared });
+      changes.push({
+        action: 'update',
+        key,
+        def,
+        value: want.value,
+        before: current,
+        unknown,
+        type,
+        targets: allTargets,
+        record,
+        shared,
+      });
       continue;
     }
 
@@ -238,7 +262,14 @@ export function diffProject({ desired, records, targets, known, stateHashes }) {
     const knownDef = known.get(key);
     const reason = !knownDef ? 'unmanaged' : knownDef.removed ? 'removed' : want ? 'unset' : 'not-for-app';
     const remaining = record.target.filter((t) => !targets.includes(t));
-    changes.push({ action: reason === 'unmanaged' ? 'unmanaged' : 'delete', key, def: knownDef, record, reason, remaining });
+    changes.push({
+      action: reason === 'unmanaged' ? 'unmanaged' : 'delete',
+      key,
+      def: knownDef,
+      record,
+      reason,
+      remaining,
+    });
   }
   return { changes, warnings };
 }
@@ -283,14 +314,16 @@ export function buildValuesFile({ env, label, values, notes = {}, manifest = MAN
     lines.push('', `# ---- ${group}`);
     for (const def of items) {
       const spec = specFor(def, env);
-      lines.push(...commentLines(`${def.description}（${def.apps.join('・')}${spec === OPTIONAL ? '。任意' : '。必須'}${def.secret ? '。秘密' : ''}）`));
+      lines.push(
+        ...commentLines(
+          `${def.description}（${def.apps.join('・')}${spec === OPTIONAL ? '。任意' : '。必須'}${def.secret ? '。秘密' : ''}）`,
+        ),
+      );
       if (notes[def.key]) lines.push(...commentLines(`注意: ${notes[def.key]}`));
       lines.push(`${def.key}=${quoteEnvValue(values[def.key] ?? '')}`);
     }
   }
-  const leftovers = Object.keys(values).filter(
-    (k) => !RESERVED_KEYS.includes(k) && !defs.some((d) => d.key === k),
-  );
+  const leftovers = Object.keys(values).filter((k) => !RESERVED_KEYS.includes(k) && !defs.some((d) => d.key === k));
   if (leftovers.length > 0) {
     lines.push('', '# ---- 定義に無い・この環境では値ファイルで決めない変数（確認して削除してください）');
     for (const k of leftovers) lines.push(`${k}=${quoteEnvValue(values[k])}`);
@@ -310,7 +343,12 @@ export function buildExampleFile(app, manifest = MANIFEST) {
   }
   const defs = manifest.filter((d) => !d.removed && d.apps.includes(app));
   for (const [group, items] of groupBy(defs)) {
-    lines.push('', '# ============================================================', `# ${group}`, '# ============================================================');
+    lines.push(
+      '',
+      '# ============================================================',
+      `# ${group}`,
+      '# ============================================================',
+    );
     for (const def of items) {
       lines.push(...commentLines(def.description));
       lines.push(`${def.key}=`);

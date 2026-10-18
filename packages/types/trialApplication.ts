@@ -63,7 +63,7 @@ function formatTrialChoice(
   otherCode: number,
   code: number,
   other: string | null | undefined,
-  locale: 'ja' | 'en'
+  locale: 'ja' | 'en',
 ): string {
   const choice = choices.find((c) => c.code === code);
   const label = choice ? (locale === 'en' ? choice.labelEn : choice.label) : String(code);
@@ -71,12 +71,20 @@ function formatTrialChoice(
 }
 
 /** 業種・職業の表示（「その他」は記入内容を添える） */
-export function formatTrialOccupation(code: number, other: string | null | undefined, locale: 'ja' | 'en' = 'ja'): string {
+export function formatTrialOccupation(
+  code: number,
+  other: string | null | undefined,
+  locale: 'ja' | 'en' = 'ja',
+): string {
   return formatTrialChoice(TRIAL_OCCUPATIONS, TRIAL_OCCUPATION_OTHER, code, other, locale);
 }
 
 /** 知ったきっかけの表示（「その他」は記入内容を添える） */
-export function formatTrialReferralSource(code: number, other: string | null | undefined, locale: 'ja' | 'en' = 'ja'): string {
+export function formatTrialReferralSource(
+  code: number,
+  other: string | null | undefined,
+  locale: 'ja' | 'en' = 'ja',
+): string {
   return formatTrialChoice(TRIAL_REFERRAL_SOURCES, TRIAL_REFERRAL_SOURCE_OTHER, code, other, locale);
 }
 
@@ -121,7 +129,9 @@ export function formatTrialApplicantName(input: Pick<TrialApplicationInput, 'las
  * 申込者のローマ字の氏名（英語の書き方「名 姓」）。本登録したユーザーの画面の名前（com_m_user.user_name）と
  * 同じ組み立て（fn_submit_trial_application が招待に入れる）。
  */
-export function formatTrialApplicantNameLatin(input: Pick<TrialApplicationInput, 'lastNameLatin' | 'firstNameLatin'>): string {
+export function formatTrialApplicantNameLatin(
+  input: Pick<TrialApplicationInput, 'lastNameLatin' | 'firstNameLatin'>,
+): string {
   return `${input.firstNameLatin} ${input.lastNameLatin}`;
 }
 

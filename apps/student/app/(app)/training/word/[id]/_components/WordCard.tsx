@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 import { PHRASE_TYPES, PhraseType } from '@gabby/types/word';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 
@@ -13,7 +13,7 @@ interface WordCardProps {
 
 export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
   const { words, wordIdx, phraseIdx, isFlipped, toggleFlip } = useWordDrillStore();
-  
+
   const currentWord = words[wordIdx];
   const phrase = currentWord?.phrases[phraseIdx];
 
@@ -24,7 +24,6 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col w-full relative">
-      
       {/* 1. Favorite Button: 押しやすさを考慮しつつ右上に配置 */}
       <div className="absolute top-4 right-4 md:right-8 z-20">
         <button
@@ -35,10 +34,10 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
             onToggleFavorite(phrase.phrase_id, phrase.is_favorite);
           }}
           className={cn(
-            "transition-all active:scale-75 p-2.5 rounded-full flex items-center justify-center",
-            phrase.is_favorite 
-              ? "text-amber-500 bg-amber-50" // ContentCardのON状態と完全同期
-              : "text-ink-subtle hover:bg-canvas/50" // OFF状態
+            'transition-all active:scale-75 p-2.5 rounded-full flex items-center justify-center',
+            phrase.is_favorite
+              ? 'text-amber-500 bg-amber-50' // ContentCardのON状態と完全同期
+              : 'text-ink-subtle hover:bg-canvas/50', // OFF状態
           )}
         >
           <motion.div
@@ -47,24 +46,22 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
             animate={phrase.is_favorite ? { scale: [1, 1.2, 1] } : { scale: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <Star 
+            <Star
               size={20} // ContentCard(18)より少しだけ大きくして学習中の操作性をUP
-              fill={phrase.is_favorite ? "currentColor" : "none"} 
-              strokeWidth={phrase.is_favorite ? 2 : 2.5} 
+              fill={phrase.is_favorite ? 'currentColor' : 'none'}
+              strokeWidth={phrase.is_favorite ? 2 : 2.5}
             />
           </motion.div>
         </button>
       </div>
 
       {/* 2. Step Badge Section: Headerのレール位置(px-8)と完全に同期 */}
-      <div className="w-full shrink-0 flex flex-col items-start mt-4 mb-2 pt-1 px-6"> 
+      <div className="w-full shrink-0 flex flex-col items-start mt-4 mb-2 pt-1 px-6">
         <div className="flex items-center h-5 overflow-hidden rounded-md border border-brand-100 shadow-sm mb-3">
           <div className="bg-brand px-2 h-full flex items-center border-r border-white/20">
-            <span className="text-[11px] font-bold text-white">
-              ステップ {phrase.seq_no}
-            </span>
+            <span className="text-[11px] font-bold text-white">ステップ {phrase.seq_no}</span>
           </div>
-          
+
           <div className="bg-brand-50/50 px-2 h-full flex items-center">
             <span className="text-[11px] font-bold text-brand/80 tracking-tight">
               {PHRASE_TYPES[phrase.phrase_type as PhraseType]?.label}
@@ -73,16 +70,13 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
         </div>
 
         {/* 分割ステッププログレスバー: 左寄せにすることでHeaderの進捗と視覚的にリンク */}
-        <div 
-          className="grid gap-1 w-32" 
-          style={{ gridTemplateColumns: `repeat(${totalSteps}, 1fr)` }}
-        >
+        <div className="grid gap-1 w-32" style={{ gridTemplateColumns: `repeat(${totalSteps}, 1fr)` }}>
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div key={i} className="h-[3px] bg-canvas rounded-full overflow-hidden relative">
               <motion.div
                 initial={false}
-                animate={{ x: i <= phraseIdx ? "0%" : "-100%" }}
-                transition={{ duration: 0.4, ease: "circOut" }}
+                animate={{ x: i <= phraseIdx ? '0%' : '-100%' }}
+                transition={{ duration: 0.4, ease: 'circOut' }}
                 className="absolute inset-0 bg-brand-500 shadow-xs shadow-brand-500/20"
               />
             </div>
@@ -91,8 +85,8 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
       </div>
 
       {/* 3. Card Surface: ユーザーが最も触れるエリア */}
-      <div 
-        className="w-full flex-1 flex items-center justify-center perspective-1000 relative select-none px-4" 
+      <div
+        className="w-full flex-1 flex items-center justify-center perspective-1000 relative select-none px-4"
         onClick={toggleFlip}
       >
         <AnimatePresence mode="wait">
@@ -104,10 +98,12 @@ export const WordCard: React.FC<WordCardProps> = ({ onToggleFavorite }) => {
             transition={{ duration: 0.2 }}
             className="w-full h-full"
           >
-            <div className={cn(
-              "w-full h-full transition-all duration-700 preserve-3d cursor-pointer rounded-panel",
-              isFlipped ? "rotate-y-180" : ""
-            )}>
+            <div
+              className={cn(
+                'w-full h-full transition-all duration-700 preserve-3d cursor-pointer rounded-panel',
+                isFlipped ? 'rotate-y-180' : '',
+              )}
+            >
               {/* Front: English (高い視認性を確保) */}
               <div className="absolute inset-0 backface-hidden flex items-center justify-center text-center p-6">
                 <p className="text-3xl sm:text-4xl font-bold text-ink leading-[1.15] tracking-tighter antialiased">

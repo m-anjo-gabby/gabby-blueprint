@@ -89,7 +89,7 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
       const result = await upsertPhrase(payload);
 
       if (result.success) {
-        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), "success");
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success');
         setOpen(false);
         onSuccess?.();
       } else {
@@ -116,7 +116,11 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
             <PlusCircle size={14} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-slate-200 text-slate-500 hover:bg-brand-50 hover:text-brand rounded-xl transition-all">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 w-9 p-0 border-slate-200 text-slate-500 hover:bg-brand-50 hover:text-brand rounded-xl transition-all"
+          >
             <Edit size={16} />
           </Button>
         )}
@@ -128,7 +132,6 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
            フォーカス時のリングを無効化（sr-onlyへのフォーカス移譲とセットで機能）
       */}
       <DialogContent className="max-w-lg p-0 overflow-hidden border-none shadow-2xl focus:outline-none [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button:focus]:ring-0 [&>button:focus]:outline-none">
-        
         {/* アクセシビリティ・ハック: 
           ダイアログ起動時の「最初のフォーカス」をこの隠し要素に吸い込ませることで、
           ×ボタンや入力項目が意図せず光るのを防ぎます。
@@ -137,7 +140,11 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
 
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
-            {isConfirming ? <CheckCircle2 size={18} className="text-emerald-400" /> : <MessageSquare size={18} className="text-brand-400" />}
+            {isConfirming ? (
+              <CheckCircle2 size={18} className="text-emerald-400" />
+            ) : (
+              <MessageSquare size={18} className="text-brand-400" />
+            )}
             {isConfirming ? t('confirmTitle') : mode === 'create' ? t('createTitle') : t('editTitle')}
           </DialogTitle>
         </DialogHeader>
@@ -153,131 +160,185 @@ export function PhraseFormDialog({ mode = 'create', initialData, wordId, onSucce
             )}
 
             {/* 英文入力エリア */}
-            <FormField control={form.control} name="phrase_en" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('phraseEnLabel')}</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-base font-bold text-slate-800 border border-slate-100 min-h-[40px] leading-relaxed">
-                    {field.value}
-                  </div>
-                ) : (
-                  <FormControl>
-                    <Textarea {...field} placeholder={t('phraseEnPlaceholder')} className="rounded-xl border-slate-200 min-h-[80px] resize-none font-medium focus-visible:ring-brand-500" />
-                  </FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            {/* 和訳入力エリア */}
-            <FormField control={form.control} name="phrase_ja" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('phraseJaLabel')}</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-600 border border-slate-100">
-                    {field.value}
-                  </div>
-                ) : (
-                  <FormControl>
-                    <Input {...field} placeholder={t('phraseJaPlaceholder')} className="rounded-xl border-slate-200 focus-visible:ring-brand-500" />
-                  </FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <div className="grid grid-cols-3 gap-4">
-              {/* 種別選択 */}
-              <FormField control={form.control} name="phrase_type" render={({ field }) => (
+            <FormField
+              control={form.control}
+              name="phrase_en"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('typeLabel')}</FormLabel>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {t('phraseEnLabel')}
+                  </FormLabel>
                   {isConfirming ? (
-                    <div className="p-2 bg-slate-50 rounded-lg text-xs font-bold border border-slate-100 text-center">
-                      {PHRASE_TYPES[Number(field.value) as PhraseType]?.label}
-                    </div>
-                  ) : (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="rounded-xl border-slate-200 h-9 text-xs focus:ring-brand-500">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.entries(PHRASE_TYPES).map(([val, info]) => (
-                          <SelectItem key={val} value={val}>{info.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </FormItem>
-              )} />
-
-              {/* 表示順入力 */}
-              <FormField control={form.control} name="seq_no" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('seqLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-2 bg-slate-50 rounded-lg text-xs font-bold border border-slate-100 text-center">
+                    <div className="p-3 bg-slate-50 rounded-xl text-base font-bold text-slate-800 border border-slate-100 min-h-[40px] leading-relaxed">
                       {field.value}
                     </div>
                   ) : (
                     <FormControl>
-                      <Input {...field} type="number" className="rounded-xl border-slate-200 h-9 text-xs focus-visible:ring-brand-500" />
+                      <Textarea
+                        {...field}
+                        placeholder={t('phraseEnPlaceholder')}
+                        className="rounded-xl border-slate-200 min-h-[80px] resize-none font-medium focus-visible:ring-brand-500"
+                      />
                     </FormControl>
                   )}
+                  <FormMessage />
                 </FormItem>
-              )} />
+              )}
+            />
 
-              {/* ステータス選択 */}
-              <FormField control={form.control} name="status" render={({ field }) => (
+            {/* 和訳入力エリア */}
+            <FormField
+              control={form.control}
+              name="phrase_ja"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('statusLabel')}</FormLabel>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {t('phraseJaLabel')}
+                  </FormLabel>
                   {isConfirming ? (
-                    <div className="p-2 bg-slate-50 rounded-lg text-xs font-bold border border-slate-100 text-center">
-                      {WORD_STATUS[field.value as WordStatus]?.label}
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-600 border border-slate-100">
+                      {field.value}
                     </div>
                   ) : (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="rounded-xl border-slate-200 h-9 text-xs focus:ring-brand-500">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.entries(WORD_STATUS).map(([key, info]) => (
-                          <SelectItem key={key} value={key}>{info.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder={t('phraseJaPlaceholder')}
+                        className="rounded-xl border-slate-200 focus-visible:ring-brand-500"
+                      />
+                    </FormControl>
                   )}
+                  <FormMessage />
                 </FormItem>
-              )} />
+              )}
+            />
+
+            <div className="grid grid-cols-3 gap-4">
+              {/* 種別選択 */}
+              <FormField
+                control={form.control}
+                name="phrase_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {t('typeLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-2 bg-slate-50 rounded-lg text-xs font-bold border border-slate-100 text-center">
+                        {PHRASE_TYPES[Number(field.value) as PhraseType]?.label}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-slate-200 h-9 text-xs focus:ring-brand-500">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(PHRASE_TYPES).map(([val, info]) => (
+                            <SelectItem key={val} value={val}>
+                              {info.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )}
+              />
+
+              {/* 表示順入力 */}
+              <FormField
+                control={form.control}
+                name="seq_no"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {t('seqLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-2 bg-slate-50 rounded-lg text-xs font-bold border border-slate-100 text-center">
+                        {field.value}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          className="rounded-xl border-slate-200 h-9 text-xs focus-visible:ring-brand-500"
+                        />
+                      </FormControl>
+                    )}
+                  </FormItem>
+                )}
+              />
+
+              {/* ステータス選択 */}
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {t('statusLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-2 bg-slate-50 rounded-lg text-xs font-bold border border-slate-100 text-center">
+                        {WORD_STATUS[field.value as WordStatus]?.label}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-slate-200 h-9 text-xs focus:ring-brand-500">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(WORD_STATUS).map(([key, info]) => (
+                            <SelectItem key={key} value={key}>
+                              {info.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* アクションボタンエリア */}
             <div className="pt-4 border-t border-slate-100">
               {isConfirming ? (
                 <div className="flex gap-3">
-                  <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold text-slate-400 hover:bg-slate-50"
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex-1 rounded-xl font-bold text-slate-400 hover:bg-slate-50"
                     onClick={() => {
-                      setServerError(null)
-                      setIsConfirming(false)
+                      setServerError(null);
+                      setIsConfirming(false);
                     }}
                   >
                     {t('backButton')}
                   </Button>
-                  <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-[0.98]">
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-[0.98]"
+                  >
                     {t('confirmSaveButton')}
                   </Button>
                 </div>
               ) : (
-                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md transition-all active:scale-[0.99]"
+                <Button
+                  type="button"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md transition-all active:scale-[0.99]"
                   onClick={async () => {
-                      if (await form.trigger()) {
-                        setServerError(null)
-                        setIsConfirming(true)
-                      }
-                    }}
+                    if (await form.trigger()) {
+                      setServerError(null);
+                      setIsConfirming(true);
+                    }
+                  }}
                 >
                   {t('confirmDetailsButton')}
                 </Button>

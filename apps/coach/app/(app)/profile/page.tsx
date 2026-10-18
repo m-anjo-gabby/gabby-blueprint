@@ -20,16 +20,17 @@ const USER_TYPE_LABELS_EN: Record<string, string> = {
 };
 
 export default async function ProfilePage() {
-  const [profile, timezones, coachProfile, countries, mailSettings, ratingStats, specialties, matchingStatus] = await Promise.all([
-    getMyProfile(),
-    getTimezoneList(),
-    getMyCoachProfile(),
-    getCountryList(),
-    getMyMailSettings(),
-    getMyCoachRatingStats(),
-    getMyCoachSpecialties(),
-    getMyCoachMatchingStatus(),
-  ]);
+  const [profile, timezones, coachProfile, countries, mailSettings, ratingStats, specialties, matchingStatus] =
+    await Promise.all([
+      getMyProfile(),
+      getTimezoneList(),
+      getMyCoachProfile(),
+      getCountryList(),
+      getMyMailSettings(),
+      getMyCoachRatingStats(),
+      getMyCoachSpecialties(),
+      getMyCoachMatchingStatus(),
+    ]);
 
   if (!profile) {
     return (

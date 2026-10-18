@@ -19,7 +19,11 @@ const PAGE_SIZE = 10;
 
 function StatusBadge({ session }: { session: SessionListItem }) {
   const badge = getSessionStatusBadge(session);
-  return <span className={cn('shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-semibold', badge.className)}>{badge.label}</span>;
+  return (
+    <span className={cn('shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-semibold', badge.className)}>
+      {badge.label}
+    </span>
+  );
 }
 
 function HistoryRow({ session, timezone }: { session: SessionListItem; timezone: string }) {
@@ -37,7 +41,9 @@ function HistoryRow({ session, timezone }: { session: SessionListItem; timezone:
           <StatusBadge session={session} />
           <p className="min-w-0 truncate text-xs text-ink-muted">{session.counterpart_name} コーチ</p>
         </div>
-        {session.cancel_reason && <p className="mt-1 line-clamp-2 text-xs text-ink-muted">理由：{session.cancel_reason}</p>}
+        {session.cancel_reason && (
+          <p className="mt-1 line-clamp-2 text-xs text-ink-muted">理由：{session.cancel_reason}</p>
+        )}
       </div>
     </>
   );
@@ -104,7 +110,9 @@ export function SessionHistoryList({ sessions, timezone }: Props) {
       {visibleSessions.length === 0 ? (
         <div className="rounded-card border border-dashed border-line px-4 py-8 text-center">
           <p className="text-sm text-ink-muted">実施済みのセッションはまだありません</p>
-          {cancelledCount > 0 && <p className="mt-1 text-xs text-ink-subtle">キャンセルの記録は「キャンセルも表示」で確認できます</p>}
+          {cancelledCount > 0 && (
+            <p className="mt-1 text-xs text-ink-subtle">キャンセルの記録は「キャンセルも表示」で確認できます</p>
+          )}
         </div>
       ) : (
         <div className="space-y-2">

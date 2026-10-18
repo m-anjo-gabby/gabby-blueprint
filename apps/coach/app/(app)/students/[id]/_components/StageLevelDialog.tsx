@@ -4,13 +4,7 @@ import { useMemo, useState } from 'react';
 import { Loader2, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -51,20 +45,15 @@ export function StageLevelDialog({ studentId, progress, open, onOpenChange, onUp
   const levels = toStageLevels(progress);
   const [levelSelections, setLevelSelections] = useState<Partial<Record<SprintQuestionType, number>>>({});
   const [savingType, setSavingType] = useState<SprintQuestionType | null>(null);
-  const [targetStage, setTargetStage] = useState<number | null>(
-    progress.stage < MAX_STAGE ? progress.stage + 1 : null
-  );
+  const [targetStage, setTargetStage] = useState<number | null>(progress.stage < MAX_STAGE ? progress.stage + 1 : null);
   const [isForcingStage, setIsForcingStage] = useState(false);
 
   const stageOptions = useMemo(
     () => Array.from({ length: MAX_STAGE - progress.stage }, (_, i) => progress.stage + 1 + i),
-    [progress.stage]
+    [progress.stage],
   );
 
-  const gaps = useMemo(
-    () => (targetStage ? getStageGaps(targetStage, levels) : []),
-    [targetStage, levels]
-  );
+  const gaps = useMemo(() => (targetStage ? getStageGaps(targetStage, levels) : []), [targetStage, levels]);
 
   const handleLevelUp = async (questionType: SprintQuestionType) => {
     const meta = QUESTION_TYPES[questionType];
@@ -128,10 +117,7 @@ export function StageLevelDialog({ studentId, progress, open, onOpenChange, onUp
             {TYPE_ORDER.map((type) => {
               const currentLevel = levels[type.value];
               const isMax = currentLevel >= type.maxLevel;
-              const options = Array.from(
-                { length: type.maxLevel - currentLevel },
-                (_, i) => currentLevel + 1 + i
-              );
+              const options = Array.from({ length: type.maxLevel - currentLevel }, (_, i) => currentLevel + 1 + i);
               const selected = levelSelections[type.value] ?? options[0] ?? currentLevel;
 
               return (
@@ -149,9 +135,7 @@ export function StageLevelDialog({ studentId, progress, open, onOpenChange, onUp
                     <div className="flex items-center gap-2">
                       <Select
                         value={String(selected)}
-                        onValueChange={(v) =>
-                          setLevelSelections((prev) => ({ ...prev, [type.value]: Number(v) }))
-                        }
+                        onValueChange={(v) => setLevelSelections((prev) => ({ ...prev, [type.value]: Number(v) }))}
                       >
                         <SelectTrigger className="w-28">
                           <SelectValue />
@@ -214,8 +198,8 @@ export function StageLevelDialog({ studentId, progress, open, onOpenChange, onUp
                       <span>Requirements not yet met</span>
                     </div>
                     <p className="text-xs text-amber-700">
-                      Forcing this stage up will raise the following levels to the minimum required value.
-                      Question types that already meet the requirement will not be changed.
+                      Forcing this stage up will raise the following levels to the minimum required value. Question
+                      types that already meet the requirement will not be changed.
                     </p>
                     <ul className="text-xs text-amber-800 space-y-0.5">
                       {gaps.map((gap) => (
@@ -232,7 +216,13 @@ export function StageLevelDialog({ studentId, progress, open, onOpenChange, onUp
                   </p>
                 )}
 
-                <Button pending={isForcingStage} type="button" onClick={handleStageUp} disabled={isForcingStage} className="w-full">
+                <Button
+                  pending={isForcingStage}
+                  type="button"
+                  onClick={handleStageUp}
+                  disabled={isForcingStage}
+                  className="w-full"
+                >
                   {gaps.length > 0 ? `Force Advance to Stage ${targetStage}` : `Advance to Stage ${targetStage}`}
                 </Button>
               </>

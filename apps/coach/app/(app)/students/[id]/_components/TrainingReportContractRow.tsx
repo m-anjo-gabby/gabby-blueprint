@@ -34,9 +34,22 @@ export function TrainingReportContractRow({ studentId, contract, contractLabel, 
       </div>
 
       <div className="space-y-1.5">
-        <TrainingReportEntry studentId={studentId} ticketId={contract.ticket_id} report={myReport} isMine onSaved={onSaved} />
+        <TrainingReportEntry
+          studentId={studentId}
+          ticketId={contract.ticket_id}
+          report={myReport}
+          isMine
+          onSaved={onSaved}
+        />
         {otherReports.map((report) => (
-          <TrainingReportEntry key={report.report_id} studentId={studentId} ticketId={contract.ticket_id} report={report} isMine={false} onSaved={onSaved} />
+          <TrainingReportEntry
+            key={report.report_id}
+            studentId={studentId}
+            ticketId={contract.ticket_id}
+            report={report}
+            isMine={false}
+            onSaved={onSaved}
+          />
         ))}
       </div>
     </li>

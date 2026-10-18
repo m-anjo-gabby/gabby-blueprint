@@ -41,7 +41,12 @@ export function SprintResultDetail({ scoreData, questions, courseTitle, favorite
         initialFavoriteIds={favoriteQuestionIds}
       />
 
-      <AudioResumeBanner status={playback.resumeStatus} onResume={() => { playback.unlockAudioContext(); }} />
+      <AudioResumeBanner
+        status={playback.resumeStatus}
+        onResume={() => {
+          playback.unlockAudioContext();
+        }}
+      />
     </>
   );
 }

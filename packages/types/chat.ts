@@ -10,7 +10,7 @@ export const CHAT_ROOM_TYPES = {
   GROUP: 'GROUP',
 } as const;
 
-export type ChatRoomType = typeof CHAT_ROOM_TYPES[keyof typeof CHAT_ROOM_TYPES];
+export type ChatRoomType = (typeof CHAT_ROOM_TYPES)[keyof typeof CHAT_ROOM_TYPES];
 
 export const CHAT_MESSAGE_TYPES = {
   TEXT: 'TEXT',
@@ -19,7 +19,7 @@ export const CHAT_MESSAGE_TYPES = {
   SYSTEM: 'SYSTEM',
 } as const;
 
-export type ChatMessageType = typeof CHAT_MESSAGE_TYPES[keyof typeof CHAT_MESSAGE_TYPES];
+export type ChatMessageType = (typeof CHAT_MESSAGE_TYPES)[keyof typeof CHAT_MESSAGE_TYPES];
 
 // チャット添付ファイルの上限サイズ (10MB)
 export const CHAT_ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024;

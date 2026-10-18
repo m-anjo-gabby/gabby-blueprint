@@ -44,7 +44,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
  * プロフィールアイコンのアップロード
  */
 export async function uploadProfileIcon(
-  formData: FormData
+  formData: FormData,
 ): Promise<{ success: true; iconPath: string } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await uploadProfileIconCore(formData);
@@ -91,7 +91,7 @@ export async function getTimezoneList(): Promise<TimezoneMaster[]> {
  * 自分自身のタイムゾーンの更新
  */
 export async function updateMyTimezone(
-  timezone: string
+  timezone: string,
 ): Promise<{ success: true; timezone: string } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await updateMyTimezoneCore(timezone);

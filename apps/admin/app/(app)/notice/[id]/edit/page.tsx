@@ -1,17 +1,13 @@
 // apps/admin/app/(app)/notice/[id]/edit/page.tsx
 import { getTranslations } from 'next-intl/server';
-import { getNoticeById } from "@/actions/adminNoticeAction";
-import { NoticeEditor } from "../../_components/NoticeEditor";
-import { notFound } from "next/navigation";
+import { getNoticeById } from '@/actions/adminNoticeAction';
+import { NoticeEditor } from '../../_components/NoticeEditor';
+import { notFound } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 
 const logger = createLogger('admin');
 
-export default async function NoticeEditPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function NoticeEditPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('notice.editor');
   const { id } = await params;
 

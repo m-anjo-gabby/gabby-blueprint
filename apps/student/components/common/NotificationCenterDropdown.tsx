@@ -25,9 +25,7 @@ import { getNotificationDisplay } from '@gabby/lib/notification/display';
 // データソースは別ストアのまま、UIの入口とタブ切替のみ統合する。
 type CenterTab = 'notice' | 'notification';
 
-const UnreadDot = () => (
-  <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 mt-1" />
-);
+const UnreadDot = () => <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 mt-1" />;
 
 function TabCountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -134,21 +132,21 @@ export function NotificationCenterDropdown() {
             {/* ─── ヘッダー ──────────────────────────────────── */}
             <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-line/50">
               <Bell size={14} className="text-ink-muted shrink-0" />
-              <span className="text-xs font-bold text-ink tracking-tight shrink-0">
-                通知センター
-              </span>
+              <span className="text-xs font-bold text-ink tracking-tight shrink-0">通知センター</span>
               <TabsList className="ml-auto h-8 p-0.5 bg-canvas rounded-full">
                 <TabsTrigger
                   value="notice"
                   className="text-[11px] font-bold rounded-full px-2.5 py-1 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-ink text-ink-muted"
                 >
-                  お知らせ<TabCountBadge count={noticeUnreadCount} />
+                  お知らせ
+                  <TabCountBadge count={noticeUnreadCount} />
                 </TabsTrigger>
                 <TabsTrigger
                   value="notification"
                   className="text-[11px] font-bold rounded-full px-2.5 py-1 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-ink text-ink-muted"
                 >
-                  通知<TabCountBadge count={notificationUnreadCount} />
+                  通知
+                  <TabCountBadge count={notificationUnreadCount} />
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -182,7 +180,7 @@ export function NotificationCenterDropdown() {
                   </div>
                 ) : (
                   <div className="p-2 space-y-1">
-                    {previewNotices.map(notice => (
+                    {previewNotices.map((notice) => (
                       <DropdownMenuItem asChild key={notice.notice_id} className="p-0 focus:bg-transparent">
                         <button
                           id={`notice-item-${notice.notice_id}`}
@@ -192,15 +190,11 @@ export function NotificationCenterDropdown() {
                           }}
                           className={cn(
                             'w-full text-left flex items-start gap-2.5 p-3 rounded-control transition-all hover:bg-canvas cursor-pointer outline-none block',
-                            !notice.is_read && 'bg-brand-soft/50'
+                            !notice.is_read && 'bg-brand-soft/50',
                           )}
                         >
                           <div className="mt-1">
-                            {!notice.is_read ? (
-                              <UnreadDot />
-                            ) : (
-                              <span className="inline-block w-1.5 h-1.5 shrink-0" />
-                            )}
+                            {!notice.is_read ? <UnreadDot /> : <span className="inline-block w-1.5 h-1.5 shrink-0" />}
                           </div>
 
                           <div className="flex-1 min-w-0">
@@ -208,7 +202,8 @@ export function NotificationCenterDropdown() {
                               <span
                                 className={cn(
                                   'text-[11px] font-bold px-1.5 py-0.5 rounded-md border',
-                                  NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
+                                  NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ??
+                                    NOTICE_TYPES.INFO.badgeClass,
                                 )}
                               >
                                 {NOTICE_TYPES[notice.notice_type as NoticeType]?.label ?? notice.notice_type}
@@ -217,7 +212,7 @@ export function NotificationCenterDropdown() {
                                 <span
                                   className={cn(
                                     'text-[11px] font-bold px-1.5 py-0.5 rounded-md border',
-                                    NOTICE_IMPORTANT_BADGE.badgeClass
+                                    NOTICE_IMPORTANT_BADGE.badgeClass,
                                   )}
                                 >
                                   {NOTICE_IMPORTANT_BADGE.label}
@@ -228,7 +223,7 @@ export function NotificationCenterDropdown() {
                             <p
                               className={cn(
                                 'text-xs font-bold text-ink-soft truncate leading-snug',
-                                !notice.is_read && 'text-ink font-bold'
+                                !notice.is_read && 'text-ink font-bold',
                               )}
                             >
                               {notice.title}
@@ -292,7 +287,7 @@ export function NotificationCenterDropdown() {
                             }}
                             className={cn(
                               'w-full text-left flex items-start gap-2.5 p-3 rounded-control transition-all hover:bg-canvas cursor-pointer outline-none block',
-                              !notification.is_read && 'bg-brand-soft/50'
+                              !notification.is_read && 'bg-brand-soft/50',
                             )}
                           >
                             <div className="mt-1">
@@ -306,7 +301,7 @@ export function NotificationCenterDropdown() {
                             <div
                               className={cn(
                                 'flex items-center justify-center w-8 h-8 rounded-xl border shrink-0',
-                                display.badgeClass ?? 'bg-canvas text-ink-muted border-line/70'
+                                display.badgeClass ?? 'bg-canvas text-ink-muted border-line/70',
                               )}
                             >
                               <Icon size={14} />
@@ -316,7 +311,7 @@ export function NotificationCenterDropdown() {
                               <p
                                 className={cn(
                                   'text-xs font-bold text-ink-soft truncate leading-snug',
-                                  !notification.is_read && 'text-ink font-bold'
+                                  !notification.is_read && 'text-ink font-bold',
                                 )}
                               >
                                 {display.title}

@@ -64,7 +64,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
     if (!supportedTypes) {
       return Object.values(QUESTION_TYPES);
     }
-    return Object.values(QUESTION_TYPES).filter(t => {
+    return Object.values(QUESTION_TYPES).filter((t) => {
       if (t.value === '0') return supportedTypes.speed;
       if (t.value === '4') return supportedTypes.structure;
       if (t.value === '5') return supportedTypes.builders;
@@ -76,7 +76,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
   // 選択可能な種別やレベル概念の変更による状態の整合性確保
   useEffect(() => {
     if (availableTypes.length > 0) {
-      const isCurrentAvailable = availableTypes.some(t => t.value === selectedType);
+      const isCurrentAvailable = availableTypes.some((t) => t.value === selectedType);
       if (!isCurrentAvailable) {
         const fallbackType = availableTypes[0].value;
         setSelectedType(fallbackType);
@@ -90,10 +90,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
   const typeMeta = QUESTION_TYPES[selectedType];
   const levels = useMemo(() => {
     if (!hasLevel) return ['1'];
-    return Array.from(
-      { length: typeMeta.maxLevel - typeMeta.minLevel + 1 },
-      (_, i) => String(typeMeta.minLevel + i)
-    );
+    return Array.from({ length: typeMeta.maxLevel - typeMeta.minLevel + 1 }, (_, i) => String(typeMeta.minLevel + i));
   }, [typeMeta, hasLevel]);
 
   return (
@@ -107,25 +104,30 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
             </h2>
             <div className="flex items-center gap-3">
               {/* 種別選択 */}
-              <Select value={selectedType} onValueChange={(v) => {
-                setIsLoading(true);
-                const nextType = v as SprintQuestionType;
-                setSelectedType(nextType);
-                setSelectedLevel(hasLevel ? String(QUESTION_TYPES[nextType].minLevel) : '1');
-              }}>
+              <Select
+                value={selectedType}
+                onValueChange={(v) => {
+                  setIsLoading(true);
+                  const nextType = v as SprintQuestionType;
+                  setSelectedType(nextType);
+                  setSelectedLevel(hasLevel ? String(QUESTION_TYPES[nextType].minLevel) : '1');
+                }}
+              >
                 <SelectTrigger className="w-[180px] h-10 bg-slate-50 border-slate-200 font-bold rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {availableTypes.map(t => (
-                    <SelectItem key={t.value} value={t.value} className="font-medium">{t.label}</SelectItem>
+                  {availableTypes.map((t) => (
+                    <SelectItem key={t.value} value={t.value} className="font-medium">
+                      {t.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               {/* レベル選択 */}
-              <Select 
-                value={selectedLevel} 
+              <Select
+                value={selectedLevel}
                 onValueChange={(v) => {
                   setIsLoading(true);
                   setSelectedLevel(v);
@@ -136,7 +138,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {levels.map(l => (
+                  {levels.map((l) => (
                     <SelectItem key={l} value={l} className="font-mono">
                       {l === '0' ? 'Basic' : `Level ${l}`}
                     </SelectItem>
@@ -149,28 +151,31 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
           <div className="h-10 w-px bg-slate-200 hidden sm:block mt-6" />
 
           <div className="mt-6 flex flex-col justify-end">
-             <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-brand-50 text-brand border-brand-100 font-black">
-                  {questions.length} Questions
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-brand-50 text-brand border-brand-100 font-black">
+                {questions.length} Questions
+              </Badge>
+              {selectedType !== '0' && (
+                <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-100 font-black">
+                  {new Set(questions.map((q) => q.group_id)).size} Groups
                 </Badge>
-                {selectedType !== '0' && (
-                   <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-100 font-black">
-                    {new Set(questions.map(q => q.group_id)).size} Groups
-                  </Badge>
-                )}
-             </div>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="mt-6 flex items-center gap-2">
           {/* 一括音声生成ボタン */}
-          <SprintTTSBulkDialog 
-            questions={questions} 
-            type={selectedType} 
-            level={Number(selectedLevel)} 
+          <SprintTTSBulkDialog
+            questions={questions}
+            type={selectedType}
+            level={Number(selectedLevel)}
             onComplete={fetchQuestions}
           >
-            <Button variant="outline" className="border-brand-100 text-brand font-bold h-10 rounded-xl gap-2 hover:bg-brand-50">
+            <Button
+              variant="outline"
+              className="border-brand-100 text-brand font-bold h-10 rounded-xl gap-2 hover:bg-brand-50"
+            >
               <Zap size={16} className="text-amber-500" fill="currentColor" />
               {t('bulkAudioButton')}
             </Button>
@@ -185,11 +190,11 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
           />
 
           {/* 新規追加フォーム */}
-          <SprintQuestionFormDialog 
-            mode="create" 
-            type={selectedType} 
-            level={Number(selectedLevel)} 
-            onSuccess={fetchQuestions} 
+          <SprintQuestionFormDialog
+            mode="create"
+            type={selectedType}
+            level={Number(selectedLevel)}
+            onSuccess={fetchQuestions}
             contentId={contentId}
           />
         </div>
@@ -203,7 +208,13 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
             <span className="text-sm font-medium italic">Loading questions...</span>
           </div>
         ) : (
-          <SprintQuestionList questions={questions} type={selectedType} onUpdate={fetchQuestions} contentId={contentId} hasLevel={hasLevel} />
+          <SprintQuestionList
+            questions={questions}
+            type={selectedType}
+            onUpdate={fetchQuestions}
+            contentId={contentId}
+            hasLevel={hasLevel}
+          />
         )}
       </div>
     </div>

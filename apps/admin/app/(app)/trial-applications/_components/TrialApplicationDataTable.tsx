@@ -20,11 +20,19 @@ export function TrialApplicationDataTable({ data, totalCount, pageCount }: Trial
   const locale = useLocale() === 'en' ? 'en' : 'ja';
   const query = useListQuery(TRIAL_APPLICATION_LIST_FILTERS);
   const statusOptions = TRIAL_APPLICATION_STATUSES.map((status) => ({ value: status, label: t(`status.${status}`) }));
-  const occupationOptions = TRIAL_OCCUPATIONS.map((o) => ({ value: String(o.code), label: locale === 'en' ? o.labelEn : o.label }));
+  const occupationOptions = TRIAL_OCCUPATIONS.map((o) => ({
+    value: String(o.code),
+    label: locale === 'en' ? o.labelEn : o.label,
+  }));
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      >
         <ListSelectFilter
           label={t('statusHeader')}
           allLabel={t('allStatuses')}

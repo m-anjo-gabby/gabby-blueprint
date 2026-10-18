@@ -1,25 +1,25 @@
-"use client"
+'use client';
 
-import * as React from "react";
-import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { addTermRevision } from "@/actions/adminTermAction";
-import { useToast } from '@gabby/lib/hooks/useToast'
-import { Save, Eye, FileEdit, History, Info, Loader2 } from "lucide-react";
-import { TermViewer } from "@gabby/lib/components/term/TermViewer";
-import { cn } from "@/lib/utils";
-import type { TermDetail } from "@gabby/types/term";
+import * as React from 'react';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { addTermRevision } from '@/actions/adminTermAction';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { Save, Eye, FileEdit, History, Info, Loader2 } from 'lucide-react';
+import { TermViewer } from '@gabby/lib/components/term/TermViewer';
+import { cn } from '@/lib/utils';
+import type { TermDetail } from '@gabby/types/term';
 
 interface TermEditorProps {
   term: TermDetail;
 }
 
-type ViewMode = "edit" | "preview" | "history";
+type ViewMode = 'edit' | 'preview' | 'history';
 
 export function TermEditor({ term }: TermEditorProps) {
   const t = useTranslations('terms.editor');
@@ -28,18 +28,18 @@ export function TermEditor({ term }: TermEditorProps) {
   const { showToast } = useToast();
 
   const currentRevision = term.revisions[0];
-  const baseContent = currentRevision?.content ?? "";
+  const baseContent = currentRevision?.content ?? '';
 
   const [content, setContent] = React.useState(baseContent);
-  const [changeNote, setChangeNote] = React.useState("");
+  const [changeNote, setChangeNote] = React.useState('');
   const [isSaving, setIsSaving] = React.useState(false);
-  const [viewMode, setViewMode] = React.useState<ViewMode>("edit");
+  const [viewMode, setViewMode] = React.useState<ViewMode>('edit');
   const [selectedRevisionId, setSelectedRevisionId] = React.useState(currentRevision?.revision_id);
 
   // 公開済みの規約は利用者が既に目にしている文面の修正となるため、修正理由を必須とする（RPC側でも検証）
   const isChangeNoteRequired = term.is_published;
   const hasChanges = content !== baseContent;
-  const canSave = hasChanges && content.trim() !== "" && (!isChangeNoteRequired || changeNote.trim() !== "");
+  const canSave = hasChanges && content.trim() !== '' && (!isChangeNoteRequired || changeNote.trim() !== '');
 
   const selectedRevision = term.revisions.find((rev) => rev.revision_id === selectedRevisionId) ?? currentRevision;
 
@@ -67,32 +67,32 @@ export function TermEditor({ term }: TermEditorProps) {
       <div className="flex items-center justify-between px-4 py-2 border-b bg-slate-50">
         <div className="flex items-center gap-1 bg-white border rounded-lg p-0.5">
           <Button
-            variant={viewMode === "edit" ? "secondary" : "ghost"}
+            variant={viewMode === 'edit' ? 'secondary' : 'ghost'}
             size="sm"
-            onClick={() => setViewMode("edit")}
+            onClick={() => setViewMode('edit')}
             className="h-8 gap-2 text-xs font-bold"
           >
             <FileEdit size={14} /> {t('editTab')}
           </Button>
           <Button
-            variant={viewMode === "preview" ? "secondary" : "ghost"}
+            variant={viewMode === 'preview' ? 'secondary' : 'ghost'}
             size="sm"
-            onClick={() => setViewMode("preview")}
+            onClick={() => setViewMode('preview')}
             className="h-8 gap-2 text-xs font-bold"
           >
             <Eye size={14} /> {t('previewTab')}
           </Button>
           <Button
-            variant={viewMode === "history" ? "secondary" : "ghost"}
+            variant={viewMode === 'history' ? 'secondary' : 'ghost'}
             size="sm"
-            onClick={() => setViewMode("history")}
+            onClick={() => setViewMode('history')}
             className="h-8 gap-2 text-xs font-bold"
           >
             <History size={14} /> {t('historyTab', { count: term.revisions.length })}
           </Button>
         </div>
 
-        {viewMode !== "history" && (
+        {viewMode !== 'history' && (
           <Button
             onClick={handleSave}
             disabled={isSaving || !canSave}
@@ -105,7 +105,7 @@ export function TermEditor({ term }: TermEditorProps) {
       </div>
 
       {/* 保存時の扱い（サイレント更新）の案内と修正理由 */}
-      {viewMode !== "history" && (
+      {viewMode !== 'history' && (
         <div className="px-4 py-3 border-b space-y-3">
           <p className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-600">
             <Info size={14} className="mt-0.5 shrink-0 text-brand-500" />
@@ -114,7 +114,7 @@ export function TermEditor({ term }: TermEditorProps) {
           <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
             <Label htmlFor="term-change-note" className="shrink-0 text-xs font-bold text-slate-500">
               {t('changeNoteLabel')}
-              <span className={cn("ml-1.5 text-[10px]", isChangeNoteRequired ? "text-rose-500" : "text-slate-400")}>
+              <span className={cn('ml-1.5 text-[10px]', isChangeNoteRequired ? 'text-rose-500' : 'text-slate-400')}>
                 {isChangeNoteRequired ? t('changeNoteRequired') : t('changeNoteOptional')}
               </span>
             </Label>
@@ -132,7 +132,7 @@ export function TermEditor({ term }: TermEditorProps) {
 
       {/* メインエリア */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col w-full min-w-0">
-        {viewMode === "edit" && (
+        {viewMode === 'edit' && (
           <Textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -141,7 +141,7 @@ export function TermEditor({ term }: TermEditorProps) {
           />
         )}
 
-        {viewMode === "preview" && (
+        {viewMode === 'preview' && (
           <TermViewer
             content={content}
             containerClassName="bg-slate-50/50 p-4 sm:p-8"
@@ -149,8 +149,8 @@ export function TermEditor({ term }: TermEditorProps) {
           />
         )}
 
-        {viewMode === "history" && (
-          term.revisions.length === 0 ? (
+        {viewMode === 'history' &&
+          (term.revisions.length === 0 ? (
             <p className="p-8 text-center text-sm text-slate-400">{t('noRevisions')}</p>
           ) : (
             <div className="flex flex-1 min-h-0 flex-col md:flex-row">
@@ -161,12 +161,14 @@ export function TermEditor({ term }: TermEditorProps) {
                       type="button"
                       onClick={() => setSelectedRevisionId(rev.revision_id)}
                       className={cn(
-                        "w-full text-left px-4 py-3 space-y-1 transition-colors hover:bg-slate-50",
-                        rev.revision_id === selectedRevision?.revision_id && "bg-brand-50/60"
+                        'w-full text-left px-4 py-3 space-y-1 transition-colors hover:bg-slate-50',
+                        rev.revision_id === selectedRevision?.revision_id && 'bg-brand-50/60',
                       )}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-700">{t('revisionLabel', { no: rev.revision_no })}</span>
+                        <span className="text-xs font-bold text-slate-700">
+                          {t('revisionLabel', { no: rev.revision_no })}
+                        </span>
                         {rev.revision_id === currentRevision?.revision_id && (
                           <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 font-bold text-[10px] px-1.5 py-0">
                             {t('currentBadge')}
@@ -176,23 +178,20 @@ export function TermEditor({ term }: TermEditorProps) {
                       <p className="text-[11px] font-mono text-slate-400">
                         {rev.insert_date} · {rev.insert_user_name ?? t('unknownUser')}
                       </p>
-                      <p className="text-[12px] text-slate-600 line-clamp-2">
-                        {rev.change_note ?? t('noChangeNote')}
-                      </p>
+                      <p className="text-[12px] text-slate-600 line-clamp-2">{rev.change_note ?? t('noChangeNote')}</p>
                     </button>
                   </li>
                 ))}
               </ul>
               <div className="flex-1 min-h-0 min-w-0 flex flex-col">
                 <TermViewer
-                  content={selectedRevision?.content ?? ""}
+                  content={selectedRevision?.content ?? ''}
                   containerClassName="bg-slate-50/50 p-4 sm:p-8"
                   contentClassName="max-w-3xl mx-auto bg-white border rounded-2xl shadow-sm sm:px-12"
                 />
               </div>
             </div>
-          )
-        )}
+          ))}
       </div>
     </div>
   );

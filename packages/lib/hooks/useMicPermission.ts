@@ -88,22 +88,25 @@ export function useMicPermission(): UseMicPermissionReturn {
     setMicTestError(false);
     setIsTestingMic(true);
 
-    recognitionRef.current = recognizer.start({ lang: 'en-US' }, {
-      // 認識開始 = マイクが許可されている
-      onStart: () => setMicStatus('granted'),
-      onTranscript: (text) => {
-        setTestTranscript(text);
-        // 何か発話が検知できたら即座に成功判定
-        if (text.trim().length > 0) stopMicTest(true, false);
+    recognitionRef.current = recognizer.start(
+      { lang: 'en-US' },
+      {
+        // 認識開始 = マイクが許可されている
+        onStart: () => setMicStatus('granted'),
+        onTranscript: (text) => {
+          setTestTranscript(text);
+          // 何か発話が検知できたら即座に成功判定
+          if (text.trim().length > 0) stopMicTest(true, false);
+        },
+        onError: (code) => {
+          clientLogger.debug('speech:mic_test_failed', 'Mic test error', { payload: { code } });
+          if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'start-failed') {
+            setMicStatus('denied');
+          }
+          stopMicTest(false, true);
+        },
       },
-      onError: (code) => {
-        clientLogger.debug('speech:mic_test_failed', 'Mic test error', { payload: { code } });
-        if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'start-failed') {
-          setMicStatus('denied');
-        }
-        stopMicTest(false, true);
-      },
-    });
+    );
 
     testTimeoutRef.current = setTimeout(() => {
       stopMicTest(false, true);

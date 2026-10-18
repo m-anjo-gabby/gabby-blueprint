@@ -15,7 +15,10 @@ interface ScrollIntoContainerOptions {
  * 没入画面の土台までずらして見出しが見切れるため、こちらを使う。
  * 上部に固定表示の段（`data-scroll-sticky`）がある場合は、その下の見える範囲を基準にする。
  */
-export function scrollIntoContainer(el: HTMLElement, { behavior = 'smooth', block = 'center' }: ScrollIntoContainerOptions = {}) {
+export function scrollIntoContainer(
+  el: HTMLElement,
+  { behavior = 'smooth', block = 'center' }: ScrollIntoContainerOptions = {},
+) {
   const container = el.parentElement?.closest<HTMLElement>(`[${SCROLL_CONTAINER_ATTR}]`);
   if (!container) return;
 

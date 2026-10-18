@@ -12,18 +12,15 @@ export async function getAzureSpeechToken() {
     throw new Error('Azure configuration (REGION or KEY) is missing.');
   }
 
-  const response = await fetch(
-    `https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
-    {
-      method: 'POST',
-      headers: {
-        'Ocp-Apim-Subscription-Key': key,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      // キャッシュ戦略は必要に応じて調整（トークンは10分有効）
-      cache: 'no-store', 
-    }
-  );
+  const response = await fetch(`https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, {
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': key,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    // キャッシュ戦略は必要に応じて調整（トークンは10分有効）
+    cache: 'no-store',
+  });
 
   if (!response.ok) {
     // statusTextだけでなく、可能であればボディの中身も取得して詳細を確認する

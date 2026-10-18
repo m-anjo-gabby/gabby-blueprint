@@ -52,7 +52,11 @@ export default async function TodaysSessionsPanel({ timezone }: { timezone: stri
   // クエリの下限は取りこぼし防止のために広めに取っているため、ここで正確な条件に絞り直す。
   const nowMs = now.getTime();
   const next24hSessions = data
-    .filter((s) => s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime).getTime() + LIVE_SESSION_END_AFTER_MS >= nowMs)
+    .filter(
+      (s) =>
+        s.status === SESSION_STATUS.SCHEDULED &&
+        new Date(s.end_datetime).getTime() + LIVE_SESSION_END_AFTER_MS >= nowMs,
+    )
     .sort((a, b) => a.start_datetime.localeCompare(b.start_datetime));
   const nextSessionId = next24hSessions[0]?.session_id;
 

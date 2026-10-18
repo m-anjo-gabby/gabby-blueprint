@@ -64,7 +64,7 @@ export async function getMySessions(startIso: string, endIso: string): Promise<S
 export async function cancelSession(
   sessionId: string,
   reason?: string,
-  proposedSlots?: ProposedSlotInput[]
+  proposedSlots?: ProposedSlotInput[],
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await cancelSessionCore(sessionId, reason, proposedSlots);
@@ -87,7 +87,7 @@ export async function recordSessionOutcome(
   sessionId: string,
   outcome: SessionOutcome,
   conductedVia: ConductedVia | null,
-  reason: string
+  reason: string,
 ): Promise<{ success: true } | { success: false; errorCode: SessionActionErrorCode; message: string }> {
   const ctx = await getLogContext();
   const result = await recordSessionOutcomeCore(sessionId, outcome, conductedVia, reason);
@@ -106,7 +106,7 @@ export async function recordSessionOutcome(
  * the coach and student were connected together). Fetched when the End Session dialog opens.
  */
 export async function getSessionOutcomeEvidence(
-  sessionId: string
+  sessionId: string,
 ): Promise<{ success: true; evidence: SessionOutcomeEvidence } | { success: false; message: string }> {
   const result = await getSessionOutcomeEvidenceCore(sessionId);
   if (!result.success) {
@@ -121,7 +121,7 @@ export async function getSessionOutcomeEvidence(
  * Fetches the session result screen's summary data (status, notes, join/leave timeline).
  */
 export async function getSessionResultSummary(
-  sessionId: string
+  sessionId: string,
 ): Promise<{ success: true; session: SessionResultSummary } | { success: false; message: string }> {
   const result = await getSessionResultSummaryCore(sessionId);
   if (!result.success) {
@@ -132,7 +132,11 @@ export async function getSessionResultSummary(
   return { success: true, session: result.session };
 }
 
-const EMPTY_SESSION_TASKS: CoachSessionTasksSummary = { unfinalizedSessions: [], missingHomeworkSessions: [], shortfalls: [] };
+const EMPTY_SESSION_TASKS: CoachSessionTasksSummary = {
+  unfinalizedSessions: [],
+  missingHomeworkSessions: [],
+  shortfalls: [],
+};
 
 /**
  * Fetches the dashboard's "Session Tasks" data: sessions past their scheduled end time that
@@ -158,7 +162,7 @@ export async function checkSessionConflict(
   studentId: string,
   startIso: string,
   endIso: string,
-  excludeSessionId?: string
+  excludeSessionId?: string,
 ): Promise<{ success: true; coachConflict: boolean; studentConflict: boolean } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await checkSessionConflictCore(coachId, studentId, startIso, endIso, excludeSessionId);
@@ -175,7 +179,7 @@ export async function checkSessionConflict(
  * Approves a student's session booking request, creating the confirmed session.
  */
 export async function approveSessionBookingRequest(
-  requestId: string
+  requestId: string,
 ): Promise<{ success: true; newSessionId: string } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await approveSessionBookingRequestCore(requestId);
@@ -194,7 +198,7 @@ export async function approveSessionBookingRequest(
  */
 export async function rejectSessionBookingRequest(
   requestId: string,
-  reason?: string
+  reason?: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await rejectSessionBookingRequestCore(requestId, reason);
@@ -212,7 +216,7 @@ export async function rejectSessionBookingRequest(
  * Accepts one of the candidate times a student proposed when cancelling a session.
  */
 export async function acceptRescheduleProposal(
-  proposalId: string
+  proposalId: string,
 ): Promise<{ success: true; newSessionId: string } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await acceptRescheduleProposalCore(proposalId);
@@ -231,7 +235,7 @@ export async function acceptRescheduleProposal(
  * (candidates are mutually exclusive choices, so rejection applies to the whole group).
  */
 export async function declineRescheduleProposals(
-  sessionId: string
+  sessionId: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await declineRescheduleProposalsCore(sessionId);
@@ -252,7 +256,7 @@ export async function declineRescheduleProposals(
  */
 export async function getBookingRequestHistoryPage(
   cursor: string | null,
-  limit: number
+  limit: number,
 ): Promise<{ items: IncomingSessionBookingRequestItem[]; nextCursor: string | null }> {
   const result = await getBookingRequestHistoryPageForCoachCore(cursor, limit);
   if (!result.success) {
@@ -270,7 +274,7 @@ export async function getBookingRequestHistoryPage(
  */
 export async function getRescheduleProposalHistoryPage(
   cursor: string | null,
-  limit: number
+  limit: number,
 ): Promise<{ items: IncomingRescheduleProposalGroup[]; nextCursor: string | null }> {
   const result = await getRescheduleProposalHistoryPageForCoachCore(cursor, limit);
   if (!result.success) {

@@ -69,7 +69,11 @@ export function CoachMatchingSkeleton() {
           <ShellSectionTitle>セッション枠の状況</ShellSectionTitle>
           <div className="grid gap-3 sm:grid-cols-2">
             {Array.from({ length: SLOT_SKELETON_COUNT }, (_, i) => (
-              <div key={i} aria-hidden className="space-y-2 rounded-card border border-line/70 bg-surface p-4 shadow-sm">
+              <div
+                key={i}
+                aria-hidden
+                className="space-y-2 rounded-card border border-line/70 bg-surface p-4 shadow-sm"
+              >
                 <div className="flex items-center justify-between">
                   <Skeleton className="h-3 w-14" />
                   <Skeleton className="h-5 w-16 rounded-full" />

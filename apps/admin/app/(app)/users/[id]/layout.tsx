@@ -10,7 +10,13 @@ import { UserDetailTabs } from './_components/UserDetailTabs';
  * ユーザー詳細（一覧の「編集」・氏名から開く）。見出しとタブを持ち、各タブは子ルート。
  * タブは種別・登録状態で出し分ける（tabs.ts）。
  */
-export default async function UserDetailLayout({ params, children }: { params: Promise<{ id: string }>; children: ReactNode }) {
+export default async function UserDetailLayout({
+  params,
+  children,
+}: {
+  params: Promise<{ id: string }>;
+  children: ReactNode;
+}) {
   const { id } = await params;
   const [t, user] = await Promise.all([getTranslations('users.detail'), getUserDetail(id)]);
 

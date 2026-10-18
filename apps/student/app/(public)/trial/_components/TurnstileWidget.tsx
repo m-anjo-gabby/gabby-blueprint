@@ -42,7 +42,7 @@ interface TurnstileWidgetProps {
 
 export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(function TurnstileWidget(
   { siteKey, onTokenChange },
-  ref
+  ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);

@@ -4,7 +4,16 @@ import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { SubmitButton } from '../common/SubmitButton';
-import { AuthBackLink, AuthHeading, AuthLinkButton, AuthPage, AuthStatus, AuthStep, EmailField, FormError } from './AuthLayout';
+import {
+  AuthBackLink,
+  AuthHeading,
+  AuthLinkButton,
+  AuthPage,
+  AuthStatus,
+  AuthStep,
+  EmailField,
+  FormError,
+} from './AuthLayout';
 import type { ForgotPasswordLabels, FormAuthAction } from './types';
 
 interface ForgotPasswordFormProps {

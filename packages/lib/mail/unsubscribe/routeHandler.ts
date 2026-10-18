@@ -22,16 +22,20 @@ const COPY = {
     button: '配信を停止する',
     done: (label: string) => `「${label}」のメールの配信を停止しました。アプリ内の通知は引き続き届きます。`,
     resume: '再開する場合は、アプリにログインし、プロフィールの「メール通知」から設定してください。',
-    invalid: 'このリンクは無効です。お手数ですが、アプリにログインし、プロフィールの「メール通知」から設定してください。',
+    invalid:
+      'このリンクは無効です。お手数ですが、アプリにログインし、プロフィールの「メール通知」から設定してください。',
     failed: '配信停止の処理に失敗しました。時間をおいて再度お試しください。',
   },
   en: {
     title: 'Unsubscribe',
-    confirm: (label: string) => `You are about to unsubscribe from "${label}" emails. Press the button below to confirm.`,
+    confirm: (label: string) =>
+      `You are about to unsubscribe from "${label}" emails. Press the button below to confirm.`,
     button: 'Unsubscribe',
-    done: (label: string) => `You have been unsubscribed from "${label}" emails. In-app notifications will still be delivered.`,
+    done: (label: string) =>
+      `You have been unsubscribed from "${label}" emails. In-app notifications will still be delivered.`,
     resume: 'To turn them back on, sign in and go to "Email notifications" in your profile.',
-    invalid: 'This link is invalid. Please sign in and change your settings under "Email notifications" in your profile.',
+    invalid:
+      'This link is invalid. Please sign in and change your settings under "Email notifications" in your profile.',
     failed: 'We could not process your request. Please try again later.',
   },
 } as const;
@@ -88,7 +92,7 @@ export function createUnsubscribeRoute(language: PageLanguage) {
 <form method="post">
 <input type="hidden" name="List-Unsubscribe" value="One-Click">
 <button type="submit" style="background:#0e3196;color:#ffffff;border:0;border-radius:6px;padding:12px 28px;font-size:15px;font-weight:bold;cursor:pointer;">${copy.button}</button>
-</form>`
+</form>`,
     );
   }
 
@@ -104,14 +108,21 @@ export function createUnsubscribeRoute(language: PageLanguage) {
       .from('com_t_user_mail_setting')
       .upsert(
         { user_id: target.userId, category: target.category, enabled: false, update_date: new Date().toISOString() },
-        { onConflict: 'user_id,category' }
+        { onConflict: 'user_id,category' },
       );
     if (error) {
-      logger.error('mail:unsubscribe_failed', error.message, { err: error, userId: target.userId, payload: { category: target.category } });
+      logger.error('mail:unsubscribe_failed', error.message, {
+        err: error,
+        userId: target.userId,
+        payload: { category: target.category },
+      });
       return page(language, paragraph(copy.failed), 500);
     }
 
-    logger.info('mail:unsubscribe_success', 'Unsubscribed via email link', { userId: target.userId, payload: { category: target.category } });
+    logger.info('mail:unsubscribe_success', 'Unsubscribed via email link', {
+      userId: target.userId,
+      payload: { category: target.category },
+    });
     const label = MAIL_CATEGORIES[target.category].labels[language].title;
     return page(language, `${paragraph(copy.done(label))}${paragraph(copy.resume)}`);
   }

@@ -19,9 +19,18 @@ import type { SprintResultScore } from './types';
 export function PlayingBars({ className }: { className?: string }) {
   return (
     <span className={cn('flex shrink-0 items-center justify-center gap-0.5', className)}>
-      <span className="h-full w-0.5 animate-bounce rounded-xs bg-current" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
-      <span className="h-full w-0.5 animate-bounce rounded-xs bg-current" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
-      <span className="h-2/3 w-0.5 animate-bounce rounded-xs bg-current" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
+      <span
+        className="h-full w-0.5 animate-bounce rounded-xs bg-current"
+        style={{ animationDelay: '0ms', animationDuration: '0.6s' }}
+      />
+      <span
+        className="h-full w-0.5 animate-bounce rounded-xs bg-current"
+        style={{ animationDelay: '150ms', animationDuration: '0.6s' }}
+      />
+      <span
+        className="h-2/3 w-0.5 animate-bounce rounded-xs bg-current"
+        style={{ animationDelay: '300ms', animationDuration: '0.6s' }}
+      />
     </span>
   );
 }
@@ -39,7 +48,18 @@ interface QuestionCardProps {
   onToggleFavorite: () => void;
 }
 
-function QuestionCard({ q, index, scoreData, historyItem, playback, jaVisibleMap, onToggleJa, onOpenFeedback, isFavorite, onToggleFavorite }: QuestionCardProps) {
+function QuestionCard({
+  q,
+  index,
+  scoreData,
+  historyItem,
+  playback,
+  jaVisibleMap,
+  onToggleJa,
+  onOpenFeedback,
+  isFavorite,
+  onToggleFavorite,
+}: QuestionCardProps) {
   // 枠の強調は再生中のカード（文を1つだけ再生している場合も含む）、問題ごとの再生ボタンの「再生中」は1問分の連続再生・全て再生のときだけ
   const isFocused = playback.focusedQuestionId === q.question_id;
   const isSequencePlaying = playback.sequenceQuestionId === q.question_id;
@@ -56,7 +76,7 @@ function QuestionCard({ q, index, scoreData, historyItem, playback, jaVisibleMap
     audioId: string,
     en: string,
     ja: string | null,
-    voice: string | null
+    voice: string | null,
   ) => (
     <SprintPhraseBlock
       variant={variant}
@@ -77,7 +97,7 @@ function QuestionCard({ q, index, scoreData, historyItem, playback, jaVisibleMap
       className={cn(
         'relative flex flex-col gap-4 rounded-card border bg-surface p-4 shadow-sm transition-all duration-300 sm:p-5',
         isFocused && 'scale-[1.01] border-transparent shadow-md ring-2 ring-brand-500',
-        isSkipped ? 'border-line/50 bg-canvas opacity-85' : 'border-line'
+        isSkipped ? 'border-line/50 bg-canvas opacity-85' : 'border-line',
       )}
     >
       {/* 上段：問題番号・問題ごとの再生・スコア/スキップ */}
@@ -95,7 +115,7 @@ function QuestionCard({ q, index, scoreData, historyItem, playback, jaVisibleMap
               'group flex h-7 select-none items-center gap-1.5 whitespace-nowrap rounded-full border pl-2.5 pr-3 transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-40',
               isSequencePlaying
                 ? 'border-transparent bg-brand text-white shadow-xs'
-                : 'border-line bg-canvas text-ink-muted hover:bg-brand-soft hover:text-brand'
+                : 'border-line bg-canvas text-ink-muted hover:bg-brand-soft hover:text-brand',
             )}
             title="一連の流れを再生"
           >
@@ -131,7 +151,7 @@ function QuestionCard({ q, index, scoreData, historyItem, playback, jaVisibleMap
                     : totalScore >= 50
                       ? 'border-sky-200/60 bg-sky-50 text-sky-700'
                       : 'border-line bg-canvas text-ink-soft',
-                  analysis ? 'cursor-pointer hover:brightness-95 active:scale-95' : 'cursor-default'
+                  analysis ? 'cursor-pointer hover:brightness-95 active:scale-95' : 'cursor-default',
                 )}
               >
                 <ChartSpline size={12} strokeWidth={2.5} className="shrink-0 opacity-80" />
@@ -147,7 +167,7 @@ function QuestionCard({ q, index, scoreData, historyItem, playback, jaVisibleMap
             title={isFavorite ? 'お気に入りを解除' : 'お気に入りに追加'}
             className={cn(
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all active:scale-75',
-              isFavorite ? 'bg-amber-50 text-amber-500' : 'text-ink-subtle hover:bg-canvas'
+              isFavorite ? 'bg-amber-50 text-amber-500' : 'text-ink-subtle hover:bg-canvas',
             )}
           >
             <Star size={16} fill={isFavorite ? 'currentColor' : 'none'} />
@@ -156,7 +176,14 @@ function QuestionCard({ q, index, scoreData, historyItem, playback, jaVisibleMap
       </div>
 
       {q.statement_en &&
-        phrase('statement', '基本文', sprintAudioId.statement(q.question_id), q.statement_en, q.statement_ja, q.statement_voice)}
+        phrase(
+          'statement',
+          '基本文',
+          sprintAudioId.statement(q.question_id),
+          q.statement_en,
+          q.statement_ja,
+          q.statement_voice,
+        )}
 
       {phrase(
         'question',
@@ -164,15 +191,36 @@ function QuestionCard({ q, index, scoreData, historyItem, playback, jaVisibleMap
         sprintAudioId.question(q.question_id),
         q.question_en,
         q.question_ja,
-        q.question_voice
+        q.question_voice,
       )}
 
       <div className="w-full pt-1">
         {!isSpeedMode
-          ? phrase('yes', '解答文', sprintAudioId.answer(q.question_id), q.answer_sentence_yes_en, q.answer_sentence_yes_ja, q.answer_sentence_yes_voice)
+          ? phrase(
+              'yes',
+              '解答文',
+              sprintAudioId.answer(q.question_id),
+              q.answer_sentence_yes_en,
+              q.answer_sentence_yes_ja,
+              q.answer_sentence_yes_voice,
+            )
           : scoreData.answer_type === '1'
-            ? phrase('no', '解答文', sprintAudioId.no(q.question_id), q.answer_sentence_no_en ?? '', q.answer_sentence_no_ja, q.answer_sentence_no_voice)
-            : phrase('yes', '解答文', sprintAudioId.yes(q.question_id), q.answer_sentence_yes_en, q.answer_sentence_yes_ja, q.answer_sentence_yes_voice)}
+            ? phrase(
+                'no',
+                '解答文',
+                sprintAudioId.no(q.question_id),
+                q.answer_sentence_no_en ?? '',
+                q.answer_sentence_no_ja,
+                q.answer_sentence_no_voice,
+              )
+            : phrase(
+                'yes',
+                '解答文',
+                sprintAudioId.yes(q.question_id),
+                q.answer_sentence_yes_en,
+                q.answer_sentence_yes_ja,
+                q.answer_sentence_yes_voice,
+              )}
       </div>
     </div>
   );
@@ -187,11 +235,18 @@ interface SprintResultQuestionListProps {
 }
 
 /** 実施した問題のカード一覧（スコアタップで発話フィードバックを開く、☆でお気に入りに登録する） */
-export function SprintResultQuestionList({ scoreData, questions, playback, initialFavoriteIds }: SprintResultQuestionListProps) {
+export function SprintResultQuestionList({
+  scoreData,
+  questions,
+  playback,
+  initialFavoriteIds,
+}: SprintResultQuestionListProps) {
   const { showToast } = useToast();
   const [jaVisibleMap, setJaVisibleMap] = useState<Record<string, boolean>>({});
   const [favoriteIds, setFavoriteIds] = useState(() => new Set(initialFavoriteIds));
-  const [feedbackTarget, setFeedbackTarget] = useState<{ feedback: FeedbackConfig; analysis: AnalysisResult } | null>(null);
+  const [feedbackTarget, setFeedbackTarget] = useState<{ feedback: FeedbackConfig; analysis: AnalysisResult } | null>(
+    null,
+  );
 
   // question_id で履歴を突き合わせる。保存時点に存在した問題が後からマスタ側で削除/非公開化されると
   // questions 側だけ短くなり index がずれるため、index ではなく question_id をキーにする。

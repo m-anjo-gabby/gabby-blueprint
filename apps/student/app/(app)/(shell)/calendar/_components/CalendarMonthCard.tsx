@@ -34,7 +34,8 @@ function getChipInfo(item: CalendarItem): { label: string; className: string } {
  * ステータス色だけに頼らず時刻で過去判定する。
  */
 function isItemPast(item: CalendarItem): boolean {
-  const cutoff = item.kind === 'session' ? item.data.end_datetime : (item.data.end_datetime ?? item.data.start_datetime);
+  const cutoff =
+    item.kind === 'session' ? item.data.end_datetime : (item.data.end_datetime ?? item.data.start_datetime);
   return new Date(cutoff) < new Date();
 }
 
@@ -55,7 +56,15 @@ interface CalendarMonthCardProps {
  * 読み込み中も日付の枠は同じ大きさで描き、月切替や画面遷移で高さが変わらないようにする
  * （画面遷移中の CalendarSkeleton と共有する）。
  */
-export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onSelectDate, onPrev, onNext, isPending = false }: CalendarMonthCardProps) {
+export function CalendarMonthCard({
+  currentMonth,
+  itemsByDate,
+  selectedDate,
+  onSelectDate,
+  onPrev,
+  onNext,
+  isPending = false,
+}: CalendarMonthCardProps) {
   const isLoading = itemsByDate === null;
   const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 });
   const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 0 });
@@ -105,7 +114,7 @@ export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onS
               className={cn(
                 'min-h-16 sm:min-h-19 rounded-lg flex flex-col items-stretch p-1 gap-0.5 text-left transition-colors relative',
                 !isSameMonth(day, currentMonth) && 'opacity-40',
-                isSelected ? 'bg-brand-soft ring-2 ring-brand-500' : 'hover:bg-canvas'
+                isSelected ? 'bg-brand-soft ring-2 ring-brand-500' : 'hover:bg-canvas',
               )}
             >
               <div className="flex justify-center px-0.5">
@@ -116,7 +125,7 @@ export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onS
                       ? 'bg-brand text-white'
                       : isSameMonth(day, currentMonth) && !isBefore(day, startOfToday())
                         ? 'text-ink-soft'
-                        : 'text-ink-subtle'
+                        : 'text-ink-subtle',
                   )}
                 >
                   {day.getDate()}
@@ -131,7 +140,7 @@ export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onS
                       className={cn(
                         'block text-[11px] font-bold px-1 py-0.5 rounded border truncate leading-tight',
                         chip.className,
-                        isItemPast(item) && 'grayscale opacity-60'
+                        isItemPast(item) && 'grayscale opacity-60',
                       )}
                     >
                       {chip.label}
@@ -139,7 +148,9 @@ export function CalendarMonthCard({ currentMonth, itemsByDate, selectedDate, onS
                   );
                 })}
                 {dayItems.length > MAX_VISIBLE_CHIPS && (
-                  <span className="block text-[11px] font-bold text-ink-subtle px-1">他{dayItems.length - MAX_VISIBLE_CHIPS}件</span>
+                  <span className="block text-[11px] font-bold text-ink-subtle px-1">
+                    他{dayItems.length - MAX_VISIBLE_CHIPS}件
+                  </span>
                 )}
               </div>
             </button>

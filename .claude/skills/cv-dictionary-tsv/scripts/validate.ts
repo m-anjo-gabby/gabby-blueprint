@@ -54,7 +54,10 @@ if (!workDir || !outPath) {
 }
 
 const readTsv = (path: string): { headers: string[]; rows: string[][] } => {
-  const lines = readFileSync(path, 'utf-8').replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim());
+  const lines = readFileSync(path, 'utf-8')
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .filter((l) => l.trim());
   return { headers: lines[0].split('\t').map((h) => h.trim()), rows: lines.slice(1).map((l) => l.split('\t')) };
 };
 
@@ -65,7 +68,8 @@ const readTsv = (path: string): { headers: string[]; rows: string[][] } => {
 const collectWarnings = (e: CVImportEntry): string[] => {
   const warnings: string[] = [];
   const letters = (s: string) => s.toLowerCase().replace(/-/g, '');
-  if (letters(e.syllables) !== letters(e.word_en)) warnings.push(`syllables「${e.syllables}」の綴りが単語と一致しません`);
+  if (letters(e.syllables) !== letters(e.word_en))
+    warnings.push(`syllables「${e.syllables}」の綴りが単語と一致しません`);
 
   const ipa = e.phonetic_spelling;
   if (!ipa) {
@@ -86,10 +90,13 @@ const collectWarnings = (e: CVImportEntry): string[] => {
     // /aɪər/（hire）・縮めた発音（every /ˈɛvri/）は確認待ち（CVJ-20261010-07・08）
     warnings.push(`音節の数（${syllableCount}）とIPAの母音の数（${vowelCount}）が合いません`);
   } else if (stressedVowelPosition(phonemes) !== e.primary_stress_syllable) {
-    warnings.push(`IPAの第一アクセント（${stressedVowelPosition(phonemes)}音節目）が primary_stress_syllable（${e.primary_stress_syllable}）と合いません`);
+    warnings.push(
+      `IPAの第一アクセント（${stressedVowelPosition(phonemes)}音節目）が primary_stress_syllable（${e.primary_stress_syllable}）と合いません`,
+    );
   }
   const expected = expectedColorVowel(phonemes);
-  if (expected && expected !== e.cv_id) warnings.push(`IPAのアクセント母音からは ${expected} が想定されます（cv_id: ${e.cv_id}）`);
+  if (expected && expected !== e.cv_id)
+    warnings.push(`IPAのアクセント母音からは ${expected} が想定されます（cv_id: ${e.cv_id}）`);
   // 米国で /ɔ/・/ɑ/ の2通りある語は olive_sock で統一する方針（JUDGEMENT-GUIDE.md CVJ-20261010-03）
   if (e.cv_id === 'auburn_dog') warnings.push('auburn_dog は原則使わない方針です（/ɑː/ の olive_sock で統一）');
   return warnings;
@@ -106,7 +113,9 @@ const skippedPath = join(workDir, 'skipped.tsv');
 const skipped = existsSync(skippedPath) ? readTsv(skippedPath).rows.map((r) => r[0].toLowerCase()) : [];
 
 const partsDir = join(workDir, 'parts');
-const partFiles = readdirSync(partsDir).filter((f) => f.endsWith('.tsv')).sort();
+const partFiles = readdirSync(partsDir)
+  .filter((f) => f.endsWith('.tsv'))
+  .sort();
 const rows: Row[] = [];
 
 for (const file of partFiles) {
@@ -143,7 +152,9 @@ for (const row of rows) {
   if (!first) {
     byKey.set(key, row);
   } else if (!isSameCVImportEntry(first.entry, row.entry)) {
-    errors.push(`${row.source}: ${row.entry.word_en} (${row.entry.part_of_speech}) が ${first.source} と重複し内容が異なります`);
+    errors.push(
+      `${row.source}: ${row.entry.word_en} (${row.entry.part_of_speech}) が ${first.source} と重複し内容が異なります`,
+    );
   }
 }
 
@@ -156,7 +167,15 @@ const ledgerByKey = new Map<string, LedgerRow>(readLedger(ledgerPath).map((r) =>
 
 // 規則変化の語尾（原形 → 見出し語）。不規則変化（began, sold 等）は母音が変わるのが正しいため照合しない
 const REGULAR_SUFFIXES: Array<[string, string]> = [
-  ['', "'s"], ['', 's'], ['', 'es'], ['', 'ed'], ['', 'd'], ['', 'ing'], ['e', 'ing'], ['y', 'ies'], ['y', 'ied'],
+  ['', "'s"],
+  ['', 's'],
+  ['', 'es'],
+  ['', 'ed'],
+  ['', 'd'],
+  ['', 'ing'],
+  ['e', 'ing'],
+  ['y', 'ies'],
+  ['y', 'ied'],
 ];
 
 // 綴りは規則変化でも発音が変わる語
@@ -167,8 +186,13 @@ const isRegularInflection = (word: string, lemma: string): boolean => {
   const l = lemma.toLowerCase();
   if (IRREGULAR_PRONUNCIATION.has(w)) return false;
   const doubled = l + l.slice(-1);
-  return REGULAR_SUFFIXES.some(([drop, suffix]) => (drop === '' || l.endsWith(drop)) && w === l.slice(0, l.length - drop.length) + suffix)
-    || w === `${doubled}ed` || w === `${doubled}ing`;
+  return (
+    REGULAR_SUFFIXES.some(
+      ([drop, suffix]) => (drop === '' || l.endsWith(drop)) && w === l.slice(0, l.length - drop.length) + suffix,
+    ) ||
+    w === `${doubled}ed` ||
+    w === `${doubled}ing`
+  );
 };
 
 /** 規則変化の行が、同じ原形・同じ品詞の行（原形の行）と Color Vowel で食い違っていないか */
@@ -183,30 +207,50 @@ for (const row of byKey.values()) {
   const ledgerRow = ledgerByKey.get(toCVEntryKey(row.entry.word_en, row.entry.part_of_speech));
   if (ledgerRow?.status === 'confirmed') {
     if (!matchesLedger(ledgerRow, row.entry)) {
-      errors.push(`${row.source}: ${row.entry.word_en} (${row.entry.part_of_speech}) が台帳 ${ledgerRow.id} の確定値と異なります（${ledgerRow.cv_id} ${ledgerRow.phonetic_spelling}）`);
+      errors.push(
+        `${row.source}: ${row.entry.word_en} (${row.entry.part_of_speech}) が台帳 ${ledgerRow.id} の確定値と異なります（${ledgerRow.cv_id} ${ledgerRow.phonetic_spelling}）`,
+      );
     }
     continue;
   }
 
   const lemmaNote = lemmaWarning(row.entry);
-  const notes = [...(row.reviewNote ? [row.reviewNote] : []), ...collectWarnings(row.entry), ...(lemmaNote ? [lemmaNote] : [])];
+  const notes = [
+    ...(row.reviewNote ? [row.reviewNote] : []),
+    ...collectWarnings(row.entry),
+    ...(lemmaNote ? [lemmaNote] : []),
+  ];
   if (!worklistKeys.has(row.entry.word_en.toLowerCase())) notes.push('ワークリストにない単語です');
   if (ledgerRow) notes.push(`台帳 ${ledgerRow.id}（確認待ち）`);
   if (notes.length > 0) {
     const e = row.entry;
-    review.push([e.word_en, e.part_of_speech, e.word_ja, e.syllables, String(e.primary_stress_syllable), e.stress_vowel_spelling, e.cv_id, e.phonetic_spelling ?? '', e.lemma ?? '', notes.join(' / '), row.source]);
+    review.push([
+      e.word_en,
+      e.part_of_speech,
+      e.word_ja,
+      e.syllables,
+      String(e.primary_stress_syllable),
+      e.stress_vowel_spelling,
+      e.cv_id,
+      e.phonetic_spelling ?? '',
+      e.lemma ?? '',
+      notes.join(' / '),
+      row.source,
+    ]);
   }
 }
 
 // ------------------------------------------------------------
 // 出力
 // ------------------------------------------------------------
-console.log(`parts: ${partFiles.length}ファイル / 有効行: ${byKey.size}件 / ワークリスト: ${worklist.length}語 / skipped: ${skipped.length}語`);
+console.log(
+  `parts: ${partFiles.length}ファイル / 有効行: ${byKey.size}件 / ワークリスト: ${worklist.length}語 / skipped: ${skipped.length}語`,
+);
 
 writeFileSync(
   join(workDir, 'review.tsv'),
   [[...OUTPUT_HEADERS, 'review', 'source'].join('\t'), ...review.map((r) => r.join('\t'))].join('\n') + '\n',
-  'utf-8'
+  'utf-8',
 );
 console.log(`要確認: ${review.length}件 → ${join(workDir, 'review.tsv')}`);
 
@@ -218,9 +262,23 @@ if (errors.length > 0) {
 
 const sorted = [...byKey.values()]
   .map((r) => r.entry)
-  .sort((a, b) => a.word_en.toLowerCase().localeCompare(b.word_en.toLowerCase()) || a.part_of_speech.localeCompare(b.part_of_speech));
+  .sort(
+    (a, b) =>
+      a.word_en.toLowerCase().localeCompare(b.word_en.toLowerCase()) ||
+      a.part_of_speech.localeCompare(b.part_of_speech),
+  );
 const body = sorted.map((e) =>
-  [e.word_en, e.part_of_speech, e.word_ja, e.syllables, e.primary_stress_syllable, e.stress_vowel_spelling, e.cv_id, e.phonetic_spelling ?? '', e.lemma ?? ''].join('\t')
+  [
+    e.word_en,
+    e.part_of_speech,
+    e.word_ja,
+    e.syllables,
+    e.primary_stress_syllable,
+    e.stress_vowel_spelling,
+    e.cv_id,
+    e.phonetic_spelling ?? '',
+    e.lemma ?? '',
+  ].join('\t'),
 );
 writeFileSync(outPath, [OUTPUT_HEADERS.join('\t'), ...body].join('\n') + '\n', 'utf-8');
 console.log(`\n出力: ${sorted.length}件 → ${outPath}`);

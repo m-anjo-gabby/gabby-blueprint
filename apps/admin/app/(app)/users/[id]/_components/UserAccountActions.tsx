@@ -64,11 +64,23 @@ export function UserAccountActions({ user }: { user: UserRecord }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-slate-600">{suspended ? t('suspendedNote') : t('activeNote')}</p>
         {suspended ? (
-          <Button variant="outline" size="sm" icon={<PlayCircle size={14} />} pending={isPending} onClick={() => handleSuspend(false)}>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<PlayCircle size={14} />}
+            pending={isPending}
+            onClick={() => handleSuspend(false)}
+          >
             {t('resume')}
           </Button>
         ) : (
-          <Button variant="outline" size="sm" icon={<Ban size={14} />} pending={isPending} onClick={() => setConfirmSuspend(user)}>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<Ban size={14} />}
+            pending={isPending}
+            onClick={() => setConfirmSuspend(user)}
+          >
             {t('suspend')}
           </Button>
         )}

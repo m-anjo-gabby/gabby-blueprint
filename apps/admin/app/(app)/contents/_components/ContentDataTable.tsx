@@ -31,7 +31,12 @@ export function ContentDataTable({ data, totalCount, pageCount }: ContentDataTab
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      >
         <ListSelectFilter
           label={t('typeHeader')}
           allLabel={t('typeFilterAllOption')}

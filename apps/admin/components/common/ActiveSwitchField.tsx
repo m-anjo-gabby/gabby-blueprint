@@ -19,7 +19,14 @@ interface ActiveSwitchFieldProps<T extends FieldValues> {
 /**
  * マスタの「使用中（is_active）」の切り替え。使用をやめたものは削除せずにオフにする（docs/DATA-DELETION.md）。
  */
-export function ActiveSwitchField<T extends FieldValues>({ control, name, label, onText, offText, readOnly }: ActiveSwitchFieldProps<T>) {
+export function ActiveSwitchField<T extends FieldValues>({
+  control,
+  name,
+  label,
+  onText,
+  offText,
+  readOnly,
+}: ActiveSwitchFieldProps<T>) {
   return (
     <FormField
       control={control}

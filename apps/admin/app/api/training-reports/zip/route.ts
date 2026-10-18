@@ -7,7 +7,11 @@ import {
   isAdminRequest,
   renderTrainingReportPdfs,
 } from '@/lib/trainingReport/queries';
-import { buildContentDisposition, buildTrainingReportFileBase, buildTrainingReportZipBase } from '@/lib/trainingReport/format';
+import {
+  buildContentDisposition,
+  buildTrainingReportFileBase,
+  buildTrainingReportZipBase,
+} from '@/lib/trainingReport/format';
 
 // 認証(cookie)に依存し、作成のたびに最新のデータからPDFを作るため、静的キャッシュさせない
 export const dynamic = 'force-dynamic';
@@ -60,7 +64,9 @@ export async function GET(request: NextRequest) {
     status: 200,
     headers: {
       'Content-Type': 'application/zip',
-      'Content-Disposition': buildContentDisposition(`${buildTrainingReportZipBase(contract.contractName, new Date())}.zip`),
+      'Content-Disposition': buildContentDisposition(
+        `${buildTrainingReportZipBase(contract.contractName, new Date())}.zip`,
+      ),
       'Cache-Control': 'no-store',
     },
   });

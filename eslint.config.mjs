@@ -1,6 +1,6 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import { defineConfig, globalIgnores } from 'eslint/config';
+import nextVitals from 'eslint-config-next/core-web-vitals';
+import nextTs from 'eslint-config-next/typescript';
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -11,22 +11,22 @@ const eslintConfig = defineConfig([
   // catalog の react のメジャー版を上げたら合わせる
   {
     settings: {
-      next: { rootDir: ["apps/*/"] },
-      react: { version: "19" },
+      next: { rootDir: ['apps/*/'] },
+      react: { version: '19' },
     },
   },
 
   {
     rules: {
       // any は使わない（DB の値は packages/types/db.ts の型、外部の値は unknown で受けて検証する）
-      "@typescript-eslint/no-explicit-any": "error",
+      '@typescript-eslint/no-explicit-any': 'error',
       // 使わない変数は消す。分割代入で残りを取り出すための変数と、_ で始まる名前（意図して使わない引数等）は許可する
-      "@typescript-eslint/no-unused-vars": [
-        "error",
+      '@typescript-eslint/no-unused-vars': [
+        'error',
         {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
           ignoreRestSiblings: true,
         },
       ],
@@ -35,25 +35,25 @@ const eslintConfig = defineConfig([
 
   // ログは共通ロガー（サーバー: logger、ブラウザ: clientLogger）に集約する。docs/LOGGING.md
   {
-    files: ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
+    files: ['apps/**/*.{ts,tsx}', 'packages/**/*.{ts,tsx}'],
     rules: {
-      "no-console": "error",
+      'no-console': 'error',
     },
   },
 
   // 生成物は lint しない。設定はリポジトリ直下にあるため、各アプリ配下にも効くよう「**/」を付ける
   globalIgnores([
-    "**/.next/**",
-    "**/.next-measure/**",
-    "**/out/**",
-    "**/build/**",
-    "**/dist/**",
-    "**/.turbo/**",
-    "**/.vercel/**",
-    "**/next-env.d.ts",
-    "testing/e2e/.artifacts/**",
-    "**/playwright-report/**",
-    "**/test-results/**",
+    '**/.next/**',
+    '**/.next-measure/**',
+    '**/out/**',
+    '**/build/**',
+    '**/dist/**',
+    '**/.turbo/**',
+    '**/.vercel/**',
+    '**/next-env.d.ts',
+    'testing/e2e/.artifacts/**',
+    '**/playwright-report/**',
+    '**/test-results/**',
   ]),
 ]);
 

@@ -20,7 +20,7 @@ const MONTHLY_REPORT_ERROR_MESSAGES_EN: Record<MonthlyReportErrorCode, string> =
  * Fetches the current coach's own monthly coaching report (defaults handled by caller: pass "YYYY-MM").
  */
 export async function getMyMonthlyReport(
-  reportMonth: string
+  reportMonth: string,
 ): Promise<{ success: true; report: CoachMonthlyReport } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await getCoachMonthlyReportCore(reportMonth);

@@ -1,20 +1,28 @@
 'use server';
 
-import { createServerClient } from "@gabby/lib/supabase/server";
-import { QUESTION_TYPES, SprintQuestion, SprintQuestionResponse, SprintQuestionType, type SprintAnswerType, type SprintAvailableLevels, type SprintType } from "@gabby/types/sprint";
-import { fetchSprintAvailableLevels } from "@gabby/lib/sprint/availableLevels";
-import { readSprintHistory, selfSprintHistorySchema } from "@gabby/lib/sprint/answeredHistory";
-import { createLogger } from "@gabby/lib/logger";
-import { getLogContext } from "@gabby/lib/logger/context";
-import { resolveSprintHasLevel, isSprintLevelSelectable } from "@gabby/lib";
-import type { ContentMetadata } from "@gabby/types/content";
-import type { AnalysisResult } from "@gabby/types/speechAssessment";
+import { createServerClient } from '@gabby/lib/supabase/server';
+import {
+  QUESTION_TYPES,
+  SprintQuestion,
+  SprintQuestionResponse,
+  SprintQuestionType,
+  type SprintAnswerType,
+  type SprintAvailableLevels,
+  type SprintType,
+} from '@gabby/types/sprint';
+import { fetchSprintAvailableLevels } from '@gabby/lib/sprint/availableLevels';
+import { readSprintHistory, selfSprintHistorySchema } from '@gabby/lib/sprint/answeredHistory';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
+import { resolveSprintHasLevel, isSprintLevelSelectable } from '@gabby/lib';
+import type { ContentMetadata } from '@gabby/types/content';
+import type { AnalysisResult } from '@gabby/types/speechAssessment';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { toIsoMonthInZone } from '@gabby/lib/date/date';
 import { getMyTimezone } from '@/lib/userTimezone';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
-const logger = createLogger("student");
+const logger = createLogger('student');
 const SPRINT_LIMIT_COUNT = 10;
 const SPRINT_SPEED_LIMIT_COUNT = 30;
 
@@ -40,9 +48,9 @@ export interface SprintHistoryItem {
   question_id: string;
   group_id: string | null;
   seq_no: number;
-  
+
   // 🌟 追加拡張フィールド
-  is_skipped: boolean;                        // スキップされたかどうか
+  is_skipped: boolean; // スキップされたかどうか
   assessment?: SprintAssessmentResult | null; // 発話評価が含まれる場合のリレーションオブジェクト
 }
 
@@ -115,65 +123,63 @@ export async function getSprintQuestionsAction(
   content_id: string,
   question_type: SprintQuestionType,
   difficulty_level: number,
-  mode: 'sprint' | 'drill' = 'sprint'
+  mode: 'sprint' | 'drill' = 'sprint',
 ): Promise<SprintQuestionResponse> {
   const ctx = await getLogContext();
-  
 
   try {
     const supabase = await createServerClient();
 
     const safeContentId = String(content_id).trim();
-    if (!(question_type in QUESTION_TYPES)) throw new Error("Invalid question type");
+    if (!(question_type in QUESTION_TYPES)) throw new Error('Invalid question type');
     const safeType = question_type;
     const safeLevel = Number(difficulty_level);
 
     // 選択画面の鍵表示と同じ判定をサーバーでも行う（URLの level 指定等で選択画面を経由しない場合も含む）
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
     const { data: progress, error: progressError } = await supabase
-      .from("student_m_sprint_progress")
-      .select("level_speed, level_structure, level_builders, level_mastery, level_managed")
-      .eq("user_id", user.id)
+      .from('student_m_sprint_progress')
+      .select('level_speed, level_structure, level_builders, level_mastery, level_managed')
+      .eq('user_id', user.id)
       .maybeSingle();
     if (progressError) throw progressError;
     if (!isSprintLevelSelectable(safeType as SprintQuestionType, safeLevel, progress)) {
-      logger.info("sprint:fetch_level_locked", "Requested level is not selectable for this student", {
+      logger.info('sprint:fetch_level_locked', 'Requested level is not selectable for this student', {
         ...ctx,
-        payload: { question_type: safeType, difficulty_level: safeLevel }
+        payload: { question_type: safeType, difficulty_level: safeLevel },
       });
       return { success: false, data: null, errorCode: 'level_locked' };
     }
 
     const { data: fetchedData, error } = await supabase
-      .from("com_m_sprint_questions")
-      .select("*")
-      .eq("content_id", safeContentId)
-      .eq("question_type", safeType)
-      .eq("difficulty_level", safeLevel);
+      .from('com_m_sprint_questions')
+      .select('*')
+      .eq('content_id', safeContentId)
+      .eq('question_type', safeType)
+      .eq('difficulty_level', safeLevel);
 
     if (error) throw error;
 
     const rawRows = (fetchedData as SprintQuestion[]) ?? [];
 
     if (rawRows.length === 0) {
-      logger.info("sprint:fetch_empty", "No questions found at all for this content/type/level", ctx);
+      logger.info('sprint:fetch_empty', 'No questions found at all for this content/type/level', ctx);
       return { success: false, data: null, errorCode: 'no_questions' };
     }
 
     let finalData: SprintQuestion[] = [];
 
-    if (safeType === "0") {
+    if (safeType === '0') {
       if (mode === 'sprint') {
         finalData = shuffleArray(rawRows).slice(0, SPRINT_SPEED_LIMIT_COUNT);
       } else {
         finalData = shuffleArray(rawRows);
       }
-    } 
-    else {
+    } else {
       // 1. ユニークな group_id を抽出
-      const allUniqueGroupIds = Array.from(new Set(rawRows.map(item => item.group_id).filter(Boolean))) as string[];
-      
+      const allUniqueGroupIds = Array.from(new Set(rawRows.map((item) => item.group_id).filter(Boolean))) as string[];
+
       // 2. group_id リストをシャッフルし、モードに応じてスライス
       let targetGroupIds = shuffleArray(allUniqueGroupIds);
       if (mode === 'sprint') {
@@ -182,7 +188,7 @@ export async function getSprintQuestionsAction(
 
       // 3. group_id ごとに問題をマップに格納
       const groupMap = new Map<string, SprintQuestion[]>();
-      rawRows.forEach(item => {
+      rawRows.forEach((item) => {
         if (!item.group_id) return;
         if (!groupMap.has(item.group_id)) {
           groupMap.set(item.group_id, []);
@@ -196,18 +202,17 @@ export async function getSprintQuestionsAction(
       });
 
       // 5. シャッフルされた targetGroupIds の順番で問題をフラットに結合
-      finalData = targetGroupIds.flatMap(groupId => groupMap.get(groupId) || []);
+      finalData = targetGroupIds.flatMap((groupId) => groupMap.get(groupId) || []);
     }
 
-    logger.debug("sprint:fetch_success", "getSprintQuestionsAction success", {
+    logger.debug('sprint:fetch_success', 'getSprintQuestionsAction success', {
       ...ctx,
-      payload: { mode, count: finalData.length }
+      payload: { mode, count: finalData.length },
     });
-    
-    return { success: true, data: finalData };
 
+    return { success: true, data: finalData };
   } catch (error) {
-    logger.error("sprint:fetch_failed", "getSprintQuestionsAction error", {
+    logger.error('sprint:fetch_failed', 'getSprintQuestionsAction error', {
       ...ctx,
       err: error,
     });
@@ -215,7 +220,7 @@ export async function getSprintQuestionsAction(
     return {
       success: false,
       data: null,
-      error: getErrorMessage(error, "Failed to fetch sprint questions")
+      error: getErrorMessage(error, 'Failed to fetch sprint questions'),
     };
   }
 }
@@ -224,7 +229,7 @@ export async function getSprintQuestionsAction(
  * 自主トレスプリント結果・履歴をDBに登録するServer Action
  */
 export async function createSprintScoreAction(
-  input: CreateSprintScoreInput
+  input: CreateSprintScoreInput,
 ): Promise<{ success: boolean; data: { self_sprint_id: string } | null; error?: string }> {
   const ctx = await getLogContext();
 
@@ -233,21 +238,21 @@ export async function createSprintScoreAction(
 
     // サーバー側でセッションから安全に本人のユーザーIDを検証・取得
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     // 履歴の形を保存前に検証する（壊れた・巨大な配列を保存させない）
     const parsedHistory = selfSprintHistorySchema.safeParse(input.history);
     if (!parsedHistory.success) {
-      logger.error("sprint:create_score_invalid_history", "Invalid answered_history payload", {
+      logger.error('sprint:create_score_invalid_history', 'Invalid answered_history payload', {
         ...ctx,
-        payload: { issues: parsedHistory.error.issues.slice(0, 5) }
+        payload: { issues: parsedHistory.error.issues.slice(0, 5) },
       });
-      return { success: false, data: null, error: "Invalid sprint history" };
+      return { success: false, data: null, error: 'Invalid sprint history' };
     }
 
     // self_t_sprint へのインサート (JSONBなので拡張されたオブジェクト配列をそのまま渡せる)
     const { data, error } = await supabase
-      .from("self_t_sprint")
+      .from('self_t_sprint')
       .insert([
         {
           user_id: user.id,
@@ -260,35 +265,32 @@ export async function createSprintScoreAction(
           total_answered: Number(input.total_answered),
           total_assessments: Number(input.total_assessments),
           answered_history: input.history, // 🌟 評価やスキップ情報がそのままJSONBとして保存されます
-        }
+        },
       ])
-      .select("self_sprint_id")
+      .select('self_sprint_id')
       .single();
 
     if (error) throw error;
 
-    logger.info("sprint:create_score_success", "Successfully saved sprint result", {
+    logger.info('sprint:create_score_success', 'Successfully saved sprint result', {
       ...ctx,
       payload: { self_sprint_id: data.self_sprint_id },
     });
 
     return { success: true, data: { self_sprint_id: data.self_sprint_id } };
-
   } catch (error) {
-    logger.error("sprint:create_score_failed", "Failed to create sprint score", {
+    logger.error('sprint:create_score_failed', 'Failed to create sprint score', {
       ...ctx,
       err: error,
     });
-    return { success: false, data: null, error: getErrorMessage(error, "Failed to save sprint results") };
+    return { success: false, data: null, error: getErrorMessage(error, 'Failed to save sprint results') };
   }
 }
 
 /**
  * 指定された結果IDから、当時の「出題・解答順序」の通りに問題を再構築してフェッチするServer Action
  */
-export async function getSprintResultAction(
-  self_sprint_id: string
-): Promise<SprintResultResponse> {
+export async function getSprintResultAction(self_sprint_id: string): Promise<SprintResultResponse> {
   const ctx = await getLogContext();
 
   try {
@@ -296,22 +298,23 @@ export async function getSprintResultAction(
 
     // サーバー側でセッションから安全に本人のユーザーIDを検証・取得
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     // ① スコア・履歴レコードを1件取得（本人のレコードのみ）
     // 🛠️ hasLevel 解決に必要な教材メタデータ（com_m_contents.metadata）を同一クエリでJOIN取得し、
     // 呼び出し側（page.tsx）での直列2回目のDB往復（getContentAction）を不要にする
     const { data: scoreRecord, error: scoreError } = await supabase
-      .from("self_t_sprint")
-      .select("*, com_m_contents(metadata)")
-      .eq("self_sprint_id", self_sprint_id)
-      .eq("user_id", user.id)
+      .from('self_t_sprint')
+      .select('*, com_m_contents(metadata)')
+      .eq('self_sprint_id', self_sprint_id)
+      .eq('user_id', user.id)
       .single();
 
     if (scoreError) throw scoreError;
-    if (!scoreRecord) throw new Error("Sprint record not found");
+    if (!scoreRecord) throw new Error('Sprint record not found');
 
-    const joinedContent = scoreRecord.com_m_contents as { metadata?: ContentMetadata | null } | { metadata?: ContentMetadata | null }[] | null;
+    const joinedContent = scoreRecord.com_m_contents as
+      { metadata?: ContentMetadata | null } | { metadata?: ContentMetadata | null }[] | null;
     const contentMetadata = Array.isArray(joinedContent) ? joinedContent[0]?.metadata : joinedContent?.metadata;
     const hasLevel = resolveSprintHasLevel(contentMetadata?.sprint);
 
@@ -326,7 +329,7 @@ export async function getSprintResultAction(
       // is_skipped が false、または未定義/nullのものを「発話した」と判定
       if (h.is_skipped === false) {
         totalAssessmentCount++;
-        
+
         // assessment 内の total_score を加算
         if (h.assessment && typeof h.assessment.total_score === 'number') {
           totalScoreSum += h.assessment.total_score;
@@ -339,10 +342,7 @@ export async function getSprintResultAction(
     const resultRecord = { ...scoreRecord, answered_history: history };
 
     // 平均スコアの算出（0割りを防ぐ・四捨五入で整数に丸める）
-    const averageAssessmentScore = scoredQuestionsCount > 0 
-      ? Math.round(totalScoreSum / scoredQuestionsCount) 
-      : 0;
-
+    const averageAssessmentScore = scoredQuestionsCount > 0 ? Math.round(totalScoreSum / scoredQuestionsCount) : 0;
 
     if (history.length === 0) {
       return {
@@ -353,18 +353,18 @@ export async function getSprintResultAction(
           totalAssessmentCount: 0,
           averageAssessmentScore: 0,
           hasLevel,
-        }
+        },
       };
     }
 
     // ② 履歴に記録されている全ての question_id を抽出
-    const targetIds = history.map(h => h.question_id);
+    const targetIds = history.map((h) => h.question_id);
 
     // ③ 問題マスタから該当する問題データを一括フェッチ
     const { data: questionsData, error: qError } = await supabase
-      .from("com_m_sprint_questions")
-      .select("*")
-      .in("question_id", targetIds);
+      .from('com_m_sprint_questions')
+      .select('*')
+      .in('question_id', targetIds);
 
     if (qError) throw qError;
 
@@ -372,10 +372,10 @@ export async function getSprintResultAction(
 
     // ④ 問題マスタから取得したデータを、保存されていた history 配列のインデックス順に完全に再ソート
     const sortedQuestions = history
-      .map(hist => rawQuestions.find(q => q.question_id === hist.question_id))
+      .map((hist) => rawQuestions.find((q) => q.question_id === hist.question_id))
       .filter((q): q is NonNullable<typeof q> => !!q);
 
-    logger.debug("sprint:get_result_success", "Successfully recovered sprint session playlist order", {
+    logger.debug('sprint:get_result_success', 'Successfully recovered sprint session playlist order', {
       ...ctx,
       payload: { total_recovered: sortedQuestions.length },
     });
@@ -389,15 +389,14 @@ export async function getSprintResultAction(
         totalAssessmentCount,
         averageAssessmentScore,
         hasLevel,
-      }
+      },
     };
-
   } catch (error) {
-    logger.error("sprint:get_result_failed", "Failed to recover sprint result", {
+    logger.error('sprint:get_result_failed', 'Failed to recover sprint result', {
       ...ctx,
       err: error,
     });
-    return { success: false, data: null, error: getErrorMessage(error, "Failed to load session results") };
+    return { success: false, data: null, error: getErrorMessage(error, 'Failed to load session results') };
   }
 }
 
@@ -411,7 +410,7 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     // セッションは日時（UTC）で保存されているため、生徒のタイムゾーンでの日付で月を絞る。
     // どのタイムゾーンでも月の範囲を覆うよう前後1日広げて取得し、生徒のタイムゾーンの月で絞り込む
@@ -422,8 +421,9 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
 
     // 1. スプリントセッション履歴の取得
     const { data: sessionsData, error: sessionsError } = await supabase
-      .from("self_t_sprint")
-      .select(`
+      .from('self_t_sprint')
+      .select(
+        `
         self_sprint_id,
         sprint_type,
         content_id,
@@ -437,11 +437,12 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
           content_name,
           metadata
         )
-      `)
-      .eq("user_id", user.id)
-      .gte("insert_date", startDate)
-      .lte("insert_date", endDate)
-      .order("insert_date", { ascending: false });
+      `,
+      )
+      .eq('user_id', user.id)
+      .gte('insert_date', startDate)
+      .lte('insert_date', endDate)
+      .order('insert_date', { ascending: false });
 
     if (sessionsError) throw sessionsError;
     const sessionsInMonth = (sessionsData ?? []).filter((s) => toIsoMonthInZone(s.insert_date, timezone) === yearMonth);
@@ -452,8 +453,9 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
     const endDayStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
     const { data: drillsData, error: drillsError } = await supabase
-      .from("self_t_sprint_summary")
-      .select(`
+      .from('self_t_sprint_summary')
+      .select(
+        `
         summary_id,
         user_id,
         content_id,
@@ -467,36 +469,36 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
         com_m_contents (
           content_name
         )
-      `)
-      .eq("user_id", user.id)
-      .gte("training_date", startDayStr)
-      .lte("training_date", endDayStr)
-      .order("training_date", { ascending: false });
+      `,
+      )
+      .eq('user_id', user.id)
+      .gte('training_date', startDayStr)
+      .lte('training_date', endDayStr)
+      .order('training_date', { ascending: false });
 
     if (drillsError) throw drillsError;
 
-    logger.debug("sprint:get_history_success", "Successfully fetched sprint and drill history", {
+    logger.debug('sprint:get_history_success', 'Successfully fetched sprint and drill history', {
       ...ctx,
       payload: { sessionsCount: sessionsInMonth.length, drillsCount: drillsData?.length || 0 },
     });
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: {
         sessions: sessionsInMonth,
-        drills: drillsData || []
-      } 
+        drills: drillsData || [],
+      },
     };
-
   } catch (error) {
-    logger.error("sprint:get_history_failed", "Failed to fetch sprint history", {
+    logger.error('sprint:get_history_failed', 'Failed to fetch sprint history', {
       ...ctx,
       err: error,
     });
-    return { 
-      success: false, 
-      data: { sessions: [], drills: [] }, 
-      error: getErrorMessage(error) 
+    return {
+      success: false,
+      data: { sessions: [], drills: [] },
+      error: getErrorMessage(error),
     };
   }
 }
@@ -511,29 +513,25 @@ export async function getLastSprintSessionAction(contentId?: string) {
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     // 最新の1件を取得
     let query = supabase
-      .from("self_t_sprint")
-      .select("sprint_type, content_id, question_type, difficulty_level, time_limit_sec")
-      .eq("user_id", user.id);
+      .from('self_t_sprint')
+      .select('sprint_type, content_id, question_type, difficulty_level, time_limit_sec')
+      .eq('user_id', user.id);
 
     if (contentId) {
-      query = query.eq("content_id", contentId);
+      query = query.eq('content_id', contentId);
     }
 
-    const { data, error } = await query
-      .order("insert_date", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data, error } = await query.order('insert_date', { ascending: false }).limit(1).maybeSingle();
 
     if (error) throw error;
 
     return { success: true, data };
-
   } catch (error) {
-    logger.error("sprint:get_last_session_failed", "Failed to fetch last session info", {
+    logger.error('sprint:get_last_session_failed', 'Failed to fetch last session info', {
       ...ctx,
       err: error,
     });
@@ -550,21 +548,20 @@ export async function getSprintProgressAction() {
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     const { data, error } = await supabase
-      .from("student_m_sprint_progress")
-      .select("*")
-      .eq("user_id", user.id)
+      .from('student_m_sprint_progress')
+      .select('*')
+      .eq('user_id', user.id)
       .maybeSingle();
 
     if (error) throw error;
 
     // データが存在しない場合は null を返し、呼び出し側でデフォルト値を扱う
     return { success: true, data };
-
   } catch (error) {
-    logger.error("sprint:get_progress_failed", "Failed to fetch sprint progress", {
+    logger.error('sprint:get_progress_failed', 'Failed to fetch sprint progress', {
       ...ctx,
       err: error,
     });
@@ -583,7 +580,7 @@ export async function reportSprintProgress(
   contentId: string,
   questionCount: number,
   assessmentCount: number,
-  questionType: SprintQuestionType // 型安全な問題種別パラメータ
+  questionType: SprintQuestionType, // 型安全な問題種別パラメータ
 ): Promise<void> {
   const ctx = await getLogContext();
 
@@ -597,7 +594,7 @@ export async function reportSprintProgress(
 
     // 修正した4引数版の RPC (increment_sprint_summary) を呼び出し
     // p_user_id はセキュリティ担保のためDB側の auth.uid() に委ねる
-    const { error } = await supabase.rpc("increment_sprint_summary", {
+    const { error } = await supabase.rpc('increment_sprint_summary', {
       p_content_id: contentId,
       p_question_count: questionCount,
       p_assessment_count: assessmentCount,
@@ -607,18 +604,18 @@ export async function reportSprintProgress(
     if (error) throw error;
 
     logger.info(
-      "sprint:report_progress_success",
+      'sprint:report_progress_success',
       `Reported sprint progress: ${questionCount} questions (${questionType}), ${assessmentCount} assessments`,
-      { ...ctx, payload: { contentId, questionCount, assessmentCount, questionType } }
+      { ...ctx, payload: { contentId, questionCount, assessmentCount, questionType } },
     );
   } catch (err) {
     // 記録処理の失敗（ネットワーク一時不通など）が、ユーザーのドリル学習継続を阻害しないよう、
     // エラーは捕捉してログに留めるソフトランディング構造を維持
-    logger.error(
-      "sprint:report_progress_failed",
-      err instanceof Error ? err.message : "Unknown error",
-      { ...ctx, err, payload: { contentId, questionCount, assessmentCount, questionType } }
-    );
+    logger.error('sprint:report_progress_failed', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { contentId, questionCount, assessmentCount, questionType },
+    });
   }
 }
 
@@ -631,22 +628,24 @@ export async function getContentAction(contentId: string) {
     const supabase = await createServerClient();
     // 選択画面で問題の無い種別・レベルを選べないよう、「問題が存在する種別×レベル」も同じ往復で返す
     const [{ data, error }, levelsByContent] = await Promise.all([
-      supabase
-        .from("com_m_contents")
-        .select("*")
-        .eq("content_id", contentId)
-        .single(),
+      supabase.from('com_m_contents').select('*').eq('content_id', contentId).single(),
       fetchSprintAvailableLevels(supabase, [contentId]),
     ]);
 
     if (error) throw error;
     if (!levelsByContent) {
-      logger.warn("sprint:get_available_levels_failed", "Failed to fetch available levels; levels are not filtered", ctx);
+      logger.warn(
+        'sprint:get_available_levels_failed',
+        'Failed to fetch available levels; levels are not filtered',
+        ctx,
+      );
     }
-    const availableLevels: SprintAvailableLevels | null = levelsByContent ? (levelsByContent.get(contentId) ?? {}) : null;
+    const availableLevels: SprintAvailableLevels | null = levelsByContent
+      ? (levelsByContent.get(contentId) ?? {})
+      : null;
     return { success: true, data, availableLevels };
   } catch (error) {
-    logger.error("sprint:get_content_failed", getErrorMessage(error), { ...ctx, err: error });
+    logger.error('sprint:get_content_failed', getErrorMessage(error), { ...ctx, err: error });
     return { success: false, error: getErrorMessage(error) };
   }
 }

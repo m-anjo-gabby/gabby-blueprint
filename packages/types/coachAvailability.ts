@@ -6,7 +6,7 @@
 
 // 曜日ラベル（表示用途はポータル側で言語別に定義する。ここでは値の並び順のみ規定）
 export const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6] as const;
-export type DayOfWeek = typeof DAYS_OF_WEEK[number]; // 0:日 ... 6:土
+export type DayOfWeek = (typeof DAYS_OF_WEEK)[number]; // 0:日 ... 6:土
 
 /**
  * CoachAvailabilitySlot: com_m_coach_availability の1レコード
@@ -18,7 +18,7 @@ export interface CoachAvailabilitySlot {
   coach_id: string;
   day_of_week: DayOfWeek;
   start_time: string; // "HH:MM:SS"
-  end_time: string;   // "HH:MM:SS"
+  end_time: string; // "HH:MM:SS"
   insert_date: string;
   update_date: string;
 }
@@ -27,34 +27,24 @@ export interface CoachAvailabilitySlot {
 export interface CoachAvailabilityFormValues {
   day_of_week: DayOfWeek;
   start_time: string; // "HH:MM"
-  end_time: string;   // "HH:MM"
+  end_time: string; // "HH:MM"
 }
 
 export type CoachAvailabilityErrorCode =
-  | 'unauthorized'
-  | 'invalid_input'
-  | 'db_insert_failed'
-  | 'db_delete_failed'
-  | 'db_update_failed'
-  | 'unexpected_error';
+  'unauthorized' | 'invalid_input' | 'db_insert_failed' | 'db_delete_failed' | 'db_update_failed' | 'unexpected_error';
 
 export type GetCoachAvailabilityResult =
-  | { success: true; slots: CoachAvailabilitySlot[] }
-  | { success: false; errorCode: CoachAvailabilityErrorCode };
+  { success: true; slots: CoachAvailabilitySlot[] } | { success: false; errorCode: CoachAvailabilityErrorCode };
 
 export type AddCoachAvailabilityResult =
-  | { success: true; slot: CoachAvailabilitySlot }
-  | { success: false; errorCode: CoachAvailabilityErrorCode };
+  { success: true; slot: CoachAvailabilitySlot } | { success: false; errorCode: CoachAvailabilityErrorCode };
 
 export type DeleteCoachAvailabilityResult =
-  | { success: true }
-  | { success: false; errorCode: CoachAvailabilityErrorCode };
+  { success: true } | { success: false; errorCode: CoachAvailabilityErrorCode };
 
 /** 空き時間を最後に確認した日時（com_m_coach_profile.availability_confirmed_at。未確認は null） */
 export type GetAvailabilityConfirmedAtResult =
-  | { success: true; confirmedAt: string | null }
-  | { success: false; errorCode: CoachAvailabilityErrorCode };
+  { success: true; confirmedAt: string | null } | { success: false; errorCode: CoachAvailabilityErrorCode };
 
 export type ConfirmAvailabilityResult =
-  | { success: true; confirmedAt: string }
-  | { success: false; errorCode: CoachAvailabilityErrorCode };
+  { success: true; confirmedAt: string } | { success: false; errorCode: CoachAvailabilityErrorCode };

@@ -12,7 +12,10 @@ import { sanitizeReturnTo } from './returnTo';
  * - PKCE（code）・Supabase 標準の招待（type=invite）: 後方互換のために残している受け口
  *   （独自の招待は /auth/invite が直接トークンを受け取るため、ここを通らない）
  */
-export function createAuthCallbackHandler(appName: 'admin' | 'coach' | 'student', options: { defaultPath?: string } = {}) {
+export function createAuthCallbackHandler(
+  appName: 'admin' | 'coach' | 'student',
+  options: { defaultPath?: string } = {},
+) {
   const logger = createLogger(appName);
   const defaultPath = options.defaultPath ?? '/dashboard';
 

@@ -54,7 +54,9 @@ export function StudentCard({ student }: Props) {
                   {latest_contract.plan_name_en}
                 </p>
                 <p>
-                  <span className={`font-semibold ${isCurrent ? 'text-emerald-500/80' : 'text-slate-400'}`}>Period </span>
+                  <span className={`font-semibold ${isCurrent ? 'text-emerald-500/80' : 'text-slate-400'}`}>
+                    Period{' '}
+                  </span>
                   {formatDateEn(latest_contract.start_date)} &ndash; {formatDateEn(latest_contract.end_date)}
                 </p>
               </div>

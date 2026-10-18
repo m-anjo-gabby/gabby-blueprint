@@ -40,7 +40,9 @@ function allowNullArgs(types) {
     // 1行の形: Args: { _a?: boolean; _b: string }
     const inline = line.match(/^(\s*Args: \{ )(.*)( \}.*)$/);
     if (argsIndent === null && inline) {
-      const props = inline[2].split('; ').map((p) => p.replace(/^(\w+\??): (.+)$/, (_, k, t) => `${k}: ${nullable(t)}`));
+      const props = inline[2]
+        .split('; ')
+        .map((p) => p.replace(/^(\w+\??): (.+)$/, (_, k, t) => `${k}: ${nullable(t)}`));
       out.push(`${inline[1]}${props.join('; ')}${inline[3]}`);
       continue;
     }
@@ -95,7 +97,8 @@ function parseEnumCheck(col, def) {
   const lists = mentions.filter((m) => m[2] !== undefined);
   if (lists.length !== 1 || mentions.some((m) => m[1] === undefined)) return null;
   const values = [...lists[0][2].matchAll(/'((?:[^']|'')*)'(?:::[\w ]+)?|(-?\d+(?:\.\d+)?)/g)].map((v) =>
-    v[1] !== undefined ? JSON.stringify(v[1].replace(/''/g, "'")) : v[2]);
+    v[1] !== undefined ? JSON.stringify(v[1].replace(/''/g, "'")) : v[2],
+  );
   return values.length > 0 ? values : null;
 }
 
@@ -123,20 +126,37 @@ function narrowEnumColumns(types, enumColumns) {
   let section = null;
   let table = null;
   let part = null;
-  return lines.map((line) => {
-    const m = line.match(/^( *)(\w+)(\??): (.*)$/);
-    if (!m) return line;
-    const [, indent, key, optional, rest] = m;
-    if (indent.length === 2 && rest === '{') { schema = key; section = table = part = null; return line; }
-    if (indent.length === 4 && rest === '{') { section = key; table = part = null; return line; }
-    if (indent.length === 6 && rest === '{') { table = key; part = null; return line; }
-    if (indent.length === 8 && rest === '{') { part = key; return line; }
-    if (indent.length !== 10 || section !== 'Tables' || !['Row', 'Insert', 'Update'].includes(part)) return line;
-    const values = enumColumns.get(`${schema}.${table}.${key}`);
-    if (!values) return line;
-    const nullable = /\| null$/.test(rest);
-    return `${indent}${key}${optional}: ${values.join(' | ')}${nullable ? ' | null' : ''}`;
-  }).join('\n');
+  return lines
+    .map((line) => {
+      const m = line.match(/^( *)(\w+)(\??): (.*)$/);
+      if (!m) return line;
+      const [, indent, key, optional, rest] = m;
+      if (indent.length === 2 && rest === '{') {
+        schema = key;
+        section = table = part = null;
+        return line;
+      }
+      if (indent.length === 4 && rest === '{') {
+        section = key;
+        table = part = null;
+        return line;
+      }
+      if (indent.length === 6 && rest === '{') {
+        table = key;
+        part = null;
+        return line;
+      }
+      if (indent.length === 8 && rest === '{') {
+        part = key;
+        return line;
+      }
+      if (indent.length !== 10 || section !== 'Tables' || !['Row', 'Insert', 'Update'].includes(part)) return line;
+      const values = enumColumns.get(`${schema}.${table}.${key}`);
+      if (!values) return line;
+      const nullable = /\| null$/.test(rest);
+      return `${indent}${key}${optional}: ${values.join(' | ')}${nullable ? ' | null' : ''}`;
+    })
+    .join('\n');
 }
 
 function parseArgs(argv) {
@@ -154,8 +174,9 @@ function parseArgs(argv) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const { project, ref, token, query } = await connect(opts.env, askSecret).catch((e) => fail(e.message));
-  const res = await api(token, 'GET', `/projects/${ref}/types/typescript?included_schemas=${SCHEMAS.join(',')}`)
-    .catch((e) => fail(`型定義の生成に失敗しました: ${e.message}`));
+  const res = await api(token, 'GET', `/projects/${ref}/types/typescript?included_schemas=${SCHEMAS.join(',')}`).catch(
+    (e) => fail(`型定義の生成に失敗しました: ${e.message}`),
+  );
   const enumColumns = await loadEnumColumns(query).catch((e) => fail(`CHECK 制約の取得に失敗しました: ${e.message}`));
   const generated = HEADER + narrowEnumColumns(allowNullArgs(res.types.replace(/\r\n/g, '\n')), enumColumns);
   const current = existsSync(OUTPUT) ? readFileSync(OUTPUT, 'utf8').replace(/\r\n/g, '\n') : '';
@@ -167,7 +188,9 @@ async function main() {
     return;
   }
   if (opts.mode === 'check') {
-    console.log(`${relative} が実DBと異なります。node supabase/release/types.mjs --env=${opts.env} --write で作り直してください。`);
+    console.log(
+      `${relative} が実DBと異なります。node supabase/release/types.mjs --env=${opts.env} --write で作り直してください。`,
+    );
     process.exit(1);
   }
   writeFileSync(OUTPUT, generated);

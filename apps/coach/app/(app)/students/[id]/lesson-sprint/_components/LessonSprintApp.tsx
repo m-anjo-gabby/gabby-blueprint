@@ -24,8 +24,8 @@ export function LessonSprintApp({ studentId, sessionId, profile, lessonSprints, 
   const router = useRouter();
   // 「Repeat Same Settings」（結果画面）から遷移してきた場合、既にセッションが開始済みのことがあるため、
   // マウント時点のストア状態を見て初期ビューを決める（常に'selecting'から始めない）。
-  const [view, setView] = useState<'selecting' | 'playing'>(
-    () => (useLessonSprintStore.getState().session.isActive ? 'playing' : 'selecting')
+  const [view, setView] = useState<'selecting' | 'playing'>(() =>
+    useLessonSprintStore.getState().session.isActive ? 'playing' : 'selecting',
   );
   const { startSession, resetStore } = useLessonSprintStore();
 

@@ -100,7 +100,7 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
       }
 
       if (result.success) {
-        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), "success");
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success');
         setOpen(false);
         setIsConfirming(false);
       } else {
@@ -131,122 +131,161 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
             <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
             <Edit size={14} /> {t('editButton')}
           </Button>
         )}
       </DialogTrigger>
 
-      <DialogContent 
-        className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button]:focus:ring-0 [&>button]:focus:ring-offset-0 [&>button]:focus-visible:ring-0 [&>button]:outline-none"
-      >
+      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button]:focus:ring-0 [&>button]:focus:ring-offset-0 [&>button]:focus-visible:ring-0 [&>button]:outline-none">
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
+              <>
+                <CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}
+              </>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
+              <>
+                <PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}
+              </>
             ) : (
-              <><Edit size={18} className="text-brand-400" /> {t('editTitle')}</>
+              <>
+                <Edit size={18} className="text-brand-400" /> {t('editTitle')}
+              </>
             )}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white">
-            
             {/* 顧客名称 */}
-            <FormField control={form.control} name="client_name" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameLabel')}</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                    {field.value}
-                  </div>
-                ) : (
-                  <FormControl>
-                    <Input {...field} placeholder={t('namePlaceholder')} className="bg-white rounded-xl border-slate-200" />
-                  </FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="client_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {t('nameLabel')}
+                  </FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                      {field.value}
+                    </div>
+                  ) : (
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder={t('namePlaceholder')}
+                        className="bg-white rounded-xl border-slate-200"
+                      />
+                    </FormControl>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               {/* 顧客種別 */}
-              <FormField control={form.control} name="client_type" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('typeLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                      {field.value === '1' ? tTable('typeCorporate') : tTable('typeIndividual')}
-                    </div>
-                  ) : (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-white rounded-xl border-slate-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="1">{tTable('typeCorporate')}</SelectItem>
-                        <SelectItem value="2">{tTable('typeIndividual')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="client_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('typeLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                        {field.value === '1' ? tTable('typeCorporate') : tTable('typeIndividual')}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="1">{tTable('typeCorporate')}</SelectItem>
+                          <SelectItem value="2">{tTable('typeIndividual')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )}
+              />
 
               {/* 業界区分 */}
-              <FormField control={form.control} name="industry_type" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('industryLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                      {field.value === '1' ? tTable('industryPharma') : field.value === '2' ? tTable('industrySemiconductor') : tTable('industryOther')}
-                    </div>
-                  ) : (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-white rounded-xl border-slate-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="1">{t('industryPharmaOption')}</SelectItem>
-                        <SelectItem value="2">{t('industrySemiconductorOption')}</SelectItem>
-                        <SelectItem value="3">{t('industryOtherOption')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="industry_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('industryLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                        {field.value === '1'
+                          ? tTable('industryPharma')
+                          : field.value === '2'
+                            ? tTable('industrySemiconductor')
+                            : tTable('industryOther')}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="1">{t('industryPharmaOption')}</SelectItem>
+                          <SelectItem value="2">{t('industrySemiconductorOption')}</SelectItem>
+                          <SelectItem value="3">{t('industryOtherOption')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* 取引状態（編集時のみ。取引を終えた顧客は削除せずに取引終了にする） */}
             {mode === 'edit' && (
-              <FormField control={form.control} name="status" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('statusLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                      {field.value === String(CLIENT_STATUS.ENDED) ? t('statusEnded') : t('statusActive')}
-                    </div>
-                  ) : (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-white rounded-xl border-slate-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={String(CLIENT_STATUS.ACTIVE)}>{t('statusActive')}</SelectItem>
-                        <SelectItem value={String(CLIENT_STATUS.ENDED)}>{t('statusEnded')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('statusLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                        {field.value === String(CLIENT_STATUS.ENDED) ? t('statusEnded') : t('statusActive')}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={String(CLIENT_STATUS.ACTIVE)}>{t('statusActive')}</SelectItem>
+                          <SelectItem value={String(CLIENT_STATUS.ENDED)}>{t('statusEnded')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )}
+              />
             )}
 
             {/* アクションエリア */}
@@ -257,8 +296,12 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
                     {t('confirmQuestion', { action: mode === 'create' ? t('actionCreate') : t('actionUpdate') })}
                   </p>
                   {serverError && (
-                    <Alert variant="destructive" className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600">
-                      <AlertCircle size={14} />{serverError}
+                    <Alert
+                      variant="destructive"
+                      className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600"
+                    >
+                      <AlertCircle size={14} />
+                      {serverError}
                     </Alert>
                   )}
                   <div className="flex gap-3">
@@ -283,7 +326,7 @@ export function ClientFormDialog({ mode = 'create', initialData }: ClientFormDia
                 <Button
                   type="button"
                   className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md"
-                  onClick={() => form.trigger().then(valid => valid && setIsConfirming(true))}
+                  onClick={() => form.trigger().then((valid) => valid && setIsConfirming(true))}
                 >
                   {mode === 'create' ? t('confirmCreateButton') : t('confirmEditButton')}
                 </Button>

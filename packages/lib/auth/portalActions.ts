@@ -54,8 +54,10 @@ export interface PortalAuthConfig {
 }
 
 function isRedirectError(error: unknown): boolean {
-  return typeof (error as { digest?: unknown })?.digest === 'string' &&
-    (error as { digest: string }).digest.startsWith('NEXT_REDIRECT');
+  return (
+    typeof (error as { digest?: unknown })?.digest === 'string' &&
+    (error as { digest: string }).digest.startsWith('NEXT_REDIRECT')
+  );
 }
 
 /**
@@ -109,7 +111,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
           {
             userId: user.id,
             payload: { userType: user.app_metadata?.user_type },
-          }
+          },
         );
         // リダイレクトループを防ぐため、不許可ユーザーのセッションは即座に破棄する
         await signOutCore();
@@ -131,7 +133,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       logger.error(
         `auth:${config.appName}_login_unexpected`,
         error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, err: error, payload: { email } }
+        { ...ctx, err: error, payload: { email } },
       );
       return errorResponse('unexpected');
     }
@@ -159,7 +161,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       logger.error(
         `auth:${config.appName}_logout_unexpected`,
         error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, err: error }
+        { ...ctx, err: error },
       );
       // ログアウト失敗してもリダイレクトを試みる
       redirect(loginPath);
@@ -190,7 +192,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       logger.error(
         `auth:${config.appName}_forgot_password_unexpected`,
         error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, err: error, payload: { email } }
+        { ...ctx, err: error, payload: { email } },
       );
       return errorResponse('unexpected');
     }
@@ -206,7 +208,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
         logger.info(
           `auth:${config.appName}_reset_password_success`,
           `${config.appName} user successfully reset password via email link`,
-          ctx
+          ctx,
         );
         // 💡 クライアント側で完了表示を見せてから安全に遷移させるため、ここではリダイレクトしない
         return { success: true };
@@ -222,7 +224,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       logger.error(
         `auth:${config.appName}_reset_password_unexpected`,
         error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, err: error }
+        { ...ctx, err: error },
       );
       return errorResponse('unexpected');
     }
@@ -237,7 +239,11 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       if (result.error) {
         logger.error(`auth:${config.appName}_update_password_failed`, result.error, ctx);
       } else {
-        logger.info(`auth:${config.appName}_update_password_success`, `${config.appName} user updated password from settings`, ctx);
+        logger.info(
+          `auth:${config.appName}_update_password_success`,
+          `${config.appName} user updated password from settings`,
+          ctx,
+        );
       }
 
       return localize(result);
@@ -248,7 +254,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       logger.error(
         `auth:${config.appName}_update_password_unexpected`,
         error instanceof Error ? error.message : 'Unknown error',
-        { ...ctx, err: error }
+        { ...ctx, err: error },
       );
       return errorResponse('unexpected');
     }

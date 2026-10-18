@@ -1,4 +1,4 @@
-import { expect, type Locator } from "@playwright/test";
+import { expect, type Locator } from '@playwright/test';
 
 /**
  * 押すと何かが表示される操作（ダイアログ・確認画面・次の段階の画面）を、表示されるまで押す。

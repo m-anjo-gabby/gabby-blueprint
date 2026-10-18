@@ -7,13 +7,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { CHAT_ROOM_TYPES, ChatRoomType, ChatTargetUser } from '@gabby/types/chat';
 import { ClientOption } from '@gabby/types/client';
@@ -131,9 +125,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
 
           {isOneOnOne ? (
             <div className="space-y-5">
-              <p className="text-xs text-slate-500">
-                {t('oneOnOneHint')}
-              </p>
+              <p className="text-xs text-slate-500">{t('oneOnOneHint')}</p>
 
               <ParticipantPicker
                 label={t('participant1Label')}
@@ -157,9 +149,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
             </div>
           ) : (
             <div className="space-y-5">
-              <p className="text-xs text-slate-500">
-                {t('groupHint')}
-              </p>
+              <p className="text-xs text-slate-500">{t('groupHint')}</p>
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-600 block">{t('roomNameLabel')}</label>

@@ -24,7 +24,7 @@ export function ScoreButtons({ onScore, disabled }: Props) {
             onClick={() => onScore(score)}
             className={cn(
               'flex flex-col items-center justify-center gap-1 h-20 rounded-2xl border-2 font-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
-              isDefault ? 'border-amber-300' : 'border-transparent'
+              isDefault ? 'border-amber-300' : 'border-transparent',
             )}
             style={{ backgroundColor: `${meta.color}1a`, color: meta.color }}
           >

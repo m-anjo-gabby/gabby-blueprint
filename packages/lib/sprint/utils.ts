@@ -9,9 +9,11 @@ import type { StudentSprintProgress } from '@gabby/types/coachStudent';
  * SprintDrillPlayer/SprintTimePlayer/SprintSelect/結果画面など、
  * courseTitle 算出のために各所で個別に再実装されていたロジックを集約したもの。
  */
-export const resolveSprintHasLevel = (metadata: Pick<MetadataSprint, 'sprint_type' | 'has_level'> | null | undefined): boolean => {
+export const resolveSprintHasLevel = (
+  metadata: Pick<MetadataSprint, 'sprint_type' | 'has_level'> | null | undefined,
+): boolean => {
   const isCorpus = metadata?.sprint_type === '1';
-  return isCorpus ? metadata?.has_level ?? true : true;
+  return isCorpus ? (metadata?.has_level ?? true) : true;
 };
 
 /**
@@ -22,7 +24,15 @@ export const resolveSprintHasLevel = (metadata: Pick<MetadataSprint, 'sprint_typ
 export const isSprintLevelSelectable = (
   type: SprintQuestionType,
   level: number,
-  progress: Partial<Pick<StudentSprintProgress, 'level_speed' | 'level_structure' | 'level_builders' | 'level_mastery' | 'level_managed'>> | null | undefined
+  progress:
+    | Partial<
+        Pick<
+          StudentSprintProgress,
+          'level_speed' | 'level_structure' | 'level_builders' | 'level_mastery' | 'level_managed'
+        >
+      >
+    | null
+    | undefined,
 ): boolean => {
   const meta = QUESTION_TYPES[type];
   if (!meta) return false;
@@ -37,7 +47,7 @@ export const isSprintLevelSelectable = (
  */
 export const hasSprintQuestionsForType = (
   availableLevels: SprintAvailableLevels | null | undefined,
-  type: SprintQuestionType
+  type: SprintQuestionType,
 ): boolean => {
   if (!availableLevels) return true;
   return (availableLevels[type]?.length ?? 0) > 0;
@@ -49,7 +59,7 @@ export const hasSprintQuestionsForType = (
 export const isSprintLevelAvailable = (
   availableLevels: SprintAvailableLevels | null | undefined,
   type: SprintQuestionType,
-  level: number
+  level: number,
 ): boolean => {
   if (!availableLevels) return true;
   return availableLevels[type]?.includes(level) ?? false;
@@ -69,7 +79,7 @@ export const pickSprintLevel = (
     availableLevels: SprintAvailableLevels | null | undefined;
     isSelectable?: (level: number) => boolean;
     preferred?: number | null;
-  }
+  },
 ): number => {
   if (!options.hasLevel) return 1;
   const meta = QUESTION_TYPES[type];
@@ -92,17 +102,17 @@ export { getFeedbackConfig, getScoreTier } from '../assessment/feedbackConfig';
  */
 export const getSprintTitle = (type: SprintQuestionType | string, level: number, hasLevel?: boolean): string => {
   const typeConfig = QUESTION_TYPES[type as SprintQuestionType];
-  const typeLabel = typeConfig ? typeConfig.label : "UG Sprint";
-  
+  const typeLabel = typeConfig ? typeConfig.label : 'UG Sprint';
+
   if (hasLevel === false) {
     return typeLabel;
   }
-  
+
   // Level=0の場合は「Lv.」をつけずに「Basic」とする
   if (level === 0) {
     return `${typeLabel} Basic`; // 例: "UG Speed Basic"
   }
-  
+
   return `${typeLabel} Lv.${level}`; // 例: "UG Speed Lv.1"
 };
 
@@ -133,12 +143,18 @@ export const isSprintLevelNotReached = (type: SprintQuestionType | string, level
  * それ以外は formatSprintLevelLabel と同じ（Basic がある種別の0は「Basic」）。
  * 教材の難易度など「レベルそのもの」の表示には formatSprintLevelLabel を使う。
  */
-export const formatAcquiredSprintLevelLabel = (type: SprintQuestionType | string, level: number, notReachedLabel: string): string =>
-  isSprintLevelNotReached(type, level) ? notReachedLabel : formatSprintLevelLabel(type, level);
+export const formatAcquiredSprintLevelLabel = (
+  type: SprintQuestionType | string,
+  level: number,
+  notReachedLabel: string,
+): string => (isSprintLevelNotReached(type, level) ? notReachedLabel : formatSprintLevelLabel(type, level));
 
 /**
  * 発話評価対象のテキストから、句読点・記号を除いた単語配列を生成する共通ヘルパー
  */
 export const cleanAnswerWords = (text: string): string[] => {
-  return text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").split(" ").filter(Boolean);
+  return text
+    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '')
+    .split(' ')
+    .filter(Boolean);
 };

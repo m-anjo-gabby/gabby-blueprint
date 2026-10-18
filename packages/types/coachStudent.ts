@@ -8,11 +8,7 @@ import type { SprintQuestionType } from './sprint';
  */
 
 export type CoachStudentErrorCode =
-  | 'unauthorized'
-  | 'forbidden'
-  | 'invalid_input'
-  | 'already_finalized'
-  | 'unexpected_error';
+  'unauthorized' | 'forbidden' | 'invalid_input' | 'already_finalized' | 'unexpected_error';
 
 /** 生徒のスプリント進捗（student_m_sprint_progressのエンティティ相当） */
 export interface StudentSprintProgress {
@@ -196,7 +192,7 @@ export const TRAINING_REPORT_STATUS = {
   DRAFT: 1,
   FINALIZED: 2,
 } as const;
-export type TrainingReportStatus = typeof TRAINING_REPORT_STATUS[keyof typeof TRAINING_REPORT_STATUS];
+export type TrainingReportStatus = (typeof TRAINING_REPORT_STATUS)[keyof typeof TRAINING_REPORT_STATUS];
 
 /**
  * 契約(ticket)単位のトレーニングレポート・コーチコメント (com_t_contract_training_report)。
@@ -218,61 +214,49 @@ export interface ContractTrainingReport {
 }
 
 export type GetAssignedStudentsResult =
-  | { success: true; students: AssignedStudentSummary[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; students: AssignedStudentSummary[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetStudentOverviewResult =
-  | { success: true; profile: StudentOverviewProfile }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; profile: StudentOverviewProfile } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetStudentLiveSessionContractsResult =
   | { success: true; contracts: StudentLiveSessionContractSummary[] }
   | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetStudentSessionsByTicketResult =
-  | { success: true; sessions: CoachSessionListItem[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; sessions: CoachSessionListItem[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 /** 次に実施可能な（status=scheduled かつ 終了予定時刻が未来の）セッション1件。無ければnull */
 export type GetStudentUpcomingSessionResult =
-  | { success: true; session: StudentSessionHistoryItem | null }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; session: StudentSessionHistoryItem | null } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetStudentLiveSessionShortfallsResult =
-  | { success: true; shortfalls: LiveSessionShortfallItem[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; shortfalls: LiveSessionShortfallItem[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetStudentNotesResult =
-  | { success: true; notes: CoachStudentNote[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; notes: CoachStudentNote[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetSelfTrainingWeekSummaryResult =
-  | { success: true; summary: SelfTrainingWeekSummary }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; summary: SelfTrainingWeekSummary } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type AddCoachStudentNoteResult =
-  | { success: true; note: CoachStudentNote }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; note: CoachStudentNote } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetContractTrainingReportsResult =
-  | { success: true; reports: ContractTrainingReport[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; reports: ContractTrainingReport[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type SaveContractTrainingReportDraftResult =
-  | { success: true; report: ContractTrainingReport }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; report: ContractTrainingReport } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type FinalizeContractTrainingReportResult =
-  | { success: true; report: ContractTrainingReport }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; report: ContractTrainingReport } | { success: false; errorCode: CoachStudentErrorCode };
 
 /**
  * コーチによる生徒スプリント進捗（レベル/ステージ）更新の結果。
  * levelUp: 問題種別を1つ指定してレベルを上げた場合、forceStageUp: ステージを強制到達させた場合に使用する。
  */
 export type UpdateStudentSprintProgressResult =
-  | { success: true; progress: StudentSprintProgress }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; progress: StudentSprintProgress } | { success: false; errorCode: CoachStudentErrorCode };
 
 /** レベル更新1件分のリクエストパラメータ（問題種別+新しい到達レベル） */
 export interface UpdateStudentLevelInput {

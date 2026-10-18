@@ -6,7 +6,7 @@ export const CLIENT_STATUS = {
   ACTIVE: 1,
   ENDED: 9,
 } as const;
-export type ClientStatus = typeof CLIENT_STATUS[keyof typeof CLIENT_STATUS];
+export type ClientStatus = (typeof CLIENT_STATUS)[keyof typeof CLIENT_STATUS];
 
 /** com_m_client.client_type（0: 初期テナント 1:法人, 2:個人。値は DB の CHECK 制約に従う） */
 export type ClientType = TableRow<'com_m_client'>['client_type'];

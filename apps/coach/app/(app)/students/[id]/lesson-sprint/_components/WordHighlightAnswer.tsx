@@ -24,9 +24,7 @@ export function WordHighlightAnswer({ words, highlighted, onToggle }: Props) {
             onClick={() => onToggle(idx)}
             className={cn(
               'px-1 py-0.5 rounded-lg text-lg sm:text-xl font-black transition-colors cursor-pointer select-none',
-              isHighlighted
-                ? 'bg-rose-100 text-rose-700 ring-2 ring-rose-300'
-                : 'text-slate-800 hover:bg-slate-100'
+              isHighlighted ? 'bg-rose-100 text-rose-700 ring-2 ring-rose-300' : 'text-slate-800 hover:bg-slate-100',
             )}
           >
             {word}

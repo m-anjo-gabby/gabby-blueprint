@@ -99,18 +99,23 @@ export function PillTabs<T extends string>({ items, value, onValueChange, 'aria-
               value={itemValue}
               className={cn(
                 'group shrink-0 snap-start gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-4 h-10 text-sm font-semibold text-ink-soft shadow-none transition-all hover:border-brand-200',
-                'data-[state=active]:border-brand data-[state=active]:bg-brand data-[state=active]:text-white'
+                'data-[state=active]:border-brand data-[state=active]:bg-brand data-[state=active]:text-white',
               )}
             >
               {Icon && (
                 <Icon
                   size={15}
-                  className={cn('shrink-0 transition-colors group-data-[state=active]:text-white', iconClassName ?? 'text-ink-subtle')}
+                  className={cn(
+                    'shrink-0 transition-colors group-data-[state=active]:text-white',
+                    iconClassName ?? 'text-ink-subtle',
+                  )}
                 />
               )}
               {label}
               {count !== undefined && (
-                <span className="text-xs font-normal text-ink-muted group-data-[state=active]:text-white/70">{count}</span>
+                <span className="text-xs font-normal text-ink-muted group-data-[state=active]:text-white/70">
+                  {count}
+                </span>
               )}
             </TabsTrigger>
           ))}

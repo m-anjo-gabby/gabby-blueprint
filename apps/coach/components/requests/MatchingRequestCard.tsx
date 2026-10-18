@@ -14,20 +14,36 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { convertWeeklyTimeZone, getFirstLiveSessionOccurrence, getLessonEndTime, getWeeklyTimeChanges, toIsoDateInZone } from '@gabby/lib/date/date';
+import {
+  convertWeeklyTimeZone,
+  getFirstLiveSessionOccurrence,
+  getLessonEndTime,
+  getWeeklyTimeChanges,
+  toIsoDateInZone,
+} from '@gabby/lib/date/date';
 import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
-import { IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS, getMatchingUnbookedBreakdown } from '@gabby/types/matching';
+import {
+  IncomingMatchingRequestItem,
+  MATCHING_REQUEST_STATUS,
+  getMatchingUnbookedBreakdown,
+} from '@gabby/types/matching';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { RequestKindTag, WebTrialTag } from './RequestKindTag';
 
 const STATUS_BADGE: Record<number, { label: string; className: string }> = {
   [MATCHING_REQUEST_STATUS.PENDING]: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  [MATCHING_REQUEST_STATUS.APPROVED]: { label: 'Approved', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  [MATCHING_REQUEST_STATUS.APPROVED]: {
+    label: 'Approved',
+    className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
   [MATCHING_REQUEST_STATUS.REJECTED]: { label: 'Rejected', className: 'bg-rose-50 text-rose-700 border-rose-200' },
-  [MATCHING_REQUEST_STATUS.CANCELLED]: { label: 'Withdrawn', className: 'bg-slate-100 text-slate-600 border-slate-200' },
+  [MATCHING_REQUEST_STATUS.CANCELLED]: {
+    label: 'Withdrawn',
+    className: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
   [MATCHING_REQUEST_STATUS.EXPIRED]: { label: 'Expired', className: 'bg-slate-100 text-slate-600 border-slate-200' },
 };
 
@@ -55,7 +71,9 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
   // even before the every-minute expiry job updates its status.
   const isExpired =
     request.status === MATCHING_REQUEST_STATUS.EXPIRED ||
-    (request.status === MATCHING_REQUEST_STATUS.PENDING && !!request.expires_at && new Date(request.expires_at).getTime() <= Date.now());
+    (request.status === MATCHING_REQUEST_STATUS.PENDING &&
+      !!request.expires_at &&
+      new Date(request.expires_at).getTime() <= Date.now());
   const badge = STATUS_BADGE[isExpired ? MATCHING_REQUEST_STATUS.EXPIRED : request.status];
   const isPending = request.status === MATCHING_REQUEST_STATUS.PENDING && !isExpired;
 
@@ -65,18 +83,30 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
   const breakdown = availability ? getMatchingUnbookedBreakdown(availability) : null;
   const canApprove = !availability || availability.is_acceptable;
   const droppedSinceRequest =
-    availability && request.requested_bookable_sessions !== null && availability.bookable_sessions < request.requested_bookable_sessions;
+    availability &&
+    request.requested_bookable_sessions !== null &&
+    availability.bookable_sessions < request.requested_bookable_sessions;
 
   // The requested day/time is the student's local time (requested_timezone) and stays fixed for the whole
   // contract. Shown here in the coach's timezone, using the offset of the next occurrence.
   const coachSlot = useMemo(
     () =>
       convertWeeklyTimeZone(
-        { day_of_week: request.requested_day_of_week, start_time: request.requested_start_time, end_time: request.requested_end_time },
+        {
+          day_of_week: request.requested_day_of_week,
+          start_time: request.requested_start_time,
+          end_time: request.requested_end_time,
+        },
         request.requested_timezone,
-        timezone
+        timezone,
       ),
-    [request.requested_day_of_week, request.requested_start_time, request.requested_end_time, request.requested_timezone, timezone]
+    [
+      request.requested_day_of_week,
+      request.requested_start_time,
+      request.requested_end_time,
+      request.requested_timezone,
+      timezone,
+    ],
   );
   const studentSlotLabel = `${DAY_OF_WEEK_LABEL_EN[request.requested_day_of_week as DayOfWeek]} ${formatTimeRange(request.requested_start_time, request.requested_end_time)}`;
   const coachSlotLabel = `${DAY_OF_WEEK_LABEL_EN[coachSlot.day_of_week as DayOfWeek]} ${formatTimeRange(coachSlot.start_time, coachSlot.end_time)}`;
@@ -89,21 +119,45 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
     if (!isPending) return null;
     const notBefore = request.license_start_date ? new Date(request.license_start_date) : undefined;
     const first = getFirstLiveSessionOccurrence(
-      request.requested_day_of_week, request.requested_start_time, request.requested_timezone, timezone, undefined, notBefore
+      request.requested_day_of_week,
+      request.requested_start_time,
+      request.requested_timezone,
+      timezone,
+      undefined,
+      notBefore,
     );
     if (request.license_end_date && first.instant > new Date(request.license_end_date)) return null;
     return first;
-  }, [isPending, request.requested_day_of_week, request.requested_start_time, request.requested_timezone, request.license_start_date, request.license_end_date, timezone]);
+  }, [
+    isPending,
+    request.requested_day_of_week,
+    request.requested_start_time,
+    request.requested_timezone,
+    request.license_start_date,
+    request.license_end_date,
+    timezone,
+  ]);
 
   // Daylight saving time (the coach's or the student's) can move the lesson in the coach's local time during
   // the contract. List each change after the first session so the coach can check it still works for them.
   const laterTimeChanges = useMemo(() => {
     if (!firstSession || !request.license_end_date) return [];
     return getWeeklyTimeChanges(
-      request.requested_day_of_week, request.requested_start_time, request.requested_timezone, timezone,
-      firstSession.instant, new Date(request.license_end_date)
+      request.requested_day_of_week,
+      request.requested_start_time,
+      request.requested_timezone,
+      timezone,
+      firstSession.instant,
+      new Date(request.license_end_date),
     ).slice(1);
-  }, [firstSession, request.requested_day_of_week, request.requested_start_time, request.requested_timezone, request.license_end_date, timezone]);
+  }, [
+    firstSession,
+    request.requested_day_of_week,
+    request.requested_start_time,
+    request.requested_timezone,
+    request.license_end_date,
+    timezone,
+  ]);
 
   const handleApprove = async () => {
     const bookingText =
@@ -114,8 +168,10 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
     const ok = await showConfirm(
       'Approve this request?',
       bookingText +
-        (laterTimeChanges.length > 0 ? ' The time in your timezone changes during the contract because of daylight saving time.' : ''),
-      { variant: 'info', confirmText: 'Approve', cancelText: 'Cancel' }
+        (laterTimeChanges.length > 0
+          ? ' The time in your timezone changes during the contract because of daylight saving time.'
+          : ''),
+      { variant: 'info', confirmText: 'Approve', cancelText: 'Cancel' },
     );
     if (!ok) return;
 
@@ -189,14 +245,20 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
             </p>
           )}
           {laterTimeChanges.map((change) => (
-            <p key={change.from.toISOString()} className="flex items-center gap-1 text-[11px] font-bold text-amber-700 mt-1">
+            <p
+              key={change.from.toISOString()}
+              className="flex items-center gap-1 text-[11px] font-bold text-amber-700 mt-1"
+            >
               <CalendarClock size={12} />
               From {formatDateEn(change.from, timezone)}: {DAY_OF_WEEK_LABEL_EN[change.day_of_week as DayOfWeek]}{' '}
-              {formatTimeRange(change.start_time, getLessonEndTime(change.start_time))} (your time, daylight saving time)
+              {formatTimeRange(change.start_time, getLessonEndTime(change.start_time))} (your time, daylight saving
+              time)
             </p>
           ))}
         </div>
-        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
+        <span
+          className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}
+        >
           {badge.label}
         </span>
       </div>
@@ -215,8 +277,12 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
             Bookable now: {availability.bookable_sessions} of {availability.target_sessions} lessons
             {request.requested_bookable_sessions !== null && ` (${request.requested_bookable_sessions} when requested)`}
           </p>
-          {breakdown.conflicts > 0 && <p>{breakdown.conflicts} lesson(s) clash with your other bookings or days off.</p>}
-          {breakdown.periodShort > 0 && <p>{breakdown.periodShort} lesson(s) don&apos;t fit in the remaining license period.</p>}
+          {breakdown.conflicts > 0 && (
+            <p>{breakdown.conflicts} lesson(s) clash with your other bookings or days off.</p>
+          )}
+          {breakdown.periodShort > 0 && (
+            <p>{breakdown.periodShort} lesson(s) don&apos;t fit in the remaining license period.</p>
+          )}
           {droppedSinceRequest && availability.is_acceptable && (
             <p className="flex items-center gap-1 font-bold">
               <TriangleAlert size={12} />
@@ -225,17 +291,21 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
           )}
           {!availability.is_acceptable ? (
             <p className="font-bold">
-              At least {availability.required_sessions} lessons are needed to approve. Please reject this request with a reason so the
-              student can choose another time.
+              At least {availability.required_sessions} lessons are needed to approve. Please reject this request with a
+              reason so the student can choose another time.
             </p>
           ) : (
-            breakdown.unbooked > 0 && <p>After approval, please arrange the unbooked lesson(s) with the student individually.</p>
+            breakdown.unbooked > 0 && (
+              <p>After approval, please arrange the unbooked lesson(s) with the student individually.</p>
+            )
           )}
         </div>
       )}
 
       {request.status === MATCHING_REQUEST_STATUS.REJECTED && request.reject_reason && (
-        <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{request.reject_reason}</p>
+        <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">
+          {request.reject_reason}
+        </p>
       )}
 
       {isPending && (

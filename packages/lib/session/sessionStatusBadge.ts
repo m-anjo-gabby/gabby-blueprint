@@ -1,4 +1,11 @@
-import { SESSION_STATUS, COMPLETION_RESULT, CANCEL_CATEGORY, SessionStatus, CompletionResult, CancelCategory } from '@gabby/types/session';
+import {
+  SESSION_STATUS,
+  COMPLETION_RESULT,
+  CANCEL_CATEGORY,
+  SessionStatus,
+  CompletionResult,
+  CancelCategory,
+} from '@gabby/types/session';
 
 export interface SessionStatusBadgeStyle {
   label: string;
@@ -32,7 +39,7 @@ export function buildSessionStatusBadge<T extends SessionStatusBadgeStyle>(
     completion_result?: CompletionResult | null;
     cancel_category?: CancelCategory | null;
   },
-  labels: SessionStatusBadgeLabels<T>
+  labels: SessionStatusBadgeLabels<T>,
 ): T {
   if (session.status === SESSION_STATUS.SCHEDULED) {
     return labels.scheduled;

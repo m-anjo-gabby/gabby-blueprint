@@ -13,7 +13,13 @@ import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
  * セッションハブ／セッション結果の`SessionSprintSummaryEntry`の両方がこの形を満たす。 */
 type LessonSprintHistoryRecord = Pick<
   LessonSprintHistoryListItem,
-  'lesson_sprint_id' | 'content_name' | 'content_name_en' | 'question_type' | 'difficulty_level' | 'average_score' | 'insert_date'
+  | 'lesson_sprint_id'
+  | 'content_name'
+  | 'content_name_en'
+  | 'question_type'
+  | 'difficulty_level'
+  | 'average_score'
+  | 'insert_date'
 >;
 
 interface Props {
@@ -35,7 +41,7 @@ export function LessonSprintHistoryRow({ studentId, record, backHref, backLabel,
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const href = withLiveSessionParam(
     `/students/${studentId}/lesson-sprint/result/${record.lesson_sprint_id}?back=${encodeURIComponent(backHref)}&back_label=${encodeURIComponent(backLabel)}`,
-    liveSessionId
+    liveSessionId,
   );
 
   return (
@@ -46,7 +52,8 @@ export function LessonSprintHistoryRow({ studentId, record, backHref, backLabel,
       <div className="min-w-0">
         <p className="text-xs font-semibold text-slate-700 truncate">{resolveCoachContentName(record)}</p>
         <p className="text-[11px] text-slate-400">
-          {typeLabel} · {formatSprintLevelLabel(record.question_type, record.difficulty_level)} · {formatDateTimeEn(record.insert_date, timezone)}
+          {typeLabel} · {formatSprintLevelLabel(record.question_type, record.difficulty_level)} ·{' '}
+          {formatDateTimeEn(record.insert_date, timezone)}
         </p>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">

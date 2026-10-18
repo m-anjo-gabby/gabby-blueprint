@@ -54,7 +54,9 @@ type DisplayFields = Pick<NoticeFormData, 'display_mode'> & {
  * 表示方法・見出し画像・行動ボタンを検証して保存用の値にする。
  * コーチ向けはコーチアプリが未対応のため、ホームのカード・見出し画像・行動ボタンを使わない（DB の chk_notice_coach_display と同じ）。
  */
-function toDisplayFields(formData: NoticeFormData): { ok: true; fields: DisplayFields } | { ok: false; message: string } {
+function toDisplayFields(
+  formData: NoticeFormData,
+): { ok: true; fields: DisplayFields } | { ok: false; message: string } {
   if (!NOTICE_DISPLAY_MODES.includes(formData.display_mode)) {
     return { ok: false, message: '表示方法が正しくありません' };
   }
@@ -71,7 +73,10 @@ function toDisplayFields(formData: NoticeFormData): { ok: true; fields: DisplayF
     return { ok: false, message: `行動ボタンの文言は${NOTICE_CTA_LABEL_MAX}文字以内で入力してください` };
   }
   if (ctaUrl && !isValidNoticeCtaUrl(ctaUrl)) {
-    return { ok: false, message: '行動ボタンのリンク先は「/」で始まるアプリ内の画面か「https://」で始まるURLを入力してください' };
+    return {
+      ok: false,
+      message: '行動ボタンのリンク先は「/」で始まるアプリ内の画面か「https://」で始まるURLを入力してください',
+    };
   }
   return {
     ok: true,
@@ -130,14 +135,15 @@ export async function getNotices(params: ListParams<'type'>): Promise<ListResult
     const supabase = createAdminClient();
     const [from, to] = toRange(params);
 
-    let query = supabase
-      .from('com_m_notice')
-      .select(`
+    let query = supabase.from('com_m_notice').select(
+      `
         *,
         com_m_client (
           client_name
         )
-      `, { count: 'exact' });
+      `,
+      { count: 'exact' },
+    );
 
     if (q) {
       query = query.ilike('title', containsPattern(q));
@@ -153,7 +159,11 @@ export async function getNotices(params: ListParams<'type'>): Promise<ListResult
       .range(from, to);
 
     if (error) {
-      logger.error('notice:get_notices_failed', error.message, { ...ctx, err: error, payload: { from, to, noticeType } });
+      logger.error('notice:get_notices_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { from, to, noticeType },
+      });
       throw error;
     }
 
@@ -167,7 +177,11 @@ export async function getNotices(params: ListParams<'type'>): Promise<ListResult
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('notice:get_notices_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeType } });
+    logger.error('notice:get_notices_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { noticeType },
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -181,12 +195,14 @@ export async function getNoticeById(noticeId: string) {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('com_m_notice')
-      .select(`
+      .select(
+        `
         *,
         com_m_client (
           client_name
         )
-      `)
+      `,
+      )
       .eq('notice_id', noticeId)
       .single();
 
@@ -200,7 +216,11 @@ export async function getNoticeById(noticeId: string) {
       client_name: data.com_m_client?.client_name || null,
     };
   } catch (error) {
-    logger.error('notice:get_by_id_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId } });
+    logger.error('notice:get_by_id_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { noticeId },
+    });
     return null;
   }
 }
@@ -219,7 +239,13 @@ export interface NoticeReadStatusUser {
 }
 
 export interface NoticeReadStatusResult extends ListResult<NoticeReadStatusUser> {
-  notice: { notice_id: string; title: string; target_type: NoticeTargetType; client_id: string | null; has_cta: boolean } | null;
+  notice: {
+    notice_id: string;
+    title: string;
+    target_type: NoticeTargetType;
+    client_id: string | null;
+    has_cta: boolean;
+  } | null;
   /** 絞り込み後の対象者のうち既読・未読の人数 */
   readCount: number;
   unreadCount: number;
@@ -234,10 +260,13 @@ export interface NoticeReadStatusResult extends ListResult<NoticeReadStatusUser>
  */
 export async function getNoticeReadStatus(
   noticeId: string,
-  params: ListParams<'clientId' | 'userType'>
+  params: ListParams<'clientId' | 'userType'>,
 ): Promise<NoticeReadStatusResult> {
   const ctx = await getLogContext();
-  const { q, filters: { clientId, userType } } = params;
+  const {
+    q,
+    filters: { clientId, userType },
+  } = params;
 
   try {
     const supabase = createAdminClient();
@@ -249,21 +278,27 @@ export async function getNoticeReadStatus(
       .single();
 
     if (noticeError || !notice) {
-      logger.error('notice:read_status_notice_not_found', noticeError?.message || 'notice not found', { ...ctx, err: noticeError, payload: { noticeId } });
+      logger.error('notice:read_status_notice_not_found', noticeError?.message || 'notice not found', {
+        ...ctx,
+        err: noticeError,
+        payload: { noticeId },
+      });
       return { notice: null, rows: [], totalCount: 0, readCount: 0, unreadCount: 0, ctaClickCount: 0 };
     }
 
     // 配信対象ユーザー母集団を、お知らせのtarget_typeに基づいて絞り込む
     let query = supabase
       .from('com_m_user')
-      .select(`
+      .select(
+        `
         id,
         user_id,
         user_name,
         user_type,
         client_id,
         com_m_client ( client_name )
-      `)
+      `,
+      )
       .neq('status', USER_STATUS.WITHDRAWN);
 
     if (notice.target_type === 'ALL') {
@@ -289,7 +324,11 @@ export async function getNoticeReadStatus(
     const { data: targetUsers, error: usersError } = await query.order('user_id', { ascending: true });
 
     if (usersError) {
-      logger.error('notice:read_status_users_failed', usersError.message, { ...ctx, err: usersError, payload: { noticeId, clientId, userType } });
+      logger.error('notice:read_status_users_failed', usersError.message, {
+        ...ctx,
+        err: usersError,
+        payload: { noticeId, clientId, userType },
+      });
       throw usersError;
     }
 
@@ -300,7 +339,11 @@ export async function getNoticeReadStatus(
       .eq('notice_id', noticeId);
 
     if (readsError) {
-      logger.error('notice:read_status_reads_failed', readsError.message, { ...ctx, err: readsError, payload: { noticeId } });
+      logger.error('notice:read_status_reads_failed', readsError.message, {
+        ...ctx,
+        err: readsError,
+        payload: { noticeId },
+      });
       throw readsError;
     }
 
@@ -350,7 +393,11 @@ export async function getNoticeReadStatus(
       ctaClickCount,
     };
   } catch (error) {
-    logger.error('notice:read_status_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId } });
+    logger.error('notice:read_status_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { noticeId },
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -390,11 +437,7 @@ export async function createNotice(formData: NoticeFormData) {
       is_published: formData.is_published,
     };
 
-    const { data, error } = await supabase
-      .from('com_m_notice')
-      .insert(insertPayload)
-      .select()
-      .single();
+    const { data, error } = await supabase.from('com_m_notice').insert(insertPayload).select().single();
 
     if (error) {
       logger.error('notice:create_failed', error.message, { ...ctx, err: error, payload: formData });
@@ -403,13 +446,17 @@ export async function createNotice(formData: NoticeFormData) {
 
     logger.info('notice:create_success', `Notice created: ${data.notice_id}`, {
       ...ctx,
-      payload: { noticeId: data.notice_id }
+      payload: { noticeId: data.notice_id },
     });
 
     revalidatePath('/notice');
     return { success: true, noticeId: data.notice_id };
   } catch (error) {
-    logger.error('notice:create_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: formData });
+    logger.error('notice:create_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: formData,
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -449,10 +496,7 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData) {
       update_date: new Date().toISOString(),
     };
 
-    const { error } = await supabase
-      .from('com_m_notice')
-      .update(updatePayload)
-      .eq('notice_id', noticeId);
+    const { error } = await supabase.from('com_m_notice').update(updatePayload).eq('notice_id', noticeId);
 
     if (error) {
       logger.error('notice:update_failed', error.message, { ...ctx, err: error, payload: { noticeId, ...formData } });
@@ -461,14 +505,18 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData) {
 
     logger.info('notice:update_success', `Notice updated: ${noticeId}`, {
       ...ctx,
-      payload: { noticeId }
+      payload: { noticeId },
     });
 
     revalidatePath('/notice');
     revalidatePath(`/notice/${noticeId}/edit`);
     return { success: true };
   } catch (error) {
-    logger.error('notice:update_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId } });
+    logger.error('notice:update_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { noticeId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -504,13 +552,17 @@ export async function deleteNotice(noticeId: string) {
 
     logger.info('notice:delete_success', `Notice deleted: ${noticeId}`, {
       ...ctx,
-      payload: { noticeId }
+      payload: { noticeId },
     });
 
     revalidatePath('/notice');
     return { success: true };
   } catch (error) {
-    logger.error('notice:delete_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId } });
+    logger.error('notice:delete_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { noticeId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -525,7 +577,7 @@ const NOTICE_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
  */
 export async function uploadNoticeImage(
   noticeId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<{ success: boolean; path?: string; message?: string }> {
   const ctx = await getLogContext();
   try {
@@ -552,10 +604,17 @@ export async function uploadNoticeImage(
       return { success: false, message: `アップロードに失敗しました: ${error.message}` };
     }
 
-    logger.info('notice:upload_image_success', `Notice image uploaded: ${storagePath}`, { ...ctx, payload: { noticeId, storagePath } });
+    logger.info('notice:upload_image_success', `Notice image uploaded: ${storagePath}`, {
+      ...ctx,
+      payload: { noticeId, storagePath },
+    });
     return { success: true, path: storagePath };
   } catch (error) {
-    logger.error('notice:upload_image_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId } });
+    logger.error('notice:upload_image_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { noticeId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -566,7 +625,7 @@ export async function uploadNoticeImage(
  */
 export async function uploadNoticeFile(
   noticeId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<{ success: boolean; attachment?: NoticeAttachment; message?: string }> {
   const ctx = await getLogContext();
   try {
@@ -583,15 +642,17 @@ export async function uploadNoticeFile(
 
     // Storageへアップロード
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { error: uploadError } = await supabase.storage
-      .from('notices')
-      .upload(storagePath, buffer, {
-        contentType: file.type || 'application/octet-stream',
-        upsert: true,
-      });
+    const { error: uploadError } = await supabase.storage.from('notices').upload(storagePath, buffer, {
+      contentType: file.type || 'application/octet-stream',
+      upsert: true,
+    });
 
     if (uploadError) {
-      logger.error('notice:upload_file_failed', uploadError.message, { ...ctx, err: uploadError, payload: { noticeId, fileName: file.name } });
+      logger.error('notice:upload_file_failed', uploadError.message, {
+        ...ctx,
+        err: uploadError,
+        payload: { noticeId, fileName: file.name },
+      });
       return { success: false, message: `アップロードに失敗しました: ${uploadError.message}` };
     }
 
@@ -605,12 +666,16 @@ export async function uploadNoticeFile(
 
     logger.info('notice:upload_file_success', `Attachment uploaded: ${storagePath}`, {
       ...ctx,
-      payload: { noticeId, storagePath }
+      payload: { noticeId, storagePath },
     });
 
     return { success: true, attachment: newAttachment };
   } catch (error) {
-    logger.error('notice:upload_file_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { noticeId } });
+    logger.error('notice:upload_file_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { noticeId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -624,9 +689,7 @@ export async function deleteNoticeFile(storagePath: string): Promise<{ success: 
     const supabase = createAdminClient();
     const cleanPath = storagePath.startsWith('/') ? storagePath.substring(1) : storagePath;
 
-    const { error } = await supabase.storage
-      .from('notices')
-      .remove([cleanPath]);
+    const { error } = await supabase.storage.from('notices').remove([cleanPath]);
 
     if (error) {
       logger.error('notice:delete_file_failed', error.message, { ...ctx, err: error, payload: { storagePath } });
@@ -636,7 +699,11 @@ export async function deleteNoticeFile(storagePath: string): Promise<{ success: 
     logger.info('notice:delete_file_success', `Attachment removed: ${cleanPath}`, { ...ctx, payload: { storagePath } });
     return { success: true };
   } catch (error) {
-    logger.error('notice:delete_file_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { storagePath } });
+    logger.error('notice:delete_file_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { storagePath },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

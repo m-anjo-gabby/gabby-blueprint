@@ -49,7 +49,8 @@ export function StudentSessionResult({ session, homework }: Props) {
         <section className="rounded-card border border-line bg-surface p-4 space-y-3">
           <div className="space-y-3">
             <p className="text-base sm:text-lg font-bold text-ink tracking-tight">
-              {formatDateTimeByZone(session.start_datetime, timezone, false)} 〜 {formatDateTimeByZone(session.end_datetime, timezone, false)}
+              {formatDateTimeByZone(session.start_datetime, timezone, false)} 〜{' '}
+              {formatDateTimeByZone(session.end_datetime, timezone, false)}
             </p>
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-control bg-brand-soft overflow-hidden flex items-center justify-center text-brand-500 shrink-0">
@@ -93,13 +94,19 @@ export function StudentSessionResult({ session, homework }: Props) {
                       <ul className="space-y-2">
                         {session.call_log.map((entry) => (
                           <li key={entry.call_log_id} className="flex items-start gap-2 text-xs">
-                            <span className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${entry.role === 'coach' ? 'bg-canvas text-ink-muted' : 'bg-brand-soft text-brand'}`}>
+                            <span
+                              className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${entry.role === 'coach' ? 'bg-canvas text-ink-muted' : 'bg-brand-soft text-brand'}`}
+                            >
                               {entry.left_at ? <LogOut size={11} /> : <LogIn size={11} />}
                             </span>
                             <span className="text-ink-soft">
-                              <span className="font-bold">{entry.role === 'coach' ? 'コーチ' : '自分'}</span>{' '}
-                              入室 {formatDateTimeByZone(entry.joined_at, timezone, false)}
-                              {entry.left_at ? <> ・ 退室 {formatDateTimeByZone(entry.left_at, timezone, false)}</> : <> ・ 接続中</>}
+                              <span className="font-bold">{entry.role === 'coach' ? 'コーチ' : '自分'}</span> 入室{' '}
+                              {formatDateTimeByZone(entry.joined_at, timezone, false)}
+                              {entry.left_at ? (
+                                <> ・ 退室 {formatDateTimeByZone(entry.left_at, timezone, false)}</>
+                              ) : (
+                                <> ・ 接続中</>
+                              )}
                             </span>
                           </li>
                         ))}
@@ -121,8 +128,12 @@ export function StudentSessionResult({ session, homework }: Props) {
           ) : (
             <>
               <div className="rounded-xl border border-line bg-canvas px-3.5 py-3 space-y-2">
-                <p className="text-[11px] font-bold text-ink-subtle">{formatDateTimeByZone(homework.insert_date, timezone, false)}</p>
-                <p className="text-sm text-ink-soft whitespace-pre-wrap wrap-break-word">{linkifyText(homework.homework_text)}</p>
+                <p className="text-[11px] font-bold text-ink-subtle">
+                  {formatDateTimeByZone(homework.insert_date, timezone, false)}
+                </p>
+                <p className="text-sm text-ink-soft whitespace-pre-wrap wrap-break-word">
+                  {linkifyText(homework.homework_text)}
+                </p>
                 {homework.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {homework.attachments.map((attachment) => (
@@ -143,10 +154,17 @@ export function StudentSessionResult({ session, homework }: Props) {
                 ) : (
                   <div className="space-y-3">
                     {homework.comments.map((comment) => (
-                      <div key={comment.comment_id} className="rounded-xl border border-line bg-canvas px-3.5 py-3 space-y-2">
-                        <p className="text-[11px] font-bold text-ink-subtle">{formatDateTimeByZone(comment.insert_date, timezone, false)}</p>
+                      <div
+                        key={comment.comment_id}
+                        className="rounded-xl border border-line bg-canvas px-3.5 py-3 space-y-2"
+                      >
+                        <p className="text-[11px] font-bold text-ink-subtle">
+                          {formatDateTimeByZone(comment.insert_date, timezone, false)}
+                        </p>
                         {comment.comment_text && (
-                          <p className="text-sm text-ink-soft whitespace-pre-wrap wrap-break-word">{linkifyText(comment.comment_text)}</p>
+                          <p className="text-sm text-ink-soft whitespace-pre-wrap wrap-break-word">
+                            {linkifyText(comment.comment_text)}
+                          </p>
                         )}
                         {comment.attachments.length > 0 && (
                           <div className="flex flex-wrap gap-2">
@@ -175,10 +193,15 @@ export function StudentSessionResult({ session, homework }: Props) {
             ) : (
               <ul className="space-y-2">
                 {session.sprint_log.map((entry) => (
-                  <li key={entry.lesson_sprint_id} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-line bg-canvas">
+                  <li
+                    key={entry.lesson_sprint_id}
+                    className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-line bg-canvas"
+                  >
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-ink-soft truncate">{entry.content_name}</p>
-                      <p className="text-[11px] text-ink-subtle">{formatDateTimeByZone(entry.insert_date, timezone, false)}</p>
+                      <p className="text-[11px] text-ink-subtle">
+                        {formatDateTimeByZone(entry.insert_date, timezone, false)}
+                      </p>
                     </div>
                     <span className="shrink-0 text-[11px] font-bold text-brand bg-brand-soft border border-brand-100 rounded-full px-2.5 py-1">
                       {entry.average_score !== null ? `${entry.average_score}/5` : '—'}
@@ -211,8 +234,13 @@ export function StudentSessionResult({ session, homework }: Props) {
           ) : (
             <ul className="space-y-2">
               {session.chat_log.map((entry) => (
-                <li key={entry.chat_id} className={`text-xs ${entry.sender_role === 'student' ? 'text-right' : 'text-left'}`}>
-                  <p className="font-bold text-ink-subtle text-[11px]">{entry.sender_role === 'coach' ? 'コーチ' : '自分'}</p>
+                <li
+                  key={entry.chat_id}
+                  className={`text-xs ${entry.sender_role === 'student' ? 'text-right' : 'text-left'}`}
+                >
+                  <p className="font-bold text-ink-subtle text-[11px]">
+                    {entry.sender_role === 'coach' ? 'コーチ' : '自分'}
+                  </p>
                   <p
                     className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg whitespace-pre-wrap wrap-break-word ${
                       entry.sender_role === 'student' ? 'bg-brand-soft text-brand-strong' : 'bg-canvas text-ink-soft'

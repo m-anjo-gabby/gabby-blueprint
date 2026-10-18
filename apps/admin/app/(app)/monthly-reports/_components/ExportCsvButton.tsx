@@ -18,7 +18,12 @@ function studentBreakdown(sessionsByDate: CoachMonthlyReport['students'][number]
   for (const sessions of Object.values(sessionsByDate)) {
     for (const s of sessions) {
       if (s.status === SESSION_STATUS.COMPLETED && s.completion_result !== COMPLETION_RESULT.NO_SHOW) completed += 1;
-      else if (s.status === SESSION_STATUS.CANCELLED && s.cancel_category === CANCEL_CATEGORY.STUDENT && s.ticket_refunded === false) lateCancel += 1;
+      else if (
+        s.status === SESSION_STATUS.CANCELLED &&
+        s.cancel_category === CANCEL_CATEGORY.STUDENT &&
+        s.ticket_refunded === false
+      )
+        lateCancel += 1;
       else if (s.status === SESSION_STATUS.COMPLETED && s.completion_result === COMPLETION_RESULT.NO_SHOW) noShow += 1;
     }
   }

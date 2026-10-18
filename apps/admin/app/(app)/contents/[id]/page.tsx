@@ -29,29 +29,18 @@ export default async function ContentDetailPage({ params, searchParams }: Props)
   return (
     <div className="flex flex-col h-screen max-w-full overflow-hidden bg-slate-50">
       {/* 共通ヘッダー（タイトルや保存進捗などを表示） */}
-      <EditorHeader 
-        content={content} 
-      />
+      <EditorHeader content={content} />
 
       <main className="flex-1 min-h-0 min-w-0 overflow-hidden flex flex-col">
         {content.content_type === 0 ? (
           // 単語エディター
-          <WordEditor 
-            contentId={contentId} 
-            selectedWordId={wordId}
-          />
+          <WordEditor contentId={contentId} selectedWordId={wordId} />
         ) : content.content_type === 2 ? (
-          <SprintEditor
-            contentId={contentId}
-            initialType={type as SprintQuestionType}
-            content={content}
-          />
+          <SprintEditor contentId={contentId} initialType={type as SprintQuestionType} content={content} />
         ) : content.content_type === 3 ? (
           <DialogueEditor contentId={contentId} />
         ) : (
-          <div className="flex items-center justify-center h-full text-slate-400">
-            {t('notReady')}
-          </div>
+          <div className="flex items-center justify-center h-full text-slate-400">{t('notReady')}</div>
         )}
       </main>
     </div>

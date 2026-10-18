@@ -34,7 +34,7 @@ function firstValue(value: string | string[] | undefined): string {
 /** URL のクエリから一覧の条件を読み取る */
 export function parseListParams<K extends string = never>(
   raw: RawSearchParams,
-  filterKeys: readonly K[] = []
+  filterKeys: readonly K[] = [],
 ): ListParams<K> {
   const page = Math.floor(Number(firstValue(raw.page)));
   return {
@@ -64,7 +64,7 @@ export function toRange({ page, pageSize }: Pick<ListParams, 'page' | 'pageSize'
 export function paginateLocally<T>(
   rows: readonly T[],
   { q, page }: Pick<ListParams, 'q' | 'page'>,
-  toSearchText: (row: T) => string
+  toSearchText: (row: T) => string,
 ): ListResult<T> & { page: number; pageCount: number } {
   const term = q.toLowerCase();
   const matched = term ? rows.filter((row) => toSearchText(row).toLowerCase().includes(term)) : rows;

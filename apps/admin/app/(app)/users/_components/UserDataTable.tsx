@@ -26,7 +26,12 @@ export function UserDataTable({ data, totalCount, pageCount, clients }: UserData
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      >
         <ListSelectFilter
           label={t('userType')}
           allLabel={t('allUserTypes')}
@@ -34,7 +39,11 @@ export function UserDataTable({ data, totalCount, pageCount, clients }: UserData
           value={query.filters.userType}
           onChange={(value) => query.setFilter('userType', value)}
         />
-        <ClientFilter clients={clients} value={query.filters.clientId} onChange={(value) => query.setFilter('clientId', value)} />
+        <ClientFilter
+          clients={clients}
+          value={query.filters.clientId}
+          onChange={(value) => query.setFilter('clientId', value)}
+        />
       </ListToolbar>
       <DataTable
         columns={createColumns(t)}

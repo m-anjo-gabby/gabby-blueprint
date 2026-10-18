@@ -10,7 +10,7 @@ export const USER_TYPES = {
 } as const;
 
 // 値の型を抽出 ( '0' | '1' | '2' )
-export type UserType = typeof USER_TYPES[keyof typeof USER_TYPES];
+export type UserType = (typeof USER_TYPES)[keyof typeof USER_TYPES];
 
 /** 画面・URL から受け取った値がユーザー種別か */
 export function isUserType(value: unknown): value is UserType {
@@ -38,7 +38,7 @@ export const USER_STATUS = {
   ACTIVE: 1,
   WITHDRAWN: 9,
 } as const;
-export type UserStatus = typeof USER_STATUS[keyof typeof USER_STATUS];
+export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
 
 /**
  * ----------------------------------------------
@@ -46,28 +46,27 @@ export type UserStatus = typeof USER_STATUS[keyof typeof USER_STATUS];
  * ----------------------------------------------
  */
 
-
 /**
  * UserBase: ユーザー情報の最小共通単位
  * アプリ全体で「ユーザー」を指す際に必須となる基本フィールド
  */
 export interface UserBase {
-  id: string;               // auth.users.id (UUID)
-  user_id: number;          // com_m_user.user_id (BIGSERIAL)
+  id: string; // auth.users.id (UUID)
+  user_id: number; // com_m_user.user_id (BIGSERIAL)
   client_id: string | null;
-  user_type: string;        // '1': student, '0': admin 等
+  user_type: string; // '1': student, '0': admin 等
   user_name: string | null;
   icon_path: string | null; // プロフィールアイコン画像のStorageパス（profileバケット内）
-  timezone: string;         // IANAタイムゾーン名 (例: 'Asia/Tokyo')
+  timezone: string; // IANAタイムゾーン名 (例: 'Asia/Tokyo')
   locale_id: string;
-  
+
   // パスワード連続失敗・ロックアウト制御用
-  login_failed_count: number;       // 連続ログイン失敗回数
-  locked_until: string | null;      // ロック解除日時 (ISO文字列、NULL時は非ロック)
-  
-  status: UserStatus;       // USER_STATUS（1:有効 0:停止 9:退会済み）
-  insert_date: string;      // 登録日時 (ISO文字列)
-  update_date: string;      // 更新日時 (ISO文字列)
+  login_failed_count: number; // 連続ログイン失敗回数
+  locked_until: string | null; // ロック解除日時 (ISO文字列、NULL時は非ロック)
+
+  status: UserStatus; // USER_STATUS（1:有効 0:停止 9:退会済み）
+  insert_date: string; // 登録日時 (ISO文字列)
+  update_date: string; // 更新日時 (ISO文字列)
 }
 
 /**
@@ -78,13 +77,13 @@ export interface UserBase {
 export interface UserRecord extends Omit<UserBase, 'status'> {
   /** ユーザーの状態（USER_STATUS）。招待中（本登録前）は null */
   user_status: UserStatus | null;
-  email?: string;             // auth.users から取得（退会済みは認証のアカウントが無いため無い）
+  email?: string; // auth.users から取得（退会済みは認証のアカウントが無いため無い）
   client_name: string | null; // com_m_client から結合
-  last_sign_in_at?: string;   // auth.users から取得
+  last_sign_in_at?: string; // auth.users から取得
   confirmed_at?: string | null;
 
   // ロール情報
-  roles?: string[]; 
+  roles?: string[];
 
   // ライセンス関連 (com_t_user_license 等の結合情報)
   contract_id: string | null;
@@ -117,30 +116,30 @@ export interface CreateUserPayload {
 /**
  * CreateUserResponse: 登録処理の戻り値規格
  */
-export type CreateUserResponse = 
-  | { 
-      success: true; 
-      user_id: string; 
-      errorType: null; 
-      message: string | null; 
+export type CreateUserResponse =
+  | {
+      success: true;
+      user_id: string;
+      errorType: null;
+      message: string | null;
     }
-  | { 
-      success: false; 
-      user_id: null; 
-      errorType: string; 
-      message: string; 
+  | {
+      success: false;
+      user_id: null;
+      errorType: string;
+      message: string;
     };
 
 /**
  * CSV / Bulk Import 関連
  */
 export interface RawCsvRow {
-  'メールアドレス'?: string;
-  'email'?: string;
-  '名前'?: string;
-  'user_name'?: string;
-  '顧客名'?: string;
-  'client_name'?: string;
+  メールアドレス?: string;
+  email?: string;
+  名前?: string;
+  user_name?: string;
+  顧客名?: string;
+  client_name?: string;
 }
 
 export interface BulkUser extends CreateUserPayload {

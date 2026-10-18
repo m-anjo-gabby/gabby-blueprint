@@ -43,16 +43,37 @@ export async function sendAccountMail({
     logger.info(`mail:${logName}_success`, `${label}を送信しました: ${to}`, { payload: { messageId: data?.id } });
     return { success: true };
   } catch (err) {
-    logger.error(`mail:${logName}_failed`, err instanceof Error ? err.message : 'Unknown error', { err, payload: { to } });
-    return { success: false, error: err instanceof Error ? err.message : 'メール送信中に予期せぬエラーが発生しました。' };
+    logger.error(`mail:${logName}_failed`, err instanceof Error ? err.message : 'Unknown error', {
+      err,
+      payload: { to },
+    });
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'メール送信中に予期せぬエラーが発生しました。',
+    };
   }
 }
 
 /** ユーザー種別ごとの招待メール（管理者: 日英併記 / コーチ: 英語 / 生徒: 日本語） */
 const INVITATIONS = {
-  [USER_TYPES.ADMIN]: { kind: 'account_invite_admin', build: buildAdminInviteMail, logName: 'send_admin_invitation', label: '管理者招待メール' },
-  [USER_TYPES.COACH]: { kind: 'account_invite_coach', build: buildCoachInviteMail, logName: 'send_coach_invitation', label: 'コーチ招待メール' },
-  [USER_TYPES.STUDENT]: { kind: 'account_invite_student', build: buildStudentInviteMail, logName: 'send_invitation', label: '招待メール' },
+  [USER_TYPES.ADMIN]: {
+    kind: 'account_invite_admin',
+    build: buildAdminInviteMail,
+    logName: 'send_admin_invitation',
+    label: '管理者招待メール',
+  },
+  [USER_TYPES.COACH]: {
+    kind: 'account_invite_coach',
+    build: buildCoachInviteMail,
+    logName: 'send_coach_invitation',
+    label: 'コーチ招待メール',
+  },
+  [USER_TYPES.STUDENT]: {
+    kind: 'account_invite_student',
+    build: buildStudentInviteMail,
+    logName: 'send_invitation',
+    label: '招待メール',
+  },
 } as const;
 
 /** 招待メールを送る（ユーザー種別に合わせたテンプレート・文言。種別が無い・不明な場合は生徒向け） */
@@ -71,7 +92,9 @@ export async function sendInvitationEmail({
   expiresDays?: number;
 }): Promise<AccountMailResult> {
   const invitation =
-    userType === USER_TYPES.ADMIN || userType === USER_TYPES.COACH ? INVITATIONS[userType] : INVITATIONS[USER_TYPES.STUDENT];
+    userType === USER_TYPES.ADMIN || userType === USER_TYPES.COACH
+      ? INVITATIONS[userType]
+      : INVITATIONS[USER_TYPES.STUDENT];
   return sendAccountMail({
     to,
     kind: invitation.kind,

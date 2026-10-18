@@ -41,7 +41,10 @@ export function CoachProfileDialog({ data, labels, onClose }: CoachProfileDialog
           <X size={16} />
         </button>
 
-        <CoachProfileCardHeader data={data} className="flex items-center gap-4 px-8 pt-8 pb-6 border-b border-slate-100" />
+        <CoachProfileCardHeader
+          data={data}
+          className="flex items-center gap-4 px-8 pt-8 pb-6 border-b border-slate-100"
+        />
 
         {/* 角丸コーナーとスクロールバーが重ならないよう、スクロール領域は外枠の右端から少し内側(mr-4)に余白を取る */}
         <div className="flex-1 min-h-0 overflow-y-auto mr-4">

@@ -20,7 +20,12 @@ export function ClientDataTable({ data, totalCount, pageCount }: ClientDataTable
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount} />
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      />
       <DataTable
         columns={createColumns(t, locale)}
         data={data}

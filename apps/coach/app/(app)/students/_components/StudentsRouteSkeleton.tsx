@@ -10,7 +10,12 @@ import {
   SessionHubSkeleton,
   SessionResultSkeleton,
 } from '../[id]/_components/LiveSessionSkeletons';
-import { StudentChildListSkeleton, StudentChildPageHeader, StudentsListSkeleton, StudentsPageHeader } from './StudentsSkeletons';
+import {
+  StudentChildListSkeleton,
+  StudentChildPageHeader,
+  StudentsListSkeleton,
+  StudentsPageHeader,
+} from './StudentsSkeletons';
 
 /** 生徒の子画面のうち、見出し＋一覧の形の画面（パスの末尾 → 画面名・幅） */
 const CHILD_LIST_PAGES: Record<string, { title: string; header: string; body: string }> = {
@@ -50,11 +55,20 @@ export function StudentsRouteSkeleton() {
   // ライブセッション関連（/sessions/[sessionId]・/sessions/[sessionId]/result・/lesson-sprint・/lesson-sprint/result/[id]）
   const [section, second, third] = rest;
   if (section === 'sessions' && second) {
-    const frame = third === 'result' ? <SessionResultSkeleton studentId={studentId} /> : <SessionHubSkeleton studentId={studentId} />;
+    const frame =
+      third === 'result' ? (
+        <SessionResultSkeleton studentId={studentId} />
+      ) : (
+        <SessionHubSkeleton studentId={studentId} />
+      );
     return <PageSkeletonFrame className="">{frame}</PageSkeletonFrame>;
   }
   if (section === 'lesson-sprint' && !second) {
-    return <PageSkeletonFrame className=""><LessonSprintSetupSkeleton /></PageSkeletonFrame>;
+    return (
+      <PageSkeletonFrame className="">
+        <LessonSprintSetupSkeleton />
+      </PageSkeletonFrame>
+    );
   }
   if (section === 'lesson-sprint' && second === 'result') {
     return (

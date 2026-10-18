@@ -65,7 +65,12 @@ export function TimezoneDataTable({ data }: TimezoneDataTableProps) {
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
         title={t('deleteDialogTitle')}
-        description={(timezone) => t.rich('deleteDialogBody', { name: locale === 'en' ? timezone.display_name_en : timezone.display_name_ja, bold: boldChunks })}
+        description={(timezone) =>
+          t.rich('deleteDialogBody', {
+            name: locale === 'en' ? timezone.display_name_en : timezone.display_name_ja,
+            bold: boldChunks,
+          })
+        }
         confirmLabel={t('deleteConfirm')}
       />
     </div>

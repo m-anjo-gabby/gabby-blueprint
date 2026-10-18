@@ -28,7 +28,10 @@ export async function getCountryListCore(): Promise<GetCountryListResult> {
 
     return { success: true, countries: data ?? [] };
   } catch (err) {
-    logger.error('country:get_country_list_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('country:get_country_list_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

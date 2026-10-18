@@ -3,7 +3,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -29,8 +38,8 @@ interface SprintTTSDialogProps {
 }
 
 const DEFAULT_PARAMS: TTSParameters = {
-  voice: "en-US-JennyNeural",
-  style: "friendly",
+  voice: 'en-US-JennyNeural',
+  style: 'friendly',
   rate: 1.0,
   pitch: 0,
 };
@@ -58,7 +67,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
           ssml: question.statement_tts_ssml,
           mode: question.statement_tts_ssml_mode,
           adjust: question.statement_tts_adjustments,
-          voice: question.statement_voice
+          voice: question.statement_voice,
         };
       case 'question':
         return {
@@ -66,7 +75,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
           ssml: question.question_tts_ssml,
           mode: question.question_tts_ssml_mode,
           adjust: question.question_tts_adjustments,
-          voice: question.question_voice
+          voice: question.question_voice,
         };
       case 'answer_yes':
         return {
@@ -74,7 +83,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
           ssml: question.answer_sentence_yes_tts_ssml,
           mode: question.answer_sentence_yes_tts_ssml_mode,
           adjust: question.answer_sentence_yes_tts_adjustments,
-          voice: question.answer_sentence_yes_voice
+          voice: question.answer_sentence_yes_voice,
         };
       case 'answer_no':
         return {
@@ -82,7 +91,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
           ssml: question.answer_sentence_no_tts_ssml,
           mode: question.answer_sentence_no_tts_ssml_mode,
           adjust: question.answer_sentence_no_tts_adjustments,
-          voice: question.answer_sentence_no_voice
+          voice: question.answer_sentence_no_voice,
         };
     }
   }, [question, section]);
@@ -95,16 +104,19 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
       setSsmlMode(data.mode || 'auto');
       setSsml(data.ssml || '');
 
-      const words = data.text.split(' ').filter(Boolean).map((word, i) => ({
-        id: `word-${i}`,
-        fullText: word,
-        text: word.replace(/[.,!?;:]/g, ''),
-        emphasis: false,
-        emphasisLevel: 'moderate' as const,
-        breakAfter: false,
-        breakDuration: 300,
-        ipa: '',
-      }));
+      const words = data.text
+        .split(' ')
+        .filter(Boolean)
+        .map((word, i) => ({
+          id: `word-${i}`,
+          fullText: word,
+          text: word.replace(/[.,!?;:]/g, ''),
+          emphasis: false,
+          emphasisLevel: 'moderate' as const,
+          breakAfter: false,
+          breakDuration: 300,
+          ipa: '',
+        }));
 
       if (data.adjust) {
         const adjData = data.adjust as unknown as TTSAdjustmentData;
@@ -119,7 +131,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
         if (adjData.words && adjData.words.length > 0) {
           const merged = words.map((base, i) => {
             const saved = adjData.words[i];
-            return (saved && saved.text === base.text) ? { ...base, ...saved } : base;
+            return saved && saved.text === base.text ? { ...base, ...saved } : base;
           });
           setAdjustments(merged);
         } else {
@@ -132,12 +144,15 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
     }
   }, [open, getSectionData]);
 
-  const rebuildSSML = useCallback((currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
-    return buildSSML(currentData.text, {
-      settings: currentParams,
-      words: currentAdjs
-    });
-  }, [currentData.text]);
+  const rebuildSSML = useCallback(
+    (currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
+      return buildSSML(currentData.text, {
+        settings: currentParams,
+        words: currentAdjs,
+      });
+    },
+    [currentData.text],
+  );
 
   useEffect(() => {
     if (ssmlMode === 'auto' && open) {
@@ -147,7 +162,7 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
 
   const updateAdjustment = (id: string, updates: Partial<WordAdjustment>) => {
     if (ssmlMode === 'manual') return;
-    setAdjustments(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+    setAdjustments((prev) => prev.map((a) => (a.id === id ? { ...a, ...updates } : a)));
   };
 
   const handleSave = async () => {
@@ -167,18 +182,18 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
         ssml,
         ssmlMode,
         adjustmentData,
-        currentData.voice
+        currentData.voice,
       );
 
       if (result.success) {
-        showToast(t('toastSaved'), "success");
+        showToast(t('toastSaved'), 'success');
         onUpdate();
         setOpen(false);
       } else {
-        showToast(result.message || t('toastSaveFailed'), "error");
+        showToast(result.message || t('toastSaveFailed'), 'error');
       }
     } catch {
-      showToast(t('toastError'), "error");
+      showToast(t('toastError'), 'error');
     } finally {
       setIsProcessing(false);
       setShowSaveAlert(false);
@@ -197,12 +212,15 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
             </DialogTitle>
           </DialogHeader>
 
-          <div className={`px-8 py-6 bg-brand-50/30 border-b border-brand-100/50 ${ssmlMode === 'manual' ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+          <div
+            className={`px-8 py-6 bg-brand-50/30 border-b border-brand-100/50 ${ssmlMode === 'manual' ? 'opacity-40 grayscale pointer-events-none' : ''}`}
+          >
             <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-x-2 gap-y-3">
               {adjustments.map((adj) => (
                 <Popover key={adj.id}>
                   <PopoverTrigger asChild>
-                    <span className={`text-xl font-bold px-1 rounded transition-all border-b-2 cursor-pointer
+                    <span
+                      className={`text-xl font-bold px-1 rounded transition-all border-b-2 cursor-pointer
                       ${adj.emphasis || adj.ipa || adj.breakAfter ? 'text-brand bg-brand-100 border-brand-500' : 'text-slate-800 border-transparent hover:bg-slate-100'}`}
                     >
                       {adj.fullText}
@@ -212,7 +230,12 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
                     <div className="space-y-5">
                       <div className="flex items-center justify-between border-b pb-2">
                         <span className="text-sm font-black text-slate-700">{adj.text}</span>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => updateAdjustment(adj.id, { emphasis: false, breakAfter: false, ipa: '' })}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => updateAdjustment(adj.id, { emphasis: false, breakAfter: false, ipa: '' })}
+                        >
                           <RotateCcw size={12} />
                         </Button>
                       </div>
@@ -220,11 +243,11 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
                       {/* 💡 改善: ロジック上存在していた IPA (発音記号) 調整用の UI 入力欄を追加 */}
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                          <Mic2 size={12} className={adj.ipa ? "text-brand-500" : ""} /> IPA Pronunciation
+                          <Mic2 size={12} className={adj.ipa ? 'text-brand-500' : ''} /> IPA Pronunciation
                         </Label>
-                        <Input 
-                          placeholder="e.g. dædi" 
-                          value={adj.ipa} 
+                        <Input
+                          placeholder="e.g. dædi"
+                          value={adj.ipa}
                           onChange={(e) => updateAdjustment(adj.id, { ipa: e.target.value })}
                           className="h-8 font-mono text-xs rounded-lg"
                         />
@@ -232,18 +255,26 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
 
                       <div className="space-y-2 border-t pt-3">
                         <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                          <Sparkles size={12} className={adj.emphasis ? "text-amber-500" : ""} /> Emphasis
+                          <Sparkles size={12} className={adj.emphasis ? 'text-amber-500' : ''} /> Emphasis
                         </Label>
                         <div className="flex justify-end">
-                          <Button variant={adj.emphasis ? "default" : "outline"} size="sm" className="h-6 px-2 text-[9px]" onClick={() => updateAdjustment(adj.id, { emphasis: !adj.emphasis })}>
-                            {adj.emphasis ? "ON" : "OFF"}
+                          <Button
+                            variant={adj.emphasis ? 'default' : 'outline'}
+                            size="sm"
+                            className="h-6 px-2 text-[9px]"
+                            onClick={() => updateAdjustment(adj.id, { emphasis: !adj.emphasis })}
+                          >
+                            {adj.emphasis ? 'ON' : 'OFF'}
                           </Button>
                         </div>
                         {adj.emphasis && (
                           <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-md">
                             {(['reduced', 'moderate', 'strong'] as const).map((level) => (
-                              <button key={level} onClick={() => updateAdjustment(adj.id, { emphasisLevel: level })}
-                                className={`text-[9px] py-1 rounded transition-all ${adj.emphasisLevel === level ? 'bg-white shadow-sm font-bold text-brand' : 'text-slate-500 hover:text-slate-700'}`}>
+                              <button
+                                key={level}
+                                onClick={() => updateAdjustment(adj.id, { emphasisLevel: level })}
+                                className={`text-[9px] py-1 rounded transition-all ${adj.emphasisLevel === level ? 'bg-white shadow-sm font-bold text-brand' : 'text-slate-500 hover:text-slate-700'}`}
+                              >
                                 {level}
                               </button>
                             ))}
@@ -252,11 +283,16 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
                       </div>
                       <div className="space-y-2 border-t pt-3">
                         <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                          <PlusCircle size={12} className={adj.breakAfter ? "text-brand-500" : ""} /> Pause After
+                          <PlusCircle size={12} className={adj.breakAfter ? 'text-brand-500' : ''} /> Pause After
                         </Label>
                         <div className="flex justify-end">
-                          <Button variant={adj.breakAfter ? "default" : "outline"} size="sm" className="h-6 px-2 text-[9px]" onClick={() => updateAdjustment(adj.id, { breakAfter: !adj.breakAfter })}>
-                            {adj.breakAfter ? "ON" : "OFF"}
+                          <Button
+                            variant={adj.breakAfter ? 'default' : 'outline'}
+                            size="sm"
+                            className="h-6 px-2 text-[9px]"
+                            onClick={() => updateAdjustment(adj.id, { breakAfter: !adj.breakAfter })}
+                          >
+                            {adj.breakAfter ? 'ON' : 'OFF'}
                           </Button>
                         </div>
                         {adj.breakAfter && (
@@ -265,7 +301,13 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
                               <span>Duration:</span>
                               <span>{adj.breakDuration}ms</span>
                             </div>
-                            <Slider value={[adj.breakDuration]} min={50} max={1000} step={50} onValueChange={([v]) => updateAdjustment(adj.id, { breakDuration: v })} />
+                            <Slider
+                              value={[adj.breakDuration]}
+                              min={50}
+                              max={1000}
+                              step={50}
+                              onValueChange={([v]) => updateAdjustment(adj.id, { breakDuration: v })}
+                            />
                           </div>
                         )}
                       </div>
@@ -277,58 +319,143 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 bg-white">
-            <div className={`p-8 space-y-8 border-r border-slate-100 ${ssmlMode === 'manual' ? 'opacity-40 pointer-events-none' : ''}`}>
+            <div
+              className={`p-8 space-y-8 border-r border-slate-100 ${ssmlMode === 'manual' ? 'opacity-40 pointer-events-none' : ''}`}
+            >
               <div className="space-y-4">
                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Voice Settings</Label>
-                <Select value={params.voice} onValueChange={(v) => setParams(p => ({...p, voice: v as AzureVoice}))}>
-                  <SelectTrigger className="w-full bg-slate-50 border-slate-200 font-bold"><SelectValue /></SelectTrigger>
-                  <SelectContent>{AZURE_VOICES.map((v) => <SelectItem key={v.id} value={v.id}>{v.label}</SelectItem>)}</SelectContent>
+                <Select
+                  value={params.voice}
+                  onValueChange={(v) => setParams((p) => ({ ...p, voice: v as AzureVoice }))}
+                >
+                  <SelectTrigger className="w-full bg-slate-50 border-slate-200 font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AZURE_VOICES.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
-                <Select value={params.style} onValueChange={(v) => setParams(p => ({...p, style: v as AzureStyle}))}>
-                  <SelectTrigger className="w-full bg-slate-50 border-slate-200 font-bold"><SelectValue /></SelectTrigger>
-                  <SelectContent>{AZURE_STYLES.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}</SelectContent>
+                <Select
+                  value={params.style}
+                  onValueChange={(v) => setParams((p) => ({ ...p, style: v as AzureStyle }))}
+                >
+                  <SelectTrigger className="w-full bg-slate-50 border-slate-200 font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AZURE_STYLES.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Speed: {params.rate}x</Label>
-                  <Slider value={[params.rate]} min={0.5} max={1.5} step={0.05} onValueChange={([v]) => setParams(p => ({...p, rate: v}))} />
+                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Speed: {params.rate}x
+                  </Label>
+                  <Slider
+                    value={[params.rate]}
+                    min={0.5}
+                    max={1.5}
+                    step={0.05}
+                    onValueChange={([v]) => setParams((p) => ({ ...p, rate: v }))}
+                  />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pitch: {params.pitch}%</Label>
-                  <Slider value={[params.pitch]} min={-20} max={20} step={1} onValueChange={([v]) => setParams(p => ({...p, pitch: v}))} />
+                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Pitch: {params.pitch}%
+                  </Label>
+                  <Slider
+                    value={[params.pitch]}
+                    min={-20}
+                    max={20}
+                    step={1}
+                    onValueChange={([v]) => setParams((p) => ({ ...p, pitch: v }))}
+                  />
                 </div>
               </div>
             </div>
 
             <div className="p-8 bg-slate-50 flex flex-col h-full">
               <div className="flex justify-between items-center mb-3">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">SSML Code <Sparkles size={10} className="text-brand-500" /></Label>
+                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                  SSML Code <Sparkles size={10} className="text-brand-500" />
+                </Label>
               </div>
               <div className="flex-grow flex flex-col border border-slate-200 rounded-xl overflow-hidden shadow-inner bg-slate-900">
-                <Textarea value={ssml} readOnly={ssmlMode === 'auto'} onChange={(e) => setSsml(e.target.value)} className="flex-grow font-mono text-[11px] leading-relaxed text-emerald-400 border-none rounded-none p-5 focus-visible:ring-0 resize-none bg-transparent min-h-[200px]" />
-                <div className={`flex items-center justify-between px-3 py-2 border-t ${ssmlMode === 'manual' ? 'bg-rose-950/30 border-rose-900/30' : 'bg-slate-800 border-slate-700'}`}>
+                <Textarea
+                  value={ssml}
+                  readOnly={ssmlMode === 'auto'}
+                  onChange={(e) => setSsml(e.target.value)}
+                  className="flex-grow font-mono text-[11px] leading-relaxed text-emerald-400 border-none rounded-none p-5 focus-visible:ring-0 resize-none bg-transparent min-h-[200px]"
+                />
+                <div
+                  className={`flex items-center justify-between px-3 py-2 border-t ${ssmlMode === 'manual' ? 'bg-rose-950/30 border-rose-900/30' : 'bg-slate-800 border-slate-700'}`}
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 bg-black/20 p-1 rounded-md">
-                      <button onClick={() => ssmlMode === 'manual' && setShowModeAlert(true)} className={`text-[8px] font-black px-2 py-0.5 rounded ${ssmlMode === 'auto' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-500'}`}>AUTO</button>
-                      <Switch checked={ssmlMode === 'manual'} onCheckedChange={(checked) => checked ? setSsmlMode('manual') : setShowModeAlert(true)} className="data-[state=checked]:bg-rose-500 scale-75" />
-                      <button onClick={() => ssmlMode === 'auto' && setSsmlMode('manual')} className={`text-[8px] font-black px-2 py-0.5 rounded ${ssmlMode === 'manual' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500'}`}>MANUAL</button>
+                      <button
+                        onClick={() => ssmlMode === 'manual' && setShowModeAlert(true)}
+                        className={`text-[8px] font-black px-2 py-0.5 rounded ${ssmlMode === 'auto' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-500'}`}
+                      >
+                        AUTO
+                      </button>
+                      <Switch
+                        checked={ssmlMode === 'manual'}
+                        onCheckedChange={(checked) => (checked ? setSsmlMode('manual') : setShowModeAlert(true))}
+                        className="data-[state=checked]:bg-rose-500 scale-75"
+                      />
+                      <button
+                        onClick={() => ssmlMode === 'auto' && setSsmlMode('manual')}
+                        className={`text-[8px] font-black px-2 py-0.5 rounded ${ssmlMode === 'manual' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500'}`}
+                      >
+                        MANUAL
+                      </button>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="h-7 text-[9px] font-bold text-slate-400 gap-1.5" onClick={() => navigator.clipboard.writeText(ssml)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-[9px] font-bold text-slate-400 gap-1.5"
+                    onClick={() => navigator.clipboard.writeText(ssml)}
+                  >
                     <Copy size={10} /> COPY
                   </Button>
                 </div>
               </div>
-              {error && <div className="mt-3 p-3 bg-rose-50 border border-rose-100 rounded-lg text-[9px] text-rose-600 font-mono">{error}</div>}
+              {error && (
+                <div className="mt-3 p-3 bg-rose-50 border border-rose-100 rounded-lg text-[9px] text-rose-600 font-mono">
+                  {error}
+                </div>
+              )}
             </div>
           </div>
 
           <DialogFooter className="p-4 bg-white border-t flex gap-3">
-            <Button pending={isSpeaking} icon={<Play size={18} />} variant="outline" className="px-8 border-2 border-brand-100 text-brand font-bold h-12 rounded-full gap-2" onClick={() => speak(ssml)} disabled={isSpeaking || isProcessing}>
+            <Button
+              pending={isSpeaking}
+              icon={<Play size={18} />}
+              variant="outline"
+              className="px-8 border-2 border-brand-100 text-brand font-bold h-12 rounded-full gap-2"
+              onClick={() => speak(ssml)}
+              disabled={isSpeaking || isProcessing}
+            >
               LISTEN
             </Button>
-            <Button pending={isProcessing} icon={<Save size={18} />} className={`px-12 font-black h-12 rounded-full shadow-lg gap-2 text-white ${ssmlMode === 'manual' ? 'bg-rose-600' : 'bg-brand'}`} onClick={() => setShowSaveAlert(true)} disabled={isProcessing || isSpeaking}>
+            <Button
+              pending={isProcessing}
+              icon={<Save size={18} />}
+              className={`px-12 font-black h-12 rounded-full shadow-lg gap-2 text-white ${ssmlMode === 'manual' ? 'bg-rose-600' : 'bg-brand'}`}
+              onClick={() => setShowSaveAlert(true)}
+              disabled={isProcessing || isSpeaking}
+            >
               SAVE
             </Button>
           </DialogFooter>
@@ -343,7 +470,15 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setSsmlMode('auto'); setShowModeAlert(false); }} className="bg-brand">Switch</AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => {
+                setSsmlMode('auto');
+                setShowModeAlert(false);
+              }}
+              className="bg-brand"
+            >
+              Switch
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -356,7 +491,9 @@ export function SprintTTSDialog({ question, section, onUpdate, children }: Sprin
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSave} className={ssmlMode === 'manual' ? "bg-rose-600" : "bg-brand"}>Confirm Save</AlertDialogAction>
+            <AlertDialogAction onClick={handleSave} className={ssmlMode === 'manual' ? 'bg-rose-600' : 'bg-brand'}>
+              Confirm Save
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

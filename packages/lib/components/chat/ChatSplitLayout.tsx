@@ -9,7 +9,13 @@ import { useChatStore } from '../../stores/useChatStore';
 import { useChatRoomsRealtime } from '../../chat/realtime/useChatRoomsRealtime';
 import { CHAT_BASE_PATH } from '../../chat/links';
 import { cn } from '../../utils';
-import { CHAT_SPLIT_CLASSES, ChatUiProvider, useChatUi, type ChatLabels, type ChatSplitBreakpoint } from './ChatUiContext';
+import {
+  CHAT_SPLIT_CLASSES,
+  ChatUiProvider,
+  useChatUi,
+  type ChatLabels,
+  type ChatSplitBreakpoint,
+} from './ChatUiContext';
 
 interface ChatSplitLayoutProps {
   labels: ChatLabels;
@@ -59,7 +65,7 @@ export function ChatSplitLayout({
         <div
           className={cn(
             'min-h-0 w-full shrink-0 flex-col border-line',
-            selectedRoomId ? classes.listHidden : classes.listShown
+            selectedRoomId ? classes.listHidden : classes.listShown,
           )}
         >
           {list}

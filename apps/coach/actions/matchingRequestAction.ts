@@ -18,7 +18,8 @@ const MATCHING_ERROR_MESSAGES_EN: Record<MatchingRequestErrorCode, string> = {
   invalid_input: 'Please check the values you entered.',
   not_eligible: 'This request is no longer valid.',
   slot_already_requested: 'This slot has already been matched or has a pending request.',
-  schedule_conflict: 'This request overlaps with one of your existing schedules. Please reject it and coordinate an alternative time with the student individually.',
+  schedule_conflict:
+    'This request overlaps with one of your existing schedules. Please reject it and coordinate an alternative time with the student individually.',
   insufficient_bookable:
     'Too many lessons in this slot now clash with your other bookings or days off, so it can no longer be approved. Please reject it with a reason so the student can choose another time.',
   not_pending: 'This request is no longer pending. The student may have withdrawn it.',
@@ -53,7 +54,7 @@ export async function getPendingIncomingRequestsForCoach(): Promise<CoachIncomin
  */
 export async function getMatchingRequestHistoryPage(
   cursor: string | null,
-  limit: number
+  limit: number,
 ): Promise<{ items: IncomingMatchingRequestItem[]; nextCursor: string | null }> {
   const result = await getMatchingRequestHistoryPageAsCoachCore(cursor, limit);
   if (!result.success) {
@@ -69,7 +70,7 @@ export async function getMatchingRequestHistoryPage(
  * lesson schedule and generates all individual sessions for the license period.
  */
 export async function approveMatchingRequest(
-  requestId: string
+  requestId: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await approveMatchingRequestCore(requestId);
@@ -88,7 +89,7 @@ export async function approveMatchingRequest(
  */
 export async function rejectMatchingRequest(
   requestId: string,
-  reason: string
+  reason: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await rejectMatchingRequestCore(requestId, reason);

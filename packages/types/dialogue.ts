@@ -38,7 +38,7 @@ export const DIALOGUE_ASSIGNMENT_STATUS = {
   UNASSIGNED: 0,
   ASSIGNED: 1,
 } as const;
-export type DialogueAssignmentStatus = typeof DIALOGUE_ASSIGNMENT_STATUS[keyof typeof DIALOGUE_ASSIGNMENT_STATUS];
+export type DialogueAssignmentStatus = (typeof DIALOGUE_ASSIGNMENT_STATUS)[keyof typeof DIALOGUE_ASSIGNMENT_STATUS];
 
 // DBレコード型 (com_t_dialogue_assignment)
 export interface DialogueAssignment {
@@ -127,25 +127,17 @@ export interface LogSessionDialogueOpenInput {
 }
 
 export type GetAvailableDialogueContentsResult =
-  | { success: true; contents: DialogueContentSummary[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; contents: DialogueContentSummary[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type AssignDialogueContentResult =
-  | { success: true; assignment_id: string }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; assignment_id: string } | { success: false; errorCode: CoachStudentErrorCode };
 
-export type UnassignDialogueContentResult =
-  | { success: true }
-  | { success: false; errorCode: CoachStudentErrorCode };
+export type UnassignDialogueContentResult = { success: true } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetStudentDialogueAssignmentsResult =
-  | { success: true; assignments: DialogueAssignmentSummary[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; assignments: DialogueAssignmentSummary[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type UpdateDialogueSessionProgressResult =
-  | { success: true }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true } | { success: false; errorCode: CoachStudentErrorCode };
 
-export type LogSessionDialogueOpenResult =
-  | { success: true }
-  | { success: false; errorCode: CoachStudentErrorCode };
+export type LogSessionDialogueOpenResult = { success: true } | { success: false; errorCode: CoachStudentErrorCode };

@@ -36,7 +36,9 @@ export function PhraseFavoriteCard({ phrase, onRemove }: PhraseFavoriteCardProps
           <span className="truncate">{phrase.content_name}</span>
           {phrase.word_en && (
             <>
-              <span aria-hidden className="text-ink-subtle">·</span>
+              <span aria-hidden className="text-ink-subtle">
+                ·
+              </span>
               <span className="shrink-0 font-semibold text-ink-soft">{phrase.word_en}</span>
             </>
           )}

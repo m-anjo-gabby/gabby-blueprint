@@ -12,14 +12,10 @@ import { ADMIN_SHELL_DATA_OPTIONS } from '@/lib/shellData';
 
 /**
  * 管理者用 統合アプリケーションレイアウト
- * * 旧 AppLogicLayout (認証・State初期化) と 
+ * * 旧 AppLogicLayout (認証・State初期化) と
  * 旧 AdminLayout (サイドバー・デザイン構造) を統合。
  */
-export default async function AdminAppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AdminAppLayout({ children }: { children: React.ReactNode }) {
   // --- 旧 AppLogicLayout のロジック ---
   const user = await getAuthUser();
 
@@ -37,9 +33,11 @@ export default async function AdminAppLayout({
   return (
     <>
       {/* Zustandへのデータ流し込みとAuth監視 */}
-      <UserStoreInitializer user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }} />
+      <UserStoreInitializer
+        user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }}
+      />
       <ShellDataLoader data={shellData} />
-      
+
       {/* --- 旧 AdminLayout のデザイン構造 --- */}
       {/* ヘッダーエリア / サイドメニュー / メインエリアの3ペイン構成 */}
       <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
@@ -53,9 +51,7 @@ export default async function AdminAppLayout({
           {/* 右側: メインコンテンツ */}
           <div className="flex flex-col flex-1 min-w-0 relative">
             {/* スクロール可能なコンテンツエリア */}
-            <main className="flex-1 flex flex-col overflow-y-auto min-h-0 p-4 md:p-6 relative">
-              {children}
-            </main>
+            <main className="flex-1 flex flex-col overflow-y-auto min-h-0 p-4 md:p-6 relative">{children}</main>
           </div>
         </div>
       </div>

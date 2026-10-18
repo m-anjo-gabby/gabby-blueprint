@@ -15,9 +15,11 @@ const MESSAGE_SELECT_WITH_ATTACHMENTS = '*, com_t_chat_attachment(*)';
 /**
  * Supabaseの結合結果 (com_t_chat_attachment) を ChatMessage.attachments に正規化する
  */
-function normalizeMessageRow(row: Omit<ChatMessage, 'attachments'> & {
-  com_t_chat_attachment?: ChatAttachmentRecord[] | null;
-}): ChatMessage {
+function normalizeMessageRow(
+  row: Omit<ChatMessage, 'attachments'> & {
+    com_t_chat_attachment?: ChatAttachmentRecord[] | null;
+  },
+): ChatMessage {
   const { com_t_chat_attachment, ...rest } = row;
   return { ...rest, attachments: com_t_chat_attachment ?? [] };
 }
@@ -36,7 +38,7 @@ function maskIfDeleted(msg: ChatMessage): ChatMessage {
  * （複数添付・添付+コメントの同時投稿に対応）。
  */
 export async function sendChatMessage(
-  payload: SendChatMessagePayload
+  payload: SendChatMessagePayload,
 ): Promise<{ success: boolean; data?: ChatMessage; error?: string }> {
   const ctx = await getLogContext();
   try {
@@ -50,11 +52,12 @@ export async function sendChatMessage(
       return { success: false, error: 'Message must not be empty' };
     }
 
-    const messageType = attachments.length === 0
-      ? CHAT_MESSAGE_TYPES.TEXT
-      : attachments.every((a) => a.file_type.startsWith('image/'))
-        ? CHAT_MESSAGE_TYPES.IMAGE
-        : CHAT_MESSAGE_TYPES.FILE;
+    const messageType =
+      attachments.length === 0
+        ? CHAT_MESSAGE_TYPES.TEXT
+        : attachments.every((a) => a.file_type.startsWith('image/'))
+          ? CHAT_MESSAGE_TYPES.IMAGE
+          : CHAT_MESSAGE_TYPES.FILE;
 
     const { data: chatRow, error } = await supabase
       .from('com_t_chat')
@@ -68,7 +71,11 @@ export async function sendChatMessage(
       .single();
 
     if (error) {
-      logger.error('chat:send_message_failed', error.message, { ...ctx, err: error, payload: { roomId: payload.roomId } });
+      logger.error('chat:send_message_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { roomId: payload.roomId },
+      });
       return { success: false, error: error.message };
     }
 
@@ -82,7 +89,7 @@ export async function sendChatMessage(
             file_name: a.file_name,
             file_type: a.file_type,
             file_size: a.file_size,
-          }))
+          })),
         )
         .select('*');
 
@@ -141,7 +148,11 @@ export async function getChatMessages(params: {
     const { data, error } = await query;
 
     if (error) {
-      logger.error('chat:get_messages_failed', error.message, { ...ctx, err: error, payload: { roomId: params.roomId } });
+      logger.error('chat:get_messages_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { roomId: params.roomId },
+      });
       return { success: false, data: [], hasMore: false, error: error.message };
     }
 
@@ -179,7 +190,11 @@ export async function getChatMessageById(chatId: string): Promise<{
       .single();
 
     if (error || !data) {
-      logger.error('chat:get_message_by_id_failed', error?.message || 'Not found', { ...ctx, err: error, payload: { chatId } });
+      logger.error('chat:get_message_by_id_failed', error?.message || 'Not found', {
+        ...ctx,
+        err: error,
+        payload: { chatId },
+      });
       return { success: false, error: error?.message || 'Not found' };
     }
 
@@ -250,7 +265,11 @@ export async function markAsRead(params: {
       .eq('dedup_key', params.roomId);
 
     if (notificationError) {
-      logger.warn('chat:mark_read_notification_sync_failed', notificationError.message, { ...ctx, err: notificationError, payload: params });
+      logger.warn('chat:mark_read_notification_sync_failed', notificationError.message, {
+        ...ctx,
+        err: notificationError,
+        payload: params,
+      });
     }
 
     return { success: true };
@@ -268,9 +287,7 @@ export async function markAsRead(params: {
  * メッセージの論理削除（Adminのみ、ポリシー違反等のモデレーション用途）
  * 削除後、本文はマスクされ「削除されたメッセージです」として表示される。
  */
-export async function deleteChatMessage(params: {
-  chatId: string;
-}): Promise<{ success: boolean; error?: string }> {
+export async function deleteChatMessage(params: { chatId: string }): Promise<{ success: boolean; error?: string }> {
   const ctx = await getLogContext();
   try {
     const currentUser = await getCurrentUserWithType();

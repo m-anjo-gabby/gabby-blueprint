@@ -19,9 +19,5 @@ interface Props {
 export function ImmersiveShell({ active, children, className }: Props) {
   if (!active) return <>{children}</>;
 
-  return (
-    <div className={cn('fixed inset-0 z-40 w-full h-full bg-slate-50', className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn('fixed inset-0 z-40 w-full h-full bg-slate-50', className)}>{children}</div>;
 }

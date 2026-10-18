@@ -46,7 +46,12 @@ export function PageHeader({ title, description, back, aside, className = 'max-w
 
 /** 見出し内の、データに依存する語（生徒名等）の骨組み。h1 の行の高さに収まるインライン要素 */
 export function TitleTextSkeleton({ className }: { className?: string }) {
-  return <span aria-hidden className={cn('inline-block h-5 w-32 animate-pulse rounded-md bg-skeleton align-middle', className)} />;
+  return (
+    <span
+      aria-hidden
+      className={cn('inline-block h-5 w-32 animate-pulse rounded-md bg-skeleton align-middle', className)}
+    />
+  );
 }
 
 /** 画面専用の骨組みの外枠（読み上げ用の「読み込み中」を付ける） */
@@ -59,7 +64,15 @@ export function PageSkeletonFrame({ className = 'space-y-6', children }: { class
 }
 
 /** 一覧の行・カードの骨組みを count 個並べる（高さ・角丸は className で本番の要素に合わせる） */
-export function SkeletonList({ count, className, gap = 'space-y-3' }: { count: number; className: string; gap?: string }) {
+export function SkeletonList({
+  count,
+  className,
+  gap = 'space-y-3',
+}: {
+  count: number;
+  className: string;
+  gap?: string;
+}) {
   return (
     <div aria-hidden className={gap}>
       {Array.from({ length: count }, (_, i) => (

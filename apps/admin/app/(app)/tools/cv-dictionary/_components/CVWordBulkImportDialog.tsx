@@ -78,7 +78,9 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
   const analyzeRows = async (rawRows: Record<string, string>[]) => {
     setIsAnalyzing(true);
     try {
-      const existingByKey = new Map((await getCVDictionaryKeys()).map((k) => [toCVEntryKey(k.word_en, k.part_of_speech), k]));
+      const existingByKey = new Map(
+        (await getCVDictionaryKeys()).map((k) => [toCVEntryKey(k.word_en, k.part_of_speech), k]),
+      );
       const firstByKey = new Map<string, ParsedRow>();
 
       const rows = rawRows.map((raw, index): ParsedRow => {
@@ -170,8 +172,12 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
 
       if (result.success) {
         showToast(
-          t('toastImported', { inserted: result.inserted ?? 0, updated: result.updated ?? 0, skipped: result.skipped ?? 0 }),
-          'success'
+          t('toastImported', {
+            inserted: result.inserted ?? 0,
+            updated: result.updated ?? 0,
+            skipped: result.skipped ?? 0,
+          }),
+          'success',
         );
         setHasCompleted(true);
         triggerRefresh();
@@ -199,9 +205,18 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
   // ============================================================
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) handleReset(); setOpen(o); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) handleReset();
+        setOpen(o);
+      }}
+    >
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-1.5 border-dashed border-slate-300 hover:bg-slate-50 font-bold h-8 text-xs">
+        <Button
+          variant="outline"
+          className="gap-1.5 border-dashed border-slate-300 hover:bg-slate-50 font-bold h-8 text-xs"
+        >
           <FileUp size={13} /> {t('button')}
         </Button>
       </DialogTrigger>
@@ -217,11 +232,13 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                 <FileUp className="text-brand-400" size={24} />
                 {hasCompleted ? t('titleComplete') : t('titleNormal')}
               </DialogTitle>
-              <p className="text-xs text-slate-400 font-medium">
-                {t('subtitle')}
-              </p>
+              <p className="text-xs text-slate-400 font-medium">{t('subtitle')}</p>
             </div>
-            <Button variant="outline" asChild className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white h-9 text-[11px] font-bold shrink-0">
+            <Button
+              variant="outline"
+              asChild
+              className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white h-9 text-[11px] font-bold shrink-0"
+            >
               <a href="/templates/cv_dictionary_sample.tsv" download>
                 <Download size={14} className="mr-2 text-brand-400" /> {t('downloadSample')}
               </a>
@@ -254,15 +271,29 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                 'flex-1 border-2 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center p-12 gap-5 cursor-pointer transition-all duration-300',
                 isDragging
                   ? 'border-brand-500 bg-brand-50/50 scale-[0.98]'
-                  : 'border-slate-100 bg-slate-50/30 hover:bg-slate-50 hover:border-slate-200'
+                  : 'border-slate-100 bg-slate-50/30 hover:bg-slate-50 hover:border-slate-200',
               )}
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
               onDragLeave={() => setIsDragging(false)}
-              onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) processFile(f); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const f = e.dataTransfer.files[0];
+                if (f) processFile(f);
+              }}
               onClick={() => fileInputRef.current?.click()}
             >
               <div className="p-8 bg-white rounded-full shadow-sm border border-slate-100">
-                <Upload className={cn('text-slate-300 transition-transform duration-500', isDragging && 'scale-125 text-brand-500')} size={48} />
+                <Upload
+                  className={cn(
+                    'text-slate-300 transition-transform duration-500',
+                    isDragging && 'scale-125 text-brand-500',
+                  )}
+                  size={48}
+                />
               </div>
               <div className="text-center space-y-2">
                 <p className="text-base font-black text-slate-700">{t('dropzoneTitle')}</p>
@@ -276,7 +307,10 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                 ref={fileInputRef}
                 className="hidden"
                 accept=".csv,.tsv,.txt"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) processFile(f);
+                }}
               />
             </div>
           ) : (
@@ -292,7 +326,10 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                     ? { label: 'Errors', val: errorItems.length, color: 'text-rose-600', bg: 'bg-rose-50' }
                     : { label: 'Duplicates', val: duplicateCount, color: 'text-slate-500' },
                 ].map((s) => (
-                  <div key={s.label} className={cn('p-5 rounded-3xl border border-slate-100 flex flex-col bg-slate-50/50', s.bg)}>
+                  <div
+                    key={s.label}
+                    className={cn('p-5 rounded-3xl border border-slate-100 flex flex-col bg-slate-50/50', s.bg)}
+                  >
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.label}</p>
                     <p className={cn('text-3xl font-black tracking-tight', s.color)}>{s.val}</p>
                   </div>
@@ -318,9 +355,15 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                       <TableBody>
                         {errorItems.map((item) => (
                           <TableRow key={item.line} className="hover:bg-rose-50/30 border-rose-50">
-                            <TableCell className="font-black text-slate-800">{item.entry.word_en || t('emptyCell')}</TableCell>
-                            <TableCell className="text-slate-500 font-medium">{item.entry.part_of_speech || t('emptyCell')}</TableCell>
-                            <TableCell className="text-rose-500 text-xs font-bold italic">{errorMessage(item)}</TableCell>
+                            <TableCell className="font-black text-slate-800">
+                              {item.entry.word_en || t('emptyCell')}
+                            </TableCell>
+                            <TableCell className="text-slate-500 font-medium">
+                              {item.entry.part_of_speech || t('emptyCell')}
+                            </TableCell>
+                            <TableCell className="text-rose-500 text-xs font-bold italic">
+                              {errorMessage(item)}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -337,7 +380,12 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                     <p className="text-xl font-black text-slate-800 tracking-tight">{t('readyTitle')}</p>
                     <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-md mx-auto">
                       {t('readyBody', { count: data.length })}
-                      {duplicateCount > 0 && <><br />{t('duplicateHint', { count: duplicateCount })}</>}
+                      {duplicateCount > 0 && (
+                        <>
+                          <br />
+                          {t('duplicateHint', { count: duplicateCount })}
+                        </>
+                      )}
                     </p>
                   </div>
 
@@ -352,7 +400,7 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                             onClick={() => setMode(m)}
                             className={cn(
                               'h-10 rounded-xl text-xs font-black transition-all',
-                              mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                              mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600',
                             )}
                           >
                             {t(`mode.${m}`)}
@@ -400,7 +448,10 @@ export function CVWordBulkImportDialog({ onSuccess }: CVWordBulkImportDialogProp
                 disabled={isProcessing || isAnalyzing || targetCount === 0 || errorItems.length > 0}
               >
                 {isProcessing ? (
-                  <><Loader2 className="animate-spin mr-2" size={18} />Processing...</>
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={18} />
+                    Processing...
+                  </>
                 ) : (
                   t('startImport', { count: targetCount })
                 )}

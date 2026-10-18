@@ -11,7 +11,8 @@ import { SAVE_NETWORK_ERROR_MESSAGE } from '@/constants/network';
 import { ProfileSection } from './ProfileSection';
 
 const SECTION_TITLE = 'メール通知';
-const NOTE = 'メールを停止しても、アプリ内の通知は届きます。アカウントに関するメール（パスワードの再設定など）は停止できません。';
+const NOTE =
+  'メールを停止しても、アプリ内の通知は届きます。アカウントに関するメール（パスワードの再設定など）は停止できません。';
 
 function MailSettingRow({ category, children }: { category: MailCategory; children: React.ReactNode }) {
   const { title, description } = MAIL_CATEGORIES[category].labels.ja;
@@ -71,7 +72,9 @@ export function MailSettingsSection({ initialSettings }: { initialSettings: Mail
           ))}
         </div>
       ) : (
-        <p className="text-sm text-ink-muted">メール通知の設定を取得できませんでした。時間を置いて再度お試しください。</p>
+        <p className="text-sm text-ink-muted">
+          メール通知の設定を取得できませんでした。時間を置いて再度お試しください。
+        </p>
       )}
       <p className="mt-3 text-xs text-ink-muted">{NOTE}</p>
     </ProfileSection>

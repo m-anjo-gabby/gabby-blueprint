@@ -11,11 +11,5 @@ interface SprintFeedbackProps {
 }
 
 export const SprintFeedback: React.FC<SprintFeedbackProps> = (props) => (
-  <SpeechFeedbackModal
-    {...props}
-    variant="sprint"
-    title="発話の分析"
-    adviceTitle="改善のヒント"
-    interactive={false}
-  />
+  <SpeechFeedbackModal {...props} variant="sprint" title="発話の分析" adviceTitle="改善のヒント" interactive={false} />
 );

@@ -18,7 +18,11 @@ const isBlank = (value: string | null) => !value?.trim();
  * 一覧に出すかどうかの判定は DB の fn_coach_matching_missing_items() が正本で、こちらは画面で
  * 入力中の値から即座に表示するための同じ定義（項目を変える場合は両方を直す）。
  */
-export function getCoachMatchingMissingItems({ iconPath, profile, hasAvailability }: CoachMatchingReadinessInput): CoachMatchingRequiredItem[] {
+export function getCoachMatchingMissingItems({
+  iconPath,
+  profile,
+  hasAvailability,
+}: CoachMatchingReadinessInput): CoachMatchingRequiredItem[] {
   const filled: Record<CoachMatchingRequiredItem, boolean> = {
     icon: !isBlank(iconPath),
     country: !!profile.country_code,
@@ -33,6 +37,8 @@ export function getCoachMatchingMissingItems({ iconPath, profile, hasAvailabilit
 }
 
 /** 生徒の一覧に出るか（デモコーチはデモの生徒にだけ出るが、ここでは区別しない） */
-export function isCoachMatchable(status: Pick<CoachMatchingStatus, 'missingItems' | 'acceptingStudents' | 'isSuspended'>): boolean {
+export function isCoachMatchable(
+  status: Pick<CoachMatchingStatus, 'missingItems' | 'acceptingStudents' | 'isSuspended'>,
+): boolean {
   return status.acceptingStudents && !status.isSuspended && status.missingItems.length === 0;
 }

@@ -34,7 +34,12 @@ interface CalendarBoardProps {
  * 月のデータはサーバーで取得して渡す（ブラウザからの後追い取得はしない）。読み込み中も同じ大きさの日付の枠を描き、
  * 月の切り替えで高さが変わらないようにする（page.tsx で月ごとの Suspense の fallback と、loading.tsx で共有する）。
  */
-export function CalendarBoard({ month, initialSessions, initialEvents, bookableSlots: serverSlots }: CalendarBoardProps) {
+export function CalendarBoard({
+  month,
+  initialSessions,
+  initialEvents,
+  bookableSlots: serverSlots,
+}: CalendarBoardProps) {
   const timezone = useTimezone();
   const router = useRouter();
   const [, startRefresh] = useTransition();
@@ -75,10 +80,12 @@ export function CalendarBoard({ month, initialSessions, initialEvents, bookableS
   };
 
   const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) => {
-    setEvents((prev) => prev.map((e) => (e.calendar_event_id === calendarEventId ? withParticipation(e, isJoined) : e)));
+    setEvents((prev) =>
+      prev.map((e) => (e.calendar_event_id === calendarEventId ? withParticipation(e, isJoined) : e)),
+    );
   };
 
-  const selectedItems = selectedDate ? itemsByDate.get(selectedDate) ?? [] : [];
+  const selectedItems = selectedDate ? (itemsByDate.get(selectedDate) ?? []) : [];
 
   return (
     <div className="space-y-6">

@@ -22,7 +22,14 @@ interface ProfileViewProps {
   timezones: TimezoneMaster[];
 }
 
-export function ProfileView({ userName, clientName, userTypeLabel, initialIconPath, initialTimezone, timezones }: ProfileViewProps) {
+export function ProfileView({
+  userName,
+  clientName,
+  userTypeLabel,
+  initialIconPath,
+  initialTimezone,
+  timezones,
+}: ProfileViewProps) {
   const t = useTranslations('profile.view');
   const locale = useLocale();
   const [iconPath, setIconPath] = useState(initialIconPath);

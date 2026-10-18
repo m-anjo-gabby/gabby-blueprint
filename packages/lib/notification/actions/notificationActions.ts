@@ -36,7 +36,10 @@ export async function getNotificationsAction(): Promise<{
 
     return { success: true, data: (data || []) as NotificationItem[] };
   } catch (err) {
-    logger.error('notification:get_all_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('notification:get_all_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, data: [], error: 'Unexpected error' };
   }
 }
@@ -63,7 +66,10 @@ export async function getUnreadNotificationCountAction(): Promise<number> {
 
     return count ?? 0;
   } catch (err) {
-    logger.error('notification:unread_count_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('notification:unread_count_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return 0;
   }
 }
@@ -94,7 +100,10 @@ export async function markNotificationAsReadAction(notificationId: string): Prom
 
     return { success: true };
   } catch (err) {
-    logger.error('notification:mark_read_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('notification:mark_read_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -125,7 +134,10 @@ export async function markAllNotificationsAsReadAction(): Promise<{
 
     return { success: true };
   } catch (err) {
-    logger.error('notification:mark_all_read_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('notification:mark_all_read_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, error: 'Unexpected error' };
   }
 }

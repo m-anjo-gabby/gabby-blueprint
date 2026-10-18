@@ -59,7 +59,13 @@ function buildDefaults(initialData?: DialogueSession, nextSessionNo?: number): F
   };
 }
 
-export function DialogueSessionFormDialog({ mode, contentId, initialData, nextSessionNo, onSuccess }: DialogueSessionFormDialogProps) {
+export function DialogueSessionFormDialog({
+  mode,
+  contentId,
+  initialData,
+  nextSessionNo,
+  onSuccess,
+}: DialogueSessionFormDialogProps) {
   const t = useTranslations('contents.editor.dialogue.sessionFormDialog');
   const schema = useMemo(() => createDialogueSessionSchema(t), [t]);
   const [open, setOpen] = useState(false);
@@ -108,7 +114,11 @@ export function DialogueSessionFormDialog({ mode, contentId, initialData, nextSe
             <PlusCircle size={18} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-slate-200 text-slate-500 hover:bg-brand-50 hover:text-brand transition-all">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-xl border-slate-200 text-slate-500 hover:bg-brand-50 hover:text-brand transition-all"
+          >
             <Edit size={16} />
           </Button>
         )}
@@ -123,54 +133,125 @@ export function DialogueSessionFormDialog({ mode, contentId, initialData, nextSe
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white max-h-[75vh] overflow-y-auto">
-            <FormField control={form.control} name="session_no" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('sessionNoLabel')}</FormLabel>
-                <FormControl><Input {...field} type="number" className="bg-white rounded-xl border-slate-200 w-24" /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="session_no"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {t('sessionNoLabel')}
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} type="number" className="bg-white rounded-xl border-slate-200 w-24" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-3 p-4 bg-brand-50/30 rounded-2xl border border-brand-100">
-                <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest block">{t('coachSlidesSectionLabel')}</span>
-                <FormField control={form.control} name="coach_slides_title" render={({ field }) => (
-                  <FormItem>
-                    <FormControl><Input {...field} placeholder={t('titlePlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="coach_slides_link" render={({ field }) => (
-                  <FormItem>
-                    <FormControl><Input {...field} placeholder={t('linkPlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>
-                  </FormItem>
-                )} />
+                <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest block">
+                  {t('coachSlidesSectionLabel')}
+                </span>
+                <FormField
+                  control={form.control}
+                  name="coach_slides_title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder={t('titlePlaceholder')}
+                          className="bg-white rounded-xl border-slate-200"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="coach_slides_link"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder={t('linkPlaceholder')}
+                          className="bg-white rounded-xl border-slate-200"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="space-y-3 p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100">
-                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest block">{t('studentSlidesSectionLabel')}</span>
-                <FormField control={form.control} name="student_slides_title" render={({ field }) => (
-                  <FormItem>
-                    <FormControl><Input {...field} placeholder={t('titlePlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="student_slides_link" render={({ field }) => (
-                  <FormItem>
-                    <FormControl><Input {...field} placeholder={t('linkPlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>
-                  </FormItem>
-                )} />
+                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest block">
+                  {t('studentSlidesSectionLabel')}
+                </span>
+                <FormField
+                  control={form.control}
+                  name="student_slides_title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder={t('titlePlaceholder')}
+                          className="bg-white rounded-xl border-slate-200"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="student_slides_link"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder={t('linkPlaceholder')}
+                          className="bg-white rounded-xl border-slate-200"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
-            <FormField control={form.control} name="admin_notes" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('adminNotesLabel')}</FormLabel>
-                <FormControl><Textarea {...field} className="resize-none bg-white rounded-xl border-slate-200 min-h-[80px]" /></FormControl>
-              </FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="admin_notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {t('adminNotesLabel')}
+                  </FormLabel>
+                  <FormControl>
+                    <Textarea {...field} className="resize-none bg-white rounded-xl border-slate-200 min-h-[80px]" />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <div className="pt-4 border-t flex justify-end gap-3">
-              <Button type="button" variant="ghost" className="rounded-xl font-bold px-6" onClick={() => setOpen(false)}>{t('cancelButton')}</Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-slate-900 text-white rounded-xl font-black px-8 gap-2 h-11 shadow-xl hover:bg-slate-800 transition-all active:scale-95">
+              <Button
+                type="button"
+                variant="ghost"
+                className="rounded-xl font-bold px-6"
+                onClick={() => setOpen(false)}
+              >
+                {t('cancelButton')}
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-slate-900 text-white rounded-xl font-black px-8 gap-2 h-11 shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+              >
                 <CheckCircle2 size={18} />
                 {isSubmitting ? t('processing') : t('confirmSaveButton')}
               </Button>

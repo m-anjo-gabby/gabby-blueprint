@@ -14,7 +14,12 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { createMatchingRequest, getMatchingSlotOptions } from '@/actions/matchingAction';
-import { CoachBrowseItem, MatchingSlotOption, SlotStatusItem, getMatchingUnbookedBreakdown } from '@gabby/types/matching';
+import {
+  CoachBrowseItem,
+  MatchingSlotOption,
+  SlotStatusItem,
+  getMatchingUnbookedBreakdown,
+} from '@gabby/types/matching';
 import { DayOfWeek } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import {
@@ -25,7 +30,12 @@ import {
   formatZonedDate,
 } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { AvailabilityLegend, CoachAvailabilityCalendar, AvailabilityCell, AvailabilityCellState } from './CoachAvailabilityCalendar';
+import {
+  AvailabilityLegend,
+  CoachAvailabilityCalendar,
+  AvailabilityCell,
+  AvailabilityCellState,
+} from './CoachAvailabilityCalendar';
 import { cn } from '@/lib/utils';
 
 interface RequestDialogProps {
@@ -47,13 +57,22 @@ function toCellState(option: MatchingSlotOption | undefined): AvailabilityCellSt
   return option.bookable_sessions >= option.target_sessions ? 'full' : 'partial';
 }
 
-export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlots, onClose, onRequested }: RequestDialogProps) {
+export function RequestDialog({
+  coach,
+  ticketId,
+  contractStartDate,
+  unmatchedSlots,
+  onClose,
+  onRequested,
+}: RequestDialogProps) {
   const studentTimezone = useTimezone();
   const [selectedSlotNo, setSelectedSlotNo] = useState<number | null>(unmatchedSlots[0]?.slot_no ?? null);
   const [selectedCell, setSelectedCell] = useState<AvailabilityCell | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // 候補ごとの予約できる回数。取得のたびに対象（コーチ×コマ）のkeyと組で持ち、対象が変わったら取得中として扱う
-  const [loadedOptions, setLoadedOptions] = useState<{ key: string; options: Map<string, MatchingSlotOption> } | null>(null);
+  const [loadedOptions, setLoadedOptions] = useState<{ key: string; options: Map<string, MatchingSlotOption> } | null>(
+    null,
+  );
   const [acknowledged, setAcknowledged] = useState(false);
   // 未予約の回の内訳は「詳しく」を押したときだけ出す（ダイアログを短く保つ）
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -77,7 +96,7 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
         const display = convertWeeklyTimeZone(
           { day_of_week: block.day_of_week, start_time: t, end_time: getLessonEndTime(t) },
           'UTC',
-          studentTimezone
+          studentTimezone,
         );
         list.push({
           key: `${block.day_of_week}-${t}`,
@@ -101,7 +120,12 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
     if (!coach || !slotNo || !optionsTargetKey) return;
     let cancelled = false;
     const candidates = Array.from(
-      new Map(cells.map((c) => [optionKey(c.displayDay, c.displayStartTime), { day_of_week: c.displayDay, start_time: c.displayStartTime }])).values()
+      new Map(
+        cells.map((c) => [
+          optionKey(c.displayDay, c.displayStartTime),
+          { day_of_week: c.displayDay, start_time: c.displayStartTime },
+        ]),
+      ).values(),
     );
     void getMatchingSlotOptions(ticketId, coach.user_id, slotNo, candidates).then((result) => {
       if (cancelled) return;
@@ -124,10 +148,15 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
 
   const cellStates = useMemo(() => {
     if (!slotOptions) return null;
-    return new Map(cells.map((c) => [c.key, toCellState(slotOptions.get(optionKey(c.displayDay, c.displayStartTime)))]));
+    return new Map(
+      cells.map((c) => [c.key, toCellState(slotOptions.get(optionKey(c.displayDay, c.displayStartTime)))]),
+    );
   }, [cells, slotOptions]);
 
-  const selectedOption = selectedCell && slotOptions ? slotOptions.get(optionKey(selectedCell.displayDay, selectedCell.displayStartTime)) : undefined;
+  const selectedOption =
+    selectedCell && slotOptions
+      ? slotOptions.get(optionKey(selectedCell.displayDay, selectedCell.displayStartTime))
+      : undefined;
   const selectedState = toCellState(selectedOption);
   const breakdown = selectedOption ? getMatchingUnbookedBreakdown(selectedOption) : null;
   const needsAcknowledgement = selectedState === 'partial';
@@ -152,7 +181,7 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
       studentTimezone,
       studentTimezone,
       undefined,
-      new Date(contractStartDate)
+      new Date(contractStartDate),
     );
   }, [coach, selectedCell, studentTimezone, contractStartDate]);
 
@@ -204,14 +233,16 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
       <DialogContent
         className={cn(
           'flex flex-col gap-0 overflow-hidden p-0 sm:max-w-xl sm:max-h-[90dvh]',
-          'max-sm:inset-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:border-0'
+          'max-sm:inset-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:border-0',
         )}
       >
         {coach && (
           <>
             <DialogHeader className="shrink-0 border-b border-line/70 px-5 pb-3 pt-5 pr-12 text-left">
               <DialogTitle>{coach.user_name} にリクエスト</DialogTitle>
-              <DialogDescription>希望のセッション開始時刻を選んでください（1回25分・あなたのタイムゾーンで表示）。</DialogDescription>
+              <DialogDescription>
+                希望のセッション開始時刻を選んでください（1回25分・あなたのタイムゾーンで表示）。
+              </DialogDescription>
             </DialogHeader>
 
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
@@ -244,7 +275,8 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
                 <div className="space-y-1 rounded-control border border-brand-100 bg-brand-soft px-3 py-2 text-brand-strong">
                   <p className="flex items-center gap-2 text-sm font-bold">
                     <Clock size={14} />
-                    毎週 {DAY_OF_WEEK_LABEL_JA[selectedCell.displayDay]} {selectedCell.displayStartTime} - {selectedCell.displayEndTime}
+                    毎週 {DAY_OF_WEEK_LABEL_JA[selectedCell.displayDay]} {selectedCell.displayStartTime} -{' '}
+                    {selectedCell.displayEndTime}
                   </p>
                   {firstSession && (
                     <p className="flex items-center gap-2 text-xs font-bold">
@@ -264,7 +296,8 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
                   <p className="flex items-start gap-1.5 font-bold">
                     <TriangleAlert size={14} className="mt-px shrink-0" aria-hidden="true" />
                     <span>
-                      {selectedOption.target_sessions}回のうち{selectedOption.bookable_sessions}回を予約します。残り{breakdown.unbooked}回はコーチと個別に日時を調整します。
+                      {selectedOption.target_sessions}回のうち{selectedOption.bookable_sessions}回を予約します。残り
+                      {breakdown.unbooked}回はコーチと個別に日時を調整します。
                     </span>
                   </p>
                   <button
@@ -274,13 +307,24 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
                     className="inline-flex items-center gap-0.5 font-bold underline underline-offset-2"
                   >
                     {showBreakdown ? '閉じる' : '詳しく'}
-                    <ChevronDown size={12} className={cn('transition-transform', showBreakdown && 'rotate-180')} aria-hidden="true" />
+                    <ChevronDown
+                      size={12}
+                      className={cn('transition-transform', showBreakdown && 'rotate-180')}
+                      aria-hidden="true"
+                    />
                   </button>
                   {showBreakdown && (
                     <div className="space-y-1">
                       <ul className="list-disc space-y-0.5 pl-5">
-                        {breakdown.conflicts > 0 && <li>コーチの他の予定（他の方のリクエストを含む）やあなたの他の予定と重なる回: {breakdown.conflicts}回</li>}
-                        {breakdown.periodShort > 0 && <li>契約の残り期間に入りきらない回: {breakdown.periodShort}回</li>}
+                        {breakdown.conflicts > 0 && (
+                          <li>
+                            コーチの他の予定（他の方のリクエストを含む）やあなたの他の予定と重なる回:{' '}
+                            {breakdown.conflicts}回
+                          </li>
+                        )}
+                        {breakdown.periodShort > 0 && (
+                          <li>契約の残り期間に入りきらない回: {breakdown.periodShort}回</li>
+                        )}
                       </ul>
                       <p>マッチング成立後、ライブセッションのページから未予約の回の日時をリクエストできます。</p>
                     </div>
@@ -301,7 +345,9 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
             </div>
 
             <div className="shrink-0 space-y-2 border-t border-line/70 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              <p className="text-[11px] text-ink-subtle">コーチは24時間以内に回答します（期限を過ぎるとリクエストは無効になります）。</p>
+              <p className="text-[11px] text-ink-subtle">
+                コーチは24時間以内に回答します（期限を過ぎるとリクエストは無効になります）。
+              </p>
               {/* モバイルでも横に並べ、本文に使える高さを残す */}
               <DialogFooter className="flex-row gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
                 <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
@@ -311,7 +357,13 @@ export function RequestDialog({ coach, ticketId, contractStartDate, unmatchedSlo
                   pending={isSubmitting}
                   type="button"
                   onClick={handleSubmit}
-                  disabled={isSubmitting || !selectedCell || !slotNo || !selectedOption || (needsAcknowledgement && !acknowledged)}
+                  disabled={
+                    isSubmitting ||
+                    !selectedCell ||
+                    !slotNo ||
+                    !selectedOption ||
+                    (needsAcknowledgement && !acknowledged)
+                  }
                 >
                   リクエストを送信
                 </Button>

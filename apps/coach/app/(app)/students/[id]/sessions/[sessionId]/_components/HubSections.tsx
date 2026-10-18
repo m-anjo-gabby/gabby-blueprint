@@ -95,7 +95,10 @@ export async function HubSelfTraining({ studentId }: { studentId: string }) {
         ) : (
           <div className="flex items-center gap-6">
             <div>
-              <p className="text-xl font-black text-slate-800">{summary.active_days}<span className="text-xs font-semibold text-slate-400">/{summary.days} days</span></p>
+              <p className="text-xl font-black text-slate-800">
+                {summary.active_days}
+                <span className="text-xs font-semibold text-slate-400">/{summary.days} days</span>
+              </p>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active</p>
             </div>
             <div>

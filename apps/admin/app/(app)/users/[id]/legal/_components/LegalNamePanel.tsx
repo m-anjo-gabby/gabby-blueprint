@@ -17,12 +17,16 @@ import { saveUserLegalName } from '@/actions/adminUserLegalAction';
 type LegalT = ReturnType<typeof useTranslations<'users.legal'>>;
 
 function createLegalNameSchema(t: LegalT) {
-  const name = z.string().trim().max(LEGAL_NAME_MAX_LENGTH, t('errorTooLong', { max: LEGAL_NAME_MAX_LENGTH }));
+  const name = z
+    .string()
+    .trim()
+    .max(LEGAL_NAME_MAX_LENGTH, t('errorTooLong', { max: LEGAL_NAME_MAX_LENGTH }));
   return z
     .object({ last_name: name, first_name: name, last_name_latin: name, first_name_latin: name })
     .superRefine((v, ctx) => {
       const hasAny = Object.values(v).some(Boolean);
-      if (hasAny && !v.first_name) ctx.addIssue({ code: 'custom', message: t('errorFirstNameRequired'), path: ['first_name'] });
+      if (hasAny && !v.first_name)
+        ctx.addIssue({ code: 'custom', message: t('errorFirstNameRequired'), path: ['first_name'] });
       if (v.last_name_latin && !v.first_name_latin) {
         ctx.addIssue({ code: 'custom', message: t('errorFirstNameRequired'), path: ['first_name_latin'] });
       }
@@ -124,7 +128,12 @@ export function LegalNamePanel({ userId, legalName }: Props) {
         </dl>
 
         <div className="flex justify-end">
-          <Button type="submit" pending={form.formState.isSubmitting} icon={<Save size={14} />} disabled={!form.formState.isDirty}>
+          <Button
+            type="submit"
+            pending={form.formState.isSubmitting}
+            icon={<Save size={14} />}
+            disabled={!form.formState.isDirty}
+          >
             {tCommon('save')}
           </Button>
         </div>

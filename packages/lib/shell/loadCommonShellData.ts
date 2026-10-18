@@ -14,7 +14,10 @@ const valueOf = <T>(result: PromiseSettledResult<{ success: boolean; data: T } |
  * 画面側のサーバーアクションもその後ろに並ばされるため、サーバー側で取得して流し込む。
  * 失敗しても例外にはせず、その項目だけ null にする（ブラウザ側で従来どおり取り直す）。
  */
-export async function loadCommonShellData({ includeChat, includeNotices = true }: CommonShellDataOptions): Promise<CommonShellData> {
+export async function loadCommonShellData({
+  includeChat,
+  includeNotices = true,
+}: CommonShellDataOptions): Promise<CommonShellData> {
   const [rooms, notices, notifications] = await Promise.allSettled([
     includeChat ? getChatRooms() : Promise.resolve(null),
     includeNotices ? getNoticesCached() : Promise.resolve(null),

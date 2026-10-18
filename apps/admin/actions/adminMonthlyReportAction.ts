@@ -21,7 +21,7 @@ export async function getCoachesForMonthlyReport(): Promise<AdminCoachSummary[]>
 
 export async function getCoachMonthlyReportForAdmin(
   coachId: string,
-  reportMonth: string
+  reportMonth: string,
 ): Promise<{ success: true; report: CoachMonthlyReport } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await getAdminCoachMonthlyReportCore(coachId, reportMonth);
@@ -36,16 +36,17 @@ export async function getCoachMonthlyReportForAdmin(
 
 export async function approveMonthlyReport(
   coachId: string,
-  reportMonth: string
+  reportMonth: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await approveCoachMonthlyReportCore(coachId, reportMonth);
 
   if (!result.success) {
     logger.error('admin:approve_monthly_report_failed', result.errorCode, ctx);
-    const message = result.errorCode === 'unresolved_sessions_exist'
-      ? '終了処理未実施のセッションが残っているため承認できません。先に該当セッションの終了処理を完了してください。'
-      : '承認に失敗しました。';
+    const message =
+      result.errorCode === 'unresolved_sessions_exist'
+        ? '終了処理未実施のセッションが残っているため承認できません。先に該当セッションの終了処理を完了してください。'
+        : '承認に失敗しました。';
     return { success: false, message };
   }
 
@@ -55,7 +56,7 @@ export async function approveMonthlyReport(
 
 export async function revokeMonthlyReportApproval(
   coachId: string,
-  reportMonth: string
+  reportMonth: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await revokeCoachMonthlyReportApprovalCore(coachId, reportMonth);

@@ -124,7 +124,9 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
   const upcomingOffsetChange = useMemo(() => findUpcomingOffsetChange(timezone, REVIEW_INTERVAL_DAYS), [timezone]);
   const [slots, setSlots] = useState<CoachAvailabilitySlot[]>(initialSlots);
   const [selection, setSelection] = useState<Set<string>>(() => expandSlotsToSelection(initialSlots, offsetMinutes));
-  const [originalSelection, setOriginalSelection] = useState<Set<string>>(() => expandSlotsToSelection(initialSlots, offsetMinutes));
+  const [originalSelection, setOriginalSelection] = useState<Set<string>>(() =>
+    expandSlotsToSelection(initialSlots, offsetMinutes),
+  );
   const [confirmedAt, setConfirmedAt] = useState<string | null>(initialConfirmedAt);
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -132,7 +134,7 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
   const { showConfirm } = useConfirm();
   const timezoneLabel = useMemo(
     () => timezones.find((tz) => tz.timezone === timezone)?.display_name_en ?? timezone,
-    [timezones, timezone]
+    [timezones, timezone],
   );
   const offsetLabel = useMemo(() => formatUtcOffset(timezone) ?? '', [timezone]);
 
@@ -179,7 +181,7 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
       const ok = await showConfirm(
         'Save changes?',
         `This removes ${toDelete.length} time block${toDelete.length > 1 ? 's' : ''} from your availability. Students will no longer be able to book those times, but already scheduled sessions are not affected.`,
-        { variant: 'danger', confirmText: 'Save', cancelText: 'Cancel' }
+        { variant: 'danger', confirmText: 'Save', cancelText: 'Cancel' },
       );
       if (!ok) return;
     }
@@ -188,11 +190,15 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
     try {
       const [deleteResults, addResults] = await Promise.all([
         Promise.all(toDelete.map((t) => deleteAvailability(t.availability_id))),
-        Promise.all(toAdd.map((r) => addAvailability({ day_of_week: r.day, start_time: r.start_time, end_time: r.end_time }))),
+        Promise.all(
+          toAdd.map((r) => addAvailability({ day_of_week: r.day, start_time: r.start_time, end_time: r.end_time })),
+        ),
       ]);
 
       const deletedIds = new Set(toDelete.filter((_, i) => deleteResults[i].success).map((t) => t.availability_id));
-      const addedSlots = addResults.filter((r): r is { success: true; slot: CoachAvailabilitySlot } => r.success).map((r) => r.slot);
+      const addedSlots = addResults
+        .filter((r): r is { success: true; slot: CoachAvailabilitySlot } => r.success)
+        .map((r) => r.slot);
       const failedCount = deleteResults.filter((r) => !r.success).length + addResults.filter((r) => !r.success).length;
 
       const updatedSlots = [...slots.filter((s) => !deletedIds.has(s.availability_id)), ...addedSlots];
@@ -226,9 +232,9 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
             </span>
           </div>
           <CardDescription>
-            Click or drag to mark the days and times you are available. Sessions are booked in 30-minute blocks (each lesson runs 25 minutes).
-            Times are shown in your timezone. Students always see these slots at the same times, so when daylight saving time
-            changes, the times shown here shift by one hour.
+            Click or drag to mark the days and times you are available. Sessions are booked in 30-minute blocks (each
+            lesson runs 25 minutes). Times are shown in your timezone. Students always see these slots at the same
+            times, so when daylight saving time changes, the times shown here shift by one hour.
           </CardDescription>
         </div>
 
@@ -237,7 +243,14 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
             <RotateCcw size={13} />
             Reset
           </Button>
-          <Button pending={isSaving} icon={<Save size={14} />} type="button" size="sm" onClick={handleSave} disabled={!isDirty || isSaving}>
+          <Button
+            pending={isSaving}
+            icon={<Save size={14} />}
+            type="button"
+            size="sm"
+            onClick={handleSave}
+            disabled={!isDirty || isSaving}
+          >
             Save Changes
           </Button>
         </div>
@@ -247,9 +260,11 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
           <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
             <Info size={14} className="mt-0.5 shrink-0" />
             <p>
-              Daylight saving time changes on {formatDateEn(upcomingOffsetChange.date, timezone)}. From then, your availability
-              will show {Math.abs(upcomingOffsetChange.shiftMinutes) / 60} hour{Math.abs(upcomingOffsetChange.shiftMinutes) === 60 ? '' : 's'}{' '}
-              {upcomingOffsetChange.shiftMinutes > 0 ? 'later' : 'earlier'} in your local time. Please review it after the change.
+              Daylight saving time changes on {formatDateEn(upcomingOffsetChange.date, timezone)}. From then, your
+              availability will show {Math.abs(upcomingOffsetChange.shiftMinutes) / 60} hour
+              {Math.abs(upcomingOffsetChange.shiftMinutes) === 60 ? '' : 's'}{' '}
+              {upcomingOffsetChange.shiftMinutes > 0 ? 'later' : 'earlier'} in your local time. Please review it after
+              the change.
             </p>
           </div>
         )}
@@ -295,7 +310,7 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
                   >
                     {DAY_OF_WEEK_LABEL_EN[day]} {r.start_time} - {r.end_time}
                   </span>
-                ))
+                )),
             )
           )}
         </div>

@@ -28,7 +28,9 @@ const writeDismissed = (value: string) => {
 };
 
 const formatToday = (nowMs: number, timeZone: string) =>
-  new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(nowMs));
+  new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(
+    new Date(nowMs),
+  );
 
 interface TodayDateLineProps {
   nowMs: number;
@@ -53,9 +55,7 @@ export function TodayDateLine({ nowMs, timezone, settingTimezone, timezoneNames 
 
   const pairKey = settingTimezone && deviceTimezone ? `${settingTimezone}|${deviceTimezone}` : null;
   const showWarning =
-    pairKey !== null &&
-    dismissed !== pairKey &&
-    hasTimezoneMismatch(settingTimezone!, deviceTimezone!, nowMs);
+    pairKey !== null && dismissed !== pairKey && hasTimezoneMismatch(settingTimezone!, deviceTimezone!, nowMs);
 
   if (!showWarning) return <p className="text-sm text-ink-muted">{today}</p>;
 

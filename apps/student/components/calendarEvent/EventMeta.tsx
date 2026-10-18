@@ -9,7 +9,10 @@ import { cn } from '@/lib/utils';
  */
 
 /** 「10月12日(日)」「20:00〜21:00」（終了時刻が無い場合は「20:00〜」） */
-export function formatEventSlot(event: Pick<CalendarEventItem, 'start_datetime' | 'end_datetime'>, timeZone: string): { date: string; time: string } {
+export function formatEventSlot(
+  event: Pick<CalendarEventItem, 'start_datetime' | 'end_datetime'>,
+  timeZone: string,
+): { date: string; time: string } {
   const dateFormat = new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' });
   const timeFormat = new Intl.DateTimeFormat('ja-JP', { timeZone, hour: '2-digit', minute: '2-digit' });
   const start = new Date(event.start_datetime);
@@ -26,7 +29,15 @@ export function formatEventCoachNames(event: Pick<CalendarEventItem, 'coaches'>)
 }
 
 /** 開催までの状況（開催中 / 今日・明日の残り時間）。現在時刻の確定前と、2日以上先は出さない */
-export function EventTiming({ event, nowMs, timezone }: { event: CalendarEventItem; nowMs: number | null; timezone: string }) {
+export function EventTiming({
+  event,
+  nowMs,
+  timezone,
+}: {
+  event: CalendarEventItem;
+  nowMs: number | null;
+  timezone: string;
+}) {
   if (nowMs === null) return null;
   const phase = getCalendarEventPhase(event, nowMs);
   if (phase === 'live') {
@@ -66,7 +77,10 @@ export function EventDetailLink({ onClick, className }: { onClick: () => void; c
     <button
       type="button"
       onClick={onClick}
-      className={cn('inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-brand-strong transition-colors hover:text-brand-900', className)}
+      className={cn(
+        'inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-brand-strong transition-colors hover:text-brand-900',
+        className,
+      )}
     >
       詳細
       <ChevronRight size={14} />
@@ -75,13 +89,25 @@ export function EventDetailLink({ onClick, className }: { onClick: () => void; c
 }
 
 /** シリーズ名（シリーズに属する回のみ。各回のタイトルの上に小さく出す） */
-export function EventSeriesLabel({ event, className }: { event: Pick<CalendarEventItem, 'series'>; className?: string }) {
+export function EventSeriesLabel({
+  event,
+  className,
+}: {
+  event: Pick<CalendarEventItem, 'series'>;
+  className?: string;
+}) {
   if (!event.series) return null;
   return <p className={cn('truncate text-xs text-ink-muted', className)}>{event.series.title}</p>;
 }
 
 /** 担当コーチ（未設定なら出さない） */
-export function EventCoachLine({ event, className }: { event: Pick<CalendarEventItem, 'coaches'>; className?: string }) {
+export function EventCoachLine({
+  event,
+  className,
+}: {
+  event: Pick<CalendarEventItem, 'coaches'>;
+  className?: string;
+}) {
   const names = formatEventCoachNames(event);
   if (!names) return null;
   return (

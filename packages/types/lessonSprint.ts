@@ -94,20 +94,16 @@ export const LESSON_SPRINT_SCORE_META: Record<number, { label: string; color: st
 export const DEFAULT_LESSON_SPRINT_SCORE = 3;
 
 export type GetLessonSprintContentsResult =
-  | { success: true; contents: LessonSprintContentSummary[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; contents: LessonSprintContentSummary[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetLessonSprintQuestionsResult =
-  | { success: true; questions: SprintQuestion[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; questions: SprintQuestion[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type CreateLessonSprintResultResponse =
-  | { success: true; lesson_sprint_id: string }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; lesson_sprint_id: string } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetLessonSprintHistoryResult =
-  | { success: true; records: LessonSprintHistoryListItem[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; records: LessonSprintHistoryListItem[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 /** 生徒×コーチのLesson Sprint実施履歴を、insert_dateカーソルでページング取得した結果（履歴一覧画面用） */
 export type GetLessonSprintHistoryPageResult =
@@ -119,5 +115,4 @@ export type GetLessonSprintDetailResult =
   | { success: false; errorCode: CoachStudentErrorCode };
 
 export type UpdateLessonSprintSessionNoteResult =
-  | { success: true }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true } | { success: false; errorCode: CoachStudentErrorCode };

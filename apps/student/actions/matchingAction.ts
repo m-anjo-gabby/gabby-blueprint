@@ -38,7 +38,8 @@ const MATCHING_ERROR_MESSAGES_JA: Record<MatchingRequestErrorCode, string> = {
   not_eligible: 'この操作を行う権限がありません。',
   slot_already_requested: 'この枠は既にマッチング済み、または承認待ちのリクエストがあります。',
   schedule_conflict: 'この時間帯はコーチの既存の予約と重複しています。別の時間帯をお選びください。',
-  insufficient_bookable: 'この時間帯は、契約期間内に予約できる回数が足りません（コーチの他の予定や他の方のリクエストと重なる回が多いため）。別の時間帯をお選びください。',
+  insufficient_bookable:
+    'この時間帯は、契約期間内に予約できる回数が足りません（コーチの他の予定や他の方のリクエストと重なる回が多いため）。別の時間帯をお選びください。',
   not_pending: 'このリクエストは既にコーチが対応済みです。画面を更新してご確認ください。',
   expired: 'このリクエストは回答期限（24時間）を過ぎたため、既に無効になっています。画面を更新してご確認ください。',
   db_insert_failed: 'リクエストの送信に失敗しました。',
@@ -156,7 +157,7 @@ export async function getMyBookableTickets(): Promise<BookableTicketSlot[]> {
  * マッチングリクエストを送信する
  */
 export async function createMatchingRequest(
-  input: CreateMatchingRequestInput
+  input: CreateMatchingRequestInput,
 ): Promise<{ success: true; requestId: string; expiresAt: string | null } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await createMatchingRequestCore(input);
@@ -177,7 +178,7 @@ export async function getMatchingSlotOptions(
   ticketId: string,
   coachId: string,
   slotNo: number,
-  candidates: { day_of_week: DayOfWeek; start_time: string }[]
+  candidates: { day_of_week: DayOfWeek; start_time: string }[],
 ): Promise<{ success: true; options: MatchingSlotOption[] } | { success: false; message: string }> {
   const result = await getMatchingSlotOptionsCore(ticketId, coachId, slotNo, candidates);
   if (!result.success) {
@@ -192,7 +193,7 @@ export async function getMatchingSlotOptions(
  * 承認待ちの自分のマッチングリクエストを取り下げる（宛先のコーチにアプリ内で通知される）
  */
 export async function withdrawMatchingRequest(
-  requestId: string
+  requestId: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await withdrawMatchingRequestCore(requestId);

@@ -67,7 +67,10 @@ export function AddSeriesSessionsDialog({ seriesId, sessions, coaches, clients }
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none" icon={<CalendarPlus size={16} />}>
+        <Button
+          className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none"
+          icon={<CalendarPlus size={16} />}
+        >
           {t('addSessionsButton')}
         </Button>
       </DialogTrigger>

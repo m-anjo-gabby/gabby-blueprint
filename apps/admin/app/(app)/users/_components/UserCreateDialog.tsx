@@ -132,7 +132,7 @@ export function UserCreateDialog() {
         handleResult(
           await createUserDirect({ ...values, password: values.password || '' }),
           t('toastCreatedDirect'),
-          t('toastCreateFailed')
+          t('toastCreateFailed'),
         );
       } else {
         handleResult(await createUser(values), t('toastInvited'), t('toastRegisterFailed'));
@@ -150,7 +150,9 @@ export function UserCreateDialog() {
   };
 
   const renderReadOnly = (value: string) => (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700">{value}</div>
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700">
+      {value}
+    </div>
   );
 
   const renderModeOption = (value: UserCreateValues['creation_mode'], current: string, onSelect: () => void) => {
@@ -160,14 +162,22 @@ export function UserCreateDialog() {
         type="button"
         onClick={onSelect}
         className={`flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-all ${
-          current === value ? 'border-slate-200 bg-white shadow-sm' : 'border-transparent text-slate-500 hover:bg-white/60'
+          current === value
+            ? 'border-slate-200 bg-white shadow-sm'
+            : 'border-transparent text-slate-500 hover:bg-white/60'
         }`}
       >
         <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-          {isInvite ? <Mail size={12} className="text-brand-500" /> : <ShieldCheck size={12} className="text-emerald-500" />}
+          {isInvite ? (
+            <Mail size={12} className="text-brand-500" />
+          ) : (
+            <ShieldCheck size={12} className="text-emerald-500" />
+          )}
           {isInvite ? t('creationModeInvite') : t('creationModeDirect')}
         </span>
-        <span className="text-[11px] leading-snug text-slate-400">{isInvite ? t('creationModeInviteDesc') : t('creationModeDirectDesc')}</span>
+        <span className="text-[11px] leading-snug text-slate-400">
+          {isInvite ? t('creationModeInviteDesc') : t('creationModeDirectDesc')}
+        </span>
       </button>
     );
   };
@@ -214,7 +224,12 @@ export function UserCreateDialog() {
                 />
               )}
 
-              <UserBasicFields clients={clients} roles={roles} isLoadingClients={isLoadingClients} readOnly={isConfirming} />
+              <UserBasicFields
+                clients={clients}
+                roles={roles}
+                isLoadingClients={isLoadingClients}
+                readOnly={isConfirming}
+              />
 
               {/* 即時作成の場合のみパスワードを入力する */}
               {creationMode === 'direct' && (
@@ -238,7 +253,9 @@ export function UserCreateDialog() {
                                 type="password"
                                 autoComplete="new-password"
                                 className={INPUT_CLASS}
-                                placeholder={name === 'password' ? t('passwordPlaceholder') : t('confirmPasswordPlaceholder')}
+                                placeholder={
+                                  name === 'password' ? t('passwordPlaceholder') : t('confirmPasswordPlaceholder')
+                                }
                               />
                             </FormControl>
                           )}
@@ -259,7 +276,9 @@ export function UserCreateDialog() {
                     <FormItem>
                       <FormLabel className={USER_FIELD_LABEL_CLASS}>{t('initialLicenseLabel')}</FormLabel>
                       {isConfirming ? (
-                        renderReadOnly(contracts.find((c) => c.contract_id === field.value)?.contract_name || t('noLicenseAssigned'))
+                        renderReadOnly(
+                          contracts.find((c) => c.contract_id === field.value)?.contract_name || t('noLicenseAssigned'),
+                        )
                       ) : (
                         <Select onValueChange={field.onChange} value={field.value} disabled={contracts.length === 0}>
                           <FormControl>
@@ -311,7 +330,11 @@ export function UserCreateDialog() {
                     >
                       {tCommon('back')}
                     </Button>
-                    <Button type="submit" pending={isSubmitting} className="h-12 flex-1 rounded-xl bg-slate-900 font-bold text-white shadow-lg hover:bg-slate-800">
+                    <Button
+                      type="submit"
+                      pending={isSubmitting}
+                      className="h-12 flex-1 rounded-xl bg-slate-900 font-bold text-white shadow-lg hover:bg-slate-800"
+                    >
                       {creationMode === 'direct' ? t('createAccount') : t('confirmSave')}
                     </Button>
                   </div>

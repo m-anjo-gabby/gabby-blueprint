@@ -29,10 +29,7 @@ const {
   signOutMode: 'revalidate',
   // 再設定メールは日本語
   resetMailLanguage: 'ja',
-  guardUser: (user) =>
-    user.app_metadata?.user_type === USER_TYPES.ADMIN
-      ? { ok: false }
-      : { ok: true },
+  guardUser: (user) => (user.app_metadata?.user_type === USER_TYPES.ADMIN ? { ok: false } : { ok: true }),
 });
 
 export {

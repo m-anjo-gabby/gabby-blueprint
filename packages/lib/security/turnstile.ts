@@ -33,11 +33,17 @@ export async function verifyTurnstileToken(token: string, ctx: LogContext): Prom
     const res = await fetch(VERIFY_URL, { method: 'POST', body, signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS) });
     const result = (await res.json()) as SiteverifyResponse;
     if (!result.success) {
-      logger.warn('security:turnstile_denied', 'Turnstile verification failed', { ...ctx, payload: { errorCodes: result['error-codes'] } });
+      logger.warn('security:turnstile_denied', 'Turnstile verification failed', {
+        ...ctx,
+        payload: { errorCodes: result['error-codes'] },
+      });
     }
     return result.success;
   } catch (err) {
-    logger.error('security:turnstile_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('security:turnstile_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return false;
   }
 }

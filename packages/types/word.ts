@@ -105,11 +105,11 @@ export interface WordAdjustment {
  * PhraseRecord を継承し、お気に入り状態やリレーション情報を付加
  */
 export interface PhraseItem extends PhraseRecord {
-  is_favorite: boolean;      // お気に入り状態 (旧 is_favorite_initial)
-  word_en?: string;          // 単語帳やリスト表示用
-  content_id?: string;       // コンテンツ切替用
-  content_name?: string;     // タブやラベル表示用
-  favorite_id?: string;      // お気に入り削除Actionに必要
+  is_favorite: boolean; // お気に入り状態 (旧 is_favorite_initial)
+  word_en?: string; // 単語帳やリスト表示用
+  content_id?: string; // コンテンツ切替用
+  content_name?: string; // タブやラベル表示用
+  favorite_id?: string; // お気に入り削除Actionに必要
 }
 
 /**

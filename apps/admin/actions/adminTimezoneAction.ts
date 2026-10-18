@@ -17,10 +17,7 @@ export async function getTimezones() {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from('com_m_timezone')
-      .select('*')
-      .order('sort_no', { ascending: true });
+    const { data, error } = await supabase.from('com_m_timezone').select('*').order('sort_no', { ascending: true });
 
     if (error) {
       logger.error('timezone:get_timezones_failed', error.message, { ...ctx, err: error });
@@ -28,7 +25,10 @@ export async function getTimezones() {
     }
     return data as TimezoneMaster[];
   } catch (error) {
-    logger.error('timezone:get_timezones_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    logger.error('timezone:get_timezones_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -50,7 +50,7 @@ export async function upsertTimezone(payload: TableInsert<'com_m_timezone'>) {
           ...payload,
           update_date: new Date().toISOString(),
         },
-        { onConflict: 'timezone' }
+        { onConflict: 'timezone' },
       )
       .select()
       .single();
@@ -69,7 +69,11 @@ export async function upsertTimezone(payload: TableInsert<'com_m_timezone'>) {
     revalidatePath('/timezones');
     return { success: true, data: savedTimezone };
   } catch (error) {
-    logger.error('timezone:upsert_timezone_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
+    logger.error('timezone:upsert_timezone_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload,
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -82,10 +86,7 @@ export async function deleteTimezone(timezone: string) {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
-    const { error } = await supabase
-      .from('com_m_timezone')
-      .delete()
-      .eq('timezone', timezone);
+    const { error } = await supabase.from('com_m_timezone').delete().eq('timezone', timezone);
 
     if (error) {
       if (isInUseError(error)) return { success: false, reason: 'in_use' as const, message: error.message };
@@ -98,7 +99,11 @@ export async function deleteTimezone(timezone: string) {
     revalidatePath('/timezones');
     return { success: true };
   } catch (error) {
-    logger.error('timezone:delete_timezone_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { timezone } });
+    logger.error('timezone:delete_timezone_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { timezone },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

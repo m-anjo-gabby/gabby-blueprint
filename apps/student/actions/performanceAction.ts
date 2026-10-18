@@ -1,8 +1,8 @@
-"use server";
+'use server';
 
-import { createServerClient } from "@gabby/lib/supabase/server";
-import { createLogger } from "@gabby/lib/logger";
-import { getLogContext } from "@gabby/lib/logger/context";
+import { createServerClient } from '@gabby/lib/supabase/server';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import type { UserTrainingPerformanceResponse } from '@gabby/types/training';
 
@@ -12,16 +12,18 @@ const logger = createLogger('student');
  * ログイン中ユーザーの特定月のトレーニング実績を一括取得する (RPC経由)
  * @param yearMonth 'YYYY-MM' 形式の文字列
  */
-export async function getUserTrainingPerformanceAction(yearMonth: string): Promise<{ success: boolean; data: UserTrainingPerformanceResponse; error?: string }> {
+export async function getUserTrainingPerformanceAction(
+  yearMonth: string,
+): Promise<{ success: boolean; data: UserTrainingPerformanceResponse; error?: string }> {
   const ctx = await getLogContext();
 
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     const { data, error } = await supabase.rpc('get_user_training_performance', {
-      _year_month: yearMonth
+      _year_month: yearMonth,
     });
 
     if (error) throw error;
@@ -29,22 +31,25 @@ export async function getUserTrainingPerformanceAction(yearMonth: string): Promi
     const resData: UserTrainingPerformanceResponse = {
       words: data?.words || [],
       sprint_sessions: data?.sprint_sessions || [],
-      sprint_drills: data?.sprint_drills || []
+      sprint_drills: data?.sprint_drills || [],
     };
 
-    logger.debug("performance:get_user_performance_success", `Fetched user performance data: ${resData.words.length} words, ${resData.sprint_sessions.length} sessions`, ctx);
+    logger.debug(
+      'performance:get_user_performance_success',
+      `Fetched user performance data: ${resData.words.length} words, ${resData.sprint_sessions.length} sessions`,
+      ctx,
+    );
     return { success: true, data: resData };
-
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error("performance:get_user_performance_failed", "Failed to fetch user performance data", {
+    logger.error('performance:get_user_performance_failed', 'Failed to fetch user performance data', {
       ...ctx,
-      payload: { error: message }
+      payload: { error: message },
     });
-    return { 
-      success: false, 
-      data: { words: [], sprint_sessions: [], sprint_drills: [] }, 
-      error: message 
+    return {
+      success: false,
+      data: { words: [], sprint_sessions: [], sprint_drills: [] },
+      error: message,
     };
   }
 }
@@ -73,18 +78,20 @@ export async function getMyTrainingLifetimeStats(): Promise<TrainingLifetimeStat
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     const { data, error } = await supabase
       .from('student_m_training_lifetime_stats')
-      .select('total_active_days, current_streak_days, first_training_date, last_training_date, total_words, total_phrases, total_assessments')
+      .select(
+        'total_active_days, current_streak_days, first_training_date, last_training_date, total_words, total_phrases, total_assessments',
+      )
       .eq('user_id', user.id)
       .maybeSingle();
 
     if (error) throw error;
     return data;
   } catch (error) {
-    logger.error("performance:get_lifetime_stats_failed", "Failed to fetch training lifetime stats", {
+    logger.error('performance:get_lifetime_stats_failed', 'Failed to fetch training lifetime stats', {
       ...ctx,
       err: error,
     });

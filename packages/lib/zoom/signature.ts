@@ -35,6 +35,6 @@ export function generateVideoSdkSignature(params: {
       exp,
     },
     sdkSecret,
-    { algorithm: 'HS256' }
+    { algorithm: 'HS256' },
   );
 }

@@ -28,5 +28,4 @@ export interface CountryMaster {
 }
 
 export type GetCountryListResult =
-  | { success: true; countries: CountryMaster[] }
-  | { success: false; errorCode: 'unexpected_error' };
+  { success: true; countries: CountryMaster[] } | { success: false; errorCode: 'unexpected_error' };

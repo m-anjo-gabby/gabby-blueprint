@@ -8,7 +8,11 @@
  */
 import 'server-only';
 import { randomBytes } from 'crypto';
-import { formatTrialApplicantName, type TrialApplicationInput, type TrialApplicationKind } from '@gabby/types/trialApplication';
+import {
+  formatTrialApplicantName,
+  type TrialApplicationInput,
+  type TrialApplicationKind,
+} from '@gabby/types/trialApplication';
 import { createAdminClient } from '../supabase/admin';
 import { createLogger, type LogContext } from '../logger';
 import { REPORTING_TIMEZONE } from '../date/reporting';
@@ -54,7 +58,11 @@ function formatJstDateTime(date: Date): string {
 }
 
 async function timezoneLabel(supabase: AdminClient, timezone: string): Promise<string> {
-  const { data } = await supabase.from('com_m_timezone').select('display_name_ja, display_name_en').eq('timezone', timezone).maybeSingle();
+  const { data } = await supabase
+    .from('com_m_timezone')
+    .select('display_name_ja, display_name_en')
+    .eq('timezone', timezone)
+    .maybeSingle();
   return data ? `${data.display_name_ja} / ${data.display_name_en}` : timezone;
 }
 
@@ -112,8 +120,14 @@ async function sendSupportMail(supabase: AdminClient, input: TrialApplicationInp
   });
   await Promise.all(
     recipients.map((to) =>
-      sendAccountMail({ to, kind: 'trial_application_notify', mail, logName: 'send_trial_application_notify', label: 'トライアルの申込の通知メール' })
-    )
+      sendAccountMail({
+        to,
+        kind: 'trial_application_notify',
+        mail,
+        logName: 'send_trial_application_notify',
+        label: 'トライアルの申込の通知メール',
+      }),
+    ),
   );
 }
 
@@ -123,7 +137,10 @@ export type SubmitTrialApplicationResult = { success: true } | { success: false 
  * 申込を受け付ける（入力は検証済み・メールアドレスは小文字にそろえて渡す）。
  * 申込者には申込の種類（登録済み等）を画面で知らせない（アドレスの登録の有無が分からないよう、常に同じ完了表示にする）。
  */
-export async function submitTrialApplication(input: TrialApplicationInput, ctx: LogContext): Promise<SubmitTrialApplicationResult> {
+export async function submitTrialApplication(
+  input: TrialApplicationInput,
+  ctx: LogContext,
+): Promise<SubmitTrialApplicationResult> {
   const supabase = createAdminClient();
   const appliedAt = new Date();
   const expiresAt = new Date(appliedAt.getTime() + INVITATION_EXPIRES_DAYS * 86_400_000);
@@ -152,7 +169,10 @@ export async function submitTrialApplication(input: TrialApplicationInput, ctx: 
 
   const logPayload = { applicationId: row.application_id, kind: row.kind, applyCount: row.apply_count };
   if (row.throttled) {
-    logger.info('trial:submit_application_throttled', 'Repeated application within the minimum interval', { ...ctx, payload: logPayload });
+    logger.info('trial:submit_application_throttled', 'Repeated application within the minimum interval', {
+      ...ctx,
+      payload: logPayload,
+    });
     return { success: true };
   }
 

@@ -9,7 +9,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 
 const logger = createLogger('admin');
 
-/** * タグ一覧取得 
+/** * タグ一覧取得
  */
 export async function getTags() {
   const ctx = await getLogContext();
@@ -27,19 +27,22 @@ export async function getTags() {
     }
     return data as ContentTag[];
   } catch (error) {
-    logger.error('tag:get_tags_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    logger.error('tag:get_tags_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
 
-/** * タグの保存（新規・更新） 
+/** * タグの保存（新規・更新）
  */
 export async function upsertTag(payload: TableInsert<'com_m_contents_tag'>) {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
     const isEdit = !!payload.tag_id;
-    
+
     const { data, error } = await supabase
       .from('com_m_contents_tag')
       .upsert({
@@ -55,15 +58,19 @@ export async function upsertTag(payload: TableInsert<'com_m_contents_tag'>) {
     }
 
     const savedTag = data as ContentTag;
-    logger.info('tag:upsert_tag_success', `Tag ${isEdit ? 'updated' : 'created'}: ${savedTag.tag_name}`, { 
+    logger.info('tag:upsert_tag_success', `Tag ${isEdit ? 'updated' : 'created'}: ${savedTag.tag_name}`, {
       ...ctx,
-      payload: { tagId: savedTag.tag_id, isEdit } 
+      payload: { tagId: savedTag.tag_id, isEdit },
     });
-    
+
     revalidatePath('/contents/tags');
     return { success: true, data: savedTag };
   } catch (error) {
-    logger.error('tag:upsert_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
+    logger.error('tag:upsert_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload,
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -75,25 +82,26 @@ export async function deleteTag(tagId: string) {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
-    const { error } = await supabase
-      .from('com_m_contents_tag')
-      .delete()
-      .eq('tag_id', tagId);
+    const { error } = await supabase.from('com_m_contents_tag').delete().eq('tag_id', tagId);
 
     if (error) {
       logger.error('tag:delete_tag_failed', error.message, { ...ctx, err: error, payload: { tagId } });
       return { success: false, message: error.message };
     }
 
-    logger.info('tag:delete_tag_success', `Tag deleted`, { 
+    logger.info('tag:delete_tag_success', `Tag deleted`, {
       ...ctx,
-      payload: { tagId } 
+      payload: { tagId },
     });
 
     revalidatePath('/contents/tags');
     return { success: true };
   } catch (error) {
-    logger.error('tag:delete_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { tagId } });
+    logger.error('tag:delete_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { tagId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

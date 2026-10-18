@@ -114,9 +114,7 @@ export function CVWordList() {
   // フィルター
   // ----------------------------------------------------------
 
-  const filteredWords = words.filter((w) =>
-    w.word_en.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredWords = words.filter((w) => w.word_en.toLowerCase().includes(searchQuery.toLowerCase()));
 
   // ============================================================
   // Render
@@ -162,7 +160,7 @@ export function CVWordList() {
                   onClick={() => handleSelect(word)}
                   className={cn(
                     'group relative flex flex-col p-3 px-4 cursor-pointer transition-all hover:bg-slate-50 border-l-4',
-                    isSelected ? 'bg-brand-50/50 border-brand-500' : 'border-transparent'
+                    isSelected ? 'bg-brand-50/50 border-brand-500' : 'border-transparent',
                   )}
                 >
                   {/* 英単語 */}
@@ -184,9 +182,7 @@ export function CVWordList() {
                           variant="outline"
                           className={cn(
                             'text-[10px] px-1.5 py-0 font-bold border-none gap-0.5',
-                            audioRatio === 1
-                              ? 'bg-emerald-50 text-emerald-600'
-                              : 'bg-amber-50 text-amber-600'
+                            audioRatio === 1 ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600',
                           )}
                         >
                           <Volume2 size={9} className="inline mr-0.5" />
@@ -216,13 +212,16 @@ export function CVWordList() {
                               <AlertCircle size={32} />
                             </div>
                             <div className="text-center space-y-2">
-                              <AlertDialogTitle className="text-xl font-black text-slate-800">{t('deleteDialogTitle')}</AlertDialogTitle>
+                              <AlertDialogTitle className="text-xl font-black text-slate-800">
+                                {t('deleteDialogTitle')}
+                              </AlertDialogTitle>
                               <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
                                 {t.rich('deleteDialogBody', {
                                   word: word.word_en,
                                   count: word.entry_count,
                                   bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
-                                })}<br />
+                                })}
+                                <br />
                                 {t('deleteDialogHint')}
                               </AlertDialogDescription>
                             </div>

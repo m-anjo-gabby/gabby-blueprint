@@ -113,7 +113,11 @@ export function CompanyProfileCard({ initialProfile }: { initialProfile: Company
         <div className="flex items-center gap-4">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage上の画像URLのプレビュー表示
-            <img src={logoUrl} alt={t('logoAlt')} className="h-16 w-auto max-w-[160px] object-contain border border-slate-100 rounded-md p-2" />
+            <img
+              src={logoUrl}
+              alt={t('logoAlt')}
+              className="h-16 w-auto max-w-[160px] object-contain border border-slate-100 rounded-md p-2"
+            />
           ) : (
             <span className="text-xs text-slate-400">{t('logoNotSet')}</span>
           )}

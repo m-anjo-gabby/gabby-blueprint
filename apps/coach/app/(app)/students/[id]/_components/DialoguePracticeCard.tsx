@@ -39,7 +39,7 @@ export function DialoguePracticeCard({
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const { assignments, assignedContentIds, handleAssigned, handleProgressChange } = useDialoguePracticeAssignments(
     studentId,
-    initialAssignments
+    initialAssignments,
   );
 
   // 概要パネルは対応中のセットに絞って表示する（完了済みはManageページで確認する運用）
@@ -64,7 +64,10 @@ export function DialoguePracticeCard({
             Assign
           </Button>
           {manageHref && (
-            <Link href={manageHref} className="text-[11px] font-bold text-brand hover:text-brand-strong transition-colors">
+            <Link
+              href={manageHref}
+              className="text-[11px] font-bold text-brand hover:text-brand-strong transition-colors"
+            >
               Manage
             </Link>
           )}
@@ -128,7 +131,8 @@ export function DialoguePracticeCard({
               <DialogHeader>
                 <DialogTitle>{selectedAssignment.content_name}</DialogTitle>
                 <DialogDescription>
-                  {selectedAssignment.completed_session_count}/{selectedAssignment.total_session_count} sessions completed
+                  {selectedAssignment.completed_session_count}/{selectedAssignment.total_session_count} sessions
+                  completed
                 </DialogDescription>
               </DialogHeader>
               <div className="-mt-2">

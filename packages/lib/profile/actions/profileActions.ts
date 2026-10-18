@@ -55,7 +55,10 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
       },
     };
   } catch (err) {
-    logger.error('profile:get_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('profile:get_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

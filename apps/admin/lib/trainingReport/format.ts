@@ -7,7 +7,7 @@ const REPORT_TIME_ZONE = 'Asia/Tokyo';
 
 /** 表の列順（UG Speed → Builders → Structure → Mastery。QUESTION_TYPES の seq_no 順） */
 export const SPRINT_TYPE_ORDER: SprintQuestionType[] = (Object.keys(QUESTION_TYPES) as SprintQuestionType[]).sort(
-  (a, b) => QUESTION_TYPES[a].seq_no - QUESTION_TYPES[b].seq_no
+  (a, b) => QUESTION_TYPES[a].seq_no - QUESTION_TYPES[b].seq_no,
 );
 
 function jstParts(iso: string): { year: number; month: number; day: number } {
@@ -48,8 +48,7 @@ export function formatPeriodLength(startIso: string, endIso: string): string {
   const end = jstParts(endIso);
   // 終了日の翌日を求め、開始日と同じ「日」になっていれば暦の月で割り切れる期間
   const nextOfEnd = new Date(Date.UTC(end.year, end.month - 1, end.day + 1));
-  const months =
-    (nextOfEnd.getUTCFullYear() - start.year) * 12 + (nextOfEnd.getUTCMonth() + 1 - start.month);
+  const months = (nextOfEnd.getUTCFullYear() - start.year) * 12 + (nextOfEnd.getUTCMonth() + 1 - start.month);
   if (nextOfEnd.getUTCDate() === start.day && months > 0) {
     return `${months}ヶ月`;
   }
@@ -92,12 +91,16 @@ function sanitizeFileName(name: string): string {
 
 /** "{氏名}様_Gabbyトレーニングレポート_{YYYYMM}"（拡張子なし。現行の手作業のファイル名に合わせる） */
 export function buildTrainingReportFileBase(data: Pick<TrainingReportData, 'student_name' | 'end_date'>): string {
-  return sanitizeFileName(`${data.student_name ?? '生徒'}様_Gabbyトレーニングレポート_${formatReportYearMonth(data.end_date)}`);
+  return sanitizeFileName(
+    `${data.student_name ?? '生徒'}様_Gabbyトレーニングレポート_${formatReportYearMonth(data.end_date)}`,
+  );
 }
 
 /** ZIPのファイル名（拡張子なし） */
 export function buildTrainingReportZipBase(contractName: string, issuedAt: Date): string {
-  return sanitizeFileName(`Gabbyトレーニングレポート_${contractName}_${formatReportDate(issuedAt.toISOString()).replace(/\//g, '')}`);
+  return sanitizeFileName(
+    `Gabbyトレーニングレポート_${contractName}_${formatReportDate(issuedAt.toISOString()).replace(/\//g, '')}`,
+  );
 }
 
 /** Content-Disposition（日本語のファイル名はfilename*で渡し、非対応ブラウザ向けにASCIIの代替名も付ける） */

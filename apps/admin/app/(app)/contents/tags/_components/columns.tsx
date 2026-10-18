@@ -19,7 +19,10 @@ const TYPE_COLORS: Record<TagType, string> = {
   other: 'bg-slate-100 text-slate-700 border-slate-200',
 };
 
-export function createColumns(t: TableT, { onDelete }: { onDelete: (tag: ContentTag) => void }): ListColumnDef<ContentTag>[] {
+export function createColumns(
+  t: TableT,
+  { onDelete }: { onDelete: (tag: ContentTag) => void },
+): ListColumnDef<ContentTag>[] {
   return [
     {
       accessorKey: 'seq_no',

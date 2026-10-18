@@ -1,6 +1,6 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
-import { storageStatePath } from "../../support/personas.ts";
-import { agreeToPendingTerms, navTab } from "../../support/studentApp.ts";
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import { storageStatePath } from '../../support/personas.ts';
+import { agreeToPendingTerms, navTab } from '../../support/studentApp.ts';
 import {
   clearPopupNotices,
   createPopupNotices,
@@ -10,7 +10,7 @@ import {
   readNoticeTitles,
   resetTermsAgreement,
   type PopupFixture,
-} from "../../support/popupFixtures.ts";
+} from '../../support/popupFixtures.ts';
 
 /**
  * 生徒アプリのポップアップ制御（PopupHost）。仕様: docs/screens/student/dashboard.md「ポップアップ表示」
@@ -24,13 +24,15 @@ import {
  * 専用ペルソナ（qa-student-07）の規約同意・お知らせを各テストで作り直すため、
  * studentApp.ts の test（お知らせを自動で閉じる）ではなく素の test を使う。
  */
-test.use({ storageState: storageStatePath("popupStudent") });
+test.use({ storageState: storageStatePath('popupStudent') });
 
 const noticeDialog = (page: Page): Locator =>
-  page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "確認しました" }) });
+  page.getByRole('dialog').filter({ has: page.getByRole('button', { name: '確認しました' }) });
 
 const termsDialog = (page: Page): Locator =>
-  page.getByRole("dialog").filter({ has: page.getByRole("button", { name: /規約を最下部までスクロールして確認|同意して次へ進む/ }) });
+  page
+    .getByRole('dialog')
+    .filter({ has: page.getByRole('button', { name: /規約を最下部までスクロールして確認|同意して次へ進む/ }) });
 
 let fixture: PopupFixture;
 
@@ -42,7 +44,7 @@ test.beforeAll(async () => {
 test.beforeEach(async ({ page }) => {
   await clearPopupNotices(fixture);
   // 前のテストが途中で失敗して未同意のまま残っていても、画面操作で同意し直してから始める
-  await page.goto("/library");
+  await page.goto('/library');
   await agreeToPendingTerms(page);
 });
 
@@ -50,124 +52,124 @@ test.afterEach(async () => {
   await clearPopupNotices(fixture);
 });
 
-test("規約が未同意の間はお知らせを出さず、同意後に表示する", async ({ page }) => {
+test('規約が未同意の間はお知らせを出さず、同意後に表示する', async ({ page }) => {
   await createPopupNotices(fixture, 1);
   await resetTermsAgreement(fixture);
 
-  await page.goto("/dashboard");
+  await page.goto('/dashboard');
   await expect(termsDialog(page)).toBeVisible();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState('networkidle');
   await expect(noticeDialog(page)).toHaveCount(0);
 
   await agreeToPendingTerms(page);
   await expect(noticeDialog(page)).toBeVisible();
 });
 
-test("お知らせはダッシュボード以外では自動表示しない", async ({ page }) => {
+test('お知らせはダッシュボード以外では自動表示しない', async ({ page }) => {
   await createPopupNotices(fixture, 1);
 
-  await page.goto("/library");
-  await page.waitForLoadState("networkidle");
+  await page.goto('/library');
+  await page.waitForLoadState('networkidle');
   await expect(noticeDialog(page)).toHaveCount(0);
 
-  await navTab(page, "ホーム").click();
-  await page.waitForURL("**/dashboard");
+  await navTab(page, 'ホーム').click();
+  await page.waitForURL('**/dashboard');
   await expect(noticeDialog(page)).toBeVisible();
 });
 
-test("1件ずつ表示し、閉じると表示したお知らせだけが既読になる", async ({ page }) => {
+test('1件ずつ表示し、閉じると表示したお知らせだけが既読になる', async ({ page }) => {
   const titles = await createPopupNotices(fixture, 2);
 
-  await page.goto("/dashboard");
+  await page.goto('/dashboard');
   const dialog = noticeDialog(page);
-  await expect(dialog.getByRole("link", { name: /ほかに新しいお知らせが1件あります/ })).toBeVisible();
-  const firstTitle = (await dialog.getByRole("heading").first().textContent())?.trim() ?? "";
+  await expect(dialog.getByRole('link', { name: /ほかに新しいお知らせが1件あります/ })).toBeVisible();
+  const firstTitle = (await dialog.getByRole('heading').first().textContent())?.trim() ?? '';
   expect(titles).toContain(firstTitle);
   // 開いただけでは中の要素（×ボタン等）にフォーカスしない（枠にフォーカスする。packages/lib/components/common/dialogFocus.ts）
-  await expect(dialog.getByRole("button", { name: "閉じる" })).not.toBeFocused();
+  await expect(dialog.getByRole('button', { name: '閉じる' })).not.toBeFocused();
   await expect(dialog).toBeFocused();
 
-  await dialog.getByRole("button", { name: "閉じる" }).click();
+  await dialog.getByRole('button', { name: '閉じる' }).click();
   await expect(dialog).toBeHidden();
   await expect.poll(() => readNoticeTitles(fixture)).toEqual([firstTitle]);
 
   // 未表示だった残りの1件は、次回（再読み込み）に単独で表示される
   const remaining = titles.filter((t) => t !== firstTitle);
   await page.reload();
-  await expect(dialog.getByRole("heading", { name: remaining[0] }).first()).toBeVisible();
-  await expect(dialog.getByRole("link", { name: /ほかに新しいお知らせ/ })).toHaveCount(0);
+  await expect(dialog.getByRole('heading', { name: remaining[0] }).first()).toBeVisible();
+  await expect(dialog.getByRole('link', { name: /ほかに新しいお知らせ/ })).toHaveCount(0);
 });
 
-test("「ほかに新しいお知らせ」からお知らせ一覧へ移り、表示した1件だけが既読になる", async ({ page }) => {
+test('「ほかに新しいお知らせ」からお知らせ一覧へ移り、表示した1件だけが既読になる', async ({ page }) => {
   const titles = await createPopupNotices(fixture, 2);
 
-  await page.goto("/dashboard");
+  await page.goto('/dashboard');
   const dialog = noticeDialog(page);
-  const firstTitle = (await dialog.getByRole("heading").first().textContent())?.trim() ?? "";
+  const firstTitle = (await dialog.getByRole('heading').first().textContent())?.trim() ?? '';
   expect(titles).toContain(firstTitle);
 
-  await dialog.getByRole("link", { name: /ほかに新しいお知らせが1件あります/ }).click();
-  await page.waitForURL("**/notice");
+  await dialog.getByRole('link', { name: /ほかに新しいお知らせが1件あります/ }).click();
+  await page.waitForURL('**/notice');
   await expect(dialog).toBeHidden();
   await expect.poll(() => readNoticeTitles(fixture)).toEqual([firstTitle]);
 });
 
-test("確認したお知らせは再表示しない", async ({ page }) => {
+test('確認したお知らせは再表示しない', async ({ page }) => {
   const [title] = await createPopupNotices(fixture, 1);
 
-  await page.goto("/dashboard");
+  await page.goto('/dashboard');
   const dialog = noticeDialog(page);
-  await dialog.getByRole("button", { name: "確認しました" }).click();
+  await dialog.getByRole('button', { name: '確認しました' }).click();
   await expect(dialog).toBeHidden();
   await expect.poll(() => readNoticeTitles(fixture)).toEqual([title]);
 
   await page.reload();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState('networkidle');
   await expect(noticeDialog(page)).toHaveCount(0);
 });
 
-test("行動ボタンを押すと指定の画面へ移り、押したことを記録する", async ({ page }) => {
-  const [title] = await createPopupNotices(fixture, 1, { cta: { label: "教材を見る", url: "/library" } });
+test('行動ボタンを押すと指定の画面へ移り、押したことを記録する', async ({ page }) => {
+  const [title] = await createPopupNotices(fixture, 1, { cta: { label: '教材を見る', url: '/library' } });
 
-  await page.goto("/dashboard");
+  await page.goto('/dashboard');
   const dialog = noticeDialog(page);
-  await dialog.getByRole("link", { name: "教材を見る" }).click();
-  await page.waitForURL("**/library");
+  await dialog.getByRole('link', { name: '教材を見る' }).click();
+  await page.waitForURL('**/library');
   await expect(dialog).toBeHidden();
   await expect.poll(() => ctaClickedNoticeTitles(fixture)).toEqual([title]);
   await expect.poll(() => readNoticeTitles(fixture)).toEqual([title]);
 });
 
-test("「ホームのカード」のお知らせはポップアップにせず、閉じると既読になって再表示しない", async ({ page }) => {
-  const [title] = await createPopupNotices(fixture, 1, { displayMode: "HOME" });
+test('「ホームのカード」のお知らせはポップアップにせず、閉じると既読になって再表示しない', async ({ page }) => {
+  const [title] = await createPopupNotices(fixture, 1, { displayMode: 'HOME' });
 
-  await page.goto("/dashboard");
-  const card = page.getByRole("region", { name: "お知らせ" });
-  await expect(card.getByRole("heading", { name: title })).toBeVisible();
+  await page.goto('/dashboard');
+  const card = page.getByRole('region', { name: 'お知らせ' });
+  await expect(card.getByRole('heading', { name: title })).toBeVisible();
   // サーバーで描いたカードはハイドレーション前の押下が効かない（WebKit で顕在化。KJ-2026-0928-02）
-  await expect(card).toHaveAttribute("data-ready", "true", { timeout: 30_000 });
-  await page.waitForLoadState("networkidle");
+  await expect(card).toHaveAttribute('data-ready', 'true', { timeout: 30_000 });
+  await page.waitForLoadState('networkidle');
   await expect(noticeDialog(page)).toHaveCount(0);
 
-  await card.getByRole("button", { name: "このお知らせを閉じる" }).click();
+  await card.getByRole('button', { name: 'このお知らせを閉じる' }).click();
   await expect(card).toBeHidden();
   await expect.poll(() => readNoticeTitles(fixture)).toEqual([title]);
 
   await page.reload();
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByRole("region", { name: "お知らせ" })).toHaveCount(0);
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('region', { name: 'お知らせ' })).toHaveCount(0);
 });
 
-test("ホームのカードの「詳しく見る」で全文を開き、確認するとカードが消える", async ({ page }) => {
-  const [title] = await createPopupNotices(fixture, 1, { displayMode: "HOME" });
+test('ホームのカードの「詳しく見る」で全文を開き、確認するとカードが消える', async ({ page }) => {
+  const [title] = await createPopupNotices(fixture, 1, { displayMode: 'HOME' });
 
-  await page.goto("/dashboard");
-  const card = page.getByRole("region", { name: "お知らせ" });
-  await expect(card).toHaveAttribute("data-ready", "true", { timeout: 30_000 });
-  await card.getByRole("button", { name: "詳しく見る" }).click();
+  await page.goto('/dashboard');
+  const card = page.getByRole('region', { name: 'お知らせ' });
+  await expect(card).toHaveAttribute('data-ready', 'true', { timeout: 30_000 });
+  await card.getByRole('button', { name: '詳しく見る' }).click();
   const dialog = noticeDialog(page);
-  await expect(dialog.getByRole("heading", { name: title })).toBeVisible();
-  await dialog.getByRole("button", { name: "確認しました" }).click();
+  await expect(dialog.getByRole('heading', { name: title })).toBeVisible();
+  await dialog.getByRole('button', { name: '確認しました' }).click();
   await expect(dialog).toBeHidden();
   await expect(card).toBeHidden();
   await expect.poll(() => readNoticeTitles(fixture)).toEqual([title]);

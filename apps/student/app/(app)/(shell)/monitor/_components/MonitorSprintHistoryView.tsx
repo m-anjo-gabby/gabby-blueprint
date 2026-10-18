@@ -68,7 +68,7 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
         sprintCount: 1,
         answeredCount: s.total_answered,
         assessmentCount: s.total_assessments || 0,
-      })
+      }),
     );
     // ドリルの集計は日付（DATE）単位
     initialData.drills.forEach((d) =>
@@ -82,7 +82,7 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
         sprintCount: null,
         answeredCount: d.question_count,
         assessmentCount: d.assessment_count,
-      })
+      }),
     );
 
     // 日付内は受講生名 → ドリル・スプリントの順 → 教材名で並べる
@@ -93,8 +93,8 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
         (a, b) =>
           a.userName.localeCompare(b.userName, 'ja') ||
           (a.mode === b.mode ? 0 : a.mode === 'drill' ? -1 : 1) ||
-          a.contentName.localeCompare(b.contentName, 'ja')
-      )
+          a.contentName.localeCompare(b.contentName, 'ja'),
+      ),
     );
     return { groups: byDate, sortedDates: [...byDate.keys()].sort((a, b) => b.localeCompare(a)), totalItems: map.size };
   }, [initialData]);
@@ -117,7 +117,7 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
         item.sprintCount ?? '-',
         item.answeredCount,
         item.assessmentCount,
-      ])
+      ]),
     );
 
     clientLogger.info('monitor:sprint_history_csv_exported', `Sprint history CSV exported: ${startDate}~${endDate}`, {
@@ -127,7 +127,7 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
     downloadCsv(
       `blueprint_sprint_drill_history_${startDate}_to_${endDate}${includeMonitor ? '_with_monitor' : ''}.csv`,
       ['日付', '受講生名', 'モード', '教材名', 'タイムアタック回数', '回答数', '発話数'],
-      rows
+      rows,
     );
   };
 
@@ -172,8 +172,12 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
                 date={date}
                 metrics={
                   <>
-                    {sprintCount > 0 && <HistoryMetric metric="sprint" label={SPRINT_MODE_LABEL.sprint} value={sprintCount} />}
-                    {drillCount > 0 && <HistoryMetric metric="drill" label={SPRINT_MODE_LABEL.drill} value={drillCount} />}
+                    {sprintCount > 0 && (
+                      <HistoryMetric metric="sprint" label={SPRINT_MODE_LABEL.sprint} value={sprintCount} />
+                    )}
+                    {drillCount > 0 && (
+                      <HistoryMetric metric="drill" label={SPRINT_MODE_LABEL.drill} value={drillCount} />
+                    )}
                     <HistoryMetric icon={CheckCircle2} label="回答" value={answeredCount} />
                     <HistoryMetric metric="speech" label="発話" value={assessmentCount} />
                   </>
@@ -196,7 +200,9 @@ export function MonitorSprintHistoryView({ initialData, users, query }: MonitorS
                     }
                     metrics={
                       <>
-                        {item.sprintCount !== null && <HistoryMetric metric="sprint" label="回数" value={item.sprintCount} />}
+                        {item.sprintCount !== null && (
+                          <HistoryMetric metric="sprint" label="回数" value={item.sprintCount} />
+                        )}
                         <HistoryMetric icon={CheckCircle2} label="回答" value={item.answeredCount} />
                         <HistoryMetric metric="speech" label="発話" value={item.assessmentCount} />
                       </>

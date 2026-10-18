@@ -24,7 +24,7 @@ export async function removeStorageFiles(
   supabase: SupabaseClient,
   bucket: string,
   paths: readonly (string | null | undefined)[],
-  { event, ctx, payload }: RemoveStorageFilesOptions
+  { event, ctx, payload }: RemoveStorageFilesOptions,
 ): Promise<void> {
   const targets = [...new Set(paths.filter((p): p is string => !!p).map((p) => p.replace(/^\/+/, '')))];
   for (let i = 0; i < targets.length; i += REMOVE_CHUNK) {

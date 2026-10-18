@@ -34,7 +34,7 @@ export function ImmersivePanel({ as: Comp = 'div', className, ...props }: Immers
       className={cn(
         'relative flex h-full w-full flex-col overflow-hidden bg-surface text-ink',
         'sm:max-w-2xl sm:rounded-panel sm:border sm:border-line sm:shadow-xl',
-        className
+        className,
       )}
       {...props}
     />
@@ -95,9 +95,7 @@ export function ContentFrame({ children, width = 'narrow', fill = false }: Conte
   }
   return (
     <div className="flex justify-center px-4 sm:px-6 py-4 sm:py-8">
-      <div className={cn('relative w-full', CONTENT_WIDTH_CLASS[width])}>
-        {children}
-      </div>
+      <div className={cn('relative w-full', CONTENT_WIDTH_CLASS[width])}>{children}</div>
     </div>
   );
 }

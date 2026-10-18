@@ -67,9 +67,7 @@ export const COACH_NAV_CONFIG: readonly NavItem[] = [
 
 /** 全リーフアイテムをフラットに取得 */
 export function getAllLeafItems(config: readonly NavItem[]): NavLeaf[] {
-  return config.flatMap((item) =>
-    item.type === 'group' ? [...item.children] : [item]
-  );
+  return config.flatMap((item) => (item.type === 'group' ? [...item.children] : [item]));
 }
 
 /**

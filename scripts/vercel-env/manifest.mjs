@@ -160,7 +160,8 @@ export const MANIFEST = [
     key: 'CRON_SECRET',
     apps: ['admin'],
     group: 'Resend（メール送信）',
-    description: 'メール送信処理（/api/cron/mail-dispatch）の秘密のキー（Supabase Vault の mail_dispatch_secret と同じ値）',
+    description:
+      'メール送信処理（/api/cron/mail-dispatch）の秘密のキー（Supabase Vault の mail_dispatch_secret と同じ値）',
     secret: true,
     generate: true,
     validate: 'random-secret',
@@ -188,7 +189,8 @@ export const MANIFEST = [
     key: 'RESEND_WEBHOOK_SECRET',
     apps: ['admin'],
     group: 'Resend（メール送信）',
-    description: 'Resend の Webhook（/api/webhooks/resend。メールの到達状況）の Signing Secret。未設定なら Webhook を受け付けない',
+    description:
+      'Resend の Webhook（/api/webhooks/resend。メールの到達状況）の Signing Secret。未設定なら Webhook を受け付けない',
     secret: true,
     validate: /^whsec_/,
     value: { default: LOCAL, dev: OPTIONAL },
@@ -224,7 +226,8 @@ export const MANIFEST = [
     key: 'TURNSTILE_SECRET_KEY',
     apps: ['student'],
     group: 'Cloudflare Turnstile',
-    description: 'Turnstile の秘密鍵（サーバーでの検証用。未設定なら申込を受け付けない）。dev・staging・手元はテスト用の鍵（常に通る）',
+    description:
+      'Turnstile の秘密鍵（サーバーでの検証用。未設定なら申込を受け付けない）。dev・staging・手元はテスト用の鍵（常に通る）',
     secret: true,
     value: { default: '1x0000000000000000000000000000000AA', prod: LOCAL },
   },
@@ -232,7 +235,8 @@ export const MANIFEST = [
     key: 'MAIL_UNSUBSCRIBE_SECRET',
     apps: ['admin', 'student', 'coach'],
     group: 'Resend（メール送信）',
-    description: 'メールのログイン不要の配信停止リンクの署名鍵（3アプリで同じ値。未設定なら配信停止リンク・List-Unsubscribe を付けない）',
+    description:
+      'メールのログイン不要の配信停止リンクの署名鍵（3アプリで同じ値。未設定なら配信停止リンク・List-Unsubscribe を付けない）',
     secret: true,
     generate: true,
     validate: 'random-secret',
@@ -243,7 +247,8 @@ export const MANIFEST = [
     key: 'MAIL_LOGO_URL',
     apps: ['admin', 'student', 'coach'],
     group: 'Resend（メール送信）',
-    description: 'メールのロゴ画像の URL（未設定なら本番 https://blueprint.gabbyacademy.com/mail-logo.png）。本番に未反映の画像を試す環境だけ指定',
+    description:
+      'メールのロゴ画像の URL（未設定なら本番 https://blueprint.gabbyacademy.com/mail-logo.png）。本番に未反映の画像を試す環境だけ指定',
     validate: 'https-url',
     value: {
       default: UNSET,

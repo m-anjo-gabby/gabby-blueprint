@@ -9,8 +9,8 @@ export const IMPERSONATION_REQUEST_HEADER_ID = 'x-impersonation-id';
 export const IMPERSONATION_REQUEST_HEADER_ADMIN_ID = 'x-impersonation-admin-id';
 
 export interface ImpersonationPayload {
-  id: string;       // com_t_admin_impersonation_log.impersonation_id
-  adminId: string;  // 代理ログインを実行した管理者のUUID
+  id: string; // com_t_admin_impersonation_log.impersonation_id
+  adminId: string; // 代理ログインを実行した管理者のUUID
   expiresAt: number; // epoch ms
 }
 

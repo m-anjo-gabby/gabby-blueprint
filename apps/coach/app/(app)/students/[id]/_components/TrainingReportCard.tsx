@@ -54,7 +54,9 @@ export function TrainingReportCard({ studentId, contracts, initialReports }: Pro
             <FileText size={14} className="text-slate-400" />
             Training Reports
           </CardTitle>
-          <p className="text-[11px] text-slate-400">Visible to coaches assigned to this student. Locked once finalized.</p>
+          <p className="text-[11px] text-slate-400">
+            Visible to coaches assigned to this student. Locked once finalized.
+          </p>
         </div>
         <Link
           href={`/students/${studentId}/training-reports`}

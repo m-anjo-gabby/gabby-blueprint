@@ -44,10 +44,6 @@ export interface SubmitCoachRatingInput {
 }
 
 export type CoachRatingErrorCode =
-  | 'unauthorized'
-  | 'invalid_input'
-  | 'already_rated'
-  | 'not_eligible'
-  | 'unexpected_error';
+  'unauthorized' | 'invalid_input' | 'already_rated' | 'not_eligible' | 'unexpected_error';
 
 export type SubmitCoachRatingResult = { success: true } | { success: false; errorCode: CoachRatingErrorCode };

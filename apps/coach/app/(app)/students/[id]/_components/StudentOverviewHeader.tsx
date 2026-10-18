@@ -2,7 +2,11 @@ import Link from 'next/link';
 import { ArrowLeft, BadgeCheck, BadgeX } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
-import type { StudentContractSessionSummary, StudentOverviewProfile, StudentSessionHistoryItem } from '@gabby/types/coachStudent';
+import type {
+  StudentContractSessionSummary,
+  StudentOverviewProfile,
+  StudentSessionHistoryItem,
+} from '@gabby/types/coachStudent';
 import { SprintProgressRadar } from './SprintProgressRadar';
 import { TodaysLessonPanel } from './TodaysLessonPanel';
 
@@ -39,7 +43,9 @@ function ContractSessionSummaryStats({ summary }: { summary: StudentContractSess
       <div className="grid grid-cols-4 gap-1.5">
         {stats.map((s) => (
           <div key={s.label} className="text-center">
-            <p className={`text-sm font-bold ${s.label === 'Unbooked' && s.value > 0 ? 'text-amber-600' : 'text-emerald-700'}`}>
+            <p
+              className={`text-sm font-bold ${s.label === 'Unbooked' && s.value > 0 ? 'text-amber-600' : 'text-emerald-700'}`}
+            >
               {s.value}
             </p>
             <p className="text-[9px] font-semibold text-emerald-500/70 uppercase tracking-wide">{s.label}</p>
@@ -48,7 +54,8 @@ function ContractSessionSummaryStats({ summary }: { summary: StudentContractSess
       </div>
       {summary.other_coach_sessions > 0 && (
         <p className="mt-1.5 text-[10px] text-emerald-600/70">
-          + {summary.other_coach_sessions} session{summary.other_coach_sessions === 1 ? '' : 's'} handled by another coach
+          + {summary.other_coach_sessions} session{summary.other_coach_sessions === 1 ? '' : 's'} handled by another
+          coach
         </p>
       )}
     </div>

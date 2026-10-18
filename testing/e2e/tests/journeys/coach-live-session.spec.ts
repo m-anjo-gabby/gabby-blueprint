@@ -1,13 +1,13 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from '@playwright/test';
 import {
   cleanupAuthFixture,
   createAuthFixture,
   deleteFixtureChatRooms,
   prepareContent,
   type AuthFixture,
-} from "../../support/authFixtures.ts";
-import { coachNav, openCoachContext } from "../../support/coachApp.ts";
-import { clickUntilVisible } from "../../support/hydration.ts";
+} from '../../support/authFixtures.ts';
+import { coachNav, openCoachContext } from '../../support/coachApp.ts';
+import { clickUntilVisible } from '../../support/hydration.ts';
 import {
   approveMatchingRequest,
   createPendingMatchingRequest,
@@ -15,7 +15,7 @@ import {
   signOutLivePair,
   type LivePair,
   type LiveSessionDay,
-} from "../../support/liveSessionFixtures.ts";
+} from '../../support/liveSessionFixtures.ts';
 
 /**
  * コーチのライブセッション（ジャーニー: e2e/journeys/coach-live-session.md）
@@ -29,13 +29,16 @@ import {
  * ダイアログ・確認画面を開く操作は、ステージング（本番ビルド）のハイドレーション前の押下に備えて clickUntilVisible で押す。
  */
 
-const PASSWORD = "CoachLive2026a";
+const PASSWORD = 'CoachLive2026a';
 
 let fixture: AuthFixture | undefined;
 let pair: LivePair | undefined;
 
 test.beforeEach(({}, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "使い捨てデータを作り、coach は PC 表示の別コンテキストで開くため desktop だけで実行する");
+  test.skip(
+    testInfo.project.name !== 'desktop',
+    '使い捨てデータを作り、coach は PC 表示の別コンテキストで開くため desktop だけで実行する',
+  );
 });
 
 test.afterEach(async () => {
@@ -61,151 +64,191 @@ async function setUpLiveSessionDay(prefix: string): Promise<{ f: AuthFixture; p:
 const hubPath = (p: LivePair, day: LiveSessionDay) => `/students/${p.studentId}/sessions/${day.sessionId}`;
 /** 画面の区分（Session Info / Training / Prep / Self-Training 等の見出しを持つ section） */
 const section = (page: Page, label: string) =>
-  page.locator("section").filter({ has: page.getByText(label, { exact: true }) }).first();
+  page
+    .locator('section')
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .first();
 
-test("ダッシュボードで今日のセッションと未読を確認し、生徒の状況を見てハブでスプリント・ダイアログを行い、終了して宿題を出す", async ({ browser }) => {
+test('ダッシュボードで今日のセッションと未読を確認し、生徒の状況を見てハブでスプリント・ダイアログを行い、終了して宿題を出す', async ({
+  browser,
+}) => {
   test.setTimeout(240_000);
-  const { f, p, day } = await setUpLiveSessionDay("coachlive");
+  const { f, p, day } = await setUpLiveSessionDay('coachlive');
   await prepareContent(f, 2);
   const { data: dialogueSessions } = await f.admin
-    .from("com_m_dialogue_session").select("content_id").eq("session_no", 1).not("coach_slides_link", "is", null).limit(50);
-  const dialogue = await prepareContent(f, 3, (dialogueSessions ?? []).map((d) => d.content_id));
+    .from('com_m_dialogue_session')
+    .select('content_id')
+    .eq('session_no', 1)
+    .not('coach_slides_link', 'is', null)
+    .limit(50);
+  const dialogue = await prepareContent(
+    f,
+    3,
+    (dialogueSessions ?? []).map((d) => d.content_id),
+  );
 
   const { context, page } = await openCoachContext(browser, { email: p.coachEmail, password: PASSWORD });
   // 教材のスライド（別タブで開く Google Slides）は外部へ取りに行かない
-  await context.route("https://docs.google.com/**", (route) => route.fulfill({ contentType: "text/html", body: "<title>slides</title>" }));
+  await context.route('https://docs.google.com/**', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<title>slides</title>' }),
+  );
   try {
-    await test.step("1. ダッシュボード: 実施中のセッションが「Up next」で出て、生徒からの未読が1件ある", async () => {
-      const next24 = page.locator("div").filter({ has: page.getByText("Next 24 Hours", { exact: true }) }).filter({ hasText: p.studentName }).last();
-      await expect(next24).toContainText("Up next");
-      await expect(page.getByRole("link", { name: /Unread Messages/ })).toContainText("1");
+    await test.step('1. ダッシュボード: 実施中のセッションが「Up next」で出て、生徒からの未読が1件ある', async () => {
+      const next24 = page
+        .locator('div')
+        .filter({ has: page.getByText('Next 24 Hours', { exact: true }) })
+        .filter({ hasText: p.studentName })
+        .last();
+      await expect(next24).toContainText('Up next');
+      await expect(page.getByRole('link', { name: /Unread Messages/ })).toContainText('1');
     });
 
-    await test.step("2. チャット: 未読のタイルから開き、生徒のメッセージを読む", async () => {
-      await page.getByRole("link", { name: /Unread Messages/ }).click();
+    await test.step('2. チャット: 未読のタイルから開き、生徒のメッセージを読む', async () => {
+      await page.getByRole('link', { name: /Unread Messages/ }).click();
       await expect(page).toHaveURL(/\/chat$/);
       await page.getByText(p.studentName).first().click();
       await expect(page.getByText(day.studentMessage)).toBeVisible();
     });
 
-    await test.step("3. 生徒概要: 担当生徒の一覧から開き、次回のセッションからハブへ移る", async () => {
-      await coachNav(page).getByRole("link", { name: "My Students", exact: true }).click();
-      await expect(page.getByRole("heading", { level: 1, name: "My Students" })).toBeVisible();
-      await page.getByRole("main").getByText(p.studentName).first().click();
+    await test.step('3. 生徒概要: 担当生徒の一覧から開き、次回のセッションからハブへ移る', async () => {
+      await coachNav(page).getByRole('link', { name: 'My Students', exact: true }).click();
+      await expect(page.getByRole('heading', { level: 1, name: 'My Students' })).toBeVisible();
+      await page.getByRole('main').getByText(p.studentName).first().click();
       await expect(page).toHaveURL(new RegExp(`/students/${p.studentId}$`));
-      await expect(page.getByText("Next Live Session")).toBeVisible();
-      await page.getByRole("link", { name: "Open Session" }).click();
+      await expect(page.getByText('Next Live Session')).toBeVisible();
+      await page.getByRole('link', { name: 'Open Session' }).click();
       await expect(page).toHaveURL(new RegExp(`${hubPath(p, day)}$`));
     });
 
-    await test.step("4. ハブ: 通話に入った記録があり、前回の宿題と直近の自主トレが見える", async () => {
-      await expect(section(page, "Session Info")).toContainText("You joined");
-      await expect(section(page, "Session Info").getByRole("button", { name: "End Session" })).toBeEnabled();
-      await expect(section(page, "Prep")).toContainText(day.previousHomework);
-      const selfTraining = section(page, "Self-Training");
-      await expect(selfTraining).toContainText("2/7 days");
-      await expect(selfTraining).toContainText("20");
+    await test.step('4. ハブ: 通話に入った記録があり、前回の宿題と直近の自主トレが見える', async () => {
+      await expect(section(page, 'Session Info')).toContainText('You joined');
+      await expect(section(page, 'Session Info').getByRole('button', { name: 'End Session' })).toBeEnabled();
+      await expect(section(page, 'Prep')).toContainText(day.previousHomework);
+      const selfTraining = section(page, 'Self-Training');
+      await expect(selfTraining).toContainText('2/7 days');
+      await expect(selfTraining).toContainText('20');
     });
 
-    await test.step("5. Live Sprint: ハブから開始し、全問を採点して結果を見てからハブへ戻る", async () => {
-      await section(page, "Training").getByRole("link", { name: "Start" }).click();
+    await test.step('5. Live Sprint: ハブから開始し、全問を採点して結果を見てからハブへ戻る', async () => {
+      await section(page, 'Training').getByRole('link', { name: 'Start' }).click();
       await expect(page).toHaveURL(new RegExp(`/students/${p.studentId}/lesson-sprint\\?session_id=${day.sessionId}`));
-      const playerStart = page.getByRole("button", { name: "Start", exact: true });
-      await clickUntilVisible(page.getByRole("button", { name: /^Start (\(YES\)|Live Sprint)/ }).first(), playerStart);
+      const playerStart = page.getByRole('button', { name: 'Start', exact: true });
+      await clickUntilVisible(page.getByRole('button', { name: /^Start (\(YES\)|Live Sprint)/ }).first(), playerStart);
       await playerStart.click();
 
       // 1問ずつ「4」で採点する（最後の問題か制限時間切れで結果が保存される）
-      const complete = page.getByText("Live Sprint Complete");
-      const score = page.getByRole("button", { name: /^4\b/ });
+      const complete = page.getByText('Live Sprint Complete');
+      const score = page.getByRole('button', { name: /^4\b/ });
       await expect(async () => {
         if (await complete.isVisible()) return;
         await score.click({ timeout: 2_000 });
         await expect(complete).toBeVisible({ timeout: 500 });
       }).toPass({ timeout: 120_000, intervals: [0] });
 
-      await page.getByRole("button", { name: "View Results" }).click();
+      await page.getByRole('button', { name: 'View Results' }).click();
       await expect(page).toHaveURL(new RegExp(`/students/${p.studentId}/lesson-sprint/result/`));
-      await page.getByRole("link", { name: "Done for now — back to Hub" }).click();
+      await page.getByRole('link', { name: 'Done for now — back to Hub' }).click();
       await expect(page).toHaveURL(new RegExp(`${hubPath(p, day)}$`));
     });
 
-    await test.step("6. ダイアログ: ハブで教材を割り当て、Session 1 のコーチ用スライドを開いて完了にする", async () => {
+    await test.step('6. ダイアログ: ハブで教材を割り当て、Session 1 のコーチ用スライドを開いて完了にする', async () => {
       // Training には Live Sprint とダイアログの2枚のカードがあり、割り当てる操作・割当済みの教材はダイアログのカードにだけある
-      const training = section(page, "Training");
-      const assignDialog = page.getByRole("dialog", { name: "Assign a Dialogue Practice set" });
-      await clickUntilVisible(training.getByRole("button", { name: "Assign", exact: true }), assignDialog);
+      const training = section(page, 'Training');
+      const assignDialog = page.getByRole('dialog', { name: 'Assign a Dialogue Practice set' });
+      await clickUntilVisible(training.getByRole('button', { name: 'Assign', exact: true }), assignDialog);
       const row = assignDialog
-        .locator("div")
+        .locator('div')
         .filter({ has: page.getByText(dialogue.content_name, { exact: true }) })
-        .filter({ has: page.getByRole("button", { name: "Assign" }) })
+        .filter({ has: page.getByRole('button', { name: 'Assign' }) })
         .last();
       // 教材のカテゴリのタブを開く（既定のタブに無い場合）
-      for (const tab of await assignDialog.getByRole("tab").all()) {
+      for (const tab of await assignDialog.getByRole('tab').all()) {
         if (await row.isVisible()) break;
         await tab.click();
       }
-      await row.getByRole("button", { name: "Assign" }).click();
+      await row.getByRole('button', { name: 'Assign' }).click();
       await expect(assignDialog).toHaveCount(0);
 
-      const sessionsDialog = page.getByRole("dialog", { name: dialogue.content_name });
-      await clickUntilVisible(training.getByRole("button").filter({ hasText: dialogue.content_name }), sessionsDialog);
+      const sessionsDialog = page.getByRole('dialog', { name: dialogue.content_name });
+      await clickUntilVisible(training.getByRole('button').filter({ hasText: dialogue.content_name }), sessionsDialog);
       // Session 1 の行（見出し・完了ボタン・教材リンク・メモ）
       const session1 = sessionsDialog
-        .locator("div")
-        .filter({ has: page.getByText("Session 1", { exact: true }) })
-        .filter({ has: page.getByRole("link", { name: "Coach Materials" }) })
+        .locator('div')
+        .filter({ has: page.getByText('Session 1', { exact: true }) })
+        .filter({ has: page.getByRole('link', { name: 'Coach Materials' }) })
         .last();
-      const popupPromise = context.waitForEvent("page");
-      await session1.getByRole("link", { name: "Coach Materials" }).click();
+      const popupPromise = context.waitForEvent('page');
+      await session1.getByRole('link', { name: 'Coach Materials' }).click();
       await (await popupPromise).close();
-      await session1.getByRole("button", { name: "Complete" }).click();
-      await expect(session1).toContainText("Completed");
-      await page.keyboard.press("Escape");
+      await session1.getByRole('button', { name: 'Complete' }).click();
+      await expect(session1).toContainText('Completed');
+      await page.keyboard.press('Escape');
       await expect(sessionsDialog).toHaveCount(0);
     });
 
-    await test.step("7. 終了: End Session の初期選択（通話の記録からの推定）のまま記録すると実施完了になり、結果画面にスプリントとダイアログの記録が出る", async () => {
-      const dialog = page.getByRole("dialog", { name: "End Session" });
-      await clickUntilVisible(section(page, "Session Info").getByRole("button", { name: "End Session" }), dialog);
-      await expect(dialog.getByRole("radio", { name: /^Completed/ })).toBeChecked();
-      await expect(dialog.getByRole("radio", { name: "In the app" })).toBeChecked();
-      await dialog.getByRole("button", { name: "Record Outcome" }).click();
+    await test.step('7. 終了: End Session の初期選択（通話の記録からの推定）のまま記録すると実施完了になり、結果画面にスプリントとダイアログの記録が出る', async () => {
+      const dialog = page.getByRole('dialog', { name: 'End Session' });
+      await clickUntilVisible(section(page, 'Session Info').getByRole('button', { name: 'End Session' }), dialog);
+      await expect(dialog.getByRole('radio', { name: /^Completed/ })).toBeChecked();
+      await expect(dialog.getByRole('radio', { name: 'In the app' })).toBeChecked();
+      await dialog.getByRole('button', { name: 'Record Outcome' }).click();
       await expect(page).toHaveURL(new RegExp(`${hubPath(p, day)}/result$`));
-      await expect(page.getByRole("heading", { level: 1, name: "Session Result" })).toBeVisible();
-      await expect(page.getByText("Completed", { exact: true }).first()).toBeVisible();
-      await expect(page.getByText("No Live Sprint was run in this session.")).toHaveCount(0);
+      await expect(page.getByRole('heading', { level: 1, name: 'Session Result' })).toBeVisible();
+      await expect(page.getByText('Completed', { exact: true }).first()).toBeVisible();
+      await expect(page.getByText('No Live Sprint was run in this session.')).toHaveCount(0);
       await expect(page.getByText(dialogue.content_name)).toBeVisible();
     });
 
     const instructions = `Practice the dialogue from Session 1 twice (${f.tag}).`;
-    await test.step("8. 宿題: 指示文を投稿すると、生徒がまだ見ていない旨が出る", async () => {
-      await page.getByPlaceholder("Instructions for the student (required)...").fill(instructions);
-      await page.getByRole("button", { name: "Post Homework" }).click();
+    await test.step('8. 宿題: 指示文を投稿すると、生徒がまだ見ていない旨が出る', async () => {
+      await page.getByPlaceholder('Instructions for the student (required)...').fill(instructions);
+      await page.getByRole('button', { name: 'Post Homework' }).click();
       await expect(page.getByText(instructions)).toBeVisible();
-      await expect(page.getByTestId("homework-viewed-status")).toHaveText("Not viewed by the student yet");
-      await expect(page.getByRole("button", { name: "Post Homework" })).toHaveCount(0);
+      await expect(page.getByTestId('homework-viewed-status')).toHaveText('Not viewed by the student yet');
+      await expect(page.getByRole('button', { name: 'Post Homework' })).toHaveCount(0);
     });
 
-    await test.step("記録: セッション・チケット・スプリント・ダイアログ・宿題", async () => {
+    await test.step('記録: セッション・チケット・スプリント・ダイアログ・宿題', async () => {
       const { admin } = f;
       const { data: session } = await admin
-        .from("com_t_session").select("status, completion_result, conducted_via, suggested_outcome, outcome_mismatch").eq("session_id", day.sessionId).single();
-      expect(session).toMatchObject({ status: 2, completion_result: 1, conducted_via: 1, suggested_outcome: 1, outcome_mismatch: false });
-      const { data: ticket } = await admin.from("com_t_user_session_ticket").select("used_sessions").eq("ticket_id", p.ticketId).single();
+        .from('com_t_session')
+        .select('status, completion_result, conducted_via, suggested_outcome, outcome_mismatch')
+        .eq('session_id', day.sessionId)
+        .single();
+      expect(session).toMatchObject({
+        status: 2,
+        completion_result: 1,
+        conducted_via: 1,
+        suggested_outcome: 1,
+        outcome_mismatch: false,
+      });
+      const { data: ticket } = await admin
+        .from('com_t_user_session_ticket')
+        .select('used_sessions')
+        .eq('ticket_id', p.ticketId)
+        .single();
       expect(ticket?.used_sessions).toBe(1);
       const { count: sprintCount } = await admin
-        .from("lesson_t_sprint").select("*", { count: "exact", head: true }).eq("session_id", day.sessionId);
+        .from('lesson_t_sprint')
+        .select('*', { count: 'exact', head: true })
+        .eq('session_id', day.sessionId);
       expect(sprintCount).toBe(1);
       const { count: dialogueLogCount } = await admin
-        .from("com_t_session_dialogue_log").select("*", { count: "exact", head: true }).eq("session_id", day.sessionId);
+        .from('com_t_session_dialogue_log')
+        .select('*', { count: 'exact', head: true })
+        .eq('session_id', day.sessionId);
       expect(dialogueLogCount).toBe(1);
-      const { data: homework } = await admin.from("com_t_session_homework").select("homework_text").eq("session_id", day.sessionId).single();
+      const { data: homework } = await admin
+        .from('com_t_session_homework')
+        .select('homework_text')
+        .eq('session_id', day.sessionId)
+        .single();
       expect(homework?.homework_text).toBe(instructions);
     });
 
-    await test.step("9. ダッシュボード: 実施したセッションは今後24時間の一覧と対応待ちから消える", async () => {
-      await coachNav(page).getByRole("link", { name: "Dashboard", exact: true }).click();
-      await expect(page.getByText("Next 24 Hours", { exact: true })).toBeVisible();
+    await test.step('9. ダッシュボード: 実施したセッションは今後24時間の一覧と対応待ちから消える', async () => {
+      await coachNav(page).getByRole('link', { name: 'Dashboard', exact: true }).click();
+      await expect(page.getByText('Next 24 Hours', { exact: true })).toBeVisible();
       await expect(page.getByText(p.studentName)).toHaveCount(0);
     });
   } finally {

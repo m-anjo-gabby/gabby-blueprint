@@ -20,7 +20,15 @@ interface HistoryListProps<T> {
  * サーバーへ再取得」の挙動を共有する（コーチの稼働年数が伸びても初期ロード・各追加ロードの
  * サイズは一定に保たれる）。
  */
-export function HistoryList<T>({ initialItems, initialCursor, pageSize, fetchPage, getKey, renderItem, emptyLabel }: HistoryListProps<T>) {
+export function HistoryList<T>({
+  initialItems,
+  initialCursor,
+  pageSize,
+  fetchPage,
+  getKey,
+  renderItem,
+  emptyLabel,
+}: HistoryListProps<T>) {
   const [items, setItems] = useState<T[]>(initialItems);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +54,14 @@ export function HistoryList<T>({ initialItems, initialCursor, pageSize, fetchPag
         <div key={getKey(item)}>{renderItem(item, index, items)}</div>
       ))}
       {cursor && (
-        <Button pending={isLoading} type="button" variant="outline" className="w-full" onClick={handleShowMore} disabled={isLoading}>
+        <Button
+          pending={isLoading}
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={handleShowMore}
+          disabled={isLoading}
+        >
           Show more
         </Button>
       )}

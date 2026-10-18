@@ -55,7 +55,7 @@ export function useChatAttachmentUpload(roomId: string, labels: ChatLabels) {
         setIsUploading(false);
       }
     },
-    [roomId, labels, setDraft, showToast]
+    [roomId, labels, setDraft, showToast],
   );
 
   return { isUploading, addFiles };

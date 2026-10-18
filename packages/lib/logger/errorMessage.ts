@@ -4,6 +4,7 @@
  */
 export function getErrorMessage(err: unknown, fallback = 'Unknown error'): string {
   if (err instanceof Error) return err.message;
-  if (typeof err === 'object' && err !== null && 'message' in err && typeof err.message === 'string') return err.message;
+  if (typeof err === 'object' && err !== null && 'message' in err && typeof err.message === 'string')
+    return err.message;
   return fallback;
 }

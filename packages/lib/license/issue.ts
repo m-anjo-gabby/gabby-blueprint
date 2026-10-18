@@ -89,7 +89,7 @@ async function grantSessionTicket(
     total_sessions: number;
     performed_by: string | null;
   },
-  ctx: LogContext
+  ctx: LogContext,
 ) {
   const { data: ticket, error } = await supabase
     .from('com_t_user_session_ticket')
@@ -104,20 +104,28 @@ async function grantSessionTicket(
     .single();
 
   if (error || !ticket) {
-    logger.error('license:grant_session_ticket_failed', error?.message || 'Ticket insert failed', { ...ctx, err: error, payload: params });
+    logger.error('license:grant_session_ticket_failed', error?.message || 'Ticket insert failed', {
+      ...ctx,
+      err: error,
+      payload: params,
+    });
     return;
   }
 
-  await recordTicketHistory(supabase, {
-    ticket_id: ticket.ticket_id,
-    contract_id: params.contract_id,
-    user_id: params.user_id,
-    action: 'granted',
-    sessions_delta: ticket.total_sessions,
-    used_sessions_after: ticket.used_sessions,
-    total_sessions: ticket.total_sessions,
-    performed_by: params.performed_by,
-  }, ctx);
+  await recordTicketHistory(
+    supabase,
+    {
+      ticket_id: ticket.ticket_id,
+      contract_id: params.contract_id,
+      user_id: params.user_id,
+      action: 'granted',
+      sessions_delta: ticket.total_sessions,
+      used_sessions_after: ticket.used_sessions,
+      total_sessions: ticket.total_sessions,
+      performed_by: params.performed_by,
+    },
+    ctx,
+  );
 }
 
 /** ライセンス発行に必要な契約の項目 */
@@ -154,34 +162,50 @@ export async function recordIssuedLicenses(
     rows: IssuedLicenseRow[];
     performedBy: string | null;
   },
-  ctx: LogContext
+  ctx: LogContext,
 ) {
   const { contractId, contract, rows, performedBy } = params;
 
-  await Promise.all(rows.map(row => recordLicenseHistory(supabase, {
-    license_id: row.license_id,
-    contract_id: contractId,
-    user_id: row.user_id,
-    action: 'assigned',
-    status: row.status,
-    start_date: row.start_date,
-    end_date: row.end_date,
-    has_dialogue_practice: contract.has_dialogue_practice,
-    note: row.note,
-    performed_by: performedBy,
-  }, ctx)));
+  await Promise.all(
+    rows.map((row) =>
+      recordLicenseHistory(
+        supabase,
+        {
+          license_id: row.license_id,
+          contract_id: contractId,
+          user_id: row.user_id,
+          action: 'assigned',
+          status: row.status,
+          start_date: row.start_date,
+          end_date: row.end_date,
+          has_dialogue_practice: contract.has_dialogue_practice,
+          note: row.note,
+          performed_by: performedBy,
+        },
+        ctx,
+      ),
+    ),
+  );
 
   // ライブセッション付き契約の場合、ライセンスに1:1で紐づくチケットを発行する
   const { weekly_frequency, total_sessions } = contract;
   if (contract.contract_type === LIVE_SESSION_CONTRACT_TYPE && weekly_frequency && total_sessions) {
-    await Promise.all(rows.map(row => grantSessionTicket(supabase, {
-      license_id: row.license_id,
-      contract_id: contractId,
-      user_id: row.user_id,
-      weekly_frequency,
-      total_sessions,
-      performed_by: performedBy,
-    }, ctx)));
+    await Promise.all(
+      rows.map((row) =>
+        grantSessionTicket(
+          supabase,
+          {
+            license_id: row.license_id,
+            contract_id: contractId,
+            user_id: row.user_id,
+            weekly_frequency,
+            total_sessions,
+            performed_by: performedBy,
+          },
+          ctx,
+        ),
+      ),
+    );
   }
 }
 
@@ -199,7 +223,7 @@ export async function issueInitialLicense(
     /** ライセンスの期間（UTC の ISO 文字列）。省略時は契約期間 */
     period?: { startDate: string; endDate: string };
   },
-  ctx: LogContext
+  ctx: LogContext,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const { contractId, userId, performedBy, period } = params;
 
@@ -245,13 +269,13 @@ export async function issueInitialLicense(
 async function applyInitialLevelManagement(
   supabase: AdminClient,
   params: { userId: string; contractType: number },
-  ctx: LogContext
+  ctx: LogContext,
 ) {
   const { error } = await supabase
     .from('student_m_sprint_progress')
     .upsert(
       { user_id: params.userId, level_managed: params.contractType === LIVE_SESSION_CONTRACT_TYPE },
-      { onConflict: 'user_id' }
+      { onConflict: 'user_id' },
     );
   if (error) {
     logger.error('license:apply_level_management_failed', error.message, { ...ctx, err: error, payload: params });

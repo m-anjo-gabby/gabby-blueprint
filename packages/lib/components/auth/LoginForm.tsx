@@ -66,10 +66,7 @@ export function LoginForm({ action, labels, badge }: LoginFormProps) {
 
       {/* 入力できる状態になったことを data-ready で示す（E2E はこれを待ってから入力する。KJ-2026-0928-02） */}
       <form action={handleSubmit} className="space-y-5" data-ready={isHydrated ? 'true' : undefined}>
-        <LoginNoticeBanner
-          notice={notice}
-          messages={{ link_error: labels.linkErrorNotice }}
-        />
+        <LoginNoticeBanner notice={notice} messages={{ link_error: labels.linkErrorNotice }} />
 
         <div className="space-y-4">
           <EmailField

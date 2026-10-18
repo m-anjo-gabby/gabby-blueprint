@@ -28,7 +28,8 @@ const DESKTOP_QUERY = '(min-width: 640px)';
 export const NOTICE_POPUP_CLASSES = {
   overlay: 'bg-ink/30',
   /** スマホ: 画面下から出るシート */
-  sheet: 'mx-auto flex max-w-2xl flex-col rounded-t-panel bg-surface px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-1 shadow-2xl outline-none',
+  sheet:
+    'mx-auto flex max-w-2xl flex-col rounded-t-panel bg-surface px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-1 shadow-2xl outline-none',
   sheetHandle: 'mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-line',
   /** sm 以上: 中央の小さなダイアログ */
   dialog: 'flex w-[calc(100vw-2rem)] max-w-120 flex-col rounded-panel bg-surface p-6 shadow-2xl outline-none',
@@ -83,14 +84,17 @@ export function NoticePopup({ notice, labels, moreCount = 0, onClose }: NoticePo
       <DialogPrimitive.Root open onOpenChange={handleOpenChange}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay
-            className={cn('fixed inset-0 z-50 data-[state=open]:animate-in data-[state=open]:fade-in-0', NOTICE_POPUP_CLASSES.overlay)}
+            className={cn(
+              'fixed inset-0 z-50 data-[state=open]:animate-in data-[state=open]:fade-in-0',
+              NOTICE_POPUP_CLASSES.overlay,
+            )}
           />
           <DialogPrimitive.Content
             aria-describedby={undefined}
             onOpenAutoFocus={focusDialogContent}
             className={cn(
               'fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-4rem)] -translate-x-1/2 -translate-y-1/2 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
-              NOTICE_POPUP_CLASSES.dialog
+              NOTICE_POPUP_CLASSES.dialog,
             )}
           >
             <NoticePopupContent
@@ -101,7 +105,11 @@ export function NoticePopup({ notice, labels, moreCount = 0, onClose }: NoticePo
               onAcknowledge={close}
               // 行動ボタンは押した記録が既読も兼ねるため、閉じるだけ
               onCtaClick={onClose}
-              title={<DialogPrimitive.Title className={noticePopupTitleClass('dialog')}>{notice.title}</DialogPrimitive.Title>}
+              title={
+                <DialogPrimitive.Title className={noticePopupTitleClass('dialog')}>
+                  {notice.title}
+                </DialogPrimitive.Title>
+              }
               closeButton={
                 <DialogPrimitive.Close aria-label={labels.close} className={NOTICE_POPUP_CLASSES.closeButton}>
                   <X size={18} />
@@ -232,7 +240,7 @@ export function NoticePopupContent({
             onClick={onAcknowledge}
             className={cn(
               'rounded-control bg-brand font-bold text-white transition-colors hover:bg-brand-strong',
-              isSheet ? 'h-12 w-full text-[15px]' : 'h-11 self-end whitespace-nowrap px-6 text-sm'
+              isSheet ? 'h-12 w-full text-[15px]' : 'h-11 self-end whitespace-nowrap px-6 text-sm',
             )}
           >
             {labels.acknowledge}
@@ -244,7 +252,7 @@ export function NoticePopupContent({
             onClick={handleMoreClick}
             className={cn(
               'flex items-center gap-1 text-[13px] font-medium text-ink-muted transition-colors hover:text-ink-soft',
-              isSheet ? 'h-11 justify-center' : 'h-9 self-start'
+              isSheet ? 'h-11 justify-center' : 'h-9 self-start',
             )}
           >
             {labels.moreNotices(moreCount)}
@@ -257,7 +265,15 @@ export function NoticePopupContent({
 }
 
 /** 本文の先頭3行（Markdown の記号を外した文章）と「続きを読む」 */
-function NoticeSummary({ notice, labels, onExpand }: { notice: NoticeItem; labels: NoticeLabels; onExpand: () => void }) {
+function NoticeSummary({
+  notice,
+  labels,
+  onExpand,
+}: {
+  notice: NoticeItem;
+  labels: NoticeLabels;
+  onExpand: () => void;
+}) {
   const { ref, isTruncated } = useSmartClamp<HTMLParagraphElement>();
   const summary = toNoticePlainText(notice.content);
   // 要約で省略された・Markdown の見た目（見出し・箇条書き等）が落ちた・添付がある場合は全文を見られるようにする

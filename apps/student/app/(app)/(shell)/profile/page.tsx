@@ -5,7 +5,11 @@ import { ProfileView } from './_components/ProfileView';
 import { ProfilePageHeader } from './_components/ProfileParts';
 
 export default async function ProfilePage() {
-  const [profile, timezones, mailSettings] = await Promise.all([getMyProfile(), getTimezoneList(), getMyMailSettings()]);
+  const [profile, timezones, mailSettings] = await Promise.all([
+    getMyProfile(),
+    getTimezoneList(),
+    getMyMailSettings(),
+  ]);
 
   if (!profile) {
     return (

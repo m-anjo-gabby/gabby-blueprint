@@ -14,7 +14,9 @@ export function useLessonSprintCountdown(timeLimitSec: number, onTimeUp: () => v
   const [isPaused, setIsPaused] = useState<boolean>(false);
 
   const secondsLeftRef = useRef<number>(secondsLeft);
-  useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
+  useEffect(() => {
+    secondsLeftRef.current = secondsLeft;
+  }, [secondsLeft]);
 
   const isPausedRef = useRef<boolean>(false);
   const pauseStartedAtRef = useRef<number | null>(null);
@@ -26,7 +28,9 @@ export function useLessonSprintCountdown(timeLimitSec: number, onTimeUp: () => v
 
   // 開始前インストラクション画面の間はタイマーを進行させないためのガード。
   const startedRef = useRef<boolean>(started);
-  useEffect(() => { startedRef.current = started; }, [started]);
+  useEffect(() => {
+    startedRef.current = started;
+  }, [started]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -67,7 +71,8 @@ export function useLessonSprintCountdown(timeLimitSec: number, onTimeUp: () => v
   };
 
   const togglePause = () => {
-    if (isPausedRef.current) resume(); else pause();
+    if (isPausedRef.current) resume();
+    else pause();
   };
 
   return { secondsLeft, secondsLeftRef, isPaused, pause, resume, togglePause, pausedSecondsRef };

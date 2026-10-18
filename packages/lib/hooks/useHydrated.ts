@@ -13,6 +13,6 @@ export function useHydrated(): boolean {
   return useSyncExternalStore(
     subscribe,
     () => true,
-    () => false
+    () => false,
   );
 }

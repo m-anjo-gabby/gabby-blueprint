@@ -81,29 +81,32 @@ export const useLessonSprintStore = create<LessonSprintState>((set, get) => ({
   setContentName: (name) => set({ contentName: name }),
   setContentMetadata: (metadata) => set({ contentMetadata: metadata }),
 
-  setConfig: (inputConfig) => set((state) => ({
-    config: { ...state.config, ...inputConfig },
-  })),
+  setConfig: (inputConfig) =>
+    set((state) => ({
+      config: { ...state.config, ...inputConfig },
+    })),
 
-  startSession: (questions) => set({
-    session: {
-      ...initialSession,
-      isActive: true,
-      questions,
-    },
-  }),
-
-  toggleWordHighlight: (index) => set((state) => {
-    const exists = state.session.currentHighlightedWords.includes(index);
-    return {
+  startSession: (questions) =>
+    set({
       session: {
-        ...state.session,
-        currentHighlightedWords: exists
-          ? state.session.currentHighlightedWords.filter((i) => i !== index)
-          : [...state.session.currentHighlightedWords, index],
+        ...initialSession,
+        isActive: true,
+        questions,
       },
-    };
-  }),
+    }),
+
+  toggleWordHighlight: (index) =>
+    set((state) => {
+      const exists = state.session.currentHighlightedWords.includes(index);
+      return {
+        session: {
+          ...state.session,
+          currentHighlightedWords: exists
+            ? state.session.currentHighlightedWords.filter((i) => i !== index)
+            : [...state.session.currentHighlightedWords, index],
+        },
+      };
+    }),
 
   commitScoreResult: (questionId, score) => {
     const { session } = get();
@@ -130,15 +133,17 @@ export const useLessonSprintStore = create<LessonSprintState>((set, get) => ({
   },
 
   setIsPaused: (isPaused) => set((state) => ({ session: { ...state.session, isPaused } })),
-  addPausedSeconds: (seconds) => set((state) => ({
-    session: { ...state.session, pausedSeconds: state.session.pausedSeconds + seconds },
-  })),
+  addPausedSeconds: (seconds) =>
+    set((state) => ({
+      session: { ...state.session, pausedSeconds: state.session.pausedSeconds + seconds },
+    })),
   setSessionNote: (sessionNote) => set((state) => ({ session: { ...state.session, sessionNote } })),
 
-  resetStore: () => set({
-    contentName: null,
-    contentMetadata: null,
-    config: initialConfig,
-    session: initialSession,
-  }),
+  resetStore: () =>
+    set({
+      contentName: null,
+      contentMetadata: null,
+      config: initialConfig,
+      session: initialSession,
+    }),
 }));

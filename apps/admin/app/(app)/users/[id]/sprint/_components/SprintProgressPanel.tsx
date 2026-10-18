@@ -8,7 +8,11 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { DetailSection } from '../../_components/DetailSection';
 import { TriangleAlert } from 'lucide-react';
-import { updateStudentSprintLevel, setStudentSprintStage, setStudentSprintLevelManaged } from '@/actions/adminStudentProgressAction';
+import {
+  updateStudentSprintLevel,
+  setStudentSprintStage,
+  setStudentSprintLevelManaged,
+} from '@/actions/adminStudentProgressAction';
 import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
 import { MAX_STAGE, StageLevels } from '@gabby/types/stageProgression';
 import { getStageGaps, getStageGoals } from '@gabby/lib/sprint/stageProgression';
@@ -130,7 +134,9 @@ export function SprintProgressPanel({ userId, initialProgress }: Props) {
           <label htmlFor="sprint-level-managed" className="text-sm font-bold text-slate-800">
             {t('levelManagedLabel')}
           </label>
-          <p className="mt-1 text-xs text-slate-500">{t(progress.level_managed ? 'levelManagedOn' : 'levelManagedOff')}</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {t(progress.level_managed ? 'levelManagedOn' : 'levelManagedOff')}
+          </p>
         </div>
         <Switch
           id="sprint-level-managed"
@@ -152,10 +158,15 @@ export function SprintProgressPanel({ userId, initialProgress }: Props) {
               const selected = levelSelections[type.value] ?? currentLevel;
 
               return (
-                <div key={type.value} className="flex items-center justify-between gap-3 py-2.5 border-b border-slate-100 last:border-0">
+                <div
+                  key={type.value}
+                  className="flex items-center justify-between gap-3 py-2.5 border-b border-slate-100 last:border-0"
+                >
                   <div>
                     <p className="text-sm font-semibold text-slate-700">{type.label}</p>
-                    <p className="text-xs text-slate-400">{t('currentPrefix', { level: formatLevel(type.value, currentLevel) })}</p>
+                    <p className="text-xs text-slate-400">
+                      {t('currentPrefix', { level: formatLevel(type.value, currentLevel) })}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Select
@@ -195,7 +206,10 @@ export function SprintProgressPanel({ userId, initialProgress }: Props) {
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-600">{t('targetStageLabel')}</label>
-              <Select value={targetStage !== null ? String(targetStage) : undefined} onValueChange={(v) => setTargetStage(Number(v))}>
+              <Select
+                value={targetStage !== null ? String(targetStage) : undefined}
+                onValueChange={(v) => setTargetStage(Number(v))}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -228,7 +242,9 @@ export function SprintProgressPanel({ userId, initialProgress }: Props) {
                   </ul>
                 </div>
               ) : (
-                <p className="text-xs font-semibold text-emerald-600">{t('gapsSatisfied', { stage: targetStage ?? 0 })}</p>
+                <p className="text-xs font-semibold text-emerald-600">
+                  {t('gapsSatisfied', { stage: targetStage ?? 0 })}
+                </p>
               ))}
 
             {stageDiff?.direction === 'down' && (
@@ -253,7 +269,13 @@ export function SprintProgressPanel({ userId, initialProgress }: Props) {
               </div>
             )}
 
-            <Button type="button" onClick={handleStageSave} disabled={!stageDiff} pending={isSavingStage} className="w-full">
+            <Button
+              type="button"
+              onClick={handleStageSave}
+              disabled={!stageDiff}
+              pending={isSavingStage}
+              className="w-full"
+            >
               {stageDiff?.direction === 'up' && t('forceUp')}
               {stageDiff?.direction === 'down' && t('forceDown')}
               {!stageDiff && t('noChange')}

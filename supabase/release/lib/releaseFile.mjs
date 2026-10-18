@@ -22,13 +22,15 @@ export function splitSections(sql) {
   return starts.map((start, idx) => {
     const end = starts[idx + 1] ?? lines.length;
     const body = lines.slice(start, end);
-    const titleLine = idx === 0
-      ? body.find((l) => l.includes('対象ブランチ')) ?? body.find((l) => /^--\s*\S/.test(l) && !/={10,}/.test(l))
-      : body[1];
-    const title = (titleLine ?? '').replace(/^--\s*/, '').replace('【追加セクション】', '').trim();
-    const posts = body
-      .map((l) => l.match(/^--\s*@post:\s*(.+?)\s*$/)?.[1])
-      .filter(Boolean);
+    const titleLine =
+      idx === 0
+        ? (body.find((l) => l.includes('対象ブランチ')) ?? body.find((l) => /^--\s*\S/.test(l) && !/={10,}/.test(l)))
+        : body[1];
+    const title = (titleLine ?? '')
+      .replace(/^--\s*/, '')
+      .replace('【追加セクション】', '')
+      .trim();
+    const posts = body.map((l) => l.match(/^--\s*@post:\s*(.+?)\s*$/)?.[1]).filter(Boolean);
     const sqlText = body.join('\n');
     return {
       no: idx + 1,
@@ -59,7 +61,7 @@ FROM ops.release_history ${where}ORDER BY applied_at;`);
 /** セクションごとの状態: pending / applied / changed（適用後に内容が変更された） */
 export function sectionState(section, history) {
   const applied = history.filter(
-    (h) => h.step_type === 'sql' && h.section_no === section.no && ['applied', 'marked'].includes(h.status)
+    (h) => h.step_type === 'sql' && h.section_no === section.no && ['applied', 'marked'].includes(h.status),
   );
   if (applied.length === 0) return { state: 'pending' };
   const last = applied[applied.length - 1];

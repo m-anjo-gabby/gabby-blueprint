@@ -216,7 +216,7 @@ function MonitorUserPicker({ users, monitorIds, selectedIds, onChange, disabled 
                   disabled={disabled}
                   className={cn(
                     'flex w-full items-center justify-between gap-3 rounded-control px-3 py-2 text-left text-sm transition-colors disabled:opacity-60',
-                    isSelected ? 'bg-brand-soft' : 'hover:bg-canvas'
+                    isSelected ? 'bg-brand-soft' : 'hover:bg-canvas',
                   )}
                 >
                   <span className="min-w-0">

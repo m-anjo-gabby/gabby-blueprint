@@ -8,10 +8,10 @@ export type ScoreTier = 'excellent' | 'great' | 'good' | 'fair' | 'poor';
  * getFeedbackConfig / getScoreTier の唯一の判定基準として、両者から共通参照する。
  */
 const SCORE_TIERS: { min: number; tier: ScoreTier; fill: string; tagText: string }[] = [
-  { min: 0.90, tier: 'excellent', fill: '#10B981', tagText: 'Excellent' },
-  { min: 0.80, tier: 'great', fill: '#3B82F6', tagText: 'Great' },
-  { min: 0.60, tier: 'good', fill: '#F59E0B', tagText: 'Good' },
-  { min: 0.30, tier: 'fair', fill: '#F97316', tagText: 'Fair' },
+  { min: 0.9, tier: 'excellent', fill: '#10B981', tagText: 'Excellent' },
+  { min: 0.8, tier: 'great', fill: '#3B82F6', tagText: 'Great' },
+  { min: 0.6, tier: 'good', fill: '#F59E0B', tagText: 'Good' },
+  { min: 0.3, tier: 'fair', fill: '#F97316', tagText: 'Fair' },
   { min: -Infinity, tier: 'poor', fill: '#EF4444', tagText: 'Poor' },
 ];
 
@@ -22,7 +22,7 @@ const SCORE_TIERS: { min: number; tier: ScoreTier; fill: string; tagText: string
  * @returns フィードバック設定
  */
 export function getFeedbackConfig(score: number): FeedbackConfig {
-  const { fill, tagText } = SCORE_TIERS.find(t => score >= t.min)!;
+  const { fill, tagText } = SCORE_TIERS.find((t) => score >= t.min)!;
   return { fill, tagText };
 }
 
@@ -33,5 +33,5 @@ export function getFeedbackConfig(score: number): FeedbackConfig {
  * @param score - 発話スコア (0-1)
  */
 export function getScoreTier(score: number): ScoreTier {
-  return SCORE_TIERS.find(t => score >= t.min)!.tier;
+  return SCORE_TIERS.find((t) => score >= t.min)!.tier;
 }

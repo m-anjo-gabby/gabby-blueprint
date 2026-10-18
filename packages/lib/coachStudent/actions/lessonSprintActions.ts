@@ -39,7 +39,11 @@ const ACTIVE_CALL_LOOKBACK_MS = LIVE_SESSION_END_AFTER_MS + 5 * 60 * 1000;
  * 導線からLesson Sprintを開始しても、実際に通話中であれば正しく紐づくようにするための保険。
  * 該当が無ければ（＝通話していない＝外部Zoom実施等）nullを返し、単独実施として扱う。
  */
-async function inferActiveSessionId(supabase: SupabaseClient, coachId: string, studentId: string): Promise<string | null> {
+async function inferActiveSessionId(
+  supabase: SupabaseClient,
+  coachId: string,
+  studentId: string,
+): Promise<string | null> {
   const lookbackIso = new Date(Date.now() - ACTIVE_CALL_LOOKBACK_MS).toISOString();
 
   const { data, error } = await supabase
@@ -97,7 +101,11 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
 
     const availableIds = await getStudentAvailableContentIds(supabase, studentId, SPRINT_CONTENT_TYPE);
     if (!availableIds) {
-      logger.error('lessonSprint:get_available_content_ids_failed', 'RPC get_student_available_content_ids failed', { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('lessonSprint:get_available_content_ids_failed', 'RPC get_student_available_content_ids failed', {
+        ...ctx,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (availableIds.size === 0) {
@@ -120,7 +128,11 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!levelsByContent) {
-      logger.warn('lessonSprint:get_available_levels_failed', 'Failed to fetch available levels; levels are not filtered', { ...ctx, userId: user.id });
+      logger.warn(
+        'lessonSprint:get_available_levels_failed',
+        'Failed to fetch available levels; levels are not filtered',
+        { ...ctx, userId: user.id },
+      );
     }
 
     return {
@@ -131,7 +143,10 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
       })),
     };
   } catch (err) {
-    logger.error('lessonSprint:get_contents_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('lessonSprint:get_contents_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -143,7 +158,7 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
 export async function getLessonSprintQuestionsCore(
   contentId: string,
   questionType: SprintQuestionType,
-  difficultyLevel: number
+  difficultyLevel: number,
 ): Promise<GetLessonSprintQuestionsResult> {
   const ctx = await getLogContext();
 
@@ -160,7 +175,12 @@ export async function getLessonSprintQuestionsCore(
       .eq('difficulty_level', difficultyLevel);
 
     if (error) {
-      logger.error('lessonSprint:get_questions_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { contentId, questionType, difficultyLevel } });
+      logger.error('lessonSprint:get_questions_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { contentId, questionType, difficultyLevel },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -194,7 +214,10 @@ export async function getLessonSprintQuestionsCore(
 
     return { success: true, questions: finalData };
   } catch (err) {
-    logger.error('lessonSprint:get_questions_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('lessonSprint:get_questions_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -203,7 +226,7 @@ export async function getLessonSprintQuestionsCore(
  * Lesson Sprintの実施結果・履歴を1件登録する
  */
 export async function createLessonSprintResultCore(
-  input: CreateLessonSprintResultInput
+  input: CreateLessonSprintResultInput,
 ): Promise<CreateLessonSprintResultResponse> {
   const ctx = await getLogContext();
 
@@ -219,14 +242,22 @@ export async function createLessonSprintResultCore(
     // 履歴の形を保存前に検証する（壊れた・巨大な配列を保存させない）
     const parsedHistory = lessonSprintHistorySchema.safeParse(input.history);
     if (!parsedHistory.success) {
-      logger.error('lessonSprint:create_result_invalid_history', 'Invalid answered_history payload', { ...ctx, userId: user.id, payload: { issues: parsedHistory.error.issues.slice(0, 5) } });
+      logger.error('lessonSprint:create_result_invalid_history', 'Invalid answered_history payload', {
+        ...ctx,
+        userId: user.id,
+        payload: { issues: parsedHistory.error.issues.slice(0, 5) },
+      });
       return { success: false, errorCode: 'invalid_input' };
     }
 
     // 対象生徒のテナントで公開されていない教材での結果登録を拒否する
     const availableIds = await getStudentAvailableContentIds(supabase, input.student_id, SPRINT_CONTENT_TYPE);
     if (!availableIds) {
-      logger.error('lessonSprint:create_result_available_content_ids_failed', 'RPC get_student_available_content_ids failed', { ...ctx, userId: user.id, payload: { studentId: input.student_id } });
+      logger.error(
+        'lessonSprint:create_result_available_content_ids_failed',
+        'RPC get_student_available_content_ids failed',
+        { ...ctx, userId: user.id, payload: { studentId: input.student_id } },
+      );
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!availableIds.has(input.content_id)) {
@@ -245,7 +276,12 @@ export async function createLessonSprintResultCore(
         .maybeSingle();
 
       if (sessionError) {
-        logger.error('lessonSprint:create_result_session_lookup_failed', sessionError.message, { ...ctx, err: sessionError, userId: user.id, payload: { sessionId: resolvedSessionId } });
+        logger.error('lessonSprint:create_result_session_lookup_failed', sessionError.message, {
+          ...ctx,
+          err: sessionError,
+          userId: user.id,
+          payload: { sessionId: resolvedSessionId },
+        });
         return { success: false, errorCode: 'unexpected_error' };
       }
       if (!session) {
@@ -279,14 +315,26 @@ export async function createLessonSprintResultCore(
       .single();
 
     if (error || !data) {
-      logger.error('lessonSprint:create_result_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id, payload: { studentId: input.student_id } });
+      logger.error('lessonSprint:create_result_failed', error?.message ?? 'No row inserted', {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { studentId: input.student_id },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    logger.info('lessonSprint:create_result_success', 'Lesson sprint result saved', { ...ctx, userId: user.id, payload: { lessonSprintId: data.lesson_sprint_id } });
+    logger.info('lessonSprint:create_result_success', 'Lesson sprint result saved', {
+      ...ctx,
+      userId: user.id,
+      payload: { lessonSprintId: data.lesson_sprint_id },
+    });
     return { success: true, lesson_sprint_id: data.lesson_sprint_id };
   } catch (err) {
-    logger.error('lessonSprint:create_result_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('lessonSprint:create_result_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -297,18 +345,30 @@ const LESSON_SPRINT_HISTORY_SELECT =
 /** LESSON_SPRINT_HISTORY_SELECT で取得した1行 */
 type LessonSprintHistoryRow = Pick<
   TableRow<'lesson_t_sprint'>,
-  | 'lesson_sprint_id' | 'session_id' | 'content_id' | 'question_type' | 'difficulty_level' | 'time_limit_sec'
-  | 'total_answered' | 'total_evaluated' | 'answered_history' | 'insert_date'
+  | 'lesson_sprint_id'
+  | 'session_id'
+  | 'content_id'
+  | 'question_type'
+  | 'difficulty_level'
+  | 'time_limit_sec'
+  | 'total_answered'
+  | 'total_evaluated'
+  | 'answered_history'
+  | 'insert_date'
 > & {
-  com_m_contents: Pick<TableRow<'com_m_contents'>, 'content_name' | 'content_name_en'> | Pick<TableRow<'com_m_contents'>, 'content_name' | 'content_name_en'>[] | null;
+  com_m_contents:
+    | Pick<TableRow<'com_m_contents'>, 'content_name' | 'content_name_en'>
+    | Pick<TableRow<'com_m_contents'>, 'content_name' | 'content_name_en'>[]
+    | null;
 };
 
 function mapLessonSprintHistoryRow(row: LessonSprintHistoryRow): LessonSprintHistoryListItem {
   const history = readSprintHistory<LessonSprintHistoryItem>(row.answered_history);
   const scored = history.filter((h) => typeof h.score === 'number');
-  const averageScore = scored.length > 0
-    ? Math.round((scored.reduce((sum, h) => sum + (h.score ?? 0), 0) / scored.length) * 10) / 10
-    : null;
+  const averageScore =
+    scored.length > 0
+      ? Math.round((scored.reduce((sum, h) => sum + (h.score ?? 0), 0) / scored.length) * 10) / 10
+      : null;
   const contentJoin = Array.isArray(row.com_m_contents) ? row.com_m_contents[0] : row.com_m_contents;
 
   return {
@@ -348,13 +408,21 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
       .limit(10);
 
     if (error) {
-      logger.error('lessonSprint:get_history_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
+      logger.error('lessonSprint:get_history_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, records: (data ?? []).map(mapLessonSprintHistoryRow) };
   } catch (err) {
-    logger.error('lessonSprint:get_history_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('lessonSprint:get_history_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -368,7 +436,7 @@ export async function getLessonSprintHistoryCore(studentId: string): Promise<Get
 export async function getLessonSprintHistoryPageCore(
   studentId: string,
   cursor: string | null,
-  limit: number
+  limit: number,
 ): Promise<GetLessonSprintHistoryPageResult> {
   const ctx = await getLogContext();
 
@@ -388,7 +456,12 @@ export async function getLessonSprintHistoryPageCore(
 
     const { data: rows, error } = await query;
     if (error) {
-      logger.error('lessonSprint:get_history_page_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
+      logger.error('lessonSprint:get_history_page_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -398,7 +471,10 @@ export async function getLessonSprintHistoryPageCore(
 
     return { success: true, items: page.map(mapLessonSprintHistoryRow), nextCursor };
   } catch (err) {
-    logger.error('lessonSprint:get_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('lessonSprint:get_history_page_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -422,7 +498,12 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
       .maybeSingle();
 
     if (recordError) {
-      logger.error('lessonSprint:get_result_failed', recordError.message, { ...ctx, err: recordError, userId: user.id, payload: { lessonSprintId } });
+      logger.error('lessonSprint:get_result_failed', recordError.message, {
+        ...ctx,
+        err: recordError,
+        userId: user.id,
+        payload: { lessonSprintId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!record) {
@@ -441,7 +522,12 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
       .in('question_id', targetIds);
 
     if (qError) {
-      logger.error('lessonSprint:get_result_questions_failed', qError.message, { ...ctx, err: qError, userId: user.id, payload: { lessonSprintId } });
+      logger.error('lessonSprint:get_result_questions_failed', qError.message, {
+        ...ctx,
+        err: qError,
+        userId: user.id,
+        payload: { lessonSprintId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -452,7 +538,10 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
 
     return { success: true, record: record as LessonSprintRecord, questions: sortedQuestions };
   } catch (err) {
-    logger.error('lessonSprint:get_result_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('lessonSprint:get_result_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -462,7 +551,7 @@ export async function getLessonSprintResultCore(lessonSprintId: string): Promise
  */
 export async function updateLessonSprintSessionNoteCore(
   lessonSprintId: string,
-  sessionNote: string | null
+  sessionNote: string | null,
 ): Promise<UpdateLessonSprintSessionNoteResult> {
   const ctx = await getLogContext();
 
@@ -480,7 +569,12 @@ export async function updateLessonSprintSessionNoteCore(
       .maybeSingle();
 
     if (error) {
-      logger.error('lessonSprint:update_session_note_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { lessonSprintId } });
+      logger.error('lessonSprint:update_session_note_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { lessonSprintId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!data) {
@@ -489,7 +583,10 @@ export async function updateLessonSprintSessionNoteCore(
 
     return { success: true };
   } catch (err) {
-    logger.error('lessonSprint:update_session_note_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('lessonSprint:update_session_note_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

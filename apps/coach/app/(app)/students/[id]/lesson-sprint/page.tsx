@@ -18,10 +18,7 @@ export default async function LessonSprintSetupPage({
     notFound();
   }
 
-  const [contents, lessonSprints] = await Promise.all([
-    getAvailableSprintContents(id),
-    getLessonSprintHistory(id),
-  ]);
+  const [contents, lessonSprints] = await Promise.all([getAvailableSprintContents(id), getLessonSprintHistory(id)]);
 
   return (
     <LessonSprintApp

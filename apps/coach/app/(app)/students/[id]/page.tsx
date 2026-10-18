@@ -14,11 +14,7 @@ import {
   preloadOverviewSections,
 } from './_components/OverviewSections';
 
-export default async function StudentOverviewPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function StudentOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   // 各カードの取得をヘッダー用の取得と同時に開始する（カードの描画時は開始済みの取得の結果を使う）
   preloadOverviewSections(id);
@@ -37,7 +33,12 @@ export default async function StudentOverviewPage({
     <div className="space-y-6">
       <StudentOverviewHeader
         profile={overview.profile}
-        timezoneName={pickTimezoneName(overview.profile.timezone, timezoneNames.get(overview.profile.timezone), 'display', 'en')}
+        timezoneName={pickTimezoneName(
+          overview.profile.timezone,
+          timezoneNames.get(overview.profile.timezone),
+          'display',
+          'en',
+        )}
         upcomingSession={upcomingSession}
       />
 

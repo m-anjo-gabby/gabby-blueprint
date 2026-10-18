@@ -14,7 +14,8 @@ if (!input) {
   process.stderr.write('usage: to-pdf.mjs <file.html> [--out=<file.pdf>]\n');
   process.exit(1);
 }
-const output = args.find((a) => a.startsWith('--out='))?.slice('--out='.length) ?? input.replace(/\.html?$/i, '') + '.pdf';
+const output =
+  args.find((a) => a.startsWith('--out='))?.slice('--out='.length) ?? input.replace(/\.html?$/i, '') + '.pdf';
 
 const require = createRequire(resolve('testing/package.json'));
 const { chromium } = require('@playwright/test');

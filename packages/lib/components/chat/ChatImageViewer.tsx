@@ -21,7 +21,11 @@ export function ChatImageViewer({ url, fileName, children }: ChatImageViewerProp
   return (
     <DialogPrimitive.Root>
       <DialogPrimitive.Trigger asChild>
-        <button type="button" aria-label={labels.openImage} className="block cursor-zoom-in rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
+        <button
+          type="button"
+          aria-label={labels.openImage}
+          className="block cursor-zoom-in rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+        >
           {children}
         </button>
       </DialogPrimitive.Trigger>

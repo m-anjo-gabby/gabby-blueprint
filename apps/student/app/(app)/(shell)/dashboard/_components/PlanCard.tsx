@@ -85,7 +85,10 @@ function ExpiryNotice({ endDate, timezone }: { endDate: string; timezone: string
  */
 export function PlanCard({ plans, nowMs, timezone }: PlanCardProps) {
   // 後に続く契約があれば終了の案内は出さないため、最も遅い終了日で判定する
-  const lastEndDate = plans.reduce<string | null>((latest, p) => (latest === null || p.end_date > latest ? p.end_date : latest), null);
+  const lastEndDate = plans.reduce<string | null>(
+    (latest, p) => (latest === null || p.end_date > latest ? p.end_date : latest),
+    null,
+  );
   const showExpiry = nowMs !== null && lastEndDate !== null && daysUntil(lastEndDate, nowMs) <= PLAN_EXPIRY_NOTICE_DAYS;
 
   return (

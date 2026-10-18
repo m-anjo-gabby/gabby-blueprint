@@ -40,7 +40,12 @@ export function SessionRecordDataTable({ data, totalCount, pageCount, coaches, m
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      >
         <ListSelectFilter
           label={t('reviewFilter')}
           allLabel={t('reviewAll')}

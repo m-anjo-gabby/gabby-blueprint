@@ -18,7 +18,7 @@ export async function getMyPendingCoachRatings(): Promise<PendingCoachRating[]> 
 
 /** コーチを評価する */
 export async function submitCoachRating(
-  input: SubmitCoachRatingInput
+  input: SubmitCoachRatingInput,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const result = await submitCoachRatingCore(input);
   if (!result.success) return { success: false, message: COACH_RATING_ERROR_MESSAGES_JA[result.errorCode] };

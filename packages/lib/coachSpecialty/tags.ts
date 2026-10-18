@@ -7,7 +7,7 @@ import { CoachSpecialtyMaster, CoachSpecialtyTag } from '@gabby/types/coachSpeci
 export function toCoachSpecialtyTags(
   codes: readonly string[],
   master: readonly CoachSpecialtyMaster[],
-  lang: 'ja' | 'en'
+  lang: 'ja' | 'en',
 ): CoachSpecialtyTag[] {
   const codeSet = new Set(codes);
   return master
@@ -23,7 +23,7 @@ export function toCoachSpecialtyTags(
 export function matchesCoachSpecialtyFilter(
   coachCodes: readonly string[],
   selectedCodes: ReadonlySet<string>,
-  master: readonly CoachSpecialtyMaster[]
+  master: readonly CoachSpecialtyMaster[],
 ): boolean {
   if (selectedCodes.size === 0) return true;
   const owned = new Set(coachCodes);

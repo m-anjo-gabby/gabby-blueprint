@@ -25,7 +25,14 @@ interface DeleteConfirmDialogProps<T> {
 }
 
 /** 一覧の行の削除の確認。行の削除ボタンで target を渡して開く */
-export function DeleteConfirmDialog<T>({ target, onClose, onConfirm, title, description, confirmLabel }: DeleteConfirmDialogProps<T>) {
+export function DeleteConfirmDialog<T>({
+  target,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmLabel,
+}: DeleteConfirmDialogProps<T>) {
   const tCommon = useTranslations('common');
   return (
     <AlertDialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
@@ -36,7 +43,10 @@ export function DeleteConfirmDialog<T>({ target, onClose, onConfirm, title, desc
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
-          <AlertDialogAction onClick={() => target !== null && onConfirm(target)} className="bg-rose-600 text-white hover:bg-rose-700">
+          <AlertDialogAction
+            onClick={() => target !== null && onConfirm(target)}
+            className="bg-rose-600 text-white hover:bg-rose-700"
+          >
             {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>

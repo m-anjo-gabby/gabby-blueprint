@@ -22,13 +22,13 @@
  *   一覧のみ
  *     ⑦ お知らせ: 見出し画像＋行動ボタン → ポップアップ・ホームには出ず、お知らせ一覧で開くと画像とボタン
  */
-import { deflateSync, crc32 } from "node:zlib";
-import { loadTestEnv, resolveTestEnvFromArgs } from "../../../helpers/env.ts";
-import { clearPopupNotices, loadPopupFixture, markOtherNoticesRead } from "../../../e2e/support/popupFixtures.ts";
+import { deflateSync, crc32 } from 'node:zlib';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { clearPopupNotices, loadPopupFixture, markOtherNoticesRead } from '../../../e2e/support/popupFixtures.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);
-const RESET_READ_ONLY = process.argv.includes("--reset-read");
+const RESET_READ_ONLY = process.argv.includes('--reset-read');
 
 const fixture = await loadPopupFixture();
 const { admin, clientId, userId } = fixture;
@@ -39,11 +39,11 @@ console.log(`\n=== お知らせの表示 確認データ: env=${env} ===`);
 await markOtherNoticesRead(fixture);
 
 if (RESET_READ_ONLY) {
-  const { data: notices, error } = await admin.from("com_m_notice").select("notice_id").eq("client_id", clientId);
+  const { data: notices, error } = await admin.from('com_m_notice').select('notice_id').eq('client_id', clientId);
   if (error) throw error;
   const ids = (notices ?? []).map((n) => n.notice_id as string);
   if (ids.length > 0) {
-    const { error: delErr } = await admin.from("com_t_notice_read").delete().eq("user_id", userId).in("notice_id", ids);
+    const { error: delErr } = await admin.from('com_t_notice_read').delete().eq('user_id', userId).in('notice_id', ids);
     if (delErr) throw delErr;
   }
   console.log(`既読・ボタンを押した記録を消しました（${ids.length}件のお知らせ）。`);
@@ -58,13 +58,18 @@ await clearPopupNotices(fixture);
 function pngChunk(type: string, data: Buffer): Buffer {
   const len = Buffer.alloc(4);
   len.writeUInt32BE(data.length);
-  const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
   const crc = Buffer.alloc(4);
   crc.writeUInt32BE(crc32(body));
   return Buffer.concat([len, body, crc]);
 }
 
-function makeImage(width: number, height: number, from: [number, number, number], to: [number, number, number]): Buffer {
+function makeImage(
+  width: number,
+  height: number,
+  from: [number, number, number],
+  to: [number, number, number],
+): Buffer {
   const raw = Buffer.alloc((width * 3 + 1) * height);
   for (let y = 0; y < height; y++) {
     const row = y * (width * 3 + 1);
@@ -86,24 +91,24 @@ function makeImage(width: number, height: number, from: [number, number, number]
   ihdr[9] = 2; // RGB
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    pngChunk("IHDR", ihdr),
-    pngChunk("IDAT", deflateSync(raw)),
-    pngChunk("IEND", Buffer.alloc(0)),
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', deflateSync(raw)),
+    pngChunk('IEND', Buffer.alloc(0)),
   ]);
 }
 
 /** 最小限の1ページのPDF（添付ファイルの表示・保存の確認用） */
 function makePdf(): Buffer {
   const objects = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
-    "", // 4: contents（下で組み立てる）
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    '', // 4: contents（下で組み立てる）
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
   ];
-  const stream = "BT /F1 24 Tf 72 760 Td (Maintenance details - sample attachment) Tj ET";
+  const stream = 'BT /F1 24 Tf 72 760 Td (Maintenance details - sample attachment) Tj ET';
   objects[3] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
-  let pdf = "%PDF-1.4\n";
+  let pdf = '%PDF-1.4\n';
   const offsets: number[] = [];
   objects.forEach((body, i) => {
     offsets.push(Buffer.byteLength(pdf));
@@ -111,24 +116,24 @@ function makePdf(): Buffer {
   });
   const xref = Buffer.byteLength(pdf);
   pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  pdf += offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("");
+  pdf += offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('');
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
   return Buffer.from(pdf);
 }
 
 async function upload(path: string, body: Buffer, contentType: string): Promise<void> {
-  const { error } = await admin.storage.from("notices").upload(path, body, { contentType, upsert: true });
+  const { error } = await admin.storage.from('notices').upload(path, body, { contentType, upsert: true });
   if (error) throw new Error(`Storage へのアップロードに失敗（${path}）: ${error.message}`);
 }
 
 // ---------------------------------------------------------------------------
 // お知らせ
 // ---------------------------------------------------------------------------
-type DisplayMode = "POPUP" | "HOME" | "LIST";
+type DisplayMode = 'POPUP' | 'HOME' | 'LIST';
 interface Pattern {
   title: string;
   displayMode: DisplayMode;
-  noticeType: "INFO" | "CAMPAIGN" | "MAINTENANCE" | "UPDATE";
+  noticeType: 'INFO' | 'CAMPAIGN' | 'MAINTENANCE' | 'UPDATE';
   important?: boolean;
   content: string;
   image?: { from: [number, number, number]; to: [number, number, number] };
@@ -160,44 +165,60 @@ const LONG_CONTENT = `いつも Gabby Blueprint をご利用いただきあり�
 > ご不便をおかけしますが、ご理解のほどよろしくお願いいたします。`;
 
 const PATTERNS: Pattern[] = [
-  { title: "【確認①】システムメンテナンスのお知らせ（11月15日）", displayMode: "POPUP", noticeType: "MAINTENANCE", important: true, content: LONG_CONTENT, pdf: true },
   {
-    title: "【確認②】秋の学習応援キャンペーン",
-    displayMode: "POPUP",
-    noticeType: "CAMPAIGN",
-    content: "期間中にトレーニングを10日以上実施した方に、特典をご用意しています。対象期間や応募方法はキャンペーンページをご覧ください。外部ページは別のタブで開きます。",
+    title: '【確認①】システムメンテナンスのお知らせ（11月15日）',
+    displayMode: 'POPUP',
+    noticeType: 'MAINTENANCE',
+    important: true,
+    content: LONG_CONTENT,
+    pdf: true,
+  },
+  {
+    title: '【確認②】秋の学習応援キャンペーン',
+    displayMode: 'POPUP',
+    noticeType: 'CAMPAIGN',
+    content:
+      '期間中にトレーニングを10日以上実施した方に、特典をご用意しています。対象期間や応募方法はキャンペーンページをご覧ください。外部ページは別のタブで開きます。',
     image: { from: [24, 71, 195], to: [14, 49, 150] },
-    cta: { label: "キャンペーンページを見る", url: "https://example.com/campaign" },
+    cta: { label: 'キャンペーンページを見る', url: 'https://example.com/campaign' },
   },
   {
-    title: "【確認③】教材ライブラリに新しい単語帳を追加しました",
-    displayMode: "POPUP",
-    noticeType: "UPDATE",
-    content: "ビジネス会議でよく使う表現をまとめた単語帳を追加しました。教材ライブラリからご利用いただけます。",
-    cta: { label: "教材を見る", url: "/library" },
+    title: '【確認③】教材ライブラリに新しい単語帳を追加しました',
+    displayMode: 'POPUP',
+    noticeType: 'UPDATE',
+    content: 'ビジネス会議でよく使う表現をまとめた単語帳を追加しました。教材ライブラリからご利用いただけます。',
+    cta: { label: '教材を見る', url: '/library' },
   },
-  { title: "【確認④】年末年始のサポート窓口について", displayMode: "POPUP", noticeType: "INFO", content: "12月29日〜1月3日はサポート窓口をお休みします。" },
   {
-    title: "【確認⑤】お気に入り機能が使いやすくなりました",
-    displayMode: "HOME",
-    noticeType: "CAMPAIGN",
-    content: "単語・フレーズ・スプリントの問題をお気に入りに登録し、種類ごとに一覧で見返せるようになりました。復習にぜひお役立てください。",
+    title: '【確認④】年末年始のサポート窓口について',
+    displayMode: 'POPUP',
+    noticeType: 'INFO',
+    content: '12月29日〜1月3日はサポート窓口をお休みします。',
+  },
+  {
+    title: '【確認⑤】お気に入り機能が使いやすくなりました',
+    displayMode: 'HOME',
+    noticeType: 'CAMPAIGN',
+    content:
+      '単語・フレーズ・スプリントの問題をお気に入りに登録し、種類ごとに一覧で見返せるようになりました。復習にぜひお役立てください。',
     image: { from: [52, 103, 225], to: [10, 38, 117] },
-    cta: { label: "お気に入りを開く", url: "/favorites" },
+    cta: { label: 'お気に入りを開く', url: '/favorites' },
   },
   {
-    title: "【確認⑥】学習記録の表示を改善しました",
-    displayMode: "HOME",
-    noticeType: "UPDATE",
-    content: "学習記録の画面で、週ごとの実施日数がひと目で分かるようになりました。詳しい変更点はお知らせの本文をご覧ください。",
+    title: '【確認⑥】学習記録の表示を改善しました',
+    displayMode: 'HOME',
+    noticeType: 'UPDATE',
+    content:
+      '学習記録の画面で、週ごとの実施日数がひと目で分かるようになりました。詳しい変更点はお知らせの本文をご覧ください。',
   },
   {
-    title: "【確認⑦】ご利用ガイドを更新しました（一覧のみ）",
-    displayMode: "LIST",
-    noticeType: "INFO",
-    content: "アプリのご利用ガイドを最新の画面に合わせて更新しました。このお知らせはポップアップ・ホームには出ず、お知らせ一覧にだけ表示されます。",
+    title: '【確認⑦】ご利用ガイドを更新しました（一覧のみ）',
+    displayMode: 'LIST',
+    noticeType: 'INFO',
+    content:
+      'アプリのご利用ガイドを最新の画面に合わせて更新しました。このお知らせはポップアップ・ホームには出ず、お知らせ一覧にだけ表示されます。',
     image: { from: [97, 142, 240], to: [24, 71, 195] },
-    cta: { label: "教材を見る", url: "/library" },
+    cta: { label: '教材を見る', url: '/library' },
   },
 ];
 
@@ -207,19 +228,25 @@ for (const [i, p] of PATTERNS.entries()) {
   let imagePath: string | null = null;
   if (p.image) {
     imagePath = `notices/${noticeId}/image/${crypto.randomUUID()}.png`;
-    await upload(imagePath, makeImage(960, 540, p.image.from, p.image.to), "image/png");
+    await upload(imagePath, makeImage(960, 540, p.image.from, p.image.to), 'image/png');
   }
   const attachments = [];
   if (p.pdf) {
     const path = `notices/${noticeId}/maintenance-details.pdf`;
     const body = makePdf();
-    await upload(path, body, "application/pdf");
-    attachments.push({ id: crypto.randomUUID(), name: "メンテナンス詳細.pdf", path, size: body.length, mime_type: "application/pdf" });
+    await upload(path, body, 'application/pdf');
+    attachments.push({
+      id: crypto.randomUUID(),
+      name: 'メンテナンス詳細.pdf',
+      path,
+      size: body.length,
+      mime_type: 'application/pdf',
+    });
   }
 
-  const { error } = await admin.from("com_m_notice").insert({
+  const { error } = await admin.from('com_m_notice').insert({
     notice_id: noticeId,
-    target_type: "CLIENT",
+    target_type: 'CLIENT',
     client_id: clientId,
     notice_type: p.noticeType,
     is_important: p.important ?? false,

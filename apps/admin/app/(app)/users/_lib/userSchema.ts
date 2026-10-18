@@ -13,7 +13,9 @@ export function createUserBaseSchema(t: FormT) {
     email: z.email({ message: t('errors.invalidEmail') }),
     user_name: z.string().min(1, t('errors.nameRequired')),
     client_id: z.string().min(1, t('errors.clientRequired')),
-    user_type: z.enum([USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH], { message: t('errors.userTypeRequired') }),
+    user_type: z.enum([USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH], {
+      message: t('errors.userTypeRequired'),
+    }),
     roles: z.array(z.string()),
   });
 }
@@ -67,7 +69,9 @@ export function isRegisteredUser(user: Pick<UserRecord, 'last_sign_in_at' | 'con
 }
 
 /** 代理ログインできるか（本登録済みで有効な生徒・コーチのみ。管理者・停止中・退会済みは対象外） */
-export function canImpersonateUser(user: Pick<UserRecord, 'user_type' | 'last_sign_in_at' | 'confirmed_at' | 'user_status'>): boolean {
+export function canImpersonateUser(
+  user: Pick<UserRecord, 'user_type' | 'last_sign_in_at' | 'confirmed_at' | 'user_status'>,
+): boolean {
   return (
     (user.user_type === USER_TYPES.STUDENT || user.user_type === USER_TYPES.COACH) &&
     user.user_status === USER_STATUS.ACTIVE &&

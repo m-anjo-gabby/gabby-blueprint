@@ -27,9 +27,7 @@ export function PaymentSettingsForm({ initialSessionPayRate }: { initialSessionP
     <div className="space-y-6 max-w-xl">
       <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
         <h2 className="text-sm font-bold text-slate-800">{t('sessionRateTitle')}</h2>
-        <p className="text-xs text-slate-500">
-          {t('sessionRateDesc')}
-        </p>
+        <p className="text-xs text-slate-500">{t('sessionRateDesc')}</p>
 
         <div className="flex gap-4">
           <div className="space-y-1.5 flex-1">

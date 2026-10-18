@@ -61,10 +61,13 @@ export function MailSettingsCard({ initialSettings }: { initialSettings: MailSet
           })}
         </div>
       ) : (
-        <p className="mt-2 text-sm text-slate-500">Could not load your email notification settings. Please try again later.</p>
+        <p className="mt-2 text-sm text-slate-500">
+          Could not load your email notification settings. Please try again later.
+        </p>
       )}
       <p className="mt-2 text-xs text-slate-500">
-        In-app notifications are still delivered when emails are turned off. Account emails (such as password resets) cannot be turned off.
+        In-app notifications are still delivered when emails are turned off. Account emails (such as password resets)
+        cannot be turned off.
       </p>
     </section>
   );

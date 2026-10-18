@@ -158,9 +158,7 @@ export function AvatarCropUploader({
         />
       </div>
 
-      {validationError && (
-        <p className="text-xs font-bold text-rose-500">{validationError}</p>
-      )}
+      {validationError && <p className="text-xs font-bold text-rose-500">{validationError}</p>}
 
       {onRemove && currentImageUrl && (
         <button

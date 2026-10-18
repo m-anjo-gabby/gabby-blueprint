@@ -36,16 +36,17 @@ export default async function ModuleCard({ summary }: Props) {
 
           <div className="mt-6 pt-4 border-t border-slate-100 flex items-end justify-between gap-2">
             <div>
-              <span className="text-2xl font-black text-slate-900 tabular-nums">
-                {summary.count.toLocaleString()}
-              </span>
+              <span className="text-2xl font-black text-slate-900 tabular-nums">{summary.count.toLocaleString()}</span>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1.5">
                 {t('countLabel')}
               </span>
             </div>
 
             {hasAlert ? (
-              <Badge variant="outline" className="shrink-0 text-amber-700 bg-amber-50 border-amber-200 font-bold whitespace-nowrap">
+              <Badge
+                variant="outline"
+                className="shrink-0 text-amber-700 bg-amber-50 border-amber-200 font-bold whitespace-nowrap"
+              >
                 {tDashboard('alertBadge', { label: t('alertLabel'), count: summary.alertCount })}
               </Badge>
             ) : (

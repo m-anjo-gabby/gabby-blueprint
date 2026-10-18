@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useState, useRef, useEffect } from "react";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Star, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
-import { ContentItem } from "@gabby/types/content";
-import { motion } from "framer-motion";
-import { getContentTypeConfig, getCefrStyle } from "@gabby/lib/content/ui";
-import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect } from 'react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Star, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { ContentItem } from '@gabby/types/content';
+import { motion } from 'framer-motion';
+import { getContentTypeConfig, getCefrStyle } from '@gabby/lib/content/ui';
+import { cn } from '@/lib/utils';
 
 interface ContentCardProps {
   content: ContentItem;
@@ -16,12 +16,8 @@ interface ContentCardProps {
   onStart: (content: ContentItem) => void; // 🔄 常に新規のため第2引数のフラグは不要に
 }
 
-export const ContentCard = ({ 
-  content, 
-  onToggleFavorite, 
-  onStart,
-}: ContentCardProps) => {
-  const clampLines = 3; 
+export const ContentCard = ({ content, onToggleFavorite, onStart }: ContentCardProps) => {
+  const clampLines = 3;
 
   // --- States & Refs ---
   const [isExpanded, setIsExpanded] = useState(false);
@@ -29,10 +25,10 @@ export const ContentCard = ({
   const descriptionRef = useRef<HTMLParagraphElement>(null);
 
   const { icon: TypeIcon, label: typeLabel, theme: typeTheme } = getContentTypeConfig(content.content_type);
-  
+
   // metadata から安全に取得
   const cefr = content.metadata?.cefr;
-  const cefrStyle = cefr ? getCefrStyle(cefr.id) : "";
+  const cefrStyle = cefr ? getCefrStyle(cefr.id) : '';
 
   // --- Description Clamp Observer ---
   useEffect(() => {
@@ -67,8 +63,8 @@ export const ContentCard = ({
             {cefr && (
               <Badge
                 className={cn(
-                  "flex shrink-0 items-center gap-1 rounded-full border-none px-2 py-0.5 text-[11px] font-bold shadow-none",
-                  cefrStyle
+                  'flex shrink-0 items-center gap-1 rounded-full border-none px-2 py-0.5 text-[11px] font-bold shadow-none',
+                  cefrStyle,
                 )}
               >
                 <span className="text-[11px] font-semibold opacity-70">CEFR</span>
@@ -84,13 +80,11 @@ export const ContentCard = ({
             }}
             aria-label={content.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
             className={cn(
-              "shrink-0 rounded-full p-2 transition-all active:scale-75",
-              content.is_favorite
-                ? "bg-amber-50 text-amber-500"
-                : "text-ink-subtle hover:bg-canvas"
+              'shrink-0 rounded-full p-2 transition-all active:scale-75',
+              content.is_favorite ? 'bg-amber-50 text-amber-500' : 'text-ink-subtle hover:bg-canvas',
             )}
           >
-            <Star size={18} fill={content.is_favorite ? "currentColor" : "none"} />
+            <Star size={18} fill={content.is_favorite ? 'currentColor' : 'none'} />
           </button>
         </div>
 
@@ -103,22 +97,26 @@ export const ContentCard = ({
           <div
             onClick={() => isClamped && setIsExpanded(!isExpanded)}
             className={cn(
-              "mb-4 rounded-xl transition-all duration-200",
-              isClamped ? "-mx-2 cursor-pointer px-2 py-1 hover:bg-canvas" : "cursor-default"
+              'mb-4 rounded-xl transition-all duration-200',
+              isClamped ? '-mx-2 cursor-pointer px-2 py-1 hover:bg-canvas' : 'cursor-default',
             )}
           >
             <p
               ref={descriptionRef}
               className={cn(
-                "text-sm leading-relaxed text-ink-muted transition-all",
-                !isExpanded && `line-clamp-${clampLines}`
+                'text-sm leading-relaxed text-ink-muted transition-all',
+                !isExpanded && `line-clamp-${clampLines}`,
               )}
-              style={!isExpanded ? {
-                display: '-webkit-box',
-                WebkitBoxOrient: 'vertical',
-                WebkitLineClamp: clampLines,
-                overflow: 'hidden'
-              } : {}}
+              style={
+                !isExpanded
+                  ? {
+                      display: '-webkit-box',
+                      WebkitBoxOrient: 'vertical',
+                      WebkitLineClamp: clampLines,
+                      overflow: 'hidden',
+                    }
+                  : {}
+              }
             >
               {content.description}
             </p>
@@ -126,9 +124,13 @@ export const ContentCard = ({
             {isClamped && (
               <div className="mt-1 flex items-center gap-1 text-xs font-semibold text-brand">
                 {isExpanded ? (
-                  <>閉じる <ChevronUp size={14} /></>
+                  <>
+                    閉じる <ChevronUp size={14} />
+                  </>
                 ) : (
-                  <>続きを読む <ChevronDown size={14} /></>
+                  <>
+                    続きを読む <ChevronDown size={14} />
+                  </>
                 )}
               </div>
             )}

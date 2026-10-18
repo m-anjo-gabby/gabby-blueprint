@@ -15,7 +15,7 @@ type TableT = ReturnType<typeof useTranslations<'calendarEvents.dataTable'>>;
 /** 「参加者」ボタン（「編集」と同じ枠付きの小さいボタン） */
 const PARTICIPANTS_BUTTON_CLASS = cn(
   buttonVariants({ variant: 'outline', size: 'sm' }),
-  'h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50'
+  'h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50',
 );
 
 const BADGE_CLASS = 'text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border';
@@ -31,7 +31,10 @@ interface ColumnOptions {
   onDelete: (event: CalendarEventItem) => void;
 }
 
-export function createColumns(t: TableT, { hideSeries, formOptions, onDelete }: ColumnOptions): ListColumnDef<CalendarEventItem>[] {
+export function createColumns(
+  t: TableT,
+  { hideSeries, formOptions, onDelete }: ColumnOptions,
+): ListColumnDef<CalendarEventItem>[] {
   return [
     {
       accessorKey: 'event_type',
@@ -71,7 +74,9 @@ export function createColumns(t: TableT, { hideSeries, formOptions, onDelete }: 
       cell: ({ row }) => {
         const coaches = row.original.coaches ?? [];
         if (coaches.length === 0) return <span className="text-slate-300">{t('noCoach')}</span>;
-        return <span className="text-xs text-slate-600">{coaches.map((c) => c.user_name || t('unnamed')).join(', ')}</span>;
+        return (
+          <span className="text-xs text-slate-600">{coaches.map((c) => c.user_name || t('unnamed')).join(', ')}</span>
+        );
       },
     },
     {

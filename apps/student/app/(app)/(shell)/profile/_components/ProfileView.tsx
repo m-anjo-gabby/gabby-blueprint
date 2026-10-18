@@ -29,7 +29,14 @@ interface ProfileViewProps {
  * アイコン画像・アカウント情報・セキュリティをセクションカードで表示する構成とし、
  * 今後の設定項目追加（通知設定・言語設定 等）はセクションを追加するだけで拡張できるようにしている。
  */
-export function ProfileView({ userName, clientName, initialIconPath, initialTimezone, timezones, mailSettings }: ProfileViewProps) {
+export function ProfileView({
+  userName,
+  clientName,
+  initialIconPath,
+  initialTimezone,
+  timezones,
+  mailSettings,
+}: ProfileViewProps) {
   const [iconPath, setIconPath] = useState(initialIconPath);
   const [timezone, setTimezone] = useState(initialTimezone);
   const user = useUserStore((state) => state.user);
@@ -75,7 +82,6 @@ export function ProfileView({ userName, clientName, initialIconPath, initialTime
     <div className="space-y-8">
       {/* アイコン画像セクション */}
       <ProfileSection title="アイコン画像">
-
         <AvatarCropUploader
           currentImageUrl={getProfileIconUrl(iconPath)}
           onUpload={handleUpload}
@@ -95,10 +101,13 @@ export function ProfileView({ userName, clientName, initialIconPath, initialTime
 
       {/* アカウント情報セクション */}
       <ProfileSection title="アカウント情報">
-
         <dl className="space-y-1">
-          <AccountInfoRow icon={UserIcon} label="名前">{userName}</AccountInfoRow>
-          <AccountInfoRow icon={IdCard} label="所属">{clientName ?? '-'}</AccountInfoRow>
+          <AccountInfoRow icon={UserIcon} label="名前">
+            {userName}
+          </AccountInfoRow>
+          <AccountInfoRow icon={IdCard} label="所属">
+            {clientName ?? '-'}
+          </AccountInfoRow>
         </dl>
 
         <div className="pt-4 max-w-xs">

@@ -26,7 +26,7 @@ const LIVE_SESSION_ROOM_ERROR_MESSAGES_EN: Record<LiveSessionRoomErrorCode, stri
  * Fetches this coach's access info (Zoom Video SDK signature, etc.) for the live session room of the given lesson session
  */
 export async function getLiveSessionRoomAccess(
-  sessionId: string
+  sessionId: string,
 ): Promise<{ success: true; access: LiveSessionRoomAccess } | { success: false; message: string }> {
   const result = await getCoachLiveSessionRoomAccessCore(sessionId);
   if (!result.success) {

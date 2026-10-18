@@ -9,11 +9,7 @@ import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useNow } from '@gabby/lib/hooks/useNow';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useEventAnnouncements } from '@gabby/lib/calendarEvent/useEventAnnouncements';
-import {
-  CalendarEventItem,
-  CALENDAR_EVENT_TYPES,
-  getCalendarEventPhase,
-} from '@gabby/types/calendarEvent';
+import { CalendarEventItem, CALENDAR_EVENT_TYPES, getCalendarEventPhase } from '@gabby/types/calendarEvent';
 import { getCalendarEventMessages, getCalendarEventMessageAttachmentUrl } from '@/actions/calendarEventAction';
 import { AddToCalendarMenu } from './AddToCalendarMenu';
 import { useEventParticipation } from './useEventParticipation';
@@ -26,7 +22,12 @@ function formatAttachmentSize(bytes: number): string {
 }
 
 export function formatEventTimeInZone(iso: string, timezone: string): string {
-  return new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: timezone }).format(new Date(iso));
+  return new Intl.DateTimeFormat('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: timezone,
+  }).format(new Date(iso));
 }
 
 function CalendarEventAnnouncements({ event, timezone }: { event: CalendarEventItem; timezone: string }) {
@@ -45,10 +46,15 @@ function CalendarEventAnnouncements({ event, timezone }: { event: CalendarEventI
         <Megaphone size={11} /> アナウンス
       </p>
       {messages.map((message) => (
-        <div key={message.calendar_event_message_id} className="bg-brand-soft/50 border border-brand-100 rounded-xl p-3 space-y-1.5">
+        <div
+          key={message.calendar_event_message_id}
+          className="bg-brand-soft/50 border border-brand-100 rounded-xl p-3 space-y-1.5"
+        >
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs font-bold text-ink">{message.title}</p>
-            <p className="text-[11px] text-ink-subtle font-bold shrink-0">{formatDateTimeByZone(message.insert_date, timezone, false)}</p>
+            <p className="text-[11px] text-ink-subtle font-bold shrink-0">
+              {formatDateTimeByZone(message.insert_date, timezone, false)}
+            </p>
           </div>
           <p className="text-xs text-ink-soft whitespace-pre-wrap">{message.content}</p>
           {message.attachments.length > 0 && (
@@ -63,7 +69,9 @@ function CalendarEventAnnouncements({ event, timezone }: { event: CalendarEventI
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Paperclip size={12} className="text-ink-subtle shrink-0" />
                     <span className="text-[11px] font-bold text-ink-soft truncate">{att.name}</span>
-                    <span className="text-[11px] text-ink-subtle tabular-nums shrink-0">{formatAttachmentSize(att.size)}</span>
+                    <span className="text-[11px] text-ink-subtle tabular-nums shrink-0">
+                      {formatAttachmentSize(att.size)}
+                    </span>
                   </div>
                   <Download size={12} className="text-ink-subtle shrink-0" />
                 </button>
@@ -88,7 +96,12 @@ interface CalendarEventCardProps {
  * カレンダーイベント（グループセッション・メンテナンス等）の詳細（カレンダーの日の詳細・ホームのイベント詳細で共有する）。
  * 参加確認ありのイベントは、参加登録した人にだけ参加URLを出す。参加登録は終了するまで、取消は開始前まで受け付ける。
  */
-export function CalendarEventCard({ event, timezone, onParticipationChanged, showSeriesLink = true }: CalendarEventCardProps) {
+export function CalendarEventCard({
+  event,
+  timezone,
+  onParticipationChanged,
+  showSeriesLink = true,
+}: CalendarEventCardProps) {
   const [copied, setCopied] = useState(false);
   const [showLink, setShowLink] = useState(false);
   const nowMs = useNow();
@@ -113,7 +126,9 @@ export function CalendarEventCard({ event, timezone, onParticipationChanged, sho
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-1.5 mb-1">
-            <span className={cn('text-[11px] font-bold px-2 py-1 rounded-md border', badge.badgeClass)}>{badge.label}</span>
+            <span className={cn('text-[11px] font-bold px-2 py-1 rounded-md border', badge.badgeClass)}>
+              {badge.label}
+            </span>
             {event.rsvp_enabled && event.is_joined && (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-md px-2 py-1">
                 <CheckCircle2 size={11} />
@@ -133,7 +148,9 @@ export function CalendarEventCard({ event, timezone, onParticipationChanged, sho
       </div>
 
       {event.description && (
-        <p className="text-xs text-ink-soft bg-canvas border border-line/70 rounded-lg px-3 py-2 whitespace-pre-wrap">{event.description}</p>
+        <p className="text-xs text-ink-soft bg-canvas border border-line/70 rounded-lg px-3 py-2 whitespace-pre-wrap">
+          {event.description}
+        </p>
       )}
 
       {/* シリーズの説明（企画の紹介・月のテーマ等）。各回の説明の下に添える */}

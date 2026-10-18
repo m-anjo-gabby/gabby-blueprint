@@ -1,6 +1,6 @@
-import { getUserTrainingPerformanceAction } from "@/actions/performanceAction";
-import { TrainingPerformance } from "./_components/TrainingPerformance";
-import { resolveTargetMonth } from "@/lib/userTimezone";
+import { getUserTrainingPerformanceAction } from '@/actions/performanceAction';
+import { TrainingPerformance } from './_components/TrainingPerformance';
+import { resolveTargetMonth } from '@/lib/userTimezone';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,9 +21,9 @@ export default async function TrainingLogPage({ searchParams }: PageProps) {
   const res = await getUserTrainingPerformanceAction(targetMonth);
 
   return (
-    <TrainingPerformance 
-      initialData={res.data || { words: [], sprint_sessions: [], sprint_drills: [] }} 
-      targetMonth={targetMonth} 
+    <TrainingPerformance
+      initialData={res.data || { words: [], sprint_sessions: [], sprint_drills: [] }}
+      targetMonth={targetMonth}
     />
   );
 }

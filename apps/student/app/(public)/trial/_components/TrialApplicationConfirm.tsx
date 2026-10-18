@@ -31,7 +31,13 @@ interface TrialApplicationConfirmProps {
  * Webトライアルの申込の確認画面。入力内容と、氏名が登録後にどう使われるか（正式な氏名・コーチに表示される名前）を見せてから送る。
  * CAPTCHA は送信の直前に通すため、この画面に置く（トークンは約5分で期限が切れ、1回しか使えない）。
  */
-export function TrialApplicationConfirm({ values, timezoneLabel, turnstileSiteKey, onBack, onComplete }: TrialApplicationConfirmProps) {
+export function TrialApplicationConfirm({
+  values,
+  timezoneLabel,
+  turnstileSiteKey,
+  onBack,
+  onComplete,
+}: TrialApplicationConfirmProps) {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -75,7 +81,10 @@ export function TrialApplicationConfirm({ values, timezoneLabel, turnstileSiteKe
         <ConfirmRow label="お住まいの地域のタイムゾーン">{timezoneLabel}</ConfirmRow>
         <ConfirmRow label="国・都市">{values.countryCity || <NotEntered />}</ConfirmRow>
         <ConfirmRow label="Gabby をどこで知りましたか？">
-          {formatTrialReferralSource(referralSource, referralSource === TRIAL_REFERRAL_SOURCE_OTHER ? values.referralSourceOther : null)}
+          {formatTrialReferralSource(
+            referralSource,
+            referralSource === TRIAL_REFERRAL_SOURCE_OTHER ? values.referralSourceOther : null,
+          )}
         </ConfirmRow>
         <ConfirmRow label="ご要望・ご質問">
           {values.message ? <span className="whitespace-pre-wrap">{values.message}</span> : <NotEntered />}
@@ -108,7 +117,14 @@ export function TrialApplicationConfirm({ values, timezoneLabel, turnstileSiteKe
           <ArrowLeft aria-hidden />
           修正する
         </Button>
-        <Button type="button" size="lg" className="sm:flex-1" onClick={handleSubmit} pending={isPending} icon={<Send aria-hidden />}>
+        <Button
+          type="button"
+          size="lg"
+          className="sm:flex-1"
+          onClick={handleSubmit}
+          pending={isPending}
+          icon={<Send aria-hidden />}
+        >
           申し込む
         </Button>
       </div>

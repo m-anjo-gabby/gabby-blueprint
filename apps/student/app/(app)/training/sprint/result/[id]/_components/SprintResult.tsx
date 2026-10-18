@@ -62,15 +62,25 @@ export function SprintResult({ scoreData, questions, courseTitle, favoriteQuesti
       {/* ヘッダー：戻る・見出し・日付（履歴側の結果画面と同じ並び）。ホームへはナビが無いため右端に置く */}
       <header className="shrink-0 space-y-1.5 border-b border-line px-5 pb-4 pt-4 sm:px-6 sm:pt-5">
         <div className="flex items-center gap-2">
-          <Link href={selectHref} replace className={`-ml-2 ${NAV_BUTTON_CLASS}`} aria-label="スプリント選択に戻る" title="スプリント選択に戻る">
+          <Link
+            href={selectHref}
+            replace
+            className={`-ml-2 ${NAV_BUTTON_CLASS}`}
+            aria-label="スプリント選択に戻る"
+            title="スプリント選択に戻る"
+          >
             <ChevronLeft size={22} />
           </Link>
-          <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight text-ink sm:text-3xl">スプリント結果</h1>
+          <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+            スプリント結果
+          </h1>
           <Link href="/dashboard" className={NAV_BUTTON_CLASS} aria-label="ホームに戻る" title="ホームに戻る">
             <Home size={20} />
           </Link>
         </div>
-        <p className="text-sm leading-relaxed text-ink-muted tabular-nums">{formatZonedDate(scoreData.created_at, timezone)}</p>
+        <p className="text-sm leading-relaxed text-ink-muted tabular-nums">
+          {formatZonedDate(scoreData.created_at, timezone)}
+        </p>
       </header>
 
       {/* 結果サマリーと出題リスト（履歴側と同じくサマリーも一緒にスクロールさせ、リストを広く見せる） */}
@@ -89,7 +99,12 @@ export function SprintResult({ scoreData, questions, courseTitle, favoriteQuesti
         <SprintResultActions scoreData={scoreData} playback={playback} />
       </div>
 
-      <AudioResumeBanner status={playback.resumeStatus} onResume={() => { playback.unlockAudioContext(); }} />
+      <AudioResumeBanner
+        status={playback.resumeStatus}
+        onResume={() => {
+          playback.unlockAudioContext();
+        }}
+      />
     </ImmersivePanel>
   );
 }

@@ -5,9 +5,7 @@ import { formatSessionSlot } from '@/lib/sessionFormat';
 import { SessionListItem } from '@gabby/types/session';
 
 /** 前回セッションの宿題の状況（未登録／登録あり。登録ありは本文の1行目を添える） */
-export type PreviousHomeworkStatus =
-  | { kind: 'none' }
-  | { kind: 'text'; preview: string };
+export type PreviousHomeworkStatus = { kind: 'none' } | { kind: 'text'; preview: string };
 
 export interface PreviousSessionSummary {
   session: SessionListItem;
@@ -46,7 +44,7 @@ export function PreviousSessionLink({ previous, timezone, variant }: Props) {
         'group flex items-center gap-3 transition-colors',
         variant === 'embedded'
           ? '-mx-2 rounded-control px-2 py-2 hover:bg-canvas'
-          : 'rounded-card border border-line bg-surface p-4 shadow-xs hover:border-brand-200 sm:px-5'
+          : 'rounded-card border border-line bg-surface p-4 shadow-xs hover:border-brand-200 sm:px-5',
       )}
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand-500">
@@ -54,7 +52,9 @@ export function PreviousSessionLink({ previous, timezone, variant }: Props) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs text-ink-muted tabular-nums">
-          {variant === 'embedded' ? `前回のセッション・${slot.date}` : `${slot.date}・${previous.session.counterpart_name} コーチ`}
+          {variant === 'embedded'
+            ? `前回のセッション・${slot.date}`
+            : `${slot.date}・${previous.session.counterpart_name} コーチ`}
         </p>
         <p className="mt-0.5 truncate text-sm">
           <HomeworkLabel homework={previous.homework} />

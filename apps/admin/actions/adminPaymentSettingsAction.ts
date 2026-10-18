@@ -29,7 +29,7 @@ export async function getSessionPayRate(): Promise<SessionPayRate | null> {
 }
 
 export async function updateSessionPayRate(
-  input: SessionPayRate
+  input: SessionPayRate,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   if (!(input.rate_amount >= 0)) {

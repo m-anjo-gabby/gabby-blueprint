@@ -125,7 +125,12 @@ function buildLinks(recipient: MailRecipient, category: MailCategory): MailLinks
   return {
     portal,
     settingsUrl: portal('/profile'),
-    unsubscribeUrl: buildUnsubscribeUrl({ portalBaseUrl: base, userId: recipient.userId, category, secret: getUnsubscribeSecret() }),
+    unsubscribeUrl: buildUnsubscribeUrl({
+      portalBaseUrl: base,
+      userId: recipient.userId,
+      category,
+      secret: getUnsubscribeSecret(),
+    }),
   };
 }
 
@@ -134,7 +139,7 @@ async function processRow(
   row: MailOutboxRow,
   nowMs: number,
   target: DispatchTarget,
-  waitForSendSlot: () => Promise<void>
+  waitForSendSlot: () => Promise<void>,
 ): Promise<RowOutcome> {
   const skip = async (reason: string): Promise<RowOutcome> => {
     await updateRow(admin, row.mail_id, { status: 'SKIPPED', last_error: reason });
@@ -163,7 +168,8 @@ async function processRow(
     const built = await HANDLERS[mailType]({ admin, row, recipient, nowMs, links });
     if ('skip' in built) return await skip(built.skip);
     if (isUndeliverableAddress(recipient.email)) return await skip('undeliverable_address');
-    if (!isAllowedRecipient(recipient.email, target.mode, target.allowlist)) return await skip('recipient_not_allowlisted');
+    if (!isAllowedRecipient(recipient.email, target.mode, target.allowlist))
+      return await skip('recipient_not_allowlisted');
 
     await waitForSendSlot();
     const result = await sendCore({
@@ -192,7 +198,11 @@ async function processRow(
 
     if (action.kind === 'sent') {
       // 同じ重複防止キーで送信済み（前回の送信の結果を記録できなかった行）。送り直さずに送信済みとする
-      await updateRow(admin, row.mail_id, { status: 'SENT', sent_at: new Date().toISOString(), last_error: 'already_sent' });
+      await updateRow(admin, row.mail_id, {
+        status: 'SENT',
+        sent_at: new Date().toISOString(),
+        last_error: 'already_sent',
+      });
       return 'sent';
     }
     if (action.kind === 'defer') {
@@ -239,7 +249,16 @@ export async function dispatchMail(): Promise<DispatchSummary> {
     mode: resolveDispatchMode(process.env.MAIL_DISPATCH_MODE),
     allowlist: parseAllowlist(process.env.MAIL_DISPATCH_RECIPIENT_ALLOWLIST),
   };
-  const summary: DispatchSummary = { mode: target.mode, enqueued: 0, claimed: 0, sent: 0, skipped: 0, retried: 0, deferred: 0, failed: 0 };
+  const summary: DispatchSummary = {
+    mode: target.mode,
+    enqueued: 0,
+    claimed: 0,
+    sent: 0,
+    skipped: 0,
+    retried: 0,
+    deferred: 0,
+    failed: 0,
+  };
 
   const { data: enqueued, error: enqueueError } = await admin.rpc('enqueue_scheduled_mails');
   if (enqueueError) logger.error('mail:dispatch_enqueue_failed', enqueueError.message, { err: enqueueError });

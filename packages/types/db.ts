@@ -42,12 +42,16 @@ type OverrideRelation<R extends { Row: object }, C> = {
 
 type OverrideRelations<Relations, Overrides> = {
   [N in keyof Relations]: N extends keyof Overrides
-    ? Relations[N] extends { Row: object } ? OverrideRelation<Relations[N], Overrides[N]> : Relations[N]
+    ? Relations[N] extends { Row: object }
+      ? OverrideRelation<Relations[N], Overrides[N]>
+      : Relations[N]
     : Relations[N];
 };
 
 type OverrideFunctions<Functions, Overrides> = {
-  [N in keyof Functions]: N extends keyof Overrides ? Omit<Functions[N], keyof Overrides[N]> & Overrides[N] : Functions[N];
+  [N in keyof Functions]: N extends keyof Overrides
+    ? Omit<Functions[N], keyof Overrides[N]> & Overrides[N]
+    : Functions[N];
 };
 
 type OverrideSchema<S, O extends SchemaOverrides> = Omit<S, 'Tables' | 'Views' | 'Functions'> & {
@@ -134,7 +138,9 @@ interface PublicOverrides extends SchemaOverrides {
     get_monitor_sprint_drill_history: { Returns: MonitorSprintDrillHistoryRow[] };
     get_monitor_sprint_history: { Returns: MonitorSprintHistoryRow[] };
     get_monitor_word_history: { Returns: MonitorWordHistoryRow[] };
-    get_monitor_user_list: { Returns: ReplaceColumns<GeneratedReturnRow<'get_monitor_user_list'>, { license_state: LicenseState }>[] };
+    get_monitor_user_list: {
+      Returns: ReplaceColumns<GeneratedReturnRow<'get_monitor_user_list'>, { license_state: LicenseState }>[];
+    };
     get_training_report_data: { Returns: TrainingReportData[] | null };
     get_user_training_performance: { Returns: UserTrainingPerformanceResponse | null };
     fn_withdraw_user: { Returns: WithdrawUserResult | null };
@@ -176,7 +182,13 @@ export type TableInsert<T extends keyof PublicSchema['Tables']> = PublicSchema['
 /** 表の更新（update の値） */
 export type TableUpdate<T extends keyof PublicSchema['Tables']> = PublicSchema['Tables'][T]['Update'];
 /** ビューの1行 */
-export type ViewRow<V extends keyof PublicSchema['Views'], S extends SchemaName = 'public'> =
-  V extends keyof Database[S]['Views'] ? Database[S]['Views'][V] extends { Row: infer R } ? R : never : never;
+export type ViewRow<
+  V extends keyof PublicSchema['Views'],
+  S extends SchemaName = 'public',
+> = V extends keyof Database[S]['Views'] ? (Database[S]['Views'][V] extends { Row: infer R } ? R : never) : never;
 /** RPC の戻り値 */
-export type FunctionReturns<F extends keyof PublicSchema['Functions']> = PublicSchema['Functions'][F] extends { Returns: infer R } ? R : never;
+export type FunctionReturns<F extends keyof PublicSchema['Functions']> = PublicSchema['Functions'][F] extends {
+  Returns: infer R;
+}
+  ? R
+  : never;

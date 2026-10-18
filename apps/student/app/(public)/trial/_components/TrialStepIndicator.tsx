@@ -19,14 +19,19 @@ export function TrialStepIndicator({ current }: { current: TrialStep }) {
         const isCurrent = index === currentIndex;
         return (
           <li key={step.key} className="flex items-center" aria-current={isCurrent ? 'step' : undefined}>
-            {index > 0 && <span className={cn('mx-2 h-px w-8 sm:w-12', index <= currentIndex ? 'bg-brand' : 'bg-line')} aria-hidden />}
+            {index > 0 && (
+              <span
+                className={cn('mx-2 h-px w-8 sm:w-12', index <= currentIndex ? 'bg-brand' : 'bg-line')}
+                aria-hidden
+              />
+            )}
             <span className="flex items-center gap-2">
               <span
                 className={cn(
                   'flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold',
                   isCurrent && 'bg-brand text-white',
                   isDone && 'bg-brand-soft text-brand',
-                  !isCurrent && !isDone && 'border border-line text-ink-subtle'
+                  !isCurrent && !isDone && 'border border-line text-ink-subtle',
                 )}
               >
                 {isDone ? <Check className="h-3.5 w-3.5" aria-label="済み" /> : index + 1}

@@ -119,9 +119,7 @@ export default function ChatPlayground() {
       <ScrollArea className="h-[480px] px-6 py-6">
         <div className="space-y-5">
           {messages.length === 0 && (
-            <p className="text-sm text-slate-300 italic py-10 text-center">
-              {t('emptyState')}
-            </p>
+            <p className="text-sm text-slate-300 italic py-10 text-center">{t('emptyState')}</p>
           )}
           {messages.map((m, i) => (
             <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -138,7 +136,9 @@ export default function ChatPlayground() {
                     m.role === 'user' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-800'
                   }`}
                 >
-                  {m.content ? m.content : isLoading && i === messages.length - 1 ? (
+                  {m.content ? (
+                    m.content
+                  ) : isLoading && i === messages.length - 1 ? (
                     <Loader2 size={14} className="animate-spin" />
                   ) : (
                     ''

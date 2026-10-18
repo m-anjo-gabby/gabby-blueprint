@@ -35,11 +35,7 @@ interface KnowledgeEntryFormDialogProps {
   onSuccess?: () => void;
 }
 
-export function KnowledgeEntryFormDialog({
-  mode = 'create',
-  initialData,
-  onSuccess,
-}: KnowledgeEntryFormDialogProps) {
+export function KnowledgeEntryFormDialog({ mode = 'create', initialData, onSuccess }: KnowledgeEntryFormDialogProps) {
   const t = useTranslations('tools.aiKnowledgeBase.formDialog');
   const tSourceTypes = useTranslations('tools.aiKnowledgeBase.sourceTypes');
   const sourceTypeOptions = useMemo(() => getKnowledgeSourceTypeOptions(tSourceTypes), [tSourceTypes]);
@@ -121,7 +117,9 @@ export function KnowledgeEntryFormDialog({
                 name="sourceType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('typeLabel')}</FormLabel>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {t('typeLabel')}
+                    </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="rounded-xl border-slate-200">
@@ -130,7 +128,9 @@ export function KnowledgeEntryFormDialog({
                       </FormControl>
                       <SelectContent>
                         {sourceTypeOptions.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -144,9 +144,15 @@ export function KnowledgeEntryFormDialog({
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('titleLabel')}</FormLabel>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {t('titleLabel')}
+                    </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder={t('titlePlaceholder')} className="rounded-xl border-slate-200 font-bold" />
+                      <Input
+                        {...field}
+                        placeholder={t('titlePlaceholder')}
+                        className="rounded-xl border-slate-200 font-bold"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -159,7 +165,9 @@ export function KnowledgeEntryFormDialog({
               name="body"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('bodyLabel')}</FormLabel>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {t('bodyLabel')}
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
@@ -172,11 +180,13 @@ export function KnowledgeEntryFormDialog({
               )}
             />
 
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              {t('embeddingHint')}
-            </p>
+            <p className="text-[11px] text-slate-400 leading-relaxed">{t('embeddingHint')}</p>
 
-            {serverError && <Alert variant="destructive" className="text-xs py-2">{serverError}</Alert>}
+            {serverError && (
+              <Alert variant="destructive" className="text-xs py-2">
+                {serverError}
+              </Alert>
+            )}
 
             <div className="pt-4 mt-2 border-t border-slate-100">
               <Button

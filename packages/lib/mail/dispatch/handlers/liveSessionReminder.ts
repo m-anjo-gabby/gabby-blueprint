@@ -32,7 +32,11 @@ export const liveSessionReminderHandler: MailHandler = async ({ admin, row, reci
   if (!isStudent && !isCoach) return { skip: 'not_participating' };
 
   const counterpartId = isStudent ? session.coach_id : session.student_id;
-  const { data: counterpart } = await admin.from('com_m_user').select('user_name').eq('id', counterpartId).maybeSingle();
+  const { data: counterpart } = await admin
+    .from('com_m_user')
+    .select('user_name')
+    .eq('id', counterpartId)
+    .maybeSingle();
 
   const { language } = recipient;
   const coachHubPath = `/students/${session.student_id}/sessions/${sessionId}`;
@@ -52,6 +56,6 @@ export const liveSessionReminderHandler: MailHandler = async ({ admin, row, reci
       }),
       actionUrl: links.portal(isStudent ? '/live-room' : coachHubPath),
       links,
-    })
+    }),
   );
 };

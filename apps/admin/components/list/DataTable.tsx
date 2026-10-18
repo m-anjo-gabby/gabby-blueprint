@@ -22,7 +22,14 @@ interface DataTableProps<T extends RowData> {
  * 表のオブジェクト（useTable の戻り値）は中身が変わっても同じ参照のため、
  * React Compiler に表示を使い回されないよう、親から受け取らずにこの部品の中で作る。
  */
-export function DataTable<T extends RowData>({ columns, data, emptyMessage, pending = false, getRowId, standalone = false }: DataTableProps<T>) {
+export function DataTable<T extends RowData>({
+  columns,
+  data,
+  emptyMessage,
+  pending = false,
+  getRowId,
+  standalone = false,
+}: DataTableProps<T>) {
   const table = useTable({ features: listTableFeatures, data, columns, getRowId });
 
   return (
@@ -31,7 +38,7 @@ export function DataTable<T extends RowData>({ columns, data, emptyMessage, pend
       className={cn(
         'overflow-hidden border border-slate-200 bg-white shadow-sm transition-opacity',
         standalone ? 'rounded-lg' : 'rounded-b-lg',
-        pending && 'pointer-events-none opacity-60'
+        pending && 'pointer-events-none opacity-60',
       )}
     >
       <Table>
@@ -41,7 +48,10 @@ export function DataTable<T extends RowData>({ columns, data, emptyMessage, pend
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className={cn('whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-600', header.column.columnDef.meta?.className)}
+                  className={cn(
+                    'whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-600',
+                    header.column.columnDef.meta?.className,
+                  )}
                 >
                   {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
@@ -54,7 +64,10 @@ export function DataTable<T extends RowData>({ columns, data, emptyMessage, pend
             table.getRowModel().rows.map((row) => (
               <TableRow key={row.id} className="border-slate-100 transition-colors hover:bg-slate-50/40">
                 {row.getAllCells().map((cell) => (
-                  <TableCell key={cell.id} className={cn('px-4 py-3 text-slate-700', cell.column.columnDef.meta?.className)}>
+                  <TableCell
+                    key={cell.id}
+                    className={cn('px-4 py-3 text-slate-700', cell.column.columnDef.meta?.className)}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

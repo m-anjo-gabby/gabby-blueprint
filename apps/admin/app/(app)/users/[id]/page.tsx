@@ -62,7 +62,9 @@ export default async function UserBasicTabPage({ params }: { params: Promise<{ i
             </div>
             <div className="space-y-1">
               <dt className="text-xs font-bold text-slate-600">{t('lastSignIn')}</dt>
-              <dd className="text-slate-700">{user.last_sign_in_at ? formatToJstDateTime(user.last_sign_in_at) : t('neverSignedIn')}</dd>
+              <dd className="text-slate-700">
+                {user.last_sign_in_at ? formatToJstDateTime(user.last_sign_in_at) : t('neverSignedIn')}
+              </dd>
             </div>
           </dl>
         </DetailSection>

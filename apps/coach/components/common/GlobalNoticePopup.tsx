@@ -22,7 +22,13 @@ export function GlobalNoticePopup() {
   // 1. Manually opened notice
   const selectedNotice = selectedNoticeId ? notices.find((n) => n.notice_id === selectedNoticeId) : undefined;
   if (selectedNotice) {
-    return <NoticePopupDialog key={selectedNotice.notice_id} notice={selectedNotice} onClose={() => setSelectedNoticeId(null)} />;
+    return (
+      <NoticePopupDialog
+        key={selectedNotice.notice_id}
+        notice={selectedNotice}
+        onClose={() => setSelectedNoticeId(null)}
+      />
+    );
   }
 
   // 2. Auto popup on dashboard access

@@ -15,8 +15,7 @@ const logger = createLogger('admin');
 const PROGRESS_COLUMNS = 'stage, level_speed, level_structure, level_builders, level_mastery, level_managed';
 
 type StudentProgressActionResult =
-  | { success: true; progress: StudentSprintProgress }
-  | { success: false; message: string };
+  { success: true; progress: StudentSprintProgress } | { success: false; message: string };
 
 function toStageLevels(progress: StudentSprintProgress): StageLevels {
   return {
@@ -38,7 +37,7 @@ function toProgressColumns(levels: StageLevels) {
 
 async function fetchProgress(
   supabase: ReturnType<typeof createAdminClient>,
-  userId: string
+  userId: string,
 ): Promise<StudentSprintProgress> {
   const { data } = await supabase
     .from('student_m_sprint_progress')
@@ -72,7 +71,7 @@ export async function getStudentSprintProgress(userId: string): Promise<StudentS
 export async function updateStudentSprintLevel(
   userId: string,
   questionType: SprintQuestionType,
-  newLevel: number
+  newLevel: number,
 ): Promise<StudentProgressActionResult> {
   const ctx = await getLogContext();
 
@@ -87,7 +86,10 @@ export async function updateStudentSprintLevel(
     const newLevels = { ...toStageLevels(current), [questionType]: newLevel };
     const newStage = computeStage(newLevels);
 
-    const levelUpdate: TableUpdate<'student_m_sprint_progress'> = { stage: newStage, update_date: new Date().toISOString() };
+    const levelUpdate: TableUpdate<'student_m_sprint_progress'> = {
+      stage: newStage,
+      update_date: new Date().toISOString(),
+    };
     levelUpdate[meta.dbKey] = newLevel;
 
     const { data, error } = await supabase
@@ -113,7 +115,10 @@ export async function updateStudentSprintLevel(
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
-    logger.error('admin:update_student_level_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('admin:update_student_level_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, message: 'システムエラーが発生しました。' };
   }
 }
@@ -124,10 +129,7 @@ export async function updateStudentSprintLevel(
  * 下げる場合: 全問題種別のレベルを、目標ステージの到達条件ちょうどの値にリセットする
  *   （到達条件マスタは種別ごとに単調増加のため、この値は必ず目標ステージちょうどに一致する）。
  */
-export async function setStudentSprintStage(
-  userId: string,
-  targetStage: number
-): Promise<StudentProgressActionResult> {
+export async function setStudentSprintStage(userId: string, targetStage: number): Promise<StudentProgressActionResult> {
   const ctx = await getLogContext();
 
   try {
@@ -143,9 +145,7 @@ export async function setStudentSprintStage(
     }
 
     const newLevels =
-      targetStage > current.stage
-        ? getForcedLevels(targetStage, toStageLevels(current))
-        : getStageGoals(targetStage);
+      targetStage > current.stage ? getForcedLevels(targetStage, toStageLevels(current)) : getStageGoals(targetStage);
     const newStage = computeStage(newLevels);
 
     const { data, error } = await supabase
@@ -171,7 +171,10 @@ export async function setStudentSprintStage(
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
-    logger.error('admin:set_student_stage_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('admin:set_student_stage_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, message: 'システムエラーが発生しました。' };
   }
 }
@@ -182,7 +185,7 @@ export async function setStudentSprintStage(
  */
 export async function setStudentSprintLevelManaged(
   userId: string,
-  levelManaged: boolean
+  levelManaged: boolean,
 ): Promise<StudentProgressActionResult> {
   const ctx = await getLogContext();
 
@@ -211,7 +214,10 @@ export async function setStudentSprintLevelManaged(
     });
     return { success: true, progress: data as StudentSprintProgress };
   } catch (err) {
-    logger.error('admin:set_student_level_managed_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('admin:set_student_level_managed_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, message: 'システムエラーが発生しました。' };
   }
 }

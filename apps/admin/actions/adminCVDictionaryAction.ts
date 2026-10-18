@@ -101,7 +101,11 @@ export async function getCVDictionaryByWord(wordEn: string): Promise<CVDictionar
 
     return data as CVDictionaryEntry[];
   } catch (err) {
-    logger.error('cvDict:get_by_word_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { wordEn } });
+    logger.error('cvDict:get_by_word_unexpected', err instanceof Error ? err.message : 'Unknown', {
+      ...ctx,
+      err,
+      payload: { wordEn },
+    });
     return [];
   }
 }
@@ -115,7 +119,11 @@ export async function getCVDictionaryByWord(wordEn: string): Promise<CVDictionar
  * PKは (word_en, part_of_speech) のためUpsertで処理
  */
 export async function upsertCVDictionaryEntry(
-  payload: Partial<CVDictionaryEntry> & Pick<TableRow<'com_m_color_vowel_dictionary'>, 'word_en' | 'part_of_speech' | 'syllables' | 'stress_vowel_spelling' | 'cv_id'>
+  payload: Partial<CVDictionaryEntry> &
+    Pick<
+      TableRow<'com_m_color_vowel_dictionary'>,
+      'word_en' | 'part_of_speech' | 'syllables' | 'stress_vowel_spelling' | 'cv_id'
+    >,
 ) {
   const ctx = await getLogContext();
   try {
@@ -189,7 +197,11 @@ export async function deleteCVDictionaryEntry(wordEn: string, partOfSpeech: stri
     revalidatePath('/tools/cv-dictionary');
     return { success: true, message: '削除しました' };
   } catch (err) {
-    logger.error('cvDict:delete_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { wordEn, partOfSpeech } });
+    logger.error('cvDict:delete_unexpected', err instanceof Error ? err.message : 'Unknown', {
+      ...ctx,
+      err,
+      payload: { wordEn, partOfSpeech },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -235,10 +247,15 @@ export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVI
   try {
     const invalid = entries.find((e) => validateCVImportEntry(e) !== null);
     if (invalid) {
-      return { success: false, message: `不正なデータが含まれています: ${invalid.word_en} (${invalid.part_of_speech})` };
+      return {
+        success: false,
+        message: `不正なデータが含まれています: ${invalid.word_en} (${invalid.part_of_speech})`,
+      };
     }
 
-    const existingMap = new Map((await getCVDictionaryKeys()).map((k) => [toCVEntryKey(k.word_en, k.part_of_speech), k]));
+    const existingMap = new Map(
+      (await getCVDictionaryKeys()).map((k) => [toCVEntryKey(k.word_en, k.part_of_speech), k]),
+    );
 
     const seen = new Set<string>();
     const now = new Date().toISOString();
@@ -310,7 +327,7 @@ export async function saveCVDictionaryAudio(
   ssml: string,
   mode: 'auto' | 'manual',
   adjustmentData: TTSAdjustmentData,
-  currentAudioPath?: string | null
+  currentAudioPath?: string | null,
 ) {
   const ctx = await getLogContext();
   try {
@@ -322,24 +339,26 @@ export async function saveCVDictionaryAudio(
     // 2. ファイルパス生成
     // audioバケット配下: dictionary/{word_en}/{pos}-{timestamp}.mp3
     // words/  sprints/ と並ぶ統一構造
-    const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[-:T.Z]/g, '')
+      .slice(0, 14);
     const safePOS = partOfSpeech.toLowerCase().replace(/[^a-z]/g, '_');
     const safeWord = wordEn.toLowerCase().replace(/[^a-z0-9]/g, '_');
     const newFilePath = `dictionary/${safeWord}/${safePOS}-${timestamp}.mp3`;
 
     // 3. Storage アップロード
-    const { error: uploadError } = await supabase.storage
-      .from('audio')
-      .upload(newFilePath, audioBuffer, {
-        contentType: 'audio/mpeg',
-        cacheControl: '31536000',
-        upsert: false,
-      });
+    const { error: uploadError } = await supabase.storage.from('audio').upload(newFilePath, audioBuffer, {
+      contentType: 'audio/mpeg',
+      cacheControl: '31536000',
+      upsert: false,
+    });
 
     if (uploadError) {
       logger.error('cvDict:audio_upload_failed', uploadError.message, {
         ...ctx,
-        err: uploadError, payload: { wordEn, partOfSpeech, newFilePath },
+        err: uploadError,
+        payload: { wordEn, partOfSpeech, newFilePath },
       });
       throw uploadError;
     }
@@ -362,7 +381,8 @@ export async function saveCVDictionaryAudio(
     if (dbError) {
       logger.error('cvDict:audio_db_update_failed', dbError.message, {
         ...ctx,
-        err: dbError, payload: { wordEn, partOfSpeech, newFilePath },
+        err: dbError,
+        payload: { wordEn, partOfSpeech, newFilePath },
       });
       await supabase.storage.from('audio').remove([newFilePath]);
       throw dbError;
@@ -374,7 +394,8 @@ export async function saveCVDictionaryAudio(
     }
 
     logger.info('cvDict:audio_saved', `Audio updated: ${wordEn} [${partOfSpeech}]`, {
-      ...ctx, payload: { wordEn, partOfSpeech, path: newFilePath },
+      ...ctx,
+      payload: { wordEn, partOfSpeech, path: newFilePath },
     });
 
     revalidatePath('/tools/cv-dictionary');
@@ -382,7 +403,8 @@ export async function saveCVDictionaryAudio(
   } catch (err) {
     logger.error('cvDict:audio_save_unexpected', err instanceof Error ? err.message : 'Unknown', {
       ...ctx,
-      err, payload: { wordEn, partOfSpeech },
+      err,
+      payload: { wordEn, partOfSpeech },
     });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }

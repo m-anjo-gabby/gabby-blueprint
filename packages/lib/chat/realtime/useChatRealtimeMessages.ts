@@ -38,7 +38,7 @@ export function useChatRealtimeMessages(roomId: string | null, onInsert: (messag
               onInsertRef.current(res.data);
             }
           });
-        }
+        },
       )
       .subscribe();
 

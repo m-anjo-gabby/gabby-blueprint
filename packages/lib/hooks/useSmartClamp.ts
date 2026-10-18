@@ -7,10 +7,10 @@ import { useState, useRef, useLayoutEffect } from 'react';
 export function useSmartClamp<T extends HTMLElement>() {
   // 監視対象のDOM要素への参照
   const ref = useRef<T | null>(null);
-  
+
   // 現在展開されているかどうかの状態
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   // テキストが枠に収まりきらず、省略（三点リーダー等）されているかどうかの判定
   const [isTruncated, setIsTruncated] = useState(false);
 
@@ -40,10 +40,10 @@ export function useSmartClamp<T extends HTMLElement>() {
   }, []);
 
   return {
-    ref,             // 対象要素の ref プロパティに渡す
-    isExpanded,      // 現在展開中か
-    isTruncated,     // テキストが溢れているか（ボタン表示の条件に利用）
-    toggle: () => setIsExpanded(prev => !prev), // 開閉を切り替える関数
-    setExpanded: setIsExpanded,                 // 明示的に開閉を設定する関数
+    ref, // 対象要素の ref プロパティに渡す
+    isExpanded, // 現在展開中か
+    isTruncated, // テキストが溢れているか（ボタン表示の条件に利用）
+    toggle: () => setIsExpanded((prev) => !prev), // 開閉を切り替える関数
+    setExpanded: setIsExpanded, // 明示的に開閉を設定する関数
   };
 }

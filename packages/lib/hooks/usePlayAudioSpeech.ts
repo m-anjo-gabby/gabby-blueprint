@@ -25,64 +25,73 @@ export function usePlayAudioSpeech() {
   const playbackRateRef = useRef<number>(1.0);
   const supabaseRef = useRef(createBrowserClient());
 
-  const play = useCallback((
-    path: string | null,
-    id: string,
-    options?: { restart?: boolean; bucketName?: string; onError?: (error: unknown) => void },
-  ): Promise<AudioPlayOutcome> => {
-    return engine.play(path, {
-      id,
-      restart: options?.restart,
-      bucketName: options?.bucketName,
-      playbackRate: playbackRateRef.current,
-      onError: options?.onError,
-    });
-  }, [engine]);
+  const play = useCallback(
+    (
+      path: string | null,
+      id: string,
+      options?: { restart?: boolean; bucketName?: string; onError?: (error: unknown) => void },
+    ): Promise<AudioPlayOutcome> => {
+      return engine.play(path, {
+        id,
+        restart: options?.restart,
+        bucketName: options?.bucketName,
+        playbackRate: playbackRateRef.current,
+        onError: options?.onError,
+      });
+    },
+    [engine],
+  );
 
-  const changePlaybackRate = useCallback((rate: number) => {
-    setPlaybackRate(rate);
-    playbackRateRef.current = rate;
-    engine.setLiveRate(rate);
-  }, [engine]);
+  const changePlaybackRate = useCallback(
+    (rate: number) => {
+      setPlaybackRate(rate);
+      playbackRateRef.current = rate;
+      engine.setLiveRate(rate);
+    },
+    [engine],
+  );
 
   /**
    * 音声ファイルをダウンロードする
    */
-  const download = useCallback(async (path: string, id: string, fileName?: string, options?: { bucketName?: string }) => {
-    setIsDownloading(id);
-    try {
-      let bucketUrl = path;
-      if (!path.startsWith('http://') && !path.startsWith('https://')) {
-        const bucketName = options?.bucketName || 'audio';
-        const { data } = supabaseRef.current.storage.from(bucketName).getPublicUrl(path);
-        bucketUrl = data.publicUrl;
+  const download = useCallback(
+    async (path: string, id: string, fileName?: string, options?: { bucketName?: string }) => {
+      setIsDownloading(id);
+      try {
+        let bucketUrl = path;
+        if (!path.startsWith('http://') && !path.startsWith('https://')) {
+          const bucketName = options?.bucketName || 'audio';
+          const { data } = supabaseRef.current.storage.from(bucketName).getPublicUrl(path);
+          bucketUrl = data.publicUrl;
+        }
+        const response = await fetch(bucketUrl);
+        if (!response.ok) throw new Error('Failed to fetch audio file');
+
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = blobUrl;
+
+        let finalFileName = fileName || id;
+        if (!finalFileName.toLowerCase().endsWith('.mp3')) {
+          finalFileName += '.mp3';
+        }
+        link.download = finalFileName;
+        document.body.appendChild(link);
+        link.click();
+
+        link.remove();
+        window.URL.revokeObjectURL(blobUrl);
+      } catch (error) {
+        clientLogger.error('audio:download_failed', 'Audio download failed', { err: error });
+        throw error;
+      } finally {
+        setIsDownloading(null);
       }
-      const response = await fetch(bucketUrl);
-      if (!response.ok) throw new Error('Failed to fetch audio file');
-
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      const link = document.createElement('a');
-      link.href = blobUrl;
-
-      let finalFileName = fileName || id;
-      if (!finalFileName.toLowerCase().endsWith('.mp3')) {
-        finalFileName += '.mp3';
-      }
-      link.download = finalFileName;
-      document.body.appendChild(link);
-      link.click();
-
-      link.remove();
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-      clientLogger.error('audio:download_failed', 'Audio download failed', { err: error });
-      throw error;
-    } finally {
-      setIsDownloading(null);
-    }
-  }, []);
+    },
+    [],
+  );
 
   return {
     play,

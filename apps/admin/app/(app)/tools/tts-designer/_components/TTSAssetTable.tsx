@@ -27,13 +27,21 @@ export function TTSAssetTable({ data, totalCount, pageCount }: TTSAssetTableProp
   const handleDelete = (asset: TTSAssetListItem) => {
     startDelete(async () => {
       const result = await deleteTTSAssetAction(asset.asset_id);
-      showToast(result.success ? 'Asset deleted successfully' : result.message || 'Failed to delete asset', result.success ? 'success' : 'error');
+      showToast(
+        result.success ? 'Asset deleted successfully' : result.message || 'Failed to delete asset',
+        result.success ? 'success' : 'error',
+      );
     });
   };
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder="Search phrases or comments..." totalCount={totalCount} pageCount={pageCount} />
+      <ListToolbar
+        query={query}
+        searchPlaceholder="Search phrases or comments..."
+        totalCount={totalCount}
+        pageCount={pageCount}
+      />
       <DataTable
         columns={createColumns({
           playingId: isPlaying,

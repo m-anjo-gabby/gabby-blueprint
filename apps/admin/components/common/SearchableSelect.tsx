@@ -1,22 +1,11 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import * as React from 'react';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface Option {
   value: string;
@@ -38,9 +27,9 @@ export function SearchableSelect({
   options,
   value,
   onChange,
-  placeholder = "選択してください...",
-  searchPlaceholder = "検索...",
-  emptyMessage = "見つかりませんでした。",
+  placeholder = '選択してください...',
+  searchPlaceholder = '検索...',
+  emptyMessage = '見つかりませんでした。',
   className,
   disabled = false,
 }: SearchableSelectProps) {
@@ -57,11 +46,9 @@ export function SearchableSelect({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn("w-full justify-between rounded-xl h-11 font-medium bg-white", className)}
+          className={cn('w-full justify-between rounded-xl h-11 font-medium bg-white', className)}
         >
-          <span className="truncate">
-            {selectedLabel || placeholder}
-          </span>
+          <span className="truncate">{selectedLabel || placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -76,17 +63,12 @@ export function SearchableSelect({
                   key={option.value}
                   value={option.label} // Commandの検索対象になる
                   onSelect={() => {
-                    onChange(option.value === value ? "" : option.value);
+                    onChange(option.value === value ? '' : option.value);
                     setOpen(false);
                   }}
                   className="cursor-pointer"
                 >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
+                  <Check className={cn('mr-2 h-4 w-4', value === option.value ? 'opacity-100' : 'opacity-0')} />
                   {option.label}
                 </CommandItem>
               ))}

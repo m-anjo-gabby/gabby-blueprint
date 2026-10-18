@@ -10,7 +10,8 @@ import type { NoticeReadStatusUser } from '@/actions/adminNoticeAction';
 
 type TableT = ReturnType<typeof useTranslations<'notice.readsTable'>>;
 
-const BADGE_CLASS = 'inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border';
+const BADGE_CLASS =
+  'inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border';
 
 export function createColumns(t: TableT, { hasCta }: { hasCta: boolean }): ListColumnDef<NoticeReadStatusUser>[] {
   const columns: ListColumnDef<NoticeReadStatusUser>[] = [
@@ -36,7 +37,9 @@ export function createColumns(t: TableT, { hasCta }: { hasCta: boolean }): ListC
         <span
           className={cn(
             BADGE_CLASS,
-            row.original.user_type === USER_TYPES.STUDENT ? 'text-brand border-brand-100 bg-brand-50/30' : 'text-slate-500 border-slate-100 bg-slate-50'
+            row.original.user_type === USER_TYPES.STUDENT
+              ? 'text-brand border-brand-100 bg-brand-50/30'
+              : 'text-slate-500 border-slate-100 bg-slate-50',
           )}
         >
           {getUserTypeLabel(row.original.user_type)}
@@ -75,7 +78,11 @@ export function createColumns(t: TableT, { hasCta }: { hasCta: boolean }): ListC
       header: t('ctaClickedAtHeader'),
       cell: ({ row }) => (
         <span className="font-mono text-[11px] text-slate-600">
-          {row.original.cta_clicked_at ? formatToJstDateTime(row.original.cta_clicked_at) : <span className="text-slate-400">-</span>}
+          {row.original.cta_clicked_at ? (
+            formatToJstDateTime(row.original.cta_clicked_at)
+          ) : (
+            <span className="text-slate-400">-</span>
+          )}
         </span>
       ),
     },

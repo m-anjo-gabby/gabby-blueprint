@@ -35,7 +35,10 @@ export interface KnowledgeEntry {
  */
 export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<ListResult<KnowledgeEntry>> {
   const ctx = await getLogContext();
-  const { q, filters: { type: sourceType } } = params;
+  const {
+    q,
+    filters: { type: sourceType },
+  } = params;
   try {
     const supabase = await createAdminClient();
     const [from, to] = toRange(params);
@@ -64,7 +67,11 @@ export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<L
 
     return { rows: data as KnowledgeEntry[], totalCount: count || 0 };
   } catch (err) {
-    logger.error('aiKb:list_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { sourceType } });
+    logger.error('aiKb:list_unexpected', err instanceof Error ? err.message : 'Unknown', {
+      ...ctx,
+      err,
+      payload: { sourceType },
+    });
     return { rows: [], totalCount: 0 };
   }
 }
@@ -119,7 +126,11 @@ export async function deleteKnowledgeEntryAction(knowledgeId: string) {
     revalidatePath(TOOL_PATH);
     return { success: true, message: '削除しました' };
   } catch (err) {
-    logger.error('aiKb:delete_failed', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { knowledgeId } });
+    logger.error('aiKb:delete_failed', err instanceof Error ? err.message : 'Unknown', {
+      ...ctx,
+      err,
+      payload: { knowledgeId },
+    });
     return { success: false, message: '削除に失敗しました' };
   }
 }

@@ -54,7 +54,9 @@ function git(cmd) {
 /** その環境のリリーススクリプト（新しい順）を { name, text } で返す。ブランチがある環境はブランチの中身を読む */
 function releaseFiles(ref, limit) {
   const names = ref
-    ? git(`ls-tree --name-only ${ref} supabase/release/`).split('\n').map((p) => path.basename(p))
+    ? git(`ls-tree --name-only ${ref} supabase/release/`)
+        .split('\n')
+        .map((p) => path.basename(p))
     : readdirSync(RELEASE_DIR);
   return names
     .filter((n) => RELEASE_FILE.test(n))
@@ -73,7 +75,12 @@ function summarize(sections, history) {
   const applied = count('applied');
   const changed = count('changed');
   const total = sections.length;
-  if (changed > 0) return { ok: false, changedOnly: applied + changed === total, label: `適用後に内容変更あり ${changed}件（適用済み ${applied}/${total}）` };
+  if (changed > 0)
+    return {
+      ok: false,
+      changedOnly: applied + changed === total,
+      label: `適用後に内容変更あり ${changed}件（適用済み ${applied}/${total}）`,
+    };
   if (applied === total) return { ok: true, label: `適用済み ${applied}/${total}` };
   if (applied === 0) return { ok: false, label: `未適用 0/${total}` };
   const pending = sections.filter((_, i) => states[i] === 'pending').map((s) => s.no);
@@ -83,7 +90,10 @@ function summarize(sections, history) {
 async function vercelToken(env) {
   const file = path.join(REPO_ROOT, `scripts/vercel-env/values/.env.${env}`);
   const fromFile = existsSync(file) ? parseEnv(readFileSync(file, 'utf8')).VERCEL_TOKEN : undefined;
-  const token = fromFile || process.env.VERCEL_TOKEN || (await askSecret(`Vercel のアクセストークン（${ENVIRONMENTS[env].label}）: `));
+  const token =
+    fromFile ||
+    process.env.VERCEL_TOKEN ||
+    (await askSecret(`Vercel のアクセストークン（${ENVIRONMENTS[env].label}）: `));
   if (!token) fail('Vercel のアクセストークンが入力されませんでした。');
   return token;
 }
@@ -93,7 +103,14 @@ async function latestDeployment(token, projectId) {
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error(`Vercel API ${res.status}: ${await res.text()}`);
   const [d] = (await res.json()).deployments;
-  return d && { sha: d.meta?.githubCommitSha ?? '', ref: d.meta?.githubCommitRef ?? '', by: d.meta?.githubDeployedBy ?? '', created: new Date(d.created) };
+  return (
+    d && {
+      sha: d.meta?.githubCommitSha ?? '',
+      ref: d.meta?.githubCommitRef ?? '',
+      by: d.meta?.githubDeployedBy ?? '',
+      created: new Date(d.created),
+    }
+  );
 }
 
 const formatTime = (date) =>
@@ -118,12 +135,17 @@ async function main() {
 
   console.log('\n========================================================');
   console.log(` 環境       : ${opts.env.toUpperCase()}（${project.name}）`);
-  console.log(` ブランチ   : ${ref ? `${ref} ${tip.slice(0, 8)} ${git(`log -1 --format=%s ${ref}`)}` : '（dev は手元のファイルと比べる）'}`);
+  console.log(
+    ` ブランチ   : ${ref ? `${ref} ${tip.slice(0, 8)} ${git(`log -1 --format=%s ${ref}`)}` : '（dev は手元のファイルと比べる）'}`,
+  );
   console.log('========================================================');
 
   console.log(`\nDB のリリーススクリプト（新しい順に ${opts.files} 件）`);
   for (const file of releaseFiles(ref, opts.files)) {
-    const result = summarize(splitSections(file.text), history.filter((h) => h.release_file === file.name));
+    const result = summarize(
+      splitSections(file.text),
+      history.filter((h) => h.release_file === file.name),
+    );
     // dev は開発中にセクションを書き換えるため、「適用後に内容変更あり」は表示だけにする
     const ok = result.ok || (opts.env === 'dev' && result.changedOnly);
     console.log(`  ${ok ? '✓' : '!'} ${file.name.padEnd(48)} ${result.label}`);
@@ -148,12 +170,18 @@ async function main() {
       else {
         ok = false;
         let behind = '?';
-        try { behind = git(`rev-list --count ${d.sha}..${tip}`); } catch { /* 手元に無いコミット */ }
+        try {
+          behind = git(`rev-list --count ${d.sha}..${tip}`);
+        } catch {
+          /* 手元に無いコミット */
+        }
         note = `${branch} の最新ではない（未デプロイのコミット ${behind} 件）`;
         problems.push(`アプリ: ${app} が ${branch} の最新（${tip.slice(0, 8)}）ではない`);
       }
     }
-    console.log(`  ${ok ? '✓' : '!'} ${app.padEnd(8)} ${d.sha.slice(0, 8)}  ${formatTime(d.created)}  ${d.by.padEnd(14)} ${note}`);
+    console.log(
+      `  ${ok ? '✓' : '!'} ${app.padEnd(8)} ${d.sha.slice(0, 8)}  ${formatTime(d.created)}  ${d.by.padEnd(14)} ${note}`,
+    );
   }
 
   if (problems.length === 0) {

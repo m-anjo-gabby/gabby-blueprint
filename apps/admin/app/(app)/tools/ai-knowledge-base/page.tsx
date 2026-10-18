@@ -21,7 +21,11 @@ export default async function AIKnowledgeBasePage({ searchParams }: { searchPara
 
   return (
     <div className="space-y-6">
-      <PageHeader title="AI Knowledge Base" description={t('subtitle')} actions={<KnowledgeEntryFormDialog mode="create" />} />
+      <PageHeader
+        title="AI Knowledge Base"
+        description={t('subtitle')}
+        actions={<KnowledgeEntryFormDialog mode="create" />}
+      />
       <KnowledgeEntryDataTable data={rows} totalCount={totalCount} pageCount={toPageCount(totalCount)} />
     </div>
   );

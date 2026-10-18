@@ -66,7 +66,11 @@ export async function uploadCoachIntroVideoCore(formData: FormData): Promise<Upl
       .upload(newVideoPath, buffer, { contentType: mimeType, upsert: false });
 
     if (uploadError) {
-      logger.error('coachProfile:upload_intro_video_failed', uploadError.message, { ...ctx, err: uploadError, userId: user.id });
+      logger.error('coachProfile:upload_intro_video_failed', uploadError.message, {
+        ...ctx,
+        err: uploadError,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'upload_failed' };
     }
 
@@ -76,7 +80,11 @@ export async function uploadCoachIntroVideoCore(formData: FormData): Promise<Upl
       .eq('user_id', user.id);
 
     if (updateError) {
-      logger.error('coachProfile:update_intro_video_path_failed', updateError.message, { ...ctx, err: updateError, userId: user.id });
+      logger.error('coachProfile:update_intro_video_path_failed', updateError.message, {
+        ...ctx,
+        err: updateError,
+        userId: user.id,
+      });
       // DB更新に失敗した場合は、アップロード済みの新ファイルを削除してロールバックする
       await adminSupabase.storage.from(PROFILE_ICON_BUCKET).remove([newVideoPath]);
       return { success: false, errorCode: 'db_update_failed' };
@@ -84,18 +92,26 @@ export async function uploadCoachIntroVideoCore(formData: FormData): Promise<Upl
 
     // 旧ビデオファイルの削除（失敗してもアップロード自体は成功扱いとし、ログのみ残す）
     if (previousVideoPath) {
-      const { error: removeError } = await adminSupabase.storage
-        .from(PROFILE_ICON_BUCKET)
-        .remove([previousVideoPath]);
+      const { error: removeError } = await adminSupabase.storage.from(PROFILE_ICON_BUCKET).remove([previousVideoPath]);
       if (removeError) {
-        logger.warn('coachProfile:remove_previous_intro_video_failed', removeError.message, { ...ctx, err: removeError, userId: user.id });
+        logger.warn('coachProfile:remove_previous_intro_video_failed', removeError.message, {
+          ...ctx,
+          err: removeError,
+          userId: user.id,
+        });
       }
     }
 
-    logger.info('coachProfile:upload_intro_video_success', `Coach intro video updated: ${newVideoPath}`, { ...ctx, userId: user.id });
+    logger.info('coachProfile:upload_intro_video_success', `Coach intro video updated: ${newVideoPath}`, {
+      ...ctx,
+      userId: user.id,
+    });
     return { success: true, introVideoPath: newVideoPath };
   } catch (err) {
-    logger.error('coachProfile:upload_intro_video_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coachProfile:upload_intro_video_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -128,22 +144,31 @@ export async function removeCoachIntroVideoCore(): Promise<RemoveCoachIntroVideo
       .eq('user_id', user.id);
 
     if (updateError) {
-      logger.error('coachProfile:remove_intro_video_db_update_failed', updateError.message, { ...ctx, err: updateError, userId: user.id });
+      logger.error('coachProfile:remove_intro_video_db_update_failed', updateError.message, {
+        ...ctx,
+        err: updateError,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
     const adminSupabase = createAdminClient();
-    const { error: removeError } = await adminSupabase.storage
-      .from(PROFILE_ICON_BUCKET)
-      .remove([previousVideoPath]);
+    const { error: removeError } = await adminSupabase.storage.from(PROFILE_ICON_BUCKET).remove([previousVideoPath]);
     if (removeError) {
-      logger.warn('coachProfile:remove_intro_video_storage_failed', removeError.message, { ...ctx, err: removeError, userId: user.id });
+      logger.warn('coachProfile:remove_intro_video_storage_failed', removeError.message, {
+        ...ctx,
+        err: removeError,
+        userId: user.id,
+      });
     }
 
     logger.info('coachProfile:remove_intro_video_success', 'Coach intro video removed', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('coachProfile:remove_intro_video_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coachProfile:remove_intro_video_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

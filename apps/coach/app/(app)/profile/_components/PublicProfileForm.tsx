@@ -145,7 +145,9 @@ export function PublicProfileForm({
                   max={60}
                   className="pr-10"
                   value={form.teaching_years ?? ''}
-                  onChange={(e) => onFieldChange('teaching_years', e.target.value === '' ? null : Number(e.target.value))}
+                  onChange={(e) =>
+                    onFieldChange('teaching_years', e.target.value === '' ? null : Number(e.target.value))
+                  }
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
                   yrs

@@ -29,7 +29,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
   // 共通ストアから更新関数を取得
   const setUser = useUserStore((state) => state.setUser);
   const supabase = createBrowserClient();
-  
+
   // React.StrictMode 等による二重実行を防ぎ、初回マウント時のみ処理するためのフラグ
   const initialized = useRef(false);
 
@@ -39,11 +39,11 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
       // 画面のチラつきを防ぐため、まずはサーバーから届いている情報をストアにセットします。
       setUser({
         id: user.id,
-        user_id: 0,           // 詳細取得までの仮値
-        user_name: '...',    // ローディング表示用
+        user_id: 0, // 詳細取得までの仮値
+        user_name: '...', // ローディング表示用
         icon_path: null,
         email: user.email,
-        locale_id: 'ja',      // DBデフォルト値
+        locale_id: 'ja', // DBデフォルト値
         timezone: 'Asia/Tokyo', // DBデフォルト値
         app_metadata: (user.app_metadata as UserAppMetadata) || { user_type: '1', roles: [] },
       });
@@ -93,7 +93,9 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
 
     // --- Step 3: 認証イベントの監視 ---
     // 別タブでのログアウトやセッション切れを検知し、ストアをクリアします。
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
       // 'INITIAL_SESSION' 等、SIGNED_OUT以外のイベントでの session 一時null化により
       // 取得済みのユーザー情報（user_name等）が誤って消去されるのを防ぐため、
       // 明示的なサインアウトのみをクリア条件とする。

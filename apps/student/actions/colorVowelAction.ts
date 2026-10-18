@@ -1,10 +1,10 @@
 // apps/student/actions/colorVowelAction.ts
-"use server";
+'use server';
 
-import { createServerClient } from "@gabby/lib/supabase/server";
-import { createLogger } from "@gabby/lib/logger";
-import { getLogContext } from "@gabby/lib/logger/context";
-import { type ColorVowelDicResult, getPartOfSpeechSeqNo } from "@gabby/types/colorVowel";
+import { createServerClient } from '@gabby/lib/supabase/server';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
+import { type ColorVowelDicResult, getPartOfSpeechSeqNo } from '@gabby/types/colorVowel';
 
 const logger = createLogger('student');
 
@@ -32,9 +32,7 @@ interface ColorVowelJoinRow {
  * - 辞書に存在しない場合は空配列 `[]` を返す（正常系）
  * - エラー発生時は `[]` を返し、pino ロガーに集約する
  */
-export async function lookupColorVowelDictionary(
-  rawWord: string
-): Promise<ColorVowelDicResult[]> {
+export async function lookupColorVowelDictionary(rawWord: string): Promise<ColorVowelDicResult[]> {
   const ctx = await getLogContext();
 
   // 1. サニタイズ（前後の記号・クォーテーションを除去し小文字化）
@@ -42,7 +40,7 @@ export async function lookupColorVowelDictionary(
     .trim()
     .replace(
       /^[.,\/#!$%\^&\*;:{}=\-_`~()\u201C\u201D\u2018\u2019"']+|[.,\/#!$%\^&\*;:{}=\-_`~()\u201C\u201D\u2018\u2019"']+$/g,
-      ""
+      '',
     )
     .toLowerCase();
 
@@ -53,7 +51,7 @@ export async function lookupColorVowelDictionary(
 
     // 2. 辞書マスタ + Color Vowel マスタを結合して該当する全単語・品詞ペアを取得
     const { data: records, error } = await supabase
-      .from("com_m_color_vowel_dictionary")
+      .from('com_m_color_vowel_dictionary')
       .select(
         `
         dic_id,
@@ -73,13 +71,13 @@ export async function lookupColorVowelDictionary(
           icon_path,
           audio_path
         )
-      `
+      `,
       )
-      .eq("status", "live")
-      .ilike("word_en", cleanWord);
+      .eq('status', 'live')
+      .ilike('word_en', cleanWord);
 
     if (error) {
-      logger.error("cvDict:lookup_failed", error.message, {
+      logger.error('cvDict:lookup_failed', error.message, {
         ...ctx,
         err: error,
         payload: { rawWord, cleanWord },
@@ -88,11 +86,10 @@ export async function lookupColorVowelDictionary(
     }
 
     if (!records || records.length === 0) {
-      logger.info(
-        "cvDict:word_not_found",
-        `Word '${cleanWord}' not found in dictionary`,
-        { ...ctx, payload: { cleanWord } }
-      );
+      logger.info('cvDict:word_not_found', `Word '${cleanWord}' not found in dictionary`, {
+        ...ctx,
+        payload: { cleanWord },
+      });
       return [];
     }
 
@@ -106,7 +103,7 @@ export async function lookupColorVowelDictionary(
         : (record.vowel as ColorVowelJoinRow);
 
       if (!vowelRaw) {
-        logger.warn("cvDict:vowel_join_empty", `Vowel join returned empty for '${cleanWord}'`, {
+        logger.warn('cvDict:vowel_join_empty', `Vowel join returned empty for '${cleanWord}'`, {
           ...ctx,
           payload: { cleanWord },
         });
@@ -114,8 +111,8 @@ export async function lookupColorVowelDictionary(
       }
 
       // Storage Public URL 解決
-      const cvBucketName = "color-vowels";
-      const audioBucketName = "audio";
+      const cvBucketName = 'color-vowels';
+      const audioBucketName = 'audio';
 
       const stripBucketPrefix = (path: string, bucket: string) =>
         path.startsWith(`${bucket}/`) ? path.slice(bucket.length + 1) : path;
@@ -123,9 +120,7 @@ export async function lookupColorVowelDictionary(
       let wordAudioUrl: string | null = null;
       if (record.audio_path) {
         const cleanPath = stripBucketPrefix(record.audio_path, audioBucketName);
-        const { data: wAudio } = supabase.storage
-          .from(audioBucketName)
-          .getPublicUrl(cleanPath);
+        const { data: wAudio } = supabase.storage.from(audioBucketName).getPublicUrl(cleanPath);
         wordAudioUrl = wAudio.publicUrl;
       }
 
@@ -136,9 +131,7 @@ export async function lookupColorVowelDictionary(
       let vowelAudioUrl: string | null = null;
       if (vowelRaw.audio_path) {
         const cleanPath = stripBucketPrefix(vowelRaw.audio_path, cvBucketName);
-        const { data: vAudio } = supabase.storage
-          .from(cvBucketName)
-          .getPublicUrl(cleanPath);
+        const { data: vAudio } = supabase.storage.from(cvBucketName).getPublicUrl(cleanPath);
         vowelAudioUrl = vAudio.publicUrl;
       }
 
@@ -164,9 +157,9 @@ export async function lookupColorVowelDictionary(
     }
 
     logger.debug(
-      "cvDict:lookup_success",
+      'cvDict:lookup_success',
       `Successfully looked up Color Vowel for '${cleanWord}' (found ${results.length} record(s))`,
-      { ...ctx, payload: { cleanWord, count: results.length } }
+      { ...ctx, payload: { cleanWord, count: results.length } },
     );
 
     // 品詞の表示順序（seq_no）に従って昇順ソート
@@ -174,11 +167,11 @@ export async function lookupColorVowelDictionary(
 
     return results;
   } catch (err) {
-    logger.error(
-      "cvDict:lookup_unexpected",
-      err instanceof Error ? err.message : "Unknown error",
-      { ...ctx, err, payload: { rawWord } }
-    );
+    logger.error('cvDict:lookup_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { rawWord },
+    });
     return [];
   }
 }

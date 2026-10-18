@@ -137,7 +137,8 @@ export function LiveSessionRoom({ access }: Props) {
   useEffect(() => {
     // lockStatusが'checking'の間はプレビュー画面自体がマウントされずcanvasが存在しないため、
     // 'granted'に変わって実際にプレビューJSXがマウントされたタイミングでも再実行されるようdepsに含める
-    if (lockStatus !== 'granted' || phase !== 'preview' || previewRequested.current || !previewCanvasRef.current) return;
+    if (lockStatus !== 'granted' || phase !== 'preview' || previewRequested.current || !previewCanvasRef.current)
+      return;
     previewRequested.current = true;
     preview.startPreview(previewCanvasRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,7 +200,7 @@ export function LiveSessionRoom({ access }: Props) {
     const confirmed = await showConfirm(
       'End live session?',
       'This will disconnect the call for both you and the student. This cannot be undone.',
-      { variant: 'danger', isModal: false, confirmText: 'End Session', cancelText: 'Cancel' }
+      { variant: 'danger', isModal: false, confirmText: 'End Session', cancelText: 'Cancel' },
     );
     if (!confirmed) return;
 
@@ -316,58 +317,58 @@ export function LiveSessionRoom({ access }: Props) {
 
           <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center bg-slate-50/50 p-5 gap-4">
             <div className="w-full max-w-md flex flex-col items-center gap-4">
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 shadow-sm">
-              <canvas ref={previewCanvasRef} className="w-full h-full object-cover" />
-              {!preview.isCameraOn && (
-                <div className="absolute inset-0 flex items-center justify-center text-slate-500">
-                  <VideoOff size={28} />
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 shadow-sm">
+                <canvas ref={previewCanvasRef} className="w-full h-full object-cover" />
+                {!preview.isCameraOn && (
+                  <div className="absolute inset-0 flex items-center justify-center text-slate-500">
+                    <VideoOff size={28} />
+                  </div>
+                )}
+              </div>
+
+              <div className="w-full flex items-center gap-2">
+                <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 transition-all duration-100"
+                    style={{ width: `${Math.min(100, preview.micVolume)}%` }}
+                  />
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 shrink-0">Mic level</span>
+              </div>
+
+              {preview.errorMessage && (
+                <div className="text-center">
+                  <p className="text-xs font-semibold text-rose-600">
+                    Failed to access camera/microphone. Please check your browser permissions.
+                  </p>
+                  <p className="text-[10px] text-rose-400 mt-0.5">{preview.errorMessage}</p>
                 </div>
               )}
-            </div>
 
-            <div className="w-full flex items-center gap-2">
-              <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 transition-all duration-100"
-                  style={{ width: `${Math.min(100, preview.micVolume)}%` }}
-                />
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={preview.toggleMic}
+                  disabled={!preview.isPreviewing}
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isMicOn ? 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
+                >
+                  {preview.isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
+                </button>
+                <button
+                  onClick={() => previewCanvasRef.current && preview.toggleCamera(previewCanvasRef.current)}
+                  disabled={!preview.isPreviewing}
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isCameraOn ? 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
+                >
+                  {preview.isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
+                </button>
+                <button
+                  onClick={() => previewCanvasRef.current && preview.toggleBlur(previewCanvasRef.current)}
+                  disabled={!preview.isPreviewing || !preview.isCameraOn}
+                  title="Blur background"
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-brand text-white hover:bg-brand-500' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm'}`}
+                >
+                  <Sparkles size={18} />
+                </button>
               </div>
-              <span className="text-[10px] font-bold text-slate-400 shrink-0">Mic level</span>
-            </div>
-
-            {preview.errorMessage && (
-              <div className="text-center">
-                <p className="text-xs font-semibold text-rose-600">
-                  Failed to access camera/microphone. Please check your browser permissions.
-                </p>
-                <p className="text-[10px] text-rose-400 mt-0.5">{preview.errorMessage}</p>
-              </div>
-            )}
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={preview.toggleMic}
-                disabled={!preview.isPreviewing}
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isMicOn ? 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
-              >
-                {preview.isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
-              </button>
-              <button
-                onClick={() => previewCanvasRef.current && preview.toggleCamera(previewCanvasRef.current)}
-                disabled={!preview.isPreviewing}
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isCameraOn ? 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
-              >
-                {preview.isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
-              </button>
-              <button
-                onClick={() => previewCanvasRef.current && preview.toggleBlur(previewCanvasRef.current)}
-                disabled={!preview.isPreviewing || !preview.isCameraOn}
-                title="Blur background"
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-brand text-white hover:bg-brand-500' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm'}`}
-              >
-                <Sparkles size={18} />
-              </button>
-            </div>
             </div>
           </div>
 
@@ -421,8 +422,7 @@ export function LiveSessionRoom({ access }: Props) {
 
       {isTimeWarningVisible && (
         <div className="flex items-center gap-2 px-5 py-2 bg-amber-500/10 text-amber-300 text-xs font-semibold border-b border-amber-500/20">
-          <TimerReset size={14} />
-          5 minutes remaining — this session will end automatically at the 30-minute mark.
+          <TimerReset size={14} />5 minutes remaining — this session will end automatically at the 30-minute mark.
         </div>
       )}
 
@@ -471,7 +471,9 @@ export function LiveSessionRoom({ access }: Props) {
                 chatMessages.map((msg) => (
                   <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                     <p className="font-bold text-slate-400 text-[10px]">{msg.senderName}</p>
-                    <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-slate-800 text-slate-100'}`}>
+                    <p
+                      className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-slate-800 text-slate-100'}`}
+                    >
                       {msg.message}
                     </p>
                   </div>

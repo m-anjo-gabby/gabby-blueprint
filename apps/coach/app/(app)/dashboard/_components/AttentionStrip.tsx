@@ -32,7 +32,9 @@ function AttentionTile({ tile }: { tile: Tile }) {
         href={tile.href}
         className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-brand-200 hover:shadow-md transition-all"
       >
-        <div className={`p-2.5 rounded-xl border shrink-0 ${hasCount ? 'bg-brand-50 text-brand border-brand-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+        <div
+          className={`p-2.5 rounded-xl border shrink-0 ${hasCount ? 'bg-brand-50 text-brand border-brand-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
+        >
           <Icon size={18} />
         </div>
         <div className="min-w-0 flex-1">
@@ -88,6 +90,10 @@ export default function AttentionStrip({ pendingRequestCount }: Props) {
     fetchNotifications();
   }, [fetchChatRooms, fetchNotices, fetchNotifications]);
 
-  const tiles = buildTiles({ requests: pendingRequestCount, chat: totalUnreadChat, updates: noticeUnread + notificationUnread });
+  const tiles = buildTiles({
+    requests: pendingRequestCount,
+    chat: totalUnreadChat,
+    updates: noticeUnread + notificationUnread,
+  });
   return <AttentionTiles tiles={tiles} />;
 }

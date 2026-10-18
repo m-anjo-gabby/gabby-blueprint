@@ -61,7 +61,7 @@ export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: Weekly
       else next.delete(key);
       onChange(next);
     },
-    [selection, onChange]
+    [selection, onChange],
   );
 
   const handlePointerDown = (day: DayOfWeek, slotIndex: number) => {
@@ -110,7 +110,7 @@ export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: Weekly
               <div
                 className={cn(
                   'h-[22px] pr-2 text-right text-[10px] text-slate-400 font-medium leading-[22px]',
-                  isHour ? 'border-t border-slate-200' : 'border-t border-slate-100'
+                  isHour ? 'border-t border-slate-200' : 'border-t border-slate-100',
                 )}
               >
                 {isHour ? slotIndexToLabel(slotIndex) : ''}
@@ -133,7 +133,7 @@ export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: Weekly
                     className={cn(
                       'h-[22px] border-l border-slate-100 transition-colors disabled:cursor-not-allowed',
                       isHour ? 'border-t border-t-slate-200' : 'border-t border-t-slate-100',
-                      isSelected ? 'bg-brand-500 hover:bg-brand' : 'bg-white hover:bg-brand-50'
+                      isSelected ? 'bg-brand-500 hover:bg-brand' : 'bg-white hover:bg-brand-50',
                     )}
                   />
                 );

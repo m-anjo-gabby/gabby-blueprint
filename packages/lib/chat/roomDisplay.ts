@@ -11,7 +11,7 @@ type RoomLike = Pick<ChatRoomListItem, 'room_type' | 'room_name' | 'members'> & 
 /** 1対1ルームの相手（自分以外の参加者）。グループや非参加ルームでは先頭の他者を返す */
 export function getChatRoomCounterpart(
   members: ChatRoomMemberSummary[],
-  currentUserId: string | undefined
+  currentUserId: string | undefined,
 ): ChatRoomMemberSummary | undefined {
   return members.find((m) => m.user_id !== currentUserId);
 }
@@ -22,7 +22,11 @@ export function getChatRoomCounterpart(
  * - 1対1（参加中）: 相手の名前
  * - 1対1（Adminの査閲対象＝非参加）: 両参加者を「A ⇔ B」で並べる
  */
-export function getChatRoomTitle(room: RoomLike, currentUserId: string | undefined, labels: ChatRoomTitleLabels): string {
+export function getChatRoomTitle(
+  room: RoomLike,
+  currentUserId: string | undefined,
+  labels: ChatRoomTitleLabels,
+): string {
   if (room.room_type === CHAT_ROOM_TYPES.GROUP) {
     return room.room_name || labels.unnamedGroup;
   }
@@ -36,7 +40,7 @@ export function getChatRoomTitle(room: RoomLike, currentUserId: string | undefin
 export function getChatRoomClientOptions(
   rooms: ChatRoomListItem[],
   unnamedClientLabel: string,
-  locale: string
+  locale: string,
 ): { value: string; label: string }[] {
   const clientNameById = new Map<string, string>();
   for (const room of rooms) {

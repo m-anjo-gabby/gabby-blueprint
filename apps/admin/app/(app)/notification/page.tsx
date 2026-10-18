@@ -28,7 +28,7 @@ export default function NotificationPage() {
         router.push(notification.link_path);
       }
     },
-    [markAsRead, router]
+    [markAsRead, router],
   );
 
   return (

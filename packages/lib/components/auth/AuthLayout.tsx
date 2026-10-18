@@ -137,7 +137,10 @@ export function EmailField({ label, ...props }: { label: string } & InputHTMLAtt
 export function FormError({ message }: { message: string | null | undefined }) {
   if (!message) return null;
   return (
-    <div role="alert" className="p-3 rounded-lg bg-rose-50 border border-rose-100 flex items-center gap-2 text-rose-600">
+    <div
+      role="alert"
+      className="p-3 rounded-lg bg-rose-50 border border-rose-100 flex items-center gap-2 text-rose-600"
+    >
       <AlertCircle className="w-4 h-4 shrink-0" aria-hidden />
       <span className="text-xs font-medium">{message}</span>
     </div>

@@ -86,13 +86,16 @@ export async function getMyPastSessions(ticketId?: string, limit?: number): Prom
 export async function cancelSession(
   sessionId: string,
   reason?: string,
-  proposedSlots?: { start_datetime: string; end_datetime: string }[]
+  proposedSlots?: { start_datetime: string; end_datetime: string }[],
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await cancelSessionCore(sessionId, reason, proposedSlots);
 
   if (!result.success) {
-    logger.error('student:cancel_session_failed', result.errorCode, { ...ctx, payload: { sessionId, reason, proposedSlots } });
+    logger.error('student:cancel_session_failed', result.errorCode, {
+      ...ctx,
+      payload: { sessionId, reason, proposedSlots },
+    });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -109,13 +112,16 @@ export async function checkSessionConflict(
   studentId: string,
   startIso: string,
   endIso: string,
-  excludeSessionId?: string
+  excludeSessionId?: string,
 ): Promise<{ success: true; coachConflict: boolean; studentConflict: boolean } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await checkSessionConflictCore(coachId, studentId, startIso, endIso, excludeSessionId);
 
   if (!result.success) {
-    logger.error('student:check_session_conflict_failed', result.errorCode, { ...ctx, payload: { coachId, studentId, startIso, endIso, excludeSessionId } });
+    logger.error('student:check_session_conflict_failed', result.errorCode, {
+      ...ctx,
+      payload: { coachId, studentId, startIso, endIso, excludeSessionId },
+    });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -130,13 +136,16 @@ export async function createSessionBookingRequest(
   scheduleId: string,
   startIso: string,
   endIso: string,
-  reason?: string
+  reason?: string,
 ): Promise<{ success: true; requestId: string } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await createSessionBookingRequestCore(scheduleId, startIso, endIso, reason);
 
   if (!result.success) {
-    logger.error('student:create_booking_request_failed', result.errorCode, { ...ctx, payload: { scheduleId, startIso, endIso } });
+    logger.error('student:create_booking_request_failed', result.errorCode, {
+      ...ctx,
+      payload: { scheduleId, startIso, endIso },
+    });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -148,7 +157,7 @@ export async function createSessionBookingRequest(
  * コーチの応答を待たずに、自分の予約リクエスト（pending中）を取り下げる
  */
 export async function withdrawSessionBookingRequest(
-  requestId: string
+  requestId: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await withdrawSessionBookingRequestCore(requestId);
@@ -206,7 +215,7 @@ export async function getMyProposedRescheduleGroups(): Promise<MyReschedulePropo
  * コーチ提案の振替候補を承諾する
  */
 export async function acceptRescheduleProposal(
-  proposalId: string
+  proposalId: string,
 ): Promise<{ success: true; newSessionId: string } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await acceptRescheduleProposalCore(proposalId);
@@ -224,7 +233,7 @@ export async function acceptRescheduleProposal(
  * コーチ提案の振替候補を、同一セッション(キャンセル)単位でまとめて却下する
  */
 export async function declineRescheduleProposals(
-  sessionId: string
+  sessionId: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const ctx = await getLogContext();
   const result = await declineRescheduleProposalsCore(sessionId);
@@ -243,7 +252,7 @@ export async function declineRescheduleProposals(
  * （RLSにより本人が関わるセッションのみ取得可能）
  */
 export async function getSessionResultSummary(
-  sessionId: string
+  sessionId: string,
 ): Promise<{ success: true; session: SessionResultSummary } | { success: false; message: string }> {
   const result = await getSessionResultSummaryCore(sessionId);
   if (!result.success) {

@@ -67,35 +67,36 @@ export function FavoritesView({ initialLists, renderId }: FavoritesViewProps) {
     </Button>
   ));
 
-  const handleRemove = useCallback(async <K extends FavoriteKindId>(kindId: K, item: FavoriteItemMap[K]) => {
-    const def: FavoriteKindDef<FavoriteItemMap[K]> = FAVORITE_KINDS[kindId];
-    const ok = await showConfirm(
-      'お気に入りから削除',
-      `この${def.noun}をお気に入りから削除しますか？`,
-      { variant: 'danger' }
-    );
-    if (!ok) return;
+  const handleRemove = useCallback(
+    async <K extends FavoriteKindId>(kindId: K, item: FavoriteItemMap[K]) => {
+      const def: FavoriteKindDef<FavoriteItemMap[K]> = FAVORITE_KINDS[kindId];
+      const ok = await showConfirm('お気に入りから削除', `この${def.noun}をお気に入りから削除しますか？`, {
+        variant: 'danger',
+      });
+      if (!ok) return;
 
-    const key = def.getKey(item);
-    const index = lists[kindId].findIndex((i) => def.getKey(i) === key);
-    const replaceList = (update: (list: FavoriteItemMap[K][]) => FavoriteItemMap[K][]) =>
-      setLists((prev) => ({ ...prev, [kindId]: update(prev[kindId]) }));
+      const key = def.getKey(item);
+      const index = lists[kindId].findIndex((i) => def.getKey(i) === key);
+      const replaceList = (update: (list: FavoriteItemMap[K][]) => FavoriteItemMap[K][]) =>
+        setLists((prev) => ({ ...prev, [kindId]: update(prev[kindId]) }));
 
-    // 楽観的に一覧から外し、失敗した場合は元の位置に戻す
-    replaceList((list) => list.filter((i) => def.getKey(i) !== key));
-    const result = await def.remove(item).catch(() => FAVORITE_TOGGLE_NETWORK_ERROR);
-    if (result.ok) {
-      showToast('お気に入りから削除しました', 'success');
-      return;
-    }
-    replaceList((list) => {
-      if (list.some((i) => def.getKey(i) === key)) return list;
-      const next = [...list];
-      next.splice(Math.max(0, Math.min(index, next.length)), 0, item);
-      return next;
-    });
-    showToast(getFavoriteToggleErrorMessage(result), 'error');
-  }, [lists, setLists, showConfirm, showToast]);
+      // 楽観的に一覧から外し、失敗した場合は元の位置に戻す
+      replaceList((list) => list.filter((i) => def.getKey(i) !== key));
+      const result = await def.remove(item).catch(() => FAVORITE_TOGGLE_NETWORK_ERROR);
+      if (result.ok) {
+        showToast('お気に入りから削除しました', 'success');
+        return;
+      }
+      replaceList((list) => {
+        if (list.some((i) => def.getKey(i) === key)) return list;
+        const next = [...list];
+        next.splice(Math.max(0, Math.min(index, next.length)), 0, item);
+        return next;
+      });
+      showToast(getFavoriteToggleErrorMessage(result), 'error');
+    },
+    [lists, setLists, showConfirm, showToast],
+  );
 
   return (
     <FavoriteAudioProvider>
@@ -104,7 +105,7 @@ export function FavoritesView({ initialLists, renderId }: FavoritesViewProps) {
         lists[kind],
         <PillTabs items={pills} value={kind} onValueChange={handleKindChange} aria-label="お気に入りの種別" />,
         otherKindLinks.length > 0 ? otherKindLinks : null,
-        handleRemove
+        handleRemove,
       )}
     </FavoriteAudioProvider>
   );
@@ -116,7 +117,7 @@ function renderSection<K extends FavoriteKindId>(
   items: FavoriteItemMap[K][],
   pills: ReactNode,
   otherKindLinks: ReactNode,
-  onRemove: (kind: K, item: FavoriteItemMap[K]) => void
+  onRemove: (kind: K, item: FavoriteItemMap[K]) => void,
 ) {
   const def: FavoriteKindDef<FavoriteItemMap[K]> = FAVORITE_KINDS[kind];
   // 種別を切り替えたら検索・絞り込みを初期状態に戻す

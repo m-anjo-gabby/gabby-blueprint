@@ -2,13 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { ExternalLink, Loader2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -85,10 +79,14 @@ export function AssignDialogueDialog({
 
           {CATEGORY_ORDER.map((c) => {
             const contents = (contentsByCategory.get(c) ?? []).filter(
-              (content) => !assignedContentIds.has(content.content_id)
+              (content) => !assignedContentIds.has(content.content_id),
             );
             return (
-              <TabsContent key={c} value={String(c)} className={`${LIST_AREA_HEIGHT} overflow-y-auto space-y-1.5 mt-3 pr-1`}>
+              <TabsContent
+                key={c}
+                value={String(c)}
+                className={`${LIST_AREA_HEIGHT} overflow-y-auto space-y-1.5 mt-3 pr-1`}
+              >
                 {contents.length === 0 ? (
                   <p className="text-xs text-slate-400 text-center py-8">No unassigned sets in this category.</p>
                 ) : (

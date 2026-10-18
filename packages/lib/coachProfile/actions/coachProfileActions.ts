@@ -30,11 +30,7 @@ export async function getMyCoachProfileCore(): Promise<GetMyCoachProfileResult> 
     const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { data, error } = await supabase
-      .from('com_m_coach_profile')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const { data, error } = await supabase.from('com_m_coach_profile').select('*').eq('user_id', user.id).maybeSingle();
 
     if (error) {
       logger.error('coachProfile:get_my_profile_failed', error.message, { ...ctx, err: error, userId: user.id });
@@ -47,7 +43,10 @@ export async function getMyCoachProfileCore(): Promise<GetMyCoachProfileResult> 
 
     return { success: true, profile: data };
   } catch (err) {
-    logger.error('coachProfile:get_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coachProfile:get_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -61,11 +60,7 @@ export async function getCoachProfileByUserIdCore(userId: string): Promise<GetMy
 
   try {
     const supabase = await createServerClient();
-    const { data, error } = await supabase
-      .from('com_m_coach_profile')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data, error } = await supabase.from('com_m_coach_profile').select('*').eq('user_id', userId).maybeSingle();
 
     if (error) {
       logger.error('coachProfile:get_profile_by_user_id_failed', error.message, { ...ctx, err: error, userId });
@@ -78,7 +73,11 @@ export async function getCoachProfileByUserIdCore(userId: string): Promise<GetMy
 
     return { success: true, profile: data };
   } catch (err) {
-    logger.error('coachProfile:get_profile_by_user_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error(
+      'coachProfile:get_profile_by_user_id_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err },
+    );
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -97,7 +96,9 @@ export async function updateMyCoachProfileCore(values: CoachProfileFormValues): 
 
     if (
       values.teaching_years !== null &&
-      (!Number.isInteger(values.teaching_years) || values.teaching_years < 0 || values.teaching_years > MAX_TEACHING_YEARS)
+      (!Number.isInteger(values.teaching_years) ||
+        values.teaching_years < 0 ||
+        values.teaching_years > MAX_TEACHING_YEARS)
     ) {
       return { success: false, errorCode: 'invalid_input' };
     }
@@ -131,14 +132,21 @@ export async function updateMyCoachProfileCore(values: CoachProfileFormValues): 
       .single();
 
     if (updateError || !data) {
-      logger.error('coachProfile:update_my_profile_failed', updateError?.message ?? 'No row updated', { ...ctx, err: updateError, userId: user.id });
+      logger.error('coachProfile:update_my_profile_failed', updateError?.message ?? 'No row updated', {
+        ...ctx,
+        err: updateError,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
     logger.info('coachProfile:update_my_profile_success', 'Coach profile updated', { ...ctx, userId: user.id });
     return { success: true, profile: data };
   } catch (err) {
-    logger.error('coachProfile:update_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coachProfile:update_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -148,7 +156,7 @@ export async function updateMyCoachProfileCore(values: CoachProfileFormValues): 
  * 「生徒に公開する自己紹介プロフィール」(updateMyCoachProfileCore)とは別カード・別アクションとして扱う。
  */
 export async function updateMyCoachZoomSettingsCore(
-  values: CoachZoomSettingsFormValues
+  values: CoachZoomSettingsFormValues,
 ): Promise<UpdateMyCoachZoomSettingsResult> {
   const ctx = await getLogContext();
 
@@ -173,14 +181,25 @@ export async function updateMyCoachZoomSettingsCore(
       .single();
 
     if (updateError || !data) {
-      logger.error('coachProfile:update_my_zoom_settings_failed', updateError?.message ?? 'No row updated', { ...ctx, err: updateError, userId: user.id });
+      logger.error('coachProfile:update_my_zoom_settings_failed', updateError?.message ?? 'No row updated', {
+        ...ctx,
+        err: updateError,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
-    logger.info('coachProfile:update_my_zoom_settings_success', 'Coach zoom meeting URL updated', { ...ctx, userId: user.id });
+    logger.info('coachProfile:update_my_zoom_settings_success', 'Coach zoom meeting URL updated', {
+      ...ctx,
+      userId: user.id,
+    });
     return { success: true, profile: data };
   } catch (err) {
-    logger.error('coachProfile:update_my_zoom_settings_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error(
+      'coachProfile:update_my_zoom_settings_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err },
+    );
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

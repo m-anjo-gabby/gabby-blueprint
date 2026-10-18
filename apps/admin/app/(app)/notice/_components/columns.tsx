@@ -3,14 +3,26 @@
 import Link from 'next/link';
 import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
-import { Building2, CheckCheck, CheckCircle2, Clock, Edit3, EyeOff, Globe, Paperclip, Trash2, Users } from 'lucide-react';
+import {
+  Building2,
+  CheckCheck,
+  CheckCircle2,
+  Clock,
+  Edit3,
+  EyeOff,
+  Globe,
+  Paperclip,
+  Trash2,
+  Users,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatToJstDateTime } from '@gabby/lib/date/date';
 import { NOTICE_IMPORTANT_BADGE, NOTICE_TYPES, type AdminNoticeListItem } from '@gabby/types/notice';
 
 type TableT = ReturnType<typeof useTranslations<'notice.table'>>;
 
-const STATUS_BADGE_CLASS = 'inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border';
+const STATUS_BADGE_CLASS =
+  'inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border';
 const TAG_BADGE_CLASS = 'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border';
 const ACTION_CLASS = 'p-2 rounded-xl text-slate-400 transition-all active:scale-95';
 
@@ -32,7 +44,9 @@ function PublishStatusBadge({ notice, t }: { notice: AdminNoticeListItem; t: Tab
     );
   }
   if (notice.expired_at && new Date(notice.expired_at) < now) {
-    return <span className={cn(STATUS_BADGE_CLASS, 'bg-slate-100 text-slate-500 border-slate-200')}>{t('statusEnded')}</span>;
+    return (
+      <span className={cn(STATUS_BADGE_CLASS, 'bg-slate-100 text-slate-500 border-slate-200')}>{t('statusEnded')}</span>
+    );
   }
   return (
     <span className={cn(STATUS_BADGE_CLASS, 'bg-emerald-50 text-emerald-700 border-emerald-200')}>
@@ -43,7 +57,7 @@ function PublishStatusBadge({ notice, t }: { notice: AdminNoticeListItem; t: Tab
 
 export function createColumns(
   t: TableT,
-  { onDelete }: { onDelete: (notice: AdminNoticeListItem) => void }
+  { onDelete }: { onDelete: (notice: AdminNoticeListItem) => void },
 ): ListColumnDef<AdminNoticeListItem>[] {
   return [
     {
@@ -61,16 +75,22 @@ export function createColumns(
             </Link>
             <div className="flex flex-wrap items-center gap-1.5">
               {notice.is_important && (
-                <span className={cn(TAG_BADGE_CLASS, NOTICE_IMPORTANT_BADGE.badgeClass)}>{NOTICE_IMPORTANT_BADGE.label}</span>
+                <span className={cn(TAG_BADGE_CLASS, NOTICE_IMPORTANT_BADGE.badgeClass)}>
+                  {NOTICE_IMPORTANT_BADGE.label}
+                </span>
               )}
               {notice.display_mode === 'POPUP' && (
-                <span className={cn(TAG_BADGE_CLASS, 'bg-purple-50 text-purple-700 border-purple-200')}>{t('popupBadge')}</span>
+                <span className={cn(TAG_BADGE_CLASS, 'bg-purple-50 text-purple-700 border-purple-200')}>
+                  {t('popupBadge')}
+                </span>
               )}
               {notice.display_mode === 'HOME' && (
                 <span className={cn(TAG_BADGE_CLASS, 'bg-sky-50 text-sky-700 border-sky-200')}>{t('homeBadge')}</span>
               )}
               {notice.cta_url && (
-                <span className={cn(TAG_BADGE_CLASS, 'bg-slate-50 text-slate-600 border-slate-200')}>{t('ctaBadge')}</span>
+                <span className={cn(TAG_BADGE_CLASS, 'bg-slate-50 text-slate-600 border-slate-200')}>
+                  {t('ctaBadge')}
+                </span>
               )}
               {notice.attachments?.length > 0 && (
                 <span className="flex items-center gap-0.5 text-[9px] font-black text-slate-400">
@@ -92,7 +112,7 @@ export function createColumns(
           <span
             className={cn(
               'inline-block rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider',
-              (type ?? NOTICE_TYPES.INFO).badgeClass
+              (type ?? NOTICE_TYPES.INFO).badgeClass,
             )}
           >
             {type?.label ?? row.original.notice_type}
@@ -135,7 +155,9 @@ export function createColumns(
     {
       accessorKey: 'published_at',
       header: t('publishedAtHeader'),
-      cell: ({ row }) => <span className="font-mono text-[11px] text-slate-600">{formatToJstDateTime(row.original.published_at)}</span>,
+      cell: ({ row }) => (
+        <span className="font-mono text-[11px] text-slate-600">{formatToJstDateTime(row.original.published_at)}</span>
+      ),
     },
     {
       accessorKey: 'expired_at',

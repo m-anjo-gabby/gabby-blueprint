@@ -40,7 +40,10 @@ function HeroBar({ className }: { className?: string }) {
 /** 主役カード「今日やること」の骨組み（面は本番と同じブランドのグラデーション） */
 export function TodayFocusCardSkeleton() {
   return (
-    <section aria-hidden className="relative flex h-full flex-col overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 shadow-md shadow-brand/15">
+    <section
+      aria-hidden
+      className="relative flex h-full flex-col overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 shadow-md shadow-brand/15"
+    >
       <HeroBackdrop />
       <div className="relative flex h-4 items-center">
         <HeroBar className="h-3 w-28" />

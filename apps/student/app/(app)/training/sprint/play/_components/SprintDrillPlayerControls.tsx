@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { ArrowRight, ArrowLeft, RotateCw, Volume2, Mic, Check, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 import { PlaybackRateControl } from '@/components/common/PlaybackRateControl';
 
 // 🔌 Zustand ストアのインポート
@@ -34,7 +34,7 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
   onToggleAutoPlay,
   playbackRate,
   onChangePlaybackRate,
-  isStarted = true
+  isStarted = true,
 }) => {
   // 🔌 Zustand ストアから状態を直接マッピング
   const currentIndex = useSprintStore((state) => state.session.currentIndex);
@@ -57,36 +57,36 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
   const isManualPlaying = isPlaying && !isAutoPlaying;
 
   // --- 共通スタイル定義 ---
-  const sideBtnBase = "w-11 h-11 shrink-0 flex items-center justify-center rounded-control transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-line/60 bg-canvas text-ink-subtle";
-  const unitBase = "flex items-center rounded-control border shadow-sm transition-all";
+  const sideBtnBase =
+    'w-11 h-11 shrink-0 flex items-center justify-center rounded-control transition-all active:scale-90 disabled:opacity-20 disabled:pointer-events-none border border-line/60 bg-canvas text-ink-subtle';
+  const unitBase = 'flex items-center rounded-control border shadow-sm transition-all';
 
   return (
     <div className="shrink-0 w-full max-w-md mx-auto flex flex-col items-center select-none pt-2 gap-y-4 px-4 pb-2 relative">
-
       {/* 1. 上段：ナビゲーション・レイヤー（戻る・進む） */}
-      <div className="flex items-center justify-between w-full gap-2 h-14 z-10">        
-        <div className={cn("flex-1 h-full bg-white border-brand-100 overflow-hidden", unitBase)}>
-          <button 
-            onClick={onPrev} 
-            disabled={isInteractionDisabled || isFirstStep} 
-            className={cn("w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r text-ink-subtle hover:bg-canvas border-brand-50 disabled:opacity-20")}
+      <div className="flex items-center justify-between w-full gap-2 h-14 z-10">
+        <div className={cn('flex-1 h-full bg-white border-brand-100 overflow-hidden', unitBase)}>
+          <button
+            onClick={onPrev}
+            disabled={isInteractionDisabled || isFirstStep}
+            className={cn(
+              'w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r text-ink-subtle hover:bg-canvas border-brand-50 disabled:opacity-20',
+            )}
           >
             <ArrowLeft size={18} strokeWidth={3} />
           </button>
-          
-          <button 
-            onClick={onNext} 
-            disabled={isInteractionDisabled} 
+
+          <button
+            onClick={onNext}
+            disabled={isInteractionDisabled}
             className={cn(
-              "flex-1 h-full flex items-center justify-center gap-2 transition-all active:brightness-90 disabled:opacity-40",
-              isLastStep 
-                ? "bg-emerald-500 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]" 
-                : "bg-brand text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]"
+              'flex-1 h-full flex items-center justify-center gap-2 transition-all active:brightness-90 disabled:opacity-40',
+              isLastStep
+                ? 'bg-emerald-500 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]'
+                : 'bg-brand text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]',
             )}
           >
-            <span className="text-[11px] font-bold">
-              {isLastStep ? '完了' : '次へ'}
-            </span>
+            <span className="text-[11px] font-bold">{isLastStep ? '完了' : '次へ'}</span>
             {isLastStep ? <Check size={18} strokeWidth={3} /> : <ArrowRight size={18} strokeWidth={3} />}
           </button>
         </div>
@@ -95,22 +95,28 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
           onClick={onToggleAutoPlay}
           disabled={!isStarted || isManualPlaying}
           className={cn(
-            sideBtnBase, 
-            isAutoPlaying ? "bg-brand text-white border-brand shadow-lg shadow-brand-100" : "hover:bg-brand-50 hover:text-brand"
+            sideBtnBase,
+            isAutoPlaying
+              ? 'bg-brand text-white border-brand shadow-lg shadow-brand-100'
+              : 'hover:bg-brand-50 hover:text-brand',
           )}
         >
-          <RotateCw size={18} strokeWidth={2.5} className={cn(isAutoPlaying ? "text-white animate-spin-slow" : "text-ink-subtle")} />
+          <RotateCw
+            size={18}
+            strokeWidth={2.5}
+            className={cn(isAutoPlaying ? 'text-white animate-spin-slow' : 'text-ink-subtle')}
+          />
         </button>
       </div>
 
       {/* 2. 下段：アクション・レイヤー（再生速度 ＋ マイク録音） */}
-      <div className={cn(
-        "grid grid-cols-2 gap-3 w-full max-w-sm px-2 mt-1 h-14 transition-all",
-        isRateMenuOpen ? "z-40 relative" : "z-20 relative"
-      )}>
-        
-        <div className={cn("h-full bg-canvas border-line overflow-visible", unitBase)}>
-          
+      <div
+        className={cn(
+          'grid grid-cols-2 gap-3 w-full max-w-sm px-2 mt-1 h-14 transition-all',
+          isRateMenuOpen ? 'z-40 relative' : 'z-20 relative',
+        )}
+      >
+        <div className={cn('h-full bg-canvas border-line overflow-visible', unitBase)}>
           {/* ⏱️ 再生速度セクション */}
           <PlaybackRateControl
             playbackRate={playbackRate}
@@ -124,8 +130,9 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
           <button
             onClick={onPlayAudio}
             disabled={isInteractionDisabled}
-            className={cn("flex-1 h-full flex items-center justify-center transition-all cursor-pointer rounded-r-control",
-              isManualPlaying ? "bg-brand-50 text-brand" : "text-ink-soft hover:text-brand"
+            className={cn(
+              'flex-1 h-full flex items-center justify-center transition-all cursor-pointer rounded-r-control',
+              isManualPlaying ? 'bg-brand-50 text-brand' : 'text-ink-soft hover:text-brand',
             )}
           >
             {isManualPlaying ? (
@@ -141,27 +148,42 @@ export const SprintDrillPlayerControls: React.FC<SprintDrillPlayerControlsProps>
           onClick={isRecording ? onStopRecord : onStartRecord}
           disabled={(isInteractionDisabled && !isRecording) || isManualPlaying || !isAssessmentMode}
           aria-label={isRecording ? '発話を止める' : '発話練習'}
-          className={cn("h-full rounded-control flex items-center justify-center font-bold text-[11px] transition-all overflow-hidden relative cursor-pointer",
-            isRecording ? "bg-rose-500 text-white shadow-md active:scale-95" : "bg-ink text-white hover:bg-ink/90 active:scale-[0.97]",
-            ((isInteractionDisabled && !isRecording) || isManualPlaying || !isAssessmentMode) && "opacity-20 disabled:pointer-events-none disabled:cursor-not-allowed"
+          className={cn(
+            'h-full rounded-control flex items-center justify-center font-bold text-[11px] transition-all overflow-hidden relative cursor-pointer',
+            isRecording
+              ? 'bg-rose-500 text-white shadow-md active:scale-95'
+              : 'bg-ink text-white hover:bg-ink/90 active:scale-[0.97]',
+            ((isInteractionDisabled && !isRecording) || isManualPlaying || !isAssessmentMode) &&
+              'opacity-20 disabled:pointer-events-none disabled:cursor-not-allowed',
           )}
         >
           {isRecording && <span className="absolute inset-0 bg-white/20 animate-pulse" />}
-          
+
           <AnimatePresence mode="wait">
             {isRecording ? (
-              <motion.div key="stop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center justify-center relative z-10">
+              <motion.div
+                key="stop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center justify-center relative z-10"
+              >
                 <Square size={14} fill="currentColor" strokeWidth={0} />
               </motion.div>
             ) : (
-              <motion.div key="mic" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center justify-center relative z-10">
+              <motion.div
+                key="mic"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center justify-center relative z-10"
+              >
                 <Mic size={20} strokeWidth={2.5} />
               </motion.div>
             )}
           </AnimatePresence>
         </button>
       </div>
-
     </div>
   );
 };

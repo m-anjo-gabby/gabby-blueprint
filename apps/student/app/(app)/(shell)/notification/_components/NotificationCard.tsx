@@ -23,9 +23,7 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
     <motion.article
       className={cn(
         'bg-white rounded-card border shadow-sm overflow-hidden transition-all',
-        !notification.is_read
-          ? 'border-brand-200 shadow-brand-100/60'
-          : 'border-line/70'
+        !notification.is_read ? 'border-brand-200 shadow-brand-100/60' : 'border-line/70',
       )}
     >
       <button
@@ -45,24 +43,22 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
         <div
           className={cn(
             'flex items-center justify-center w-9 h-9 rounded-xl border shrink-0',
-            display.badgeClass ?? 'bg-canvas text-ink-muted border-line/70'
+            display.badgeClass ?? 'bg-canvas text-ink-muted border-line/70',
           )}
         >
           <Icon size={16} />
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className={cn(
-            'text-sm leading-snug truncate',
-            notification.is_read
-              ? 'font-bold text-ink-soft'
-              : 'font-bold text-ink'
-          )}>
+          <p
+            className={cn(
+              'text-sm leading-snug truncate',
+              notification.is_read ? 'font-bold text-ink-soft' : 'font-bold text-ink',
+            )}
+          >
             {display.title}
           </p>
-          <p className="text-xs text-ink-muted mt-1 leading-relaxed line-clamp-2">
-            {display.body}
-          </p>
+          <p className="text-xs text-ink-muted mt-1 leading-relaxed line-clamp-2">{display.body}</p>
           <p className="text-[11px] text-ink-subtle mt-2 font-bold">
             {formatZonedDateJapanese(notification.occurred_at, timezone)}
           </p>

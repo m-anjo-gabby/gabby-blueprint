@@ -124,7 +124,13 @@ export function DialogueSessionRow({ assignmentId, session, onProgressChange, on
           className="text-xs"
         />
         <div className="flex justify-end">
-          <Button type="button" size="sm" variant="outline" disabled={isSaving || !notesChanged} onClick={handleSaveNotes}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isSaving || !notesChanged}
+            onClick={handleSaveNotes}
+          >
             Save Note
           </Button>
         </div>

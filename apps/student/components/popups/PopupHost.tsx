@@ -38,9 +38,7 @@ export function PopupHost({ hasPendingGate }: PopupHostProps) {
 
   if (hasPendingGate) return null;
 
-  const selectedNotice = selectedNoticeId
-    ? notices.find((n) => n.notice_id === selectedNoticeId)
-    : undefined;
+  const selectedNotice = selectedNoticeId ? notices.find((n) => n.notice_id === selectedNoticeId) : undefined;
   if (selectedNotice) {
     return (
       <NoticePopupDialog

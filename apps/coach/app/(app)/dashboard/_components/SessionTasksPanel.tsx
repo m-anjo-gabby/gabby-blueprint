@@ -4,7 +4,17 @@ import { getMySessionTasks } from '@/actions/sessionAction';
 import { formatWeeklySlotEn } from '@/lib/weeklySlot';
 import { DashboardPanelCard, PanelRowList, PanelRowsSkeleton } from './DashboardPanelCard';
 
-function TaskRow({ href, icon: Icon, title, subtitle }: { href: string; icon: LucideIcon; title: string; subtitle: string }) {
+function TaskRow({
+  href,
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+}) {
   return (
     <Link
       href={href}

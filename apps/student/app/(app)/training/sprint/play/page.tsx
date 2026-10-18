@@ -1,17 +1,17 @@
 'use client';
 
-import { use, useEffect } from "react";
-import { getSprintQuestionsAction, getLastSprintSessionAction, getContentAction } from "@/actions/sprintAction";
-import { SprintSelect } from "./_components/SprintSelect";
-import { SprintDrillPlayer } from "./_components/SprintDrillPlayer";
-import { SprintTimePlayer } from "./_components/SprintTimePlayer";
-import { SprintQuestionType, SprintAnswerType, QUESTION_TYPES, toSprintType } from "@gabby/types/sprint";
-import { useToast } from "@gabby/lib/hooks/useToast";
-import { useSprintStore } from "@/stores/useSprintStore";
-import { AlertCircle, Volume2, BookOpen } from "lucide-react";
-import Link from "next/link";
-import { ContentLoading } from "@/components/common/ContentLoading";
-import { ImmersiveNotice, noticeActionClass } from "@/components/shell/ImmersiveNotice";
+import { use, useEffect } from 'react';
+import { getSprintQuestionsAction, getLastSprintSessionAction, getContentAction } from '@/actions/sprintAction';
+import { SprintSelect } from './_components/SprintSelect';
+import { SprintDrillPlayer } from './_components/SprintDrillPlayer';
+import { SprintTimePlayer } from './_components/SprintTimePlayer';
+import { SprintQuestionType, SprintAnswerType, QUESTION_TYPES, toSprintType } from '@gabby/types/sprint';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { useSprintStore } from '@/stores/useSprintStore';
+import { AlertCircle, Volume2, BookOpen } from 'lucide-react';
+import Link from 'next/link';
+import { ContentLoading } from '@/components/common/ContentLoading';
+import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
 import { primeSpeechSynthesis } from '@gabby/lib/speech/synthesis';
 import { unlockAudio } from '@gabby/lib/audio/core/audioRuntime';
 
@@ -36,7 +36,18 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
   // 📦 状態管理（Zustandストアへ一元化、ローカルuseStateは排除）
   // ────────────────────────────────────────────────────────────
-  const { config, ui, session, setUiView, setConfig, startSession, clearSessionProgress, setContentMetadata, setContentName, markLevelUnavailable } = useSprintStore();
+  const {
+    config,
+    ui,
+    session,
+    setUiView,
+    setConfig,
+    startSession,
+    clearSessionProgress,
+    setContentMetadata,
+    setContentName,
+    markLevelUnavailable,
+  } = useSprintStore();
   const { showToast } = useToast();
 
   // ────────────────────────────────────────────────────────────
@@ -82,7 +93,8 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
 
         // 優先順位: 1. DB履歴(dbConfig) > 2. URLパラメータ > 3. システムデフォルト
         const fallbackType = (dbConfig?.question_type || resolvedParams.type || '0') as SprintQuestionType;
-        const fallbackLevel = resolvedParams.level || String(dbConfig?.difficulty_level ?? QUESTION_TYPES[fallbackType]?.minLevel ?? 0);
+        const fallbackLevel =
+          resolvedParams.level || String(dbConfig?.difficulty_level ?? QUESTION_TYPES[fallbackType]?.minLevel ?? 0);
         const fallbackTime = parseInt(resolvedParams.time_limit_sec || '', 10) || dbConfig?.time_limit_sec || 60;
 
         // モード判定の解決
@@ -92,12 +104,12 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
         } else if (resolvedParams.mode === 'drill') {
           fallbackMode = 'drill';
         } else {
-          const isExplicitDrill = (dbConfig && String(dbConfig.sprint_type) === '0');
+          const isExplicitDrill = dbConfig && String(dbConfig.sprint_type) === '0';
           fallbackMode = isExplicitDrill ? 'drill' : 'sprint';
         }
 
         targetConfig = {
-          mode: fallbackMode, 
+          mode: fallbackMode,
           questionType: fallbackType,
           level: fallbackLevel,
           timeLimitSec: fallbackTime,
@@ -129,7 +141,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       // 初期表示Viewの決定
       const isResume = resolvedParams.resume === 'true';
       const hasLevel = !!resolvedParams.level;
-      
+
       if (!targetConfig.contentId) {
         setUiView('no_content');
       } else if (isReturningFromSession) {
@@ -145,7 +157,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     };
 
     initializeConfigAndView();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedParams, contentId]);
 
   // ────────────────────────────────────────────────────────────
@@ -160,11 +172,9 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     isAssessmentMode?: boolean;
   }) => {
     setUiView('loading');
-    
+
     const validTypes: SprintQuestionType[] = ['0', '4', '5', '6'];
-    const questionType = validTypes.includes(selectedConfig.questionType)
-      ? selectedConfig.questionType
-      : '0';
+    const questionType = validTypes.includes(selectedConfig.questionType) ? selectedConfig.questionType : '0';
 
     const parsedLevel = parseInt(selectedConfig.level || '', 10);
     const difficultyLevel = isNaN(parsedLevel) ? QUESTION_TYPES[questionType].minLevel : parsedLevel;
@@ -180,12 +190,13 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       targetContentId,
       questionType,
       difficultyLevel,
-      selectedConfig.mode
+      selectedConfig.mode,
     );
 
     if (response.success && response.data && response.data.length > 0) {
       const sprintType = toSprintType(resolvedParams.sprint_type || response.data[0]?.sprint_type);
-      const isAssessmentMode = selectedConfig.isAssessmentMode !== undefined ? selectedConfig.isAssessmentMode : config.isAssessmentMode;
+      const isAssessmentMode =
+        selectedConfig.isAssessmentMode !== undefined ? selectedConfig.isAssessmentMode : config.isAssessmentMode;
 
       // 💡 ストア側のアクションに集約してセッション情報・初期化を一撃で適用
       startSession({
@@ -199,9 +210,9 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
           answerType: selectedConfig.answerType,
           timeLimitSec: selectedConfig.timeLimitSec,
           mode: selectedConfig.mode,
-          isAssessmentMode
+          isAssessmentMode,
         },
-        resumeId: resolvedParams.resume_id
+        resumeId: resolvedParams.resume_id,
       });
 
       setUiView(selectedConfig.mode);
@@ -226,12 +237,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // ────────────────────────────────────────────────────────────
 
   if (ui.view === 'loading') {
-    return (
-      <ContentLoading
-        title="トレーニングを準備しています"
-        subtitle="少々お待ちください"
-      />
-    );
+    return <ContentLoading title="トレーニングを準備しています" subtitle="少々お待ちください" />;
   }
 
   // 0. 教材未割り当て・取得不可時のエンプティステート
@@ -240,19 +246,25 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       <ImmersiveNotice
         icon={<BookOpen size={28} />}
         title="教材が選択されていません"
-        description={<>教材データを取得できません。<br />教材一覧からトレーニングする教材を選択してください。</>}
-        actions={<Link href="/library" className={noticeActionClass()}>教材一覧へ</Link>}
+        description={
+          <>
+            教材データを取得できません。
+            <br />
+            教材一覧からトレーニングする教材を選択してください。
+          </>
+        }
+        actions={
+          <Link href="/library" className={noticeActionClass()}>
+            教材一覧へ
+          </Link>
+        }
       />
     );
   }
 
   // 1. 選択画面
   if (ui.view === 'selecting') {
-    return (
-      <SprintSelect
-        onStart={handleStartSession}
-      />
-    );
+    return <SprintSelect onStart={handleStartSession} />;
   }
 
   // 2. ジェスチャー待ち画面（直接アクセス時のみ）
@@ -272,14 +284,14 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
               primeSpeechSynthesis();
               // 共有の AudioContext もこのタップの中でアンロック・復旧する（中断中なら作り直す）
               void unlockAudio();
-              
+
               handleStartSession({
                 mode: config.mode,
                 questionType: config.questionType || '0',
                 level: String(config.level),
                 timeLimitSec: config.timeLimitSec,
                 answerType: (resolvedParams.answer_type as SprintAnswerType) || '0',
-                isAssessmentMode: config.isAssessmentMode
+                isAssessmentMode: config.isAssessmentMode,
               });
             }}
             className={noticeActionClass()}
@@ -299,7 +311,11 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
         icon={<AlertCircle size={28} />}
         title="教材データを取得できません"
         description="教材データの取得に失敗しました。もう一度一覧からお試しください。"
-        actions={<Link href="/dashboard" className={noticeActionClass()}>ホームに戻る</Link>}
+        actions={
+          <Link href="/dashboard" className={noticeActionClass()}>
+            ホームに戻る
+          </Link>
+        }
       />
     );
   }
@@ -307,22 +323,17 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   // 5. プレイヤー（SPA切り替え）
   if (ui.view === 'drill') {
     return (
-      <SprintDrillPlayer 
-        questions={session?.questions || []} 
-        initialQuestionId={session?.resumeId} 
-        initialStarted={true} 
+      <SprintDrillPlayer
+        questions={session?.questions || []}
+        initialQuestionId={session?.resumeId}
+        initialStarted={true}
         onExit={() => setUiView('selecting')}
       />
     );
   }
 
   if (ui.view === 'sprint') {
-    return (
-      <SprintTimePlayer 
-        questions={session?.questions || []} 
-        onExit={() => setUiView('selecting')}
-      />
-    );
+    return <SprintTimePlayer questions={session?.questions || []} onExit={() => setUiView('selecting')} />;
   }
 
   return null;

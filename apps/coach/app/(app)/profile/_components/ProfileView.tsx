@@ -99,11 +99,11 @@ export function ProfileView({
   const [iconPath, setIconPath] = useState(initialIconPath);
   const [timezone, setTimezone] = useState(initialTimezone);
   const [coachProfileForm, setCoachProfileForm] = useState<CoachProfileFormValues>(
-    toCoachProfileFormValues(initialCoachProfile)
+    toCoachProfileFormValues(initialCoachProfile),
   );
   // 生徒の一覧に出るかは保存済みの値で決まるため、入力中のフォームとは別に保存済みの値を持つ
   const [savedCoachProfile, setSavedCoachProfile] = useState<CoachProfileFormValues>(
-    toCoachProfileFormValues(initialCoachProfile)
+    toCoachProfileFormValues(initialCoachProfile),
   );
   // Gabby Coach Since はアカウント作成日から自動設定される読み取り専用項目のため、フォームとは別に保持する
   const [coachSince, setCoachSince] = useState(initialCoachProfile?.coach_since ?? null);
@@ -115,7 +115,7 @@ export function ProfileView({
 
   const selectedCountry = useMemo(
     () => countries.find((c) => c.country_code === coachProfileForm.country_code) ?? null,
-    [countries, coachProfileForm.country_code]
+    [countries, coachProfileForm.country_code],
   );
 
   const handleUpload = async (blob: Blob) => {
@@ -177,7 +177,7 @@ export function ProfileView({
 
   const handleCoachProfileFieldChange = <K extends keyof CoachProfileFormValues>(
     field: K,
-    value: CoachProfileFormValues[K]
+    value: CoachProfileFormValues[K],
   ) => {
     setCoachProfileForm((prev) => ({ ...prev, [field]: value }));
   };

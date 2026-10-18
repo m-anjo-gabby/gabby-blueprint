@@ -3,12 +3,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MonthlyReportSession } from '@gabby/types/monthlyReport';
 import { sessionStatusLabel } from './sessionStatusLabel';
 
@@ -25,13 +20,7 @@ function formatTimeRange(session: MonthlyReportSession): string {
   return `${formatter.format(new Date(session.start_datetime))} - ${formatter.format(new Date(session.end_datetime))}`;
 }
 
-export function AttentionCellDialog({
-  detail,
-  onClose,
-}: {
-  detail: AttentionCellDetail | null;
-  onClose: () => void;
-}) {
+export function AttentionCellDialog({ detail, onClose }: { detail: AttentionCellDetail | null; onClose: () => void }) {
   return (
     <Dialog open={detail !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
@@ -56,9 +45,7 @@ export function AttentionCellDialog({
                   <div>
                     <p className="font-medium text-slate-800">{formatTimeRange(session)}</p>
                     <p className="text-xs text-slate-500">{sessionStatusLabel(session)}</p>
-                    {session.status_note && (
-                      <p className="text-xs text-slate-400 mt-0.5">{session.status_note}</p>
-                    )}
+                    {session.status_note && <p className="text-xs text-slate-400 mt-0.5">{session.status_note}</p>}
                   </div>
                   {session.is_unresolved && (
                     <Link

@@ -11,7 +11,9 @@ export function useSprintCountdown(timeLimitSec: number, onTimeUp: () => void, o
   const [secondsLeft, setSecondsLeft] = useState<number>(timeLimitSec || 60);
 
   const secondsLeftRef = useRef<number>(secondsLeft);
-  useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
+  useEffect(() => {
+    secondsLeftRef.current = secondsLeft;
+  }, [secondsLeft]);
 
   // 全体の残り制限時間カウント。
   // 💡 interval はマウント時に一度だけ生成し、functional update で毎秒デクリメントする

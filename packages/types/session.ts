@@ -13,7 +13,7 @@ export const SESSION_STATUS = {
   COMPLETED: 2,
   CANCELLED: 3,
 } as const;
-export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
+export type SessionStatus = (typeof SESSION_STATUS)[keyof typeof SESSION_STATUS];
 
 // com_t_session.completion_result（status=COMPLETEDの内訳。status<>COMPLETEDの行では常にNULL）
 export const COMPLETION_RESULT = {
@@ -21,7 +21,7 @@ export const COMPLETION_RESULT = {
   EARLY_ENDED: 2,
   NO_SHOW: 3,
 } as const;
-export type CompletionResult = typeof COMPLETION_RESULT[keyof typeof COMPLETION_RESULT];
+export type CompletionResult = (typeof COMPLETION_RESULT)[keyof typeof COMPLETION_RESULT];
 
 /**
  * ライブセッションの実施結果（コーチの End Session = record_session_outcome RPC、アドミンの修正 =
@@ -38,11 +38,15 @@ export const SESSION_OUTCOME = {
   COACH_ABSENT: 4,
   TECHNICAL_ISSUE: 5,
 } as const;
-export type SessionOutcome = typeof SESSION_OUTCOME[keyof typeof SESSION_OUTCOME];
+export type SessionOutcome = (typeof SESSION_OUTCOME)[keyof typeof SESSION_OUTCOME];
 
 /** 結果を実施済み（status=COMPLETED）として記録する結果か（実施方法の入力が要り、チケットを消化する） */
 export function isConductedOutcome(outcome: SessionOutcome): outcome is CompletionResult {
-  return outcome === SESSION_OUTCOME.COMPLETED || outcome === SESSION_OUTCOME.STUDENT_LEFT_EARLY || outcome === SESSION_OUTCOME.STUDENT_NO_SHOW;
+  return (
+    outcome === SESSION_OUTCOME.COMPLETED ||
+    outcome === SESSION_OUTCOME.STUDENT_LEFT_EARLY ||
+    outcome === SESSION_OUTCOME.STUDENT_NO_SHOW
+  );
 }
 
 // com_t_session.conducted_via（status=COMPLETEDの行のみ。NULLは不明＝旧経路で確定しコーチの入室記録が無い行）
@@ -50,7 +54,7 @@ export const CONDUCTED_VIA = {
   APP: 1,
   EXTERNAL_ZOOM: 2,
 } as const;
-export type ConductedVia = typeof CONDUCTED_VIA[keyof typeof CONDUCTED_VIA];
+export type ConductedVia = (typeof CONDUCTED_VIA)[keyof typeof CONDUCTED_VIA];
 
 // com_t_session.cancel_category（status=CANCELLEDの起因。status<>CANCELLEDの行では常にNULL）
 export const CANCEL_CATEGORY = {
@@ -62,7 +66,7 @@ export const CANCEL_CATEGORY = {
   /** 通信トラブル等、こちら側の都合で実施できなかった（開始後にコーチが記録。チケットは返還） */
   TECHNICAL: 6,
 } as const;
-export type CancelCategory = typeof CANCEL_CATEGORY[keyof typeof CANCEL_CATEGORY];
+export type CancelCategory = (typeof CANCEL_CATEGORY)[keyof typeof CANCEL_CATEGORY];
 
 /** 生徒・コーチ本人操作によるキャンセル（変更履歴タブに表示する対象の判定に使う） */
 export const SESSION_SELF_INITIATED_CANCEL_CATEGORIES: readonly CancelCategory[] = [
@@ -90,7 +94,10 @@ export const SESSION_RESULT_STATUSES: readonly SessionStatus[] = [SESSION_STATUS
  * 合わせて見る必要がある: `session.status === SESSION_STATUS.CANCELLED &&
  * session.cancel_category != null && SESSION_SELF_INITIATED_CANCEL_CATEGORIES.includes(session.cancel_category)`
  */
-export function isSelfInitiatedCancel(session: { status: SessionStatus; cancel_category: CancelCategory | null }): boolean {
+export function isSelfInitiatedCancel(session: {
+  status: SessionStatus;
+  cancel_category: CancelCategory | null;
+}): boolean {
   return (
     session.status === SESSION_STATUS.CANCELLED &&
     session.cancel_category != null &&
@@ -133,9 +140,7 @@ export type SessionActionErrorCode =
   | 'no_ticket_available'
   | 'unexpected_error';
 
-export type CancelSessionResult =
-  | { success: true }
-  | { success: false; errorCode: SessionActionErrorCode };
+export type CancelSessionResult = { success: true } | { success: false; errorCode: SessionActionErrorCode };
 
 /** cancel_session RPCに渡す、候補提案する時間1件分（最大3件まで。コーチ・生徒どちらのキャンセルでも使う） */
 // JSON として RPC に渡すため interface ではなく type にする（interface は Json に代入できない）
@@ -154,14 +159,14 @@ export const RESCHEDULE_PROPOSAL_STATUS = {
   DECLINED: 3,
   EXPIRED: 5,
 } as const;
-export type RescheduleProposalStatus = typeof RESCHEDULE_PROPOSAL_STATUS[keyof typeof RESCHEDULE_PROPOSAL_STATUS];
+export type RescheduleProposalStatus = (typeof RESCHEDULE_PROPOSAL_STATUS)[keyof typeof RESCHEDULE_PROPOSAL_STATUS];
 
 // com_t_session_slot_proposal.proposed_by_role
 export const PROPOSED_BY_ROLE = {
   STUDENT: 1,
   COACH: 2,
 } as const;
-export type ProposedByRole = typeof PROPOSED_BY_ROLE[keyof typeof PROPOSED_BY_ROLE];
+export type ProposedByRole = (typeof PROPOSED_BY_ROLE)[keyof typeof PROPOSED_BY_ROLE];
 
 /** com_t_session_slot_proposalのうち振替候補(source_session_id IS NOT NULL)の1行分。
  * キャンセル時に相手方へ提案された候補（コーチ・生徒いずれの提案も含む）。
@@ -206,18 +211,14 @@ export interface IncomingRescheduleProposalGroup extends SessionReschedulePropos
 }
 
 export type GetMyRescheduleProposalsResult =
-  | { success: true; proposals: SessionRescheduleProposal[] }
-  | { success: false; errorCode: SessionActionErrorCode };
+  { success: true; proposals: SessionRescheduleProposal[] } | { success: false; errorCode: SessionActionErrorCode };
 
 /** 振替候補の承諾(accept_session_reschedule_proposal RPC)の結果 */
 export type AcceptRescheduleProposalResult =
-  | { success: true; newSessionId: string }
-  | { success: false; errorCode: SessionActionErrorCode };
+  { success: true; newSessionId: string } | { success: false; errorCode: SessionActionErrorCode };
 
 /** 振替候補の一括却下(decline_session_reschedule_proposals RPC)の結果 */
-export type DeclineRescheduleProposalResult =
-  | { success: true }
-  | { success: false; errorCode: SessionActionErrorCode };
+export type DeclineRescheduleProposalResult = { success: true } | { success: false; errorCode: SessionActionErrorCode };
 
 // com_t_session_slot_proposal.status のうち、自由予約リクエスト(source_session_id IS NULL)が
 // 取り得る値のサブセット（2026-09-15、com_t_session_booking_requestとの統合。値自体は不変）
@@ -227,7 +228,8 @@ export const SESSION_BOOKING_REQUEST_STATUS = {
   REJECTED: 3,
   WITHDRAWN: 4,
 } as const;
-export type SessionBookingRequestStatus = typeof SESSION_BOOKING_REQUEST_STATUS[keyof typeof SESSION_BOOKING_REQUEST_STATUS];
+export type SessionBookingRequestStatus =
+  (typeof SESSION_BOOKING_REQUEST_STATUS)[keyof typeof SESSION_BOOKING_REQUEST_STATUS];
 
 /** com_t_session_slot_proposalのうち自由予約リクエスト(source_session_id IS NULL)の1行分。
  * 未消化チケットによる自由日時の新規予約リクエスト。request_id/requested_start_datetime/
@@ -254,18 +256,15 @@ export interface MyBookingRequestItem extends SessionBookingRequest {
 
 /** 予約リクエスト作成(create_session_booking_request RPC)の結果 */
 export type CreateSessionBookingRequestResult =
-  | { success: true; requestId: string }
-  | { success: false; errorCode: SessionActionErrorCode };
+  { success: true; requestId: string } | { success: false; errorCode: SessionActionErrorCode };
 
 /** 予約リクエストの承認(approve_session_booking_request RPC)の結果 */
 export type ApproveSessionBookingRequestResult =
-  | { success: true; newSessionId: string }
-  | { success: false; errorCode: SessionActionErrorCode };
+  { success: true; newSessionId: string } | { success: false; errorCode: SessionActionErrorCode };
 
 /** 予約リクエストの却下/取下げの結果 */
 export type RespondSessionBookingRequestResult =
-  | { success: true }
-  | { success: false; errorCode: SessionActionErrorCode };
+  { success: true } | { success: false; errorCode: SessionActionErrorCode };
 
 /** コーチ・生徒それぞれのダブルブッキング有無(check_session_conflict RPC)の結果 */
 export type CheckSessionConflictResult =
@@ -273,9 +272,7 @@ export type CheckSessionConflictResult =
   | { success: false; errorCode: SessionActionErrorCode };
 
 /** 実施結果の記録(record_session_outcome RPC)・修正(admin_correct_session_outcome RPC)の結果 */
-export type RecordSessionOutcomeResult =
-  | { success: true }
-  | { success: false; errorCode: SessionActionErrorCode };
+export type RecordSessionOutcomeResult = { success: true } | { success: false; errorCode: SessionActionErrorCode };
 
 /**
  * 入退室ログからの実施結果の推定と根拠（get_session_outcome_evidence RPC）。
@@ -289,8 +286,7 @@ export interface SessionOutcomeEvidence {
 }
 
 export type GetSessionOutcomeEvidenceResult =
-  | { success: true; evidence: SessionOutcomeEvidence }
-  | { success: false; errorCode: SessionActionErrorCode };
+  { success: true; evidence: SessionOutcomeEvidence } | { success: false; errorCode: SessionActionErrorCode };
 
 /** com_t_session_call_log 1行分（レッスン結果画面の入退室タイムライン表示用） */
 export interface SessionCallLogEntry {
@@ -354,8 +350,7 @@ export interface SessionResultSummary {
 }
 
 export type GetSessionResultSummaryResult =
-  | { success: true; session: SessionResultSummary }
-  | { success: false; errorCode: SessionActionErrorCode };
+  { success: true; session: SessionResultSummary } | { success: false; errorCode: SessionActionErrorCode };
 
 /**
  * ----------------------------------------------
@@ -403,5 +398,4 @@ export interface CoachSessionTasksSummary {
 }
 
 export type GetCoachSessionTasksResult =
-  | { success: true; tasks: CoachSessionTasksSummary }
-  | { success: false; errorCode: SessionActionErrorCode };
+  { success: true; tasks: CoachSessionTasksSummary } | { success: false; errorCode: SessionActionErrorCode };

@@ -36,7 +36,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   const searchParams = useSearchParams();
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
-  
+
   // 音声エンジン・録音・評価ロジック
   // 表示中ずっと発話セッションを借り、最初の発話以降は出力経路を切り替えない
   useSpeakingSession();
@@ -59,11 +59,25 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   } = useSpeakingPlayer({ decodeTimeoutMs: 1000, stopBeforeChime: true, urlResolution: 'sdk' });
 
   // ドリル状態管理（Zustand）
-  const { 
-    words, wordIdx, phraseIdx, isAutoPlaying, showIndex, 
-    feedback, analysis, loading,
-    initDrill, setFeedback, setAnalysis, setLoading, nextStep, prevStep,
-    toggleAutoPlay, jumpTo, updatePhraseFavorite, reset,
+  const {
+    words,
+    wordIdx,
+    phraseIdx,
+    isAutoPlaying,
+    showIndex,
+    feedback,
+    analysis,
+    loading,
+    initDrill,
+    setFeedback,
+    setAnalysis,
+    setLoading,
+    nextStep,
+    prevStep,
+    toggleAutoPlay,
+    jumpTo,
+    updatePhraseFavorite,
+    reset,
   } = useWordDrillStore();
 
   // 初期化管理と二重遷移防止用Ref
@@ -98,12 +112,12 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     isInitialized.current = sectionId;
 
     async function init() {
-      setLoading(true); 
+      setLoading(true);
       reset(); // 前のセッション情報をクリア
 
       try {
         const { words: fetchedWords, contentName: name, cefr } = await getWordData(sectionId);
-        
+
         let startW = 0;
         let startP = 0;
         let isResumed = false;
@@ -113,12 +127,12 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
           const resumeItemId = await takeResumeContent(sectionId);
           if (resumeItemId) {
             fetchedWords.some((w, wIdx) => {
-              const pIdx = w.phrases.findIndex(p => p.phrase_id === resumeItemId);
-              if (pIdx !== -1) { 
-                startW = wIdx; 
-                startP = pIdx; 
+              const pIdx = w.phrases.findIndex((p) => p.phrase_id === resumeItemId);
+              if (pIdx !== -1) {
+                startW = wIdx;
+                startP = pIdx;
                 isResumed = true;
-                return true; 
+                return true;
               }
               return false;
             });
@@ -126,13 +140,13 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         }
 
         initDrill(fetchedWords, name, cefr, startW, startP);
-        
+
         // 教材を開いた瞬間の先行カウント（1件分）を即座に同期して、不意の離脱に備える
         await syncProgressNow();
 
-        if (isResumed) showToast("続きから再開しました", "success");
+        if (isResumed) showToast('続きから再開しました', 'success');
       } catch {
-        showToast("データの読み込みに失敗しました", "error");
+        showToast('データの読み込みに失敗しました', 'error');
       } finally {
         setLoading(false);
       }
@@ -151,8 +165,8 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * 確認→ローディング表示→進捗同期→離脱、という流れはSprintプレイヤーと共通のためフック化
    */
   const handleBackToPrevious = useExitConfirmFlow({
-    confirmTitle: "トレーニングを終了しますか？",
-    confirmMessage: "前の画面に戻ります。",
+    confirmTitle: 'トレーニングを終了しますか？',
+    confirmMessage: '前の画面に戻ります。',
     confirmVariant: 'info',
     setLoading,
     sync: syncProgressNow,
@@ -164,34 +178,40 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    * 代替読み上げ（TTSフォールバック）は行わず、ユーザーへの通知とサーバーログ記録のみ行う。
    * 音声ファイルは常に用意されている前提のため、発生時は運用側で把握できるようにする。
    */
-  const handleAudioUnavailable = useCallback((phrase: PhraseItem, reason: string) => {
-    showToast('音声を再生できません', 'error');
-    clientLogger.warn('word:audio_playback_failed', `Phrase audio unavailable: ${phrase.phrase_id}`, {
-      payload: {
-        sectionId,
-        phraseId: phrase.phrase_id,
-        wordId: phrase.word_id,
-        audioPath: phrase.audio_path,
-        ttsStatus: phrase.tts_status,
-        reason,
-      },
-    });
-  }, [sectionId, showToast]);
+  const handleAudioUnavailable = useCallback(
+    (phrase: PhraseItem, reason: string) => {
+      showToast('音声を再生できません', 'error');
+      clientLogger.warn('word:audio_playback_failed', `Phrase audio unavailable: ${phrase.phrase_id}`, {
+        payload: {
+          sectionId,
+          phraseId: phrase.phrase_id,
+          wordId: phrase.word_id,
+          audioPath: phrase.audio_path,
+          ttsStatus: phrase.tts_status,
+          reason,
+        },
+      });
+    },
+    [sectionId, showToast],
+  );
 
   /**
    * 音声再生用統合ハンドラ
    */
-  const handleGlobalSpeak = useCallback((phrase: PhraseItem) => {
-    if (phrase.audio_path && phrase.tts_status === 1) {
-      play(phrase.audio_path, {
-        id: phrase.phrase_id,
-        restart: true,
-        onError: (err) => handleAudioUnavailable(phrase, err instanceof Error ? err.message : String(err)),
-      });
-    } else {
-      handleAudioUnavailable(phrase, 'tts_not_ready');
-    }
-  }, [play, handleAudioUnavailable]);
+  const handleGlobalSpeak = useCallback(
+    (phrase: PhraseItem) => {
+      if (phrase.audio_path && phrase.tts_status === 1) {
+        play(phrase.audio_path, {
+          id: phrase.phrase_id,
+          restart: true,
+          onError: (err) => handleAudioUnavailable(phrase, err instanceof Error ? err.message : String(err)),
+        });
+      } else {
+        handleAudioUnavailable(phrase, 'tts_not_ready');
+      }
+    },
+    [play, handleAudioUnavailable],
+  );
 
   /**
    * ナビゲーション：次へ進む
@@ -203,11 +223,13 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     isNavigating.current = true;
     const { isLast } = nextStep();
     if (isLast) {
-      showToast("すべてのトレーニングが完了しました！", "success");
+      showToast('すべてのトレーニングが完了しました！', 'success');
     }
-    
+
     // ナビゲーションガードを長めに確保し、再レンダリングに伴うアンマウントの嵐をやり過ごす
-    setTimeout(() => { isNavigating.current = false; }, 1000);
+    setTimeout(() => {
+      isNavigating.current = false;
+    }, 1000);
   }, [nextStep, showToast]);
 
   /**
@@ -218,9 +240,11 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
     if (isNavigating.current) return;
 
     isNavigating.current = true;
-    prevStep(); 
-    
-    setTimeout(() => { isNavigating.current = false; }, 400);
+    prevStep();
+
+    setTimeout(() => {
+      isNavigating.current = false;
+    }, 400);
   }, [prevStep]);
 
   /**
@@ -228,7 +252,10 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    */
   const handleVoiceCheck = async () => {
     // 発話中のタップは、その時点の評価で確定する
-    if (isListening) { finishListening(); return; }
+    if (isListening) {
+      finishListening();
+      return;
+    }
     if (!currentWord || !currentPhrase) return;
 
     // iOS WebKit 自動再生ロックの明示的な解除
@@ -271,7 +298,11 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    */
   const handleSaveAndExit = async () => {
     if (!currentWord || !currentPhrase) return;
-    const ok = await showConfirm("ブックマークして終了しますか？", "ホームの「続きから」で、この位置から再開できます。", { variant: 'warning', isModal: false });
+    const ok = await showConfirm(
+      'ブックマークして終了しますか？',
+      'ホームの「続きから」で、この位置から再開できます。',
+      { variant: 'warning', isModal: false },
+    );
     if (!ok) return;
 
     const metadata: WordResumeMetadata = {
@@ -282,20 +313,20 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
       display: {
         progress_percent: Math.round(((wordIdx + 1) / words.length) * 100),
         position_text: `Word ${wordIdx + 1} / ${words.length}`,
-        last_unit_name: currentWord.word_en
-      }
+        last_unit_name: currentWord.word_en,
+      },
     };
 
     try {
       await saveResumeContent(sectionId, currentPhrase.phrase_id, metadata);
-      
+
       // 💡 ブックマークして終了時は、即座に進捗の溜まりを同期
       await syncProgressNow();
 
-      showToast("ブックマークしました", "success");
+      showToast('ブックマークしました', 'success');
       router.push('/dashboard');
     } catch {
-      showToast("保存に失敗しました", "error");
+      showToast('保存に失敗しました', 'error');
     }
   };
 
@@ -322,7 +353,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
     const t = setTimeout(() => {
       handleGlobalSpeak(currentPhrase);
-    }, 600); 
+    }, 600);
 
     return () => {
       clearTimeout(t);
@@ -352,7 +383,7 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
    */
   const handleToggleAutoPlay = async () => {
     if (!isAutoPlaying) {
-      const ok = await showConfirm("Start Auto Play?", "自動再生を開始しますか？", { variant: 'info', isModal: false });
+      const ok = await showConfirm('Start Auto Play?', '自動再生を開始しますか？', { variant: 'info', isModal: false });
       if (!ok) return;
       // ユーザーインタラクション時にAudioContextのロックを強制解除
       await unlockAudioContext();
@@ -389,34 +420,30 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
 
   // 1. ロード中画面
   if (loading) {
-    return (
-      <ContentLoading 
-        title="トレーニングを準備しています" 
-        subtitle="教材データを読み込んでいます..." 
-      />
-    );
+    return <ContentLoading title="トレーニングを準備しています" subtitle="教材データを読み込んでいます..." />;
   }
 
   // 2. エンプティステート：コンテンツが存在しない場合
-  if (words.length === 0) return (
-    <ImmersiveNotice
-      tone="warning"
-      icon={<AlertCircle size={28} />}
-      title="この教材は利用できません"
-      description="現在ご利用いただけないか、アクセスする権限がありません。"
-      actions={
-        <>
-          <button type="button" onClick={() => router.push('/dashboard')} className={noticeActionClass()}>
-            ホームに戻る
-          </button>
-          <button type="button" onClick={handleBackToPrevious} className={noticeActionClass('secondary')}>
-            <ArrowLeft size={14} strokeWidth={2.5} />
-            前の画面に戻る
-          </button>
-        </>
-      }
-    />
-  );
+  if (words.length === 0)
+    return (
+      <ImmersiveNotice
+        tone="warning"
+        icon={<AlertCircle size={28} />}
+        title="この教材は利用できません"
+        description="現在ご利用いただけないか、アクセスする権限がありません。"
+        actions={
+          <>
+            <button type="button" onClick={() => router.push('/dashboard')} className={noticeActionClass()}>
+              ホームに戻る
+            </button>
+            <button type="button" onClick={handleBackToPrevious} className={noticeActionClass('secondary')}>
+              <ArrowLeft size={14} strokeWidth={2.5} />
+              前の画面に戻る
+            </button>
+          </>
+        }
+      />
+    );
 
   // 安全装置（words[0]はあるが何らかの理由で現在のインデックスが異常な場合）
   if (!currentWord || !currentPhrase) return null;
@@ -425,17 +452,16 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
   return (
     <>
       <ImmersivePanel as="main">
-        
         <div className="flex-1 flex flex-col overflow-hidden p-4 pb-0">
           <WordHeader onBack={handleBackToPrevious} />
-          
+
           <div className="flex-1 flex flex-col justify-center overflow-hidden">
             <WordCard onToggleFavorite={handleToggleFavorite} />
           </div>
         </div>
 
         <div className="px-6 pb-8 shrink-0">
-          <WordControls 
+          <WordControls
             isListening={isListening}
             isPlaying={isAudioPlaying !== null}
             timeLeft={timeLeft}
@@ -453,14 +479,27 @@ export default function WordTrainingPage({ params }: { params: Promise<{ id: str
         <WordFeedback feedback={feedback} analysis={analysis} onClose={() => setFeedback(null)} />
         <WordIndex isOpen={showIndex} onSelect={(idx) => jumpTo(idx, 0)} />
 
-        <AudioResumeBanner status={resumeStatus} onResume={() => { unlockAudioContext(); }} />
+        <AudioResumeBanner
+          status={resumeStatus}
+          onResume={() => {
+            unlockAudioContext();
+          }}
+        />
       </ImmersivePanel>
 
       <style jsx global>{`
-        .perspective-1000 { perspective: 1000px; }
-        .preserve-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; }
-        .rotate-y-180 { transform: rotateY(180deg); }
+        .perspective-1000 {
+          perspective: 1000px;
+        }
+        .preserve-3d {
+          transform-style: preserve-3d;
+        }
+        .backface-hidden {
+          backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+          transform: rotateY(180deg);
+        }
       `}</style>
     </>
   );

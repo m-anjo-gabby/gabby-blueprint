@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { HelpCircle, Smartphone, Monitor, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface MicTroubleshootingDialogProps {
@@ -18,29 +18,31 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
 
   const steps = {
     ios: [
-      { text: "ブラウザのURL左側にある「ああ」または「設定アイコン」をタップします。" },
-      { text: "「ウェブサイトの設定」を選択します。" },
-      { text: "マイクの権限を「確認」または「許可」に変更します。" },
-      { text: "改善しない場合: 端末の「設定」アプリ ＞ 「Safari」 ＞ 「マイク」から「許可」にチェックが入っているか確認してください。" }
+      { text: 'ブラウザのURL左側にある「ああ」または「設定アイコン」をタップします。' },
+      { text: '「ウェブサイトの設定」を選択します。' },
+      { text: 'マイクの権限を「確認」または「許可」に変更します。' },
+      {
+        text: '改善しない場合: 端末の「設定」アプリ ＞ 「Safari」 ＞ 「マイク」から「許可」にチェックが入っているか確認してください。',
+      },
     ],
     android: [
-      { text: "ブラウザのアドレスバー左側にある「設定・鍵アイコン」をタップします。" },
-      { text: "「権限」または「サイトの設定」をタップします。" },
-      { text: "「マイク」のスイッチを「ON（許可）」に切り替えます。" },
-      { text: "改善しない場合: 端末の「設定」アプリ ＞ 「アプリ」 ＞ 「Chrome」 ＞ 「権限」 ＞ 「マイク」でアプリ自体の権限が許可されているか確認してください。" }
+      { text: 'ブラウザのアドレスバー左側にある「設定・鍵アイコン」をタップします。' },
+      { text: '「権限」または「サイトの設定」をタップします。' },
+      { text: '「マイク」のスイッチを「ON（許可）」に切り替えます。' },
+      {
+        text: '改善しない場合: 端末の「設定」アプリ ＞ 「アプリ」 ＞ 「Chrome」 ＞ 「権限」 ＞ 「マイク」でアプリ自体の権限が許可されているか確認してください。',
+      },
     ],
     pc: [
-      { text: "ブラウザのアドレスバーの左端にある「鍵マーク（または設定アイコン）」をクリックします。" },
-      { text: "マイクの項目を探し、プルダウンから「許可」を選択します。" },
-      { text: "ページ上部に「再読み込み」の案内が表示されたら、ボタンを押してページを更新します。" }
-    ]
+      { text: 'ブラウザのアドレスバーの左端にある「鍵マーク（または設定アイコン）」をクリックします。' },
+      { text: 'マイクの項目を探し、プルダウンから「許可」を選択します。' },
+      { text: 'ページ上部に「再読み込み」の案内が表示されたら、ボタンを押してページを更新します。' },
+    ],
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-md rounded-panel p-6 bg-white border border-line/60 shadow-2xl text-ink"
-      >
+      <DialogContent className="max-w-md rounded-panel p-6 bg-white border border-line/60 shadow-2xl text-ink">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-ink flex items-center gap-2 select-none">
             <HelpCircle className="w-5 h-5 text-brand-500" />
@@ -66,16 +68,16 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
                   type="button"
                   onClick={() => setActiveTab(tab)}
                   className={cn(
-                    "relative py-2 text-xs font-bold rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 z-10 outline-none select-none",
-                    isActive ? "text-brand" : "text-ink-subtle hover:text-ink-soft"
+                    'relative py-2 text-xs font-bold rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 z-10 outline-none select-none',
+                    isActive ? 'text-brand' : 'text-ink-subtle hover:text-ink-soft',
                   )}
                 >
                   {/* layoutId を復活させ、transitionをイージングに変更 */}
                   {isActive && (
-                    <motion.div 
-                      layoutId="activeDeviceTab" 
-                      className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-line/40 -z-10" 
-                      transition={{ type: "tween", ease: "easeInOut", duration: 0.2 }} 
+                    <motion.div
+                      layoutId="activeDeviceTab"
+                      className="absolute inset-0 bg-white rounded-lg shadow-2xs border border-line/40 -z-10"
+                      transition={{ type: 'tween', ease: 'easeInOut', duration: 0.2 }}
                     />
                   )}
                   {tab === 'pc' ? <Monitor size={12} /> : <Smartphone size={12} />}
@@ -93,7 +95,7 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.15, ease: "linear" }}
+                transition={{ duration: 0.15, ease: 'linear' }}
                 className="space-y-3.5 absolute inset-0 p-4 w-full h-full"
               >
                 {steps[activeTab].map((step, index) => (
@@ -101,9 +103,7 @@ export const MicTroubleshootingDialog: React.FC<MicTroubleshootingDialogProps> =
                     <div className="h-5 w-5 rounded-full bg-brand-50 border border-brand-100 text-brand text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5 font-mono">
                       {index + 1}
                     </div>
-                    <p className="text-xs font-bold text-ink-soft leading-relaxed pt-0.5">
-                      {step.text}
-                    </p>
+                    <p className="text-xs font-bold text-ink-soft leading-relaxed pt-0.5">{step.text}</p>
                   </div>
                 ))}
               </motion.div>

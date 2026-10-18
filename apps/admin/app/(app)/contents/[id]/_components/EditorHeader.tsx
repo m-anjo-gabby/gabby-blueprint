@@ -42,9 +42,7 @@ export function EditorHeader({ content }: ContentHeaderProps) {
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <BookOpen size={16} className="text-brand-500" />
-            <h1 className="text-sm font-black text-slate-900 truncate max-w-75">
-              {content.content_name}
-            </h1>
+            <h1 className="text-sm font-black text-slate-900 truncate max-w-75">{content.content_name}</h1>
             <Badge variant="secondary" className="bg-slate-100 text-[10px] font-bold py-0 h-5 text-slate-500">
               ID: {content.content_id.slice(0, 8)}
             </Badge>
@@ -67,12 +65,10 @@ export function EditorHeader({ content }: ContentHeaderProps) {
             {/* 一括音声生成ボタン
                 phrases は渡さず、Dialog内部で自律的に取得するように変更
             */}
-            <TTSBulkDialog 
-              contentId={content.content_id} 
-            >
-              <Button 
-                variant="outline" 
-                size="sm" 
+            <TTSBulkDialog contentId={content.content_id}>
+              <Button
+                variant="outline"
+                size="sm"
                 className="h-8 px-4 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 font-bold gap-2 transition-all shadow-sm"
               >
                 <Zap size={14} fill="currentColor" />

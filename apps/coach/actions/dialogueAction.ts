@@ -47,7 +47,7 @@ export async function getAvailableDialogueContents(studentId: string): Promise<D
  */
 export async function assignDialogueContent(
   studentId: string,
-  contentId: string
+  contentId: string,
 ): Promise<{ success: true; assignmentId: string } | { success: false; message: string }> {
   const result = await assignDialogueContentCore(studentId, contentId);
   if (!result.success) {
@@ -62,7 +62,7 @@ export async function assignDialogueContent(
  * Unassigns a previously assigned Dialogue Practice set
  */
 export async function unassignDialogueContent(
-  assignmentId: string
+  assignmentId: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const result = await unassignDialogueContentCore(assignmentId);
   if (!result.success) {
@@ -93,7 +93,7 @@ export async function getStudentDialogueAssignments(studentId: string): Promise<
  * Updates a Dialogue Practice session's completion state and coach notes
  */
 export async function updateDialogueSessionProgress(
-  input: UpdateDialogueSessionProgressInput
+  input: UpdateDialogueSessionProgressInput,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const result = await updateDialogueSessionProgressCore(input);
   if (!result.success) {
@@ -109,7 +109,7 @@ export async function updateDialogueSessionProgress(
  * Best-effort logging only — callers should not block the material link on this.
  */
 export async function logSessionDialogueOpen(
-  input: LogSessionDialogueOpenInput
+  input: LogSessionDialogueOpenInput,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const result = await logSessionDialogueOpenCore(input);
   if (!result.success) {

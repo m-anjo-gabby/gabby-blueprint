@@ -26,7 +26,14 @@ interface UserStats {
   latestDate: string | null;
 }
 
-const emptyStats = (): UserStats => ({ days: new Set(), phrases: 0, sprintSessions: 0, sprintAnswers: 0, assessments: 0, latestDate: null });
+const emptyStats = (): UserStats => ({
+  days: new Set(),
+  phrases: 0,
+  sprintSessions: 0,
+  sprintAnswers: 0,
+  assessments: 0,
+  latestDate: null,
+});
 
 type LicenseState = MonitorUser['license_state'];
 
@@ -86,7 +93,7 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
       record(h.user_id, h.training_date, (s) => {
         s.phrases += h.phrase_count;
         s.assessments += h.assessment_count;
-      })
+      }),
     );
     // スプリント（実施した生徒のタイムゾーンでの実施日。RPCで算出済み）
     sprintHistory.sessions.forEach((h) =>
@@ -94,13 +101,13 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
         s.sprintSessions += 1;
         s.sprintAnswers += h.total_answered;
         s.assessments += h.total_assessments || 0;
-      })
+      }),
     );
     // スプリントドリル（training_date は DATE）
     sprintHistory.drills.forEach((h) =>
       record(h.user_id, h.training_date, (s) => {
         s.assessments += h.assessment_count;
-      })
+      }),
     );
 
     return statsMap;
@@ -130,8 +137,19 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
     });
     downloadCsv(
       `blueprint_user_summary_${targetMonth}${query.includeMonitor ? '_with_monitor' : ''}.csv`,
-      ['受講生', 'ステータス', 'ライセンス開始日', 'ライセンス終了日', 'トレーニング日数', 'フレーズ数', 'スプリント本数', 'スプリント回答数', '発話数', '最終実施日'],
-      rows
+      [
+        '受講生',
+        'ステータス',
+        'ライセンス開始日',
+        'ライセンス終了日',
+        'トレーニング日数',
+        'フレーズ数',
+        'スプリント本数',
+        'スプリント回答数',
+        '発話数',
+        '最終実施日',
+      ],
+      rows,
     );
   };
 
@@ -165,7 +183,12 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
           />
         ) : (
           <div className="overflow-hidden rounded-card border border-line bg-surface">
-            <div className={cn('hidden items-center gap-4 border-b border-line bg-canvas px-5 py-2.5 text-xs font-semibold text-ink-muted lg:grid', TABLE_GRID)}>
+            <div
+              className={cn(
+                'hidden items-center gap-4 border-b border-line bg-canvas px-5 py-2.5 text-xs font-semibold text-ink-muted lg:grid',
+                TABLE_GRID,
+              )}
+            >
               <span>受講生</span>
               <span className="text-center">ステータス</span>
               <span className="text-center">ライセンス期間</span>
@@ -183,7 +206,10 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
                 const state = LICENSE_STATE[user.license_state] ?? UNKNOWN_STATE;
 
                 return (
-                  <li key={user.id} className={cn('grid gap-3 px-4 py-4 sm:px-5 lg:items-center lg:gap-4 lg:py-3', TABLE_GRID)}>
+                  <li
+                    key={user.id}
+                    className={cn('grid gap-3 px-4 py-4 sm:px-5 lg:items-center lg:gap-4 lg:py-3', TABLE_GRID)}
+                  >
                     <div className="min-w-0">
                       <MonitorUserName name={user.user_name} isMonitor={isMonitorAccount(user)} className="text-sm" />
                       <p className="truncate text-xs text-ink-muted">{user.email}</p>
@@ -191,12 +217,18 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
 
                     <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4 lg:contents">
                       <Cell label="ステータス">
-                        <span className={cn('inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold', state.className)}>{state.label}</span>
+                        <span
+                          className={cn(
+                            'inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+                            state.className,
+                          )}
+                        >
+                          {state.label}
+                        </span>
                       </Cell>
                       <Cell label="ライセンス期間">
                         <span className="text-xs text-ink-soft tabular-nums">
-                          {formatDate(user.license_start_date)} 〜{' '}
-                          <br className="max-lg:hidden" />
+                          {formatDate(user.license_start_date)} 〜 <br className="max-lg:hidden" />
                           {formatDate(user.license_end_date)}
                         </span>
                       </Cell>
@@ -244,9 +276,19 @@ function HeaderMetric({ icon, label }: { icon: React.ReactNode; label: string })
 }
 
 /** 一覧の1項目。lg 未満は項目名を上に添え、lg 以上は見出し行の列に揃える */
-function Cell({ label, align = 'center', children }: { label: string; align?: 'center' | 'end'; children: React.ReactNode }) {
+function Cell({
+  label,
+  align = 'center',
+  children,
+}: {
+  label: string;
+  align?: 'center' | 'end';
+  children: React.ReactNode;
+}) {
   return (
-    <div className={cn('flex min-w-0 flex-col items-start gap-1', align === 'end' ? 'lg:items-end' : 'lg:items-center')}>
+    <div
+      className={cn('flex min-w-0 flex-col items-start gap-1', align === 'end' ? 'lg:items-end' : 'lg:items-center')}
+    >
       <span className="text-xs text-ink-muted lg:hidden">{label}</span>
       {children}
     </div>

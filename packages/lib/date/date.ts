@@ -32,13 +32,10 @@ const zoneForDate = (date: Date | string | number, timeZone: string): string =>
  * @param dateString UTCの日時文字列（日付だけの値はそのままの日付で表示する）
  * @param timeZone 表示したいタイムゾーン（デフォルトは Asia/Tokyo）
  */
-export const formatDateByZone = (
-  dateString?: string | null, 
-  timeZone: string = 'Asia/Tokyo'
-): string => {
-  if (!dateString) return "";
+export const formatDateByZone = (dateString?: string | null, timeZone: string = 'Asia/Tokyo'): string => {
+  if (!dateString) return '';
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "";
+  if (isNaN(date.getTime())) return '';
 
   try {
     return new Intl.DateTimeFormat('ja-JP', {
@@ -46,7 +43,9 @@ export const formatDateByZone = (
       month: '2-digit',
       day: '2-digit',
       timeZone: zoneForDate(dateString, timeZone),
-    }).format(date).replace(/\//g, '-');
+    })
+      .format(date)
+      .replace(/\//g, '-');
   } catch {
     // 不正なタイムゾーンが渡された場合のフォールバック
     return formatDateByZone(dateString, 'Asia/Tokyo');
@@ -59,11 +58,11 @@ export const formatDateByZone = (
 export const formatDateTimeByZone = (
   dateString?: string | null,
   timeZone: string = 'Asia/Tokyo',
-  withSeconds: boolean = true
+  withSeconds: boolean = true,
 ): string => {
-  if (!dateString) return "---";
+  if (!dateString) return '---';
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "---";
+  if (isNaN(date.getTime())) return '---';
 
   try {
     return new Intl.DateTimeFormat('ja-JP', {
@@ -91,7 +90,12 @@ export const formatToJstDateTime = (d?: string | null) => formatDateTimeByZone(d
 export const toIsoDateInZone = (date: Date | string | number, timeZone: string): string => {
   const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
   if (isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('en-CA', { timeZone: zoneForDate(date, timeZone), year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: zoneForDate(date, timeZone),
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
 };
 
 export type TimeOfDayCategory = 'morning' | 'day' | 'evening' | 'night';
@@ -100,7 +104,7 @@ export type TimeOfDayCategory = 'morning' | 'day' | 'evening' | 'night';
 export const getHourInZone = (dateString: string, timeZone: string): number => {
   try {
     return Number(
-      new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', hourCycle: 'h23' }).format(new Date(dateString))
+      new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', hourCycle: 'h23' }).format(new Date(dateString)),
     );
   } catch {
     return new Date(dateString).getHours();
@@ -171,7 +175,9 @@ const timeStringToMinutes = (time: string): number => {
 };
 
 const minutesToTimeString = (totalMinutes: number): string => {
-  const h = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+  const h = Math.floor(totalMinutes / 60)
+    .toString()
+    .padStart(2, '0');
   const m = (totalMinutes % 60).toString().padStart(2, '0');
   return `${h}:${m}`;
 };
@@ -196,9 +202,7 @@ export const getLessonEndTime = (startTime: string): string => {
 };
 
 /** 2つの時間帯（"HH:MM"、終了時刻は含まない半開区間）が重なっているかを判定する */
-export const doTimeRangesOverlap = (
-  aStart: string, aEnd: string, bStart: string, bEnd: string
-): boolean => {
+export const doTimeRangesOverlap = (aStart: string, aEnd: string, bStart: string, bEnd: string): boolean => {
   const aS = timeStringToMinutes(aStart.slice(0, 5));
   const aE = timeStringToMinutes(aEnd.slice(0, 5));
   const bS = timeStringToMinutes(bStart.slice(0, 5));
@@ -211,8 +215,12 @@ function getTimeZoneOffsetMinutes(utcInstant: Date, timeZone: string): number {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
     hourCycle: 'h23',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
   }).formatToParts(utcInstant);
   const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
   const asUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
@@ -251,7 +259,7 @@ function nextOccurrenceDateInZone(dayOfWeek: number, timeZone: string): string {
 export const convertWeeklyTimeZone = (
   input: { day_of_week: number; start_time: string; end_time: string },
   fromTimeZone: string,
-  toTimeZone: string
+  toTimeZone: string,
 ): { day_of_week: number; start_time: string; end_time: string } => {
   const startTime = input.start_time.slice(0, 5);
   const endTime = input.end_time.slice(0, 5);
@@ -270,7 +278,10 @@ export const convertWeeklyTimeZone = (
   const targetDayOfWeek = new Date(`${targetDateStr}T00:00:00Z`).getUTCDay();
 
   const timeFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: toTimeZone, hourCycle: 'h23', hour: '2-digit', minute: '2-digit',
+    timeZone: toTimeZone,
+    hourCycle: 'h23',
+    hour: '2-digit',
+    minute: '2-digit',
   });
   const formatTime = (d: Date) => {
     const p = timeFormatter.formatToParts(d);
@@ -309,7 +320,7 @@ export const getFirstLiveSessionOccurrence = (
   sourceTimeZone: string,
   targetTimeZone: string,
   now: Date = new Date(),
-  notBefore?: Date
+  notBefore?: Date,
 ): FirstLiveSessionOccurrence => {
   const time = startTime.slice(0, 5);
   const threshold = new Date(Math.max(now.getTime() + 24 * 60 * 60 * 1000, notBefore?.getTime() ?? 0));
@@ -334,7 +345,10 @@ export const getFirstLiveSessionOccurrence = (
   const targetDayOfWeek = new Date(`${targetDateStr}T00:00:00Z`).getUTCDay();
 
   const timeFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: targetTimeZone, hourCycle: 'h23', hour: '2-digit', minute: '2-digit',
+    timeZone: targetTimeZone,
+    hourCycle: 'h23',
+    hour: '2-digit',
+    minute: '2-digit',
   });
   const parts = timeFormatter.formatToParts(instant);
   const h = parts.find((p) => p.type === 'hour')?.value ?? '00';
@@ -377,15 +391,20 @@ const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY;
 export const shiftWeeklyMinute = (
   dayOfWeek: number,
   minuteOfDay: number,
-  deltaMinutes: number
+  deltaMinutes: number,
 ): { day_of_week: number; minute_of_day: number } => {
-  const total = (((dayOfWeek * MINUTES_PER_DAY + minuteOfDay + deltaMinutes) % MINUTES_PER_WEEK) + MINUTES_PER_WEEK) % MINUTES_PER_WEEK;
+  const total =
+    (((dayOfWeek * MINUTES_PER_DAY + minuteOfDay + deltaMinutes) % MINUTES_PER_WEEK) + MINUTES_PER_WEEK) %
+    MINUTES_PER_WEEK;
   return { day_of_week: Math.floor(total / MINUTES_PER_DAY), minute_of_day: total % MINUTES_PER_DAY };
 };
 
 const formatHourMinuteInZone = (instant: Date, timeZone: string): string => {
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone, hourCycle: 'h23', hour: '2-digit', minute: '2-digit',
+    timeZone,
+    hourCycle: 'h23',
+    hour: '2-digit',
+    minute: '2-digit',
   }).formatToParts(instant);
   const h = parts.find((p) => p.type === 'hour')?.value ?? '00';
   const m = parts.find((p) => p.type === 'minute')?.value ?? '00';
@@ -401,7 +420,7 @@ export const listWeeklyOccurrences = (
   startTime: string,
   timeZone: string,
   from: Date,
-  to: Date
+  to: Date,
 ): Date[] => {
   const time = startTime.slice(0, 5);
   const fromDateStr = toIsoDateInZone(from, timeZone);
@@ -438,7 +457,7 @@ export const getWeeklyTimeChanges = (
   sourceTimeZone: string,
   targetTimeZone: string,
   from: Date,
-  to: Date
+  to: Date,
 ): WeeklyTimeChange[] => {
   const changes: WeeklyTimeChange[] = [];
   for (const instant of listWeeklyOccurrences(dayOfWeek, startTime, sourceTimeZone, from, to)) {

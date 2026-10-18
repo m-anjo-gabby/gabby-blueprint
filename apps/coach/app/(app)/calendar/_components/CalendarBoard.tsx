@@ -1,15 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  isSameMonth,
-  format,
-} from 'date-fns';
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
@@ -40,7 +32,8 @@ function getChipInfo(item: CalendarItem): { label: string; className: string } {
  * ステータス色だけに頼らず時刻で過去判定する。
  */
 function isItemPast(item: CalendarItem): boolean {
-  const cutoff = item.kind === 'session' ? item.data.end_datetime : (item.data.end_datetime ?? item.data.start_datetime);
+  const cutoff =
+    item.kind === 'session' ? item.data.end_datetime : (item.data.end_datetime ?? item.data.start_datetime);
   return new Date(cutoff) < new Date();
 }
 
@@ -105,10 +98,12 @@ export function CalendarBoard({ month, initialSessions, initialEvents }: Calenda
   };
 
   const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) => {
-    setEvents((prev) => prev.map((e) => (e.calendar_event_id === calendarEventId ? withParticipation(e, isJoined) : e)));
+    setEvents((prev) =>
+      prev.map((e) => (e.calendar_event_id === calendarEventId ? withParticipation(e, isJoined) : e)),
+    );
   };
 
-  const selectedItems = selectedDate ? itemsByDate.get(selectedDate) ?? [] : [];
+  const selectedItems = selectedDate ? (itemsByDate.get(selectedDate) ?? []) : [];
 
   return (
     <div className="space-y-6">
@@ -125,7 +120,9 @@ export function CalendarBoard({ month, initialSessions, initialEvents }: Calenda
           </button>
           <p className="flex items-center gap-1.5 text-sm font-black text-slate-800">
             {format(currentMonth, 'MMMM yyyy')}
-            {monthNavigator.isPending && <Loader2 size={14} className="animate-spin text-slate-400" aria-label="Loading" />}
+            {monthNavigator.isPending && (
+              <Loader2 size={14} className="animate-spin text-slate-400" aria-label="Loading" />
+            )}
           </p>
           <button
             type="button"
@@ -160,7 +157,7 @@ export function CalendarBoard({ month, initialSessions, initialEvents }: Calenda
                   'min-h-16 sm:min-h-19 rounded-lg flex flex-col items-stretch p-1 gap-0.5 text-left transition-colors relative',
                   !isSameMonth(day, currentMonth) && 'opacity-40',
                   isSelected ? 'bg-brand-50 ring-2 ring-brand-500' : 'hover:bg-slate-100',
-                  isHighlighted && 'bg-amber-50 ring-2 ring-amber-400'
+                  isHighlighted && 'bg-amber-50 ring-2 ring-amber-400',
                 )}
               >
                 <div className="flex justify-center px-0.5">
@@ -171,7 +168,7 @@ export function CalendarBoard({ month, initialSessions, initialEvents }: Calenda
                         ? 'bg-brand text-white'
                         : isSameMonth(day, currentMonth) && key >= todayKey
                           ? 'text-slate-700'
-                          : 'text-slate-400'
+                          : 'text-slate-400',
                     )}
                   >
                     {day.getDate()}
@@ -186,7 +183,7 @@ export function CalendarBoard({ month, initialSessions, initialEvents }: Calenda
                         className={cn(
                           'block text-[8px] font-bold px-1 py-0.5 rounded border truncate leading-tight',
                           chip.className,
-                          isItemPast(item) && 'grayscale opacity-60'
+                          isItemPast(item) && 'grayscale opacity-60',
                         )}
                       >
                         {chip.label}
@@ -194,7 +191,9 @@ export function CalendarBoard({ month, initialSessions, initialEvents }: Calenda
                     );
                   })}
                   {dayItems.length > MAX_VISIBLE_CHIPS && (
-                    <span className="block text-[8px] font-bold text-slate-400 px-1">+{dayItems.length - MAX_VISIBLE_CHIPS} more</span>
+                    <span className="block text-[8px] font-bold text-slate-400 px-1">
+                      +{dayItems.length - MAX_VISIBLE_CHIPS} more
+                    </span>
                   )}
                 </div>
               </button>

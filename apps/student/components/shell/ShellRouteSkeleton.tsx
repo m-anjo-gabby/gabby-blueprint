@@ -53,9 +53,12 @@ function resolveShellSkeleton(pathname: string): { width: ContentWidth; skeleton
     case 'chat':
       return 'chat';
     case 'training':
-      if (second === 'performance') return { width: SHELL_CONTENT_WIDTH.trainingPerformance, skeleton: <TrainingPerformanceSkeleton /> };
-      if (second === 'word' && third === 'history') return { width: SHELL_CONTENT_WIDTH.wordHistory, skeleton: <WordHistorySkeleton /> };
-      if (second === 'sprint' && third === 'history') return { width: SHELL_CONTENT_WIDTH.sprintHistory, skeleton: <SprintHistoryRouteSkeleton /> };
+      if (second === 'performance')
+        return { width: SHELL_CONTENT_WIDTH.trainingPerformance, skeleton: <TrainingPerformanceSkeleton /> };
+      if (second === 'word' && third === 'history')
+        return { width: SHELL_CONTENT_WIDTH.wordHistory, skeleton: <WordHistorySkeleton /> };
+      if (second === 'sprint' && third === 'history')
+        return { width: SHELL_CONTENT_WIDTH.sprintHistory, skeleton: <SprintHistoryRouteSkeleton /> };
       if (second === 'dialogue') return { width: SHELL_CONTENT_WIDTH.dialogue, skeleton: <DialogueSkeleton /> };
       return null;
     default:

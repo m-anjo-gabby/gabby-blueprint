@@ -17,7 +17,10 @@ export function createColumns(t: SeriesT): ListColumnDef<CalendarEventSeriesItem
       accessorKey: 'title',
       header: t('titleHeader'),
       cell: ({ row }) => (
-        <Link href={`/calendar-events/series/${row.original.series_id}`} className="font-bold text-slate-700 hover:text-brand">
+        <Link
+          href={`/calendar-events/series/${row.original.series_id}`}
+          className="font-bold text-slate-700 hover:text-brand"
+        >
           {row.original.title}
         </Link>
       ),
@@ -25,14 +28,18 @@ export function createColumns(t: SeriesT): ListColumnDef<CalendarEventSeriesItem
     {
       accessorKey: 'session_count',
       header: t('sessionCountHeader'),
-      cell: ({ row }) => <span className="tabular-nums text-slate-600">{t('sessionCount', { count: row.original.session_count })}</span>,
+      cell: ({ row }) => (
+        <span className="tabular-nums text-slate-600">{t('sessionCount', { count: row.original.session_count })}</span>
+      ),
     },
     {
       accessorKey: 'next_start_datetime',
       header: t('nextSessionHeader'),
       cell: ({ row }) => (
         <span className="text-slate-600">
-          {row.original.next_start_datetime ? formatDateTimeByZone(row.original.next_start_datetime, 'Asia/Tokyo', false) : t('noUpcoming')}
+          {row.original.next_start_datetime
+            ? formatDateTimeByZone(row.original.next_start_datetime, 'Asia/Tokyo', false)
+            : t('noUpcoming')}
         </span>
       ),
     },

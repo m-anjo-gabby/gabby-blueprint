@@ -23,10 +23,7 @@ const {
   messages: (code) => AUTH_ERROR_MESSAGES[code],
   // Password reset emails are sent in English
   resetMailLanguage: 'en',
-  guardUser: (user) =>
-    user.app_metadata?.user_type === USER_TYPES.COACH
-      ? { ok: true }
-      : { ok: false },
+  guardUser: (user) => (user.app_metadata?.user_type === USER_TYPES.COACH ? { ok: true } : { ok: false }),
 });
 
 export {

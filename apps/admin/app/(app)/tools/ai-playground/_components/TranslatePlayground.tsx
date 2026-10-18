@@ -57,9 +57,7 @@ export default function TranslatePlayground() {
       <div className="p-8 space-y-6">
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-              English Text
-            </Label>
+            <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">English Text</Label>
           </div>
           <Textarea
             value={inputText}

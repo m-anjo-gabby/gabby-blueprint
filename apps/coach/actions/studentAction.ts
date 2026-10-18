@@ -60,7 +60,7 @@ export async function getAssignedStudents(): Promise<AssignedStudentSummary[]> {
  * Fetches the Student Overview header data (basic info + sprint progress) for one student
  */
 export async function getStudentOverview(
-  studentId: string
+  studentId: string,
 ): Promise<{ success: true; profile: StudentOverviewProfile } | { success: false; message: string }> {
   const result = await getStudentOverviewCore(studentId);
   if (!result.success) {
@@ -145,7 +145,12 @@ export async function getStudentNotes(studentId: string): Promise<CoachStudentNo
   return result.notes;
 }
 
-const DEFAULT_SELF_TRAINING_WEEK_SUMMARY: SelfTrainingWeekSummary = { days: 7, active_days: 0, total_questions: 0, total_assessments: 0 };
+const DEFAULT_SELF_TRAINING_WEEK_SUMMARY: SelfTrainingWeekSummary = {
+  days: 7,
+  active_days: 0,
+  total_questions: 0,
+  total_assessments: 0,
+};
 
 /**
  * Fetches a summary (active days / total questions / total speaking assessments) of this
@@ -167,7 +172,7 @@ export async function getSelfTrainingWeekSummary(studentId: string, days = 7): P
  */
 export async function addCoachStudentNote(
   studentId: string,
-  noteText: string
+  noteText: string,
 ): Promise<{ success: true; note: CoachStudentNote } | { success: false; message: string }> {
   const result = await addCoachStudentNoteCore(studentId, noteText);
   if (!result.success) {
@@ -199,7 +204,7 @@ export async function getContractTrainingReports(studentId: string): Promise<Con
 export async function saveContractTrainingReportDraft(
   ticketId: string,
   studentId: string,
-  commentText: string
+  commentText: string,
 ): Promise<{ success: true; report: ContractTrainingReport } | { success: false; message: string }> {
   const result = await saveContractTrainingReportDraftCore(ticketId, studentId, commentText);
   if (!result.success) {
@@ -214,7 +219,7 @@ export async function saveContractTrainingReportDraft(
  * Finalizes the logged-in coach's own training report. Once finalized it can no longer be edited.
  */
 export async function finalizeContractTrainingReport(
-  reportId: string
+  reportId: string,
 ): Promise<{ success: true; report: ContractTrainingReport } | { success: false; message: string }> {
   const result = await finalizeContractTrainingReportCore(reportId);
   if (!result.success) {
@@ -226,8 +231,7 @@ export async function finalizeContractTrainingReport(
 }
 
 type UpdateSprintProgressActionResult =
-  | { success: true; progress: StudentSprintProgress }
-  | { success: false; message: string };
+  { success: true; progress: StudentSprintProgress } | { success: false; message: string };
 
 function resolveSprintProgressErrorMessage(errorCode: CoachStudentErrorCode, invalidInputMessage: string): string {
   return errorCode === 'invalid_input' ? invalidInputMessage : COACH_STUDENT_ERROR_MESSAGES_EN[errorCode];
@@ -239,7 +243,7 @@ function resolveSprintProgressErrorMessage(errorCode: CoachStudentErrorCode, inv
 export async function updateStudentSprintLevel(
   studentId: string,
   questionType: SprintQuestionType,
-  newLevel: number
+  newLevel: number,
 ): Promise<UpdateSprintProgressActionResult> {
   const result = await updateStudentSprintLevelCore(studentId, questionType, newLevel);
   if (!result.success) {
@@ -247,7 +251,10 @@ export async function updateStudentSprintLevel(
     logger.error('coach:update_student_sprint_level_failed', result.errorCode, ctx);
     return {
       success: false,
-      message: resolveSprintProgressErrorMessage(result.errorCode, 'Please select a level higher than the current one.'),
+      message: resolveSprintProgressErrorMessage(
+        result.errorCode,
+        'Please select a level higher than the current one.',
+      ),
     };
   }
   return { success: true, progress: result.progress };
@@ -259,7 +266,7 @@ export async function updateStudentSprintLevel(
  */
 export async function forceStageUpStudent(
   studentId: string,
-  targetStage: number
+  targetStage: number,
 ): Promise<UpdateSprintProgressActionResult> {
   const result = await forceStageUpStudentCore(studentId, targetStage);
   if (!result.success) {
@@ -267,7 +274,10 @@ export async function forceStageUpStudent(
     logger.error('coach:force_stage_up_student_failed', result.errorCode, ctx);
     return {
       success: false,
-      message: resolveSprintProgressErrorMessage(result.errorCode, 'Please select a stage higher than the current one.'),
+      message: resolveSprintProgressErrorMessage(
+        result.errorCode,
+        'Please select a stage higher than the current one.',
+      ),
     };
   }
   return { success: true, progress: result.progress };

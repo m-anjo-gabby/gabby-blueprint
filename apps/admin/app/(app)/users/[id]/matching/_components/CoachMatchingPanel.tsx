@@ -34,7 +34,9 @@ export function CoachMatchingPanel({ coachId, status }: Props) {
   const handleSave = () => {
     startSave(async () => {
       // 通信の失敗等は戻り値ではなく例外になる（そのままでは画面全体のエラー表示になる）ため、失敗として扱う
-      const result = await setCoachMatchingSuspension(coachId, suspended, suspended ? note.trim() || null : null).catch(() => null);
+      const result = await setCoachMatchingSuspension(coachId, suspended, suspended ? note.trim() || null : null).catch(
+        () => null,
+      );
       if (!result) {
         showToast(tCommon('networkError'), 'error');
         return;
@@ -100,7 +102,9 @@ export function CoachMatchingPanel({ coachId, status }: Props) {
           <Switch id="matching-suspend" checked={suspended} onCheckedChange={setSuspended} />
         </div>
         {status.isSuspended && status.suspendedAt && (
-          <p className="text-xs text-slate-500">{t('suspendedSince', { date: formatDateTimeByZone(status.suspendedAt) })}</p>
+          <p className="text-xs text-slate-500">
+            {t('suspendedSince', { date: formatDateTimeByZone(status.suspendedAt) })}
+          </p>
         )}
         {suspended && (
           <div className="space-y-1.5">

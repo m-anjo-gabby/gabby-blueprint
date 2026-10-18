@@ -37,7 +37,13 @@ function TitledCardSkeleton({ title, icon, rows = 2 }: { title: string; icon?: R
 
 /** セッションハブの Dialogue Practice カードの骨組み（page.tsx の Suspense の fallback と共有） */
 export function HubDialoguePracticeSkeleton() {
-  return <TitledCardSkeleton title="Dialogue Practice" icon={<MessagesSquare size={14} className="text-slate-400" />} rows={2} />;
+  return (
+    <TitledCardSkeleton
+      title="Dialogue Practice"
+      icon={<MessagesSquare size={14} className="text-slate-400" />}
+      rows={2}
+    />
+  );
 }
 
 /** セッションハブの Prep 区画の骨組み（page.tsx の Suspense の fallback と共有） */
@@ -81,8 +87,8 @@ export function SessionHubSkeleton({ studentId }: { studentId: string }) {
       <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
         <div className="max-w-5xl mx-auto space-y-8 pb-8">
           <p className="text-[13px] text-slate-500 max-w-2xl">
-            Prep for this session, then click Start Live Session below to begin the call — it opens in a separate
-            tab (or window), so you can keep this page open for training (e.g. Live Sprint) and prep info.
+            Prep for this session, then click Start Live Session below to begin the call — it opens in a separate tab
+            (or window), so you can keep this page open for training (e.g. Live Sprint) and prep info.
           </p>
 
           <Section label="Session Info" icon={Info}>
@@ -101,7 +107,11 @@ export function SessionHubSkeleton({ studentId }: { studentId: string }) {
 
           <Section label="Training">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <TitledCardSkeleton title="Live Sprint" icon={<Zap size={14} className="fill-current text-amber-400" />} rows={1} />
+              <TitledCardSkeleton
+                title="Live Sprint"
+                icon={<Zap size={14} className="fill-current text-amber-400" />}
+                rows={1}
+              />
               <HubDialoguePracticeSkeleton />
             </div>
           </Section>

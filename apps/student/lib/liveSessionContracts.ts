@@ -15,15 +15,19 @@ export const getMyLiveSessionContractsCached = cache(getMyLiveSessionContracts);
  */
 export function pickLiveSessionContract<T extends { ticket_id: string; is_current: boolean }>(
   contracts: T[],
-  requestedTicketId?: string
+  requestedTicketId?: string,
 ): T | undefined {
-  return contracts.find((c) => c.ticket_id === requestedTicketId) ?? contracts.find((c) => c.is_current) ?? contracts[0];
+  return (
+    contracts.find((c) => c.ticket_id === requestedTicketId) ?? contracts.find((c) => c.is_current) ?? contracts[0]
+  );
 }
 
 /**
  * 次の契約（継続用。有効かつ開始前のうち最も早いもの）。契約一覧は start_date 降順のため末尾が最も早い。
  */
-export function pickNextLiveSessionContract(contracts: LiveSessionContractSummary[]): LiveSessionContractSummary | undefined {
+export function pickNextLiveSessionContract(
+  contracts: LiveSessionContractSummary[],
+): LiveSessionContractSummary | undefined {
   const upcoming = contracts.filter((c) => c.is_active && !c.is_current);
   return upcoming[upcoming.length - 1];
 }
@@ -32,7 +36,9 @@ export function pickNextLiveSessionContract(contracts: LiveSessionContractSummar
  * 現在の契約と並ぶ次の契約の、専属コーチの選択状況を取得する。次の契約が無ければ null。
  * 案内は現在の契約の選択を優先するため、出し分けは呼び出し側で行う（現在の契約に未選択のコマが無い時だけ出す）。
  */
-export async function getNextContractMatching(contracts: LiveSessionContractSummary[]): Promise<NextContractMatching | null> {
+export async function getNextContractMatching(
+  contracts: LiveSessionContractSummary[],
+): Promise<NextContractMatching | null> {
   const next = pickNextLiveSessionContract(contracts);
   if (!next) return null;
   const slots = await getMySlotStatus(next.ticket_id);

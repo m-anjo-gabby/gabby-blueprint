@@ -71,6 +71,6 @@ export function useAdminChatLabels(): ChatLabels {
       fileTooLarge: (name) => t('messageInput.toastFileSizeError', { name }),
       uploadFailed: (name) => t('messageInput.toastUploadFailed', { name }),
     }),
-    [t, locale]
+    [t, locale],
   );
 }

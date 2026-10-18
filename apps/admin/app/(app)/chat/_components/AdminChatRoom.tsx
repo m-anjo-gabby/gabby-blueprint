@@ -51,7 +51,11 @@ export function AdminChatRoom(props: AdminChatRoomProps) {
                 <Info size={18} />
               </button>
             </SheetTrigger>
-            <SheetContent side="right" aria-describedby={undefined} className="w-full space-y-6 overflow-y-auto p-5 sm:max-w-sm">
+            <SheetContent
+              side="right"
+              aria-describedby={undefined}
+              className="w-full space-y-6 overflow-y-auto p-5 sm:max-w-sm"
+            >
               <SheetHeader className="p-0 text-left">
                 <SheetTitle className="text-base font-bold text-ink">{tDetails('title')}</SheetTitle>
               </SheetHeader>
@@ -75,9 +79,10 @@ function ChatRoomDetails({ roomId, room, members, canManage }: AdminChatRoomProp
   const timeZone = useTimezone();
   const router = useRouter();
   const isGroup = room.room_type === CHAT_ROOM_TYPES.GROUP;
-  const createdAt = new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'ja-JP', { dateStyle: 'medium', timeZone }).format(
-    new Date(room.created_at)
-  );
+  const createdAt = new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'ja-JP', {
+    dateStyle: 'medium',
+    timeZone,
+  }).format(new Date(room.created_at));
 
   return (
     <div className="space-y-6">

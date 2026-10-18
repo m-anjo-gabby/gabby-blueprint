@@ -31,7 +31,7 @@ export interface TrialApplicationForRegistration extends LegalName {
 export async function findTrialApplicationByInvitation(
   supabase: AdminClient,
   invitationId: string,
-  ctx: LogContext
+  ctx: LogContext,
 ): Promise<TrialApplicationForRegistration | null> {
   const { data, error } = await supabase
     .from('com_t_trial_application')
@@ -48,7 +48,9 @@ export async function findTrialApplicationByInvitation(
 /** トライアルのライセンスの期間（本登録の日から WEB_TRIAL_LICENSE_DAYS 日間。日本時間の暦日の 0:00 〜 23:59:59.999） */
 export function getWebTrialLicensePeriod(now: Date = new Date()): { startDate: string; endDate: string } {
   const firstDay = toIsoDateInZone(now, REPORTING_TIMEZONE);
-  const dayAfterLast = new Date(Date.parse(`${firstDay}T00:00:00Z`) + WEB_TRIAL_LICENSE_DAYS * 86_400_000).toISOString().slice(0, 10);
+  const dayAfterLast = new Date(Date.parse(`${firstDay}T00:00:00Z`) + WEB_TRIAL_LICENSE_DAYS * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
   // 終了は「最終日の翌日 0:00 の 1ms 前」（zonedWallClockToUtc はミリ秒を含む時刻を正しく扱えないため、0:00 から引く）
   return {
     startDate: zonedWallClockToUtc(`${firstDay}T00:00:00`, REPORTING_TIMEZONE).toISOString(),
@@ -69,7 +71,7 @@ export function getWebTrialLicensePeriod(now: Date = new Date()): { startDate: s
 export async function completeTrialRegistration(
   supabase: AdminClient,
   params: { application: TrialApplicationForRegistration; userId: string },
-  ctx: LogContext
+  ctx: LogContext,
 ): Promise<void> {
   const { application, userId } = params;
   const { application_id: applicationId, timezone } = application;
@@ -89,10 +91,14 @@ export async function completeTrialRegistration(
     const licenseResult = await issueInitialLicense(
       supabase,
       { contractId, userId, performedBy: null, period: getWebTrialLicensePeriod(now) },
-      ctx
+      ctx,
     );
     if (!licenseResult.success) {
-      logger.error('trial:issue_license_failed', licenseResult.message, { ...ctx, userId, payload: { applicationId, contractId } });
+      logger.error('trial:issue_license_failed', licenseResult.message, {
+        ...ctx,
+        userId,
+        payload: { applicationId, contractId },
+      });
     }
   }
 
@@ -101,7 +107,12 @@ export async function completeTrialRegistration(
     .update({ timezone, update_date: now.toISOString() })
     .eq('id', userId);
   if (timezoneError) {
-    logger.error('trial:set_timezone_failed', timezoneError.message, { ...ctx, err: timezoneError, userId, payload: { applicationId } });
+    logger.error('trial:set_timezone_failed', timezoneError.message, {
+      ...ctx,
+      err: timezoneError,
+      userId,
+      payload: { applicationId },
+    });
   }
 
   // 新しいユーザーのため行は無い。本人の申告による登録のため登録者（updated_by）は空にする
@@ -113,7 +124,12 @@ export async function completeTrialRegistration(
     first_name_latin: application.first_name_latin,
   });
   if (legalError) {
-    logger.error('trial:set_legal_name_failed', legalError.message, { ...ctx, err: legalError, userId, payload: { applicationId } });
+    logger.error('trial:set_legal_name_failed', legalError.message, {
+      ...ctx,
+      err: legalError,
+      userId,
+      payload: { applicationId },
+    });
   }
 
   const { error: applicationError } = await supabase

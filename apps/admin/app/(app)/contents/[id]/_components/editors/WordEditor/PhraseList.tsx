@@ -5,15 +5,18 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Loader2, Plus, Settings2, Trash2, 
-  AlertCircle, CheckCircle2, Music4, Headphones, 
-  Download
+import {
+  Loader2,
+  Plus,
+  Settings2,
+  Trash2,
+  AlertCircle,
+  CheckCircle2,
+  Music4,
+  Headphones,
+  Download,
 } from 'lucide-react';
-import { 
-  getPhrasesByWordId, 
-  deletePhrase 
-} from '@/actions/adminWordAction';
+import { getPhrasesByWordId, deletePhrase } from '@/actions/adminWordAction';
 import { PhraseRecord } from '@gabby/types/word';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { TTSDialog } from './TTSDialog';
@@ -29,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWordStore } from '@/stores/useWordStore';
 
@@ -60,7 +63,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
       const data = await getPhrasesByWordId(wordId);
       setPhrases(data);
     } catch {
-      showToast(t('fetchFailed'), "error");
+      showToast(t('fetchFailed'), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -78,55 +81,67 @@ export function PhraseList({ wordId }: PhraseListProps) {
       // 音声ファイルはサーバー側で、削除した行のパスから消す
       const result = await deletePhrase(phraseId);
       if (result.success) {
-        showToast(t('deleted'), "success");
+        showToast(t('deleted'), 'success');
         fetchPhrases();
       } else {
-        showToast(result.message || t('deleteFailed'), "error");
+        showToast(result.message || t('deleteFailed'), 'error');
       }
     } catch {
-      showToast(t('systemError'), "error");
+      showToast(t('systemError'), 'error');
     }
   };
 
   /**
    * 音声ダウンロードハンドラー
    */
-  const handleDownload = useCallback(async (phrase: PhraseRecord) => {
-    if (!phrase.audio_path) return;
+  const handleDownload = useCallback(
+    async (phrase: PhraseRecord) => {
+      if (!phrase.audio_path) return;
 
-    try {
-      // ファイル名の組み立て: "Word-Type-Seq.mp3" 
-      // 例: "apple-1-1.mp3"
-      const wordText = selectedWord?.word_en || 'phrase';
-      const type = phrase.phrase_type;
-      const seq = phrase.seq_no;
-      
-      // OSで禁止されている文字を置換
-      const safeBaseName = `${wordText}-type${type}-${seq}`
-        .replace(/[^a-z0-9]/gi, '_')
-        .toLowerCase();
-        
-      await download(phrase.audio_path, phrase.phrase_id, safeBaseName);
-    } catch {
-      showToast(t('downloadFailed'), "error");
-    }
-  }, [download, selectedWord, showToast, t]);
+      try {
+        // ファイル名の組み立て: "Word-Type-Seq.mp3"
+        // 例: "apple-1-1.mp3"
+        const wordText = selectedWord?.word_en || 'phrase';
+        const type = phrase.phrase_type;
+        const seq = phrase.seq_no;
+
+        // OSで禁止されている文字を置換
+        const safeBaseName = `${wordText}-type${type}-${seq}`.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+        await download(phrase.audio_path, phrase.phrase_id, safeBaseName);
+      } catch {
+        showToast(t('downloadFailed'), 'error');
+      }
+    },
+    [download, selectedWord, showToast, t],
+  );
 
   /**
    * TTS（音声生成）ステータスに応じたバッジのレンダリング
    */
-  const statusConfigs = useMemo((): Record<number, { label: string; icon: React.ElementType; className: string }> => ({
-    1: { label: t('statusGenerated'), icon: CheckCircle2, className: "bg-emerald-50 text-emerald-600 border-emerald-100" },
-    2: { label: t('statusNeedsUpdate'), icon: AlertCircle, className: "bg-amber-50 text-amber-600 border-amber-100" },
-    9: { label: t('statusError'), icon: AlertCircle, className: "bg-rose-50 text-rose-600 border-rose-100" },
-  }), [t]);
+  const statusConfigs = useMemo(
+    (): Record<number, { label: string; icon: React.ElementType; className: string }> => ({
+      1: {
+        label: t('statusGenerated'),
+        icon: CheckCircle2,
+        className: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      },
+      2: { label: t('statusNeedsUpdate'), icon: AlertCircle, className: 'bg-amber-50 text-amber-600 border-amber-100' },
+      9: { label: t('statusError'), icon: AlertCircle, className: 'bg-rose-50 text-rose-600 border-rose-100' },
+    }),
+    [t],
+  );
 
   const renderStatusBadge = (status: number) => {
-    const config = statusConfigs[status] || { label: t('statusNotGenerated'), icon: Music4, className: "bg-slate-100 text-slate-400 border-slate-200" };
+    const config = statusConfigs[status] || {
+      label: t('statusNotGenerated'),
+      icon: Music4,
+      className: 'bg-slate-100 text-slate-400 border-slate-200',
+    };
     const Icon = config.icon;
 
     return (
-      <Badge variant="outline" className={cn("gap-1 font-bold py-0.5 px-2 text-[10px]", config.className)}>
+      <Badge variant="outline" className={cn('gap-1 font-bold py-0.5 px-2 text-[10px]', config.className)}>
         <Icon size={12} />
         {config.label}
       </Badge>
@@ -135,8 +150,8 @@ export function PhraseList({ wordId }: PhraseListProps) {
 
   return (
     <div className="flex flex-col h-full bg-slate-50/50 min-w-0 overflow-hidden">
-      {/* ヘッダーセクション 
-      */}
+      {/* ヘッダーセクション
+       */}
       <div className="p-4 px-6 bg-white border-b border-slate-200 flex justify-between items-center sticky top-0 z-10 shadow-sm">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -147,13 +162,13 @@ export function PhraseList({ wordId }: PhraseListProps) {
           </div>
           <p className="text-[11px] text-slate-400 font-medium truncate">{t('subtitle')}</p>
         </div>
-        
+
         {/* 新規登録ダイアログ */}
         <PhraseFormDialog mode="create" wordId={wordId} onSuccess={fetchPhrases} />
       </div>
 
-      {/* メインリストエリア 
-      */}
+      {/* メインリストエリア
+       */}
       <ScrollArea className="flex-1">
         <div className="p-6">
           {isLoading ? (
@@ -171,8 +186,8 @@ export function PhraseList({ wordId }: PhraseListProps) {
           ) : (
             <div className="space-y-4 max-w-5xl mx-auto">
               {phrases.map((phrase) => (
-                <div 
-                  key={phrase.phrase_id} 
+                <div
+                  key={phrase.phrase_id}
                   className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group hover:border-brand-300 hover:shadow-md transition-all duration-300"
                 >
                   <div className="p-5 flex gap-5">
@@ -192,28 +207,26 @@ export function PhraseList({ wordId }: PhraseListProps) {
                         <div className="text-[17px] font-bold text-slate-900 leading-snug tracking-tight break-words">
                           {phrase.phrase_en}
                         </div>
-                        <div className="text-[13px] text-slate-500 font-medium leading-relaxed">
-                          {phrase.phrase_ja}
-                        </div>
+                        <div className="text-[13px] text-slate-500 font-medium leading-relaxed">{phrase.phrase_ja}</div>
                       </div>
-                      
+
                       {/* ステータスと再生ボタン */}
                       <div className="pt-1 flex items-center gap-4">
                         {renderStatusBadge(phrase.tts_status)}
-                        
+
                         {phrase.audio_path && (
                           <div className="flex items-center gap-1">
                             {/* 再生ボタン */}
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               disabled={!!isPlaying && isPlaying !== phrase.phrase_id}
                               onClick={() => play(phrase.audio_path!, phrase.phrase_id)}
                               className={cn(
-                                "h-7 px-2.5 gap-1.5 rounded-lg border transition-all",
-                                isPlaying === phrase.phrase_id 
-                                  ? "bg-brand text-white hover:bg-brand-strong border-brand shadow-sm" 
-                                  : "text-brand-500 hover:text-brand-strong hover:bg-brand-50 border-transparent hover:border-brand-100"
+                                'h-7 px-2.5 gap-1.5 rounded-lg border transition-all',
+                                isPlaying === phrase.phrase_id
+                                  ? 'bg-brand text-white hover:bg-brand-strong border-brand shadow-sm'
+                                  : 'text-brand-500 hover:text-brand-strong hover:bg-brand-50 border-transparent hover:border-brand-100',
                               )}
                             >
                               {isPlaying === phrase.phrase_id ? (
@@ -222,7 +235,7 @@ export function PhraseList({ wordId }: PhraseListProps) {
                                 <Headphones size={14} />
                               )}
                               <span className="text-[11px] font-bold">
-                                {isPlaying === phrase.phrase_id ? "Playing..." : "Listen"}
+                                {isPlaying === phrase.phrase_id ? 'Playing...' : 'Listen'}
                               </span>
                             </Button>
 
@@ -253,7 +266,11 @@ export function PhraseList({ wordId }: PhraseListProps) {
 
                       {/* TTS設定ダイアログ */}
                       <TTSDialog phrase={phrase} onUpdate={fetchPhrases}>
-                        <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-slate-200 text-slate-500 hover:bg-brand-50 hover:text-brand hover:border-brand-200 rounded-xl transition-all">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9 w-9 p-0 border-slate-200 text-slate-500 hover:bg-brand-50 hover:text-brand hover:border-brand-200 rounded-xl transition-all"
+                        >
                           <Settings2 size={16} />
                         </Button>
                       </TTSDialog>
@@ -261,7 +278,11 @@ export function PhraseList({ wordId }: PhraseListProps) {
                       {/* 削除確認（AlertDialog） */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-9 w-9 p-0 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 w-9 p-0 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                          >
                             <Trash2 size={16} />
                           </Button>
                         </AlertDialogTrigger>
@@ -271,7 +292,9 @@ export function PhraseList({ wordId }: PhraseListProps) {
                               <AlertCircle size={32} />
                             </div>
                             <div className="text-center space-y-2">
-                              <AlertDialogTitle className="text-xl font-black text-slate-800">{t('deleteDialogTitle')}</AlertDialogTitle>
+                              <AlertDialogTitle className="text-xl font-black text-slate-800">
+                                {t('deleteDialogTitle')}
+                              </AlertDialogTitle>
                               <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed italic">
                                 {t('confirmDeletePhrase', {
                                   preview: `${phrase.phrase_en.substring(0, 40)}${phrase.phrase_en.length > 40 ? '...' : ''}`,

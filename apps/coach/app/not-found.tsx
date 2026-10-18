@@ -41,9 +41,7 @@ export default function NotFound() {
                 404 Resource
               </span>
             </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              Page Not Found
-            </h1>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Page Not Found</h1>
             <p className="text-sm text-slate-500 mt-2.5 leading-relaxed max-w-sm font-medium">
               The page you tried to access, or the path to the requested data, does not exist or has been changed.
             </p>
@@ -62,7 +60,6 @@ export default function NotFound() {
               Status Code: 404 / Route Object Not Found
             </p>
           </div>
-
         </motion.div>
       </div>
     </div>

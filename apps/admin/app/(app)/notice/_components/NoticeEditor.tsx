@@ -5,18 +5,15 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { 
-  Save, 
-  Eye, 
-  FileEdit, 
-  Loader2, 
-  ChevronLeft, 
-  Paperclip, 
-  Trash2, 
-  Upload, 
-  
-  
-  
+import {
+  Save,
+  Eye,
+  FileEdit,
+  Loader2,
+  ChevronLeft,
+  Paperclip,
+  Trash2,
+  Upload,
   Building2,
   FileText,
   X,
@@ -40,14 +37,14 @@ import {
 } from '@gabby/types/notice';
 import { getNoticeImageUrl, isValidNoticeCtaUrl } from '@gabby/lib/notice/links';
 import { ClientOption } from '@gabby/types/client';
-import { 
-  createNotice, 
-  updateNotice, 
-  uploadNoticeFile, 
+import {
+  createNotice,
+  updateNotice,
+  uploadNoticeFile,
   uploadNoticeImage,
-  deleteNoticeFile, 
+  deleteNoticeFile,
   utcToJstInputStr,
-  NoticeFormData 
+  NoticeFormData,
 } from '@/actions/adminNoticeAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
 
@@ -117,7 +114,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
   const [isImportant, setIsImportant] = React.useState(initialData?.is_important || false);
   const [displayMode, setDisplayMode] = React.useState<NoticeDisplayMode>(initialData?.display_mode ?? 'LIST');
   const [image, setImage] = React.useState<ImageState>(() =>
-    initialData?.image_path ? { kind: 'saved', path: initialData.image_path } : { kind: 'none' }
+    initialData?.image_path ? { kind: 'saved', path: initialData.image_path } : { kind: 'none' },
   );
   const [ctaLabel, setCtaLabel] = React.useState(initialData?.cta_label ?? '');
   const [ctaUrl, setCtaUrl] = React.useState(initialData?.cta_url ?? '');
@@ -130,7 +127,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
 
   const [content, setContent] = React.useState(initialData?.content || '');
   const [attachments, setAttachments] = React.useState<PendingAttachment[]>(() => {
-    return (initialData?.attachments || []).map(a => ({
+    return (initialData?.attachments || []).map((a) => ({
       id: a.id,
       name: a.name,
       size: a.size,
@@ -201,7 +198,8 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
     setImage({ kind: 'new', file, previewUrl: URL.createObjectURL(file) });
   };
 
-  const imagePreviewUrl = image.kind === 'new' ? image.previewUrl : image.kind === 'saved' ? getNoticeImageUrl(image.path) : null;
+  const imagePreviewUrl =
+    image.kind === 'new' ? image.previewUrl : image.kind === 'saved' ? getNoticeImageUrl(image.path) : null;
 
   // 添付ファイルのローカル追加 (まだStorageへはアップロードしない)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,16 +218,16 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
       });
     }
 
-    setAttachments(prev => [...prev, ...newItems]);
+    setAttachments((prev) => [...prev, ...newItems]);
     e.target.value = '';
   };
 
   // 添付ファイルのローカル削除 (既存ファイルの場合は削除予約)
   const handleRemoveAttachment = (att: PendingAttachment) => {
     if (att.path) {
-      setDeletedPaths(prev => [...prev, att.path!]);
+      setDeletedPaths((prev) => [...prev, att.path!]);
     }
-    setAttachments(prev => prev.filter(a => a.id !== att.id));
+    setAttachments((prev) => prev.filter((a) => a.id !== att.id));
   };
 
   // 保存処理
@@ -308,7 +306,8 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
         imagePath = res.path;
       }
       const initialImagePath = initialData?.image_path ?? null;
-      const removedPaths = initialImagePath && initialImagePath !== imagePath ? [...deletedPaths, initialImagePath] : deletedPaths;
+      const removedPaths =
+        initialImagePath && initialImagePath !== imagePath ? [...deletedPaths, initialImagePath] : deletedPaths;
 
       // 3. 削除マークされた既存ファイルの Storage からの削除
       for (const path of removedPaths) {
@@ -390,13 +389,13 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
 
       {/* ─── メインフォーム＆エディタエリア ───────────────────── */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-hidden">
-        
         {/* 左側: メタ情報＆添付ファイル設定 (lg:col-span-5) */}
         <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-100 shadow-sm p-6 overflow-y-auto space-y-6">
-          
           {/* タイトル */}
           <div className="space-y-2">
-            <Label className="text-xs font-black text-slate-700">{t('titleLabel')} <span className="text-rose-500">*</span></Label>
+            <Label className="text-xs font-black text-slate-700">
+              {t('titleLabel')} <span className="text-rose-500">*</span>
+            </Label>
             <input
               type="text"
               value={title}
@@ -416,7 +415,9 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition-all"
               >
                 {Object.entries(NOTICE_TYPES).map(([key, config]) => (
-                  <option key={key} value={key}>{config.label}</option>
+                  <option key={key} value={key}>
+                    {config.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -439,7 +440,8 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
           {targetType === 'CLIENT' && (
             <div className="space-y-2 bg-brand-50/50 p-3.5 rounded-xl border border-brand-100">
               <Label className="text-xs font-black text-brand-900 flex items-center gap-1.5">
-                <Building2 size={14} className="text-brand" /> {t('selectClientLabel')} <span className="text-rose-500">*</span>
+                <Building2 size={14} className="text-brand" /> {t('selectClientLabel')}{' '}
+                <span className="text-rose-500">*</span>
               </Label>
               <select
                 value={clientId}
@@ -448,7 +450,9 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
               >
                 <option value="">{t('selectClientPlaceholder')}</option>
                 {clientOptions.map((c) => (
-                  <option key={c.client_id} value={c.client_id}>{c.client_name}</option>
+                  <option key={c.client_id} value={c.client_id}>
+                    {c.client_name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -459,7 +463,9 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('publishPeriodTitle')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold text-slate-600">{t('publishStartLabel')} <span className="text-rose-500">*</span></Label>
+                <Label className="text-[11px] font-bold text-slate-600">
+                  {t('publishStartLabel')} <span className="text-rose-500">*</span>
+                </Label>
                 <input
                   type="date"
                   value={publishedAtJst}
@@ -516,10 +522,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                   <Label className="text-xs font-black text-slate-800 cursor-pointer">{t('publishedFlagLabel')}</Label>
                   <p className="text-[10px] text-slate-500">{t('publishedFlagHint')}</p>
                 </div>
-                <Switch
-                  checked={isPublished}
-                  onCheckedChange={setIsPublished}
-                />
+                <Switch checked={isPublished} onCheckedChange={setIsPublished} />
               </div>
 
               {/* 重要フラグ */}
@@ -528,17 +531,16 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                   <Label className="text-xs font-black text-slate-800 cursor-pointer">{t('importantFlagLabel')}</Label>
                   <p className="text-[10px] text-slate-500">{t('importantFlagHint')}</p>
                 </div>
-                <Switch
-                  checked={isImportant}
-                  onCheckedChange={setIsImportant}
-                />
+                <Switch checked={isImportant} onCheckedChange={setIsImportant} />
               </div>
             </div>
           </div>
 
           {/* 表示方法 */}
           <fieldset className="space-y-3 pt-2 border-t border-slate-100">
-            <legend className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('displayModeTitle')}</legend>
+            <legend className="text-xs font-black text-slate-400 uppercase tracking-widest">
+              {t('displayModeTitle')}
+            </legend>
             <div className="space-y-2">
               {NOTICE_DISPLAY_MODES.map((mode) => {
                 const disabled = mode === 'HOME' && isCoachTarget;
@@ -546,7 +548,9 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                   <label
                     key={mode}
                     className={`flex items-start gap-3 rounded-xl border p-3 transition-colors ${
-                      displayMode === mode ? 'border-brand-300 bg-brand-50/50' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                      displayMode === mode
+                        ? 'border-brand-300 bg-brand-50/50'
+                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
                     } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                   >
                     <input
@@ -559,7 +563,9 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                       className="mt-0.5 accent-brand"
                     />
                     <span className="space-y-0.5">
-                      <span className="block text-xs font-black text-slate-800">{t(DISPLAY_MODE_KEYS[mode].label)}</span>
+                      <span className="block text-xs font-black text-slate-800">
+                        {t(DISPLAY_MODE_KEYS[mode].label)}
+                      </span>
                       <span className="block text-[10px] text-slate-500">{t(DISPLAY_MODE_KEYS[mode].hint)}</span>
                     </span>
                   </label>
@@ -579,11 +585,20 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                 {imagePreviewUrl ? (
                   <div className="space-y-2">
                     {/* eslint-disable-next-line @next/next/no-img-element -- Storage の公開URL・選択中のファイルのプレビュー */}
-                    <img src={imagePreviewUrl} alt={t('imageAlt')} className="aspect-video w-full rounded-xl border border-slate-200 object-cover" />
+                    <img
+                      src={imagePreviewUrl}
+                      alt={t('imageAlt')}
+                      className="aspect-video w-full rounded-xl border border-slate-200 object-cover"
+                    />
                     <div className="flex items-center gap-2">
                       <label className="cursor-pointer h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
                         <ImagePlus size={13} /> {t('imageSelect')}
-                        <input type="file" accept={IMAGE_TYPES.join(',')} onChange={handleImageSelect} className="hidden" />
+                        <input
+                          type="file"
+                          accept={IMAGE_TYPES.join(',')}
+                          onChange={handleImageSelect}
+                          className="hidden"
+                        />
                       </label>
                       <button
                         type="button"
@@ -606,7 +621,9 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="notice-cta-label" className="text-[11px] font-bold text-slate-600">{t('ctaLabelLabel')}</Label>
+                  <Label htmlFor="notice-cta-label" className="text-[11px] font-bold text-slate-600">
+                    {t('ctaLabelLabel')}
+                  </Label>
                   <input
                     id="notice-cta-label"
                     type="text"
@@ -618,7 +635,9 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="notice-cta-url" className="text-[11px] font-bold text-slate-600">{t('ctaUrlLabel')}</Label>
+                  <Label htmlFor="notice-cta-url" className="text-[11px] font-bold text-slate-600">
+                    {t('ctaUrlLabel')}
+                  </Label>
                   <input
                     id="notice-cta-url"
                     type="text"
@@ -643,12 +662,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
               <label className="cursor-pointer h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
                 <Upload size={13} />
                 {t('addButton')}
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
+                <input type="file" multiple onChange={handleFileUpload} className="hidden" />
               </label>
             </div>
 
@@ -750,7 +764,6 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
             )}
           </div>
         </div>
-
       </div>
     </div>
   );

@@ -31,7 +31,9 @@ export async function getMyCalendarEvents(startIso: string, endIso: string): Pro
 /**
  * Join a calendar event (e.g. a group session) that has RSVP enabled.
  */
-export async function joinCalendarEvent(calendarEventId: string): Promise<{ success: true } | { success: false; message: string }> {
+export async function joinCalendarEvent(
+  calendarEventId: string,
+): Promise<{ success: true } | { success: false; message: string }> {
   const result = await joinCalendarEventCore(calendarEventId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -45,7 +47,7 @@ export async function joinCalendarEvent(calendarEventId: string): Promise<{ succ
  * Cancel participation in a calendar event.
  */
 export async function cancelCalendarEventParticipation(
-  calendarEventId: string
+  calendarEventId: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const result = await cancelCalendarEventParticipationCore(calendarEventId);
   if (!result.success) {

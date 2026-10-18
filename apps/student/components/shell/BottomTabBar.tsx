@@ -27,13 +27,13 @@ export function BottomTabBar({ items, badges, pathname }: BottomTabBarProps) {
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'flex h-14 flex-col items-center justify-center gap-1 transition-colors active:scale-95',
-                  isActive ? 'text-brand-strong' : 'text-ink-muted'
+                  isActive ? 'text-brand-strong' : 'text-ink-muted',
                 )}
               >
                 <span
                   className={cn(
                     'relative flex h-7 w-12 items-center justify-center rounded-full transition-colors',
-                    isActive && 'bg-brand-soft'
+                    isActive && 'bg-brand-soft',
                   )}
                 >
                   <item.icon size={20} strokeWidth={isActive ? 2.4 : 2} />

@@ -2,9 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import {
-  Menu, X, LogOut, User as UserIcon, Lock, ChevronDown,
-} from 'lucide-react';
+import { Menu, X, LogOut, User as UserIcon, Lock, ChevronDown } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,11 +25,12 @@ export default function Header() {
   const { showConfirm } = useConfirm();
 
   const handleSignOut = async () => {
-    const ok = await showConfirm(
-      'Confirm Logout',
-      'This will end your session and log you out. Are you sure?',
-      { variant: 'danger', isModal: true, confirmText: 'Log Out', cancelText: 'Cancel' }
-    );
+    const ok = await showConfirm('Confirm Logout', 'This will end your session and log you out. Are you sure?', {
+      variant: 'danger',
+      isModal: true,
+      confirmText: 'Log Out',
+      cancelText: 'Cancel',
+    });
     if (ok) await signOut();
   };
 
@@ -61,70 +60,72 @@ export default function Header() {
 
       {/* Right: notification center (notices + notifications) + account dropdown */}
       <div className="flex items-center gap-2">
-      <NotificationCenterDropdown />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100 hover:bg-slate-100 transition-all outline-none active:scale-95">
-            <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-brand-500 overflow-hidden shrink-0">
-              {profileIconUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <UserIcon size={14} />
-              )}
-            </div>
-            <span className="text-xs font-bold text-slate-600 hidden sm:inline max-w-32 truncate">
-              {user?.email?.split('@')[0] || 'Guest'}
-            </span>
-            <ChevronDown size={12} className="text-slate-400" />
-          </button>
-        </DropdownMenuTrigger>
-
-        <DropdownMenuContent className="w-56 p-2 rounded-2xl shadow-xl border-slate-100" align="end">
-          {/* Profile summary */}
-          <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-400 overflow-hidden shrink-0">
-              {profileIconUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <UserIcon size={18} />
-              )}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-black text-slate-800 truncate">
+        <NotificationCenterDropdown />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100 hover:bg-slate-100 transition-all outline-none active:scale-95">
+              <div className="flex items-center justify-center w-6 h-6 bg-white rounded-full shadow-sm text-brand-500 overflow-hidden shrink-0">
+                {profileIconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <UserIcon size={14} />
+                )}
+              </div>
+              <span className="text-xs font-bold text-slate-600 hidden sm:inline max-w-32 truncate">
                 {user?.email?.split('@')[0] || 'Guest'}
-              </p>
-              {user?.email && (
-                <p className="text-[10px] font-medium text-slate-400 truncate">{user.email}</p>
-              )}
+              </span>
+              <ChevronDown size={12} className="text-slate-400" />
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent className="w-56 p-2 rounded-2xl shadow-xl border-slate-100" align="end">
+            {/* Profile summary */}
+            <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-400 overflow-hidden shrink-0">
+                {profileIconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <UserIcon size={18} />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-black text-slate-800 truncate">{user?.email?.split('@')[0] || 'Guest'}</p>
+                {user?.email && <p className="text-[10px] font-medium text-slate-400 truncate">{user.email}</p>}
+              </div>
             </div>
-          </div>
 
-          <DropdownMenuSeparator className="mb-1 border-slate-100" />
+            <DropdownMenuSeparator className="mb-1 border-slate-100" />
 
-          <DropdownMenuItem asChild>
-            <Link href="/profile" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
-              <UserIcon size={14} /> Profile
-            </Link>
-          </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50"
+              >
+                <UserIcon size={14} /> Profile
+              </Link>
+            </DropdownMenuItem>
 
-          <DropdownMenuItem asChild>
-            <Link href="/profile/password" className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50">
-              <Lock size={14} /> Change Password
-            </Link>
-          </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href="/profile/password"
+                className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-50"
+              >
+                <Lock size={14} /> Change Password
+              </Link>
+            </DropdownMenuItem>
 
-          <DropdownMenuSeparator className="my-1 border-slate-100" />
+            <DropdownMenuSeparator className="my-1 border-slate-100" />
 
-          <DropdownMenuItem
-            onClick={handleSignOut}
-            className="flex items-center gap-2 text-xs font-bold text-rose-500 cursor-pointer hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-600"
-          >
-            <LogOut size={14} /> Logout
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              className="flex items-center gap-2 text-xs font-bold text-rose-500 cursor-pointer hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-600"
+            >
+              <LogOut size={14} /> Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

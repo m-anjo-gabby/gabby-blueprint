@@ -3,7 +3,10 @@
 import { usePathname } from 'next/navigation';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
-import { SprintResultActionsSkeleton, SprintResultBodySkeleton } from '@/components/training/sprint-result/SprintResultSkeleton';
+import {
+  SprintResultActionsSkeleton,
+  SprintResultBodySkeleton,
+} from '@/components/training/sprint-result/SprintResultSkeleton';
 import { useUrlMonth } from '@/lib/useUrlMonth';
 import { SprintHistoryView } from './SprintHistoryView';
 
@@ -21,7 +24,9 @@ function SprintResultDetailSkeleton() {
     <>
       <ShellPageHeader
         title="スプリント結果"
-        description={<span aria-hidden className="inline-block h-3.5 w-32 animate-pulse rounded-md bg-skeleton align-middle" />}
+        description={
+          <span aria-hidden className="inline-block h-3.5 w-32 animate-pulse rounded-md bg-skeleton align-middle" />
+        }
         back={HISTORY_PATH}
       >
         <SprintResultActionsSkeleton />

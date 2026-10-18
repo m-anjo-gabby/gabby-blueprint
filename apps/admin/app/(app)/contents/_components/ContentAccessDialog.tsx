@@ -1,84 +1,76 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback } from 'react'
-import { useTranslations } from 'next-intl'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Plus, X, Loader2, ArrowLeft, Building2, ShieldCheck, AlertCircle } from 'lucide-react'
-import { getContentAccessData, assignAccess, removeAccess } from '@/actions/adminContentAction'
-import { useToast } from '@gabby/lib/hooks/useToast'
-import { Content, ContentAccessSummary } from '@gabby/types/content'
+import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Plus, X, Loader2, ArrowLeft, Building2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { getContentAccessData, assignAccess, removeAccess } from '@/actions/adminContentAction';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { Content, ContentAccessSummary } from '@gabby/types/content';
 
 interface Props {
-  content: Content
+  content: Content;
   children: React.ReactNode;
 }
 
 export function ContentAccessDialog({ content, children }: Props) {
-  const t = useTranslations('contents.accessDialog')
-  const [open, setOpen] = useState(false)
-  const [isAddMode, setIsAddMode] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [assignedClients, setAssignedClients] = useState<ContentAccessSummary[]>(content.access_clients || [])
-  const [unassignedClients, setUnassignedClients] = useState<ContentAccessSummary[]>([])
-  const { showToast } = useToast()
+  const t = useTranslations('contents.accessDialog');
+  const [open, setOpen] = useState(false);
+  const [isAddMode, setIsAddMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [assignedClients, setAssignedClients] = useState<ContentAccessSummary[]>(content.access_clients || []);
+  const [unassignedClients, setUnassignedClients] = useState<ContentAccessSummary[]>([]);
+  const { showToast } = useToast();
 
   const loadData = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const data = await getContentAccessData(content.content_id)
-      setAssignedClients(data.assignedClients)
-      setUnassignedClients(data.unassignedClients)
+      const data = await getContentAccessData(content.content_id);
+      setAssignedClients(data.assignedClients);
+      setUnassignedClients(data.unassignedClients);
     } catch {
-      showToast(t('toastFetchFailed'), 'error')
+      showToast(t('toastFetchFailed'), 'error');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [content.content_id, showToast, t])
+  }, [content.content_id, showToast, t]);
 
   useEffect(() => {
     if (open) {
-      loadData()
-      setIsAddMode(false)
+      loadData();
+      setIsAddMode(false);
     }
-  }, [open, loadData])
+  }, [open, loadData]);
 
   const handleAdd = async (clientId: string) => {
-    setLoading(true)
-    const res = await assignAccess(content.content_id, clientId)
+    setLoading(true);
+    const res = await assignAccess(content.content_id, clientId);
     if (res.success) {
-      await loadData()
-      showToast(t('toastAssigned'), 'success')
+      await loadData();
+      showToast(t('toastAssigned'), 'success');
     } else {
-      showToast(t('toastAssignFailed'), 'error')
-      setLoading(false)
+      showToast(t('toastAssignFailed'), 'error');
+      setLoading(false);
     }
-  }
+  };
 
   const handleRemove = async (clientId: string) => {
-    setLoading(true)
-    const res = await removeAccess(content.content_id, clientId)
+    setLoading(true);
+    const res = await removeAccess(content.content_id, clientId);
     if (res.success) {
-      await loadData()
-      showToast(t('toastRemoved'), 'success')
+      await loadData();
+      showToast(t('toastRemoved'), 'success');
     } else {
-      showToast(t('toastRemoveFailed'), 'error')
-      setLoading(false)
+      showToast(t('toastRemoveFailed'), 'error');
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
 
       <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl">
         <DialogHeader className="p-6 bg-slate-900 text-white">
@@ -90,11 +82,18 @@ export function ContentAccessDialog({ content, children }: Props) {
 
         <div className="p-6 bg-white min-h-[400px]">
           {loading && assignedClients.length === 0 ? (
-            <div className="flex justify-center p-20"><Loader2 className="animate-spin text-brand-500" /></div>
+            <div className="flex justify-center p-20">
+              <Loader2 className="animate-spin text-brand-500" />
+            </div>
           ) : isAddMode ? (
             /* --- 追加モード --- */
             <div className="space-y-4">
-              <Button variant="ghost" size="sm" onClick={() => setIsAddMode(false)} className="h-8 text-slate-500 p-0 font-bold hover:bg-transparent hover:text-brand">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsAddMode(false)}
+                className="h-8 text-slate-500 p-0 font-bold hover:bg-transparent hover:text-brand"
+              >
                 <ArrowLeft size={16} className="mr-1" /> {t('backButton')}
               </Button>
               <ScrollArea className="h-[350px] pr-4">
@@ -105,10 +104,20 @@ export function ContentAccessDialog({ content, children }: Props) {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {unassignedClients.map(client => (
-                      <div key={client.client_id} className="flex items-center justify-between p-3 border rounded-2xl bg-slate-50/30 group hover:border-brand-200 transition-colors">
+                    {unassignedClients.map((client) => (
+                      <div
+                        key={client.client_id}
+                        className="flex items-center justify-between p-3 border rounded-2xl bg-slate-50/30 group hover:border-brand-200 transition-colors"
+                      >
                         <span className="text-sm font-bold text-slate-700">{client.client_name}</span>
-                        <Button size="sm" onClick={() => handleAdd(client.client_id)} disabled={loading} className="bg-brand hover:bg-brand-strong h-8 rounded-xl font-bold">{t('addButtonLabel')}</Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAdd(client.client_id)}
+                          disabled={loading}
+                          className="bg-brand hover:bg-brand-strong h-8 rounded-xl font-bold"
+                        >
+                          {t('addButtonLabel')}
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -120,7 +129,11 @@ export function ContentAccessDialog({ content, children }: Props) {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Authorized Clients</p>
-                <Button size="sm" onClick={() => setIsAddMode(true)} className="bg-slate-900 hover:bg-slate-800 text-white gap-1.5 rounded-xl h-8 font-bold shadow-md active:scale-95 transition-all">
+                <Button
+                  size="sm"
+                  onClick={() => setIsAddMode(true)}
+                  className="bg-slate-900 hover:bg-slate-800 text-white gap-1.5 rounded-xl h-8 font-bold shadow-md active:scale-95 transition-all"
+                >
                   <Plus size={14} /> {t('addClientsButton')}
                 </Button>
               </div>
@@ -130,19 +143,27 @@ export function ContentAccessDialog({ content, children }: Props) {
                   <div className="text-center py-20 bg-amber-50/50 rounded-3xl border border-dashed border-amber-200 px-6">
                     <AlertCircle className="mx-auto text-amber-300 mb-2" size={32} />
                     <p className="text-xs text-amber-600 font-bold leading-relaxed">
-                      {t('emptyAssignedTitle')}<br />
+                      {t('emptyAssignedTitle')}
+                      <br />
                       {t('emptyAssignedBody')}
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {assignedClients.map(client => (
-                      <div key={client.client_id} className="flex items-center justify-between p-3 border border-brand-100 rounded-2xl bg-brand-50/30 group">
+                    {assignedClients.map((client) => (
+                      <div
+                        key={client.client_id}
+                        className="flex items-center justify-between p-3 border border-brand-100 rounded-2xl bg-brand-50/30 group"
+                      >
                         <div className="flex items-center gap-2">
                           <Building2 size={16} className="text-brand-400" />
                           <span className="text-sm font-bold text-brand-900">{client.client_name}</span>
                         </div>
-                        <button onClick={() => handleRemove(client.client_id)} disabled={loading} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-rose-100 text-brand-300 hover:text-rose-600 transition-all">
+                        <button
+                          onClick={() => handleRemove(client.client_id)}
+                          disabled={loading}
+                          className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-rose-100 text-brand-300 hover:text-rose-600 transition-all"
+                        >
                           <X size={14} />
                         </button>
                       </div>
@@ -155,5 +176,5 @@ export function ContentAccessDialog({ content, children }: Props) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

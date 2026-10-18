@@ -13,7 +13,9 @@ import { cn } from '../../utils';
 type NoticeCtaSource = Pick<NoticeItem, 'notice_id' | 'cta_label' | 'cta_url'>;
 
 /** 行動ボタンを出すか（文言とリンク先が両方そろっている場合だけ） */
-export function hasNoticeCta(notice: NoticeCtaSource): notice is NoticeCtaSource & { cta_label: string; cta_url: string } {
+export function hasNoticeCta(
+  notice: NoticeCtaSource,
+): notice is NoticeCtaSource & { cta_label: string; cta_url: string } {
   return Boolean(notice.cta_label && notice.cta_url);
 }
 
@@ -48,7 +50,7 @@ export function NoticeCtaLink({ notice, labels, onClick, preview = false, classN
   };
   const classes = cn(
     'inline-flex items-center justify-center gap-1.5 rounded-control bg-brand px-5 text-sm font-bold text-white transition-colors hover:bg-brand-strong',
-    className
+    className,
   );
   const Icon = isExternal ? ExternalLink : ChevronRight;
 

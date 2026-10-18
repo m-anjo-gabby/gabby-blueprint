@@ -23,7 +23,7 @@ const logger = createLogger('common');
  */
 export async function uploadSessionHomeworkAttachmentCore(
   sessionId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<UploadHomeworkAttachmentResult> {
   const ctx = await getLogContext();
   try {
@@ -37,7 +37,11 @@ export async function uploadSessionHomeworkAttachmentCore(
     }
 
     const mimeType = file.type || 'application/octet-stream';
-    if (!HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES.includes(mimeType as (typeof HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES)[number])) {
+    if (
+      !HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES.includes(
+        mimeType as (typeof HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES)[number],
+      )
+    ) {
       return { success: false, errorCode: 'unsupported_type' };
     }
 
@@ -116,11 +120,15 @@ export async function getSessionHomeworkAttachmentUrl(path: string): Promise<{ u
 
     return { url: data.signedUrl };
   } catch (err) {
-    logger.error('sessionHomework:get_attachment_url_unexpected', err instanceof Error ? err.message : 'Unknown error', {
-      ...ctx,
-      err,
-      payload: { path },
-    });
+    logger.error(
+      'sessionHomework:get_attachment_url_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      {
+        ...ctx,
+        err,
+        payload: { path },
+      },
+    );
     return { url: null, error: 'Unexpected error' };
   }
 }

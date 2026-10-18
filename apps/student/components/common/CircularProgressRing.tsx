@@ -57,7 +57,14 @@ export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
   return (
     <div className={cn('relative flex items-center justify-center', className)} style={{ width: size, height: size }}>
       <svg className="w-full h-full transform -rotate-90" viewBox={`0 0 ${vb} ${vb}`}>
-        <circle cx={center} cy={center} r={radius} className={trackClassName} strokeWidth={strokeWidth} fill={trackFill} />
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          className={trackClassName}
+          strokeWidth={strokeWidth}
+          fill={trackFill}
+        />
         <motion.circle
           cx={center}
           cy={center}
@@ -71,9 +78,7 @@ export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
           strokeLinecap="round"
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        {children}
-      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
     </div>
   );
 };

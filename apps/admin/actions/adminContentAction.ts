@@ -28,7 +28,8 @@ export async function getContents(params: ListParams<'type'>): Promise<ListResul
 
     let query = supabase
       .from('com_m_contents')
-      .select(`
+      .select(
+        `
         *,
         tags:com_t_contents_tag_rel(
           tag:com_m_contents_tag(
@@ -43,7 +44,9 @@ export async function getContents(params: ListParams<'type'>): Promise<ListResul
             client_name
           )
         )
-      `, { count: 'exact' })
+      `,
+        { count: 'exact' },
+      )
       .order('content_type', { ascending: true })
       // ダイアログ教材はセット分類ごとにseq_noを振り直しているため、分類単位でまとめて並べる（他種別はNULL）
       .order('category_id', { ascending: true, nullsFirst: false })
@@ -64,14 +67,18 @@ export async function getContents(params: ListParams<'type'>): Promise<ListResul
     const { data, count, error } = await query;
 
     if (error) {
-      logger.error('content:get_contents_failed', error.message, { ...ctx, err: error, payload: { from, to, contentType } });
+      logger.error('content:get_contents_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { from, to, contentType },
+      });
       throw new Error(error.message);
     }
 
     const contents: Content[] = (data || []).map((item) => ({
       ...item,
       tags: item.tags?.map((t) => t.tag).filter(Boolean) || [],
-      access_clients: item.access?.map((a) => a.client).filter(Boolean) || []
+      access_clients: item.access?.map((a) => a.client).filter(Boolean) || [],
     }));
 
     return {
@@ -79,7 +86,11 @@ export async function getContents(params: ListParams<'type'>): Promise<ListResul
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('content:get_contents_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentType } });
+    logger.error('content:get_contents_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { contentType },
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -92,11 +103,7 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
   try {
     const supabase = createAdminClient();
 
-    const { data, error } = await supabase
-      .from('com_m_contents')
-      .select('*')
-      .eq('content_id', contentId)
-      .single();
+    const { data, error } = await supabase.from('com_m_contents').select('*').eq('content_id', contentId).single();
 
     if (error) {
       logger.error('content:get_content_by_id_failed', error.message, { ...ctx, err: error, payload: { contentId } });
@@ -105,7 +112,11 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
 
     return data as ContentRecord;
   } catch (err) {
-    logger.error('content:get_content_by_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId } });
+    logger.error('content:get_content_by_id_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { contentId },
+    });
     return null;
   }
 }
@@ -114,7 +125,8 @@ export async function getContentById(contentId: string): Promise<ContentRecord |
  * 教材の登録・更新 (Upsert)
  */
 /** 教材の登録・更新の入力（タグ・公開先は別の操作で保存するため含めない） */
-export type ContentUpsertInput = Pick<ContentRecord, 'content_name' | 'content_label'> & Partial<Omit<ContentRecord, 'content_name' | 'content_label'>>;
+export type ContentUpsertInput = Pick<ContentRecord, 'content_name' | 'content_label'> &
+  Partial<Omit<ContentRecord, 'content_name' | 'content_label'>>;
 
 export async function upsertContent(payload: ContentUpsertInput) {
   const ctx = await getLogContext();
@@ -131,16 +143,18 @@ export async function upsertContent(payload: ContentUpsertInput) {
         .select('metadata')
         .eq('content_id', contentId)
         .single();
-      
+
       if (existingRecord?.metadata) {
         finalMetadata = {
           ...existingRecord.metadata,
           ...metadata,
           // スプリントデータの階層が壊れないよう明示的にディープマージ
-          sprint: metadata?.sprint ? {
-            ...(existingRecord.metadata.sprint || {}),
-            ...metadata.sprint
-          } : existingRecord.metadata.sprint
+          sprint: metadata?.sprint
+            ? {
+                ...(existingRecord.metadata.sprint || {}),
+                ...metadata.sprint,
+              }
+            : existingRecord.metadata.sprint,
         };
       }
     }
@@ -154,16 +168,9 @@ export async function upsertContent(payload: ContentUpsertInput) {
 
     let query;
     if (contentId) {
-      query = supabase
-        .from('com_m_contents')
-        .update(dataToSave)
-        .eq('content_id', contentId)
-        .select();
+      query = supabase.from('com_m_contents').update(dataToSave).eq('content_id', contentId).select();
     } else {
-      query = supabase
-        .from('com_m_contents')
-        .insert([dataToSave])
-        .select();
+      query = supabase.from('com_m_contents').insert([dataToSave]).select();
     }
 
     const { data, error } = await query;
@@ -174,15 +181,23 @@ export async function upsertContent(payload: ContentUpsertInput) {
     }
 
     const savedContent = data?.[0] as Content;
-    logger.info('content:upsert_content_success', `Content ${isEdit ? 'updated' : 'created'}: ${savedContent.content_name}`, { 
-      ...ctx, 
-      payload: { contentId: savedContent.content_id, isEdit } 
-    });
+    logger.info(
+      'content:upsert_content_success',
+      `Content ${isEdit ? 'updated' : 'created'}: ${savedContent.content_name}`,
+      {
+        ...ctx,
+        payload: { contentId: savedContent.content_id, isEdit },
+      },
+    );
 
     revalidatePath('/contents');
     return { success: true, data: savedContent };
   } catch (error) {
-    logger.error('content:upsert_content_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
+    logger.error('content:upsert_content_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload,
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -198,7 +213,10 @@ export async function deleteContent(contentId: string) {
 
     // 消す前に、教材に付属する音声のパスを集める（単語・フレーズは CASCADE、スプリントの問題は外部キーが無いため後で消す）
     const [{ data: phrases, error: phraseError }, { data: questions, error: questionError }] = await Promise.all([
-      supabase.from('com_m_phrase').select('audio_path, com_m_word!inner(content_id)').eq('com_m_word.content_id', contentId),
+      supabase
+        .from('com_m_phrase')
+        .select('audio_path, com_m_word!inner(content_id)')
+        .eq('com_m_word.content_id', contentId),
       supabase
         .from('com_m_sprint_questions')
         .select('statement_voice, question_voice, answer_sentence_yes_voice, answer_sentence_no_voice')
@@ -207,10 +225,7 @@ export async function deleteContent(contentId: string) {
     if (phraseError) throw phraseError;
     if (questionError) throw questionError;
 
-    const { error } = await supabase
-      .from('com_m_contents')
-      .delete()
-      .eq('content_id', contentId);
+    const { error } = await supabase.from('com_m_contents').delete().eq('content_id', contentId);
 
     if (error) {
       if (isInUseError(error)) return { success: false, reason: 'in_use' as const, message: error.message };
@@ -218,9 +233,16 @@ export async function deleteContent(contentId: string) {
       return { success: false, message: error.message };
     }
 
-    const { error: questionDeleteError } = await supabase.from('com_m_sprint_questions').delete().eq('content_id', contentId);
+    const { error: questionDeleteError } = await supabase
+      .from('com_m_sprint_questions')
+      .delete()
+      .eq('content_id', contentId);
     if (questionDeleteError) {
-      logger.error('content:delete_sprint_questions_failed', questionDeleteError.message, { ...ctx, err: questionDeleteError, payload: { contentId } });
+      logger.error('content:delete_sprint_questions_failed', questionDeleteError.message, {
+        ...ctx,
+        err: questionDeleteError,
+        payload: { contentId },
+      });
     }
     await removeStorageFiles(
       supabase,
@@ -228,20 +250,31 @@ export async function deleteContent(contentId: string) {
       [
         ...(phrases ?? []).map((p) => p.audio_path as string | null),
         // 問題の行が消せなかった場合は、残った行が参照する音声を消さない
-        ...(questionDeleteError ? [] : (questions ?? []).flatMap((q) => [q.statement_voice, q.question_voice, q.answer_sentence_yes_voice, q.answer_sentence_no_voice])),
+        ...(questionDeleteError
+          ? []
+          : (questions ?? []).flatMap((q) => [
+              q.statement_voice,
+              q.question_voice,
+              q.answer_sentence_yes_voice,
+              q.answer_sentence_no_voice,
+            ])),
       ],
-      { event: 'content:delete_files_failed', ctx, payload: { contentId } }
+      { event: 'content:delete_files_failed', ctx, payload: { contentId } },
     );
 
-    logger.info('content:delete_content_success', `Content deleted`, {  
+    logger.info('content:delete_content_success', `Content deleted`, {
       ...ctx,
-      payload: { contentId } 
+      payload: { contentId },
     });
 
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:delete_content_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId } });
+    logger.error('content:delete_content_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { contentId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -260,7 +293,11 @@ export async function getTagAssignmentData(contentId: string) {
       .order('seq_no', { ascending: true });
 
     if (tagError) {
-      logger.error('content:get_tag_assignment_all_tags_failed', tagError.message, { ...ctx, err: tagError, payload: { contentId } });
+      logger.error('content:get_tag_assignment_all_tags_failed', tagError.message, {
+        ...ctx,
+        err: tagError,
+        payload: { contentId },
+      });
       throw new Error(tagError.message);
     }
 
@@ -270,15 +307,19 @@ export async function getTagAssignmentData(contentId: string) {
       .eq('content_id', contentId);
 
     if (relError) {
-      logger.error('content:get_tag_assignment_rel_data_failed', relError.message, { ...ctx, err: relError, payload: { contentId } });
+      logger.error('content:get_tag_assignment_rel_data_failed', relError.message, {
+        ...ctx,
+        err: relError,
+        payload: { contentId },
+      });
       throw new Error(relError.message);
     }
 
-    const assignedTagIds = new Set(relData.map(r => r.tag_id));
+    const assignedTagIds = new Set(relData.map((r) => r.tag_id));
     const assignedTags: ContentTagSummary[] = [];
     const unassignedTags: ContentTagSummary[] = [];
 
-    allTags.forEach(tag => {
+    allTags.forEach((tag) => {
       if (assignedTagIds.has(tag.tag_id)) {
         assignedTags.push(tag);
       } else {
@@ -288,7 +329,11 @@ export async function getTagAssignmentData(contentId: string) {
 
     return { assignedTags, unassignedTags };
   } catch (error) {
-    logger.error('content:get_tag_assignment_data_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId } });
+    logger.error(
+      'content:get_tag_assignment_data_unexpected',
+      error instanceof Error ? error.message : 'Unknown error',
+      { ...ctx, err: error, payload: { contentId } },
+    );
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -301,26 +346,28 @@ export async function assignTag(contentId: string, tagId: string) {
   try {
     const supabase = await createAdminClient();
 
-    const { error } = await supabase
-      .from('com_t_contents_tag_rel')
-      .insert({
-        content_id: contentId,
-        tag_id: tagId
-      });
+    const { error } = await supabase.from('com_t_contents_tag_rel').insert({
+      content_id: contentId,
+      tag_id: tagId,
+    });
 
     if (error) {
       logger.error('content:assign_tag_failed', error.message, { ...ctx, err: error, payload: { contentId, tagId } });
       return { success: false, message: error.message };
     }
 
-    logger.info('content:assign_tag_success', `Tag assigned to content`, { 
+    logger.info('content:assign_tag_success', `Tag assigned to content`, {
       ...ctx,
-      payload: { contentId, tagId } 
+      payload: { contentId, tagId },
     });
 
     return { success: true };
   } catch (error) {
-    logger.error('content:assign_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId, tagId } });
+    logger.error('content:assign_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { contentId, tagId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -344,14 +391,18 @@ export async function removeTag(contentId: string, tagId: string) {
       return { success: false, message: error.message };
     }
 
-    logger.info('content:remove_tag_success', `Tag removed from content`, { 
+    logger.info('content:remove_tag_success', `Tag removed from content`, {
       ...ctx,
-      payload: { contentId, tagId } 
+      payload: { contentId, tagId },
     });
 
     return { success: true };
   } catch (error) {
-    logger.error('content:remove_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId, tagId } });
+    logger.error('content:remove_tag_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { contentId, tagId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -371,7 +422,11 @@ export async function getContentAccessData(contentId: string) {
       .order('client_name', { ascending: true });
 
     if (clientError) {
-      logger.error('content:get_content_access_all_clients_failed', clientError.message, { ...ctx, err: clientError, payload: { contentId } });
+      logger.error('content:get_content_access_all_clients_failed', clientError.message, {
+        ...ctx,
+        err: clientError,
+        payload: { contentId },
+      });
       throw new Error(clientError.message);
     }
 
@@ -381,17 +436,25 @@ export async function getContentAccessData(contentId: string) {
       .eq('content_id', contentId);
 
     if (accessError) {
-      logger.error('content:get_content_access_data_failed', accessError.message, { ...ctx, err: accessError, payload: { contentId } });
+      logger.error('content:get_content_access_data_failed', accessError.message, {
+        ...ctx,
+        err: accessError,
+        payload: { contentId },
+      });
       throw new Error(accessError.message);
     }
 
-    const assignedClientIds = new Set(accessData.map(a => a.client_id));
-    const assignedClients = allClients.filter(client => assignedClientIds.has(client.client_id));
-    const unassignedClients = allClients.filter(client => !assignedClientIds.has(client.client_id));
+    const assignedClientIds = new Set(accessData.map((a) => a.client_id));
+    const assignedClients = allClients.filter((client) => assignedClientIds.has(client.client_id));
+    const unassignedClients = allClients.filter((client) => !assignedClientIds.has(client.client_id));
 
     return { assignedClients, unassignedClients };
   } catch (error) {
-    logger.error('content:get_content_access_data_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId } });
+    logger.error(
+      'content:get_content_access_data_unexpected',
+      error instanceof Error ? error.message : 'Unknown error',
+      { ...ctx, err: error, payload: { contentId } },
+    );
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -408,19 +471,27 @@ export async function assignAccess(contentId: string, clientId: string) {
       .insert({ content_id: contentId, client_id: clientId });
 
     if (error) {
-      logger.error('content:assign_access_failed', error.message, { ...ctx, err: error, payload: { contentId, clientId } });
+      logger.error('content:assign_access_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { contentId, clientId },
+      });
       return { success: false, message: error.message };
     }
 
-    logger.info('content:assign_access_success', `Access assigned to client`, { 
+    logger.info('content:assign_access_success', `Access assigned to client`, {
       ...ctx,
-      payload: { contentId, clientId } 
+      payload: { contentId, clientId },
     });
 
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:assign_access_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId, clientId } });
+    logger.error('content:assign_access_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { contentId, clientId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -439,19 +510,27 @@ export async function removeAccess(contentId: string, clientId: string) {
       .eq('client_id', clientId);
 
     if (error) {
-      logger.error('content:remove_access_failed', error.message, { ...ctx, err: error, payload: { contentId, clientId } });
+      logger.error('content:remove_access_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { contentId, clientId },
+      });
       return { success: false, message: error.message };
     }
 
-    logger.info('content:remove_access_success', `Access removed from client`, { 
+    logger.info('content:remove_access_success', `Access removed from client`, {
       ...ctx,
-      payload: { contentId, clientId } 
+      payload: { contentId, clientId },
     });
 
     revalidatePath('/contents');
     return { success: true };
   } catch (error) {
-    logger.error('content:remove_access_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId, clientId } });
+    logger.error('content:remove_access_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { contentId, clientId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }

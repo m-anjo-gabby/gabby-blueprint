@@ -49,11 +49,21 @@ export function MonitorMonthPickerPopover({ currentMonth, onSelect, disabled }: 
       </PopoverTrigger>
       <PopoverContent className="w-64 rounded-control p-3" align="start">
         <div className="mb-3 flex items-center justify-between">
-          <button type="button" onClick={() => setViewYear((y) => y - 1)} className={YEAR_BUTTON_CLASS} aria-label="前年">
+          <button
+            type="button"
+            onClick={() => setViewYear((y) => y - 1)}
+            className={YEAR_BUTTON_CLASS}
+            aria-label="前年"
+          >
             <ChevronLeft size={16} />
           </button>
           <span className="text-sm font-bold text-ink tabular-nums">{viewYear}年</span>
-          <button type="button" onClick={() => setViewYear((y) => y + 1)} className={YEAR_BUTTON_CLASS} aria-label="翌年">
+          <button
+            type="button"
+            onClick={() => setViewYear((y) => y + 1)}
+            className={YEAR_BUTTON_CLASS}
+            aria-label="翌年"
+          >
             <ChevronRight size={16} />
           </button>
         </div>
@@ -68,7 +78,7 @@ export function MonitorMonthPickerPopover({ currentMonth, onSelect, disabled }: 
                 aria-pressed={isSelected}
                 className={cn(
                   'rounded-control py-2 text-sm font-semibold transition-colors',
-                  isSelected ? 'bg-brand text-white' : 'text-ink-soft hover:bg-brand-soft hover:text-brand'
+                  isSelected ? 'bg-brand text-white' : 'text-ink-soft hover:bg-brand-soft hover:text-brand',
                 )}
               >
                 {label}

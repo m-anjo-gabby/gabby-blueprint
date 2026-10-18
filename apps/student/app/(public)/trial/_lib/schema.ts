@@ -20,7 +20,8 @@ const REFERRAL_SOURCE_CODES = TRIAL_REFERRAL_SOURCES.map((r) => String(r.code));
 const requiredText = (label: string, max: number) =>
   z.string().trim().min(1, `${label}を入力してください`).max(max, `${label}は${max}文字以内で入力してください`);
 
-const optionalText = (label: string, max: number) => z.string().trim().max(max, `${label}は${max}文字以内で入力してください`);
+const optionalText = (label: string, max: number) =>
+  z.string().trim().max(max, `${label}は${max}文字以内で入力してください`);
 
 const romaji = (label: string) =>
   requiredText(label, TRIAL_FIELD_LIMITS.latinName).regex(ROMAJI_PATTERN, `${label}は半角の英字で入力してください`);
@@ -41,7 +42,9 @@ export const trialApplicationSchema = z
     countryCity: optionalText('国・都市', TRIAL_FIELD_LIMITS.countryCity),
     occupation: z.string().refine((value) => OCCUPATION_CODES.includes(value), '業種・職業を選んでください'),
     occupationOther: optionalText('業種・職業', TRIAL_FIELD_LIMITS.occupationOther),
-    referralSource: z.string().refine((value) => REFERRAL_SOURCE_CODES.includes(value), 'Gabby をどこで知ったかを選んでください'),
+    referralSource: z
+      .string()
+      .refine((value) => REFERRAL_SOURCE_CODES.includes(value), 'Gabby をどこで知ったかを選んでください'),
     referralSourceOther: optionalText('知ったきっかけ', TRIAL_FIELD_LIMITS.referralSourceOther),
     message: optionalText('ご要望・ご質問', TRIAL_FIELD_LIMITS.message),
     // 個人情報保護方針への同意（必須。同意の日時は申込の日時として扱い、列には持たない）

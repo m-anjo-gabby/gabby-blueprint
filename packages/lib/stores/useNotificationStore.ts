@@ -59,12 +59,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     // 楽観的UI更新
     set((state) => ({
       notifications: state.notifications.map((n) =>
-        n.notification_id === notificationId ? { ...n, is_read: true } : n
+        n.notification_id === notificationId ? { ...n, is_read: true } : n,
       ),
       unreadCount: Math.max(
         0,
         state.unreadCount -
-          (state.notifications.find((n) => n.notification_id === notificationId && !n.is_read) ? 1 : 0)
+          (state.notifications.find((n) => n.notification_id === notificationId && !n.is_read) ? 1 : 0),
       ),
     }));
     await markNotificationAsReadAction(notificationId);

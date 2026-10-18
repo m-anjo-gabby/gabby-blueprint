@@ -31,7 +31,13 @@ export function MonthlyReportGrid({ report }: { report: CoachMonthlyReport }) {
 
   const openCell = (student: MonthlyReportStudentRow, dateKey: string, sessions: MonthlyReportSession[]) => {
     if (sessions.length === 0 || !sessions.some((s) => s.is_unresolved || s.is_attention)) return;
-    setDetail({ studentId: student.student_id, userName: student.user_name, iconPath: student.icon_path, dateKey, sessions });
+    setDetail({
+      studentId: student.student_id,
+      userName: student.user_name,
+      iconPath: student.icon_path,
+      dateKey,
+      sessions,
+    });
   };
 
   if (report.students.length === 0) {

@@ -46,7 +46,7 @@ export async function MonthlyReportSection({ coachId, yearMonth, coachName }: Pr
           result.report.coach_timezone,
           timezoneNames.get(result.report.coach_timezone),
           'display',
-          locale === 'en' ? 'en' : 'ja'
+          locale === 'en' ? 'en' : 'ja',
         )}
         approval={result.report.approval}
       />

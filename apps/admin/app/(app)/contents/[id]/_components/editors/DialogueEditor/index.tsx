@@ -32,9 +32,7 @@ export function DialogueEditor({ contentId }: DialogueEditorProps) {
     fetchSessions();
   }, [fetchSessions]);
 
-  const nextSessionNo = sessions.length > 0
-    ? Math.max(...sessions.map((s) => s.session_no)) + 1
-    : 1;
+  const nextSessionNo = sessions.length > 0 ? Math.max(...sessions.map((s) => s.session_no)) + 1 : 1;
 
   return (
     <div className="flex flex-col h-full bg-slate-50/30 overflow-hidden">

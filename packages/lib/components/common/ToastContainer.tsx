@@ -16,7 +16,7 @@ export default function ToastContainer() {
   };
 
   return (
-    <div 
+    <div
       className="fixed bottom-10 left-1/2 -translate-x-1/2 z-200 flex flex-col items-center gap-3 pointer-events-none w-full max-w-100 px-6"
       aria-live="polite" // スクリーンリーダー対応
     >
@@ -38,17 +38,13 @@ export default function ToastContainer() {
             `}
           >
             {/* アイコン */}
-            <span className="shrink-0 opacity-90">
-              {icons[toast.type || 'info']}
-            </span>
+            <span className="shrink-0 opacity-90">{icons[toast.type || 'info']}</span>
 
             {/* メッセージ */}
-            <span className="flex-1 leading-tight">
-              {toast.message}
-            </span>
+            <span className="flex-1 leading-tight">{toast.message}</span>
 
             {/* 手動で閉じるボタン（任意ですがあると親切） */}
-            <button 
+            <button
               onClick={() => removeToast(toast.id)}
               className="shrink-0 ml-2 p-1 hover:bg-white/20 rounded-full transition-colors"
             >

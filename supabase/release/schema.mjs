@@ -132,7 +132,10 @@ const PRIV = { a: 'INSERT', r: 'SELECT', w: 'UPDATE', d: 'DELETE', D: 'TRUNCATE'
 function privilegesOf(acl, role) {
   const item = (acl ?? []).find((a) => a.startsWith(`${role}=`));
   if (!item) return [];
-  return [...item.slice(role.length + 1).split('/')[0]].map((ch) => PRIV[ch]).filter(Boolean).sort();
+  return [...item.slice(role.length + 1).split('/')[0]]
+    .map((ch) => PRIV[ch])
+    .filter(Boolean)
+    .sort();
 }
 
 /** Postgres が付ける既定の制約名なら、列定義の中に書いても同じ名前で再現できる */
@@ -157,10 +160,14 @@ function renderTable(table) {
   for (const k of constraints) {
     if (k.type !== 'c' && k.type !== 'x' && isDefaultName(table, k)) {
       const col = k.columns[0];
-      const text = k.type === 'p' && k.columns.length === 1 ? 'PRIMARY KEY'
-        : k.type === 'u' ? 'UNIQUE'
-          : k.type === 'f' ? k.def.replace(/^FOREIGN KEY \([^)]*\) /, '')
-            : null;
+      const text =
+        k.type === 'p' && k.columns.length === 1
+          ? 'PRIMARY KEY'
+          : k.type === 'u'
+            ? 'UNIQUE'
+            : k.type === 'f'
+              ? k.def.replace(/^FOREIGN KEY \([^)]*\) /, '')
+              : null;
       if (text) {
         inline.set(col, [...(inline.get(col) ?? []), text]);
         continue;
@@ -190,7 +197,8 @@ function renderTable(table) {
   const comments = [];
   if (table.comment != null) comments.push(`COMMENT ON TABLE ${table.name} IS ${quoteLiteral(table.comment)};`);
   for (const c of columns) {
-    if (c.comment != null) comments.push(`COMMENT ON COLUMN ${table.name}.${quoteIdent(c.name)} IS ${quoteLiteral(c.comment)};`);
+    if (c.comment != null)
+      comments.push(`COMMENT ON COLUMN ${table.name}.${quoteIdent(c.name)} IS ${quoteLiteral(c.comment)};`);
   }
   if (comments.length > 0) out.push('', ...comments);
 
@@ -224,7 +232,10 @@ function renderTable(table) {
 }
 
 function indent(expr) {
-  return expr.split('\n').map((l) => `    ${l.trimEnd()}`).join('\n');
+  return expr
+    .split('\n')
+    .map((l) => `    ${l.trimEnd()}`)
+    .join('\n');
 }
 
 /** anon / authenticated の権限が既定（DEFAULT_PRIVILEGES）と違う場合だけ出力する */
@@ -254,12 +265,14 @@ function renderBlock(table) {
 // 正本ファイルの読み書き
 // ---------------------------------------------------------------------------
 function readCanonicalFiles() {
-  return readdirSync(TABLE_DIR).filter((f) => f.endsWith('.sql')).map((f) => {
-    const file = path.join(TABLE_DIR, f);
-    const text = readFileSync(file, 'utf8');
-    const blocks = [...text.matchAll(MARKER_RE)].map((m) => ({ table: m[1], text: m[0].replace(/\r\n/g, '\n') }));
-    return { file, name: f, text, blocks };
-  });
+  return readdirSync(TABLE_DIR)
+    .filter((f) => f.endsWith('.sql'))
+    .map((f) => {
+      const file = path.join(TABLE_DIR, f);
+      const text = readFileSync(file, 'utf8');
+      const blocks = [...text.matchAll(MARKER_RE)].map((m) => ({ table: m[1], text: m[0].replace(/\r\n/g, '\n') }));
+      return { file, name: f, text, blocks };
+    });
 }
 
 async function main() {
@@ -281,7 +294,8 @@ async function main() {
   const covered = new Set(files.flatMap((f) => f.blocks.map((b) => b.table)));
   const targets = new Set(opts.tables.length > 0 ? opts.tables : covered);
   for (const name of targets) {
-    if (!covered.has(name)) fail(`マーカー（-- @schema ${name}）のある正本ファイルがありません。先にファイルにマーカーを書いてください。`);
+    if (!covered.has(name))
+      fail(`マーカー（-- @schema ${name}）のある正本ファイルがありません。先にファイルにマーカーを書いてください。`);
   }
 
   const diffs = [];
@@ -308,7 +322,11 @@ async function main() {
     missing.forEach((m) => console.log(`  ${m}`));
   }
   if (opts.mode === 'write') {
-    console.log(diffs.length === 0 ? '\n変更はありません。' : `\n${diffs.length} テーブルを書き直しました: ${diffs.map((d) => d.table).join(', ')}`);
+    console.log(
+      diffs.length === 0
+        ? '\n変更はありません。'
+        : `\n${diffs.length} テーブルを書き直しました: ${diffs.map((d) => d.table).join(', ')}`,
+    );
   } else {
     if (diffs.length > 0) {
       console.log('\n正本と実DBで内容が違うテーブル:');
@@ -318,7 +336,8 @@ async function main() {
       }
     }
     const uncovered = [...catalog.keys()].filter((name) => !covered.has(name) && !HAND_WRITTEN.includes(name));
-    if (uncovered.length > 0) console.log(`\n正本（マーカー）の無いテーブル: ${uncovered.length} 件\n  ${uncovered.join('\n  ')}`);
+    if (uncovered.length > 0)
+      console.log(`\n正本（マーカー）の無いテーブル: ${uncovered.length} 件\n  ${uncovered.join('\n  ')}`);
     console.log(diffs.length === 0 && missing.length === 0 ? '\n正本と実DBは一致しています。' : '');
     if (diffs.length > 0 || missing.length > 0) process.exitCode = 1;
   }

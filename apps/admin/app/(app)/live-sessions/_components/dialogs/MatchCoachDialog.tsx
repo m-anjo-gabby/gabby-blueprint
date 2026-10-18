@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { matchStudentWithCoachAsAdmin } from '@/actions/adminLiveSessionAction';
@@ -18,7 +25,9 @@ const LESSON_DURATION_MINUTES = 25;
 function addMinutesToTime(time: string, minutes: number): string {
   const [h, m] = time.split(':').map(Number);
   const total = h * 60 + m + minutes;
-  const hh = Math.floor(total / 60).toString().padStart(2, '0');
+  const hh = Math.floor(total / 60)
+    .toString()
+    .padStart(2, '0');
   const mm = (total % 60).toString().padStart(2, '0');
   return `${hh}:${mm}`;
 }
@@ -87,9 +96,7 @@ export function MatchCoachDialog({ open, initialSlotNo, ticketId, coaches, onClo
       <DialogContent className="rounded-3xl">
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
-          <DialogDescription>
-            {t('description')}
-          </DialogDescription>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
@@ -122,7 +129,9 @@ export function MatchCoachDialog({ open, initialSlotNo, ticketId, coaches, onClo
                 className="flex h-9 w-full rounded-md border border-input bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 {DAY_KEYS.map((key, i) => (
-                  <option key={i} value={i}>{tDay(key)}</option>
+                  <option key={i} value={i}>
+                    {tDay(key)}
+                  </option>
                 ))}
               </select>
             </div>
@@ -133,14 +142,22 @@ export function MatchCoachDialog({ open, initialSlotNo, ticketId, coaches, onClo
                 onChange={(e) => setStartTime(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                <option value="" disabled>{t('timePlaceholder')}</option>
-                {ADMIN_TIME_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                <option value="" disabled>
+                  {t('timePlaceholder')}
+                </option>
+                {ADMIN_TIME_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
           <p className="text-[10px] text-slate-400 leading-relaxed">
-            {t('hint1')}<br />
-            {t('timezoneNote')}<br />
+            {t('hint1')}
+            <br />
+            {t('timezoneNote')}
+            <br />
             {t('hint2')}
           </p>
         </div>
@@ -148,7 +165,12 @@ export function MatchCoachDialog({ open, initialSlotNo, ticketId, coaches, onClo
           <Button type="button" variant="outline" onClick={reset} disabled={isMatching}>
             {t('close')}
           </Button>
-          <Button pending={isMatching} type="button" onClick={handleMatch} disabled={isMatching || !coachId || !startTime}>
+          <Button
+            pending={isMatching}
+            type="button"
+            onClick={handleMatch}
+            disabled={isMatching || !coachId || !startTime}
+          >
             {t('confirmButton')}
           </Button>
         </DialogFooter>

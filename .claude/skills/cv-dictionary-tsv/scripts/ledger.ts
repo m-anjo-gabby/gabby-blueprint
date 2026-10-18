@@ -15,10 +15,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import {
-  CV_IMPORT_REQUIRED_HEADERS,
-  CV_IMPORT_OPTIONAL_HEADERS,
-} from '../../../../apps/admin/lib/cvDictionaryImport';
+import { CV_IMPORT_REQUIRED_HEADERS, CV_IMPORT_OPTIONAL_HEADERS } from '../../../../apps/admin/lib/cvDictionaryImport';
 import {
   DEFAULT_LEDGER_PATH,
   DEFAULT_PROPER_NOUNS_PATH,
@@ -68,7 +65,10 @@ const sync = () => {
   const workDir = argOf('--work');
   if (!workDir) throw new Error('--work を指定してください');
 
-  const lines = readFileSync(join(workDir, 'review.tsv'), 'utf-8').replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim());
+  const lines = readFileSync(join(workDir, 'review.tsv'), 'utf-8')
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .filter((l) => l.trim());
   const headers = lines[0].split('\t');
   const existing = new Set(ledger.map(ledgerKey));
   const source = basename(workDir.replace(/[\\/]+$/, ''));
@@ -78,7 +78,10 @@ const sync = () => {
     const cells = line.split('\t');
     const r = Object.fromEntries(headers.map((h, i) => [h, cells[i] ?? '']));
     // 台帳で確認済み・確認待ちの注記だけの行は追記対象外
-    const question = r.review.split(' / ').filter((q: string) => !q.startsWith('台帳')).join(' / ');
+    const question = r.review
+      .split(' / ')
+      .filter((q: string) => !q.startsWith('台帳'))
+      .join(' / ');
     if (!question || existing.has(ledgerKey(r as LedgerRow))) continue;
 
     const row: LedgerRow = {
@@ -123,14 +126,17 @@ const exportConfirmed = () => {
   // word_ja・lemma は台帳で管理しないため、--dict で指定した生成済みの辞書TSVから引く
   const dictPath = argOf('--dict');
   if (!dictPath) throw new Error('--dict に word_ja の参照元となる辞書TSV（生成済みの一括登録TSV）を指定してください');
-  const dictLines = readFileSync(dictPath, 'utf-8').replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim());
+  const dictLines = readFileSync(dictPath, 'utf-8')
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .filter((l) => l.trim());
   const dictHeaders = dictLines[0].split('\t');
   const dict = new Map(
     dictLines.slice(1).map((l) => {
       const c = l.split('\t');
       const rec = Object.fromEntries(dictHeaders.map((h, i) => [h, c[i] ?? '']));
       return [ledgerKey(rec as LedgerRow), { wordJa: rec.word_ja, lemma: rec.lemma ?? '' }];
-    })
+    }),
   );
 
   // 台帳は複数の辞書TSVの語をまとめて持つため、指定した辞書TSVに含まれる語だけを書き出す
@@ -139,11 +145,22 @@ const exportConfirmed = () => {
   if (missing.length > 0) {
     throw new Error(`辞書TSVに word_ja が空の行があります: ${missing.map((r) => `${r.id} ${r.word_en}`).join(', ')}`);
   }
-  if (targets.length < rows.length) console.log(`辞書TSVに含まれない確定行 ${rows.length - targets.length}件は書き出しません`);
+  if (targets.length < rows.length)
+    console.log(`辞書TSVに含まれない確定行 ${rows.length - targets.length}件は書き出しません`);
 
   const body = targets.map((r) => {
     const d = dict.get(ledgerKey(r));
-    return [r.word_en, r.part_of_speech, d?.wordJa, r.syllables, r.primary_stress_syllable, r.stress_vowel_spelling, r.cv_id, r.phonetic_spelling, d?.lemma].join('\t');
+    return [
+      r.word_en,
+      r.part_of_speech,
+      d?.wordJa,
+      r.syllables,
+      r.primary_stress_syllable,
+      r.stress_vowel_spelling,
+      r.cv_id,
+      r.phonetic_spelling,
+      d?.lemma,
+    ].join('\t');
   });
   writeFileSync(outPath, [headers.join('\t'), ...body].join('\n') + '\n', 'utf-8');
   console.log(`確定行 ${targets.length}件 → ${outPath}（取込画面で「データのみ上書き」を選んで反映してください）`);

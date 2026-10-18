@@ -26,14 +26,18 @@ const { chromium } = require('@playwright/test');
 const G = (title, intro, items) => ({ title, intro, items });
 /** 区分と各サンプルの表示名・宛先・タイミング。send-mail-samples.ts の label と対応させる */
 const GROUPS = [
-  G('アカウント（招待・パスワード再設定）', '従来からあるメールを、新しい共通の外枠に揃えました。配信停止の対象外です。管理者宛ては日本語・英語の併記です。', [
-    ['auth-student-INVITE', '招待（生徒）', '生徒', '管理画面から招待したとき'],
-    ['auth-coach-INVITE', '招待（コーチ）', 'コーチ', '管理画面から招待したとき'],
-    ['auth-admin-INVITE', '招待（管理者）', '管理者', '管理画面から招待したとき'],
-    ['auth-student-RESET', 'パスワード再設定（生徒）', '生徒', '再設定を申請したとき'],
-    ['auth-coach-RESET', 'パスワード再設定（コーチ）', 'コーチ', '再設定を申請したとき'],
-    ['auth-admin-RESET', 'パスワード再設定（管理者）', '管理者', '再設定を申請したとき'],
-  ]),
+  G(
+    'アカウント（招待・パスワード再設定）',
+    '従来からあるメールを、新しい共通の外枠に揃えました。配信停止の対象外です。管理者宛ては日本語・英語の併記です。',
+    [
+      ['auth-student-INVITE', '招待（生徒）', '生徒', '管理画面から招待したとき'],
+      ['auth-coach-INVITE', '招待（コーチ）', 'コーチ', '管理画面から招待したとき'],
+      ['auth-admin-INVITE', '招待（管理者）', '管理者', '管理画面から招待したとき'],
+      ['auth-student-RESET', 'パスワード再設定（生徒）', '生徒', '再設定を申請したとき'],
+      ['auth-coach-RESET', 'パスワード再設定（コーチ）', 'コーチ', '再設定を申請したとき'],
+      ['auth-admin-RESET', 'パスワード再設定（管理者）', '管理者', '再設定を申請したとき'],
+    ],
+  ),
   G('通知（生徒宛て）', '出来事が起きたらすぐ送ります。プロフィールの「メール通知」の「通知」で止められます。', [
     ['student-SESSION_CANCELLED_BY_COACH', 'コーチがセッションをキャンセル', '生徒', 'すぐ'],
     ['student-SESSION_RESCHEDULE_PROPOSED', 'コーチから振替候補の提案', '生徒', 'すぐ'],
@@ -43,42 +47,71 @@ const GROUPS = [
     ['student-MATCHING_REJECTED', '専属コーチのマッチング否認', '生徒', 'すぐ'],
     ['student-HOMEWORK_POSTED', 'コーチが宿題を出した', '生徒', 'すぐ'],
   ]),
-  G('通知（コーチ宛て・英語）', 'コーチアプリの表示言語に合わせて英語で送ります。プロフィールの「Email notifications」で止められます。', [
-    ['coach-SESSION_CANCELLED_BY_STUDENT', '生徒がセッションをキャンセル', 'コーチ', 'すぐ'],
-    ['coach-SESSION_RESCHEDULE_PROPOSED_BY_STUDENT', '生徒から振替候補の提案', 'コーチ', 'すぐ'],
-    ['coach-SESSION_BOOKED_BY_STUDENT', '生徒がセッションを予約', 'コーチ', 'すぐ'],
-    ['coach-SESSION_BOOKING_REQUESTED', '生徒から予約の申請', 'コーチ', 'すぐ'],
-    ['coach-MATCHING_ASSIGNED_TO_COACH', '専属コーチの担当が決定', 'コーチ', 'すぐ'],
-    ['coach-COACH_REPORT_APPROVED', '月次レポートの承認', 'コーチ', 'すぐ'],
-    ['coach-COACH_REPORT_APPROVAL_REVOKED', '月次レポートの承認の取り消し', 'コーチ', 'すぐ'],
-  ]),
+  G(
+    '通知（コーチ宛て・英語）',
+    'コーチアプリの表示言語に合わせて英語で送ります。プロフィールの「Email notifications」で止められます。',
+    [
+      ['coach-SESSION_CANCELLED_BY_STUDENT', '生徒がセッションをキャンセル', 'コーチ', 'すぐ'],
+      ['coach-SESSION_RESCHEDULE_PROPOSED_BY_STUDENT', '生徒から振替候補の提案', 'コーチ', 'すぐ'],
+      ['coach-SESSION_BOOKED_BY_STUDENT', '生徒がセッションを予約', 'コーチ', 'すぐ'],
+      ['coach-SESSION_BOOKING_REQUESTED', '生徒から予約の申請', 'コーチ', 'すぐ'],
+      ['coach-MATCHING_ASSIGNED_TO_COACH', '専属コーチの担当が決定', 'コーチ', 'すぐ'],
+      ['coach-COACH_REPORT_APPROVED', '月次レポートの承認', 'コーチ', 'すぐ'],
+      ['coach-COACH_REPORT_APPROVAL_REVOKED', '月次レポートの承認の取り消し', 'コーチ', 'すぐ'],
+    ],
+  ),
   G('チャットの新着', '未読のまま10分たったら1通だけ送ります。送る時点で既読なら送りません。', [
     ['student-CHAT_UNREAD', 'チャットの新着（生徒）', '生徒', '未読が10分続いたら'],
     ['coach-CHAT_UNREAD', 'チャットの新着（コーチ）', 'コーチ', '未読が10分続いたら'],
   ]),
-  G('リマインダー（ライブセッション）', '予定のセッションの24時間前と1時間前に送ります。キャンセル・振替済み・開始済みには送りません。', [
-    ['student-LIVE-24h', 'ライブセッション 24時間前（生徒）', '生徒', '24時間前'],
-    ['student-LIVE-1h', 'ライブセッション 1時間前（生徒）', '生徒', '1時間前'],
-    ['coach-LIVE-24h', 'ライブセッション 24時間前（コーチ）', 'コーチ', '24時間前'],
-    ['coach-LIVE-1h', 'ライブセッション 1時間前（コーチ）', 'コーチ', '1時間前'],
-  ]),
-  G('リマインダー（グループセッション）', '参加登録した回（コーチは担当・参加登録した回）の24時間前と1時間前に送ります。シリーズの有無・参加URLの有無で表示が変わります。', [
-    ['student-REMINDER-24h-series', 'グループセッション 24時間前（生徒・シリーズの回）', '生徒', '24時間前'],
-    ['student-REMINDER-1h-single-nourl', 'グループセッション 1時間前（生徒・単発・参加URL未設定）', '生徒', '1時間前'],
-    ['coach-REMINDER-24h-series', 'グループセッション 24時間前（コーチ・シリーズの回）', 'コーチ', '24時間前'],
-    ['coach-REMINDER-1h', 'グループセッション 1時間前（コーチ）', 'コーチ', '1時間前'],
-  ]),
-  G('運営向けの日次の要約', '毎朝 9:00（日本時間）に運営の指定アドレスへ送ります。問題が無い日も届きます。日本語・英語の併記です。', [
-    ['ops-DAILY_REPORT-ok', '日次の要約（異常なし）', '運営', '毎朝 9:00'],
-    ['ops-DAILY_REPORT-issues', '日次の要約（要確認あり）', '運営', '毎朝 9:00'],
-  ]),
+  G(
+    'リマインダー（ライブセッション）',
+    '予定のセッションの24時間前と1時間前に送ります。キャンセル・振替済み・開始済みには送りません。',
+    [
+      ['student-LIVE-24h', 'ライブセッション 24時間前（生徒）', '生徒', '24時間前'],
+      ['student-LIVE-1h', 'ライブセッション 1時間前（生徒）', '生徒', '1時間前'],
+      ['coach-LIVE-24h', 'ライブセッション 24時間前（コーチ）', 'コーチ', '24時間前'],
+      ['coach-LIVE-1h', 'ライブセッション 1時間前（コーチ）', 'コーチ', '1時間前'],
+    ],
+  ),
+  G(
+    'リマインダー（グループセッション）',
+    '参加登録した回（コーチは担当・参加登録した回）の24時間前と1時間前に送ります。シリーズの有無・参加URLの有無で表示が変わります。',
+    [
+      ['student-REMINDER-24h-series', 'グループセッション 24時間前（生徒・シリーズの回）', '生徒', '24時間前'],
+      [
+        'student-REMINDER-1h-single-nourl',
+        'グループセッション 1時間前（生徒・単発・参加URL未設定）',
+        '生徒',
+        '1時間前',
+      ],
+      ['coach-REMINDER-24h-series', 'グループセッション 24時間前（コーチ・シリーズの回）', 'コーチ', '24時間前'],
+      ['coach-REMINDER-1h', 'グループセッション 1時間前（コーチ）', 'コーチ', '1時間前'],
+    ],
+  ),
+  G(
+    '運営向けの日次の要約',
+    '毎朝 9:00（日本時間）に運営の指定アドレスへ送ります。問題が無い日も届きます。日本語・英語の併記です。',
+    [
+      ['ops-DAILY_REPORT-ok', '日次の要約（異常なし）', '運営', '毎朝 9:00'],
+      ['ops-DAILY_REPORT-issues', '日次の要約（要確認あり）', '運営', '毎朝 9:00'],
+    ],
+  ),
 ];
 
-const decode = (s) => s.replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+const decode = (s) =>
+  s
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const mapped = new Set(GROUPS.flatMap((g) => g.items.map(([label]) => label)));
-const exported = readdirSync(MAILS).filter((f) => f.endsWith('.html')).map((f) => f.replace(/\.html$/, ''));
+const exported = readdirSync(MAILS)
+  .filter((f) => f.endsWith('.html'))
+  .map((f) => f.replace(/\.html$/, ''));
 const unmapped = exported.filter((label) => !mapped.has(label));
 if (unmapped.length) {
   process.stderr.write(`GROUPS に無いサンプルがあります（区分・表示名を足してください）: ${unmapped.join(', ')}\n`);
@@ -135,6 +168,11 @@ await browser.close();
 
 const toc = GROUPS.map((g, i) => `<a href="#g${i + 1}">${i + 1}. ${esc(g.title)}（${g.items.length}）</a>`).join('');
 const tpl = readFileSync(TEMPLATE, 'utf8');
-const out = tpl.replaceAll('{{COUNT}}', String(count)).replaceAll('{{BRANCH}}', esc(BRANCH)).replaceAll('{{DATE}}', esc(DATE)).replace('{{TOC}}', toc).replace('{{SECTIONS}}', sections.join('\n'));
+const out = tpl
+  .replaceAll('{{COUNT}}', String(count))
+  .replaceAll('{{BRANCH}}', esc(BRANCH))
+  .replaceAll('{{DATE}}', esc(DATE))
+  .replace('{{TOC}}', toc)
+  .replace('{{SECTIONS}}', sections.join('\n'));
 writeFileSync(OUT, out);
 process.stdout.write(`${count} mails, images ${(bytes / 1024 / 1024).toFixed(1)}MB\n`);

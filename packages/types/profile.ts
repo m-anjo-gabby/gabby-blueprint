@@ -12,13 +12,9 @@ export const PROFILE_ICON_BUCKET = 'profile';
 export const PROFILE_ICON_MAX_SIZE = 5 * 1024 * 1024;
 
 // プロフィールアイコンとして許可するMIMEタイプ
-export const PROFILE_ICON_ALLOWED_MIME_TYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-] as const;
+export const PROFILE_ICON_ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 
-export type ProfileIconMimeType = typeof PROFILE_ICON_ALLOWED_MIME_TYPES[number];
+export type ProfileIconMimeType = (typeof PROFILE_ICON_ALLOWED_MIME_TYPES)[number];
 
 /**
  * ----------------------------------------------
@@ -55,12 +51,9 @@ export type ProfileIconErrorCode =
   | 'unexpected_error';
 
 export type UploadProfileIconResult =
-  | { success: true; iconPath: string }
-  | { success: false; errorCode: ProfileIconErrorCode };
+  { success: true; iconPath: string } | { success: false; errorCode: ProfileIconErrorCode };
 
-export type RemoveProfileIconResult =
-  | { success: true }
-  | { success: false; errorCode: ProfileIconErrorCode };
+export type RemoveProfileIconResult = { success: true } | { success: false; errorCode: ProfileIconErrorCode };
 
 export type GetMyProfileResult =
   | { success: true; profile: MyProfile }
@@ -69,16 +62,10 @@ export type GetMyProfileResult =
 /**
  * タイムゾーン設定関連
  */
-export type UpdateTimezoneErrorCode =
-  | 'unauthorized'
-  | 'invalid_timezone'
-  | 'db_update_failed'
-  | 'unexpected_error';
+export type UpdateTimezoneErrorCode = 'unauthorized' | 'invalid_timezone' | 'db_update_failed' | 'unexpected_error';
 
 export type UpdateTimezoneResult =
-  | { success: true; timezone: string }
-  | { success: false; errorCode: UpdateTimezoneErrorCode };
+  { success: true; timezone: string } | { success: false; errorCode: UpdateTimezoneErrorCode };
 
 export type GetTimezoneListResult =
-  | { success: true; timezones: TimezoneMaster[] }
-  | { success: false; errorCode: 'unexpected_error' };
+  { success: true; timezones: TimezoneMaster[] } | { success: false; errorCode: 'unexpected_error' };

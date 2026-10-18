@@ -52,9 +52,13 @@ for (const dir of packageDirs(packages)) {
     for (const [name, spec] of Object.entries(pkg[kind] ?? {})) {
       if (spec.startsWith('workspace:')) continue;
       if (spec !== 'catalog:') {
-        errors.push(`${file} の ${kind}.${name} が "${spec}" です。版は pnpm-workspace.yaml の catalog に書き、ここは "catalog:" にしてください。`);
+        errors.push(
+          `${file} の ${kind}.${name} が "${spec}" です。版は pnpm-workspace.yaml の catalog に書き、ここは "catalog:" にしてください。`,
+        );
       } else if (!catalog.has(name)) {
-        errors.push(`${file} の ${kind}.${name} が catalog にありません。pnpm-workspace.yaml の catalog に追加してください。`);
+        errors.push(
+          `${file} の ${kind}.${name} が catalog にありません。pnpm-workspace.yaml の catalog に追加してください。`,
+        );
       }
       used.add(name);
     }
@@ -62,7 +66,10 @@ for (const dir of packageDirs(packages)) {
 }
 
 for (const name of catalog) {
-  if (!used.has(name)) errors.push(`catalog の ${name} はどのパッケージからも使われていません。pnpm-workspace.yaml から削除してください。`);
+  if (!used.has(name))
+    errors.push(
+      `catalog の ${name} はどのパッケージからも使われていません。pnpm-workspace.yaml から削除してください。`,
+    );
 }
 
 if (errors.length) {

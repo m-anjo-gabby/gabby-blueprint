@@ -3,7 +3,14 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import {
   SessionOutcomeFields,
@@ -11,7 +18,13 @@ import {
   type SessionOutcomeFieldsLabels,
 } from '@gabby/lib/components/common/SessionOutcomeFields';
 import { toSessionOutcome } from '@gabby/lib/session/outcome';
-import { CONDUCTED_VIA, SESSION_OUTCOME, SESSION_STATUS, isConductedOutcome, type SessionOutcome } from '@gabby/types/session';
+import {
+  CONDUCTED_VIA,
+  SESSION_OUTCOME,
+  SESSION_STATUS,
+  isConductedOutcome,
+  type SessionOutcome,
+} from '@gabby/types/session';
 import type { AdminOutcomeTarget, AdminSessionOutcomeHistoryEntry } from '@gabby/types/adminLiveSession';
 import {
   correctSessionOutcomeAsAdmin,
@@ -56,7 +69,9 @@ export function useOutcomeFieldLabels(): SessionOutcomeFieldsLabels {
     evidenceFailed: t('evidenceFailed'),
     evidenceSummary: (e) => {
       if (!e.coachJoined) return t('evidenceNoCoach');
-      return e.studentJoined ? t('evidenceTogether', { minutes: Math.floor(e.overlapSeconds / 60) }) : t('evidenceStudentAbsent');
+      return e.studentJoined
+        ? t('evidenceTogether', { minutes: Math.floor(e.overlapSeconds / 60) })
+        : t('evidenceStudentAbsent');
     },
     reasonLabel: t('reasonLabel'),
     reasonOptional: '',
@@ -137,7 +152,7 @@ function CorrectOutcomeForm({ target, onClose, onCorrected }: Props & { target: 
         target.session_id,
         draft.outcome,
         isConductedOutcome(draft.outcome) ? draft.conductedVia : null,
-        draft.reason
+        draft.reason,
       );
       if (!result.success) {
         showToast(result.message, 'error');
@@ -178,15 +193,21 @@ function CorrectOutcomeForm({ target, onClose, onCorrected }: Props & { target: 
         ) : (
           <ul className="space-y-1.5" data-testid="session-outcome-history">
             {history.map((entry) => (
-              <li key={entry.history_id} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <li
+                key={entry.history_id}
+                className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600"
+              >
                 <p className="font-semibold text-slate-700">
                   {formatSessionDateTime(entry.performed_at, locale)}{' '}
-                  {t(entry.action === 'recorded' ? 'historyRecorded' : 'historyCorrected', { name: entry.performed_by_name ?? '-' })}
+                  {t(entry.action === 'recorded' ? 'historyRecorded' : 'historyCorrected', {
+                    name: entry.performed_by_name ?? '-',
+                  })}
                 </p>
                 <p>
                   {tOutcome(`outcomes.${OUTCOME_KEYS[entry.outcome]}.label`)}
                   {entry.conducted_via === CONDUCTED_VIA.EXTERNAL_ZOOM && ` / ${tOutcome('viaExternal')}`}
-                  {entry.ticket_action && ` / ${t(entry.ticket_action === 'consumed' ? 'ticketConsumed' : 'ticketRestored')}`}
+                  {entry.ticket_action &&
+                    ` / ${t(entry.ticket_action === 'consumed' ? 'ticketConsumed' : 'ticketRestored')}`}
                 </p>
                 {entry.reason && <p className="text-slate-500 whitespace-pre-wrap">{entry.reason}</p>}
               </li>

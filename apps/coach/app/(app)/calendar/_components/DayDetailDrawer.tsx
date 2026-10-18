@@ -3,7 +3,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { Check, CalendarClock, CheckCircle2, Copy, ExternalLink, Loader2, Megaphone, Paperclip, Download, X } from 'lucide-react';
+import {
+  Check,
+  CalendarClock,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  Loader2,
+  Megaphone,
+  Paperclip,
+  Download,
+  X,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -33,7 +44,12 @@ interface DayDetailDrawerProps {
 }
 
 function formatTimeInZone(iso: string, timezone: string): string {
-  return new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: timezone }).format(new Date(iso));
+  return new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: timezone,
+  }).format(new Date(iso));
 }
 
 function formatDateTimeInZone(iso: string, timezone: string): string {
@@ -74,10 +90,15 @@ function CalendarEventAnnouncements({ event, timezone }: { event: CalendarEventI
         <Megaphone size={11} /> Announcements
       </p>
       {messages.map((message) => (
-        <div key={message.calendar_event_message_id} className="bg-brand-50/50 border border-brand-100 rounded-xl p-3 space-y-1.5">
+        <div
+          key={message.calendar_event_message_id}
+          className="bg-brand-50/50 border border-brand-100 rounded-xl p-3 space-y-1.5"
+        >
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs font-black text-slate-800">{message.title}</p>
-            <p className="text-[10px] text-slate-400 font-bold shrink-0">{formatDateTimeInZone(message.insert_date, timezone)}</p>
+            <p className="text-[10px] text-slate-400 font-bold shrink-0">
+              {formatDateTimeInZone(message.insert_date, timezone)}
+            </p>
           </div>
           <p className="text-xs text-slate-600 whitespace-pre-wrap">{message.content}</p>
           {message.attachments.length > 0 && (
@@ -92,7 +113,9 @@ function CalendarEventAnnouncements({ event, timezone }: { event: CalendarEventI
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Paperclip size={12} className="text-slate-400 shrink-0" />
                     <span className="text-[11px] font-bold text-slate-700 truncate">{att.name}</span>
-                    <span className="text-[10px] text-slate-400 font-mono shrink-0">{formatAttachmentSize(att.size)}</span>
+                    <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                      {formatAttachmentSize(att.size)}
+                    </span>
                   </div>
                   <Download size={12} className="text-slate-400 shrink-0" />
                 </button>
@@ -172,7 +195,14 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-1.5 mb-1">
-            <span className={cn('text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border', badge.badgeClass)}>{label}</span>
+            <span
+              className={cn(
+                'text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border',
+                badge.badgeClass,
+              )}
+            >
+              {label}
+            </span>
             {event.is_assigned_coach && (
               <span className="inline-flex items-center gap-1 text-[10px] font-black text-brand-strong bg-brand-50 border border-brand-100 rounded-md px-2 py-1">
                 <CheckCircle2 size={11} />
@@ -197,7 +227,9 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
       </div>
 
       {event.description && (
-        <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 whitespace-pre-wrap">{event.description}</p>
+        <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 whitespace-pre-wrap">
+          {event.description}
+        </p>
       )}
 
       {(!event.rsvp_enabled || event.is_assigned_coach) && event.location_url && (
@@ -213,7 +245,14 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
       )}
 
       {event.rsvp_enabled && !event.is_assigned_coach && !event.is_joined && isFuture && (
-        <Button pending={isSubmitting} type="button" size="sm" onClick={handleJoin} disabled={isSubmitting} className="mt-1">
+        <Button
+          pending={isSubmitting}
+          type="button"
+          size="sm"
+          onClick={handleJoin}
+          disabled={isSubmitting}
+          className="mt-1"
+        >
           Join
         </Button>
       )}
@@ -276,14 +315,23 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
   );
 }
 
-export function DayDetailDrawer({ date, items, timezone, onClose, onActionRequested, onParticipationChanged }: DayDetailDrawerProps) {
+export function DayDetailDrawer({
+  date,
+  items,
+  timezone,
+  onClose,
+  onActionRequested,
+  onParticipationChanged,
+}: DayDetailDrawerProps) {
   const sorted = items.slice().sort((a, b) => a.data.start_datetime.localeCompare(b.data.start_datetime));
 
   return (
     <Drawer open={!!date} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="max-w-2xl mx-auto max-h-[85vh]">
         <DrawerHeader className="text-left">
-          <DrawerTitle className="text-base font-black text-slate-800">{date ? formatDayHeading(date) : ''}</DrawerTitle>
+          <DrawerTitle className="text-base font-black text-slate-800">
+            {date ? formatDayHeading(date) : ''}
+          </DrawerTitle>
         </DrawerHeader>
 
         <div className="px-4 pb-6 overflow-y-auto space-y-3">
@@ -303,21 +351,32 @@ export function DayDetailDrawer({ date, items, timezone, onClose, onActionReques
                 const canResolve = session.status === SESSION_STATUS.SCHEDULED && isPastEnd;
                 const hasResult = session.status === SESSION_STATUS.COMPLETED;
                 return (
-                  <article key={getCalendarItemKey(item)} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-2">
+                  <article
+                    key={getCalendarItemKey(item)}
+                    className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-2"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-black text-slate-800">
-                          {formatTimeInZone(session.start_datetime, timezone)} - {formatTimeInZone(session.end_datetime, timezone)}
+                          {formatTimeInZone(session.start_datetime, timezone)} -{' '}
+                          {formatTimeInZone(session.end_datetime, timezone)}
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5">{session.counterpart_name}</p>
                       </div>
-                      <span className={cn('text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0', badge.className)}>
+                      <span
+                        className={cn(
+                          'text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0',
+                          badge.className,
+                        )}
+                      >
                         {badge.label}
                       </span>
                     </div>
 
                     {session.cancel_reason && (
-                      <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">{session.cancel_reason}</p>
+                      <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                        {session.cancel_reason}
+                      </p>
                     )}
 
                     {canAct && (

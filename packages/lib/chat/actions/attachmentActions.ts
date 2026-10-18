@@ -4,11 +4,7 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import {
-  CHAT_ATTACHMENT_ALLOWED_MIME_TYPES,
-  CHAT_ATTACHMENT_MAX_SIZE,
-  PendingChatAttachment,
-} from '@gabby/types/chat';
+import { CHAT_ATTACHMENT_ALLOWED_MIME_TYPES, CHAT_ATTACHMENT_MAX_SIZE, PendingChatAttachment } from '@gabby/types/chat';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
@@ -20,7 +16,7 @@ const logger = createLogger('common');
  */
 export async function uploadChatAttachment(
   roomId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<{ success: boolean; attachment?: PendingChatAttachment; message?: string }> {
   const ctx = await getLogContext();
   try {
@@ -100,9 +96,7 @@ export async function uploadChatAttachment(
  * チャット添付ファイルの公開URL（署名付きURL）を取得
  * "chat" バケットはPrivate運用のため、有効期限付きの署名URLを返す。
  */
-export async function getChatAttachmentUrl(
-  path: string
-): Promise<{ url: string | null; error?: string }> {
+export async function getChatAttachmentUrl(path: string): Promise<{ url: string | null; error?: string }> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();

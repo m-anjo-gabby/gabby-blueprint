@@ -8,7 +8,9 @@ import readline from 'node:readline';
 export function askSecret(question) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    rl._writeToOutput = (s) => { if (s.includes(question)) rl.output.write(s); };
+    rl._writeToOutput = (s) => {
+      if (s.includes(question)) rl.output.write(s);
+    };
     // close() は 'close' イベントを同期的に発火するため、回答を先に確定させてから閉じる
     rl.on('close', () => resolve(''));
     rl.question(question, (answer) => {

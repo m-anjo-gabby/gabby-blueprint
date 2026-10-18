@@ -33,7 +33,10 @@ export async function GET(request: Request) {
   });
 
   if (verifyError) {
-    logger.error('impersonation:verify_failed', verifyError.message, { err: verifyError, payload: { impersonationId } });
+    logger.error('impersonation:verify_failed', verifyError.message, {
+      err: verifyError,
+      payload: { impersonationId },
+    });
     return NextResponse.redirect(`${origin}/login?error=impersonation`);
   }
 
@@ -52,7 +55,11 @@ export async function GET(request: Request) {
     .single();
 
   if (logError || !logRow?.admin_id) {
-    logger.error('impersonation:audit_log_update_failed', logError?.message || 'Log row not found or already redeemed', { err: logError, payload: { impersonationId } });
+    logger.error(
+      'impersonation:audit_log_update_failed',
+      logError?.message || 'Log row not found or already redeemed',
+      { err: logError, payload: { impersonationId } },
+    );
     return NextResponse.redirect(`${origin}/login?error=impersonation`);
   }
 
@@ -70,7 +77,7 @@ export async function GET(request: Request) {
       sameSite: 'lax',
       path: '/',
       maxAge: IMPERSONATION_TTL_MINUTES * 60,
-    }
+    },
   );
 
   return response;

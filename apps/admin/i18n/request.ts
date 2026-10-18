@@ -9,9 +9,7 @@ export const DEFAULT_LOCALE: AppLocale = 'en';
 export const LOCALE_COOKIE_NAME = 'NEXT_LOCALE';
 
 export function resolveLocale(raw: string | undefined): AppLocale {
-  return (SUPPORTED_LOCALES as readonly string[]).includes(raw ?? '')
-    ? (raw as AppLocale)
-    : DEFAULT_LOCALE;
+  return (SUPPORTED_LOCALES as readonly string[]).includes(raw ?? '') ? (raw as AppLocale) : DEFAULT_LOCALE;
 }
 
 export default getRequestConfig(async () => {

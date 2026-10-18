@@ -101,7 +101,10 @@ export async function getCoachRatings(coachId: string): Promise<AdminCoachRating
       })),
     };
   } catch (err) {
-    logger.error('coach_rating:admin_get_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coach_rating:admin_get_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return null;
   }
 }

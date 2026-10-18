@@ -62,13 +62,13 @@ export async function GET(request: NextRequest) {
   // ("2026-09-13")ではなく同じ自然言語表記("September 13, 2026")にフォーマットする。
   const issueDateLabel = approval.approved_at
     ? new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(
-        new Date(approval.approved_at)
+        new Date(approval.approved_at),
       )
     : '';
 
   const [year, month] = result.report.report_month.split('-').map(Number);
   const periodLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
-    new Date(Date.UTC(year, month - 1, 1))
+    new Date(Date.UTC(year, month - 1, 1)),
   );
 
   // 書面には正式な氏名（英語の書面のため「名 姓」）を載せ、未登録の場合は画面の名前にする
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       lateCancelCount: result.report.late_cancel_count,
       noShowCount: result.report.no_show_count,
       totalEarnings,
-    })
+    }),
   );
 
   return new NextResponse(new Uint8Array(buffer), {

@@ -26,7 +26,7 @@ export function UserDetailTabs({ userId, tabs }: Props) {
           aria-current={tab === active ? 'page' : undefined}
           className={cn(
             'shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-bold transition-colors',
-            tab === active ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'
+            tab === active ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800',
           )}
         >
           {t(tab)}

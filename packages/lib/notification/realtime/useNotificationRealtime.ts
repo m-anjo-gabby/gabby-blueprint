@@ -54,7 +54,7 @@ export function useNotificationRealtime(userId: string | null) {
           if (row?.notification_type === 'CHAT_NEW_MESSAGE' && row.is_read === false) {
             refreshChatRooms();
           }
-        }
+        },
       )
       .subscribe();
 

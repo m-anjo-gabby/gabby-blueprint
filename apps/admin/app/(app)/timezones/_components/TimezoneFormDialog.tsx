@@ -42,7 +42,12 @@ type TimezoneFormValues = z.infer<ReturnType<typeof createTimezoneSchema>>;
 const NAME_FIELDS = [
   { name: 'display_name_ja', labelKey: 'nameJaLabel', placeholderKey: 'nameJaPlaceholder', hintKey: null },
   { name: 'display_name_en', labelKey: 'nameEnLabel', placeholderKey: 'nameEnPlaceholder', hintKey: null },
-  { name: 'short_name_ja', labelKey: 'shortNameJaLabel', placeholderKey: 'shortNameJaPlaceholder', hintKey: 'shortNameHint' },
+  {
+    name: 'short_name_ja',
+    labelKey: 'shortNameJaLabel',
+    placeholderKey: 'shortNameJaPlaceholder',
+    hintKey: 'shortNameHint',
+  },
   { name: 'short_name_en', labelKey: 'shortNameEnLabel', placeholderKey: 'shortNameEnPlaceholder', hintKey: null },
 ] as const satisfies ReadonlyArray<{
   name: Exclude<keyof TimezoneFormValues, 'timezone' | 'sort_no' | 'is_active'>;
@@ -118,7 +123,7 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
       const result = await upsertTimezone(payload);
 
       if (result.success) {
-        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), "success");
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success');
         setOpen(false);
         setIsConfirming(false);
       } else {
@@ -147,91 +152,123 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
             <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
             <Edit size={14} /> {t('editButton')}
           </Button>
         )}
       </DialogTrigger>
 
-      <DialogContent
-        className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100"
-      >
+      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100">
         {/* ダークヘッダー: 他の管理画面ダイアログと統一したネガティブマージン設定 */}
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
+              <>
+                <CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}
+              </>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
+              <>
+                <PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}
+              </>
             ) : (
-              <><Edit size={18} className="text-brand-400" /> {t('editTitle')}</>
+              <>
+                <Edit size={18} className="text-brand-400" /> {t('editTitle')}
+              </>
             )}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white">
-
             {/* --- IANAタイムゾーン名（主キー） --- */}
-            <FormField control={form.control} name="timezone" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('ianaLabel')}</FormLabel>
-                {isConfirming || mode === 'edit' ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono text-slate-700">
-                    {field.value}
-                  </div>
-                ) : (
-                  <FormControl>
-                    <Input {...field} placeholder={t('ianaPlaceholder')} className="bg-white rounded-xl border-slate-200 font-mono" />
-                  </FormControl>
-                )}
-                {!isConfirming && mode === 'create' && (
-                  <FormDescription className="text-[11px] text-slate-400">
-                    {t('ianaHint')}
-                  </FormDescription>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            {/* --- 表示名称・短い名前（日本語 / 英語） --- */}
-            {NAME_FIELDS.map(({ name, labelKey, placeholderKey, hintKey }) => (
-              <FormField key={name} control={form.control} name={name} render={({ field }) => (
+            <FormField
+              control={form.control}
+              name="timezone"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t(labelKey)}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {t('ianaLabel')}
+                  </FormLabel>
+                  {isConfirming || mode === 'edit' ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono text-slate-700">
                       {field.value}
                     </div>
                   ) : (
                     <FormControl>
-                      <Input {...field} placeholder={t(placeholderKey)} className="bg-white rounded-xl border-slate-200" />
+                      <Input
+                        {...field}
+                        placeholder={t('ianaPlaceholder')}
+                        className="bg-white rounded-xl border-slate-200 font-mono"
+                      />
                     </FormControl>
                   )}
-                  {!isConfirming && hintKey && (
-                    <FormDescription className="text-[11px] text-slate-400">{t(hintKey)}</FormDescription>
+                  {!isConfirming && mode === 'create' && (
+                    <FormDescription className="text-[11px] text-slate-400">{t('ianaHint')}</FormDescription>
                   )}
                   <FormMessage />
                 </FormItem>
-              )} />
+              )}
+            />
+
+            {/* --- 表示名称・短い名前（日本語 / 英語） --- */}
+            {NAME_FIELDS.map(({ name, labelKey, placeholderKey, hintKey }) => (
+              <FormField
+                key={name}
+                control={form.control}
+                name={name}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t(labelKey)}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                        {field.value}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder={t(placeholderKey)}
+                          className="bg-white rounded-xl border-slate-200"
+                        />
+                      </FormControl>
+                    )}
+                    {!isConfirming && hintKey && (
+                      <FormDescription className="text-[11px] text-slate-400">{t(hintKey)}</FormDescription>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             ))}
 
             {/* --- 表示順 --- */}
-            <FormField control={form.control} name="sort_no" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('sortNoLabel')}</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                    {field.value}
-                  </div>
-                ) : (
-                  <FormControl>
-                    <Input {...field} type="number" className="bg-white rounded-xl border-slate-200" />
-                  </FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="sort_no"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {t('sortNoLabel')}
+                  </FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                      {field.value}
+                    </div>
+                  ) : (
+                    <FormControl>
+                      <Input {...field} type="number" className="bg-white rounded-xl border-slate-200" />
+                    </FormControl>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* --- 使用中（使わなくなったタイムゾーンは削除せずにオフにする） --- */}
             <ActiveSwitchField
@@ -251,8 +288,12 @@ export function TimezoneFormDialog({ mode = 'create', initialData }: TimezoneFor
                     {t('confirmQuestion', { action: mode === 'create' ? t('actionCreate') : t('actionUpdate') })}
                   </p>
                   {serverError && (
-                    <Alert variant="destructive" className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600">
-                      <AlertCircle size={14} />{serverError}
+                    <Alert
+                      variant="destructive"
+                      className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600"
+                    >
+                      <AlertCircle size={14} />
+                      {serverError}
                     </Alert>
                   )}
                   <div className="flex gap-3">

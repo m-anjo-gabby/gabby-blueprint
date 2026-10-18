@@ -24,13 +24,21 @@ export const AudioResumeBanner: React.FC<AudioResumeBannerProps> = ({ status, on
   if (status === 'failedAgain') {
     return (
       <div className="absolute inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-[130] p-6 animate-in fade-in duration-300">
-        <div role="alertdialog" aria-labelledby="audio-failed-again-title" className="bg-white rounded-panel shadow-2xl p-6 max-w-xs w-full text-center space-y-4">
+        <div
+          role="alertdialog"
+          aria-labelledby="audio-failed-again-title"
+          className="bg-white rounded-panel shadow-2xl p-6 max-w-xs w-full text-center space-y-4"
+        >
           <div className="w-12 h-12 rounded-control bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto text-rose-500">
             <Volume2 size={22} strokeWidth={2.5} />
           </div>
           <div className="space-y-2">
-            <h3 id="audio-failed-again-title" className="text-sm font-bold text-ink tracking-tight">音声を復旧できませんでした</h3>
-            <p className="text-xs text-ink-muted leading-relaxed">再読み込みでは直らない状態です。お手数ですが、ブラウザのタブを閉じてから、もう一度開いてください。</p>
+            <h3 id="audio-failed-again-title" className="text-sm font-bold text-ink tracking-tight">
+              音声を復旧できませんでした
+            </h3>
+            <p className="text-xs text-ink-muted leading-relaxed">
+              再読み込みでは直らない状態です。お手数ですが、ブラウザのタブを閉じてから、もう一度開いてください。
+            </p>
             <ol className="text-xs text-ink-soft leading-relaxed text-left list-decimal pl-5 space-y-0.5">
               <li>タブ一覧を開き、このタブを閉じる</li>
               <li>新しいタブで Gabby Blueprint を開く</li>
@@ -51,7 +59,9 @@ export const AudioResumeBanner: React.FC<AudioResumeBannerProps> = ({ status, on
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-ink tracking-tight">セッションが切断されました</h3>
-            <p className="text-xs text-ink-muted leading-relaxed">音声の接続を復旧できませんでした。お手数ですが再読み込みしてください。</p>
+            <p className="text-xs text-ink-muted leading-relaxed">
+              音声の接続を復旧できませんでした。お手数ですが再読み込みしてください。
+            </p>
           </div>
           <button
             type="button"

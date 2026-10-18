@@ -95,7 +95,7 @@ function renderBlocksText(blocks: MailBlock[], lang: MailLocale): string[] {
           block.text
             .split('\n')
             .map((line) => `> ${line}`)
-            .join('\n')
+            .join('\n'),
         );
         break;
       case 'details':
@@ -103,7 +103,7 @@ function renderBlocksText(blocks: MailBlock[], lang: MailLocale): string[] {
           [
             ...block.rows.map((row) => [labelLine(row.label, lang), row.sub, row.value].filter(Boolean).join('\n')),
             ...(block.note ? [block.note] : []),
-          ].join('\n\n')
+          ].join('\n\n'),
         );
         break;
       case 'button':
@@ -112,7 +112,11 @@ function renderBlocksText(blocks: MailBlock[], lang: MailLocale): string[] {
         parts.push(`▼ ${block.label}\n${block.href}`);
         break;
       case 'notice':
-        parts.push(block.items.map((item) => [item.title ? `※ ${item.title}` : null, item.text, item.sub].filter(Boolean).join('\n')).join('\n\n'));
+        parts.push(
+          block.items
+            .map((item) => [item.title ? `※ ${item.title}` : null, item.text, item.sub].filter(Boolean).join('\n'))
+            .join('\n\n'),
+        );
         break;
       case 'section':
         if (parts.length > 0) parts.push('------------------------------');

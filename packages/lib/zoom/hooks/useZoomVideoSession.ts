@@ -50,7 +50,7 @@ interface UseZoomVideoSessionResult {
     access: LiveSessionRoomAccess,
     selfVideoContainer: HTMLElement,
     peerVideoContainer: HTMLElement,
-    options?: { initialMicOn?: boolean; initialCameraOn?: boolean; initialBlurOn?: boolean }
+    options?: { initialMicOn?: boolean; initialCameraOn?: boolean; initialBlurOn?: boolean },
   ) => Promise<void>;
   /** end=trueを渡すと、ホスト（コーチ）権限で全参加者を退出させてセッションを終了する */
   leave: (end?: boolean) => Promise<void>;
@@ -125,7 +125,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
       access: LiveSessionRoomAccess,
       selfVideoContainer: HTMLElement,
       peerVideoContainer: HTMLElement,
-      options?: { initialMicOn?: boolean; initialCameraOn?: boolean; initialBlurOn?: boolean }
+      options?: { initialMicOn?: boolean; initialCameraOn?: boolean; initialBlurOn?: boolean },
     ) => {
       const initialMicOn = options?.initialMicOn ?? true;
       const initialCameraOn = options?.initialCameraOn ?? true;
@@ -190,20 +190,23 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
           }
         });
 
-        client.on('chat-on-message', (payload: { message?: string; sender: { name: string; userId: number }; timestamp: number }) => {
-          // chat-on-messageは送信者自身にもエコーされるため、sendChatMessage側では楽観的な追加を行わず、
-          // このイベントを唯一の情報源としてuserIdの一致でisSelfを判定する（二重表示防止）
-          setChatMessages((prev) => [
-            ...prev,
-            {
-              id: `${payload.timestamp}-${prev.length}`,
-              senderName: payload.sender.name,
-              message: payload.message ?? '',
-              timestamp: payload.timestamp,
-              isSelf: payload.sender.userId === selfUserIdRef.current,
-            },
-          ]);
-        });
+        client.on(
+          'chat-on-message',
+          (payload: { message?: string; sender: { name: string; userId: number }; timestamp: number }) => {
+            // chat-on-messageは送信者自身にもエコーされるため、sendChatMessage側では楽観的な追加を行わず、
+            // このイベントを唯一の情報源としてuserIdの一致でisSelfを判定する（二重表示防止）
+            setChatMessages((prev) => [
+              ...prev,
+              {
+                id: `${payload.timestamp}-${prev.length}`,
+                senderName: payload.sender.name,
+                message: payload.message ?? '',
+                timestamp: payload.timestamp,
+                isSelf: payload.sender.userId === selfUserIdRef.current,
+              },
+            ]);
+          },
+        );
 
         await client.join(access.sessionName, access.signature, access.userIdentity);
 
@@ -245,7 +248,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
         setIsJoining(false);
       }
     },
-    [renderPeerVideo]
+    [renderPeerVideo],
   );
 
   const leave = useCallback(async (end?: boolean) => {
@@ -353,7 +356,7 @@ export function useZoomVideoSession(): UseZoomVideoSessionResult {
         }
       }
     },
-    [isScreenSharing]
+    [isScreenSharing],
   );
 
   const sendChatMessage = useCallback(async (text: string) => {

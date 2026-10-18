@@ -1,5 +1,5 @@
-import type { Page } from "@playwright/test";
-import { test, expect, loginAsNewStudent } from "../../support/studentApp.ts";
+import type { Page } from '@playwright/test';
+import { test, expect, loginAsNewStudent } from '../../support/studentApp.ts';
 import {
   DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
@@ -8,8 +8,8 @@ import {
   grantAppLicense,
   prepareWordContent,
   type AuthFixture,
-} from "../../support/authFixtures.ts";
-import { USES_LOCAL_SERVER } from "../../support/targets.ts";
+} from '../../support/authFixtures.ts';
+import { USES_LOCAL_SERVER } from '../../support/targets.ts';
 
 /**
  * 発話の流れ（仕様: e2e/specs/training/speaking-flow.md）
@@ -26,10 +26,10 @@ import { USES_LOCAL_SERVER } from "../../support/targets.ts";
  * 再生した音声（音声ファイルの取得）と発話評価の開始（参照文）を、ブラウザ内の記録に順番に残して確かめる。
  */
 
-const PASSWORD = "Speaking2026a";
+const PASSWORD = 'Speaking2026a';
 
 interface SpeechLogEntry {
-  type: "audio" | "listen";
+  type: 'audio' | 'listen';
   text?: string;
 }
 
@@ -43,16 +43,22 @@ type FakeSpeechWindow = Window & { __gabbyFakeSpeech?: FakeSpeechConfig & { log:
 test.use({
   storageState: { cookies: [], origins: [] },
   // 偽のマイクを使い、音声の自動再生を許可する（ブラウザの起動設定のためファイル単位で指定する）
-  launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", "--autoplay-policy=no-user-gesture-required"] },
+  launchOptions: {
+    args: [
+      '--use-fake-device-for-media-stream',
+      '--use-fake-ui-for-media-stream',
+      '--autoplay-policy=no-user-gesture-required',
+    ],
+  },
   // マイクの許可確認（getUserMedia）を通すため、マイクの使用を許可しておく
-  permissions: ["microphone"],
+  permissions: ['microphone'],
 });
 
 let fixture: AuthFixture | undefined;
 
 test.afterEach(async () => {
   if (fixture) {
-    await fixture.admin.from("com_m_contents_access").delete().eq("client_id", fixture.clientId);
+    await fixture.admin.from('com_m_contents_access').delete().eq('client_id', fixture.clientId);
   }
   // 単語帳の進捗・スプリントの記録は生徒の削除で連鎖削除される
   await cleanupAuthFixture(fixture);
@@ -60,8 +66,8 @@ test.afterEach(async () => {
 });
 
 test.beforeEach(async ({}, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "使い捨てデータを作るため desktop だけで実行する");
-  test.skip(!USES_LOCAL_SERVER, "テスト用の認識方式は本番ビルドでは使えないため dev だけで実行する");
+  test.skip(testInfo.project.name !== 'desktop', '使い捨てデータを作るため desktop だけで実行する');
+  test.skip(!USES_LOCAL_SERVER, 'テスト用の認識方式は本番ビルドでは使えないため dev だけで実行する');
 });
 
 /**
@@ -74,14 +80,14 @@ async function useFakeSpeech(page: Page, config: FakeSpeechConfig = {}): Promise
     (window as FakeSpeechWindow).__gabbyFakeSpeech = { ...c, log };
     const originalFetch = window.fetch.bind(window);
     window.fetch = (input, init) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (url.includes("/storage/v1/object/public/")) log.push({ type: "audio", text: decodeURIComponent(url) });
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes('/storage/v1/object/public/')) log.push({ type: 'audio', text: decodeURIComponent(url) });
       return originalFetch(input, init);
     };
   }, config);
 }
 
-const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const readSpeechLog = (page: Page): Promise<SpeechLogEntry[]> =>
   page.evaluate(() => (window as FakeSpeechWindow).__gabbyFakeSpeech?.log ?? []);
@@ -89,15 +95,15 @@ const readSpeechLog = (page: Page): Promise<SpeechLogEntry[]> =>
 /** 最初の発話評価が始まるまで待ち、それまでの記録を返す（最後の要素が発話評価の開始） */
 async function waitForFirstListen(page: Page): Promise<SpeechLogEntry[]> {
   await expect
-    .poll(async () => (await readSpeechLog(page)).some((e) => e.type === "listen"), { timeout: 60_000 })
+    .poll(async () => (await readSpeechLog(page)).some((e) => e.type === 'listen'), { timeout: 60_000 })
     .toBe(true);
   const log = await readSpeechLog(page);
-  return log.slice(0, log.findIndex((e) => e.type === "listen") + 1);
+  return log.slice(0, log.findIndex((e) => e.type === 'listen') + 1);
 }
 
 /** 使い捨てのアプリのみ契約の生徒を作ってログインする */
 async function startAsStudent(page: Page): Promise<AuthFixture> {
-  const f = await createAuthFixture("speak");
+  const f = await createAuthFixture('speak');
   fixture = f;
   const email = `${f.tag}-student@${DISPOSABLE_EMAIL_DOMAIN}`;
   const userId = await createDisposableStudent(f, { email, password: PASSWORD });
@@ -106,97 +112,104 @@ async function startAsStudent(page: Page): Promise<AuthFixture> {
   return f;
 }
 
-test.describe("単語帳の発話", () => {
+test.describe('単語帳の発話', () => {
   /** 使い捨ての生徒で単語帳を開く */
   async function openWordDrill(page: Page): Promise<{ f: AuthFixture; contentId: string; contentName: string }> {
     const f = await startAsStudent(page);
     const word = await prepareWordContent(f);
     await page.goto(`/training/word/${word.content_id}`);
-    await expect(page.getByRole("button", { name: "発話練習" })).toBeEnabled({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: '発話練習' })).toBeEnabled({ timeout: 30_000 });
     return { f, contentId: word.content_id, contentName: word.content_name };
   }
 
-  test("発話ボタンを押すと、表示中のフレーズをチャイムの後に発話評価し、評価が表示される", async ({ page }) => {
+  test('発話ボタンを押すと、表示中のフレーズをチャイムの後に発話評価し、評価が表示される', async ({ page }) => {
     test.setTimeout(120_000);
     await useFakeSpeech(page);
     await openWordDrill(page);
 
-    await page.getByRole("button", { name: "発話練習" }).click();
+    await page.getByRole('button', { name: '発話練習' }).click();
 
     // 参照文どおりの発話（fake の既定）なので最高評価になる
-    await expect(page.getByText("スコア", { exact: true })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText("Excellent", { exact: true })).toBeVisible();
+    await expect(page.getByText('スコア', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('Excellent', { exact: true })).toBeVisible();
 
     // 発話評価は1回だけ、表示中のフレーズ（画面に出ている英文）を参照文にして行われる
-    const listen = (await readSpeechLog(page)).filter((e) => e.type === "listen");
+    const listen = (await readSpeechLog(page)).filter((e) => e.type === 'listen');
     expect(listen).toHaveLength(1);
     expect(listen[0].text).toBeTruthy();
     await expect(page.getByText(listen[0].text!, { exact: false }).first()).toBeAttached();
   });
 
-  test("発話中に止めると、その時点の評価で確定する", async ({ page }) => {
+  test('発話中に止めると、その時点の評価で確定する', async ({ page }) => {
     test.setTimeout(120_000);
     // 認識結果が届く前に止められるよう、文字起こしを返すまでの時間を長くする
     await useFakeSpeech(page, { delayMs: 60_000 });
     await openWordDrill(page);
 
-    await page.getByRole("button", { name: "発話練習" }).click();
-    const stop = page.getByRole("button", { name: "発話を止める" });
+    await page.getByRole('button', { name: '発話練習' }).click();
+    const stop = page.getByRole('button', { name: '発話を止める' });
     await expect(stop).toBeVisible({ timeout: 20_000 });
     await stop.click();
 
     // 何も聞き取れていない時点で確定するため、評価は表示されるが最高評価にはならない
-    await expect(page.getByText("スコア", { exact: true })).toBeVisible();
-    await expect(page.getByText("Excellent", { exact: true })).toHaveCount(0);
+    await expect(page.getByText('スコア', { exact: true })).toBeVisible();
+    await expect(page.getByText('Excellent', { exact: true })).toHaveCount(0);
   });
 
-  test("発話中にカードを切り替えると、その発話の評価は出ず、切り替え先のカードで発話し直せる", async ({ page }) => {
+  test('発話中にカードを切り替えると、その発話の評価は出ず、切り替え先のカードで発話し直せる', async ({ page }) => {
     test.setTimeout(120_000);
     // 発話中に切り替えられるよう、文字起こしを返すまでの時間を長くする
     await useFakeSpeech(page, { delayMs: 60_000 });
     const { f, contentId, contentName } = await openWordDrill(page);
 
-    await page.getByRole("button", { name: "発話練習" }).click();
-    const stop = page.getByRole("button", { name: "発話を止める" });
+    await page.getByRole('button', { name: '発話練習' }).click();
+    const stop = page.getByRole('button', { name: '発話を止める' });
     await expect(stop).toBeVisible({ timeout: 20_000 });
 
     // 発話中は「前へ」「次へ」は押せないため、見出しの単語名から単語の一覧を開いて別の単語へ移る
     // （発話中にカードを切り替えられる経路。発話は中断され、止めるボタンと違いその時点の評価で確定しない）
-    await expect(page.getByRole("button", { name: "次へ" })).toBeDisabled();
+    await expect(page.getByRole('button', { name: '次へ' })).toBeDisabled();
     const { data: words } = await f.admin
-      .from("com_m_word").select("word_en").eq("content_id", contentId).eq("status", "live").order("word_en");
-    const header = page.getByRole("button", { name: new RegExp(escapeRegExp(contentName)) });
-    const headerText = (await header.textContent()) ?? "";
+      .from('com_m_word')
+      .select('word_en')
+      .eq('content_id', contentId)
+      .eq('status', 'live')
+      .order('word_en');
+    const header = page.getByRole('button', { name: new RegExp(escapeRegExp(contentName)) });
+    const headerText = (await header.textContent()) ?? '';
     const target = (words ?? []).map((w) => w.word_en as string).find((w) => !headerText.includes(w));
-    if (!target) throw new Error("切り替え先の単語が見つかりません");
+    if (!target) throw new Error('切り替え先の単語が見つかりません');
 
-    const index = page.getByRole("dialog");
+    const index = page.getByRole('dialog');
     await header.click();
     await expect(index).toBeVisible();
-    await index.getByRole("button", { name: new RegExp(`(^|\\s)${escapeRegExp(target)}(\\s|$)`) }).first().click();
+    await index
+      .getByRole('button', { name: new RegExp(`(^|\\s)${escapeRegExp(target)}(\\s|$)`) })
+      .first()
+      .click();
     await expect(index).toBeHidden();
     await expect(header).toContainText(target);
 
     await expect(stop).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "発話練習" })).toBeEnabled();
-    await expect(page.getByText("スコア", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '発話練習' })).toBeEnabled();
+    await expect(page.getByText('スコア', { exact: true })).toHaveCount(0);
 
     // 切り替え先のカードでは発話評価できる（すぐに文字起こしを返す設定に戻す）
     await page.evaluate(() => {
       const fake = (window as FakeSpeechWindow).__gabbyFakeSpeech;
       if (fake) fake.delayMs = 400;
     });
-    await page.getByRole("button", { name: "発話練習" }).click();
-    await expect(page.getByText("Excellent", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await page.getByRole('button', { name: '発話練習' }).click();
+    await expect(page.getByText('Excellent', { exact: true })).toBeVisible({ timeout: 20_000 });
 
-    const listen = (await readSpeechLog(page)).filter((e) => e.type === "listen");
+    const listen = (await readSpeechLog(page)).filter((e) => e.type === 'listen');
     expect(listen).toHaveLength(2);
-    expect(listen[1].text, "切り替え先のカードのフレーズで発話評価されていない").not.toBe(listen[0].text);
+    expect(listen[1].text, '切り替え先のカードのフレーズで発話評価されていない').not.toBe(listen[0].text);
   });
 });
 
-test.describe("スプリントの発話", () => {
-  type QuestionType = "0" | "4" | "5" | "6";
+test.describe('スプリントの発話', () => {
+  type QuestionType = '0' | '4' | '5' | '6';
 
   interface SprintQuestionRow {
     question_type: QuestionType;
@@ -206,75 +219,87 @@ test.describe("スプリントの発話", () => {
     answer_sentence_no_en: string | null;
   }
 
-  const QUESTION_TYPES: QuestionType[] = ["0", "4", "5", "6"];
+  const QUESTION_TYPES: QuestionType[] = ['0', '4', '5', '6'];
 
   /**
    * 4種別すべてに音声付きの問題がある教材を、使い捨ての顧客に公開して返す。
    * 公開範囲の違う環境でも動くよう、名前ではなく問題の有無で選ぶ。
    */
-  async function prepareSprintContent(f: AuthFixture): Promise<{ contentId: string; sprintType: string; questions: SprintQuestionRow[] }> {
+  async function prepareSprintContent(
+    f: AuthFixture,
+  ): Promise<{ contentId: string; sprintType: string; questions: SprintQuestionRow[] }> {
     const { data: mastery, error } = await f.admin
-      .from("com_m_sprint_questions")
-      .select("content_id")
-      .eq("question_type", "6")
-      .not("question_voice", "is", null)
-      .not("statement_voice", "is", null);
+      .from('com_m_sprint_questions')
+      .select('content_id')
+      .eq('question_type', '6')
+      .not('question_voice', 'is', null)
+      .not('statement_voice', 'is', null);
     if (error) throw new Error(`スプリントの問題の取得に失敗しました: ${error.message}`);
 
     for (const contentId of [...new Set((mastery ?? []).map((r) => r.content_id as string))]) {
       const { data: questions } = await f.admin
-        .from("com_m_sprint_questions")
-        .select("question_type, statement_voice, question_voice, answer_sentence_yes_en, answer_sentence_no_en")
-        .eq("content_id", contentId)
-        .not("question_voice", "is", null);
+        .from('com_m_sprint_questions')
+        .select('question_type, statement_voice, question_voice, answer_sentence_yes_en, answer_sentence_no_en')
+        .eq('content_id', contentId)
+        .not('question_voice', 'is', null);
       const rows = (questions ?? []) as SprintQuestionRow[];
       if (!QUESTION_TYPES.every((t) => rows.some((q) => q.question_type === t))) continue;
 
       const { data: content } = await f.admin
-        .from("com_m_contents")
-        .select("content_scope, metadata")
-        .eq("content_id", contentId)
-        .eq("status", 1)
+        .from('com_m_contents')
+        .select('content_scope, metadata')
+        .eq('content_id', contentId)
+        .eq('status', 1)
         .maybeSingle();
       if (!content) continue;
       if (content.content_scope === 1) {
-        const { error: accessError } = await f.admin.from("com_m_contents_access").insert({ client_id: f.clientId, content_id: contentId });
+        const { error: accessError } = await f.admin
+          .from('com_m_contents_access')
+          .insert({ client_id: f.clientId, content_id: contentId });
         if (accessError) throw new Error(`スプリントの公開先の追加に失敗しました: ${accessError.message}`);
       }
-      const sprintType = (content.metadata as { sprint?: { sprint_type?: string } } | null)?.sprint?.sprint_type ?? "0";
+      const sprintType = (content.metadata as { sprint?: { sprint_type?: string } } | null)?.sprint?.sprint_type ?? '0';
       return { contentId, sprintType, questions: rows };
     }
-    throw new Error("4種別すべてに音声付きの問題があるスプリント教材が見つかりません");
+    throw new Error('4種別すべてに音声付きの問題があるスプリント教材が見つかりません');
   }
 
   /** スプリント選択画面を開き、発話評価の有無を選ぶ（ONの場合はマイクを許可する） */
   async function openSprintSelect(
     page: Page,
-    params: { mode: "sprint" | "drill"; type: QuestionType; contentId: string; sprintType: string; assessment: boolean },
+    params: {
+      mode: 'sprint' | 'drill';
+      type: QuestionType;
+      contentId: string;
+      sprintType: string;
+      assessment: boolean;
+    },
   ): Promise<void> {
-    await page.goto(`/training/sprint/play?mode=${params.mode}&type=${params.type}&content_id=${params.contentId}&sprint_type=${params.sprintType}`);
-    const assessmentOff = page.getByRole("button", { name: "OFF", exact: true });
+    await page.goto(
+      `/training/sprint/play?mode=${params.mode}&type=${params.type}&content_id=${params.contentId}&sprint_type=${params.sprintType}`,
+    );
+    const assessmentOff = page.getByRole('button', { name: 'OFF', exact: true });
     await expect(assessmentOff).toBeVisible({ timeout: 30_000 });
     if (!params.assessment) {
       await assessmentOff.click();
       return;
     }
-    const allowMic = page.getByRole("button", { name: "タップしてマイクを許可する" });
+    const allowMic = page.getByRole('button', { name: 'タップしてマイクを許可する' });
     if (await allowMic.isVisible()) await allowMic.click();
   }
 
   /** 記録された音声のURLが、その問題のどの音声か */
   const isAudioOf = (entry: SpeechLogEntry | undefined, path: string | null): boolean =>
-    entry?.type === "audio" && !!path && !!entry.text?.endsWith(path);
+    entry?.type === 'audio' && !!path && !!entry.text?.endsWith(path);
 
   const PROMPT_ORDER: Record<QuestionType, { label: string; withStatement: boolean }> = {
-    "0": { label: "Speed: 質問文 → 発話", withStatement: false },
-    "5": { label: "Builders: 基本文 → 指示文 → 発話", withStatement: true },
-    "4": { label: "Structure: 基本文 → 指示文 → 発話", withStatement: true },
-    "6": { label: "Mastery: 基本文 → 質問文 → 発話", withStatement: true },
+    '0': { label: 'Speed: 質問文 → 発話', withStatement: false },
+    '5': { label: 'Builders: 基本文 → 指示文 → 発話', withStatement: true },
+    '4': { label: 'Structure: 基本文 → 指示文 → 発話', withStatement: true },
+    '6': { label: 'Mastery: 基本文 → 質問文 → 発話', withStatement: true },
   };
 
-  for (const type of ["0", "5", "4", "6"] as const) {
+  for (const type of ['0', '5', '4', '6'] as const) {
     const { label, withStatement } = PROMPT_ORDER[type];
 
     test(`スプリント（${label}）: 再生の後にチャイムが鳴り、解答文で発話評価される`, async ({ page }) => {
@@ -283,118 +308,165 @@ test.describe("スプリントの発話", () => {
       const f = await startAsStudent(page);
       const sprint = await prepareSprintContent(f);
 
-      await openSprintSelect(page, { mode: "sprint", type, contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
+      await openSprintSelect(page, {
+        mode: 'sprint',
+        type,
+        contentId: sprint.contentId,
+        sprintType: sprint.sprintType,
+        assessment: true,
+      });
       // Speed は回答の種類（YES/NO）を選んで開始する。YES で開始し、YES の解答文で評価されることを確かめる
-      const start = page.getByRole("button", { name: type === "0" ? "YESで回答開始" : "タイムアタックを開始" });
+      const start = page.getByRole('button', { name: type === '0' ? 'YESで回答開始' : 'タイムアタックを開始' });
       await expect(start).toBeEnabled();
       await start.click();
 
       const log = await waitForFirstListen(page);
       const listen = log[log.length - 1];
-      const question = sprint.questions.find((q) => q.question_type === type && q.answer_sentence_yes_en === listen.text);
+      const question = sprint.questions.find(
+        (q) => q.question_type === type && q.answer_sentence_yes_en === listen.text,
+      );
       expect(question, `発話評価の参照文が ${label} の問題の解答文ではない: ${listen.text}`).toBeTruthy();
 
       // 発話評価の直前に再生された音声の並び（同じ問題の 基本文 → 質問文/指示文、または 質問文のみ）
-      const played = log.slice(0, -1).filter((e) => e.type === "audio");
+      const played = log.slice(0, -1).filter((e) => e.type === 'audio');
       if (withStatement) {
-        expect(isAudioOf(played.at(-2), question!.statement_voice), "基本文が再生されていない").toBe(true);
-        expect(isAudioOf(played.at(-1), question!.question_voice), "基本文の後に質問文/指示文が再生されていない").toBe(true);
+        expect(isAudioOf(played.at(-2), question!.statement_voice), '基本文が再生されていない').toBe(true);
+        expect(isAudioOf(played.at(-1), question!.question_voice), '基本文の後に質問文/指示文が再生されていない').toBe(
+          true,
+        );
       } else {
-        expect(isAudioOf(played.at(-1), question!.question_voice), "質問文が再生されていない").toBe(true);
-        expect(played.some((e) => isAudioOf(e, question!.statement_voice)), "Speed で基本文が再生された").toBe(false);
+        expect(isAudioOf(played.at(-1), question!.question_voice), '質問文が再生されていない').toBe(true);
+        expect(
+          played.some((e) => isAudioOf(e, question!.statement_voice)),
+          'Speed で基本文が再生された',
+        ).toBe(false);
       }
 
-      await expect(page.getByText("Excellent", { exact: true })).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText('Excellent', { exact: true })).toBeVisible({ timeout: 20_000 });
     });
   }
 
-  test("スプリント（Speed の NO 回答）: NO で開始すると、NO の解答文で発話評価される", async ({ page }) => {
+  test('スプリント（Speed の NO 回答）: NO で開始すると、NO の解答文で発話評価される', async ({ page }) => {
     test.setTimeout(150_000);
     await useFakeSpeech(page);
     const f = await startAsStudent(page);
     const sprint = await prepareSprintContent(f);
 
-    await openSprintSelect(page, { mode: "sprint", type: "0", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
-    const start = page.getByRole("button", { name: "NOで回答開始" });
+    await openSprintSelect(page, {
+      mode: 'sprint',
+      type: '0',
+      contentId: sprint.contentId,
+      sprintType: sprint.sprintType,
+      assessment: true,
+    });
+    const start = page.getByRole('button', { name: 'NOで回答開始' });
     await expect(start).toBeEnabled();
     await start.click();
 
     const log = await waitForFirstListen(page);
     const listen = log[log.length - 1];
-    const speed = sprint.questions.filter((q) => q.question_type === "0");
-    expect(speed.some((q) => q.answer_sentence_no_en === listen.text), `発話評価の参照文が Speed の NO の解答文ではない: ${listen.text}`).toBe(true);
-    expect(speed.some((q) => q.answer_sentence_yes_en === listen.text), "NO で開始したのに YES の解答文で発話評価された").toBe(false);
+    const speed = sprint.questions.filter((q) => q.question_type === '0');
+    expect(
+      speed.some((q) => q.answer_sentence_no_en === listen.text),
+      `発話評価の参照文が Speed の NO の解答文ではない: ${listen.text}`,
+    ).toBe(true);
+    expect(
+      speed.some((q) => q.answer_sentence_yes_en === listen.text),
+      'NO で開始したのに YES の解答文で発話評価された',
+    ).toBe(false);
 
-    await expect(page.getByText("Excellent", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('Excellent', { exact: true })).toBeVisible({ timeout: 20_000 });
   });
 
-  test("スプリント（発話評価OFF）: 問題を再生した後は発話せず、脳内回答で次の問題へ進める", async ({ page }) => {
+  test('スプリント（発話評価OFF）: 問題を再生した後は発話せず、脳内回答で次の問題へ進める', async ({ page }) => {
     test.setTimeout(150_000);
     await useFakeSpeech(page);
     const f = await startAsStudent(page);
     const sprint = await prepareSprintContent(f);
 
-    await openSprintSelect(page, { mode: "sprint", type: "6", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: false });
-    await page.getByRole("button", { name: "タイムアタックを開始" }).click();
+    await openSprintSelect(page, {
+      mode: 'sprint',
+      type: '6',
+      contentId: sprint.contentId,
+      sprintType: sprint.sprintType,
+      assessment: false,
+    });
+    await page.getByRole('button', { name: 'タイムアタックを開始' }).click();
 
-    await expect(page.getByText("発話なし", { exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('発話なし', { exact: true })).toBeVisible({ timeout: 30_000 });
     // 回答の段階（基本文・質問文の再生後）になると「次の問題へ」が押せるようになる
-    await expect(page.getByRole("button", { name: "次の問題へ" })).toBeEnabled({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: '次の問題へ' })).toBeEnabled({ timeout: 60_000 });
 
     const log = await readSpeechLog(page);
-    expect(log.filter((e) => e.type === "audio").length).toBeGreaterThanOrEqual(2);
-    expect(log.some((e) => e.type === "listen")).toBe(false);
+    expect(log.filter((e) => e.type === 'audio').length).toBeGreaterThanOrEqual(2);
+    expect(log.some((e) => e.type === 'listen')).toBe(false);
   });
 
-  test("スプリント: 発話中に画面が隠れると発話を止め、戻ると同じ問題を頭からやり直す", async ({ page }) => {
+  test('スプリント: 発話中に画面が隠れると発話を止め、戻ると同じ問題を頭からやり直す', async ({ page }) => {
     test.setTimeout(150_000);
     // 発話中に画面を隠せるよう、文字起こしを返すまでの時間を長くする
     await useFakeSpeech(page, { delayMs: 60_000 });
     const f = await startAsStudent(page);
     const sprint = await prepareSprintContent(f);
 
-    await openSprintSelect(page, { mode: "sprint", type: "6", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
-    await page.getByRole("button", { name: "タイムアタックを開始" }).click();
+    await openSprintSelect(page, {
+      mode: 'sprint',
+      type: '6',
+      contentId: sprint.contentId,
+      sprintType: sprint.sprintType,
+      assessment: true,
+    });
+    await page.getByRole('button', { name: 'タイムアタックを開始' }).click();
     const first = await waitForFirstListen(page);
     const listenText = first[first.length - 1].text;
 
     // 画面の表示・非表示（iOS ではバックグラウンド・画面ロック）を擬似的に切り替える
-    const setVisibility = (state: "hidden" | "visible") =>
+    const setVisibility = (state: 'hidden' | 'visible') =>
       page.evaluate((v) => {
-        Object.defineProperty(document, "visibilityState", { configurable: true, get: () => v });
-        document.dispatchEvent(new Event("visibilitychange"));
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => v });
+        document.dispatchEvent(new Event('visibilitychange'));
       }, state);
 
-    await setVisibility("hidden");
-    await setVisibility("visible");
+    await setVisibility('hidden');
+    await setVisibility('visible');
 
     // 戻ると、次の問題へ進まずに同じ問題を頭から再生し直し、同じ解答文でもう一度発話評価が始まる
     await expect
-      .poll(async () => (await readSpeechLog(page)).filter((e) => e.type === "listen").map((e) => e.text), { timeout: 60_000 })
+      .poll(async () => (await readSpeechLog(page)).filter((e) => e.type === 'listen').map((e) => e.text), {
+        timeout: 60_000,
+      })
       .toEqual([listenText, listenText]);
   });
 
-  test("スプリントの終了後、結果画面で「全て再生」が自動で始まり、文の個別再生では問題の再生ボタンが再生中にならない", async ({ page }) => {
+  test('スプリントの終了後、結果画面で「全て再生」が自動で始まり、文の個別再生では問題の再生ボタンが再生中にならない', async ({
+    page,
+  }) => {
     test.setTimeout(180_000);
     await useFakeSpeech(page);
     const f = await startAsStudent(page);
     const sprint = await prepareSprintContent(f);
 
     // 全問に発話で答え終えると、スプリントが終わって結果画面へ移る
-    await openSprintSelect(page, { mode: "sprint", type: "6", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
-    await page.getByRole("button", { name: "タイムアタックを開始" }).click();
+    await openSprintSelect(page, {
+      mode: 'sprint',
+      type: '6',
+      contentId: sprint.contentId,
+      sprintType: sprint.sprintType,
+      assessment: true,
+    });
+    await page.getByRole('button', { name: 'タイムアタックを開始' }).click();
     await page.waitForURL(/\/training\/sprint\/result\/[0-9a-f-]{36}/, { timeout: 150_000 });
 
-    await test.step("実施の記録が保存され、履歴は出題順に問題ごとの回答（スキップの有無・発話評価）を持つ", async () => {
+    await test.step('実施の記録が保存され、履歴は出題順に問題ごとの回答（スキップの有無・発話評価）を持つ', async () => {
       const selfSprintId = page.url().match(/\/result\/([0-9a-f-]{36})/)![1];
       const { data: record, error } = await f.admin
-        .from("self_t_sprint")
-        .select("content_id, question_type, total_answered, total_assessments, answered_history")
-        .eq("self_sprint_id", selfSprintId)
+        .from('self_t_sprint')
+        .select('content_id, question_type, total_answered, total_assessments, answered_history')
+        .eq('self_sprint_id', selfSprintId)
         .single();
       expect(error).toBeNull();
       expect(record!.content_id).toBe(sprint.contentId);
-      expect(record!.question_type).toBe("6");
+      expect(record!.question_type).toBe('6');
 
       const history = record!.answered_history as {
         question_id: unknown;
@@ -406,56 +478,66 @@ test.describe("スプリントの発話", () => {
       expect(history.length).toBeGreaterThan(0);
       expect(history.map((h) => h.seq_no)).toEqual(history.map((_, i) => i + 1));
       for (const h of history) {
-        expect(typeof h.question_id).toBe("string");
-        expect(typeof h.is_skipped).toBe("boolean");
+        expect(typeof h.question_id).toBe('string');
+        expect(typeof h.is_skipped).toBe('boolean');
       }
       // 全問に発話で答えているため、発話評価のスコアが記録され、件数がヘッダーの集計と一致する
       const assessed = history.filter((h) => !h.is_skipped && h.assessment);
       expect(assessed.length).toBeGreaterThan(0);
-      for (const h of assessed) expect(typeof h.assessment!.total_score).toBe("number");
+      for (const h of assessed) expect(typeof h.assessment!.total_score).toBe('number');
       expect(record!.total_assessments).toBe(assessed.length);
     });
 
-    await test.step("「全て再生」が自動で始まり、自動再生の指定はURLから外れる", async () => {
-      await expect(page.getByRole("button", { name: "停止", exact: true })).toBeVisible({ timeout: 20_000 });
+    await test.step('「全て再生」が自動で始まり、自動再生の指定はURLから外れる', async () => {
+      await expect(page.getByRole('button', { name: '停止', exact: true })).toBeVisible({ timeout: 20_000 });
       await expect(page).toHaveURL(/\/training\/sprint\/result\/[0-9a-f-]{36}$/);
-      await page.getByRole("button", { name: "停止", exact: true }).click();
+      await page.getByRole('button', { name: '停止', exact: true }).click();
     });
 
-    await test.step("文を1つだけ再生しても、問題ごとの再生ボタンは「再生中」にならない", async () => {
+    await test.step('文を1つだけ再生しても、問題ごとの再生ボタンは「再生中」にならない', async () => {
       const card = page.locator('[id^="card-"]').first();
-      await card.getByRole("button", { name: "解答文を再生" }).first().click();
-      await expect(card.getByRole("button", { name: "再生", exact: true })).toBeVisible();
-      await expect(card.getByText("再生中", { exact: true })).toHaveCount(0);
+      await card.getByRole('button', { name: '解答文を再生' }).first().click();
+      await expect(card.getByRole('button', { name: '再生', exact: true })).toBeVisible();
+      await expect(card.getByText('再生中', { exact: true })).toHaveCount(0);
     });
   });
 
-  test("ドリル: 問題の再生後、発話ボタンを押すとチャイムの後に解答文で発話評価され、評価が表示される", async ({ page }) => {
+  test('ドリル: 問題の再生後、発話ボタンを押すとチャイムの後に解答文で発話評価され、評価が表示される', async ({
+    page,
+  }) => {
     test.setTimeout(150_000);
     await useFakeSpeech(page);
     const f = await startAsStudent(page);
     const sprint = await prepareSprintContent(f);
 
-    await openSprintSelect(page, { mode: "drill", type: "6", contentId: sprint.contentId, sprintType: sprint.sprintType, assessment: true });
-    await page.getByRole("button", { name: "ドリルを開始" }).click();
+    await openSprintSelect(page, {
+      mode: 'drill',
+      type: '6',
+      contentId: sprint.contentId,
+      sprintType: sprint.sprintType,
+      assessment: true,
+    });
+    await page.getByRole('button', { name: 'ドリルを開始' }).click();
 
     // ドリルは問題（基本文 → 質問文）を自動で再生した後、発話ボタンを押すまで発話しない
     await expect
-      .poll(async () => (await readSpeechLog(page)).filter((e) => e.type === "audio").length, { timeout: 60_000 })
+      .poll(async () => (await readSpeechLog(page)).filter((e) => e.type === 'audio').length, { timeout: 60_000 })
       .toBeGreaterThanOrEqual(2);
-    const record = page.getByRole("button", { name: "発話練習" });
+    const record = page.getByRole('button', { name: '発話練習' });
     await expect(record).toBeEnabled({ timeout: 30_000 });
-    expect((await readSpeechLog(page)).some((e) => e.type === "listen")).toBe(false);
+    expect((await readSpeechLog(page)).some((e) => e.type === 'listen')).toBe(false);
 
     await record.click();
     const log = await waitForFirstListen(page);
     const listen = log[log.length - 1];
-    const firstStatement = log.find((e) => e.type === "audio");
-    const question = sprint.questions.find((q) => q.question_type === "6" && isAudioOf(firstStatement, q.statement_voice));
-    expect(question, "最初に再生された基本文の問題が見つからない").toBeTruthy();
+    const firstStatement = log.find((e) => e.type === 'audio');
+    const question = sprint.questions.find(
+      (q) => q.question_type === '6' && isAudioOf(firstStatement, q.statement_voice),
+    );
+    expect(question, '最初に再生された基本文の問題が見つからない').toBeTruthy();
     expect(listen.text).toBe(question!.answer_sentence_yes_en);
 
-    await expect(page.getByText("スコア", { exact: true })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText("Excellent", { exact: true })).toBeVisible();
+    await expect(page.getByText('スコア', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('Excellent', { exact: true })).toBeVisible();
   });
 });

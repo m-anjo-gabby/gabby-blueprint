@@ -22,10 +22,7 @@ const historyItemBase = {
  */
 const selfSprintHistoryItemSchema = z.looseObject({
   ...historyItemBase,
-  assessment: z
-    .looseObject({ total_score: z.number() })
-    .nullable()
-    .optional(),
+  assessment: z.looseObject({ total_score: z.number() }).nullable().optional(),
 });
 
 /** Lesson Sprint（コーチ主導）の履歴1件。score は 1(Pass)〜5(No Mistake)、スキップ時は null */

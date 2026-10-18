@@ -8,7 +8,7 @@ import type { SprintAvailableLevels, SprintQuestionType } from '@gabby/types/spr
  */
 export async function fetchSprintAvailableLevels(
   supabase: SupabaseClient,
-  contentIds: string[]
+  contentIds: string[],
 ): Promise<Map<string, SprintAvailableLevels> | null> {
   const result = new Map<string, SprintAvailableLevels>();
   if (contentIds.length === 0) return result;
@@ -16,7 +16,11 @@ export async function fetchSprintAvailableLevels(
   const { data, error } = await supabase.rpc('get_sprint_available_levels', { p_content_ids: contentIds });
   if (error) return null;
 
-  for (const row of (data ?? []) as { content_id: string; question_type: SprintQuestionType; difficulty_level: number }[]) {
+  for (const row of (data ?? []) as {
+    content_id: string;
+    question_type: SprintQuestionType;
+    difficulty_level: number;
+  }[]) {
     const levels = result.get(row.content_id) ?? {};
     (levels[row.question_type] ??= []).push(Number(row.difficulty_level));
     result.set(row.content_id, levels);

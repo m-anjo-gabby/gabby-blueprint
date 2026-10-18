@@ -25,9 +25,10 @@ interface Props {
 function summarizeMonth(items: LessonSprintHistoryListItem[], monthLabel: string, timezone: string) {
   const monthItems = items.filter((it) => formatMonthYearEn(it.insert_date, timezone) === monthLabel);
   const scored = monthItems.filter((it): it is typeof it & { average_score: number } => it.average_score !== null);
-  const avgScore = scored.length > 0
-    ? Math.round((scored.reduce((sum, it) => sum + it.average_score, 0) / scored.length) * 10) / 10
-    : null;
+  const avgScore =
+    scored.length > 0
+      ? Math.round((scored.reduce((sum, it) => sum + it.average_score, 0) / scored.length) * 10) / 10
+      : null;
   return { count: monthItems.length, avgScore };
 }
 
@@ -51,18 +52,19 @@ export function LessonSprintHistoryList({ studentId, initialItems, initialCursor
 
         return (
           <div className={isNewMonth && index > 0 ? 'pt-2' : undefined}>
-            {isNewMonth && (() => {
-              const { count, avgScore } = summarizeMonth(items, monthLabel, timezone);
-              return (
-                <p className="sticky top-0 z-10 bg-slate-50 px-1 py-2 text-[11px] font-black text-slate-400 uppercase tracking-wider">
-                  {monthLabel}
-                  <span className="ml-1.5 font-bold normal-case text-slate-400/80">
-                    · {count} sprint{count === 1 ? '' : 's'}
-                    {avgScore !== null && ` · avg ${avgScore}/5`}
-                  </span>
-                </p>
-              );
-            })()}
+            {isNewMonth &&
+              (() => {
+                const { count, avgScore } = summarizeMonth(items, monthLabel, timezone);
+                return (
+                  <p className="sticky top-0 z-10 bg-slate-50 px-1 py-2 text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                    {monthLabel}
+                    <span className="ml-1.5 font-bold normal-case text-slate-400/80">
+                      · {count} sprint{count === 1 ? '' : 's'}
+                      {avgScore !== null && ` · avg ${avgScore}/5`}
+                    </span>
+                  </p>
+                );
+              })()}
             <LessonSprintHistoryRow
               studentId={studentId}
               record={item}

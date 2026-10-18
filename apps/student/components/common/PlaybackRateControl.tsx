@@ -3,7 +3,7 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 export const PLAYBACK_RATES = [0.8, 1.0, 1.2, 1.5] as const;
 
@@ -19,22 +19,22 @@ interface PlaybackRateControlProps {
 
 const TRIGGER_STYLES = {
   word: {
-    base: "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-control",
-    selected: "bg-brand text-white border-brand-500 hover:bg-brand-strong active:bg-brand-800",
-    unselected: "text-ink-subtle border-line hover:bg-canvas active:bg-line",
-    value: "text-[11px] font-bold leading-none",
-    label: "text-[11px] font-bold tracking-tighter",
-    labelSelected: "opacity-90",
-    labelUnselected: "opacity-70",
+    base: 'w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-control',
+    selected: 'bg-brand text-white border-brand-500 hover:bg-brand-strong active:bg-brand-800',
+    unselected: 'text-ink-subtle border-line hover:bg-canvas active:bg-line',
+    value: 'text-[11px] font-bold leading-none',
+    label: 'text-[11px] font-bold tracking-tighter',
+    labelSelected: 'opacity-90',
+    labelUnselected: 'opacity-70',
   },
   sprint: {
-    base: "w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-control border-line hover:bg-canvas active:bg-line cursor-pointer z-10",
-    selected: "bg-brand text-white border-brand-500 hover:bg-brand-strong active:bg-brand-800",
-    unselected: "text-ink-soft",
-    value: "text-[11px] font-bold leading-none",
-    label: "text-[11px] font-bold tracking-tight mt-0.5",
-    labelSelected: "text-brand-100",
-    labelUnselected: "text-ink-subtle",
+    base: 'w-14 h-full flex flex-col items-center justify-center transition-all shrink-0 border-r relative rounded-l-control border-line hover:bg-canvas active:bg-line cursor-pointer z-10',
+    selected: 'bg-brand text-white border-brand-500 hover:bg-brand-strong active:bg-brand-800',
+    unselected: 'text-ink-soft',
+    value: 'text-[11px] font-bold leading-none',
+    label: 'text-[11px] font-bold tracking-tight mt-0.5',
+    labelSelected: 'text-brand-100',
+    labelUnselected: 'text-ink-subtle',
   },
 } as const;
 
@@ -57,12 +57,7 @@ export const PlaybackRateControl: React.FC<PlaybackRateControlProps> = ({
 
   return (
     <div className="h-full relative shrink-0 overflow-visible">
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-30 cursor-default"
-          onClick={() => onOpenChange(false)}
-        />
-      )}
+      {isOpen && <div className="fixed inset-0 z-30 cursor-default" onClick={() => onOpenChange(false)} />}
 
       <button
         onClick={() => !disabled && onOpenChange(!isOpen)}
@@ -79,7 +74,7 @@ export const PlaybackRateControl: React.FC<PlaybackRateControlProps> = ({
             initial={{ opacity: 0, y: 4, scale: 0.95 }}
             animate={{ opacity: 1, y: -10, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.95 }}
-            transition={{ duration: 0.12, ease: "easeOut" }}
+            transition={{ duration: 0.12, ease: 'easeOut' }}
             className="absolute bottom-full left-1/2 -translate-x-1/2 bg-white border border-line/90 shadow-2xl rounded-control p-1.5 min-w-[80px] flex flex-col gap-1 z-50 mb-1"
           >
             <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2.5 h-2.5 bg-white border-b border-r border-line rotate-45" />
@@ -94,10 +89,8 @@ export const PlaybackRateControl: React.FC<PlaybackRateControlProps> = ({
                     onOpenChange(false);
                   }}
                   className={cn(
-                    "w-full px-2.5 py-1.5 text-xs font-bold font-mono rounded-xl transition-all flex items-center justify-between gap-2 cursor-pointer",
-                    isSelected
-                      ? "bg-brand-50 text-brand"
-                      : "text-ink-soft hover:bg-canvas hover:text-brand-500"
+                    'w-full px-2.5 py-1.5 text-xs font-bold font-mono rounded-xl transition-all flex items-center justify-between gap-2 cursor-pointer',
+                    isSelected ? 'bg-brand-50 text-brand' : 'text-ink-soft hover:bg-canvas hover:text-brand-500',
                   )}
                 >
                   <span>{rate.toFixed(1)}x</span>

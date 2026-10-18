@@ -31,7 +31,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
     if (onToggle) {
       onToggle(notice.notice_id, notice.is_read);
     } else {
-      setLocalIsOpen(prev => {
+      setLocalIsOpen((prev) => {
         const next = !prev;
         if (next && !notice.is_read) {
           onRead?.(notice.notice_id);
@@ -46,7 +46,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
       id={`notice-${notice.notice_id}`}
       className={cn(
         'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all',
-        !notice.is_read ? 'border-brand-200' : 'border-slate-200'
+        !notice.is_read ? 'border-brand-200' : 'border-slate-200',
       )}
     >
       {/* ─── Card header (click to expand) ──── */}
@@ -70,7 +70,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             <span
               className={cn(
                 'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
-                NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
+                NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass,
               )}
             >
               {NOTICE_TYPE_LABEL_EN[notice.notice_type as NoticeType] ?? notice.notice_type}
@@ -79,7 +79,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
               <span
                 className={cn(
                   'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
-                  NOTICE_IMPORTANT_BADGE.badgeClass
+                  NOTICE_IMPORTANT_BADGE.badgeClass,
                 )}
               >
                 {NOTICE_IMPORTANT_LABEL_EN}
@@ -94,17 +94,17 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
           </div>
 
           {/* Title */}
-          <p className={cn(
-            'text-sm leading-snug truncate',
-            notice.is_read ? 'font-bold text-slate-600' : 'font-black text-slate-900'
-          )}>
+          <p
+            className={cn(
+              'text-sm leading-snug truncate',
+              notice.is_read ? 'font-bold text-slate-600' : 'font-black text-slate-900',
+            )}
+          >
             {notice.title}
           </p>
 
           {/* Published date */}
-          <p className="text-[11px] text-slate-400 mt-1 font-bold">
-            {formatDateEn(notice.published_at, timezone)}
-          </p>
+          <p className="text-[11px] text-slate-400 mt-1 font-bold">{formatDateEn(notice.published_at, timezone)}</p>
         </div>
 
         {/* Expand icon */}

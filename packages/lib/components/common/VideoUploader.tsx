@@ -109,9 +109,7 @@ export function VideoUploader({
         )}
       </div>
 
-      {validationError && (
-        <p className="text-xs font-bold text-rose-500">{validationError}</p>
-      )}
+      {validationError && <p className="text-xs font-bold text-rose-500">{validationError}</p>}
 
       <div className="flex items-center gap-3">
         <button

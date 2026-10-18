@@ -17,8 +17,7 @@ function getSpeechRecognitionClass(): SpeechRecognitionConstructor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-const isMobileDevice = () =>
-  typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const isMobileDevice = () => typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
 /**
  * ブラウザ標準の Web Speech API（SpeechRecognition）による認識。
@@ -37,7 +36,11 @@ export const webSpeechRecognizer: SpeechRecognizerEngine = {
     if (!SpeechRecognitionClass) {
       clientLogger.warn('speech:not_supported', 'Web Speech API is not supported in this browser');
       queueMicrotask(() => callbacks.onError?.('not-supported'));
-      return { stop: () => { /* no-op */ } };
+      return {
+        stop: () => {
+          /* no-op */
+        },
+      };
     }
 
     let active = true;
@@ -66,7 +69,11 @@ export const webSpeechRecognizer: SpeechRecognizerEngine = {
       clientLogger.debug('speech:recognition_failed', 'Speech recognition error', { payload: { error } });
       if (error === 'no-speech' || error === 'aborted') return;
       active = false;
-      try { recognition.abort(); } catch { /* no-op */ }
+      try {
+        recognition.abort();
+      } catch {
+        /* no-op */
+      }
       callbacks.onError?.(error);
     };
 
@@ -95,7 +102,11 @@ export const webSpeechRecognizer: SpeechRecognizerEngine = {
         if (!active) return;
         active = false;
         // abort() を使用することで、Edge等での不要な後追いイベントを遮断
-        try { recognition.abort(); } catch { /* 停止済み */ }
+        try {
+          recognition.abort();
+        } catch {
+          /* 停止済み */
+        }
       },
     };
   },

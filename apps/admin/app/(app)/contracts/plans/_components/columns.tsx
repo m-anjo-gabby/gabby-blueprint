@@ -11,7 +11,10 @@ import { ContractPlanFormDialog } from './ContractPlanFormDialog';
 
 type TableT = ReturnType<typeof useTranslations<'contracts.plans.table'>>;
 
-export function createColumns(t: TableT, { onDelete }: { onDelete: (plan: ContractPlan) => void }): ListColumnDef<ContractPlan>[] {
+export function createColumns(
+  t: TableT,
+  { onDelete }: { onDelete: (plan: ContractPlan) => void },
+): ListColumnDef<ContractPlan>[] {
   return [
     {
       accessorKey: 'sort_no',
@@ -61,7 +64,9 @@ export function createColumns(t: TableT, { onDelete }: { onDelete: (plan: Contra
     {
       accessorKey: 'period_months',
       header: t('periodHeader'),
-      cell: ({ row }) => <span className="text-slate-600">{t('periodUnit', { count: row.original.period_months })}</span>,
+      cell: ({ row }) => (
+        <span className="text-slate-600">{t('periodUnit', { count: row.original.period_months })}</span>
+      ),
     },
     {
       accessorKey: 'plan_code',

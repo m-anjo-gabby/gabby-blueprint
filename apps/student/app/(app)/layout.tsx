@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
 import ToastContainer from '@gabby/lib/components/common/ToastContainer';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
-import { TermsAgreementModal } from "@/components/common/TermsAgreementModal";
+import { TermsAgreementModal } from '@/components/common/TermsAgreementModal';
 import { checkPendingAgreements } from '@/actions/termAction';
 import { NavigationScrollReset } from '@/components/common/NavigationScrollReset';
 import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
@@ -23,11 +23,7 @@ import type { ShellNavContext } from '@/constants/navigation';
  * 3. 法的ガード: 最新の利用規約・プライバシーポリシーへの同意チェック
  * 4. 共通基盤: 背景色、トースト、汎用ダイアログの配置
  */
-export default async function StudentAppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function StudentAppLayout({ children }: { children: React.ReactNode }) {
   // --- 1. 認証チェック ---
   const user = await getAuthUser();
 
@@ -43,7 +39,10 @@ export default async function StudentAppLayout({
   // ログイン後の全ページで共通して、最新規約への同意状況を確認します。
   // 未同意がある場合は TermsAgreementModal が表示され、操作をロックします。
   // 規約の同意状況と、シェルのナビ項目の表示可否（ライブセッション付き契約の有無）を並列に取得する
-  const [pendingTerms, contracts] = await Promise.all([checkPendingAgreements(user.id), getMyLiveSessionContractsCached()]);
+  const [pendingTerms, contracts] = await Promise.all([
+    checkPendingAgreements(user.id),
+    getMyLiveSessionContractsCached(),
+  ]);
   const roles = (user.app_metadata?.roles as string[] | undefined) ?? [];
   const navContext: ShellNavContext = {
     hasLiveSession: contracts.some((c) => c.is_active),
@@ -66,7 +65,7 @@ export default async function StudentAppLayout({
       <NavigationScrollReset />
       {/* 音声の中断・復旧の発生状況をログへ送る（表示なし） */}
       <AudioDiagnosticsReporter />
-      
+
       {/* Color Vowel辞書 Provider: 単語タップで辞書検索ツールチップおよびダイアログをグローバル表示 */}
       <ColorVowelLookupProvider>
         {/* デザイン基盤: 全体共通の背景色やフォントを適用。
@@ -84,12 +83,7 @@ export default async function StudentAppLayout({
           agreeToTerms アクションで同意すると、サーバー側で再検証(revalidatePath)
           が走り、この pendingTerms が空になることでモーダルが自動的に消えます。
       */}
-      {pendingTerms.length > 0 && (
-        <TermsAgreementModal 
-          userId={user.id} 
-          pendingTerms={pendingTerms} 
-        />
-      )}
+      {pendingTerms.length > 0 && <TermsAgreementModal userId={user.id} pendingTerms={pendingTerms} />}
 
       {/* 通知・ダイアログ系 UI: 全てのコンテンツの上にオーバーレイされるように配置 */}
       <ToastContainer />

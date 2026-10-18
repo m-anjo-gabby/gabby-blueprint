@@ -42,11 +42,7 @@ export async function getCurrentUserWithType(): Promise<{ id: string; user_type:
   const user = await getAuthUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from('com_m_user')
-    .select('id, user_type')
-    .eq('id', user.id)
-    .single();
+  const { data: profile } = await supabase.from('com_m_user').select('id, user_type').eq('id', user.id).single();
 
   if (!profile) return null;
   return { id: user.id, user_type: profile.user_type as string };
@@ -84,7 +80,10 @@ export async function getChatRoomTargetUsers(): Promise<{
 
     return { success: true, data: (data || []) as ChatTargetUser[] };
   } catch (err) {
-    logger.error('chat:get_target_users_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('chat:get_target_users_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, data: [], error: 'Unexpected error' };
   }
 }
@@ -97,7 +96,7 @@ export async function getChatRoomTargetUsers(): Promise<{
  * 制限なし、roomName必須）。重複作成防止は行わない（作成のたびに新規ルームとなる）。
  */
 export async function createChatRoom(
-  payload: CreateChatRoomPayload
+  payload: CreateChatRoomPayload,
 ): Promise<{ success: boolean; roomId?: string; error?: string }> {
   const ctx = await getLogContext();
   try {
@@ -124,7 +123,7 @@ export async function createChatRoom(
 
 async function createOneOnOneChatRoom(
   payload: CreateChatRoomPayload,
-  ctx: Awaited<ReturnType<typeof getLogContext>>
+  ctx: Awaited<ReturnType<typeof getLogContext>>,
 ): Promise<{ success: boolean; roomId?: string; error?: string }> {
   const [memberIdA, memberIdB] = payload.memberIds;
   if (!memberIdA || !memberIdB || payload.memberIds.length !== 2 || memberIdA === memberIdB) {
@@ -146,10 +145,7 @@ async function createOneOnOneChatRoom(
     return { success: false, error: 'Target user not found' };
   }
 
-  if (
-    !isHumanUserType(profileA.user_type) ||
-    !isHumanUserType(profileB.user_type)
-  ) {
+  if (!isHumanUserType(profileA.user_type) || !isHumanUserType(profileB.user_type)) {
     return { success: false, error: 'Invalid member combination' };
   }
 
@@ -160,7 +156,11 @@ async function createOneOnOneChatRoom(
     .single<{ room_id: string; created: boolean }>();
 
   if (ensureError || !ensured) {
-    logger.error('chat:create_room_failed', ensureError?.message || 'Unknown error', { ...ctx, err: ensureError, payload });
+    logger.error('chat:create_room_failed', ensureError?.message || 'Unknown error', {
+      ...ctx,
+      err: ensureError,
+      payload,
+    });
     return { success: false, error: ensureError?.message || 'Failed to create chat room' };
   }
 
@@ -176,7 +176,7 @@ async function createOneOnOneChatRoom(
 
 async function createGroupChatRoom(
   payload: CreateChatRoomPayload,
-  ctx: Awaited<ReturnType<typeof getLogContext>>
+  ctx: Awaited<ReturnType<typeof getLogContext>>,
 ): Promise<{ success: boolean; roomId?: string; error?: string }> {
   const roomName = payload.roomName?.trim();
   if (!roomName) {
@@ -216,9 +216,9 @@ async function createGroupChatRoom(
     return { success: false, error: roomError?.message || 'Failed to create chat room' };
   }
 
-  const { error: memberError } = await supabase.from('com_t_chat_room_user').insert(
-    members.map((m) => ({ room_id: newRoom.room_id, user_id: m.id, user_type: m.user_type }))
-  );
+  const { error: memberError } = await supabase
+    .from('com_t_chat_room_user')
+    .insert(members.map((m) => ({ room_id: newRoom.room_id, user_id: m.id, user_type: m.user_type })));
 
   if (memberError) {
     logger.error('chat:create_room_members_failed', memberError.message, {
@@ -242,7 +242,7 @@ async function createGroupChatRoom(
  * 過去に退出済み（left_at設定済み）のユーザーを指定した場合は再参加として扱う。
  */
 export async function addChatRoomMember(
-  payload: AddChatRoomMemberPayload
+  payload: AddChatRoomMemberPayload,
 ): Promise<{ success: boolean; member?: ChatRoomMemberSummary; error?: string }> {
   const ctx = await getLogContext();
   try {
@@ -333,7 +333,7 @@ export async function addChatRoomMember(
  * 残り人数が MIN_GROUP_ROOM_MEMBERS を下回る削除は拒否する。
  */
 export async function removeChatRoomMember(
-  payload: RemoveChatRoomMemberPayload
+  payload: RemoveChatRoomMemberPayload,
 ): Promise<{ success: boolean; error?: string }> {
   const ctx = await getLogContext();
   try {
@@ -393,7 +393,10 @@ export async function removeChatRoomMember(
 
     return { success: true };
   } catch (err) {
-    logger.error('chat:remove_member_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('chat:remove_member_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -426,7 +429,7 @@ async function buildChatRoomListItems(
   supabase: SupabaseClient<Database>,
   rooms: RoomBase[],
   currentUserId: string,
-  myMembershipByRoom: Map<string, { last_read_chat_id: string | null }>
+  myMembershipByRoom: Map<string, { last_read_chat_id: string | null }>,
 ): Promise<ChatRoomListItem[]> {
   const roomIds = rooms.map((r) => r.room_id);
   if (roomIds.length === 0) return [];
@@ -442,19 +445,14 @@ async function buildChatRoomListItems(
       .in('room_id', roomIds)
       .is('left_at', null),
     // 直近メッセージのみを対象に「最新メッセージ」「未読件数」を算出する（大量履歴を毎回全走査しないための現実的な上限）
-    supabase
-      .from('com_t_chat')
-      .select('*')
-      .in('room_id', roomIds)
-      .order('created_at', { ascending: false })
-      .limit(500),
+    supabase.from('com_t_chat').select('*').in('room_id', roomIds).order('created_at', { ascending: false }).limit(500),
     lastReadChatIds.length > 0
       ? supabase.from('com_t_chat').select('chat_id, created_at').in('chat_id', lastReadChatIds)
       : Promise.resolve({ data: [] as { chat_id: string; created_at: string }[] }),
   ]);
 
   const lastReadCreatedAtByChatId = new Map(
-    (lastReadMessages || []).map((m: { chat_id: string; created_at: string }) => [m.chat_id, m.created_at])
+    (lastReadMessages || []).map((m: { chat_id: string; created_at: string }) => [m.chat_id, m.created_at]),
   );
 
   const lastMessageByRoom = new Map<string, ChatMessage>();
@@ -471,7 +469,7 @@ async function buildChatRoomListItems(
     if (!membership) continue;
 
     const lastReadAt = membership.last_read_chat_id
-      ? lastReadCreatedAtByChatId.get(membership.last_read_chat_id) ?? null
+      ? (lastReadCreatedAtByChatId.get(membership.last_read_chat_id) ?? null)
       : null;
     const isUnread = msg.sender_user_id !== currentUserId && (!lastReadAt || msg.created_at > lastReadAt);
     if (isUnread) {
@@ -504,7 +502,7 @@ async function buildChatRoomListItems(
           unread_count: unreadCountByRoom.get(room.room_id) ?? 0,
           members: membersByRoom.get(room.room_id) ?? [],
           is_member: myMembershipByRoom.has(room.room_id),
-        }) as ChatRoomListItem
+        }) as ChatRoomListItem,
     )
     .sort((a, b) => {
       const aTime = a.last_message?.created_at ?? a.created_at;
@@ -539,7 +537,7 @@ export async function getChatRooms(): Promise<{
     }
 
     const myMembershipByRoom = new Map(
-      (myMemberships || []).map((m) => [m.room_id, { last_read_chat_id: m.last_read_chat_id as string | null }])
+      (myMemberships || []).map((m) => [m.room_id, { last_read_chat_id: m.last_read_chat_id as string | null }]),
     );
 
     const roomIds = Array.from(myMembershipByRoom.keys());
@@ -599,13 +597,21 @@ export async function getAllChatRoomsForAdmin(): Promise<{
       .is('left_at', null);
 
     const myMembershipByRoom = new Map(
-      (myMemberships || []).map((m) => [m.room_id, { last_read_chat_id: m.last_read_chat_id as string | null }])
+      (myMemberships || []).map((m) => [m.room_id, { last_read_chat_id: m.last_read_chat_id as string | null }]),
     );
 
-    const data = await buildChatRoomListItems(supabase, (allRooms || []) as RoomBase[], currentUser.id, myMembershipByRoom);
+    const data = await buildChatRoomListItems(
+      supabase,
+      (allRooms || []) as RoomBase[],
+      currentUser.id,
+      myMembershipByRoom,
+    );
     return { success: true, data };
   } catch (err) {
-    logger.error('chat:get_all_rooms_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('chat:get_all_rooms_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, data: [], error: 'Unexpected error' };
   }
 }
@@ -648,7 +654,9 @@ export async function getChatRoomDetail(roomId: string): Promise<{
 
     const { data: members } = await supabase
       .from('com_t_chat_room_user')
-      .select('user_id, user_type, last_read_chat_id, com_m_user(user_name, icon_path, client_id, com_m_client(client_name))')
+      .select(
+        'user_id, user_type, last_read_chat_id, com_m_user(user_name, icon_path, client_id, com_m_client(client_name))',
+      )
       .eq('room_id', roomId)
       .is('left_at', null);
 
@@ -669,15 +677,18 @@ export async function getChatRoomDetail(roomId: string): Promise<{
 
     // 既読位置（メッセージID）を送信時刻に置き換える（自分=「ここから未読」、1対1の相手=「既読」表示）
     const readRows = (members || []) as { user_id: string; last_read_chat_id: string | null }[];
-    const myReadChatId = isMember ? readRows.find((m) => m.user_id === user.id)?.last_read_chat_id ?? null : null;
+    const myReadChatId = isMember ? (readRows.find((m) => m.user_id === user.id)?.last_read_chat_id ?? null) : null;
     const counterpartReadChatId =
       isMember && room.room_type === CHAT_ROOM_TYPES.ONE_ON_ONE
-        ? readRows.find((m) => m.user_id !== user.id)?.last_read_chat_id ?? null
+        ? (readRows.find((m) => m.user_id !== user.id)?.last_read_chat_id ?? null)
         : null;
     const readChatIds = [myReadChatId, counterpartReadChatId].filter((id): id is string => !!id);
     const readAtByChatId = new Map<string, string>();
     if (readChatIds.length > 0) {
-      const { data: readChats } = await supabase.from('com_t_chat').select('chat_id, created_at').in('chat_id', readChatIds);
+      const { data: readChats } = await supabase
+        .from('com_t_chat')
+        .select('chat_id, created_at')
+        .in('chat_id', readChatIds);
       for (const c of readChats ?? []) readAtByChatId.set(c.chat_id as string, c.created_at as string);
     }
 
@@ -688,8 +699,8 @@ export async function getChatRoomDetail(roomId: string): Promise<{
         members: memberList,
         isMember,
         viewerUserId: user.id,
-        myLastReadAt: myReadChatId ? readAtByChatId.get(myReadChatId) ?? null : null,
-        counterpartLastReadAt: counterpartReadChatId ? readAtByChatId.get(counterpartReadChatId) ?? null : null,
+        myLastReadAt: myReadChatId ? (readAtByChatId.get(myReadChatId) ?? null) : null,
+        counterpartLastReadAt: counterpartReadChatId ? (readAtByChatId.get(counterpartReadChatId) ?? null) : null,
       },
     };
   } catch (err) {

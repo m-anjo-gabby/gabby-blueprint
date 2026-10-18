@@ -2,13 +2,24 @@
 
 import { useState, useTransition } from 'react';
 import { GraduationCap, Send } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { StarRatingInput } from '@gabby/lib/components/common/StarRating';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { COACH_RATING_FEEDBACK_MAX_LENGTH, type CoachRatingItem, type PendingCoachRating } from '@gabby/types/coachRating';
+import {
+  COACH_RATING_FEEDBACK_MAX_LENGTH,
+  type CoachRatingItem,
+  type PendingCoachRating,
+} from '@gabby/types/coachRating';
 import { submitCoachRating } from '@/actions/coachRatingAction';
 import { COACH_RATING_ITEMS, ratingOptionLabel } from '@/constants/coachRating';
 
@@ -29,17 +40,30 @@ interface CoachRatingDialogProps {
 export function CoachRatingDialog({ target, onClose, onSubmitted }: CoachRatingDialogProps) {
   return (
     <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        className="max-w-md rounded-panel border border-line/60 bg-surface p-6 text-ink shadow-2xl"
-      >
+      <DialogContent className="max-w-md rounded-panel border border-line/60 bg-surface p-6 text-ink shadow-2xl">
         {/* 対象が替わるたびに入力を初期化する */}
-        {target && <CoachRatingForm key={`${target.ticketId}:${target.coachId}`} target={target} onClose={onClose} onSubmitted={onSubmitted} />}
+        {target && (
+          <CoachRatingForm
+            key={`${target.ticketId}:${target.coachId}`}
+            target={target}
+            onClose={onClose}
+            onSubmitted={onSubmitted}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function CoachRatingForm({ target, onClose, onSubmitted }: { target: PendingCoachRating; onClose: () => void; onSubmitted: () => void }) {
+function CoachRatingForm({
+  target,
+  onClose,
+  onSubmitted,
+}: {
+  target: PendingCoachRating;
+  onClose: () => void;
+  onSubmitted: () => void;
+}) {
   const { showToast } = useToast();
   const [scores, setScores] = useState<Scores>(EMPTY_SCORES);
   const [feedback, setFeedback] = useState('');
@@ -123,7 +147,13 @@ function CoachRatingForm({ target, onClose, onSubmitted }: { target: PendingCoac
         <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
           あとで
         </Button>
-        <Button type="button" onClick={handleSubmit} disabled={!isComplete} pending={isPending} icon={<Send size={16} />}>
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!isComplete}
+          pending={isPending}
+          icon={<Send size={16} />}
+        >
           送信する
         </Button>
       </DialogFooter>

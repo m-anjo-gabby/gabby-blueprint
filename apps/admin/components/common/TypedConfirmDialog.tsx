@@ -74,8 +74,16 @@ export function TypedConfirmDialog({
           <Label htmlFor={inputId} className="text-xs font-bold text-slate-600">
             {inputLabel}
           </Label>
-          <p className="select-all rounded-md bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700">{expectedText}</p>
-          <Input id={inputId} value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" disabled={pending || disabled} />
+          <p className="select-all rounded-md bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700">
+            {expectedText}
+          </p>
+          <Input
+            id={inputId}
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            autoComplete="off"
+            disabled={pending || disabled}
+          />
         </div>
 
         {error && <p className="rounded-md bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600">{error}</p>}

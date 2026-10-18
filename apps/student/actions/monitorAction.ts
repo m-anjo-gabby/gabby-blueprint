@@ -1,9 +1,9 @@
-"use server";
+'use server';
 
-import { createServerClient } from "@gabby/lib/supabase/server";
-import { createLogger } from "@gabby/lib/logger";
-import { getLogContext } from "@gabby/lib/logger/context";
-import { WordSummaryHistoryItem } from "./wordAction"; // Re-use type
+import { createServerClient } from '@gabby/lib/supabase/server';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
+import { WordSummaryHistoryItem } from './wordAction'; // Re-use type
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
@@ -98,30 +98,29 @@ export interface MonitorSprintHistoryResponse {
 export async function getMonitorUserList(
   startDate: string,
   endDate: string,
-  includeMonitor: boolean = false
+  includeMonitor: boolean = false,
 ): Promise<{ success: boolean; data: MonitorUser[]; error?: string }> {
   const ctx = await getLogContext();
 
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     // 💡 _start_date/_end_date は必須。対象期間に有効な契約（status=1かつ期間が重なる）を
     //    持つ生徒のみを対象にする（private.get_monitor_target_users に判定ロジックを集約）
     const { data, error } = await supabase.rpc('get_monitor_user_list', {
       _start_date: startDate,
       _end_date: endDate,
-      _include_monitor: includeMonitor
+      _include_monitor: includeMonitor,
     });
 
     if (error) throw error;
 
-    logger.debug("monitor:get_user_list_success", `Fetched ${data?.length || 0} users`, ctx);
+    logger.debug('monitor:get_user_list_success', `Fetched ${data?.length || 0} users`, ctx);
     return { success: true, data: data || [] };
-
   } catch (error) {
-    logger.error("monitor:get_user_list_failed", "Failed to fetch monitor user list", {
+    logger.error('monitor:get_user_list_failed', 'Failed to fetch monitor user list', {
       ...ctx,
       err: error,
     });
@@ -136,44 +135,45 @@ export async function getMonitorWordHistory(
   startDate: string,
   endDate: string,
   userIds?: string[],
-  includeMonitor: boolean = false // 💡 引数を追加
+  includeMonitor: boolean = false, // 💡 引数を追加
 ): Promise<{ success: boolean; data: MonitorWordSummaryHistoryItem[]; error?: string }> {
   const ctx = await getLogContext();
 
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     const { data, error } = await supabase.rpc('get_monitor_word_history', {
       _start_date: startDate,
       _end_date: endDate,
       _user_ids: userIds && userIds.length > 0 ? userIds : null,
-      _include_monitor: includeMonitor // 💡 パラメータを追加
+      _include_monitor: includeMonitor, // 💡 パラメータを追加
     });
 
     if (error) throw error;
 
-    const formattedData = data?.map(item => ({
-      summary_id: item.summary_id,
-      content_id: item.content_id,
-      user_id: item.user_id,
-      training_date: item.training_date,
-      word_count: item.word_count,
-      phrase_count: item.phrase_count,
-      assessment_count: item.assessment_count,
-      update_date: item.update_date,
-      com_m_contents: {
-        content_name: item.content_name
-      },
-      com_m_user: {
-        user_name: item.user_name
-      }
-    })) || [];
+    const formattedData =
+      data?.map((item) => ({
+        summary_id: item.summary_id,
+        content_id: item.content_id,
+        user_id: item.user_id,
+        training_date: item.training_date,
+        word_count: item.word_count,
+        phrase_count: item.phrase_count,
+        assessment_count: item.assessment_count,
+        update_date: item.update_date,
+        com_m_contents: {
+          content_name: item.content_name,
+        },
+        com_m_user: {
+          user_name: item.user_name,
+        },
+      })) || [];
 
     return { success: true, data: formattedData as MonitorWordSummaryHistoryItem[] };
   } catch (error) {
-    logger.error("monitor:get_word_history_failed", "Failed to fetch monitor word history", {
+    logger.error('monitor:get_word_history_failed', 'Failed to fetch monitor word history', {
       ...ctx,
       err: error,
       payload: { startDate, endDate, userIds, includeMonitor },
@@ -189,14 +189,14 @@ export async function getMonitorSprintHistory(
   startDate: string,
   endDate: string,
   userIds?: string[],
-  includeMonitor: boolean = false
+  includeMonitor: boolean = false,
 ): Promise<{ success: boolean; data: MonitorSprintHistoryResponse; error?: string }> {
   const ctx = await getLogContext();
 
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     // 💡 _user_ids パラメータに渡すために、空配列なら null にする
     const queryUserIds = userIds && userIds.length > 0 ? userIds : null;
@@ -207,20 +207,20 @@ export async function getMonitorSprintHistory(
         _start_date: startDate,
         _end_date: endDate,
         _user_ids: queryUserIds,
-        _include_monitor: includeMonitor
+        _include_monitor: includeMonitor,
       }),
       supabase.rpc('get_monitor_sprint_drill_history', {
         _start_date: startDate,
         _end_date: endDate,
         _user_ids: queryUserIds,
-        _include_monitor: includeMonitor
-      })
+        _include_monitor: includeMonitor,
+      }),
     ]);
 
     if (sessionsRes.error) throw sessionsRes.error;
     if (drillsRes.error) throw drillsRes.error;
 
-    const formattedSessions = (sessionsRes.data || []).map(item => ({
+    const formattedSessions = (sessionsRes.data || []).map((item) => ({
       self_sprint_id: item.self_sprint_id,
       user_id: item.user_id,
       sprint_type: item.sprint_type || '0',
@@ -233,16 +233,18 @@ export async function getMonitorSprintHistory(
       total_assessments: item.total_assessments || 0,
       insert_date: item.insert_date,
       training_date: item.training_date,
-      com_m_contents: item.content_name ? {
-        content_name: item.content_name
-      } : null,
+      com_m_contents: item.content_name
+        ? {
+            content_name: item.content_name,
+          }
+        : null,
       com_m_user: {
         user_name: item.user_name,
-        email: item.email || ''
-      }
+        email: item.email || '',
+      },
     }));
 
-    const formattedDrills = (drillsRes.data || []).map(item => ({
+    const formattedDrills = (drillsRes.data || []).map((item) => ({
       summary_id: item.summary_id,
       user_id: item.user_id,
       content_id: item.content_id,
@@ -253,33 +255,39 @@ export async function getMonitorSprintHistory(
       structure_count: item.structure_count,
       builders_count: item.builders_count,
       mastery_count: item.mastery_count,
-      com_m_contents: item.content_name ? {
-        content_name: item.content_name
-      } : null,
+      com_m_contents: item.content_name
+        ? {
+            content_name: item.content_name,
+          }
+        : null,
       com_m_user: {
         user_name: item.user_name,
-        email: item.email || ''
-      }
+        email: item.email || '',
+      },
     }));
 
-    logger.debug("monitor:get_sprint_history_success", `Fetched ${formattedSessions.length} sessions, ${formattedDrills.length} drills`, ctx);
+    logger.debug(
+      'monitor:get_sprint_history_success',
+      `Fetched ${formattedSessions.length} sessions, ${formattedDrills.length} drills`,
+      ctx,
+    );
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: {
         sessions: formattedSessions as MonitorSprintHistoryItem[],
-        drills: formattedDrills as MonitorSprintDrillHistoryItem[]
-      }
+        drills: formattedDrills as MonitorSprintDrillHistoryItem[],
+      },
     };
   } catch (error) {
-    logger.error("monitor:get_sprint_history_failed", "Error in getMonitorSprintHistory via RPC", {
+    logger.error('monitor:get_sprint_history_failed', 'Error in getMonitorSprintHistory via RPC', {
       ...ctx,
       err: error,
     });
-    return { 
-      success: false, 
-      data: { sessions: [], drills: [] }, 
-      error: getErrorMessage(error) 
+    return {
+      success: false,
+      data: { sessions: [], drills: [] },
+      error: getErrorMessage(error),
     };
   }
 }

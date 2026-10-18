@@ -24,10 +24,7 @@ const {
   messages: async (code) => (await getTranslations('authErrors'))(code),
   // 日本人・英語ネイティブ双方のスタッフが使うため、再設定メールは日英併記
   resetMailLanguage: 'bilingual',
-  guardUser: (user) =>
-    user.app_metadata?.user_type === USER_TYPES.ADMIN
-      ? { ok: true }
-      : { ok: false },
+  guardUser: (user) => (user.app_metadata?.user_type === USER_TYPES.ADMIN ? { ok: true } : { ok: false }),
 });
 
 export {

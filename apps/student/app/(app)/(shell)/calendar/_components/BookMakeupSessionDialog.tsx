@@ -59,7 +59,13 @@ function timeStrToMs(time: string): number {
  * 選ばせる（コマの担当コーチは com_m_lesson_schedule.coach_id で既に確定している）。
  * 日時は担当コーチの対応可能時間に縛られず自由に選べるが、必ずコーチの承認を経て確定する。
  */
-export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onRequested }: BookMakeupSessionDialogProps) {
+export function BookMakeupSessionDialog({
+  open,
+  slots,
+  initialDate,
+  onClose,
+  onRequested,
+}: BookMakeupSessionDialogProps) {
   const currentUserId = useUserStore((state) => state.user?.id);
   const studentTimezone = useTimezone();
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(slots[0]?.schedule_id ?? null);
@@ -98,25 +104,29 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
     // サーバー側(create_session_booking_request)の「開始24時間以上先」ルールのソフトチェック。
     // 最終的な整合性は常にRPC側で担保するため、ここでは参考表示のみ。
     if (!isAtLeastHoursFromNow(start, MIN_SESSION_BOOKING_LEAD_HOURS)) {
-      setConflictMessage(`開始${MIN_SESSION_BOOKING_LEAD_HOURS}時間以内の予約はできません。翌日以降の日時を選択してください。`);
+      setConflictMessage(
+        `開始${MIN_SESSION_BOOKING_LEAD_HOURS}時間以内の予約はできません。翌日以降の日時を選択してください。`,
+      );
       return;
     }
 
     let cancelled = false;
     setIsChecking(true);
     const end = new Date(start.getTime() + duration);
-    checkSessionConflict(selectedSlot.coach_id, currentUserId, start.toISOString(), end.toISOString()).then((result) => {
-      if (cancelled) return;
-      setIsChecking(false);
-      if (!result.success) return;
-      setConflictMessage(
-        result.coachConflict
-          ? 'コーチが同じ時間帯に別のセッションの予定があります。'
-          : result.studentConflict
-            ? 'ご自身が同じ時間帯に別のセッションの予定があります。'
-            : null
-      );
-    });
+    checkSessionConflict(selectedSlot.coach_id, currentUserId, start.toISOString(), end.toISOString()).then(
+      (result) => {
+        if (cancelled) return;
+        setIsChecking(false);
+        if (!result.success) return;
+        setConflictMessage(
+          result.coachConflict
+            ? 'コーチが同じ時間帯に別のセッションの予定があります。'
+            : result.studentConflict
+              ? 'ご自身が同じ時間帯に別のセッションの予定があります。'
+              : null,
+        );
+      },
+    );
     return () => {
       cancelled = true;
     };
@@ -128,7 +138,12 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
     try {
       const start = new Date(`${newDate}T${newStartTime}:00`);
       const end = new Date(start.getTime() + duration);
-      const result = await createSessionBookingRequest(selectedSlot.schedule_id, start.toISOString(), end.toISOString(), reason);
+      const result = await createSessionBookingRequest(
+        selectedSlot.schedule_id,
+        start.toISOString(),
+        end.toISOString(),
+        reason,
+      );
       if (!result.success) {
         showToast(result.message, 'error');
         return;
@@ -183,7 +198,8 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
                   const weekly = convertWeeklyTimeZone(s, s.schedule_timezone, studentTimezone);
                   return (
                     <option key={s.schedule_id} value={s.schedule_id}>
-                      {s.coach_name}コーチ（毎週{DAY_OF_WEEK_LABEL_JA[weekly.day_of_week as DayOfWeek]} {weekly.start_time}〜／残り{s.shortfall}回分）
+                      {s.coach_name}コーチ（毎週{DAY_OF_WEEK_LABEL_JA[weekly.day_of_week as DayOfWeek]}{' '}
+                      {weekly.start_time}〜／残り{s.shortfall}回分）
                     </option>
                   );
                 })}
@@ -244,7 +260,12 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
           <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             戻る
           </Button>
-          <Button pending={isSubmitting} type="button" onClick={handleSubmit} disabled={isSubmitting || !selectedSlot || !newStartTime || !!conflictMessage}>
+          <Button
+            pending={isSubmitting}
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !selectedSlot || !newStartTime || !!conflictMessage}
+          >
             リクエストする
           </Button>
         </DialogFooter>

@@ -13,7 +13,7 @@ export function NavBadge({ badge, className }: NavBadgeProps) {
       <span
         className={cn(
           'absolute -top-1.5 -right-2 min-w-4.5 h-4.5 px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold leading-4.5 text-center ring-2 ring-white',
-          className
+          className,
         )}
       >
         {badge.count > 99 ? '99+' : badge.count}

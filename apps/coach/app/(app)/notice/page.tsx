@@ -14,29 +14,30 @@ export default function NoticePage() {
   const focusId = searchParams.get('focus');
 
   const { notices, isLoading, fetchNotices, markAsRead } = useNoticeStore();
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() =>
-    focusId ? new Set([focusId]) : new Set()
-  );
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => (focusId ? new Set([focusId]) : new Set()));
 
   // Always fetch the latest data on mount, and show the skeleton until that fetch completes
   // (never flash a stale list left in the store, or an empty state before the first fetch)
   const isReady = useFetchOnMount(fetchNotices, isLoading);
 
-  const handleToggleNotice = useCallback((noticeId: string, isRead: boolean) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(noticeId)) {
-        next.delete(noticeId);
-      } else {
-        next.add(noticeId);
-      }
-      return next;
-    });
+  const handleToggleNotice = useCallback(
+    (noticeId: string, isRead: boolean) => {
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(noticeId)) {
+          next.delete(noticeId);
+        } else {
+          next.add(noticeId);
+        }
+        return next;
+      });
 
-    if (!isRead) {
-      markAsRead(noticeId);
-    }
-  }, [markAsRead]);
+      if (!isRead) {
+        markAsRead(noticeId);
+      }
+    },
+    [markAsRead],
+  );
 
   // Scroll to the focused card if a `focus` query param is present
   const scrolledRef = useRef(false);
@@ -63,13 +64,11 @@ export default function NoticePage() {
             <BellOff size={22} />
           </div>
           <p className="text-sm font-bold text-slate-500">No notices yet</p>
-          <p className="text-[11px] text-slate-400 mt-1.5">
-            You&apos;ll see announcements from the team here.
-          </p>
+          <p className="text-[11px] text-slate-400 mt-1.5">You&apos;ll see announcements from the team here.</p>
         </motion.div>
       ) : (
         <div className="space-y-3 pb-6">
-          {notices.map(notice => (
+          {notices.map((notice) => (
             <NoticeCard
               key={notice.notice_id}
               notice={notice}

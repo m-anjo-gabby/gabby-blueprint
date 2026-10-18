@@ -67,12 +67,12 @@ export function slotMatchesFilter(
   startTime: string,
   endTime: string,
   selectedDays: Set<DayOfWeek>,
-  selectedTimeBuckets: Set<string>
+  selectedTimeBuckets: Set<string>,
 ): boolean {
   if (selectedDays.size > 0 && !selectedDays.has(day)) return false;
   if (selectedTimeBuckets.size > 0) {
     const bucketMatch = TIME_BUCKETS.some(
-      (bucket) => selectedTimeBuckets.has(bucket.key) && overlapsTimeBucket(startTime, endTime, bucket)
+      (bucket) => selectedTimeBuckets.has(bucket.key) && overlapsTimeBucket(startTime, endTime, bucket),
     );
     if (!bucketMatch) return false;
   }

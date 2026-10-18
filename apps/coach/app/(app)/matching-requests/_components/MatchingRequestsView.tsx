@@ -33,12 +33,28 @@ export function MatchingRequestsView({
   const renderPendingItem = (item: CoachIncomingRequestItem) => {
     switch (item.kind) {
       case 'matching':
-        return <MatchingRequestCard key={`matching-${item.data.request_id}`} request={item.data} onResolved={handleMatchingResolved} />;
+        return (
+          <MatchingRequestCard
+            key={`matching-${item.data.request_id}`}
+            request={item.data}
+            onResolved={handleMatchingResolved}
+          />
+        );
       case 'booking':
-        return <BookingRequestCard key={`booking-${item.data.request_id}`} request={item.data} onResolved={handleBookingResolved} />;
+        return (
+          <BookingRequestCard
+            key={`booking-${item.data.request_id}`}
+            request={item.data}
+            onResolved={handleBookingResolved}
+          />
+        );
       case 'reschedule_proposal':
         return (
-          <RescheduleProposalRequestCard key={`proposal-${item.data.session_id}`} group={item.data} onResolved={handleProposalResolved} />
+          <RescheduleProposalRequestCard
+            key={`proposal-${item.data.session_id}`}
+            group={item.data}
+            onResolved={handleProposalResolved}
+          />
         );
     }
   };

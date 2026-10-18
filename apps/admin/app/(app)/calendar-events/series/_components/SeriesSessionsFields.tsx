@@ -149,7 +149,11 @@ export function SeriesSessionsFields({ coaches, clients }: SeriesSessionsFieldsP
 
       {/* 回ごとの設定 */}
       {fields.map((item, index) => (
-        <section key={item.id} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4" data-testid="series-session-row">
+        <section
+          key={item.id}
+          className="space-y-3 rounded-xl border border-slate-200 bg-white p-4"
+          data-testid="series-session-row"
+        >
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-700">{t('sessionNumber', { number: index + 1 })}</h3>
             {fields.length > 1 && (

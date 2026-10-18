@@ -41,7 +41,11 @@ export const ENVIRONMENTS = {
     },
     vercel: {
       admin: { project: 'blueprint-admin-dev', projectId: 'prj_QsIkByBrgufMfDPpTc5XyPdGSPUV', targets: ['production'] },
-      student: { project: 'blueprint-student-dev', projectId: 'prj_JaDvlbZFH1k4YVg1EWC5ReB0Tcma', targets: ['production'] },
+      student: {
+        project: 'blueprint-student-dev',
+        projectId: 'prj_JaDvlbZFH1k4YVg1EWC5ReB0Tcma',
+        targets: ['production'],
+      },
       coach: { project: 'blueprint-coach-dev', projectId: 'prj_lYTSawX7FjeOvDD1oplbQE0TW3zJ', targets: ['production'] },
     },
   },
@@ -55,7 +59,11 @@ export const ENVIRONMENTS = {
     },
     vercel: {
       admin: { project: 'blueprint-admin-stg', projectId: 'prj_DECTrxS8NBmwOVhmTMp1SjqV1bZ2', targets: ['production'] },
-      student: { project: 'blueprint-student-stg', projectId: 'prj_FoNKKVtXqEnzwVM0wVVqpNIOTFcI', targets: ['production'] },
+      student: {
+        project: 'blueprint-student-stg',
+        projectId: 'prj_FoNKKVtXqEnzwVM0wVVqpNIOTFcI',
+        targets: ['production'],
+      },
       coach: { project: 'blueprint-coach-stg', projectId: 'prj_rsJqGyVtvZuF2hvsqEt7EWpNTrow', targets: ['production'] },
     },
   },
@@ -68,9 +76,21 @@ export const ENVIRONMENTS = {
       coach: 'https://blueprint-coach.gabbyacademy.com',
     },
     vercel: {
-      admin: { project: 'blueprint-admin-prod', projectId: 'prj_cA9h7wnBqummrIhpuScSVzd8a4Ty', targets: ['production'] },
-      student: { project: 'blueprint-student-prod', projectId: 'prj_nF8Hn9zjtxV0bhq8nWNqbptMhWeL', targets: ['production'] },
-      coach: { project: 'blueprint-coach-prod', projectId: 'prj_uZ0lZfkJCMNCX7GJdzlEJ767o0aa', targets: ['production'] },
+      admin: {
+        project: 'blueprint-admin-prod',
+        projectId: 'prj_cA9h7wnBqummrIhpuScSVzd8a4Ty',
+        targets: ['production'],
+      },
+      student: {
+        project: 'blueprint-student-prod',
+        projectId: 'prj_nF8Hn9zjtxV0bhq8nWNqbptMhWeL',
+        targets: ['production'],
+      },
+      coach: {
+        project: 'blueprint-coach-prod',
+        projectId: 'prj_uZ0lZfkJCMNCX7GJdzlEJ767o0aa',
+        targets: ['production'],
+      },
     },
     // 反映前にこの文字列の手入力を求める（取り違え防止）
     confirmWord: 'prod',

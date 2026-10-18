@@ -5,10 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import {
-  Loader2, Plus, Trash2, AlertCircle, CheckCircle2,
-  Music4, Headphones, Settings2, Zap,
-} from 'lucide-react';
+import { Loader2, Plus, Trash2, AlertCircle, CheckCircle2, Music4, Headphones, Settings2, Zap } from 'lucide-react';
 import { getCVDictionaryByWord, deleteCVDictionaryEntry, CVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { CVWordFormDialog } from './CVWordFormDialog';
@@ -36,10 +33,14 @@ import { ipaToPhonemes } from '@gabby/lib/colorVowel/phonemes';
 // ============================================================
 
 function createTtsStatusConfig(
-  t: ReturnType<typeof useTranslations<'tools.cvDictionary.entryList'>>
+  t: ReturnType<typeof useTranslations<'tools.cvDictionary.entryList'>>,
 ): Record<number, { label: string; className: string; icon: React.ElementType }> {
   return {
-    1: { label: t('statusGenerated'), className: 'bg-emerald-50 text-emerald-600 border-emerald-100', icon: CheckCircle2 },
+    1: {
+      label: t('statusGenerated'),
+      className: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      icon: CheckCircle2,
+    },
     2: { label: t('statusNeedsUpdate'), className: 'bg-amber-50 text-amber-600 border-amber-100', icon: AlertCircle },
     9: { label: t('statusError'), className: 'bg-rose-50 text-rose-600 border-rose-100', icon: AlertCircle },
   };
@@ -160,7 +161,11 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
         <div className="flex items-center gap-2 shrink-0">
           {/* 一括音声生成 */}
           <CVTTSBulkDialog onComplete={fetchEntries}>
-            <Button variant="outline" size="sm" className="h-8 text-xs font-bold border-slate-200 text-slate-500 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs font-bold border-slate-200 text-slate-500 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 gap-1.5"
+            >
               <Zap size={13} /> {t('bulkAudioButton')}
             </Button>
           </CVTTSBulkDialog>
@@ -199,7 +204,7 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
                         variant="outline"
                         className={cn(
                           'text-[10px] font-black px-2 py-1 rounded-lg border',
-                          getPartOfSpeechTailwindColor(entry.part_of_speech)
+                          getPartOfSpeechTailwindColor(entry.part_of_speech),
                         )}
                       >
                         {entry.part_of_speech}
@@ -215,7 +220,9 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
                       <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
                         {entry.syllables && (
                           <div className="flex items-center gap-1.5 text-slate-500">
-                            <span className="text-slate-300 font-black uppercase text-[9px] w-16 shrink-0">Syllables</span>
+                            <span className="text-slate-300 font-black uppercase text-[9px] w-16 shrink-0">
+                              Syllables
+                            </span>
                             <span className="font-mono font-bold">{entry.syllables}</span>
                             {entry.primary_stress_syllable && (
                               <span className="text-slate-300 text-[9px]">(#{entry.primary_stress_syllable})</span>
@@ -224,14 +231,18 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
                         )}
                         {entry.phonetic_spelling && (
                           <div className="flex items-center gap-1.5 text-slate-500">
-                            <span className="text-slate-300 font-black uppercase text-[9px] w-16 shrink-0">Phonetic</span>
+                            <span className="text-slate-300 font-black uppercase text-[9px] w-16 shrink-0">
+                              Phonetic
+                            </span>
                             <span className="font-mono">{entry.phonetic_spelling}</span>
                           </div>
                         )}
                         {entry.phonetic_spelling && (
                           // 生徒アプリに表示する音素表記（IPA から自動変換）。変換できない記号があると生徒アプリでは表示されない
                           <div className="flex items-center gap-1.5 text-slate-500">
-                            <span className="text-slate-300 font-black uppercase text-[9px] w-16 shrink-0">Phoneme</span>
+                            <span className="text-slate-300 font-black uppercase text-[9px] w-16 shrink-0">
+                              Phoneme
+                            </span>
                             {phonemeText(entry.phonetic_spelling) ?? (
                               <span className="font-bold text-amber-600">Unsupported IPA symbol</span>
                             )}
@@ -270,7 +281,7 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
                               'h-7 px-2.5 gap-1.5 rounded-lg border transition-all',
                               isPlaying === `${entry.word_en}-${entry.part_of_speech}`
                                 ? 'bg-brand text-white hover:bg-brand-strong border-brand shadow-sm'
-                                : 'text-brand-500 hover:text-brand-strong hover:bg-brand-50 border-transparent hover:border-brand-100'
+                                : 'text-brand-500 hover:text-brand-strong hover:bg-brand-50 border-transparent hover:border-brand-100',
                             )}
                           >
                             {isPlaying === `${entry.word_en}-${entry.part_of_speech}` ? (
@@ -320,13 +331,16 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
                               <AlertCircle size={32} />
                             </div>
                             <div className="text-center space-y-2">
-                              <AlertDialogTitle className="text-xl font-black text-slate-800">{t('deleteDialogTitle')}</AlertDialogTitle>
+                              <AlertDialogTitle className="text-xl font-black text-slate-800">
+                                {t('deleteDialogTitle')}
+                              </AlertDialogTitle>
                               <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
                                 {t.rich('deleteDialogBody', {
                                   word: entry.word_en,
                                   pos: entry.part_of_speech,
                                   bold: (chunks) => <span className="font-bold text-slate-900">{chunks}</span>,
-                                })}<br />
+                                })}
+                                <br />
                                 {t('deleteDialogHint')}
                               </AlertDialogDescription>
                             </div>

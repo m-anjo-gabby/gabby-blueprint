@@ -70,7 +70,12 @@ export function SeriesFormDialog({ series }: SeriesFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 px-3 border-slate-200 text-slate-600 hover:bg-slate-50" icon={<Edit size={14} />}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-3 border-slate-200 text-slate-600 hover:bg-slate-50"
+          icon={<Edit size={14} />}
+        >
           {t('editButton')}
         </Button>
       </DialogTrigger>

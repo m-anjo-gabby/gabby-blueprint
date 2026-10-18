@@ -1,4 +1,9 @@
-import { NOTIFICATION_MESSAGE_BUILDERS, NOTIFICATION_TYPES, type NotificationText, type NotificationType } from './notification';
+import {
+  NOTIFICATION_MESSAGE_BUILDERS,
+  NOTIFICATION_TYPES,
+  type NotificationText,
+  type NotificationType,
+} from './notification';
 import { NOTIFICATION_MESSAGE_BUILDERS_EN } from './notificationEn';
 
 /**
@@ -18,7 +23,11 @@ export function isNotificationType(type: string): type is NotificationType {
   return Object.prototype.hasOwnProperty.call(NOTIFICATION_TYPES, type);
 }
 
-export function getNotificationText(type: string, payload: Record<string, unknown> | null | undefined, locale: NotificationLocale): NotificationText {
+export function getNotificationText(
+  type: string,
+  payload: Record<string, unknown> | null | undefined,
+  locale: NotificationLocale,
+): NotificationText {
   if (!isNotificationType(type)) return FALLBACK_TEXT[locale];
   const builders = locale === 'en' ? NOTIFICATION_MESSAGE_BUILDERS_EN : NOTIFICATION_MESSAGE_BUILDERS;
   return builders[type](payload ?? {});

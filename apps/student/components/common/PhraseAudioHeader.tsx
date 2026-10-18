@@ -76,9 +76,7 @@ export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
   return (
     <div className={cn('flex items-center w-full mb-1', className)}>
       <div className={cn('flex items-center gap-x-1', styles.label)}>
-        <span className="text-xs font-bold whitespace-nowrap leading-none">
-          {label}
-        </span>
+        <span className="text-xs font-bold whitespace-nowrap leading-none">{label}</span>
         <button
           type="button"
           onClick={onPlay}
@@ -89,11 +87,7 @@ export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
             isLoading ? 'text-brand bg-brand-50' : cn(styles.idle, styles.hover),
           )}
         >
-          {isLoading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Volume2 size={16} strokeWidth={2.5} />
-          )}
+          {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Volume2 size={16} strokeWidth={2.5} />}
         </button>
         {jaText && onToggleJa && (
           <button

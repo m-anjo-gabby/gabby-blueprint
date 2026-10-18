@@ -18,13 +18,22 @@ export default function TrialLayout({ children }: { children: ReactNode }) {
           <header className="mb-6 space-y-4 text-center">
             {/* ロゴはログイン画面（LoginForm）と同じ画像 */}
             <div className="flex justify-center">
-              <Image src="/logo-01.png" alt="Gabby Blueprint" width={320} height={85} className="h-auto w-auto max-w-56 md:max-w-64" priority />
+              <Image
+                src="/logo-01.png"
+                alt="Gabby Blueprint"
+                width={320}
+                height={85}
+                className="h-auto w-auto max-w-56 md:max-w-64"
+                priority
+              />
             </div>
             <h1 className="text-2xl font-bold text-ink">無料体験のお申し込み</h1>
           </header>
           {children}
         </div>
-        <p className="text-center text-[11px] text-ink-subtle">© {new Date().getFullYear()} Gabby All rights reserved.</p>
+        <p className="text-center text-[11px] text-ink-subtle">
+          © {new Date().getFullYear()} Gabby All rights reserved.
+        </p>
       </div>
     </div>
   );

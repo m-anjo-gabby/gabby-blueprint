@@ -15,7 +15,8 @@ function ItemCountBadge({ count }: { count: number | null }) {
   return (
     <div className="flex shrink-0 items-center gap-1.5 rounded-xl border border-brand-100 bg-brand-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-brand">
       <Bell size={10} />
-      {count === null ? <Skeleton className="h-2.5 w-3" /> : count} <span className="ml-0.5 opacity-60">{t('itemsLabel')}</span>
+      {count === null ? <Skeleton className="h-2.5 w-3" /> : count}{' '}
+      <span className="ml-0.5 opacity-60">{t('itemsLabel')}</span>
     </div>
   );
 }

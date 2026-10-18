@@ -28,7 +28,10 @@ export async function getCoachSpecialtyListCore(): Promise<GetCoachSpecialtyList
 
     return { success: true, specialties: data ?? [] };
   } catch (err) {
-    logger.error('coach_specialty:get_list_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coach_specialty:get_list_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -60,7 +63,10 @@ export async function getCoachSpecialtyCodesCore(coachIds: string[]): Promise<Ma
     }
     return codesById;
   } catch (err) {
-    logger.error('coach_specialty:get_codes_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coach_specialty:get_codes_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return codesById;
   }
 }

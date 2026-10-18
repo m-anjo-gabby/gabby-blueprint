@@ -50,7 +50,7 @@ export function RequestHistoryTabs({ initialMatching, initialBooking, initialRes
             onClick={() => setActive(tab.key)}
             className={cn(
               'rounded-md px-3 py-1.5 text-xs font-bold transition-colors',
-              active === tab.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              active === tab.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700',
             )}
           >
             {tab.label}

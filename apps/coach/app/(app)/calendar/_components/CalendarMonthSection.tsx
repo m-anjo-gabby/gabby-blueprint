@@ -7,7 +7,10 @@ import { CalendarBoard } from './CalendarBoard';
 /** 月のセッション・イベントをサーバーで取得して、カレンダーを描く（page.tsx で月ごとの Suspense に包む） */
 export async function CalendarMonthSection({ month }: { month: string }) {
   const { startIso, endIso } = getMonthGridRange(month);
-  const [sessions, events] = await Promise.all([getMySessions(startIso, endIso), getMyCalendarEvents(startIso, endIso)]);
+  const [sessions, events] = await Promise.all([
+    getMySessions(startIso, endIso),
+    getMyCalendarEvents(startIso, endIso),
+  ]);
   return (
     <CalendarBoard
       month={month}

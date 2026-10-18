@@ -83,5 +83,9 @@ function PasswordSkeleton() {
  */
 export function ProfileRouteSkeleton() {
   const pathname = usePathname();
-  return <RouteSkeleton>{pathname.startsWith('/profile/password') ? <PasswordSkeleton /> : <ProfileSkeleton />}</RouteSkeleton>;
+  return (
+    <RouteSkeleton>
+      {pathname.startsWith('/profile/password') ? <PasswordSkeleton /> : <ProfileSkeleton />}
+    </RouteSkeleton>
+  );
 }

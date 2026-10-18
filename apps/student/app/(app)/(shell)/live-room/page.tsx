@@ -6,7 +6,11 @@ import {
   getMyBookingRequests,
 } from '@/actions/sessionAction';
 import { getMyBookableTickets, getMyLiveSessionOverview } from '@/actions/matchingAction';
-import { getMyLiveSessionContractsCached, getNextContractMatching, pickLiveSessionContract } from '@/lib/liveSessionContracts';
+import {
+  getMyLiveSessionContractsCached,
+  getNextContractMatching,
+  pickLiveSessionContract,
+} from '@/lib/liveSessionContracts';
 import { getSessionHomework } from '@/actions/sessionHomeworkAction';
 import { getMyPendingCoachRatings } from '@/actions/coachRatingAction';
 import { COMPLETION_RESULT, SESSION_STATUS, type SessionListItem } from '@gabby/types/session';
@@ -14,7 +18,6 @@ import type { LiveSessionOverview } from '@gabby/types/matching';
 import { LiveSessionHub } from './_components/LiveSessionHub';
 import { LiveSessionIntro } from './_components/LiveSessionIntro';
 import type { PreviousHomeworkStatus, PreviousSessionSummary } from './_components/PreviousSessionLink';
-
 
 const HOMEWORK_PREVIEW_LENGTH = 60;
 
@@ -24,7 +27,7 @@ const HOMEWORK_PREVIEW_LENGTH = 60;
  */
 async function fetchPreviousSession(pastSessions: SessionListItem[]): Promise<PreviousSessionSummary | null> {
   const session = pastSessions.find(
-    (s) => s.status === SESSION_STATUS.COMPLETED && s.completion_result !== COMPLETION_RESULT.NO_SHOW
+    (s) => s.status === SESSION_STATUS.COMPLETED && s.completion_result !== COMPLETION_RESULT.NO_SHOW,
   );
   if (!session) return null;
 
@@ -51,15 +54,18 @@ export default async function LiveSessionHubPage({ searchParams }: { searchParam
     async (contracts): Promise<[SessionListItem[], LiveSessionOverview | null, PreviousSessionSummary | null]> => {
       const selected = pickLiveSessionContract(contracts, requestedTicketId);
       if (!selected) return [[], null, null];
-      const [past, overview] = await Promise.all([getMyPastSessions(selected.ticket_id), getMyLiveSessionOverview(selected.ticket_id)]);
+      const [past, overview] = await Promise.all([
+        getMyPastSessions(selected.ticket_id),
+        getMyLiveSessionOverview(selected.ticket_id),
+      ]);
       const previous = selected.is_current ? await fetchPreviousSession(past) : null;
       return [past, overview, previous];
-    }
+    },
   );
 
   // 現在の契約を表示している時は、次の契約（継続用）の専属コーチの選択状況も取得する（未選択なら案内する）
   const nextMatchingPromise = contractsPromise.then((contracts) =>
-    pickLiveSessionContract(contracts, requestedTicketId)?.is_current ? getNextContractMatching(contracts) : null
+    pickLiveSessionContract(contracts, requestedTicketId)?.is_current ? getNextContractMatching(contracts) : null,
   );
 
   const [

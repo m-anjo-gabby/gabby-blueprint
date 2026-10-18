@@ -19,13 +19,15 @@ const logger = createLogger('admin');
  * 状態はビュー private.vw_trial_application_list が判定する。
  */
 export async function getTrialApplications(
-  params: ListParams<'status' | 'occupation'>
+  params: ListParams<'status' | 'occupation'>,
 ): Promise<ListResult<TrialApplicationRow>> {
   const ctx = await getLogContext();
   const { q, filters } = params;
   // 既知の値だけを条件にする（不正な値は「すべて」として扱う）
   const status = TRIAL_APPLICATION_STATUSES.includes(filters.status as TrialApplicationStatus) ? filters.status : '';
-  const occupation = TRIAL_OCCUPATIONS.some((o) => String(o.code) === filters.occupation) ? Number(filters.occupation) : null;
+  const occupation = TRIAL_OCCUPATIONS.some((o) => String(o.code) === filters.occupation)
+    ? Number(filters.occupation)
+    : null;
   try {
     const supabase = createAdminClient();
     const [from, to] = toRange(params);
@@ -41,12 +43,19 @@ export async function getTrialApplications(
       .range(from, to);
 
     if (error) {
-      logger.error('trial:get_trial_applications_failed', error.message, { ...ctx, err: error, payload: { from, to, status, occupation } });
+      logger.error('trial:get_trial_applications_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { from, to, status, occupation },
+      });
       throw new Error(error.message);
     }
     return { rows: (data ?? []) as TrialApplicationRow[], totalCount: count ?? 0 };
   } catch (error) {
-    logger.error('trial:get_trial_applications_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    logger.error('trial:get_trial_applications_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+    });
     throw error instanceof Error ? error : new Error('Unexpected error');
   }
 }

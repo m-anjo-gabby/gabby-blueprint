@@ -15,7 +15,10 @@ export function HomeworkViewedStatus({ homework, timezone }: Props) {
   const viewedAt = homework.student_viewed_at;
   if (!viewedAt) {
     return (
-      <p className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700" data-testid="homework-viewed-status">
+      <p
+        className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700"
+        data-testid="homework-viewed-status"
+      >
         <EyeOff size={12} className="shrink-0" />
         Not viewed by the student yet
       </p>
@@ -24,7 +27,10 @@ export function HomeworkViewedStatus({ homework, timezone }: Props) {
   const latestComment = homework.comments[0];
   const hasUnseenComment = !!latestComment && latestComment.insert_date > viewedAt;
   return (
-    <p className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500" data-testid="homework-viewed-status">
+    <p
+      className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500"
+      data-testid="homework-viewed-status"
+    >
       <Eye size={12} className="shrink-0" />
       Viewed by the student · {formatDateTimeEn(viewedAt, timezone)}
       {hasUnseenComment && <span className="text-amber-700"> · your latest comment isn’t viewed yet</span>}

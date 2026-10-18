@@ -3,7 +3,14 @@
 import { useTransition } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { SessionOutcomeFields, useSessionOutcomeDraft } from '@gabby/lib/components/common/SessionOutcomeFields';
 import { getOutcomeReasonKind } from '@gabby/lib/session/outcome';
@@ -34,7 +41,8 @@ export function EndSessionDialog({ open, onClose, ...formProps }: Props) {
         <DialogHeader>
           <DialogTitle>End Session</DialogTitle>
           <DialogDescription>
-            Record what happened in your session with {formProps.studentName}. If anything is recorded incorrectly, contact the admin team to fix it.
+            Record what happened in your session with {formProps.studentName}. If anything is recorded incorrectly,
+            contact the admin team to fix it.
           </DialogDescription>
         </DialogHeader>
         <EndSessionForm onClose={onClose} {...formProps} />
@@ -46,9 +54,14 @@ export function EndSessionDialog({ open, onClose, ...formProps }: Props) {
 function EndSessionForm({ sessionId, onClose, onRecorded, onNotActionable }: Omit<Props, 'open' | 'studentName'>) {
   const { showToast } = useToast();
   const [isSubmitting, startSubmit] = useTransition();
-  const { evidence, evidenceFailed, draft, setDraft } = useSessionOutcomeDraft({ sessionId, loadEvidence: getSessionOutcomeEvidence });
+  const { evidence, evidenceFailed, draft, setDraft } = useSessionOutcomeDraft({
+    sessionId,
+    loadEvidence: getSessionOutcomeEvidence,
+  });
 
-  const reasonKind = draft ? getOutcomeReasonKind(draft.outcome, draft.conductedVia, evidence?.suggestedOutcome ?? null) : null;
+  const reasonKind = draft
+    ? getOutcomeReasonKind(draft.outcome, draft.conductedVia, evidence?.suggestedOutcome ?? null)
+    : null;
   const canSubmit = !!draft && (reasonKind === null || draft.reason.trim() !== '');
 
   const handleSubmit = () => {
@@ -58,7 +71,7 @@ function EndSessionForm({ sessionId, onClose, onRecorded, onNotActionable }: Omi
         sessionId,
         draft.outcome,
         isConductedOutcome(draft.outcome) ? draft.conductedVia : null,
-        draft.reason
+        draft.reason,
       );
       if (!result.success) {
         showToast(result.message, 'error');
@@ -95,7 +108,13 @@ function EndSessionForm({ sessionId, onClose, onRecorded, onNotActionable }: Omi
         <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="button" onClick={handleSubmit} disabled={!canSubmit} pending={isSubmitting} icon={<CheckCircle2 />}>
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          pending={isSubmitting}
+          icon={<CheckCircle2 />}
+        >
           Record Outcome
         </Button>
       </DialogFooter>

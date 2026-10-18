@@ -9,11 +9,7 @@ import type { TimezoneNames } from './timezone';
  */
 
 export type AdminLiveSessionErrorCode =
-  | 'unauthorized'
-  | 'forbidden'
-  | 'not_found'
-  | 'invalid_input'
-  | 'unexpected_error';
+  'unauthorized' | 'forbidden' | 'not_found' | 'invalid_input' | 'unexpected_error';
 
 /** 顧客配下の生徒（ライブセッション管理画面の生徒選択用の簡略情報） */
 export interface AdminStudentSummary {
@@ -67,21 +63,16 @@ export interface AdminCoachSummary {
 }
 
 export type GetClientStudentsResult =
-  | { success: true; students: AdminStudentSummary[] }
-  | { success: false; errorCode: AdminLiveSessionErrorCode };
+  { success: true; students: AdminStudentSummary[] } | { success: false; errorCode: AdminLiveSessionErrorCode };
 
 export type GetScheduleSlotsForTicketResult =
-  | { success: true; slots: AdminScheduleSlotSummary[] }
-  | { success: false; errorCode: AdminLiveSessionErrorCode };
+  { success: true; slots: AdminScheduleSlotSummary[] } | { success: false; errorCode: AdminLiveSessionErrorCode };
 
 export type ReleaseLessonScheduleSlotResult =
-  | { success: true }
-  | { success: false; errorCode: AdminLiveSessionErrorCode; message: string };
+  { success: true } | { success: false; errorCode: AdminLiveSessionErrorCode; message: string };
 
 /** アドミン代理操作系（キャンセル・振替・予約・直接マッチング）の共通の結果型 */
-export type AdminSessionActionResult =
-  | { success: true }
-  | { success: false; message: string };
+export type AdminSessionActionResult = { success: true } | { success: false; message: string };
 
 /** アドミンのライブセッション管理のセッション一覧1行（実施結果の確認・修正に使う項目を加えたもの） */
 export interface AdminSessionListItem extends CoachSessionListItem {

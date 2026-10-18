@@ -1,7 +1,11 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { getSessionResultSummary } from '@/actions/sessionAction';
-import { HubDialoguePracticeSkeleton, HubPrepSkeleton, HubSelfTrainingSkeleton } from '../../_components/LiveSessionSkeletons';
+import {
+  HubDialoguePracticeSkeleton,
+  HubPrepSkeleton,
+  HubSelfTrainingSkeleton,
+} from '../../_components/LiveSessionSkeletons';
 import { SessionHub } from './_components/SessionHub';
 import { HubDialoguePractice, HubPrep, HubSelfTraining } from './_components/HubSections';
 
@@ -13,11 +17,7 @@ import { HubDialoguePractice, HubPrep, HubSelfTraining } from './_components/Hub
  * （.../result）が担うため、ここでは重複させず、通話前後に確認したい「前回までの状況」
  * （前回の宿題・前回のLive Sprint・直近1週間の自主トレ状況）を画面遷移なしで見せることに絞る。
  */
-export default async function SessionHubPage({
-  params,
-}: {
-  params: Promise<{ id: string; sessionId: string }>;
-}) {
+export default async function SessionHubPage({ params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const { id, sessionId } = await params;
 
   // 通話開始・終了の操作に必要なセッション情報だけを先に確定させ、

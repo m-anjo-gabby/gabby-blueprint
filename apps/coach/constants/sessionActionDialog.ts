@@ -24,7 +24,8 @@ export const COACH_SESSION_ACTION_LABELS: SessionActionDialogLabels = {
     tooSoonMessage: 'This time is less than 24 hours away. Please choose a time from tomorrow onward.',
     backButton: 'Back',
     submitButton: 'Cancel Session',
-    successToast: (hasProposals) => (hasProposals ? 'Session cancelled. Your proposed times were sent to the student.' : 'Session cancelled.'),
+    successToast: (hasProposals) =>
+      hasProposals ? 'Session cancelled. Your proposed times were sent to the student.' : 'Session cancelled.',
     counterpartTimeLabel: "Student's local time",
     counterpartTimeCaution: 'late night / early morning for the student',
   },

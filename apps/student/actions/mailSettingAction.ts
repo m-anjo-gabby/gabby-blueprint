@@ -8,7 +8,10 @@ export async function getMyMailSettings(): Promise<MailSettings | null> {
 }
 
 /** メール通知の設定（1区分）を更新する */
-export async function updateMyMailSetting(category: string, enabled: boolean): Promise<{ success: true } | { success: false; message: string }> {
+export async function updateMyMailSetting(
+  category: string,
+  enabled: boolean,
+): Promise<{ success: true } | { success: false; message: string }> {
   const result = await updateMyMailSettingCore(category, enabled);
   if (!result.success) {
     return {

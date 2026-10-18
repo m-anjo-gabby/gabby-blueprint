@@ -18,16 +18,20 @@ const logger = createLogger('admin');
 const SUSPEND_BAN_DURATION = '876000h';
 
 /** RPC が例外のメッセージで返す中断の理由（fn_withdraw_user / fn_purge_client） */
-const WITHDRAW_BLOCKERS = ['user_not_found', 'not_withdrawable', 'active_license', 'scheduled_session', 'active_matching'] as const;
+const WITHDRAW_BLOCKERS = [
+  'user_not_found',
+  'not_withdrawable',
+  'active_license',
+  'scheduled_session',
+  'active_matching',
+] as const;
 const PURGE_BLOCKERS = ['client_not_found', 'protected_client', 'has_admin', 'linked_to_other_client'] as const;
 
 export type WithdrawBlocker = (typeof WITHDRAW_BLOCKERS)[number];
 export type PurgeBlocker = (typeof PURGE_BLOCKERS)[number];
 
 export type DataDeletionResult<E extends string> =
-  | { success: true }
-  | { success: false; errorCode: E | 'forbidden' | 'name_mismatch' | 'unexpected_error' };
-
+  { success: true } | { success: false; errorCode: E | 'forbidden' | 'name_mismatch' | 'unexpected_error' };
 
 /** システム管理者（admin ロール）か */
 async function requireSystemAdmin(): Promise<string | null> {
@@ -41,7 +45,11 @@ function pickBlocker<T extends readonly string[]>(message: string | undefined, c
 }
 
 /** Storage のファイルを消す（失敗してもエラーのログだけ残して続ける。DB の消去は済んでいるため） */
-async function removeDeletedFiles(paths: DeletedStoragePaths, ctx: Awaited<ReturnType<typeof getLogContext>>, payload: Record<string, unknown>) {
+async function removeDeletedFiles(
+  paths: DeletedStoragePaths,
+  ctx: Awaited<ReturnType<typeof getLogContext>>,
+  payload: Record<string, unknown>,
+) {
   const supabase = createAdminClient();
   for (const [bucket, list] of Object.entries(paths) as [keyof DeletedStoragePaths, string[] | undefined][]) {
     await removeStorageFiles(supabase, bucket, list ?? [], { event: 'dataDeletion:delete_files_failed', ctx, payload });
@@ -62,13 +70,20 @@ async function deleteAuthUser(userId: string, ctx: Awaited<ReturnType<typeof get
  * ユーザーの停止・再開。停止中はログインできない（認証のアカウントを止め、com_m_user.status = 0 にする）。
  * 退会済みのユーザーは対象外。
  */
-export async function setUserSuspended(userId: string, suspended: boolean): Promise<DataDeletionResult<'user_not_found' | 'withdrawn'>> {
+export async function setUserSuspended(
+  userId: string,
+  suspended: boolean,
+): Promise<DataDeletionResult<'user_not_found' | 'withdrawn'>> {
   const ctx = await getLogContext();
   try {
     if (!(await requireSystemAdmin())) return { success: false, errorCode: 'forbidden' };
     const supabase = createAdminClient();
 
-    const { data: user, error: fetchError } = await supabase.from('com_m_user').select('status').eq('id', userId).maybeSingle();
+    const { data: user, error: fetchError } = await supabase
+      .from('com_m_user')
+      .select('status')
+      .eq('id', userId)
+      .maybeSingle();
     if (fetchError) throw fetchError;
     if (!user) return { success: false, errorCode: 'user_not_found' };
     if (user.status === USER_STATUS.WITHDRAWN) return { success: false, errorCode: 'withdrawn' };
@@ -84,11 +99,19 @@ export async function setUserSuspended(userId: string, suspended: boolean): Prom
       .eq('id', userId);
     if (error) throw error;
 
-    logger.info(suspended ? 'user:suspend_success' : 'user:resume_success', `User ${suspended ? 'suspended' : 'resumed'}`, { ...ctx, payload: { userId } });
+    logger.info(
+      suspended ? 'user:suspend_success' : 'user:resume_success',
+      `User ${suspended ? 'suspended' : 'resumed'}`,
+      { ...ctx, payload: { userId } },
+    );
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (err) {
-    logger.error(suspended ? 'user:suspend_unexpected' : 'user:resume_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { userId } });
+    logger.error(
+      suspended ? 'user:suspend_unexpected' : 'user:resume_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err, payload: { userId } },
+    );
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -104,7 +127,11 @@ export async function withdrawUser(userId: string, confirmName: string): Promise
     if (!adminId) return { success: false, errorCode: 'forbidden' };
     const supabase = createAdminClient();
 
-    const { data: user, error: fetchError } = await supabase.from('com_m_user').select('user_name, status').eq('id', userId).maybeSingle();
+    const { data: user, error: fetchError } = await supabase
+      .from('com_m_user')
+      .select('user_name, status')
+      .eq('id', userId)
+      .maybeSingle();
     if (fetchError) throw fetchError;
     if (!user) return { success: false, errorCode: 'user_not_found' };
     // 退会済み（途中で失敗した再実行）は表示名が置き換わっているため、名前の照合をしない
@@ -123,24 +150,38 @@ export async function withdrawUser(userId: string, confirmName: string): Promise
     await removeDeletedFiles(result?.storage ?? {}, ctx, { userId });
     if (!(await deleteAuthUser(userId, ctx))) return { success: false, errorCode: 'unexpected_error' };
 
-    logger.info('user:withdraw_success', 'User withdrawn (personal data erased)', { ...ctx, payload: { userId, counts: result?.counts } });
+    logger.info('user:withdraw_success', 'User withdrawn (personal data erased)', {
+      ...ctx,
+      payload: { userId, counts: result?.counts },
+    });
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (err) {
-    logger.error('user:withdraw_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { userId } });
+    logger.error('user:withdraw_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { userId },
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /** 顧客単位の一括削除の予行（消える件数。何も消さない） */
 export async function previewPurgeClient(
-  clientId: string
-): Promise<{ success: true; counts: PurgeClientCounts } | { success: false; errorCode: PurgeBlocker | 'forbidden' | 'unexpected_error' }> {
+  clientId: string,
+): Promise<
+  | { success: true; counts: PurgeClientCounts }
+  | { success: false; errorCode: PurgeBlocker | 'forbidden' | 'unexpected_error' }
+> {
   const ctx = await getLogContext();
   try {
     const adminId = await requireSystemAdmin();
     if (!adminId) return { success: false, errorCode: 'forbidden' };
-    const { data, error } = await createAdminClient().rpc('fn_purge_client', { p_client_id: clientId, p_dry_run: true, p_performed_by: adminId });
+    const { data, error } = await createAdminClient().rpc('fn_purge_client', {
+      p_client_id: clientId,
+      p_dry_run: true,
+      p_performed_by: adminId,
+    });
     if (error) {
       const blocker = pickBlocker(error.message, PURGE_BLOCKERS);
       if (blocker) return { success: false, errorCode: blocker };
@@ -148,7 +189,11 @@ export async function previewPurgeClient(
     }
     return { success: true, counts: data.counts };
   } catch (err) {
-    logger.error('client:purge_preview_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { clientId } });
+    logger.error('client:purge_preview_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { clientId },
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -164,12 +209,20 @@ export async function purgeClient(clientId: string, confirmName: string): Promis
     if (!adminId) return { success: false, errorCode: 'forbidden' };
     const supabase = createAdminClient();
 
-    const { data: client, error: fetchError } = await supabase.from('com_m_client').select('client_name').eq('client_id', clientId).maybeSingle();
+    const { data: client, error: fetchError } = await supabase
+      .from('com_m_client')
+      .select('client_name')
+      .eq('client_id', clientId)
+      .maybeSingle();
     if (fetchError) throw fetchError;
     if (!client) return { success: false, errorCode: 'client_not_found' };
     if (client.client_name.trim() !== confirmName.trim()) return { success: false, errorCode: 'name_mismatch' };
 
-    const { data, error } = await supabase.rpc('fn_purge_client', { p_client_id: clientId, p_dry_run: false, p_performed_by: adminId });
+    const { data, error } = await supabase.rpc('fn_purge_client', {
+      p_client_id: clientId,
+      p_dry_run: false,
+      p_performed_by: adminId,
+    });
     if (error) {
       const blocker = pickBlocker(error.message, PURGE_BLOCKERS);
       if (blocker) return { success: false, errorCode: blocker };
@@ -189,7 +242,11 @@ export async function purgeClient(clientId: string, confirmName: string): Promis
     revalidatePath('/contracts');
     return { success: true };
   } catch (err) {
-    logger.error('client:purge_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { clientId } });
+    logger.error('client:purge_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { clientId },
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

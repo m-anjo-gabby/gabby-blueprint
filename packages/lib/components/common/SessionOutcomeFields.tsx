@@ -53,7 +53,9 @@ export interface SessionOutcomeFieldsLabels {
 
 interface UseSessionOutcomeDraftOptions {
   sessionId: string;
-  loadEvidence: (sessionId: string) => Promise<{ success: true; evidence: SessionOutcomeEvidence } | { success: false; message: string }>;
+  loadEvidence: (
+    sessionId: string,
+  ) => Promise<{ success: true; evidence: SessionOutcomeEvidence } | { success: false; message: string }>;
   /**
    * 初期値。null の項目は推定から決める（結果 = 推定、無ければ実施完了。実施方法 = コーチの入室記録の有無）。
    * アドミンの修正では現在の記録を渡す。
@@ -128,7 +130,11 @@ export function SessionOutcomeFields({
       <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
         <p className="text-[11px] font-bold text-slate-500">{labels.evidenceTitle}</p>
         <p className="text-xs text-slate-700 mt-0.5" data-testid="session-outcome-evidence">
-          {evidence ? labels.evidenceSummary(evidence) : evidenceFailed ? labels.evidenceFailed : labels.evidenceLoading}
+          {evidence
+            ? labels.evidenceSummary(evidence)
+            : evidenceFailed
+              ? labels.evidenceFailed
+              : labels.evidenceLoading}
         </p>
       </div>
 
@@ -171,7 +177,10 @@ export function SessionOutcomeFields({
             {CONDUCTED_VIA_OPTIONS.map((via) => {
               const isSelected = draft.conductedVia === via;
               return (
-                <label key={via} className={cn(OPTION_CLASS, 'items-center', isSelected ? OPTION_SELECTED : OPTION_IDLE)}>
+                <label
+                  key={via}
+                  className={cn(OPTION_CLASS, 'items-center', isSelected ? OPTION_SELECTED : OPTION_IDLE)}
+                >
                   <input
                     type="radio"
                     name={`${name}-via`}

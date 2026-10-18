@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Calendar, ChevronDown } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
@@ -44,7 +44,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
         acc.phrases += s.phrase_count;
         return acc;
       },
-      { words: 0, phrases: 0 }
+      { words: 0, phrases: 0 },
     );
   }, [items]);
 
@@ -52,14 +52,14 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
   const groupedData = useMemo(() => {
     const groups: GroupedWordHistory = {};
 
-    items.forEach(session => {
+    items.forEach((session) => {
       // 💡 外部関数を通さず、直接インラインでタイムゾーン付きフォーマットを実行
       const dateStr = formatZonedDate(session.training_date, timezone);
       if (!groups[dateStr]) groups[dateStr] = [];
       groups[dateStr].push(session);
     });
 
-    Object.keys(groups).forEach(date => {
+    Object.keys(groups).forEach((date) => {
       groups[date].sort((a, b) => {
         const nameA = a.com_m_contents?.content_name || '';
         const nameB = b.com_m_contents?.content_name || '';
@@ -71,9 +71,7 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
   }, [items, timezone]); // 💡 静的解析が一致するよう `timezone` を依存配列にしっかり追加
 
   const toggleDate = (date: string) => {
-    setExpandedDates(prev =>
-      prev.includes(date) ? prev.filter(d => d !== date) : [...prev, date]
-    );
+    setExpandedDates((prev) => (prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date]));
   };
 
   // ソートの計算量最適化
@@ -108,7 +106,11 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
             const totalAssessmentsDay = sessions.reduce((acc, s) => acc + s.assessment_count, 0);
 
             return (
-              <motion.div key={date} layout="position" className="overflow-hidden rounded-card border border-line bg-surface">
+              <motion.div
+                key={date}
+                layout="position"
+                className="overflow-hidden rounded-card border border-line bg-surface"
+              >
                 <button
                   type="button"
                   onClick={() => toggleDate(date)}
@@ -123,7 +125,13 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                       <HistoryMetric metric="speech" label="発話" value={totalAssessmentsDay} />
                     </div>
                   </div>
-                  <ChevronDown size={18} className={cn('shrink-0 text-ink-subtle transition-transform duration-200', isExpanded && 'rotate-180')} />
+                  <ChevronDown
+                    size={18}
+                    className={cn(
+                      'shrink-0 text-ink-subtle transition-transform duration-200',
+                      isExpanded && 'rotate-180',
+                    )}
+                  />
                 </button>
 
                 <AnimatePresence initial={false}>
@@ -138,7 +146,9 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                       <ul className="space-y-2 p-3 sm:p-4">
                         {sessions.map((session) => (
                           <li key={session.content_id} className="rounded-control border border-line bg-surface p-3.5">
-                            <p className="text-sm font-semibold text-ink">{session.com_m_contents?.content_name || '教材データなし'}</p>
+                            <p className="text-sm font-semibold text-ink">
+                              {session.com_m_contents?.content_name || '教材データなし'}
+                            </p>
                             <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                               <HistoryMetric metric="word" label="単語" value={session.word_count} />
                               <HistoryMetric metric="phrase" label="フレーズ" value={session.phrase_count} />

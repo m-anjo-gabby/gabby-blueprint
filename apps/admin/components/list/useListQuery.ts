@@ -34,7 +34,7 @@ interface ListQueryOptions {
  */
 export function useListQuery<K extends string = never>(
   filterKeys: readonly K[] = [],
-  { shallow = false }: ListQueryOptions = {}
+  { shallow = false }: ListQueryOptions = {},
 ): ListQuery<K> {
   const router = useRouter();
   const pathname = usePathname();

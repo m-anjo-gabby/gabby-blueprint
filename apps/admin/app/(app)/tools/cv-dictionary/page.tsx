@@ -1,10 +1,6 @@
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from '@/components/ui/resizable';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { CVWordList } from './_components/CVWordList';
 import { CVEntryList } from './_components/CVEntryList';
 import { BookOpenText } from 'lucide-react';

@@ -14,7 +14,12 @@ const TEXT = '#333333';
 const MUTED = '#6b7280';
 const FONT = "'Helvetica Neue', Arial, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif";
 
-const paragraphStyle: React.CSSProperties = { fontSize: '15px', lineHeight: '1.7', margin: '0 0 16px 0', whiteSpace: 'pre-wrap' };
+const paragraphStyle: React.CSSProperties = {
+  fontSize: '15px',
+  lineHeight: '1.7',
+  margin: '0 0 16px 0',
+  whiteSpace: 'pre-wrap',
+};
 
 function Paragraph({ block }: { block: Extract<MailBlock, { kind: 'paragraph' }> }) {
   return (
@@ -35,7 +40,12 @@ function Paragraph({ block }: { block: Extract<MailBlock, { kind: 'paragraph' }>
 function Button({ block }: { block: Extract<MailBlock, { kind: 'button' }> }) {
   return (
     <>
-      <table role="presentation" cellPadding={0} cellSpacing={0} style={{ margin: '32px auto', borderCollapse: 'separate' }}>
+      <table
+        role="presentation"
+        cellPadding={0}
+        cellSpacing={0}
+        style={{ margin: '32px auto', borderCollapse: 'separate' }}
+      >
         <tbody>
           <tr>
             <td align="center" style={{ backgroundColor: BRAND, borderRadius: '6px' }}>
@@ -80,7 +90,9 @@ function Block({ block, index }: { block: MailBlock; index: number }) {
     case 'paragraph':
       return <Paragraph block={block} />;
     case 'title':
-      return <p style={{ fontSize: '17px', fontWeight: 'bold', margin: '0 0 12px 0', color: '#111827' }}>{block.text}</p>;
+      return (
+        <p style={{ fontSize: '17px', fontWeight: 'bold', margin: '0 0 12px 0', color: '#111827' }}>{block.text}</p>
+      );
     case 'quote':
       return (
         <p
@@ -97,15 +109,23 @@ function Block({ block, index }: { block: MailBlock; index: number }) {
       );
     case 'details':
       return (
-        <div style={{ backgroundColor: '#f3f5fb', borderRadius: '8px', padding: '20px 20px 8px 20px', margin: '24px 0' }}>
+        <div
+          style={{ backgroundColor: '#f3f5fb', borderRadius: '8px', padding: '20px 20px 8px 20px', margin: '24px 0' }}
+        >
           {block.rows.map((row) => (
             <React.Fragment key={row.label}>
               <p style={{ fontSize: '12px', color: MUTED, margin: '0 0 2px 0' }}>{row.label}</p>
               {row.sub && <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 2px 0' }}>{row.sub}</p>}
-              <p style={{ fontSize: '15px', fontWeight: 'bold', margin: '0 0 12px 0', color: '#111827' }}>{row.value}</p>
+              <p style={{ fontSize: '15px', fontWeight: 'bold', margin: '0 0 12px 0', color: '#111827' }}>
+                {row.value}
+              </p>
             </React.Fragment>
           ))}
-          {block.note && <p style={{ fontSize: '14px', color: '#4b5563', margin: '0 0 12px 0', whiteSpace: 'pre-wrap' }}>{block.note}</p>}
+          {block.note && (
+            <p style={{ fontSize: '14px', color: '#4b5563', margin: '0 0 12px 0', whiteSpace: 'pre-wrap' }}>
+              {block.note}
+            </p>
+          )}
         </div>
       );
     case 'button':
@@ -120,7 +140,9 @@ function Block({ block, index }: { block: MailBlock; index: number }) {
       );
     case 'notice':
       return (
-        <div style={{ backgroundColor: '#fffbeb', borderLeft: '4px solid #f59e0b', padding: '16px', margin: '32px 0 0 0' }}>
+        <div
+          style={{ backgroundColor: '#fffbeb', borderLeft: '4px solid #f59e0b', padding: '16px', margin: '32px 0 0 0' }}
+        >
           {block.items.map((item, itemIndex) => (
             <div key={item.text} style={itemIndex > 0 ? { marginTop: '12px' } : undefined}>
               <p style={{ fontSize: '13px', color: '#92400e', margin: 0 }}>
@@ -139,7 +161,10 @@ function Block({ block, index }: { block: MailBlock; index: number }) {
       );
     case 'section':
       return (
-        <div lang={block.lang} style={index > 0 ? { borderTop: '1px solid #e5e7eb', paddingTop: '20px', marginTop: '4px' } : undefined}>
+        <div
+          lang={block.lang}
+          style={index > 0 ? { borderTop: '1px solid #e5e7eb', paddingTop: '20px', marginTop: '4px' } : undefined}
+        >
           {block.blocks.map((child, childIndex) => (
             <Block key={childIndex} block={child} index={childIndex} />
           ))}
@@ -162,10 +187,27 @@ export function MailLayout({ doc }: { doc: MailDocument }) {
       </head>
       <body style={{ margin: 0, padding: 0, backgroundColor: '#f4f5f7' }}>
         {/* 受信一覧の要約（本文には表示しない） */}
-        <div style={{ display: 'none', maxHeight: 0, overflow: 'hidden', opacity: 0, fontSize: '1px', lineHeight: '1px', color: '#f4f5f7' }}>
+        <div
+          style={{
+            display: 'none',
+            maxHeight: 0,
+            overflow: 'hidden',
+            opacity: 0,
+            fontSize: '1px',
+            lineHeight: '1px',
+            color: '#f4f5f7',
+          }}
+        >
           {doc.preheader}
         </div>
-        <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} bgcolor="#f4f5f7" style={{ backgroundColor: '#f4f5f7' }}>
+        <table
+          role="presentation"
+          width="100%"
+          cellPadding={0}
+          cellSpacing={0}
+          bgcolor="#f4f5f7"
+          style={{ backgroundColor: '#f4f5f7' }}
+        >
           <tbody>
             <tr>
               <td align="center" style={{ padding: '32px 12px 40px 12px' }}>
@@ -175,12 +217,26 @@ export function MailLayout({ doc }: { doc: MailDocument }) {
                   cellPadding={0}
                   cellSpacing={0}
                   bgcolor="#ffffff"
-                  style={{ width: '100%', maxWidth: '600px', backgroundColor: '#ffffff', borderRadius: '8px', fontFamily: FONT, color: TEXT }}
+                  style={{
+                    width: '100%',
+                    maxWidth: '600px',
+                    backgroundColor: '#ffffff',
+                    borderRadius: '8px',
+                    fontFamily: FONT,
+                    color: TEXT,
+                  }}
                 >
                   <tbody>
                     {/* ヘッダー（ロゴ） */}
                     <tr>
-                      <td align="center" style={{ padding: '24px 32px 16px 32px', borderTop: `4px solid ${BRAND}`, borderRadius: '8px 8px 0 0' }}>
+                      <td
+                        align="center"
+                        style={{
+                          padding: '24px 32px 16px 32px',
+                          borderTop: `4px solid ${BRAND}`,
+                          borderRadius: '8px 8px 0 0',
+                        }}
+                      >
                         <img
                           src={getMailLogoUrl()}
                           alt="Gabby Blueprint"
@@ -198,7 +254,11 @@ export function MailLayout({ doc }: { doc: MailDocument }) {
                             fontFamily: FONT,
                           }}
                         />
-                        {doc.headerLabel && <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: MUTED, fontWeight: 'bold' }}>{doc.headerLabel}</p>}
+                        {doc.headerLabel && (
+                          <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: MUTED, fontWeight: 'bold' }}>
+                            {doc.headerLabel}
+                          </p>
+                        )}
                       </td>
                     </tr>
                     <tr>

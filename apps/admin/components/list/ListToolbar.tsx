@@ -24,13 +24,25 @@ interface ListToolbarProps {
  * 一覧の上部の操作欄（検索・絞り込み・条件のクリア・件数・ページ送り）。
  * 直下に DataTable を置く前提で、上側だけ角丸にしている。
  */
-export function ListToolbar({ query, searchPlaceholder, totalCount, pageCount, page = query.page, children }: ListToolbarProps) {
+export function ListToolbar({
+  query,
+  searchPlaceholder,
+  totalCount,
+  pageCount,
+  page = query.page,
+  children,
+}: ListToolbarProps) {
   const t = useTranslations('common.list');
 
   return (
     <div className="flex flex-col gap-3 rounded-t-lg border-x border-t border-slate-200 bg-slate-50/80 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-wrap items-center gap-2">
-        <ListSearch value={query.q} placeholder={searchPlaceholder} submitLabel={t('search')} onSearch={query.setSearch} />
+        <ListSearch
+          value={query.q}
+          placeholder={searchPlaceholder}
+          submitLabel={t('search')}
+          onSearch={query.setSearch}
+        />
         {children}
         <Button
           variant="ghost"
@@ -111,7 +123,10 @@ function ListSearch({ value, placeholder, submitLabel, onSearch }: ListSearchPro
       }}
     >
       <div className="relative flex-1 sm:w-72 sm:flex-none">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+          aria-hidden
+        />
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

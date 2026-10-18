@@ -26,9 +26,25 @@ const MAX_CONTEXTS = 3;
 
 // 大文字始まりでも学習語彙として辞書化する語（曜日・月名）
 const CAPITALIZED_VOCAB = new Set([
-  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
-  'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august',
-  'september', 'october', 'november', 'december',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+  'january',
+  'february',
+  'march',
+  'april',
+  'may',
+  'june',
+  'july',
+  'august',
+  'september',
+  'october',
+  'november',
+  'december',
 ]);
 
 interface WordStat {
@@ -59,7 +75,10 @@ if (!outDir || inputs.length === 0) {
 }
 
 const readTsv = (path: string): Record<string, string>[] => {
-  const lines = readFileSync(path, 'utf-8').replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim());
+  const lines = readFileSync(path, 'utf-8')
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .filter((l) => l.trim());
   const headers = lines[0].split('\t').map((h) => h.trim());
   return lines.slice(1).map((line) => {
     const cells = line.split('\t');
@@ -95,7 +114,11 @@ for (const path of inputs) {
 
         const key = word.toLowerCase();
         const stat = stats.get(key) ?? {
-          count: 0, forms: new Set<string>(), hasLowercase: false, capitalizedMidSentence: false, contexts: new Set<string>(),
+          count: 0,
+          forms: new Set<string>(),
+          hasLowercase: false,
+          capitalizedMidSentence: false,
+          contexts: new Set<string>(),
         };
         stat.count++;
         stat.forms.add(word);
@@ -146,7 +169,9 @@ for (const [key, s] of [...stats.entries()].sort(([a], [b]) => a.localeCompare(b
   const note = isAbbreviation
     ? 'abbreviation'
     : alwaysCapitalized
-      ? s.capitalizedMidSentence ? 'capitalized_mid_sentence' : 'capitalized_sentence_initial_only'
+      ? s.capitalizedMidSentence
+        ? 'capitalized_mid_sentence'
+        : 'capitalized_sentence_initial_only'
       : '';
   // 文中でも大文字で始まる語は出現形のまま（X-ray）。文頭でしか大文字にならない語は小文字にする
   const keepForm = isAbbreviation || isCapitalizedVocab || note === 'capitalized_mid_sentence';
@@ -159,12 +184,12 @@ mkdirSync(join(outDir, 'parts'), { recursive: true });
 writeFileSync(
   join(outDir, 'worklist.tsv'),
   ['word\tcount\tnote\tcontexts', ...work.map((r) => r.join('\t'))].join('\n') + '\n',
-  'utf-8'
+  'utf-8',
 );
 writeFileSync(
   join(outDir, 'excluded.tsv'),
   ['word\treason\tcount', ...excluded.map((r) => r.join('\t'))].join('\n') + '\n',
-  'utf-8'
+  'utf-8',
 );
 
 console.log(`入力ファイル: ${inputs.length}件`);

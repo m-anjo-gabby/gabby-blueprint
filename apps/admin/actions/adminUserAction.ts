@@ -1,28 +1,28 @@
 'use server';
 
-import { createAdminClient } from "@gabby/lib/supabase/admin";
-import { 
-  UserRecord, 
-  CreateUserPayload, 
-  CreateUserResponse, 
-  BulkUser, 
-  BulkImportResponse, 
-  BulkImportResultDetail, 
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import {
+  UserRecord,
+  CreateUserPayload,
+  CreateUserResponse,
+  BulkUser,
+  BulkImportResponse,
+  BulkImportResultDetail,
   RoleDefinition,
   isUserType,
-} from "@gabby/types/user";
-import { formatToJstDate } from "@gabby/lib/date/date";
-import { revalidatePath } from "next/cache";
-import { z } from "zod";
+} from '@gabby/types/user';
+import { formatToJstDate } from '@gabby/lib/date/date';
+import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { exactPattern, ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { issueInitialLicense, resolvePerformedBy } from '@gabby/lib/license/issue';
-import { INVITATION_EXPIRES_DAYS, sendInvitationEmail } from "@gabby/lib/mail/actions/sendAccountMail"; // 招待メール（ユーザー種別ごとのテンプレート・文言で送り分け）
-import { validatePasswordStrength } from "@gabby/lib/auth/validation"; // パスワード強度の共通バリデーション
-import { randomBytes } from "crypto"; // 暗号トークン生成用
-import { getPortalBaseUrl } from "@gabby/lib/navigation/portalUrl";
+import { INVITATION_EXPIRES_DAYS, sendInvitationEmail } from '@gabby/lib/mail/actions/sendAccountMail'; // 招待メール（ユーザー種別ごとのテンプレート・文言で送り分け）
+import { validatePasswordStrength } from '@gabby/lib/auth/validation'; // パスワード強度の共通バリデーション
+import { randomBytes } from 'crypto'; // 暗号トークン生成用
+import { getPortalBaseUrl } from '@gabby/lib/navigation/portalUrl';
 
 const logger = createLogger('admin');
 
@@ -63,7 +63,9 @@ const EMAIL_INVITING_MESSAGE = '招待中（本登録前）のメールアドレ
  * 戻り値はエラーの文言（使えるなら null）。
  */
 async function checkEmailAvailable(supabase: AdminClient, email: string): Promise<string | null> {
-  const { data: authUserId, error: authError } = await supabase.rpc('fn_find_auth_user_id_by_email', { p_email: email });
+  const { data: authUserId, error: authError } = await supabase.rpc('fn_find_auth_user_id_by_email', {
+    p_email: email,
+  });
   if (authError) throw authError;
   if (authUserId) return EMAIL_EXISTS_MESSAGE;
 
@@ -86,15 +88,15 @@ async function checkEmailAvailable(supabase: AdminClient, email: string): Promis
  */
 export async function getUsers(params: ListParams<'clientId' | 'userType'>): Promise<ListResult<UserRecord>> {
   const ctx = await getLogContext();
-  const { q, filters: { clientId, userType } } = params;
+  const {
+    q,
+    filters: { clientId, userType },
+  } = params;
   try {
     const supabase = await createAdminClient();
     const [from, to] = toRange(params);
 
-    let query = supabase
-      .schema('private')
-      .from('vw_user_list')
-      .select('*', { count: 'exact' });
+    let query = supabase.schema('private').from('vw_user_list').select('*', { count: 'exact' });
 
     if (q) {
       query = query.or(ilikeAny(['user_name', 'email', 'client_name'], q));
@@ -114,7 +116,11 @@ export async function getUsers(params: ListParams<'clientId' | 'userType'>): Pro
       .range(from, to);
 
     if (error) {
-      logger.error('user:get_users_failed', error.message, { ...ctx, err: error, payload: { from, to, clientId, userType } });
+      logger.error('user:get_users_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { from, to, clientId, userType },
+      });
       throw error;
     }
 
@@ -129,7 +135,11 @@ export async function getUsers(params: ListParams<'clientId' | 'userType'>): Pro
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('user:get_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId, userType } });
+    logger.error('user:get_users_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { clientId, userType },
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -142,12 +152,7 @@ export async function getUserById(id: string): Promise<UserRecord | null> {
   if (!z.uuid().safeParse(id).success) return null;
 
   const supabase = await createAdminClient();
-  const { data, error } = await supabase
-    .schema('private')
-    .from('vw_user_list')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
+  const { data, error } = await supabase.schema('private').from('vw_user_list').select('*').eq('id', id).maybeSingle();
 
   if (error) {
     logger.error('user:get_user_failed', error.message, { ...ctx, err: error, payload: { id } });
@@ -165,10 +170,12 @@ export async function getUserById(id: string): Promise<UserRecord | null> {
 /**
  * ユーザー登録アクション
  */
-export async function createUser(payload: CreateUserPayload & { roles?: string[], contract_id?: string }): Promise<CreateUserResponse> {
+export async function createUser(
+  payload: CreateUserPayload & { roles?: string[]; contract_id?: string },
+): Promise<CreateUserResponse> {
   const ctx = await getLogContext();
   const { email, user_name, client_id, user_type, roles = [], contract_id } = payload;
-  
+
   try {
     const supabase = await createAdminClient();
 
@@ -195,17 +202,18 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
         user_name,
         user_type,
         client_id: client_id || null,
-        contract_id: contract_id === 'none' ? null : (contract_id || null), // 'none'の場合はnullに変換
+        contract_id: contract_id === 'none' ? null : contract_id || null, // 'none'の場合はnullに変換
         roles,
         token: invitationToken,
         expires_at: expiresAt.toISOString(),
-        invited_by: ctx.userId || null
+        invited_by: ctx.userId || null,
       })
       .select('id, token')
       .single();
 
     if (error) {
-      if (error.code === '23505') { // Postgresの一意制約違反（確認の直後に同じメールアドレスで招待された場合）
+      if (error.code === '23505') {
+        // Postgresの一意制約違反（確認の直後に同じメールアドレスで招待された場合）
         return { success: false, user_id: null, errorType: 'email_exists', message: EMAIL_INVITING_MESSAGE };
       }
       logger.error('user:create_user_invite_failed', error.message, { ...ctx, err: error, payload });
@@ -213,7 +221,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
     }
 
     if (!inviteData) {
-      return { success: false, user_id: null, errorType: 'unexpected_error', message: "データの作成に失敗しました。" };
+      return { success: false, user_id: null, errorType: 'unexpected_error', message: 'データの作成に失敗しました。' };
     }
 
     const userId = inviteData.id; // 既存機能（一括インポートなど）との互換性のため、発行された招待ID(UUID)を仮のuserIdとして引き継ぐ
@@ -247,26 +255,37 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
       .from('com_t_invitation')
       .update({
         mail_sent_at: mailResult.success ? new Date().toISOString() : null,
-        last_mail_error: mailResult.success ? null : (mailResult.error || "Unknown Error")
+        last_mail_error: mailResult.success ? null : mailResult.error || 'Unknown Error',
       })
       .eq('id', userId);
 
     if (!mailResult.success) {
-      logger.error('user:create_user_mail_dispatch_failed', mailResult.error || 'Unknown error', { ...ctx, payload: { email } });
+      logger.error('user:create_user_mail_dispatch_failed', mailResult.error || 'Unknown error', {
+        ...ctx,
+        payload: { email },
+      });
       // メール送信に失敗しても、レコードは作成されているため管理画面一覧からいつでも「再送」が可能です。
     }
 
-    logger.info('user:create_user_success', `User invited: ${email}`, { 
+    logger.info('user:create_user_success', `User invited: ${email}`, {
       ...ctx,
-      payload: { userId, email, clientId: client_id } 
+      payload: { userId, email, clientId: client_id },
     });
 
     revalidatePath('/users', 'layout');
-    return { success: true, user_id: userId, errorType: null, message: mailResult.success ? null : (mailResult.error || "招待メールの送信に失敗しました") };
-
+    return {
+      success: true,
+      user_id: userId,
+      errorType: null,
+      message: mailResult.success ? null : mailResult.error || '招待メールの送信に失敗しました',
+    };
   } catch (err) {
-    logger.error("user:create_user_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload });
-    return { success: false, user_id: null, errorType: 'unexpected_error', message: "予期せぬエラーが発生しました" };
+    logger.error('user:create_user_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload,
+    });
+    return { success: false, user_id: null, errorType: 'unexpected_error', message: '予期せぬエラーが発生しました' };
   }
 }
 
@@ -276,7 +295,7 @@ export async function createUser(payload: CreateUserPayload & { roles?: string[]
  * 管理者がその場で指定したメールアドレス・パスワードで確認済みアカウントを作成します。
  */
 export async function createUserDirect(
-  payload: CreateUserPayload & { roles?: string[]; contract_id?: string; password: string }
+  payload: CreateUserPayload & { roles?: string[]; contract_id?: string; password: string },
 ): Promise<CreateUserResponse> {
   const ctx = await getLogContext();
   const { email, user_name, client_id, user_type, roles = [], contract_id, password } = payload;
@@ -305,16 +324,25 @@ export async function createUserDirect(
         user_name,
         user_type,
         client_id: client_id || null,
-        roles
-      }
+        roles,
+      },
     });
 
     if (authError || !authData.user) {
       if (authError?.code === 'email_exists') {
         return { success: false, user_id: null, errorType: 'email_exists', message: EMAIL_EXISTS_MESSAGE };
       }
-      logger.error('user:create_user_direct_auth_failed', authError?.message || 'User object null', { ...ctx, err: authError, payload: { email } });
-      return { success: false, user_id: null, errorType: 'unexpected_error', message: authError?.message || "アカウントの作成に失敗しました。" };
+      logger.error('user:create_user_direct_auth_failed', authError?.message || 'User object null', {
+        ...ctx,
+        err: authError,
+        payload: { email },
+      });
+      return {
+        success: false,
+        user_id: null,
+        errorType: 'unexpected_error',
+        message: authError?.message || 'アカウントの作成に失敗しました。',
+      };
     }
 
     const userId = authData.user.id;
@@ -329,38 +357,53 @@ export async function createUserDirect(
         client_id: client_id || null,
         user_name,
         user_type,
-        update_date: new Date().toISOString()
+        update_date: new Date().toISOString(),
       })
       .eq('id', userId);
 
     if (dbUserError) {
       partialFailures.push('com_m_user_sync');
-      logger.error('user:create_user_direct_sync_failed', dbUserError.message, { ...ctx, err: dbUserError, payload: { userId } });
+      logger.error('user:create_user_direct_sync_failed', dbUserError.message, {
+        ...ctx,
+        err: dbUserError,
+        payload: { userId },
+      });
     }
 
     // ロールの紐付け
     if (roles.length > 0) {
       const { error: roleError } = await supabase
         .from('com_t_user_role')
-        .insert(roles.map(roleId => ({ user_id: userId, role_id: roleId })));
+        .insert(roles.map((roleId) => ({ user_id: userId, role_id: roleId })));
 
       if (roleError) {
         partialFailures.push('role_insert');
-        logger.error('user:create_user_direct_role_insert_failed', roleError.message, { ...ctx, err: roleError, payload: { userId, roles } });
+        logger.error('user:create_user_direct_role_insert_failed', roleError.message, {
+          ...ctx,
+          err: roleError,
+          payload: { userId, roles },
+        });
       }
     }
 
     // 初期ライセンスの割当（生徒など、契約が指定された場合のみ）
     // 契約管理からの割当と同じく、履歴・ライブのチケットも作る（@gabby/lib/license/issue）
     if (contract_id && contract_id !== 'none') {
-      const licenseResult = await issueInitialLicense(supabase, {
-        contractId: contract_id,
-        userId,
-        performedBy: resolvePerformedBy(ctx.userId),
-      }, ctx);
+      const licenseResult = await issueInitialLicense(
+        supabase,
+        {
+          contractId: contract_id,
+          userId,
+          performedBy: resolvePerformedBy(ctx.userId),
+        },
+        ctx,
+      );
       if (!licenseResult.success) {
         partialFailures.push('license_insert');
-        logger.error('user:create_user_direct_license_insert_failed', licenseResult.message, { ...ctx, payload: { userId, contract_id } });
+        logger.error('user:create_user_direct_license_insert_failed', licenseResult.message, {
+          ...ctx,
+          payload: { userId, contract_id },
+        });
       }
     }
 
@@ -368,26 +411,25 @@ export async function createUserDirect(
       // 一部サブステップが失敗した状態。障害調査で成功ログに埋もれないようwarnで区別する
       logger.warn('user:create_user_direct_partial_success', `User created with partial failures: ${email}`, {
         ...ctx,
-        payload: { userId, email, clientId: client_id, partialFailures }
+        payload: { userId, email, clientId: client_id, partialFailures },
       });
     } else {
       logger.info('user:create_user_direct_success', `User created directly (auto-confirmed): ${email}`, {
         ...ctx,
-        payload: { userId, email, clientId: client_id }
+        payload: { userId, email, clientId: client_id },
       });
     }
 
     revalidatePath('/users', 'layout');
     return { success: true, user_id: userId, errorType: null, message: null };
-
   } catch (err) {
     // 💡 セキュリティ: payloadには平文パスワードが含まれるため、ログにはそのまま渡さない
-    logger.error("user:create_user_direct_unexpected", err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('user:create_user_direct_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
       err,
-      payload: { ...payload, password: undefined }
+      payload: { ...payload, password: undefined },
     });
-    return { success: false, user_id: null, errorType: 'unexpected_error', message: "予期せぬエラーが発生しました" };
+    return { success: false, user_id: null, errorType: 'unexpected_error', message: '予期せぬエラーが発生しました' };
   }
 }
 
@@ -424,7 +466,7 @@ export async function resendInvite(email: string, userType?: string) {
       .update({
         token: newWeightToken,
         expires_at: newExpiresAt.toISOString(),
-        update_date: new Date().toISOString()
+        update_date: new Date().toISOString(),
       })
       .eq('id', currentInvite.id);
 
@@ -450,7 +492,7 @@ export async function resendInvite(email: string, userType?: string) {
       .from('com_t_invitation')
       .update({
         mail_sent_at: mailResult.success ? new Date().toISOString() : currentInvite.mail_sent_at,
-        last_mail_error: mailResult.success ? null : (mailResult.error || "Resend Failed")
+        last_mail_error: mailResult.success ? null : mailResult.error || 'Resend Failed',
       })
       .eq('id', currentInvite.id);
 
@@ -458,15 +500,19 @@ export async function resendInvite(email: string, userType?: string) {
       return { success: false, message: 'メールの再送に失敗しました。' };
     }
 
-    logger.info('user:resend_invite_success', `Invite resent to: ${email}`, { 
+    logger.info('user:resend_invite_success', `Invite resent to: ${email}`, {
       ...ctx,
-      payload: { email } 
+      payload: { email },
     });
 
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
-    logger.error('user:resend_invite_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { email } });
+    logger.error('user:resend_invite_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+      payload: { email },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -474,34 +520,36 @@ export async function resendInvite(email: string, userType?: string) {
 /**
  * ユーザー更新アクション
  */
-export async function updateUser(
-  id: string,
-  payload: CreateUserPayload & { roles?: string[] }
-) {
+export async function updateUser(id: string, payload: CreateUserPayload & { roles?: string[] }) {
   const ctx = await getLogContext();
   const { email, user_name, client_id, user_type, roles = [] } = payload;
-  
+
   try {
     const supabase = await createAdminClient();
 
     // 1. ユーザロール (com_t_user_role) の更新
-    const { error: roleDeleteError } = await supabase
-      .from('com_t_user_role')
-      .delete()
-      .eq('user_id', id);
+    const { error: roleDeleteError } = await supabase.from('com_t_user_role').delete().eq('user_id', id);
 
     if (roleDeleteError) {
-      logger.error('user:update_user_role_delete_failed', roleDeleteError.message, { ...ctx, err: roleDeleteError, payload: { id } });
+      logger.error('user:update_user_role_delete_failed', roleDeleteError.message, {
+        ...ctx,
+        err: roleDeleteError,
+        payload: { id },
+      });
       throw roleDeleteError;
     }
 
     if (roles.length > 0) {
       const { error: roleInsertError } = await supabase
         .from('com_t_user_role')
-        .insert(roles.map(roleId => ({ user_id: id, role_id: roleId })));
-      
+        .insert(roles.map((roleId) => ({ user_id: id, role_id: roleId })));
+
       if (roleInsertError) {
-        logger.error('user:update_user_role_insert_failed', roleInsertError.message, { ...ctx, err: roleInsertError, payload: { id, roles } });
+        logger.error('user:update_user_role_insert_failed', roleInsertError.message, {
+          ...ctx,
+          err: roleInsertError,
+          payload: { id, roles },
+        });
         throw roleInsertError;
       }
     }
@@ -513,12 +561,16 @@ export async function updateUser(
         user_name,
         user_type,
         client_id,
-        roles
-      }
+        roles,
+      },
     });
 
     if (authError) {
-      logger.error('user:update_user_auth_failed', authError.message, { ...ctx, err: authError, payload: { id, payload } });
+      logger.error('user:update_user_auth_failed', authError.message, {
+        ...ctx,
+        err: authError,
+        payload: { id, payload },
+      });
       return { success: false, errorType: 'update_error', message: `Auth更新失敗: ${authError.message}` };
     }
 
@@ -529,26 +581,29 @@ export async function updateUser(
         user_name,
         user_type,
         client_id,
-        update_date: new Date().toISOString()
+        update_date: new Date().toISOString(),
       })
       .eq('id', id);
 
     if (dbError) {
-      logger.error("user:update_user_db_failed", dbError.message, { ...ctx, err: dbError, payload: { id, payload } });
+      logger.error('user:update_user_db_failed', dbError.message, { ...ctx, err: dbError, payload: { id, payload } });
       return { success: false, errorType: 'update_error', message: `マスタ更新に失敗しました: ${dbError.message}` };
     }
 
     logger.info('user:update_user_success', `User updated: ${email}`, {
       ...ctx,
-      payload: { userId: id, email, roles }
+      payload: { userId: id, email, roles },
     });
 
     revalidatePath('/users', 'layout');
     return { success: true };
-
   } catch (err) {
-    logger.error("user:update_user_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { id, payload } });
-    return { success: false, errorType: 'unexpected_error', message: "予期せぬエラーが発生しました" };
+    logger.error('user:update_user_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { id, payload },
+    });
+    return { success: false, errorType: 'unexpected_error', message: '予期せぬエラーが発生しました' };
   }
 }
 
@@ -565,7 +620,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
     try {
       // 💡 改善: メールAPI (Resend) のレートリミット(2req/s)を考慮し、2人目以降は少し待機する
       if (results.length > 0) {
-        await new Promise(resolve => setTimeout(resolve, 600)); // 0.6秒待機
+        await new Promise((resolve) => setTimeout(resolve, 600)); // 0.6秒待機
       }
 
       const result = await createUser({
@@ -573,7 +628,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
         user_name: user.user_name,
         client_id: user.client_id,
         user_type: user.user_type,
-        contract_id: contract_id === 'none' ? undefined : contract_id
+        contract_id: contract_id === 'none' ? undefined : contract_id,
       });
 
       if (result.success && result.user_id) {
@@ -581,18 +636,26 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
         results.push({ id: result.user_id, email: user.email, status: 'success', message: result.message });
       } else {
         errorCount++;
-        results.push({ email: user.email, status: 'error', message: result.message || "招待データの作成に失敗しました" });
+        results.push({
+          email: user.email,
+          status: 'error',
+          message: result.message || '招待データの作成に失敗しました',
+        });
       }
     } catch (err) {
-      logger.error("user:bulk_create_users_loop_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { email: user.email } });
+      logger.error('user:bulk_create_users_loop_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+        ...ctx,
+        err,
+        payload: { email: user.email },
+      });
       errorCount++;
-      results.push({ email: user.email, status: 'error', message: "予期せぬエラーが発生しました" });
+      results.push({ email: user.email, status: 'error', message: '予期せぬエラーが発生しました' });
     }
   }
 
-  logger.info('user:bulk_create_users_success', `Bulk user import completed`, { 
+  logger.info('user:bulk_create_users_success', `Bulk user import completed`, {
     ...ctx,
-    payload: { total: users.length, successCount, errorCount } 
+    payload: { total: users.length, successCount, errorCount },
   });
 
   revalidatePath('/users', 'layout');
@@ -613,13 +676,16 @@ export async function getRoles(): Promise<RoleDefinition[]> {
       .order('seq_no', { ascending: true });
 
     if (error) {
-      logger.error("user:get_roles_failed", error.message, { ...ctx, err: error });
+      logger.error('user:get_roles_failed', error.message, { ...ctx, err: error });
       return [];
     }
 
     return data as RoleDefinition[];
   } catch (error) {
-    logger.error("user:get_roles_unexpected", error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    logger.error('user:get_roles_unexpected', error instanceof Error ? error.message : 'Unknown error', {
+      ...ctx,
+      err: error,
+    });
     return [];
   }
 }

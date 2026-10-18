@@ -17,7 +17,10 @@ interface ColumnOptions {
   onDelete: (entry: KnowledgeEntry) => void;
 }
 
-export function createColumns(t: ListT, { sourceTypeOptions, onDelete }: ColumnOptions): ListColumnDef<KnowledgeEntry>[] {
+export function createColumns(
+  t: ListT,
+  { sourceTypeOptions, onDelete }: ColumnOptions,
+): ListColumnDef<KnowledgeEntry>[] {
   return [
     {
       accessorKey: 'source_type',
@@ -28,7 +31,10 @@ export function createColumns(t: ListT, { sourceTypeOptions, onDelete }: ColumnO
         return (
           <Badge
             variant="outline"
-            className={cn('gap-1 border-none px-2 text-[10px] font-bold', option?.badgeClassName ?? 'bg-slate-100 text-slate-500')}
+            className={cn(
+              'gap-1 border-none px-2 text-[10px] font-bold',
+              option?.badgeClassName ?? 'bg-slate-100 text-slate-500',
+            )}
           >
             <Icon size={12} />
             {option?.label ?? row.original.source_type}

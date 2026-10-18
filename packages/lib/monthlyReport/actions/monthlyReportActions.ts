@@ -15,7 +15,14 @@ import {
   MonthlyReportStudentRow,
   RevokeCoachMonthlyReportApprovalResult,
 } from '@gabby/types/monthlyReport';
-import { SESSION_STATUS, COMPLETION_RESULT, CANCEL_CATEGORY, SessionStatus, CompletionResult, CancelCategory } from '@gabby/types/session';
+import {
+  SESSION_STATUS,
+  COMPLETION_RESULT,
+  CANCEL_CATEGORY,
+  SessionStatus,
+  CompletionResult,
+  CancelCategory,
+} from '@gabby/types/session';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
@@ -58,7 +65,7 @@ function classifyMonthlyReportRpcError(message: string | undefined): MonthlyRepo
 async function buildMonthlyReport(
   supabase: AnySupabaseClient,
   coachId: string,
-  reportMonthInput: string
+  reportMonthInput: string,
 ): Promise<GetCoachMonthlyReportResult> {
   const ctx = await getLogContext();
   const reportMonth = normalizeReportMonth(reportMonthInput);
@@ -76,7 +83,11 @@ async function buildMonthlyReport(
   ]);
 
   if (studentsResult.error || sessionsResult.error || approvalResult.error || coachResult.error) {
-    const message = studentsResult.error?.message ?? sessionsResult.error?.message ?? approvalResult.error?.message ?? coachResult.error?.message;
+    const message =
+      studentsResult.error?.message ??
+      sessionsResult.error?.message ??
+      approvalResult.error?.message ??
+      coachResult.error?.message;
     logger.error('monthlyReport:build_failed', message ?? 'unknown', { ...ctx, payload: { coachId, reportMonth } });
     if (message?.includes('not authorized')) {
       return { success: false, errorCode: 'forbidden' };
@@ -142,9 +153,18 @@ async function buildMonthlyReport(
 
   const grandTotal = studentRows.reduce((sum, row) => sum + row.month_total, 0);
   // 内訳表示用の3区分（完了には早期終了を含める。completed_count+late_cancel_count+no_show_count===grand_totalとなる）
-  const completedCount = sessions.filter((s) => s.status === SESSION_STATUS.COMPLETED && s.completion_result !== COMPLETION_RESULT.NO_SHOW).length;
-  const lateCancelCount = sessions.filter((s) => s.status === SESSION_STATUS.CANCELLED && s.cancel_category === CANCEL_CATEGORY.STUDENT && s.ticket_refunded === false).length;
-  const noShowCount = sessions.filter((s) => s.status === SESSION_STATUS.COMPLETED && s.completion_result === COMPLETION_RESULT.NO_SHOW).length;
+  const completedCount = sessions.filter(
+    (s) => s.status === SESSION_STATUS.COMPLETED && s.completion_result !== COMPLETION_RESULT.NO_SHOW,
+  ).length;
+  const lateCancelCount = sessions.filter(
+    (s) =>
+      s.status === SESSION_STATUS.CANCELLED &&
+      s.cancel_category === CANCEL_CATEGORY.STUDENT &&
+      s.ticket_refunded === false,
+  ).length;
+  const noShowCount = sessions.filter(
+    (s) => s.status === SESSION_STATUS.COMPLETED && s.completion_result === COMPLETION_RESULT.NO_SHOW,
+  ).length;
   const unresolvedCount = sessions.filter((s) => s.is_unresolved).length;
 
   const approvalRow = approvalResult.data as {
@@ -194,7 +214,10 @@ export async function getCoachMonthlyReportCore(reportMonth: string): Promise<Ge
 
     return await buildMonthlyReport(supabase, user.id, reportMonth);
   } catch (err) {
-    logger.error('monthlyReport:get_coach_report_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('monthlyReport:get_coach_report_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -202,13 +225,19 @@ export async function getCoachMonthlyReportCore(reportMonth: string): Promise<Ge
 /**
  * 指定コーチの月次コーチングレポートを取得する（アドミン画面向け、任意のコーチを指定可能）
  */
-export async function getAdminCoachMonthlyReportCore(coachId: string, reportMonth: string): Promise<GetCoachMonthlyReportResult> {
+export async function getAdminCoachMonthlyReportCore(
+  coachId: string,
+  reportMonth: string,
+): Promise<GetCoachMonthlyReportResult> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
     return await buildMonthlyReport(supabase, coachId, reportMonth);
   } catch (err) {
-    logger.error('monthlyReport:get_admin_report_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('monthlyReport:get_admin_report_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -216,7 +245,10 @@ export async function getAdminCoachMonthlyReportCore(coachId: string, reportMont
 /**
  * 指定コーチ・対象月の月次コーチングレポートを承認する（アドミン専用）
  */
-export async function approveCoachMonthlyReportCore(coachId: string, reportMonth: string): Promise<ApproveCoachMonthlyReportResult> {
+export async function approveCoachMonthlyReportCore(
+  coachId: string,
+  reportMonth: string,
+): Promise<ApproveCoachMonthlyReportResult> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -227,14 +259,24 @@ export async function approveCoachMonthlyReportCore(coachId: string, reportMonth
     });
 
     if (error) {
-      logger.error('monthlyReport:approve_failed', error.message, { ...ctx, err: error, payload: { coachId, reportMonth } });
+      logger.error('monthlyReport:approve_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { coachId, reportMonth },
+      });
       return { success: false, errorCode: classifyMonthlyReportRpcError(error.message) };
     }
 
-    logger.info('monthlyReport:approve_success', 'Monthly report approved', { ...ctx, payload: { coachId, reportMonth } });
+    logger.info('monthlyReport:approve_success', 'Monthly report approved', {
+      ...ctx,
+      payload: { coachId, reportMonth },
+    });
     return { success: true };
   } catch (err) {
-    logger.error('monthlyReport:approve_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('monthlyReport:approve_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -242,7 +284,10 @@ export async function approveCoachMonthlyReportCore(coachId: string, reportMonth
 /**
  * 指定コーチ・対象月の月次コーチングレポートの承認を取り消す（アドミン専用。誤承認への対処）
  */
-export async function revokeCoachMonthlyReportApprovalCore(coachId: string, reportMonth: string): Promise<RevokeCoachMonthlyReportApprovalResult> {
+export async function revokeCoachMonthlyReportApprovalCore(
+  coachId: string,
+  reportMonth: string,
+): Promise<RevokeCoachMonthlyReportApprovalResult> {
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -252,14 +297,24 @@ export async function revokeCoachMonthlyReportApprovalCore(coachId: string, repo
     });
 
     if (error) {
-      logger.error('monthlyReport:revoke_failed', error.message, { ...ctx, err: error, payload: { coachId, reportMonth } });
+      logger.error('monthlyReport:revoke_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { coachId, reportMonth },
+      });
       return { success: false, errorCode: classifyMonthlyReportRpcError(error.message) };
     }
 
-    logger.info('monthlyReport:revoke_success', 'Monthly report approval revoked', { ...ctx, payload: { coachId, reportMonth } });
+    logger.info('monthlyReport:revoke_success', 'Monthly report approval revoked', {
+      ...ctx,
+      payload: { coachId, reportMonth },
+    });
     return { success: true };
   } catch (err) {
-    logger.error('monthlyReport:revoke_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('monthlyReport:revoke_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

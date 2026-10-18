@@ -23,10 +23,14 @@ export function FavoriteOnlyToggle({ pressed, onPressedChange }: FavoriteOnlyTog
         'flex h-12 shrink-0 items-center gap-1.5 rounded-control border px-3 text-sm font-semibold transition-colors active:scale-95',
         pressed
           ? 'border-brand-200 bg-brand-soft text-brand-strong'
-          : 'border-line bg-surface text-ink-soft hover:bg-canvas'
+          : 'border-line bg-surface text-ink-soft hover:bg-canvas',
       )}
     >
-      <Star size={16} fill={pressed ? 'currentColor' : 'none'} className={pressed ? 'text-amber-500' : 'text-ink-subtle'} />
+      <Star
+        size={16}
+        fill={pressed ? 'currentColor' : 'none'}
+        className={pressed ? 'text-amber-500' : 'text-ink-subtle'}
+      />
       お気に入り
     </button>
   );

@@ -53,9 +53,10 @@ const p = pino({
   // err は serializeError で整形済み。pino 既定の err の整形を重ねない
   serializers: { err: (value: unknown) => value },
   // ローカル開発では pino-pretty で読みやすく表示する
-  transport: process.env.NODE_ENV !== 'production'
-    ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:standard', messageKey: 'message' } }
-    : undefined,
+  transport:
+    process.env.NODE_ENV !== 'production'
+      ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:standard', messageKey: 'message' } }
+      : undefined,
 });
 
 /**
@@ -107,7 +108,7 @@ export function extractIpFromRequest(req: { headers: { get: (name: string) => st
 export const createRequestLogger = (
   service: LogService,
   req: { headers: { get: (name: string) => string | null } },
-  requestId?: string
+  requestId?: string,
 ): Logger => {
   const ip = extractIpFromRequest(req);
   const base = createLogger(service);

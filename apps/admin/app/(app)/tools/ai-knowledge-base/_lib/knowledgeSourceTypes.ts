@@ -22,9 +22,6 @@ export function getKnowledgeSourceTypeOptions(t: SourceTypeT): readonly Knowledg
   ] as const;
 }
 
-export function getKnowledgeSourceTypeOption(
-  value: string,
-  t: SourceTypeT
-): KnowledgeSourceTypeOption | undefined {
+export function getKnowledgeSourceTypeOption(value: string, t: SourceTypeT): KnowledgeSourceTypeOption | undefined {
   return getKnowledgeSourceTypeOptions(t).find((o) => o.value === value);
 }

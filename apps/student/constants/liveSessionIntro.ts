@@ -115,4 +115,3 @@ export const LIVE_SESSION_INTRO: LiveSessionIntroContent = {
     },
   ],
 };
-

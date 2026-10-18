@@ -29,7 +29,8 @@ export const hasTimezoneMismatch = (settingZone: string, deviceZone: string, now
   if (settingZone === deviceZone) return false;
   try {
     const now = new Date(nowMs);
-    const format = (timeZone: string) => new Intl.DateTimeFormat('en-US', { ...LOCAL_TIME_FORMAT, timeZone }).format(now);
+    const format = (timeZone: string) =>
+      new Intl.DateTimeFormat('en-US', { ...LOCAL_TIME_FORMAT, timeZone }).format(now);
     return format(settingZone) !== format(deviceZone);
   } catch {
     // 未知のタイムゾーン名などで判定できない場合は、誤警告を避けて表示しない

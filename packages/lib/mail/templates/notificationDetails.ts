@@ -59,7 +59,8 @@ const COPY = {
     reason: '理由',
     message: 'メッセージ',
     expires: (label: string) => `振替候補は ${label} までにお選びください。期限を過ぎると選べなくなります。`,
-    respondBy: (label: string) => `${label} までに承認または否認してください。期限を過ぎるとリクエストは無効になります。`,
+    respondBy: (label: string) =>
+      `${label} までに承認または否認してください。期限を過ぎるとリクエストは無効になります。`,
     rescheduleTitle: 'セッションがキャンセルされました（振替候補あり）',
     rescheduleSubject: 'セッションのキャンセルと振替候補',
   },
@@ -74,7 +75,8 @@ const COPY = {
     proposal: (n: number) => `Alternative time ${n}`,
     reason: 'Reason',
     message: 'Message from the student',
-    expires: (label: string) => `Please respond by ${label}. The alternative times can no longer be selected after that.`,
+    expires: (label: string) =>
+      `Please respond by ${label}. The alternative times can no longer be selected after that.`,
     respondBy: (label: string) => `Please approve or reject this request by ${label}. It expires after that.`,
     rescheduleTitle: 'Session cancelled with alternative times',
     rescheduleSubject: 'Session cancelled with alternative times',
@@ -101,9 +103,16 @@ export function buildNotificationDetails({
   const copy = COPY[language];
   const full = (time: ScheduleTime) => formatReminderSchedule({ ...time, timeZone, zoneName, language });
   const short = (time: ScheduleTime) => formatShortSchedule({ startIso: time.startIso, timeZone, language });
-  const weekly = (time: ScheduleTime, withZone = true) => formatWeeklySlot({ ...time, timeZone, zoneName, language, withZone });
-  const textRow = (label: string, value: string | null | undefined): Row[] => (value?.trim() ? [{ label, value: value.trim() }] : []);
-  const result = (rows: Row[], subjectSuffix: string | null, extra?: Partial<NotificationMailDetails>, note?: string | null) => ({
+  const weekly = (time: ScheduleTime, withZone = true) =>
+    formatWeeklySlot({ ...time, timeZone, zoneName, language, withZone });
+  const textRow = (label: string, value: string | null | undefined): Row[] =>
+    value?.trim() ? [{ label, value: value.trim() }] : [];
+  const result = (
+    rows: Row[],
+    subjectSuffix: string | null,
+    extra?: Partial<NotificationMailDetails>,
+    note?: string | null,
+  ) => ({
     subjectSuffix,
     block: rows.length > 0 ? { kind: 'details' as const, rows, note: note ?? null } : null,
     ...extra,
@@ -113,7 +122,9 @@ export function buildNotificationDetails({
   switch (type) {
     case 'SESSION_CANCELLED_BY_COACH':
     case 'SESSION_CANCELLED_BY_STUDENT':
-      return session ? result([{ label: copy.cancelledSession, value: full(session) }], short(session)) : result([], null);
+      return session
+        ? result([{ label: copy.cancelledSession, value: full(session) }], short(session))
+        : result([], null);
     case 'SESSION_RESCHEDULE_PROPOSED':
     case 'SESSION_RESCHEDULE_PROPOSED_BY_STUDENT': {
       // キャンセルと振替候補は1通（キャンセルを主にし、候補はその下に並べる）
@@ -122,20 +133,34 @@ export function buildNotificationDetails({
         ...(session ? [{ label: copy.cancelledSession, value: full(session) }] : []),
         ...proposals.map((proposal, index) => ({ label: copy.proposal(index + 1), value: full(proposal) })),
       ];
-      const expires = proposals.length > 0 && facts.proposalExpiresIso ? copy.expires(short({ startIso: facts.proposalExpiresIso, endIso: null })) : null;
-      return result(rows, session ? short(session) : null, { title: copy.rescheduleTitle, subjectBase: copy.rescheduleSubject }, expires);
+      const expires =
+        proposals.length > 0 && facts.proposalExpiresIso
+          ? copy.expires(short({ startIso: facts.proposalExpiresIso, endIso: null }))
+          : null;
+      return result(
+        rows,
+        session ? short(session) : null,
+        { title: copy.rescheduleTitle, subjectBase: copy.rescheduleSubject },
+        expires,
+      );
     }
     case 'SESSION_BOOKED_BY_STUDENT':
     case 'SESSION_BOOKING_APPROVED':
       return session ? result([{ label: copy.bookedSession, value: full(session) }], short(session)) : result([], null);
     case 'SESSION_BOOKING_REQUESTED':
       return session
-        ? result([{ label: copy.requestedDateTime, value: full(session) }, ...textRow(copy.message, facts.message)], short(session))
+        ? result(
+            [{ label: copy.requestedDateTime, value: full(session) }, ...textRow(copy.message, facts.message)],
+            short(session),
+          )
         : result([], null);
     case 'SESSION_BOOKING_REJECTED':
       return result(
-        [...(session ? [{ label: copy.requestedDateTime, value: full(session) }] : []), ...textRow(copy.reason, facts.reason)],
-        session ? short(session) : null
+        [
+          ...(session ? [{ label: copy.requestedDateTime, value: full(session) }] : []),
+          ...textRow(copy.reason, facts.reason),
+        ],
+        session ? short(session) : null,
       );
     case 'MATCHING_APPROVED':
       return slot
@@ -144,21 +169,21 @@ export function buildNotificationDetails({
               { label: copy.weeklySlot, value: weekly(slot) },
               { label: copy.firstSession, value: full(slot) },
             ],
-            `${copy.firstPrefix}${language === 'ja' ? ': ' : ' '}${short(slot)}`
+            `${copy.firstPrefix}${language === 'ja' ? ': ' : ' '}${short(slot)}`,
           )
         : result([], null);
     case 'MATCHING_REJECTED':
     case 'MATCHING_EXPIRED':
       return result(
         [...(slot ? [{ label: copy.requestedSlot, value: weekly(slot) }] : []), ...textRow(copy.reason, facts.reason)],
-        slot ? weekly(slot, false) : null
+        slot ? weekly(slot, false) : null,
       );
     case 'MATCHING_REQUESTED':
       return result(
         slot ? [{ label: copy.requestedSlot, value: weekly(slot) }] : [],
         slot ? weekly(slot, false) : null,
         undefined,
-        facts.respondByIso ? copy.respondBy(short({ startIso: facts.respondByIso, endIso: null })) : null
+        facts.respondByIso ? copy.respondBy(short({ startIso: facts.respondByIso, endIso: null })) : null,
       );
     default:
       return result([], null);

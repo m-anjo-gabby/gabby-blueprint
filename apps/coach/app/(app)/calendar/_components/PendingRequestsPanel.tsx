@@ -16,7 +16,8 @@ interface PendingRequestsPanelProps {
   onSessionsChanged?: () => void;
 }
 
-const PANEL_CLASS = 'bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col max-h-[70vh] lg:max-h-none lg:h-full';
+const PANEL_CLASS =
+  'bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col max-h-[70vh] lg:max-h-none lg:h-full';
 
 /** 読み込み中の骨組み（見出し・History リンクは本物、件数と依頼カードを骨組み） */
 export function PendingRequestsPanelSkeleton() {
@@ -24,7 +25,10 @@ export function PendingRequestsPanelSkeleton() {
     <div className={PANEL_CLASS}>
       <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100 shrink-0">
         <h2 className="text-xs font-black text-brand-500 uppercase tracking-widest">Pending Requests</h2>
-        <Link href="/matching-requests" className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-700 shrink-0">
+        <Link
+          href="/matching-requests"
+          className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-700 shrink-0"
+        >
           History
           <ArrowRight size={12} />
         </Link>
@@ -41,7 +45,7 @@ export function PendingRequestsPanelSkeleton() {
 export function PendingRequestsPanel({ initialRequests, onDateHover, onSessionsChanged }: PendingRequestsPanelProps) {
   const { pending, handleMatchingResolved, handleBookingResolved, handleProposalResolved } = useCoachPendingRequests(
     initialRequests,
-    onSessionsChanged
+    onSessionsChanged,
   );
 
   const renderItem = (item: CoachIncomingRequestItem) => {
@@ -79,8 +83,13 @@ export function PendingRequestsPanel({ initialRequests, onDateHover, onSessionsC
   return (
     <div className={PANEL_CLASS}>
       <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100 shrink-0">
-        <h2 className="text-xs font-black text-brand-500 uppercase tracking-widest">Pending Requests ({pending.length})</h2>
-        <Link href="/matching-requests" className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-700 shrink-0">
+        <h2 className="text-xs font-black text-brand-500 uppercase tracking-widest">
+          Pending Requests ({pending.length})
+        </h2>
+        <Link
+          href="/matching-requests"
+          className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-700 shrink-0"
+        >
           History
           <ArrowRight size={12} />
         </Link>

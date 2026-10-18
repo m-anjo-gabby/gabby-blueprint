@@ -1,12 +1,18 @@
-"use server";
+'use server';
 
-import { createServerClient } from "@gabby/lib/supabase/server";
-import { FAVORITE_PHRASE_COLUMNS, FavoritePhraseItem, FavoriteResponse, TrainingWord, TrainingWordResponse } from "@gabby/types/word";
-import { CONTENT_STATUS } from "@gabby/types/content";
-import { createLogger } from "@gabby/lib/logger";
-import { getLogContext } from "@gabby/lib/logger/context";
-import { toggleFavoriteRow } from "@/lib/favoriteToggle";
-import { FAVORITE_LIMIT, type FavoriteToggleResult } from "@/constants/favorites";
+import { createServerClient } from '@gabby/lib/supabase/server';
+import {
+  FAVORITE_PHRASE_COLUMNS,
+  FavoritePhraseItem,
+  FavoriteResponse,
+  TrainingWord,
+  TrainingWordResponse,
+} from '@gabby/types/word';
+import { CONTENT_STATUS } from '@gabby/types/content';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
+import { toggleFavoriteRow } from '@/lib/favoriteToggle';
+import { FAVORITE_LIMIT, type FavoriteToggleResult } from '@/constants/favorites';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
@@ -20,18 +26,20 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     const { data, error } = await supabase
       .from('com_m_word')
-      .select(`
+      .select(
+        `
         *,
         com_m_contents!inner ( content_name, metadata ),
         com_m_phrase (
           *,
           com_t_favorite_phrase ( phrase_id )
         )
-      `)
+      `,
+      )
       .eq('content_id', contentId)
       .eq('status', 'live')
       .eq('com_m_phrase.status', 'live')
@@ -43,7 +51,7 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
     // 結果として data 自体が空配列になります。
 
     if (error) {
-      logger.error("word:get_training_data_failed", error.message, { ...ctx, err: error, payload: { contentId } });
+      logger.error('word:get_training_data_failed', error.message, { ...ctx, err: error, payload: { contentId } });
       throw new Error(`取得失敗: ${error.message}`);
     }
 
@@ -53,9 +61,9 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
     if (!rawData || rawData.length === 0) {
       // 教材の存在自体を別途確認（RLSの影響を受けないようにするか、あるいは単に「利用不可」とする）
       // ここではセキュリティを優先し、詳細な理由は伏せて「利用不可」のステータスを返します
-      return { 
-        words: [], 
-        contentName: 'Unavailable Content' 
+      return {
+        words: [],
+        contentName: 'Unavailable Content',
       };
     }
 
@@ -66,10 +74,8 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
     let cefrData: { id: string; label: string } | undefined = undefined;
 
     if (firstItem?.com_m_contents) {
-      const contents = Array.isArray(firstItem.com_m_contents) 
-        ? firstItem.com_m_contents[0] 
-        : firstItem.com_m_contents;
-      
+      const contents = Array.isArray(firstItem.com_m_contents) ? firstItem.com_m_contents[0] : firstItem.com_m_contents;
+
       contentName = contents?.content_name || 'Training';
       // 教材マスターのmetadataからcefrを抽出
       cefrData = contents?.metadata?.cefr;
@@ -82,18 +88,21 @@ export async function getWordData(contentId: string): Promise<TrainingWordRespon
       phrases: (word.com_m_phrase || []).map((p) => ({
         ...p, // phrase_id, phrase_en, phrase_ja, phrase_type, status, tts_status 等をすべて継承
         // UI制御用のプロパティをセット（is_favorite に統一）
-        is_favorite: Array.isArray(p.com_t_favorite_phrase) && p.com_t_favorite_phrase.length > 0 
-      }))
+        is_favorite: Array.isArray(p.com_t_favorite_phrase) && p.com_t_favorite_phrase.length > 0,
+      })),
     }));
 
-    return { 
-      words, 
+    return {
+      words,
       contentName,
-      cefr: cefrData // 戻り値にCEFR情報を追加
+      cefr: cefrData, // 戻り値にCEFR情報を追加
     };
-    
   } catch (err) {
-    logger.error("word:get_training_data_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId } });
+    logger.error('word:get_training_data_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { contentId },
+    });
     throw err;
   }
 }
@@ -121,13 +130,16 @@ export async function getFavoriteCount(): Promise<number> {
       .eq('user_id', user.id);
 
     if (error) {
-      logger.error("word:get_favorite_count_failed", error.message, { ...ctx, err: error });
+      logger.error('word:get_favorite_count_failed', error.message, { ...ctx, err: error });
       return 0;
     }
 
     return count || 0;
   } catch (err) {
-    logger.error("word:get_favorite_count_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('word:get_favorite_count_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return 0;
   }
 }
@@ -139,13 +151,14 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
-    
+
     const user = await getAuthUser();
     if (!user) return [];
 
     const { data, error } = await supabase
       .from('com_t_favorite_phrase')
-      .select(`
+      .select(
+        `
         favorite_id,
         phrase_id,
         insert_date,
@@ -159,14 +172,15 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
             )
           )
         )
-      `)
+      `,
+      )
       .eq('user_id', user.id)
       .eq('com_m_phrase.com_m_word.com_m_contents.status', CONTENT_STATUS.PUBLISHED)
       .order('insert_date', { ascending: false })
       .limit(FAVORITE_LIMIT);
 
     if (error) {
-      logger.error("word:get_favorite_phrases_failed", error.message, { ...ctx, err: error });
+      logger.error('word:get_favorite_phrases_failed', error.message, { ...ctx, err: error });
       throw new Error(`取得失敗: ${error.message}`);
     }
 
@@ -179,7 +193,10 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
       content_name: com_m_word.com_m_contents.content_name,
     }));
   } catch (err) {
-    logger.error("word:get_favorite_phrases_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('word:get_favorite_phrases_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return [];
   }
 }
@@ -187,27 +204,40 @@ export async function getFavoritePhrases(): Promise<FavoritePhraseItem[]> {
 /**
  * 学習進捗（単語・フレーズの消化数）をサマリーテーブルに同期
  */
-export async function reportWordProgress(contentId: string, wordCount: number, phraseCount: number, assessmentCount: number) {
+export async function reportWordProgress(
+  contentId: string,
+  wordCount: number,
+  phraseCount: number,
+  assessmentCount: number,
+) {
   const ctx = await getLogContext();
   if (!contentId || (wordCount === 0 && phraseCount === 0 && assessmentCount === 0)) return;
 
   try {
     const supabase = await createServerClient();
-    
+
     // p_user_id は渡さず、DB側の auth.uid() に委ねる。
     // これによりクライアント側からのID偽装を物理的に防ぎ、Server Actionの負荷も軽減。
     const { error } = await supabase.rpc('increment_word_summary', {
       p_content_id: contentId,
       p_word_count: wordCount,
       p_phrase_count: phraseCount,
-      p_assessment_count: assessmentCount
+      p_assessment_count: assessmentCount,
     });
 
     if (error) throw error;
-    logger.info("word:report_progress_success", `Reported progress: ${wordCount} words, ${phraseCount} phrases, ${assessmentCount} assessments`, { ...ctx, payload: { contentId, wordCount, phraseCount, assessmentCount } });
+    logger.info(
+      'word:report_progress_success',
+      `Reported progress: ${wordCount} words, ${phraseCount} phrases, ${assessmentCount} assessments`,
+      { ...ctx, payload: { contentId, wordCount, phraseCount, assessmentCount } },
+    );
   } catch (err) {
     // 記録処理の失敗が学習体験を阻害しないよう、エラーは捕捉してログに留める（学習継続を優先）
-    logger.error("word:report_progress_failed", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId, wordCount, phraseCount, assessmentCount } });
+    logger.error('word:report_progress_failed', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { contentId, wordCount, phraseCount, assessmentCount },
+    });
   }
 }
 
@@ -230,13 +260,15 @@ export interface WordSummaryHistoryItem {
  * ユーザーの特定月の単語ドリル履歴一覧を取得する
  * @param yearMonth 'YYYY-MM' 形式の文字列
  */
-export async function getUserWordHistoryAction(yearMonth: string): Promise<{ success: boolean; data: WordSummaryHistoryItem[]; error?: string }> {
+export async function getUserWordHistoryAction(
+  yearMonth: string,
+): Promise<{ success: boolean; data: WordSummaryHistoryItem[]; error?: string }> {
   const ctx = await getLogContext();
 
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     // 月の開始日と終了日を計算 (UTCベースでクエリ)
     const [year, month] = yearMonth.split('-').map(Number);
@@ -244,8 +276,9 @@ export async function getUserWordHistoryAction(yearMonth: string): Promise<{ suc
     const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)).toISOString();
 
     const { data, error } = await supabase
-      .from("self_t_word_summary")
-      .select(`
+      .from('self_t_word_summary')
+      .select(
+        `
         content_id,
         training_date,
         word_count,
@@ -255,29 +288,30 @@ export async function getUserWordHistoryAction(yearMonth: string): Promise<{ suc
         com_m_contents (
           content_name
         )
-      `)
-      .eq("user_id", user.id)
-      .gte("training_date", startDate)
-      .lte("training_date", endDate)
-      .order("training_date", { ascending: false }); // 最新の日付が上に来るようにソート
+      `,
+      )
+      .eq('user_id', user.id)
+      .gte('training_date', startDate)
+      .lte('training_date', endDate)
+      .order('training_date', { ascending: false }); // 最新の日付が上に来るようにソート
 
     if (error) throw error;
 
     // Supabaseの結合結果が配列で返るため、インターフェースに合わせて平坦化する
-    const formattedData = data?.map(item => ({
-      ...item,
-      com_m_contents: Array.isArray(item.com_m_contents) ? item.com_m_contents[0] : item.com_m_contents
-    })) || [];
+    const formattedData =
+      data?.map((item) => ({
+        ...item,
+        com_m_contents: Array.isArray(item.com_m_contents) ? item.com_m_contents[0] : item.com_m_contents,
+      })) || [];
 
-    logger.debug("word:get_history_success", "Successfully fetched word summary history", {
+    logger.debug('word:get_history_success', 'Successfully fetched word summary history', {
       ...ctx,
       payload: { count: formattedData.length },
     });
 
     return { success: true, data: formattedData as WordSummaryHistoryItem[] };
-
   } catch (error) {
-    logger.error("word:get_history_failed", "Failed to fetch word summary history", {
+    logger.error('word:get_history_failed', 'Failed to fetch word summary history', {
       ...ctx,
       err: error,
     });

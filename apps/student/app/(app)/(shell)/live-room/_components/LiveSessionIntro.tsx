@@ -2,7 +2,11 @@ import Link from 'next/link';
 import { ArrowRight, ExternalLink, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
-import { LIVE_SESSION_INTRO, type LiveSessionIntroAction, type LiveSessionIntroAudience } from '@/constants/liveSessionIntro';
+import {
+  LIVE_SESSION_INTRO,
+  type LiveSessionIntroAction,
+  type LiveSessionIntroAudience,
+} from '@/constants/liveSessionIntro';
 
 /**
  * ライブセッション紹介（アップセル）画面。
@@ -48,12 +52,19 @@ export function LiveSessionIntro() {
               <h2 className="text-sm font-bold text-ink">ご利用の流れ</h2>
               <ol className="grid grid-cols-3 gap-2">
                 {steps.map((step, index) => (
-                  <li key={step.title} className="rounded-control border border-line/60 bg-canvas/70 px-2 py-3 sm:p-3 text-center">
+                  <li
+                    key={step.title}
+                    className="rounded-control border border-line/60 bg-canvas/70 px-2 py-3 sm:p-3 text-center"
+                  >
                     <span className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
                       {index + 1}
                     </span>
-                    <p className="mt-2 text-[13px] sm:text-sm font-bold text-ink [word-break:auto-phrase]">{step.title}</p>
-                    <p className="mt-1 text-[11px] leading-snug text-ink-muted [word-break:auto-phrase]">{step.description}</p>
+                    <p className="mt-2 text-[13px] sm:text-sm font-bold text-ink [word-break:auto-phrase]">
+                      {step.title}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-ink-muted [word-break:auto-phrase]">
+                      {step.description}
+                    </p>
                   </li>
                 ))}
               </ol>
@@ -96,9 +107,9 @@ function IntroActionLink({ action }: { action: LiveSessionIntroAction }) {
   const className = cn(
     'flex min-h-12 w-full items-center justify-center gap-2 rounded-control px-4 py-3 text-center text-sm font-bold transition-all active:scale-[0.98]',
     action.variant === 'primary'
-      // 料金ページへの導線はコーポレートサイトの CTA と揃えてゴールドにする
-      ? 'bg-gold text-brand-deep shadow-sm hover:brightness-95'
-      : 'border border-line bg-surface text-brand hover:border-brand-200 hover:bg-brand-soft'
+      ? // 料金ページへの導線はコーポレートサイトの CTA と揃えてゴールドにする
+        'bg-gold text-brand-deep shadow-sm hover:brightness-95'
+      : 'border border-line bg-surface text-brand hover:border-brand-200 hover:bg-brand-soft',
   );
 
   if (action.href.startsWith('mailto:')) {

@@ -1,5 +1,10 @@
 import { IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS } from './matching';
-import { IncomingRescheduleProposalGroup, RESCHEDULE_PROPOSAL_STATUS, SESSION_BOOKING_REQUEST_STATUS, SessionBookingRequest } from './session';
+import {
+  IncomingRescheduleProposalGroup,
+  RESCHEDULE_PROPOSAL_STATUS,
+  SESSION_BOOKING_REQUEST_STATUS,
+  SessionBookingRequest,
+} from './session';
 
 /**
  * ----------------------------------------------

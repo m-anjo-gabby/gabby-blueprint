@@ -11,11 +11,5 @@ interface WordFeedbackProps {
 }
 
 export const WordFeedback: React.FC<WordFeedbackProps> = (props) => (
-  <SpeechFeedbackModal
-    {...props}
-    variant="word"
-    title="発話の分析"
-    adviceTitle="改善のヒント"
-    interactive
-  />
+  <SpeechFeedbackModal {...props} variant="word" title="発話の分析" adviceTitle="改善のヒント" interactive />
 );

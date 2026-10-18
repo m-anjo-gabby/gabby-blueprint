@@ -23,7 +23,12 @@ export async function MonthlyReportSection({ yearMonth }: { yearMonth: string })
     <>
       <SummaryCard
         report={result.report}
-        timezoneName={pickTimezoneName(result.report.coach_timezone, timezoneNames.get(result.report.coach_timezone), 'display', 'en')}
+        timezoneName={pickTimezoneName(
+          result.report.coach_timezone,
+          timezoneNames.get(result.report.coach_timezone),
+          'display',
+          'en',
+        )}
       />
       <MonthlyReportGrid report={result.report} />
     </>

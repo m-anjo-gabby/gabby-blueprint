@@ -78,7 +78,9 @@ export function UserBasicInfoForm({ user, clients, roles }: Props) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-        {isInviting && <p className="rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-700">{tDetail('invitingNote')}</p>}
+        {isInviting && (
+          <p className="rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-700">{tDetail('invitingNote')}</p>
+        )}
 
         <UserBasicFields clients={clients} roles={roles} disabled={isInviting} emailLocked />
 
@@ -91,7 +93,13 @@ export function UserBasicInfoForm({ user, clients, roles }: Props) {
 
         <div className="flex justify-end">
           {isInviting ? (
-            <Button type="button" variant="outline" pending={isResending} icon={<Mail size={14} />} onClick={handleResendInvite}>
+            <Button
+              type="button"
+              variant="outline"
+              pending={isResending}
+              icon={<Mail size={14} />}
+              onClick={handleResendInvite}
+            >
               {t('resendInvite')}
             </Button>
           ) : (

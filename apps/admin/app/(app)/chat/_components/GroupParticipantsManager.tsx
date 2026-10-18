@@ -78,7 +78,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
           value: u.id,
           label: `${u.user_name || tCommon('unnamed')}${u.client_id ? ` - ${clientNameById.get(u.client_id) || tCommon('unknownClient')}` : ''}`,
         })),
-    [candidateUsers, currentMemberIds, addUserType, addClientId, clientNameById, tCommon]
+    [candidateUsers, currentMemberIds, addUserType, addClientId, clientNameById, tCommon],
   );
 
   const handleAdd = async () => {
@@ -106,7 +106,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
     const ok = await showConfirm(
       t('removeConfirmTitle'),
       t('removeConfirmBody', { name: member.user_name || tCommon('unnamed') }),
-      { variant: 'danger', isModal: true }
+      { variant: 'danger', isModal: true },
     );
     if (!ok) return;
 

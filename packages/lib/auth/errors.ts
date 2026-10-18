@@ -53,9 +53,12 @@ export const AUTH_ERROR_MESSAGES_JA: Record<AuthErrorCode, string> = {
   password_too_short: 'パスワードは8文字以上で入力してください。',
   password_needs_alnum: 'パスワードには英字と数字を両方含めてください。',
   password_same_as_old: '新しいパスワードは現在と同じものは使用できません。',
-  password_leaked: 'このパスワードは過去にデータ漏洩の被害に遭った可能性があるため使用できません。他のパスワードを指定してください。',
-  password_weak: 'このパスワードは単純すぎるか推測されやすいため使用できません。より複雑なパスワードを設定してください。',
-  session_invalid: '認証セッションが無効、または期限が切れています。一度ログアウトして再度ログインしてからお試しください。',
+  password_leaked:
+    'このパスワードは過去にデータ漏洩の被害に遭った可能性があるため使用できません。他のパスワードを指定してください。',
+  password_weak:
+    'このパスワードは単純すぎるか推測されやすいため使用できません。より複雑なパスワードを設定してください。',
+  session_invalid:
+    '認証セッションが無効、または期限が切れています。一度ログアウトして再度ログインしてからお試しください。',
   password_update_failed: 'パスワードの更新に失敗しました。',
   session_timeout: 'セッションがタイムアウトしました。再度ログインしてください。',
   current_password_incorrect: '現在のパスワードが正しくありません。',

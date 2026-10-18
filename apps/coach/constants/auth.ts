@@ -38,7 +38,8 @@ export const AUTH_LABELS: AuthLabels = {
     submit: 'Sign in',
     submitting: 'Signing in...',
     invalidLinkTitle: 'This link is invalid',
-    invalidLinkBody: 'This reset link has already been used or has expired. Would you like to send another reset email?',
+    invalidLinkBody:
+      'This reset link has already been used or has expired. Would you like to send another reset email?',
     linkErrorNotice: "We couldn't verify the link. Please try again or contact your administrator.",
   },
   forgotPassword: {

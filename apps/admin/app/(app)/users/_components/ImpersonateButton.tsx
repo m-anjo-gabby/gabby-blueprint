@@ -1,14 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { LogIn, Loader2, AlertTriangle } from 'lucide-react';
@@ -97,9 +90,7 @@ export function ImpersonateButton({ user, compact = false }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              {t('reasonLabel')}
-            </label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('reasonLabel')}</label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}

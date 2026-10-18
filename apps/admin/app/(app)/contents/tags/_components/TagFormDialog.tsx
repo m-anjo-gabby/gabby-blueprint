@@ -94,7 +94,7 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
       const result = await upsertTag(payload);
 
       if (result.success) {
-        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), "success");
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success');
         setOpen(false);
         setIsConfirming(false);
       } else {
@@ -123,31 +123,38 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
             <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
             <Edit size={14} /> {t('editButton')}
           </Button>
         )}
       </DialogTrigger>
 
-      <DialogContent
-        className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100"
-      >
+      <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100">
         {/* ダークヘッダー: 他の管理画面ダイアログと統一したネガティブマージン設定 */}
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
+              <>
+                <CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}
+              </>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
+              <>
+                <PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}
+              </>
             ) : (
-              <><Edit size={18} className="text-brand-400" /> {t('editTitle')}</>
+              <>
+                <Edit size={18} className="text-brand-400" /> {t('editTitle')}
+              </>
             )}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white">
-            
             {/* 編集モード時のみ UUID を参考情報として表示 */}
             {mode === 'edit' && !isConfirming && (
               <div className="mb-2">
@@ -157,65 +164,87 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
             )}
 
             {/* --- タグ名称 --- */}
-            <FormField control={form.control} name="tag_name" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameLabel')}</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
-                    {field.value}
-                  </div>
-                ) : (
-                  <FormControl>
-                    <Input {...field} placeholder={t('namePlaceholder')} className="bg-white rounded-xl border-slate-200" />
-                  </FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* --- タイプ --- */}
-              <FormField control={form.control} name="tag_type" render={({ field }) => (
+            <FormField
+              control={form.control}
+              name="tag_name"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('typeLabel')}</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {t('nameLabel')}
+                  </FormLabel>
                   {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                      {TAG_TYPES[field.value as TagType]?.label || field.value}
-                    </div>
-                  ) : (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-white rounded-xl border-slate-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.entries(TAG_TYPES).map(([value, info]) => (
-                          <SelectItem key={value} value={value}>
-                            {info.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </FormItem>
-              )} />
-
-              {/* --- 表示順 --- */}
-              <FormField control={form.control} name="seq_no" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('seqLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                       {field.value}
                     </div>
                   ) : (
                     <FormControl>
-                      <Input {...field} type="number" className="bg-white rounded-xl border-slate-200" />
+                      <Input
+                        {...field}
+                        placeholder={t('namePlaceholder')}
+                        className="bg-white rounded-xl border-slate-200"
+                      />
                     </FormControl>
                   )}
+                  <FormMessage />
                 </FormItem>
-              )} />
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* --- タイプ --- */}
+              <FormField
+                control={form.control}
+                name="tag_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('typeLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                        {TAG_TYPES[field.value as TagType]?.label || field.value}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(TAG_TYPES).map(([value, info]) => (
+                            <SelectItem key={value} value={value}>
+                              {info.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )}
+              />
+
+              {/* --- 表示順 --- */}
+              <FormField
+                control={form.control}
+                name="seq_no"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('seqLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                        {field.value}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Input {...field} type="number" className="bg-white rounded-xl border-slate-200" />
+                      </FormControl>
+                    )}
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* --- アクションエリア --- */}
@@ -226,8 +255,12 @@ export function TagFormDialog({ mode = 'create', initialData }: TagFormDialogPro
                     {t('confirmQuestion', { action: mode === 'create' ? t('actionCreate') : t('actionUpdate') })}
                   </p>
                   {serverError && (
-                    <Alert variant="destructive" className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600">
-                      <AlertCircle size={14} />{serverError}
+                    <Alert
+                      variant="destructive"
+                      className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600"
+                    >
+                      <AlertCircle size={14} />
+                      {serverError}
                     </Alert>
                   )}
                   <div className="flex gap-3">

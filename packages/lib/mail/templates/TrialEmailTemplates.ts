@@ -148,11 +148,17 @@ export function buildTrialApplicationNotifyMail({
           kind: 'paragraph',
           text: 'Webトライアルの申込がありました。\nA new web trial application has been received.',
         },
-        ...(label.note ? [{ kind: 'notice' as const, items: [{ title: `${label.ja} / ${label.en}`, text: label.note }] }] : []),
+        ...(label.note
+          ? [{ kind: 'notice' as const, items: [{ title: `${label.ja} / ${label.en}`, text: label.note }] }]
+          : []),
         {
           kind: 'details',
           rows: [
-            { label: '種類 / Type', value: `${label.ja} / ${label.en}`, sub: applyCount > 1 ? `${applyCount}回目 / #${applyCount}` : null },
+            {
+              label: '種類 / Type',
+              value: `${label.ja} / ${label.en}`,
+              sub: applyCount > 1 ? `${applyCount}回目 / #${applyCount}` : null,
+            },
             { label: '申込日時 / Applied at', value: `${appliedAt}（日本時間 / JST）` },
             { label: '氏名 / Name', value: name, sub: nameLatin },
             { label: 'メール / Email', value: input.email },
@@ -170,7 +176,12 @@ export function buildTrialApplicationNotifyMail({
             { label: '国・都市 / Country, city', value: input.countryCity || '—' },
           ],
         },
-        ...(input.message ? [{ kind: 'title' as const, text: 'ご要望・ご質問 / Message' }, { kind: 'quote' as const, text: input.message }] : []),
+        ...(input.message
+          ? [
+              { kind: 'title' as const, text: 'ご要望・ご質問 / Message' },
+              { kind: 'quote' as const, text: input.message },
+            ]
+          : []),
         ...(adminUrl ? [{ kind: 'button' as const, label: '申込一覧を開く / Open applications', href: adminUrl }] : []),
       ],
       footer: [

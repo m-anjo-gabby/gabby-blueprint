@@ -52,7 +52,7 @@ export function SeriesCreateForm({ initialValues, cancelHref, coaches, clients }
           ...createSeriesSessionsShape(t),
         })
         .superRefine(refineSeriesSessions(t)),
-    [t]
+    [t],
   );
   const router = useRouter();
   const { showToast } = useToast();
@@ -64,7 +64,11 @@ export function SeriesCreateForm({ initialValues, cancelHref, coaches, clients }
   const onSubmit = (values: SeriesCreateValues) => {
     startTransition(async () => {
       const { common, rows } = toSeriesSessionsPayload(values);
-      const result = await createCalendarEventSeries({ title: values.title, description: values.description }, common, rows);
+      const result = await createCalendarEventSeries(
+        { title: values.title, description: values.description },
+        common,
+        rows,
+      );
       if (!result.success) {
         showToast(t('toastCreateFailed'), 'error');
         return;

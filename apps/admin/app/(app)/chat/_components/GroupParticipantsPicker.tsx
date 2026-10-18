@@ -21,7 +21,13 @@ interface GroupParticipantsPickerProps {
   disabled?: boolean;
 }
 
-export function GroupParticipantsPicker({ users, clients, selectedIds, onChange, disabled }: GroupParticipantsPickerProps) {
+export function GroupParticipantsPicker({
+  users,
+  clients,
+  selectedIds,
+  onChange,
+  disabled,
+}: GroupParticipantsPickerProps) {
   const t = useTranslations('chat.groupParticipantsPicker');
   const tCommon = useTranslations('chat.common');
   const ALL_CLIENTS_OPTION = { value: '', label: tCommon('allClientsOption') };
@@ -94,7 +100,9 @@ export function GroupParticipantsPicker({ users, clients, selectedIds, onChange,
                     {u.user_name || tCommon('unnamed')}
                     {u.client_id ? ` - ${clientNameById.get(u.client_id) || tCommon('unknownClient')}` : ''}
                   </span>
-                  <span className="ml-auto pl-2 text-[10px] text-slate-400 shrink-0">{getUserTypeLabel(u.user_type)}</span>
+                  <span className="ml-auto pl-2 text-[10px] text-slate-400 shrink-0">
+                    {getUserTypeLabel(u.user_type)}
+                  </span>
                 </CommandItem>
               );
             })}

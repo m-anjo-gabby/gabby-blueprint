@@ -72,7 +72,9 @@ export function TodayFocusCard({ focus, onClearResume }: TodayFocusCardProps) {
 
       <p className="relative text-xs font-semibold tracking-wide text-brand-100">{view.eyebrow}</p>
 
-      <h2 className="relative mt-2 text-xl sm:text-2xl font-bold leading-snug tracking-tight line-clamp-2">{view.title}</h2>
+      <h2 className="relative mt-2 text-xl sm:text-2xl font-bold leading-snug tracking-tight line-clamp-2">
+        {view.title}
+      </h2>
       {view.description && <p className="relative mt-2 text-sm text-white/85">{view.description}</p>}
 
       {view.progressPercent !== undefined && (

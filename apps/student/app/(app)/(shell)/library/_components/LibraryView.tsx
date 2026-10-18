@@ -9,7 +9,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 // Components
 import { ContentCard } from '@/components/common/ContentCard';
 import { PillTabs } from '@/components/shell/PillTabs';
-import { Input } from "@/components/ui/input";
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { FavoriteOnlyToggle } from './FavoriteOnlyToggle';
 
@@ -71,16 +71,16 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
   // 種別タブの件数は、お気に入りで絞り込み中はお気に入りの中での件数にする
   const scopedContents = useMemo(
     () => (favoriteOnly ? allContents.filter((c) => c.is_favorite) : allContents),
-    [allContents, favoriteOnly]
+    [allContents, favoriteOnly],
   );
   const typeTabs = useMemo(() => buildTypeTabs(scopedContents), [scopedContents]);
 
   // --- Logic: フィルタリングロジック ---
   const filteredList = useMemo(() => {
-    return scopedContents.filter(c => {
+    return scopedContents.filter((c) => {
       const matchesSearch = c.content_name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesType = selectedType === 'All' || String(c.content_type) === selectedType;
-      const matchesTag = selectedTag === 'All' || c.display_tags.some(t => t.tag_name === selectedTag);
+      const matchesTag = selectedTag === 'All' || c.display_tags.some((t) => t.tag_name === selectedTag);
       return matchesSearch && matchesType && matchesTag;
     });
   }, [scopedContents, searchQuery, selectedType, selectedTag]);
@@ -91,7 +91,7 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
    */
   const handleToggleFavorite = async (contentId: string, currentState: boolean) => {
     const nextState = !currentState;
-    const content = allContents.find(c => c.content_id === contentId);
+    const content = allContents.find((c) => c.content_id === contentId);
     const contentName = content?.content_name || '教材';
 
     // 1. 楽観的アップデート
@@ -108,10 +108,8 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
 
     // 4. 成功時のトースト通知
     showToast(
-      nextState 
-        ? `「${contentName}」をお気に入りに追加しました` 
-        : `「${contentName}」をお気に入りから解除しました`, 
-      'success'
+      nextState ? `「${contentName}」をお気に入りに追加しました` : `「${contentName}」をお気に入りから解除しました`,
+      'success',
     );
   };
 
@@ -119,13 +117,15 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
     <>
       {/* 1. ヘッダーエリア（検索・種別タブはスクロールしても上部に固定） */}
       <ShellPageHeader title="教材" titleHidden>
-
         {/* 検索バー */}
         <div className="flex gap-2">
           <div className="relative flex-1 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-brand transition-colors" size={18} />
-            <Input 
-              placeholder="教材を検索..." 
+            <Search
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle group-focus-within:text-brand transition-colors"
+              size={18}
+            />
+            <Input
+              placeholder="教材を検索..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               // iOSズーム防止の text-base
@@ -134,11 +134,16 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
           </div>
           <FavoriteOnlyToggle pressed={favoriteOnly} onPressedChange={setFavoriteOnly} />
           {(searchQuery || selectedType !== 'All' || selectedTag !== 'All' || favoriteOnly) && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               aria-label="条件をクリア"
-              onClick={() => { setSearchQuery(''); setSelectedType('All'); setSelectedTag('All'); setFavoriteOnly(false); }} 
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedType('All');
+                setSelectedTag('All');
+                setFavoriteOnly(false);
+              }}
               className="rounded-control text-ink-muted hover:bg-surface hover:text-ink"
             >
               <X size={20} />
@@ -163,7 +168,7 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
         <AnimatePresence mode="popLayout" initial={false}>
           {filteredList.length > 0 ? (
             <div className="grid gap-4 lg:grid-cols-2">
-              {filteredList.map(content => (
+              {filteredList.map((content) => (
                 <motion.div
                   key={content.content_id}
                   layout
@@ -172,7 +177,7 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
                   exit={{ opacity: 0, scale: 0.95 }}
                   className="h-full"
                 >
-                  <ContentCard 
+                  <ContentCard
                     content={content}
                     onToggleFavorite={handleToggleFavorite}
                     onStart={(c) => router.push(getTrainingPath(c))}
@@ -181,7 +186,7 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
               ))}
             </div>
           ) : (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center py-32 text-ink-subtle space-y-4"

@@ -13,7 +13,10 @@ const MAX_BODY_LENGTH = 16_000;
 const RATE_LIMIT_PER_MINUTE = 60;
 
 const bodySchema = z.object({
-  event: z.string().max(100).regex(/^[a-z][A-Za-z0-9]*:[a-z0-9_]+$/),
+  event: z
+    .string()
+    .max(100)
+    .regex(/^[a-z][A-Za-z0-9]*:[a-z0-9_]+$/),
   level: z.enum(['info', 'warn', 'error']),
   message: z.string().max(1000),
   path: z.string().max(300).optional(),

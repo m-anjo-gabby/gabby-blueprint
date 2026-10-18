@@ -77,7 +77,7 @@ export function buildCurrentWeek(activities: TrainingActivity[], timeZone: strin
 export function resolveStreakDays(
   stats: { current_streak_days: number; last_training_date: string | null } | null,
   timeZone: string,
-  nowMs: number
+  nowMs: number,
 ): number {
   if (!stats?.last_training_date) return 0;
   const todayIso = toIsoDateInZone(nowMs, timeZone);

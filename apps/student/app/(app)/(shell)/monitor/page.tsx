@@ -1,8 +1,4 @@
-import {
-  getMonitorUserList,
-  getMonitorWordHistory,
-  getMonitorSprintHistory,
-} from '@/actions/monitorAction';
+import { getMonitorUserList, getMonitorWordHistory, getMonitorSprintHistory } from '@/actions/monitorAction';
 import { MonitorHeader } from './_components/MonitorHeader';
 import { MonitorUserList } from './_components/MonitorUserList';
 import { MonitorWordHistoryView } from './_components/MonitorWordHistoryView';

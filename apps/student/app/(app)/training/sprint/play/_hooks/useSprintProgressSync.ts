@@ -30,7 +30,7 @@ export function useSprintProgressSync(contentId: string | null, questionType: st
         contentIdRef.current,
         questionCount,
         assessmentCount,
-        (questionTypeRef.current || '0') as SprintQuestionType
+        (questionTypeRef.current || '0') as SprintQuestionType,
       );
     }
   }, []);

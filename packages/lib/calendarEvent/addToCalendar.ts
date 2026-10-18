@@ -5,7 +5,10 @@ import { CALENDAR_EVENT_DEFAULT_DURATION_MS, type CalendarEventItem } from '@gab
  * 日時は UTC（末尾 Z）で渡すため、受け取ったカレンダー側で利用者のタイムゾーンに変換される。
  * 参加URLは参加登録した人にだけ渡す（呼び出し側で locationUrl を指定した場合だけ含める）。
  */
-type AddToCalendarEvent = Pick<CalendarEventItem, 'calendar_event_id' | 'title' | 'description' | 'start_datetime' | 'end_datetime'>;
+type AddToCalendarEvent = Pick<
+  CalendarEventItem,
+  'calendar_event_id' | 'title' | 'description' | 'start_datetime' | 'end_datetime'
+>;
 
 interface AddToCalendarOptions {
   locationUrl?: string | null;
@@ -13,12 +16,17 @@ interface AddToCalendarOptions {
 
 /** 20261012T110000Z 形式（Google カレンダー・iCalendar 共通） */
 function toCalendarUtc(ms: number): string {
-  return new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  return new Date(ms)
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}/, '');
 }
 
 function getRange(event: AddToCalendarEvent): { start: string; end: string } {
   const startMs = new Date(event.start_datetime).getTime();
-  const endMs = event.end_datetime ? new Date(event.end_datetime).getTime() : startMs + CALENDAR_EVENT_DEFAULT_DURATION_MS;
+  const endMs = event.end_datetime
+    ? new Date(event.end_datetime).getTime()
+    : startMs + CALENDAR_EVENT_DEFAULT_DURATION_MS;
   return { start: toCalendarUtc(startMs), end: toCalendarUtc(endMs) };
 }
 

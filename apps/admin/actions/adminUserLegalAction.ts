@@ -42,7 +42,11 @@ export async function getUserLegalName(userId: string): Promise<GetUserLegalName
   if (!z.uuid().safeParse(userId).success) return { success: false };
 
   const supabase = await createServerClient();
-  const { data, error } = await supabase.from('com_m_user_legal').select(LEGAL_NAME_SELECT).eq('user_id', userId).maybeSingle();
+  const { data, error } = await supabase
+    .from('com_m_user_legal')
+    .select(LEGAL_NAME_SELECT)
+    .eq('user_id', userId)
+    .maybeSingle();
   if (error) {
     logger.error('user_legal:get_failed', error.message, { ...ctx, err: error, payload: { userId } });
     return { success: false };
@@ -88,7 +92,7 @@ export async function saveUserLegalName(input: {
         updated_by: admin?.id ?? null,
         update_date: new Date().toISOString(),
       },
-      { onConflict: 'user_id' }
+      { onConflict: 'user_id' },
     );
     if (error) {
       logger.error('user_legal:save_failed', error.message, { ...ctx, err: error, payload: { userId } });

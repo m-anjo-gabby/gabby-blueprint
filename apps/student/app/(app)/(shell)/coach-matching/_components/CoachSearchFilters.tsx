@@ -79,7 +79,7 @@ export function CoachSearchFilters({
               'w-9 h-9 rounded-control text-xs font-bold transition-colors border',
               selectedDays.has(day)
                 ? 'bg-brand border-brand text-white'
-                : 'bg-canvas border-line/70 text-ink-muted hover:bg-brand-soft'
+                : 'bg-canvas border-line/70 text-ink-muted hover:bg-brand-soft',
             )}
           >
             {DAY_OF_WEEK_LABEL_JA[day].slice(0, 1)}
@@ -98,7 +98,7 @@ export function CoachSearchFilters({
               'h-9 px-3 rounded-control text-xs font-bold transition-colors border',
               selectedTimeBuckets.has(bucket.key)
                 ? 'bg-brand border-brand text-white'
-                : 'bg-canvas border-line/70 text-ink-muted hover:bg-brand-soft'
+                : 'bg-canvas border-line/70 text-ink-muted hover:bg-brand-soft',
             )}
           >
             {bucket.label}
@@ -123,7 +123,7 @@ export function CoachSearchFilters({
                     'inline-flex items-center gap-1 h-9 px-3 rounded-control text-xs font-bold transition-colors border',
                     selected
                       ? 'bg-brand border-brand text-white'
-                      : 'bg-canvas border-line/70 text-ink-muted hover:bg-brand-soft'
+                      : 'bg-canvas border-line/70 text-ink-muted hover:bg-brand-soft',
                   )}
                 >
                   {specialty.kind === 'skill' && <AudioLines size={13} aria-hidden />}

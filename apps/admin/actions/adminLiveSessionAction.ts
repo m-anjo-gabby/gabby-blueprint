@@ -46,7 +46,11 @@ export async function getClientStudents(clientId: string): Promise<GetClientStud
       .order('user_name');
 
     if (error) {
-      logger.error('liveSession:get_client_students_failed', error.message, { ...ctx, err: error, payload: { clientId } });
+      logger.error('liveSession:get_client_students_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { clientId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -56,7 +60,11 @@ export async function getClientStudents(clientId: string): Promise<GetClientStud
 
     return { success: true, students };
   } catch (err) {
-    logger.error('liveSession:get_client_students_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { clientId } });
+    logger.error('liveSession:get_client_students_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { clientId },
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -79,7 +87,11 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
       .eq('user_id', studentId);
 
     if (ticketError) {
-      logger.error('liveSession:get_student_contracts_ticket_failed', ticketError.message, { ...ctx, err: ticketError, payload: { studentId } });
+      logger.error('liveSession:get_student_contracts_ticket_failed', ticketError.message, {
+        ...ctx,
+        err: ticketError,
+        payload: { studentId },
+      });
       return [];
     }
     if (!tickets || tickets.length === 0) return [];
@@ -88,19 +100,33 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
       supabase
         .from('com_t_user_license')
         .select('license_id, status, start_date, end_date')
-        .in('license_id', tickets.map((t) => t.license_id)),
+        .in(
+          'license_id',
+          tickets.map((t) => t.license_id),
+        ),
       supabase
         .from('com_m_contract')
         .select('contract_id, contract_name, plan_name')
-        .in('contract_id', tickets.map((t) => t.contract_id)),
+        .in(
+          'contract_id',
+          tickets.map((t) => t.contract_id),
+        ),
     ]);
 
     if (licenseError) {
-      logger.error('liveSession:get_student_contracts_license_failed', licenseError.message, { ...ctx, err: licenseError, payload: { studentId } });
+      logger.error('liveSession:get_student_contracts_license_failed', licenseError.message, {
+        ...ctx,
+        err: licenseError,
+        payload: { studentId },
+      });
       return [];
     }
     if (contractError) {
-      logger.error('liveSession:get_student_contracts_contract_failed', contractError.message, { ...ctx, err: contractError, payload: { studentId } });
+      logger.error('liveSession:get_student_contracts_contract_failed', contractError.message, {
+        ...ctx,
+        err: contractError,
+        payload: { studentId },
+      });
       return [];
     }
 
@@ -112,7 +138,8 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
       .map((t) => {
         const license = licenseById.get(t.license_id);
         if (!license) return null;
-        const isCurrent = license.status === 1 && new Date(license.start_date) <= now && now <= new Date(license.end_date);
+        const isCurrent =
+          license.status === 1 && new Date(license.start_date) <= now && now <= new Date(license.end_date);
         return {
           ticket_id: t.ticket_id,
           license_id: t.license_id,
@@ -129,7 +156,11 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
       .filter((c): c is AdminContractSummary => c !== null)
       .sort((a, b) => b.start_date.localeCompare(a.start_date));
   } catch (err) {
-    logger.error('liveSession:get_student_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { studentId } });
+    logger.error('liveSession:get_student_contracts_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { studentId },
+    });
     return [];
   }
 }
@@ -145,12 +176,18 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
 
     const { data: schedules, error } = await supabase
       .from('com_m_lesson_schedule')
-      .select('schedule_id, ticket_id, slot_no, day_of_week, start_time, end_time, schedule_timezone, coach_id, status, target_sessions')
+      .select(
+        'schedule_id, ticket_id, slot_no, day_of_week, start_time, end_time, schedule_timezone, coach_id, status, target_sessions',
+      )
       .eq('ticket_id', ticketId)
       .order('slot_no', { ascending: true });
 
     if (error) {
-      logger.error('liveSession:get_schedule_slots_failed', error.message, { ...ctx, err: error, payload: { ticketId } });
+      logger.error('liveSession:get_schedule_slots_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { ticketId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -166,7 +203,11 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
     // （「セッションを予約」ボタンの表示可否に使用）
     const [shortfallResults, timezoneNames] = await Promise.all([
       Promise.all(
-        rows.map((s) => (s.status === 1 ? supabase.rpc('fn_schedule_shortfall', { p_schedule_id: s.schedule_id }).single() : Promise.resolve(null)))
+        rows.map((s) =>
+          s.status === 1
+            ? supabase.rpc('fn_schedule_shortfall', { p_schedule_id: s.schedule_id }).single()
+            : Promise.resolve(null),
+        ),
       ),
       getTimezoneNameMap(),
     ]);
@@ -183,7 +224,11 @@ export async function getScheduleSlotsForTicket(ticketId: string): Promise<GetSc
 
     return { success: true, slots };
   } catch (err) {
-    logger.error('liveSession:get_schedule_slots_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { ticketId } });
+    logger.error('liveSession:get_schedule_slots_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { ticketId },
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -198,12 +243,18 @@ export async function getSessionsForTicket(ticketId: string): Promise<AdminSessi
 
     const { data: sessions, error } = await supabase
       .from('com_t_session')
-      .select('session_id, schedule_id, start_datetime, end_datetime, status, completion_result, cancel_category, rescheduled_from, cancel_reason, status_note, coach_id, conducted_via, outcome_mismatch')
+      .select(
+        'session_id, schedule_id, start_datetime, end_datetime, status, completion_result, cancel_category, rescheduled_from, cancel_reason, status_note, coach_id, conducted_via, outcome_mismatch',
+      )
       .eq('ticket_id', ticketId)
       .order('start_datetime', { ascending: false });
 
     if (error) {
-      logger.error('liveSession:get_sessions_for_ticket_failed', error.message, { ...ctx, err: error, payload: { ticketId } });
+      logger.error('liveSession:get_sessions_for_ticket_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { ticketId },
+      });
       return [];
     }
 
@@ -217,7 +268,11 @@ export async function getSessionsForTicket(ticketId: string): Promise<AdminSessi
 
     return rows.map((s) => ({ ...s, coach_name: nameById.get(s.coach_id) ?? '(Unknown)' }));
   } catch (err) {
-    logger.error('liveSession:get_sessions_for_ticket_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { ticketId } });
+    logger.error(
+      'liveSession:get_sessions_for_ticket_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err, payload: { ticketId } },
+    );
     return [];
   }
 }
@@ -235,16 +290,27 @@ export async function releaseLessonScheduleSlot(scheduleId: string): Promise<Rel
     const { error } = await supabase.rpc('release_lesson_schedule_slot', { p_schedule_id: scheduleId });
 
     if (error) {
-      logger.error('liveSession:release_schedule_slot_failed', error.message, { ...ctx, err: error, payload: { scheduleId } });
+      logger.error('liveSession:release_schedule_slot_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { scheduleId },
+      });
       return { success: false, errorCode: 'unexpected_error', message: error.message };
     }
 
-    logger.info('liveSession:release_schedule_slot_success', 'Lesson schedule slot released', { ...ctx, payload: { scheduleId } });
+    logger.info('liveSession:release_schedule_slot_success', 'Lesson schedule slot released', {
+      ...ctx,
+      payload: { scheduleId },
+    });
 
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:release_schedule_slot_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { scheduleId } });
+    logger.error('liveSession:release_schedule_slot_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { scheduleId },
+    });
     return { success: false, errorCode: 'unexpected_error', message: '予期せぬエラーが発生しました' };
   }
 }
@@ -269,7 +335,10 @@ export async function getCoachesForMatching(): Promise<AdminCoachSummary[]> {
 
     return (data ?? []).map((c) => ({ id: c.id, user_name: c.user_name ?? '(Unknown)' }));
   } catch (err) {
-    logger.error('liveSession:get_coaches_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('liveSession:get_coaches_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return [];
   }
 }
@@ -287,7 +356,11 @@ export async function getCoachesForMatching(): Promise<AdminCoachSummary[]> {
  * チケット返還の可否は12時間ルール等を適用せず、管理者が明示的に指定する
  * （cancel_session側のp_admin_refund_ticket。詳細はDDLコメント参照）。
  */
-export async function cancelSessionAsAdmin(sessionId: string, refundTicket: boolean, reason?: string): Promise<AdminSessionActionResult> {
+export async function cancelSessionAsAdmin(
+  sessionId: string,
+  refundTicket: boolean,
+  reason?: string,
+): Promise<AdminSessionActionResult> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -300,14 +373,22 @@ export async function cancelSessionAsAdmin(sessionId: string, refundTicket: bool
     });
 
     if (error) {
-      logger.error('liveSession:cancel_as_admin_failed', error.message, { ...ctx, err: error, payload: { sessionId, refundTicket } });
+      logger.error('liveSession:cancel_as_admin_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { sessionId, refundTicket },
+      });
       return { success: false, message: error.message };
     }
 
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:cancel_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { sessionId } });
+    logger.error('liveSession:cancel_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { sessionId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -325,7 +406,11 @@ export async function cancelSessionAsAdmin(sessionId: string, refundTicket: bool
  * 予約するという「キャンセル＋予約」の2操作に統一する（生徒・コーチと同じ操作の型に揃え、
  * 管理者専用の特殊経路を極力減らす）。
  */
-export async function bookMakeupSessionAsAdmin(scheduleId: string, startIso: string, endIso: string): Promise<AdminSessionActionResult> {
+export async function bookMakeupSessionAsAdmin(
+  scheduleId: string,
+  startIso: string,
+  endIso: string,
+): Promise<AdminSessionActionResult> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -336,14 +421,22 @@ export async function bookMakeupSessionAsAdmin(scheduleId: string, startIso: str
     });
 
     if (error) {
-      logger.error('liveSession:book_makeup_as_admin_failed', error.message, { ...ctx, err: error, payload: { scheduleId, startIso, endIso } });
+      logger.error('liveSession:book_makeup_as_admin_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { scheduleId, startIso, endIso },
+      });
       return { success: false, message: error.message };
     }
 
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:book_makeup_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { scheduleId } });
+    logger.error('liveSession:book_makeup_as_admin_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { scheduleId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -379,10 +472,17 @@ export async function matchStudentWithCoachAsAdmin(params: {
       }
       // 直接マッチングは予約できる回数の割合の基準を適用しない（重なる回は飛ばして作る）。1回も予約できない場合だけ失敗する
       if (error.message?.includes('NO_REMAINING_SESSIONS')) {
-        return { success: false, message: 'この枠は、コーチ交代前のセッションで契約の回数を使い切っているため、マッチングできません' };
+        return {
+          success: false,
+          message: 'この枠は、コーチ交代前のセッションで契約の回数を使い切っているため、マッチングできません',
+        };
       }
       if (error.message?.includes('NO_BOOKABLE_SESSION')) {
-        return { success: false, message: 'このコーチの指定の時間帯は、契約期間内に予約できる回がありません（全ての回が他の予定と重なっています）' };
+        return {
+          success: false,
+          message:
+            'このコーチの指定の時間帯は、契約期間内に予約できる回がありません（全ての回が他の予定と重なっています）',
+        };
       }
       return { success: false, message: error.message };
     }
@@ -390,7 +490,11 @@ export async function matchStudentWithCoachAsAdmin(params: {
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:admin_match_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: params });
+    logger.error('liveSession:admin_match_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: params,
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -409,7 +513,7 @@ export async function matchStudentWithCoachAsAdmin(params: {
 export async function adjustTargetSessionsAsAdmin(
   scheduleId: string,
   newTargetSessions: number,
-  reason: string
+  reason: string,
 ): Promise<AdminSessionActionResult> {
   const ctx = await getLogContext();
   try {
@@ -421,16 +525,27 @@ export async function adjustTargetSessionsAsAdmin(
     });
 
     if (error) {
-      logger.error('liveSession:adjust_target_sessions_failed', error.message, { ...ctx, err: error, payload: { scheduleId, newTargetSessions, reason } });
+      logger.error('liveSession:adjust_target_sessions_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { scheduleId, newTargetSessions, reason },
+      });
       return { success: false, message: error.message };
     }
 
-    logger.info('liveSession:adjust_target_sessions_success', 'Schedule target_sessions adjusted', { ...ctx, payload: { scheduleId, newTargetSessions, reason } });
+    logger.info('liveSession:adjust_target_sessions_success', 'Schedule target_sessions adjusted', {
+      ...ctx,
+      payload: { scheduleId, newTargetSessions, reason },
+    });
 
     revalidatePath('/live-sessions');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:adjust_target_sessions_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { scheduleId, newTargetSessions, reason } });
+    logger.error(
+      'liveSession:adjust_target_sessions_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      { ...ctx, err, payload: { scheduleId, newTargetSessions, reason } },
+    );
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -444,7 +559,7 @@ export async function adjustTargetSessionsAsAdmin(
 
 /** 入退室ログからの実施結果の推定と根拠（結果の修正ダイアログを開いた時に取得する） */
 export async function getSessionOutcomeEvidenceAsAdmin(
-  sessionId: string
+  sessionId: string,
 ): Promise<{ success: true; evidence: SessionOutcomeEvidence } | { success: false; message: string }> {
   const result = await getSessionOutcomeEvidenceCore(sessionId);
   if (!result.success) {
@@ -467,7 +582,11 @@ export async function getSessionOutcomeHistory(sessionId: string): Promise<Admin
       .order('performed_at', { ascending: false });
 
     if (error) {
-      logger.error('liveSession:get_outcome_history_failed', error.message, { ...ctx, err: error, payload: { sessionId } });
+      logger.error('liveSession:get_outcome_history_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { sessionId },
+      });
       return [];
     }
 
@@ -490,7 +609,11 @@ export async function getSessionOutcomeHistory(sessionId: string): Promise<Admin
       performed_at: r.performed_at,
     }));
   } catch (err) {
-    logger.error('liveSession:get_outcome_history_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { sessionId } });
+    logger.error('liveSession:get_outcome_history_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { sessionId },
+    });
     return [];
   }
 }
@@ -503,7 +626,7 @@ export async function correctSessionOutcomeAsAdmin(
   sessionId: string,
   outcome: SessionOutcome,
   conductedVia: ConductedVia | null,
-  reason: string
+  reason: string,
 ): Promise<AdminSessionActionResult> {
   const ctx = await getLogContext();
   try {
@@ -516,20 +639,38 @@ export async function correctSessionOutcomeAsAdmin(
     });
 
     if (error) {
-      logger.error('liveSession:correct_outcome_failed', error.message, { ...ctx, err: error, payload: { sessionId, outcome, conductedVia } });
+      logger.error('liveSession:correct_outcome_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { sessionId, outcome, conductedVia },
+      });
       return { success: false, message: error.message };
     }
 
-    logger.info('liveSession:correct_outcome_success', 'Session outcome corrected', { ...ctx, payload: { sessionId, outcome, conductedVia } });
+    logger.info('liveSession:correct_outcome_success', 'Session outcome corrected', {
+      ...ctx,
+      payload: { sessionId, outcome, conductedVia },
+    });
     revalidatePath('/live-sessions', 'layout');
     return { success: true };
   } catch (err) {
-    logger.error('liveSession:correct_outcome_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { sessionId } });
+    logger.error('liveSession:correct_outcome_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { sessionId },
+    });
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
 
-const SESSION_RECORD_RESULTS = ['unrecorded', 'completed', 'left_early', 'no_show', 'coach_absent', 'technical'] as const;
+const SESSION_RECORD_RESULTS = [
+  'unrecorded',
+  'completed',
+  'left_early',
+  'no_show',
+  'coach_absent',
+  'technical',
+] as const;
 const SESSION_RECORD_VIAS = ['app', 'external'] as const;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -542,7 +683,7 @@ type SessionRecordRpcRow = AdminSessionRecord & { total_count: number };
  * via = 実施方法、review = '1' で要確認だけ）。不正な値は「すべて」として扱う。
  */
 export async function getSessionRecordList(
-  params: ListParams<'month' | 'coach' | 'result' | 'via' | 'review'>
+  params: ListParams<'month' | 'coach' | 'result' | 'via' | 'review'>,
 ): Promise<ListResult<AdminSessionRecord>> {
   const ctx = await getLogContext();
   const { q, filters } = params;
@@ -565,7 +706,11 @@ export async function getSessionRecordList(
   });
 
   if (error) {
-    logger.error('liveSession:get_session_records_failed', error.message, { ...ctx, err: error, payload: { filters, from } });
+    logger.error('liveSession:get_session_records_failed', error.message, {
+      ...ctx,
+      err: error,
+      payload: { filters, from },
+    });
     throw new Error(error.message);
   }
 

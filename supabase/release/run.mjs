@@ -39,8 +39,14 @@ const HISTORY_DDL = path.join(REPO_ROOT, 'supabase/DDL/table/ops_release_history
 // ---------------------------------------------------------------------------
 function parseArgs(argv) {
   const opts = {
-    env: undefined, file: undefined, list: false, status: false,
-    sections: undefined, markApplied: undefined, reapply: false, skipPost: false,
+    env: undefined,
+    file: undefined,
+    list: false,
+    status: false,
+    sections: undefined,
+    markApplied: undefined,
+    reapply: false,
+    skipPost: false,
   };
   for (const arg of argv) {
     if (arg.startsWith('--env=')) opts.env = arg.slice('--env='.length);
@@ -127,7 +133,11 @@ VALUES (${lit(record.file)}, ${record.section.no}, ${lit(record.section.title)},
 // ログ
 // ---------------------------------------------------------------------------
 function git(cmd) {
-  try { return execSync(`git ${cmd}`, { cwd: REPO_ROOT }).toString().trim(); } catch { return 'unknown'; }
+  try {
+    return execSync(`git ${cmd}`, { cwd: REPO_ROOT }).toString().trim();
+  } catch {
+    return 'unknown';
+  }
 }
 
 function writeLog(log) {
@@ -148,9 +158,10 @@ function formatDate(iso) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
 
-  const sqlPath = path.isAbsolute(opts.file) || opts.file.includes('/') || opts.file.includes('\\')
-    ? path.resolve(REPO_ROOT, opts.file)
-    : path.join(RELEASE_DIR, opts.file);
+  const sqlPath =
+    path.isAbsolute(opts.file) || opts.file.includes('/') || opts.file.includes('\\')
+      ? path.resolve(REPO_ROOT, opts.file)
+      : path.join(RELEASE_DIR, opts.file);
   if (!existsSync(sqlPath)) fail(`ファイルが見つかりません: ${sqlPath}`);
   const fileName = path.basename(sqlPath);
   const sqlText = readFileSync(sqlPath, 'utf8');
@@ -194,7 +205,9 @@ async function main() {
       for (const command of s.posts) {
         const runs = history.filter((h) => h.step_type === 'post' && h.section_no === s.no && h.command === command);
         const last = runs[runs.length - 1];
-        console.log(`        @post: ${command}  → ${last ? `${last.status} ${formatDate(last.applied_at)}` : '未実行'}`);
+        console.log(
+          `        @post: ${command}  → ${last ? `${last.status} ${formatDate(last.applied_at)}` : '未実行'}`,
+        );
       }
     }
     return;
@@ -216,21 +229,27 @@ async function main() {
   } else if (sections.length === 1) {
     targetNos = [1];
   } else {
-    fail(`このファイルには ${sections.length} 個のセクションがあります。--status で適用状況を確認し、--sections=pending / all / <番号> を指定してください。`);
+    fail(
+      `このファイルには ${sections.length} 個のセクションがあります。--status で適用状況を確認し、--sections=pending / all / <番号> を指定してください。`,
+    );
   }
   const targets = sections.filter((s) => targetNos.includes(s.no));
 
   const alreadyApplied = targets.filter((s) => states.get(s.no).state !== 'pending');
   if (alreadyApplied.length > 0 && !opts.reapply) {
-    fail(`適用済みのセクションが含まれています: ${alreadyApplied.map((s) => `[${s.no}]`).join(' ')}\n` +
-      '  --status で確認してください。冪等なセクションを意図的に再実行する場合のみ --reapply を付けてください。');
+    fail(
+      `適用済みのセクションが含まれています: ${alreadyApplied.map((s) => `[${s.no}]`).join(' ')}\n` +
+        '  --status で確認してください。冪等なセクションを意図的に再実行する場合のみ --reapply を付けてください。',
+    );
   }
 
   // --- 実行計画の表示と確認 ---
   const postCount = isMark || opts.skipPost ? 0 : targets.reduce((n, s) => n + s.posts.length, 0);
-  printHeader(isMark
-    ? '適用済みとして記録のみ（SQLは実行しません）'
-    : `セクション ${targets.length} / ${sections.length} を適用、適用後作業 ${postCount}件${opts.skipPost ? '（--skip-post）' : ''}`);
+  printHeader(
+    isMark
+      ? '適用済みとして記録のみ（SQLは実行しません）'
+      : `セクション ${targets.length} / ${sections.length} を適用、適用後作業 ${postCount}件${opts.skipPost ? '（--skip-post）' : ''}`,
+  );
   for (const s of targets) {
     console.log(`  [${s.no}] ${s.title}  （現在: ${stateLabel(s.no)}）`);
     if (!isMark && !opts.skipPost) s.posts.forEach((p) => console.log(`        @post: ${p}`));
@@ -260,9 +279,16 @@ async function main() {
     steps: [],
     result: 'aborted',
   };
-  const record = (section, stepType, status, extra = {}) => historyInsertSql({
-    file: fileName, section, stepType, status, appliedBy: gitUser, gitCommit, ...extra,
-  });
+  const record = (section, stepType, status, extra = {}) =>
+    historyInsertSql({
+      file: fileName,
+      section,
+      stepType,
+      status,
+      appliedBy: gitUser,
+      gitCommit,
+      ...extra,
+    });
 
   // Ctrl+C等で中断した場合もログを残す
   process.on('SIGINT', () => {
@@ -283,7 +309,11 @@ async function main() {
     await query(readFileSync(HISTORY_DDL, 'utf8'));
 
     if (isMark) {
-      await query(targets.map((s) => record(s, 'sql', 'marked', { note: 'run.mjs 導入前などに適用済みのため記録のみ' })).join('\n'));
+      await query(
+        targets
+          .map((s) => record(s, 'sql', 'marked', { note: 'run.mjs 導入前などに適用済みのため記録のみ' }))
+          .join('\n'),
+      );
       targets.forEach((s) => log.steps.push({ type: 'sql', section: s.no, title: s.title, status: 'marked' }));
       console.log(`\n${targets.length}件のセクションを適用済みとして記録しました。`);
       log.result = 'success';
@@ -301,7 +331,9 @@ async function main() {
         console.log('NG');
         log.steps.push({ type: 'sql', section: section.no, title: section.title, status: 'failed', error: e.message });
         await query(record(section, 'sql', 'failed', { note: e.message.slice(0, 1000) })).catch(() => {});
-        throw new Error(`セクション${section.no}でエラーが発生しました（このセクションはロールバックされ、以降は未実行です）\n${e.message}`);
+        throw new Error(
+          `セクション${section.no}でエラーが発生しました（このセクションはロールバックされ、以降は未実行です）\n${e.message}`,
+        );
       }
       console.log(`OK (${Date.now() - started}ms)`);
       log.steps.push({ type: 'sql', section: section.no, title: section.title, status: 'applied' });
@@ -309,7 +341,9 @@ async function main() {
       if (opts.skipPost) continue;
       for (const command of section.posts) {
         if (!envVars.SUPABASE_URL || !envVars.SUPABASE_SERVICE_ROLE_KEY) {
-          throw new Error('適用後作業には SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が必要です（--skip-post で省略可）。');
+          throw new Error(
+            '適用後作業には SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が必要です（--skip-post で省略可）。',
+          );
         }
         const answer = await ask(`\n  @post: ${command}\n  実行しますか？ (y=実行 / s=スキップ / N=中止): `);
         if (answer.toLowerCase() === 's') {
@@ -319,10 +353,17 @@ async function main() {
         }
         if (answer.toLowerCase() !== 'y') throw new Error('適用後作業の実行前に中止しました。');
 
-        const { status: exitCode } = spawnSync(command, { cwd: REPO_ROOT, env: postEnv, stdio: 'inherit', shell: true });
+        const { status: exitCode } = spawnSync(command, {
+          cwd: REPO_ROOT,
+          env: postEnv,
+          stdio: 'inherit',
+          shell: true,
+        });
         const ok = exitCode === 0;
         log.steps.push({ type: 'post', section: section.no, command, status: ok ? 'applied' : 'failed', exitCode });
-        await query(record(section, 'post', ok ? 'applied' : 'failed', { command, note: ok ? null : `exit code ${exitCode}` }));
+        await query(
+          record(section, 'post', ok ? 'applied' : 'failed', { command, note: ok ? null : `exit code ${exitCode}` }),
+        );
         if (!ok) throw new Error(`適用後作業が失敗しました（終了コード ${exitCode}）: ${command}`);
       }
     }

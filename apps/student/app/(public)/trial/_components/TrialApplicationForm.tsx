@@ -79,7 +79,15 @@ interface ChoiceWithOtherFieldProps {
 }
 
 /** 選択肢（必須）と、「その他」を選んだ時だけ出る記入欄（必須。検証は schema.ts）の組 */
-function ChoiceWithOtherField({ control, name, otherName, label, choices, otherCode, otherMaxLength }: ChoiceWithOtherFieldProps) {
+function ChoiceWithOtherField({
+  control,
+  name,
+  otherName,
+  label,
+  choices,
+  otherCode,
+  otherMaxLength,
+}: ChoiceWithOtherFieldProps) {
   const isOther = useWatch({ control, name }) === String(otherCode);
   return (
     <>
@@ -203,11 +211,39 @@ export function TrialApplicationForm({ timezones, turnstileSiteKey, intro }: Tri
 
         {/* 氏名（姓・名）。正式な氏名として本登録時に登録し、ローマ字はコーチが見る名前（名 姓）にも使う */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-6">
-          <NameField control={form.control} name="lastName" label="姓" placeholder="山田" autoComplete="family-name" maxLength={TRIAL_FIELD_LIMITS.name} />
-          <NameField control={form.control} name="firstName" label="名" placeholder="太郎" autoComplete="given-name" maxLength={TRIAL_FIELD_LIMITS.name} />
+          <NameField
+            control={form.control}
+            name="lastName"
+            label="姓"
+            placeholder="山田"
+            autoComplete="family-name"
+            maxLength={TRIAL_FIELD_LIMITS.name}
+          />
+          <NameField
+            control={form.control}
+            name="firstName"
+            label="名"
+            placeholder="太郎"
+            autoComplete="given-name"
+            maxLength={TRIAL_FIELD_LIMITS.name}
+          />
           {/* ローマ字欄は漢字の自動入力が入らないよう autoComplete を切る */}
-          <NameField control={form.control} name="lastNameLatin" label="姓（ローマ字）" placeholder="Yamada" autoComplete="off" maxLength={TRIAL_FIELD_LIMITS.latinName} />
-          <NameField control={form.control} name="firstNameLatin" label="名（ローマ字）" placeholder="Taro" autoComplete="off" maxLength={TRIAL_FIELD_LIMITS.latinName} />
+          <NameField
+            control={form.control}
+            name="lastNameLatin"
+            label="姓（ローマ字）"
+            placeholder="Yamada"
+            autoComplete="off"
+            maxLength={TRIAL_FIELD_LIMITS.latinName}
+          />
+          <NameField
+            control={form.control}
+            name="firstNameLatin"
+            label="名（ローマ字）"
+            placeholder="Taro"
+            autoComplete="off"
+            maxLength={TRIAL_FIELD_LIMITS.latinName}
+          />
         </div>
 
         <ChoiceWithOtherField

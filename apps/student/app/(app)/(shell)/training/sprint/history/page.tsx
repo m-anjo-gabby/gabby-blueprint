@@ -1,6 +1,6 @@
-import { getUserSprintHistoryAction } from "@/actions/sprintAction";
-import { SprintHistoryView } from "./_components/SprintHistoryView";
-import { resolveTargetMonth } from "@/lib/userTimezone";
+import { getUserSprintHistoryAction } from '@/actions/sprintAction';
+import { SprintHistoryView } from './_components/SprintHistoryView';
+import { resolveTargetMonth } from '@/lib/userTimezone';
 
 interface PageProps {
   searchParams: Promise<{

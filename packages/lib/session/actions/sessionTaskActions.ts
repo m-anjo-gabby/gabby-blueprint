@@ -70,7 +70,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
       logger.error(
         'session:get_coach_tasks_failed',
         unfinalizedError?.message ?? candidateError?.message ?? scheduleError?.message ?? 'unknown error',
-        { ...ctx, err: unfinalizedError, userId: user.id }
+        { ...ctx, err: unfinalizedError, userId: user.id },
       );
       return { success: false, errorCode: 'unexpected_error' };
     }
@@ -84,7 +84,9 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
     });
 
     const shortfallResults = await Promise.all(
-      (schedules ?? []).map((schedule) => supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single())
+      (schedules ?? []).map((schedule) =>
+        supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single(),
+      ),
     );
 
     const shortfallCandidates = (schedules ?? [])
@@ -102,7 +104,9 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
         const row = data as ScheduleShortfallRpcRow;
         return row.shortfall > 0 ? { schedule, row } : null;
       })
-      .filter((v): v is { schedule: NonNullable<typeof schedules>[number]; row: ScheduleShortfallRpcRow } => v !== null);
+      .filter(
+        (v): v is { schedule: NonNullable<typeof schedules>[number]; row: ScheduleShortfallRpcRow } => v !== null,
+      );
 
     // 3クエリ分のstudent_idをまとめて1回で解決する
     const studentIds = new Set<string>();
@@ -110,12 +114,17 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
     for (const r of missingHomeworkRows) studentIds.add(r.student_id);
     for (const { schedule } of shortfallCandidates) studentIds.add(schedule.student_id);
 
-    const { data: students, error: studentsError } = studentIds.size > 0
-      ? await supabase.from('com_m_user').select('id, user_name').in('id', Array.from(studentIds))
-      : { data: [] as { id: string; user_name: string | null }[], error: null };
+    const { data: students, error: studentsError } =
+      studentIds.size > 0
+        ? await supabase.from('com_m_user').select('id, user_name').in('id', Array.from(studentIds))
+        : { data: [] as { id: string; user_name: string | null }[], error: null };
 
     if (studentsError) {
-      logger.error('session:get_coach_tasks_students_failed', studentsError.message, { ...ctx, err: studentsError, userId: user.id });
+      logger.error('session:get_coach_tasks_students_failed', studentsError.message, {
+        ...ctx,
+        err: studentsError,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -152,7 +161,10 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
     const tasks: CoachSessionTasksSummary = { unfinalizedSessions, missingHomeworkSessions, shortfalls };
     return { success: true, tasks };
   } catch (err) {
-    logger.error('session:get_coach_tasks_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('session:get_coach_tasks_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

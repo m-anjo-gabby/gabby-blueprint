@@ -1,9 +1,9 @@
-import { canAccessPath } from "@/lib/navigation";
-import { getDashboardSummary, type DashboardModuleKey } from "@/actions/adminDashboardAction";
-import { DASHBOARD_MODULE_CONFIG, DASHBOARD_MODULE_ORDER } from "./_components/moduleConfig";
-import DashboardHeader from "./_components/DashboardHeader";
-import ModuleSummaryGrid from "./_components/ModuleSummaryGrid";
-import ModuleCard from "./_components/ModuleCard";
+import { canAccessPath } from '@/lib/navigation';
+import { getDashboardSummary, type DashboardModuleKey } from '@/actions/adminDashboardAction';
+import { DASHBOARD_MODULE_CONFIG, DASHBOARD_MODULE_ORDER } from './_components/moduleConfig';
+import DashboardHeader from './_components/DashboardHeader';
+import ModuleSummaryGrid from './_components/ModuleSummaryGrid';
+import ModuleCard from './_components/ModuleCard';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 export default async function Page() {
@@ -12,7 +12,7 @@ export default async function Page() {
 
   // サイドバー（lib/navigation.ts）と同じ権限定義を使い、閲覧権限のあるモジュールのみ表示・取得する
   const visibleKeys: DashboardModuleKey[] = DASHBOARD_MODULE_ORDER.filter((key) =>
-    canAccessPath(DASHBOARD_MODULE_CONFIG[key].href, roles)
+    canAccessPath(DASHBOARD_MODULE_CONFIG[key].href, roles),
   );
 
   const modules = await getDashboardSummary(visibleKeys);

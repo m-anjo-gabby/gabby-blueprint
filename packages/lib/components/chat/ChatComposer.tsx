@@ -56,7 +56,11 @@ function ComposerIconButton({
   variant,
   className,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { pending: boolean; icon: React.ReactNode; variant: 'primary' | 'ghost' }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  pending: boolean;
+  icon: React.ReactNode;
+  variant: 'primary' | 'ghost';
+}) {
   return (
     <button
       type="button"
@@ -66,7 +70,7 @@ function ComposerIconButton({
         variant === 'primary'
           ? 'bg-brand text-white hover:bg-brand-strong disabled:bg-line disabled:text-ink-subtle'
           : 'text-ink-muted hover:bg-canvas hover:text-ink disabled:opacity-50',
-        className
+        className,
       )}
       {...props}
     >

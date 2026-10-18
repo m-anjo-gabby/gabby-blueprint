@@ -97,7 +97,12 @@ export function MatchingStatusCard({ missingItems, initialAcceptingStudents, isS
             Turn this off while you take a break. Your current students and scheduled sessions are not affected.
           </p>
         </div>
-        <Switch id="accepting-students" checked={acceptingStudents} disabled={isSaving} onCheckedChange={handleChange} />
+        <Switch
+          id="accepting-students"
+          checked={acceptingStudents}
+          disabled={isSaving}
+          onCheckedChange={handleChange}
+        />
       </div>
 
       {isSuspended && (

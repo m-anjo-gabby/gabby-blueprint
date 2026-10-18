@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -11,7 +20,20 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, XCircle, PencilLine, Check, Copy } from 'lucide-react';
+import {
+  Loader2,
+  Play,
+  Save,
+  Volume2,
+  Sparkles,
+  RotateCcw,
+  PlusCircle,
+  Mic2,
+  XCircle,
+  PencilLine,
+  Check,
+  Copy,
+} from 'lucide-react';
 import { TTSAdjustmentData, WordAdjustment } from '@gabby/types/word';
 import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -64,16 +86,19 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
 
   // 単語配列の初期化
   useEffect(() => {
-    const words: WordAdjustment[] = readText.split(' ').filter(Boolean).map((word, i) => ({
-      id: `word-${i}`,
-      fullText: word,
-      text: word.replace(/[.,!?;:]/g, ''),
-      emphasis: false,
-      emphasisLevel: 'moderate',
-      breakAfter: false,
-      breakDuration: 300,
-      ipa: '',
-    }));
+    const words: WordAdjustment[] = readText
+      .split(' ')
+      .filter(Boolean)
+      .map((word, i) => ({
+        id: `word-${i}`,
+        fullText: word,
+        text: word.replace(/[.,!?;:]/g, ''),
+        emphasis: false,
+        emphasisLevel: 'moderate',
+        breakAfter: false,
+        breakDuration: 300,
+        ipa: '',
+      }));
     setAdjustments(words);
   }, [readText]);
 
@@ -92,7 +117,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
         words: currentAdjs,
       });
     },
-    [readText]
+    [readText],
   );
 
   // Autoモード時のみ、設定変更をSSMLに反映
@@ -139,7 +164,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
         breakAfter: false,
         breakDuration: 300,
         ipa: '',
-      }))
+      })),
     );
     setSsmlMode('auto');
     showToast('All settings have been reset.', 'info');
@@ -171,7 +196,7 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
         ssml,
         ssmlMode,
         adjustmentData,
-        entry.audio_path
+        entry.audio_path,
       );
 
       if (result.success) {
@@ -263,7 +288,9 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
                 <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
                   <span className="font-bold text-white text-sm">{entry.word_en}</span>
                   <span>·</span>
-                  <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[11px]">{entry.part_of_speech}</span>
+                  <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[11px]">
+                    {entry.part_of_speech}
+                  </span>
                   {entry.phonetic_spelling && (
                     <>
                       <span>·</span>
@@ -282,7 +309,9 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
           </DialogHeader>
 
           {/* 原文表示セクション：Manual時は操作不可 */}
-          <div className={`px-8 py-6 bg-brand-50/30 border-b border-brand-100/50 transition-all duration-300 ${ssmlMode === 'manual' ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}>
+          <div
+            className={`px-8 py-6 bg-brand-50/30 border-b border-brand-100/50 transition-all duration-300 ${ssmlMode === 'manual' ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}
+          >
             <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-x-2 gap-y-3">
               {adjustments.map((adj) => (
                 <Popover key={adj.id}>
@@ -400,12 +429,17 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
           {/* 2カラムレイアウト */}
           <div className="grid grid-cols-1 md:grid-cols-2 bg-white">
             {/* 左：コントロールパネル */}
-            <div className={`p-8 space-y-8 border-r border-slate-100 transition-opacity ${ssmlMode === 'manual' ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+            <div
+              className={`p-8 space-y-8 border-r border-slate-100 transition-opacity ${ssmlMode === 'manual' ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
+            >
               <div className="space-y-4">
                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Voice Settings</Label>
 
                 {/* Voice Select */}
-                <Select value={params.voice} onValueChange={(v) => setParams((p) => ({ ...p, voice: v as AzureVoice }))}>
+                <Select
+                  value={params.voice}
+                  onValueChange={(v) => setParams((p) => ({ ...p, voice: v as AzureVoice }))}
+                >
                   <SelectTrigger className="w-full bg-slate-50 border-slate-200 font-medium">
                     <SelectValue placeholder="Select Voice" />
                   </SelectTrigger>
@@ -419,7 +453,10 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
                 </Select>
 
                 {/* Style Select */}
-                <Select value={params.style} onValueChange={(v) => setParams((p) => ({ ...p, style: v as AzureStyle }))}>
+                <Select
+                  value={params.style}
+                  onValueChange={(v) => setParams((p) => ({ ...p, style: v as AzureStyle }))}
+                >
                   <SelectTrigger className="w-full bg-slate-50 border-slate-200 font-medium">
                     <SelectValue placeholder="Select Style" />
                   </SelectTrigger>
@@ -435,12 +472,28 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
 
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Speed: {params.rate}x</Label>
-                  <Slider value={[params.rate]} min={0.5} max={1.5} step={0.05} onValueChange={([v]) => setParams((p) => ({ ...p, rate: v }))} />
+                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Speed: {params.rate}x
+                  </Label>
+                  <Slider
+                    value={[params.rate]}
+                    min={0.5}
+                    max={1.5}
+                    step={0.05}
+                    onValueChange={([v]) => setParams((p) => ({ ...p, rate: v }))}
+                  />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pitch: {params.pitch}%</Label>
-                  <Slider value={[params.pitch]} min={-20} max={20} step={1} onValueChange={([v]) => setParams((p) => ({ ...p, pitch: v }))} />
+                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Pitch: {params.pitch}%
+                  </Label>
+                  <Slider
+                    value={[params.pitch]}
+                    min={-20}
+                    max={20}
+                    step={1}
+                    onValueChange={([v]) => setParams((p) => ({ ...p, pitch: v }))}
+                  />
                 </div>
               </div>
             </div>
@@ -451,7 +504,12 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
                   SSML Code <Sparkles size={10} className="text-brand-500" />
                 </Label>
-                <Button variant="ghost" size="sm" onClick={handleReset} className="h-6 text-[10px] gap-1 text-slate-400 hover:text-rose-500 transition-colors">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleReset}
+                  className="h-6 text-[10px] gap-1 text-slate-400 hover:text-rose-500 transition-colors"
+                >
                   <RotateCcw size={10} /> Reset
                 </Button>
               </div>
@@ -470,13 +528,17 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
                   placeholder="Enter SSML code here..."
                 />
 
-                <div className={`flex items-center justify-between px-3 py-2 border-t transition-colors ${ssmlMode === 'manual' ? 'bg-rose-950/30 border-rose-900/30' : 'bg-slate-800 border-slate-700'}`}>
+                <div
+                  className={`flex items-center justify-between px-3 py-2 border-t transition-colors ${ssmlMode === 'manual' ? 'bg-rose-950/30 border-rose-900/30' : 'bg-slate-800 border-slate-700'}`}
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 bg-black/20 p-1 rounded-md">
                       <button
                         onClick={() => ssmlMode === 'manual' && handleModeToggle(false)}
                         className={`text-[8px] font-black px-2 py-0.5 rounded transition-all ${
-                          ssmlMode === 'auto' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-400'
+                          ssmlMode === 'auto'
+                            ? 'bg-brand-500 text-white shadow-sm'
+                            : 'text-slate-500 hover:text-slate-400'
                         }`}
                       >
                         AUTO
@@ -489,7 +551,9 @@ export function CVTTSDialog({ entry, onUpdate, children }: CVTTSDialogProps) {
                       <button
                         onClick={() => ssmlMode === 'auto' && handleModeToggle(true)}
                         className={`text-[8px] font-black px-2 py-0.5 rounded transition-all ${
-                          ssmlMode === 'manual' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-400'
+                          ssmlMode === 'manual'
+                            ? 'bg-rose-500 text-white shadow-sm'
+                            : 'text-slate-500 hover:text-slate-400'
                         }`}
                       >
                         MANUAL

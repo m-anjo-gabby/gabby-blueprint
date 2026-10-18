@@ -51,11 +51,10 @@ export default function Error({ error }: ErrorProps) {
                 Console Exception
               </span>
             </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              An Exception Was Detected
-            </h1>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">An Exception Was Detected</h1>
             <p className="text-sm text-slate-500 mt-2.5 leading-relaxed max-w-md font-medium">
-              An unexpected handling exception occurred while rendering the page or communicating data. This event has been logged as structured data in the core system log.
+              An unexpected handling exception occurred while rendering the page or communicating data. This event has
+              been logged as structured data in the core system log.
             </p>
           </div>
 
@@ -80,7 +79,6 @@ export default function Error({ error }: ErrorProps) {
               Back to Dashboard
             </button>
           </div>
-
         </motion.div>
       </div>
     </div>

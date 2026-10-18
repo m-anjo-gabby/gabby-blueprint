@@ -36,10 +36,7 @@ function getAnswerAudio(q: SprintQuestion, scoreData: SprintResultScore) {
  * スプリント結果画面の音声再生（個別・問題ごと・全て再生）。
  * 実施直後の没入画面と、履歴から開くシェル画面で共通に使う。
  */
-export function useSprintResultPlayback(
-  scoreData: SprintResultScore,
-  questions: SprintQuestion[]
-) {
+export function useSprintResultPlayback(scoreData: SprintResultScore, questions: SprintQuestion[]) {
   const { play, stop, isPlaying: playingAudioId, unlockAudioContext, resumeStatus } = usePlayAudioSpeech();
 
   const [focusedQuestionId, setFocusedQuestionId] = useState<string | null>(null);
@@ -73,13 +70,17 @@ export function useSprintResultPlayback(
   const playQuestionSequence = useCallback(
     async (q: SprintQuestion, isCancelled: () => boolean) => {
       if (scoreData.question_type !== '0' && q.statement_en && q.statement_voice) {
-        if ((await play(q.statement_voice, sprintAudioId.statement(q.question_id), { restart: true })) === 'interrupted') return false;
+        if (
+          (await play(q.statement_voice, sprintAudioId.statement(q.question_id), { restart: true })) === 'interrupted'
+        )
+          return false;
         if (isCancelled()) return false;
         await wait(400);
       }
       if (isCancelled()) return false;
       if (q.question_voice) {
-        if ((await play(q.question_voice, sprintAudioId.question(q.question_id), { restart: true })) === 'interrupted') return false;
+        if ((await play(q.question_voice, sprintAudioId.question(q.question_id), { restart: true })) === 'interrupted')
+          return false;
       }
       if (isCancelled()) return false;
       await wait(400);
@@ -91,7 +92,7 @@ export function useSprintResultPlayback(
       }
       return !isCancelled();
     },
-    [play, scoreData]
+    [play, scoreData],
   );
 
   /** 文を1つだけ再生する（全て再生中は無効） */
@@ -113,7 +114,7 @@ export function useSprintResultPlayback(
         setFocusedQuestionId(null);
       }
     },
-    [play, playbackMode]
+    [play, playbackMode],
   );
 
   /** 1問分を続けて再生する（全て再生中は無効） */
@@ -138,7 +139,7 @@ export function useSprintResultPlayback(
         }
       }
     },
-    [playbackMode, stopAllAudio, playQuestionSequence]
+    [playbackMode, stopAllAudio, playQuestionSequence],
   );
 
   /** 全問題を順番に再生する。再生中に呼ぶと停止する */

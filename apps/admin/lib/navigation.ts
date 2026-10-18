@@ -1,8 +1,29 @@
 // apps/admin/lib/navigation.ts
 import {
-  LayoutDashboard, Building2, FileSignature, Users, BookOpen,
-  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon, CalendarDays, CalendarRange, Video, DollarSign,
-  Settings, LifeBuoy, FileChartColumn, Landmark, UserPlus,
+  LayoutDashboard,
+  Building2,
+  FileSignature,
+  Users,
+  BookOpen,
+  Speech,
+  ShieldCheck,
+  Wrench,
+  BookOpenText,
+  Bell,
+  MessageCircle,
+  Globe,
+  Bot,
+  Library,
+  LucideIcon,
+  CalendarDays,
+  CalendarRange,
+  Video,
+  DollarSign,
+  Settings,
+  LifeBuoy,
+  FileChartColumn,
+  Landmark,
+  UserPlus,
 } from 'lucide-react';
 
 // ============================================================
@@ -188,9 +209,7 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
 
 /** 全リーフアイテムをフラットに取得 */
 export function getAllLeafItems(config: readonly NavItem[]): NavLeaf[] {
-  return config.flatMap((item) =>
-    item.type === 'group' ? [...item.children] : [item]
-  );
+  return config.flatMap((item) => (item.type === 'group' ? [...item.children] : [item]));
 }
 
 /**

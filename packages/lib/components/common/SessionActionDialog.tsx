@@ -10,12 +10,7 @@ import { useToast } from '../../hooks/useToast';
 import { useUserStore } from '../../stores/useUserStore';
 import { generateLessonStartTimeOptions, isAtLeastHoursFromNow, MIN_SESSION_BOOKING_LEAD_HOURS } from '../../date/date';
 import { CounterpartLocalTime } from './CounterpartLocalTime';
-import {
-  SESSION_STATUS,
-  CANCEL_CATEGORY,
-  SessionListItem,
-  ProposedSlotInput,
-} from '@gabby/types/session';
+import { SESSION_STATUS, CANCEL_CATEGORY, SessionListItem, ProposedSlotInput } from '@gabby/types/session';
 
 /**
  * ----------------------------------------------
@@ -36,7 +31,7 @@ const DialogOverlay = React.forwardRef<
     ref={ref}
     className={cn(
       'fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-      className
+      className,
     )}
     {...props}
   />
@@ -55,7 +50,7 @@ const DialogContent = React.forwardRef<
       onOpenAutoFocus={onOpenAutoFocus ?? focusDialogContent}
       className={cn(
         'outline-none fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
-        className
+        className,
       )}
       {...props}
     >
@@ -81,7 +76,11 @@ const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title ref={ref} className={cn('text-lg font-semibold leading-none tracking-tight', className)} {...props} />
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn('text-lg font-semibold leading-none tracking-tight', className)}
+    {...props}
+  />
 ));
 DialogTitle.displayName = DialogPrimitive.Title.displayName;
 
@@ -109,7 +108,10 @@ function Button({
   variant = 'default',
   size = 'default',
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof BUTTON_VARIANTS; size?: keyof typeof BUTTON_SIZES }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: keyof typeof BUTTON_VARIANTS;
+  size?: keyof typeof BUTTON_SIZES;
+}) {
   return <button className={cn(BUTTON_BASE, BUTTON_VARIANTS[variant], BUTTON_SIZES[size], className)} {...props} />;
 }
 
@@ -122,7 +124,7 @@ function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLText
     <textarea
       className={cn(
         'flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
-        className
+        className,
       )}
       {...props}
     />
@@ -165,15 +167,17 @@ export interface SessionActionDialogActions {
   cancelSession: (
     sessionId: string,
     reason?: string,
-    proposedSlots?: ProposedSlotInput[]
+    proposedSlots?: ProposedSlotInput[],
   ) => Promise<{ success: true } | { success: false; message: string }>;
   checkSessionConflict: (
     coachId: string,
     studentId: string,
     startIso: string,
     endIso: string,
-    excludeSessionId?: string
-  ) => Promise<{ success: true; coachConflict: boolean; studentConflict: boolean } | { success: false; message: string }>;
+    excludeSessionId?: string,
+  ) => Promise<
+    { success: true; coachConflict: boolean; studentConflict: boolean } | { success: false; message: string }
+  >;
 }
 
 export interface SessionActionDialogCancelLabels {
@@ -222,7 +226,14 @@ export interface SessionActionDialogProps {
  * キャンセル時は、セッションに紐づくviewer_role/counterpart_id/counterpart_timezoneから
  * コーチ・生徒それぞれのID、および相手のタイムゾーンでの開始日時表示を導出する。
  */
-export function SessionActionDialog({ target, onClose, onResolved, actions, labels, formatCounterpartTime }: SessionActionDialogProps) {
+export function SessionActionDialog({
+  target,
+  onClose,
+  onResolved,
+  actions,
+  labels,
+  formatCounterpartTime,
+}: SessionActionDialogProps) {
   const currentUserId = useUserStore((state) => state.user?.id);
   const [reason, setReason] = useState('');
   const [proposedSlots, setProposedSlots] = useState<ProposedSlotDraft[]>([]);
@@ -244,7 +255,9 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
 
   const addProposedSlot = () => {
     setProposedSlots((prev) =>
-      prev.length >= MAX_PROPOSED_SLOTS ? prev : [...prev, { date: tomorrowIsoDate(), time: '', conflictMessage: null, isChecking: false }]
+      prev.length >= MAX_PROPOSED_SLOTS
+        ? prev
+        : [...prev, { date: tomorrowIsoDate(), time: '', conflictMessage: null, isChecking: false }],
     );
   };
 
@@ -252,10 +265,17 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     if (!target || !coachId || !studentId) return;
     setProposedSlots((prev) => prev.map((s, i) => (i === index ? { ...s, isChecking: true } : s)));
 
-    const duration = new Date(target.session.end_datetime).getTime() - new Date(target.session.start_datetime).getTime();
+    const duration =
+      new Date(target.session.end_datetime).getTime() - new Date(target.session.start_datetime).getTime();
     const start = new Date(`${date}T${time}:00`);
     const end = new Date(start.getTime() + duration);
-    const result = await actions.checkSessionConflict(coachId, studentId, start.toISOString(), end.toISOString(), target.session.session_id);
+    const result = await actions.checkSessionConflict(
+      coachId,
+      studentId,
+      start.toISOString(),
+      end.toISOString(),
+      target.session.session_id,
+    );
 
     setProposedSlots((prev) =>
       prev.map((s, i) => {
@@ -267,12 +287,14 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
             ? labels.cancel.conflictMessages.student
             : null;
         return { ...s, isChecking: false, conflictMessage: message };
-      })
+      }),
     );
   };
 
   const updateProposedSlot = (index: number, patch: Partial<Pick<ProposedSlotDraft, 'date' | 'time'>>) => {
-    setProposedSlots((prev) => prev.map((slot, i) => (i === index ? { ...slot, ...patch, conflictMessage: null } : slot)));
+    setProposedSlots((prev) =>
+      prev.map((slot, i) => (i === index ? { ...slot, ...patch, conflictMessage: null } : slot)),
+    );
     const merged = { ...proposedSlots[index], ...patch };
     if (!merged.date || !merged.time) return;
 
@@ -281,7 +303,9 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     // ダブルブッキングチェック(ネットワーク呼び出し)を省略する。
     const start = new Date(`${merged.date}T${merged.time}:00`);
     if (!isAtLeastHoursFromNow(start, MIN_SESSION_BOOKING_LEAD_HOURS)) {
-      setProposedSlots((prev) => prev.map((s, i) => (i === index ? { ...s, conflictMessage: labels.cancel.tooSoonMessage } : s)));
+      setProposedSlots((prev) =>
+        prev.map((s, i) => (i === index ? { ...s, conflictMessage: labels.cancel.tooSoonMessage } : s)),
+      );
       return;
     }
 
@@ -299,7 +323,8 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     setIsSubmitting(true);
     try {
       const validSlots = canPropose ? proposedSlots.filter((s) => s.date && s.time && !s.conflictMessage) : [];
-      const duration = new Date(target.session.end_datetime).getTime() - new Date(target.session.start_datetime).getTime();
+      const duration =
+        new Date(target.session.end_datetime).getTime() - new Date(target.session.start_datetime).getTime();
       const proposedSlotInputs: ProposedSlotInput[] = validSlots.map((s) => {
         const start = new Date(`${s.date}T${s.time}:00`);
         const end = new Date(start.getTime() + duration);
@@ -311,7 +336,11 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
         showToast(result.message, 'error');
         return;
       }
-      onResolved(target.session.session_id, { status: SESSION_STATUS.CANCELLED, cancel_category: cancelCategory, cancel_reason: reason || null });
+      onResolved(target.session.session_id, {
+        status: SESSION_STATUS.CANCELLED,
+        cancel_category: cancelCategory,
+        cancel_reason: reason || null,
+      });
       showToast(labels.cancel.successToast(proposedSlotInputs.length > 0), 'success');
       onClose();
     } finally {
@@ -319,8 +348,8 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
     }
   };
 
-
-  const policyNote = target?.mode === 'cancel' ? labels.cancel.policyNote(isWithin12Hours(target.session.start_datetime)) : null;
+  const policyNote =
+    target?.mode === 'cancel' ? labels.cancel.policyNote(isWithin12Hours(target.session.start_datetime)) : null;
 
   return (
     <DialogPrimitive.Root open={!!target} onOpenChange={(open) => !open && onClose()}>
@@ -337,7 +366,7 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
                   'text-xs rounded-lg px-3 py-2 border',
                   policyNote.tone === 'warning'
                     ? 'text-rose-600 bg-rose-50 border-rose-100'
-                    : 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                    : 'text-emerald-700 bg-emerald-50 border-emerald-100',
                 )}
               >
                 {policyNote.text}
@@ -345,7 +374,12 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
             )}
             <div className="space-y-1.5">
               <Label>{labels.cancel.reasonLabel}</Label>
-              <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={labels.cancel.reasonPlaceholder} />
+              <Textarea
+                rows={3}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder={labels.cancel.reasonPlaceholder}
+              />
             </div>
 
             {canPropose && (
@@ -398,7 +432,9 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
                               <XIcon size={14} />
                             </button>
                           </div>
-                          {slot.isChecking && <p className="text-[11px] text-slate-400">{labels.cancel.checkingText}</p>}
+                          {slot.isChecking && (
+                            <p className="text-[11px] text-slate-400">{labels.cancel.checkingText}</p>
+                          )}
                           {slot.conflictMessage && <p className="text-[11px] text-rose-600">{slot.conflictMessage}</p>}
                           {!slot.conflictMessage && proposedStart && (
                             <CounterpartLocalTime
@@ -428,7 +464,6 @@ export function SessionActionDialog({ target, onClose, onResolved, actions, labe
             </DialogFooter>
           </>
         )}
-
       </DialogContent>
     </DialogPrimitive.Root>
   );

@@ -15,7 +15,7 @@ export function addDays(d: Date, days: number): Date {
 /** 暦日(UTC基準のDate)とJSTの時刻(hh:mm)から、timestamptz用のISO文字列を作る。 */
 export function jstDateTimeISO(dateOnly: Date, hh: number, mm: number): string {
   return new Date(
-    Date.UTC(dateOnly.getUTCFullYear(), dateOnly.getUTCMonth(), dateOnly.getUTCDate(), hh - 9, mm)
+    Date.UTC(dateOnly.getUTCFullYear(), dateOnly.getUTCMonth(), dateOnly.getUTCDate(), hh - 9, mm),
   ).toISOString();
 }
 

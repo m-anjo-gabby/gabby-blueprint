@@ -57,7 +57,7 @@ export async function upsertKnowledgeEntry(params: UpsertKnowledgeEntryParams): 
         created_by: params.createdBy,
         update_date: new Date().toISOString(),
       },
-      { onConflict: 'knowledge_id' }
+      { onConflict: 'knowledge_id' },
     )
     .select('knowledge_id, source_type, title, body, metadata')
     .single<KnowledgeBaseRow>();
@@ -81,10 +81,7 @@ export async function upsertKnowledgeEntry(params: UpsertKnowledgeEntryParams): 
 export async function deleteKnowledgeEntry(knowledgeId: string): Promise<void> {
   const supabase = createAdminClient();
 
-  const { error } = await supabase
-    .from(TABLE_NAME)
-    .delete()
-    .eq('knowledge_id', knowledgeId);
+  const { error } = await supabase.from(TABLE_NAME).delete().eq('knowledge_id', knowledgeId);
 
   if (error) {
     throw new Error(`Failed to delete knowledge base entry: ${error.message}`);

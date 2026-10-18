@@ -6,7 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { adjustTargetSessionsAsAdmin } from '@/actions/adminLiveSessionAction';
 import type { AdminScheduleSlotSummary } from '@gabby/types/adminLiveSession';
@@ -85,14 +92,24 @@ export function AdjustTargetSessionsDialog({ target, onClose, onAdjusted }: Prop
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('reasonLabel')}</Label>
-            <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('reasonPlaceholder')} />
+            <Textarea
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={t('reasonPlaceholder')}
+            />
           </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => handleClose(false)} disabled={isSubmitting}>
             {t('close')}
           </Button>
-          <Button pending={isSubmitting} type="button" onClick={handleSubmit} disabled={isSubmitting || !isValueValid || !reason.trim()}>
+          <Button
+            pending={isSubmitting}
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !isValueValid || !reason.trim()}
+          >
             {t('confirmButton')}
           </Button>
         </DialogFooter>

@@ -48,7 +48,8 @@ export async function getHomeCalendarEvents(): Promise<CalendarEventItem[]> {
   const events = await getMyCalendarEvents(startIso, endIso);
   return events.filter(
     (event) =>
-      CALENDAR_EVENT_TYPES[event.event_type]?.homeDisplay === 'feature' && getCalendarEventPhase(event, nowMs) !== 'ended'
+      CALENDAR_EVENT_TYPES[event.event_type]?.homeDisplay === 'feature' &&
+      getCalendarEventPhase(event, nowMs) !== 'ended',
   );
 }
 
@@ -65,7 +66,7 @@ export async function getGroupSessionList(): Promise<{ upcoming: CalendarEventIt
   const DAY_MS = 24 * 60 * 60 * 1000;
   const events = await getMyCalendarEvents(
     new Date(nowMs - GROUP_SESSION_PAST_DAYS * DAY_MS).toISOString(),
-    new Date(nowMs + GROUP_SESSION_UPCOMING_DAYS * DAY_MS).toISOString()
+    new Date(nowMs + GROUP_SESSION_UPCOMING_DAYS * DAY_MS).toISOString(),
   );
   const featured = events.filter((event) => CALENDAR_EVENT_TYPES[event.event_type]?.homeDisplay === 'feature');
   return {
@@ -80,7 +81,7 @@ export async function getGroupSessionList(): Promise<{ upcoming: CalendarEventIt
  * シリーズのまだ終わっていない回に、まとめて参加登録する
  */
 export async function joinCalendarEventSeries(
-  seriesId: string
+  seriesId: string,
 ): Promise<{ success: true; joinedIds: string[] } | { success: false; message: string }> {
   const result = await joinCalendarEventSeriesCore(seriesId);
   if (!result.success) {
@@ -94,7 +95,9 @@ export async function joinCalendarEventSeries(
 /**
  * グループセッション等（rsvp_enabled=TRUE）のカレンダーイベントに参加登録する
  */
-export async function joinCalendarEvent(calendarEventId: string): Promise<{ success: true } | { success: false; message: string }> {
+export async function joinCalendarEvent(
+  calendarEventId: string,
+): Promise<{ success: true } | { success: false; message: string }> {
   const result = await joinCalendarEventCore(calendarEventId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -108,7 +111,7 @@ export async function joinCalendarEvent(calendarEventId: string): Promise<{ succ
  * カレンダーイベントの参加をキャンセルする
  */
 export async function cancelCalendarEventParticipation(
-  calendarEventId: string
+  calendarEventId: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const result = await cancelCalendarEventParticipationCore(calendarEventId);
   if (!result.success) {

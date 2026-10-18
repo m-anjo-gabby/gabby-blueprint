@@ -64,10 +64,7 @@ function resolveTooltipPositionFromRect(rect: DOMRect): Omit<TooltipState, 'text
   const GAP = 8; // 単語とツールチップの間隔
   const HORIZONTAL_PADDING = 70;
 
-  const x = Math.max(
-    HORIZONTAL_PADDING,
-    Math.min(window.innerWidth - HORIZONTAL_PADDING, rect.left + rect.width / 2)
-  );
+  const x = Math.max(HORIZONTAL_PADDING, Math.min(window.innerWidth - HORIZONTAL_PADDING, rect.left + rect.width / 2));
 
   if (rect.top > 70) {
     // 上側表示: y = 単語上端 - GAP → translateY(-100%) でツールチップ本体を上に退避
@@ -206,7 +203,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
       closeTooltip,
       activeWordKey: tooltip?.key ?? null,
     }),
-    [openTooltip, closeTooltip, tooltip]
+    [openTooltip, closeTooltip, tooltip],
   );
 
   return (
@@ -226,9 +223,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                   top: tooltip.y,
                   // top 時: translateY(-100%) でボックス全体を y 座標より上に押し上げ
                   // bottom 時: translateX(-50%) のみで上端が y になる
-                  transform: tooltip.placement === 'top'
-                    ? 'translateX(-50%) translateY(-100%)'
-                    : 'translateX(-50%)',
+                  transform: tooltip.placement === 'top' ? 'translateX(-50%) translateY(-100%)' : 'translateX(-50%)',
                   zIndex: 9999,
                   pointerEvents: 'auto',
                 }}
@@ -252,7 +247,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                       'text-xs font-semibold text-white shadow-2xl',
                       'ring-1 ring-black/10',
                       'hover:bg-ink-soft active:scale-[0.95]',
-                      'transition-all duration-150 select-none'
+                      'transition-all duration-150 select-none',
                     )}
                   >
                     <Search className="h-3.5 w-3.5 shrink-0 opacity-75" />
@@ -291,7 +286,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
               </div>
             )}
           </AnimatePresence>,
-          document.body
+          document.body,
         )}
 
       {/* ── 辞書結果シート ── */}

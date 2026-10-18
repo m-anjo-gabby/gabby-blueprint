@@ -68,7 +68,7 @@ export function TrainingReportEntry({ studentId, ticketId, report: initialReport
     const confirmed = await showConfirm(
       'Finalize this report?',
       'Once finalized, this comment can no longer be edited by anyone. Make sure it is complete before continuing.',
-      { variant: 'warning', isModal: false, confirmText: 'Finalize Report', cancelText: 'Cancel' }
+      { variant: 'warning', isModal: false, confirmText: 'Finalize Report', cancelText: 'Cancel' },
     );
     if (!confirmed) return;
 
@@ -105,7 +105,10 @@ export function TrainingReportEntry({ studentId, ticketId, report: initialReport
           ) : (
             <>
               {isFinalized ? (
-                <Badge variant="outline" className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] shrink-0">
+                <Badge
+                  variant="outline"
+                  className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] shrink-0"
+                >
                   <Lock size={10} />
                   Finalized
                 </Badge>
@@ -116,7 +119,14 @@ export function TrainingReportEntry({ studentId, ticketId, report: initialReport
               )}
               <span className="text-xs text-slate-600 truncate">
                 {isMine ? 'You' : report.coach_name}
-                <span className="text-slate-400"> · {formatDateEn(isFinalized && report.finalized_at ? report.finalized_at : report.update_date, timezone)}</span>
+                <span className="text-slate-400">
+                  {' '}
+                  ·{' '}
+                  {formatDateEn(
+                    isFinalized && report.finalized_at ? report.finalized_at : report.update_date,
+                    timezone,
+                  )}
+                </span>
               </span>
             </>
           )}
@@ -141,19 +151,36 @@ export function TrainingReportEntry({ studentId, ticketId, report: initialReport
                 className="text-xs"
               />
               <div className="flex justify-end gap-2">
-                <Button pending={isSaving} type="button" variant="outline" size="sm" onClick={handleSave} disabled={isSaving || isFinalizing}>
+                <Button
+                  pending={isSaving}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={isSaving || isFinalizing}
+                >
                   Save Draft
                 </Button>
-                <Button pending={isFinalizing} type="button" size="sm" onClick={handleFinalize} disabled={isSaving || isFinalizing}>
+                <Button
+                  pending={isFinalizing}
+                  type="button"
+                  size="sm"
+                  onClick={handleFinalize}
+                  disabled={isSaving || isFinalizing}
+                >
                   Finalize Report
                 </Button>
               </div>
             </>
           ) : (
             <>
-              <p className="text-xs text-slate-700 whitespace-pre-wrap">{report?.comment_text || 'No comment has been written yet.'}</p>
+              <p className="text-xs text-slate-700 whitespace-pre-wrap">
+                {report?.comment_text || 'No comment has been written yet.'}
+              </p>
               {isFinalized && report?.finalized_at && (
-                <p className="text-[10px] text-slate-400">Finalized on {formatDateTimeEn(report.finalized_at, timezone)}</p>
+                <p className="text-[10px] text-slate-400">
+                  Finalized on {formatDateTimeEn(report.finalized_at, timezone)}
+                </p>
               )}
             </>
           )}

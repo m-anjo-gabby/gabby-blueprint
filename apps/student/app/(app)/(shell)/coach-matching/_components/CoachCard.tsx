@@ -88,7 +88,13 @@ export function CoachCard({
         displayDay,
         displayStartTime: converted.start_time,
         displayEndTime: converted.end_time,
-        matches: slotMatchesFilter(displayDay, converted.start_time, converted.end_time, selectedDays, selectedTimeBuckets),
+        matches: slotMatchesFilter(
+          displayDay,
+          converted.start_time,
+          converted.end_time,
+          selectedDays,
+          selectedTimeBuckets,
+        ),
       };
     });
     list.sort((a, b) => {
@@ -106,12 +112,12 @@ export function CoachCard({
 
   const specialtyTags = useMemo(
     () => toCoachSpecialtyTags(coach.specialty_codes, specialties, 'ja'),
-    [coach.specialty_codes, specialties]
+    [coach.specialty_codes, specialties],
   );
 
   const country = useMemo(
     () => countries.find((c) => c.country_code === coach.country_code) ?? null,
-    [countries, coach.country_code]
+    [countries, coach.country_code],
   );
 
   return (
@@ -201,7 +207,7 @@ export function CoachCard({
                 'px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap',
                 hasActiveFilter && !slot.matches
                   ? 'bg-canvas text-ink-subtle border-line/70'
-                  : 'bg-brand-soft text-brand-strong border-brand-100'
+                  : 'bg-brand-soft text-brand-strong border-brand-100',
               )}
             >
               {DAY_OF_WEEK_LABEL_JA[slot.displayDay].slice(0, 1)} {slot.displayStartTime}

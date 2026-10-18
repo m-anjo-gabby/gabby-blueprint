@@ -82,7 +82,10 @@ export function NoticeAttachmentList({ attachments, labels, preview = false }: N
                 aria-busy={isPending(att, 'preview') || undefined}
                 onClick={() => handlePreview(att)}
                 title={labels.previewHint}
-                className={cn(BUTTON_CLASS, 'border border-line bg-surface text-ink-soft hover:bg-brand-soft hover:text-brand')}
+                className={cn(
+                  BUTTON_CLASS,
+                  'border border-line bg-surface text-ink-soft hover:bg-brand-soft hover:text-brand',
+                )}
               >
                 {isPending(att, 'preview') ? <Loader2 className="animate-spin" aria-hidden /> : <Eye aria-hidden />}
                 {labels.preview}

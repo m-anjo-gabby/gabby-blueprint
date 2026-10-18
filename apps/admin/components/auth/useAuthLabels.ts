@@ -18,7 +18,7 @@ export function usePasswordFieldLabels(): PasswordFieldLabels {
       match: t('match'),
       mismatch: t('mismatch'),
     }),
-    [t, tErrors]
+    [t, tErrors],
   );
 }
 
@@ -88,6 +88,6 @@ export function useAuthLabels(): AuthLabels {
       },
       passwordFields,
     }),
-    [tLogin, tForgot, tUpdate, tInvite, tErrors, passwordFields]
+    [tLogin, tForgot, tUpdate, tInvite, tErrors, passwordFields],
   );
 }

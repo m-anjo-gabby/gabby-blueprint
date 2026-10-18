@@ -51,7 +51,12 @@ export default async function CalendarEventSeriesDetailPage({ params }: { params
                 </Link>
               </Button>
               <DeleteSeriesButton seriesId={series.series_id} title={series.title} />
-              <AddSeriesSessionsDialog seriesId={series.series_id} sessions={sessions} coaches={coaches} clients={clients} />
+              <AddSeriesSessionsDialog
+                seriesId={series.series_id}
+                sessions={sessions}
+                coaches={coaches}
+                clients={clients}
+              />
             </>
           }
         />

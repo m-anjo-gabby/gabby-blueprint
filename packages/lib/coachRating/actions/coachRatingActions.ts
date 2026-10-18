@@ -60,7 +60,10 @@ export async function getCoachRatingStatsCore(coachIds: string[]): Promise<Map<s
     }
     return statsById;
   } catch (err) {
-    logger.error('coach_rating:get_stats_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coach_rating:get_stats_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return statsById;
   }
 }
@@ -100,7 +103,10 @@ export async function getMyPendingCoachRatingsCore(): Promise<PendingCoachRating
       completedCount: row.completed_count,
     }));
   } catch (err) {
-    logger.error('coach_rating:get_pending_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coach_rating:get_pending_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return [];
   }
 }
@@ -142,14 +148,26 @@ export async function submitCoachRatingCore(input: SubmitCoachRatingInput): Prom
       if (error.message?.includes('INVALID_SCORE') || error.message?.includes('FEEDBACK_TOO_LONG')) {
         return { success: false, errorCode: 'invalid_input' };
       }
-      logger.error('coach_rating:submit_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { ticketId, coachId } });
+      logger.error('coach_rating:submit_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { ticketId, coachId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    logger.info('coach_rating:submit_success', 'Coach rating submitted', { ...ctx, userId: user.id, payload: { ticketId, coachId } });
+    logger.info('coach_rating:submit_success', 'Coach rating submitted', {
+      ...ctx,
+      userId: user.id,
+      payload: { ticketId, coachId },
+    });
     return { success: true };
   } catch (err) {
-    logger.error('coach_rating:submit_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('coach_rating:submit_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

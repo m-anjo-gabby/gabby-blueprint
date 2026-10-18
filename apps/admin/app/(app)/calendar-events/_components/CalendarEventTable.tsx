@@ -23,7 +23,13 @@ interface CalendarEventTableProps {
 }
 
 /** カレンダーイベントの表と削除の確認（一覧・シリーズの詳細で共用） */
-export function CalendarEventTable({ data, formOptions, hideSeries = false, pending = false, standalone = false }: CalendarEventTableProps) {
+export function CalendarEventTable({
+  data,
+  formOptions,
+  hideSeries = false,
+  pending = false,
+  standalone = false,
+}: CalendarEventTableProps) {
   const t = useTranslations('calendarEvents.dataTable');
   const { showToast } = useToast();
   const [deleting, setDeleting] = useState<CalendarEventItem | null>(null);

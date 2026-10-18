@@ -7,12 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,7 +55,10 @@ function isEdited(message: CalendarEventMessageItem): boolean {
   return new Date(message.update_date).getTime() !== new Date(message.insert_date).getTime();
 }
 
-export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessages }: CalendarEventAnnouncementPanelProps) {
+export function CalendarEventAnnouncementPanel({
+  calendarEventId,
+  initialMessages,
+}: CalendarEventAnnouncementPanelProps) {
   const t = useTranslations('calendarEvents.announcementPanel');
   const tCommon = useTranslations('common');
   const { showToast } = useToast();
@@ -94,7 +92,7 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
     setTitle(message.title);
     setContent(message.content);
     setAttachments(
-      message.attachments.map((a) => ({ id: a.id, name: a.name, size: a.size, mime_type: a.mime_type, path: a.path }))
+      message.attachments.map((a) => ({ id: a.id, name: a.name, size: a.size, mime_type: a.mime_type, path: a.path })),
     );
     setOpen(true);
   };
@@ -134,7 +132,13 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
       const finalAttachments: CalendarEventMessageAttachment[] = [];
       for (const att of attachments) {
         if (att.path) {
-          finalAttachments.push({ id: att.id, name: att.name, size: att.size, mime_type: att.mime_type, path: att.path });
+          finalAttachments.push({
+            id: att.id,
+            name: att.name,
+            size: att.size,
+            mime_type: att.mime_type,
+            path: att.path,
+          });
           continue;
         }
         if (!att.file) continue;
@@ -150,7 +154,11 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
       }
 
       const result = editingId
-        ? await updateCalendarEventMessage(editingId, calendarEventId, { title, content, attachments: finalAttachments })
+        ? await updateCalendarEventMessage(editingId, calendarEventId, {
+            title,
+            content,
+            attachments: finalAttachments,
+          })
         : await createCalendarEventMessage(calendarEventId, {
             calendar_event_message_id: messageId,
             title,
@@ -167,8 +175,10 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
       if (editingId) {
         setMessages((prev) =>
           prev.map((m) =>
-            m.calendar_event_message_id === editingId ? { ...m, title, content, attachments: finalAttachments, update_date: now } : m
-          )
+            m.calendar_event_message_id === editingId
+              ? { ...m, title, content, attachments: finalAttachments, update_date: now }
+              : m,
+          ),
         );
         showToast(t('toastUpdated'), 'success');
       } else {
@@ -212,7 +222,10 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={handleOpenCreate} className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none">
+        <Button
+          onClick={handleOpenCreate}
+          className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none"
+        >
           <Megaphone size={16} /> {t('sendButton')}
         </Button>
 
@@ -272,7 +285,10 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
                 {attachments.length > 0 && (
                   <div className="space-y-2">
                     {attachments.map((att) => (
-                      <div key={att.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                      <div
+                        key={att.id}
+                        className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs"
+                      >
                         <div className="flex items-center gap-2 min-w-0">
                           <Paperclip size={13} className="text-slate-400 shrink-0" />
                           <div className="min-w-0">
@@ -300,7 +316,13 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
                   disabled={isSaving}
                   className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md gap-2"
                 >
-                  {isSaving ? <Loader2 size={16} className="animate-spin" /> : editingId ? <Save size={16} /> : <Send size={16} />}
+                  {isSaving ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : editingId ? (
+                    <Save size={16} />
+                  ) : (
+                    <Send size={16} />
+                  )}
                   {isSaving ? t('processing') : editingId ? t('updateButton') : t('sendConfirmButton')}
                 </Button>
               </div>
@@ -316,7 +338,10 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
       ) : (
         <div className="space-y-3">
           {messages.map((message) => (
-            <article key={message.calendar_event_message_id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-2">
+            <article
+              key={message.calendar_event_message_id}
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-2"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -344,7 +369,11 @@ export function CalendarEventAnnouncementPanel({ calendarEventId, initialMessage
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                      >
                         <Trash2 size={14} />
                       </Button>
                     </AlertDialogTrigger>

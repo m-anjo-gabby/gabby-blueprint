@@ -19,7 +19,12 @@ import {
   SESSION_RESULT_STATUSES,
   isSelfInitiatedCancel,
 } from '@gabby/types/session';
-import { BookableTicketSlot, LiveSessionContractSummary, LiveSessionOverview, NextContractMatching } from '@gabby/types/matching';
+import {
+  BookableTicketSlot,
+  LiveSessionContractSummary,
+  LiveSessionOverview,
+  NextContractMatching,
+} from '@gabby/types/matching';
 import type { PendingCoachRating } from '@gabby/types/coachRating';
 import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
@@ -116,16 +121,22 @@ export function LiveSessionHub({
   const refresh = () => startRefresh(() => router.refresh());
 
   const isCurrent = selectedContract.is_current;
-  const historySessions = pastSessions.filter((s) => RESULT_LINKABLE_STATUSES.has(s.status) || isSelfInitiatedCancel(s));
+  const historySessions = pastSessions.filter(
+    (s) => RESULT_LINKABLE_STATUSES.has(s.status) || isSelfInitiatedCancel(s),
+  );
   const [nextSession, ...laterSessions] = isCurrent ? upcomingSessions : [];
 
   // 未予約の回のうち、予約リクエスト・振替候補（届いた候補・自分が提案した候補）の回答待ちになっている分は「調整中」として差し引く
   const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length + proposedGroups.length : 0;
   const unbookedCount = isCurrent && overview ? Math.max(overview.unbooked_count - adjustingCount, 0) : 0;
   // 専属コーチの未選択は、表示中の契約が有効（現在の契約、または開始前の契約）なら案内する
-  const unmatchedSlotCount = selectedContract.is_active && overview ? overview.slots.filter((s) => s.status === 'unmatched').length : 0;
+  const unmatchedSlotCount =
+    selectedContract.is_active && overview ? overview.slots.filter((s) => s.status === 'unmatched').length : 0;
   // 現在の契約の選択が済んでいれば、次の契約（継続用）の選択を促す
-  const nextUnmatched = isCurrent && unmatchedSlotCount === 0 && nextContractMatching && nextContractMatching.unmatchedCount > 0 ? nextContractMatching : null;
+  const nextUnmatched =
+    isCurrent && unmatchedSlotCount === 0 && nextContractMatching && nextContractMatching.unmatchedCount > 0
+      ? nextContractMatching
+      : null;
   const showBookingNotice = unbookedCount > 0 && bookableSlots.length > 0;
   const bookingDialogOpen = isBookingOpen || (isBookingAfterDecline && !isRefreshing && bookableSlots.length > 0);
   const closeBookingDialog = () => {
@@ -166,11 +177,18 @@ export function LiveSessionHub({
 
       {contracts.length > 1 && (
         <div className="mb-5">
-          <LiveContractSelect contracts={contracts} selectedTicketId={selectedContract.ticket_id} onChange={handleContractChange} />
+          <LiveContractSelect
+            contracts={contracts}
+            selectedTicketId={selectedContract.ticket_id}
+            onChange={handleContractChange}
+          />
         </div>
       )}
 
-      <div className={cn('space-y-8 transition-opacity', isRefreshing && 'pointer-events-none opacity-60')} aria-busy={isRefreshing}>
+      <div
+        className={cn('space-y-8 transition-opacity', isRefreshing && 'pointer-events-none opacity-60')}
+        aria-busy={isRefreshing}
+      >
         {hasActions && (
           <div>
             <ShellSectionTitle aside={<CountBadge count={actionCount} />}>対応が必要です</ShellSectionTitle>
@@ -271,7 +289,12 @@ export function LiveSessionHub({
         )}
 
         {overview && (
-          <ContractOverviewCard contract={selectedContract} overview={overview} timezone={timezone} adjustingCount={adjustingCount} />
+          <ContractOverviewCard
+            contract={selectedContract}
+            overview={overview}
+            timezone={timezone}
+            adjustingCount={adjustingCount}
+          />
         )}
 
         {isCurrent && (laterSessions.length > 0 || bookingRequests.length > 0 || proposedGroups.length > 0) && (

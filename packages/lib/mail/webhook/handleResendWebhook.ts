@@ -27,7 +27,11 @@ export async function handleResendWebhook(req: Request): Promise<Response> {
   const payload = await req.text();
   let event: MailWebhookEvent;
   try {
-    event = verifyResendWebhook({ payload, headers: { id, timestamp, signature }, webhookSecret: secret }) as MailWebhookEvent;
+    event = verifyResendWebhook({
+      payload,
+      headers: { id, timestamp, signature },
+      webhookSecret: secret,
+    }) as MailWebhookEvent;
   } catch (err) {
     logger.warn('mail:webhook_invalid_signature', err instanceof Error ? err.message : 'Invalid signature', { err });
     return Response.json({ error: 'unauthorized' }, { status: 401 });
@@ -39,11 +43,17 @@ export async function handleResendWebhook(req: Request): Promise<Response> {
   const admin = createAdminClient();
   const { data: recorded, error } = await admin.rpc('record_mail_event', record);
   if (error) {
-    logger.error('mail:webhook_record_failed', error.message, { err: error, payload: { webhookId: id, eventType: record.p_event_type } });
+    logger.error('mail:webhook_record_failed', error.message, {
+      err: error,
+      payload: { webhookId: id, eventType: record.p_event_type },
+    });
     return Response.json({ error: 'record_failed' }, { status: 500 });
   }
 
-  if (recorded && ['email.bounced', 'email.failed', 'email.complained', 'email.suppressed'].includes(record.p_event_type)) {
+  if (
+    recorded &&
+    ['email.bounced', 'email.failed', 'email.complained', 'email.suppressed'].includes(record.p_event_type)
+  ) {
     logger.warn('mail:delivery_problem', `${record.p_event_type}: ${record.p_detail ?? ''}`, {
       payload: {
         eventType: record.p_event_type,

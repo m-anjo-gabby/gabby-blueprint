@@ -5,7 +5,12 @@ import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { formatTrialOccupation, formatTrialReferralSource, type TrialApplicationRow, type TrialApplicationStatus } from '@gabby/types/trialApplication';
+import {
+  formatTrialOccupation,
+  formatTrialReferralSource,
+  type TrialApplicationRow,
+  type TrialApplicationStatus,
+} from '@gabby/types/trialApplication';
 
 type TableT = ReturnType<typeof useTranslations<'trialApplications.dataTable'>>;
 
@@ -55,7 +60,9 @@ export function createColumns(t: TableT, locale: 'ja' | 'en'): ListColumnDef<Tri
       accessorKey: 'occupation',
       header: t('occupationHeader'),
       cell: ({ row }) => (
-        <span className="text-slate-600">{formatTrialOccupation(row.original.occupation, row.original.occupation_other, locale)}</span>
+        <span className="text-slate-600">
+          {formatTrialOccupation(row.original.occupation, row.original.occupation_other, locale)}
+        </span>
       ),
     },
     {
@@ -82,7 +89,10 @@ export function createColumns(t: TableT, locale: 'ja' | 'en'): ListColumnDef<Tri
       header: t('messageHeader'),
       cell: ({ row }) =>
         row.original.message ? (
-          <p className="max-w-xs whitespace-pre-wrap break-words text-xs text-slate-600 line-clamp-3" title={row.original.message}>
+          <p
+            className="max-w-xs whitespace-pre-wrap break-words text-xs text-slate-600 line-clamp-3"
+            title={row.original.message}
+          >
             {row.original.message}
           </p>
         ) : (
@@ -102,7 +112,9 @@ export function createColumns(t: TableT, locale: 'ja' | 'en'): ListColumnDef<Tri
               : null;
         return (
           <div className="whitespace-nowrap">
-            <span className={cn('rounded-md border px-2 py-1 text-xs font-bold', STATUS_BADGE_CLASS[status])}>{t(`status.${status}`)}</span>
+            <span className={cn('rounded-md border px-2 py-1 text-xs font-bold', STATUS_BADGE_CLASS[status])}>
+              {t(`status.${status}`)}
+            </span>
             {sub && <span className="mt-1 block text-xs text-slate-400">{sub}</span>}
           </div>
         );

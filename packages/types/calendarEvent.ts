@@ -45,10 +45,12 @@ export type CalendarEventPhase = 'upcoming' | 'live' | 'ended';
 /** イベントの開催状況を判定する（終了時刻が無い場合は開始から CALENDAR_EVENT_DEFAULT_DURATION_MS で終了とみなす） */
 export function getCalendarEventPhase(
   event: Pick<CalendarEventItem, 'start_datetime' | 'end_datetime'>,
-  nowMs: number
+  nowMs: number,
 ): CalendarEventPhase {
   const startMs = new Date(event.start_datetime).getTime();
-  const endMs = event.end_datetime ? new Date(event.end_datetime).getTime() : startMs + CALENDAR_EVENT_DEFAULT_DURATION_MS;
+  const endMs = event.end_datetime
+    ? new Date(event.end_datetime).getTime()
+    : startMs + CALENDAR_EVENT_DEFAULT_DURATION_MS;
   if (nowMs < startMs) return 'upcoming';
   if (nowMs < endMs) return 'live';
   return 'ended';

@@ -30,7 +30,9 @@ export function useEventParticipation(onChanged: (calendarEventId: string, isJoi
   };
 
   const cancel = async (calendarEventId: string) => {
-    const ok = await showConfirm('参加をキャンセルしますか？', 'このイベントへの参加登録を取り消します。', { variant: 'danger' });
+    const ok = await showConfirm('参加をキャンセルしますか？', 'このイベントへの参加登録を取り消します。', {
+      variant: 'danger',
+    });
     if (!ok) return;
 
     setIsSubmitting(true);

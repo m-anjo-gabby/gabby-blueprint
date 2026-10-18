@@ -23,7 +23,9 @@ export const groupSessionReminderHandler: MailHandler = async ({ admin, row, rec
 
   const { data: event, error } = await admin
     .from('com_m_calendar_event')
-    .select('title, description, start_datetime, end_datetime, location_url, is_published, series:com_m_calendar_event_series(title)')
+    .select(
+      'title, description, start_datetime, end_datetime, location_url, is_published, series:com_m_calendar_event_series(title)',
+    )
     .eq('calendar_event_id', calendarEventId)
     .maybeSingle();
   if (error) throw new Error(`event_fetch_failed: ${error.message}`);
@@ -67,6 +69,6 @@ export const groupSessionReminderHandler: MailHandler = async ({ admin, row, rec
       // 生徒はグループセッションの一覧、コーチはカレンダーで詳細を確認する
       detailUrl: links.portal(isCoach ? '/calendar' : '/group-sessions'),
       links,
-    })
+    }),
   );
 };

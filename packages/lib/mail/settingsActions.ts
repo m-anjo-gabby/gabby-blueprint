@@ -21,7 +21,10 @@ export async function getMyMailSettingsCore(): Promise<MailSettings | null> {
     const user = await getAuthUser();
     if (!user) return null;
     const supabase = await createServerClient();
-    const { data, error } = await supabase.from('com_t_user_mail_setting').select('category, enabled').eq('user_id', user.id);
+    const { data, error } = await supabase
+      .from('com_t_user_mail_setting')
+      .select('category, enabled')
+      .eq('user_id', user.id);
     if (error) {
       logger.error('mail:get_settings_failed', error.message, { ...ctx, err: error, userId: user.id });
       return null;
@@ -40,8 +43,10 @@ export async function getMyMailSettingsCore(): Promise<MailSettings | null> {
 /** ログイン中のユーザーのメール配信設定（1区分）を更新する */
 export async function updateMyMailSettingCore(
   category: string,
-  enabled: boolean
-): Promise<{ success: true } | { success: false; errorCode: 'unauthorized' | 'invalid_category' | 'unexpected_error' }> {
+  enabled: boolean,
+): Promise<
+  { success: true } | { success: false; errorCode: 'unauthorized' | 'invalid_category' | 'unexpected_error' }
+> {
   const ctx = await getLogContext();
   try {
     const user = await getAuthUser();
@@ -53,16 +58,28 @@ export async function updateMyMailSettingCore(
       .from('com_t_user_mail_setting')
       .upsert(
         { user_id: user.id, category, enabled, update_date: new Date().toISOString() },
-        { onConflict: 'user_id,category' }
+        { onConflict: 'user_id,category' },
       );
     if (error) {
-      logger.error('mail:update_setting_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { category, enabled } });
+      logger.error('mail:update_setting_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { category, enabled },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
-    logger.info('mail:update_setting_success', 'Updated mail setting', { ...ctx, userId: user.id, payload: { category, enabled } });
+    logger.info('mail:update_setting_success', 'Updated mail setting', {
+      ...ctx,
+      userId: user.id,
+      payload: { category, enabled },
+    });
     return { success: true };
   } catch (err) {
-    logger.error('mail:update_setting_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('mail:update_setting_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

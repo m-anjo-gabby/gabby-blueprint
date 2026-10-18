@@ -36,7 +36,7 @@ export function DialoguePracticeManager({ studentId, availableContents, initialA
 
   const filteredAssignments = useMemo(
     () => (activeFilter === 'all' ? assignments : assignments.filter((a) => a.category_id === activeFilter)),
-    [assignments, activeFilter]
+    [assignments, activeFilter],
   );
 
   return (

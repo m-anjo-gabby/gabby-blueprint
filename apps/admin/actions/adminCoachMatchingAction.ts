@@ -34,7 +34,7 @@ export async function getCoachMatchingStatus(coachId: string): Promise<CoachMatc
 export async function setCoachMatchingSuspension(
   coachId: string,
   suspended: boolean,
-  note: string | null
+  note: string | null,
 ): Promise<SetCoachMatchingSuspensionResult> {
   const ctx = await getLogContext();
   const parsed = setSuspensionInput.safeParse({ coachId, suspended, note });
@@ -49,7 +49,11 @@ export async function setCoachMatchingSuspension(
       p_note: parsed.data.note,
     });
     if (error) {
-      logger.error('coach_matching:admin_set_suspension_failed', error.message, { ...ctx, err: error, payload: { coachId } });
+      logger.error('coach_matching:admin_set_suspension_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { coachId },
+      });
       return { success: false };
     }
 
@@ -59,11 +63,15 @@ export async function setCoachMatchingSuspension(
     });
     return { success: true };
   } catch (err) {
-    logger.error('coach_matching:admin_set_suspension_unexpected', err instanceof Error ? err.message : 'Unknown error', {
-      ...ctx,
-      err,
-      payload: { coachId },
-    });
+    logger.error(
+      'coach_matching:admin_set_suspension_unexpected',
+      err instanceof Error ? err.message : 'Unknown error',
+      {
+        ...ctx,
+        err,
+        payload: { coachId },
+      },
+    );
     return { success: false };
   }
 }

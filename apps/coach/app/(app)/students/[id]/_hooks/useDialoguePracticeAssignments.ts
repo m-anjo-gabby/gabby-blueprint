@@ -58,7 +58,9 @@ export function useDialoguePracticeAssignments(studentId: string, initialAssignm
             is_completed: input.is_completed,
             notes: trimmedNotes.length > 0 ? trimmedNotes : null,
             completed_date: input.is_completed
-              ? (s.is_completed ? s.completed_date : new Date().toISOString().slice(0, 10))
+              ? s.is_completed
+                ? s.completed_date
+                : new Date().toISOString().slice(0, 10)
               : null,
           };
         });
@@ -69,7 +71,7 @@ export function useDialoguePracticeAssignments(studentId: string, initialAssignm
           completed_session_count: completedCount,
           is_set_completed: sessions.length > 0 && completedCount === sessions.length,
         };
-      })
+      }),
     );
   };
 

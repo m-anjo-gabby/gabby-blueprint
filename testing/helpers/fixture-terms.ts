@@ -26,7 +26,7 @@ function jstMidnightUtc(year: number, month: number, day: number): Date {
 
 function addMonths(ym: YearMonth, n: number): YearMonth {
   const i = ym.month - 1 + n;
-  return { year: ym.year + Math.floor(i / 12), month: ((i % 12) + 12) % 12 + 1 };
+  return { year: ym.year + Math.floor(i / 12), month: (((i % 12) + 12) % 12) + 1 };
 }
 
 export function termOf(index: number): Term {
@@ -36,13 +36,14 @@ export function termOf(index: number): Term {
   const end = new Date(jstMidnightUtc(next.year, next.month, 1).getTime() - 1);
   const endJst = new Date(end.getTime() + JST_OFFSET_MS).toISOString().slice(0, 10);
   const months = Array.from({ length: TERM_MONTHS }, (_, i) => addMonths(first, i));
-  const label = `T${index}（${first.year}-${String(first.month).padStart(2, "0")}-01〜${endJst}）`;
+  const label = `T${index}（${first.year}-${String(first.month).padStart(2, '0')}-01〜${endJst}）`;
   return { index, label, startIso: start.toISOString(), endIso: end.toISOString(), months };
 }
 
 export function currentTermIndex(now: Date = new Date()): number {
   const jst = new Date(now.getTime() + JST_OFFSET_MS);
-  const monthsSinceAnchor = (jst.getUTCFullYear() - TERM_ANCHOR.year) * 12 + jst.getUTCMonth() - (TERM_ANCHOR.month - 1);
+  const monthsSinceAnchor =
+    (jst.getUTCFullYear() - TERM_ANCHOR.year) * 12 + jst.getUTCMonth() - (TERM_ANCHOR.month - 1);
   return Math.floor(monthsSinceAnchor / TERM_MONTHS);
 }
 

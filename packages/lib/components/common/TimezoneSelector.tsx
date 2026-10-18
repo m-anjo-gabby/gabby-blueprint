@@ -53,7 +53,7 @@ export function TimezoneSelector({
 
   const options = useMemo(
     () => timezones.map((tz) => ({ ...tz, offsetLabel: formatUtcOffset(tz.timezone, now) ?? '' })),
-    [timezones, now]
+    [timezones, now],
   );
 
   const currentTimeLabel = useMemo(() => {
@@ -99,7 +99,10 @@ export function TimezoneSelector({
           ))}
         </select>
         {isSaving && (
-          <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400 pointer-events-none" />
+          <Loader2
+            size={14}
+            className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400 pointer-events-none"
+          />
         )}
       </div>
       {currentTimeLabel && (

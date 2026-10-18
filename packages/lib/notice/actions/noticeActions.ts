@@ -1,9 +1,9 @@
-"use server";
+'use server';
 
-import { createServerClient } from "@gabby/lib/supabase/server";
-import { createLogger } from "@gabby/lib/logger";
-import { getLogContext } from "@gabby/lib/logger/context";
-import { NoticeItem } from "@gabby/types/notice";
+import { createServerClient } from '@gabby/lib/supabase/server';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
+import { NoticeItem } from '@gabby/types/notice';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
@@ -27,15 +27,17 @@ export async function getNoticesAction(): Promise<{
 
     const { data, error } = await supabase
       .from('com_m_notice')
-      .select(`
+      .select(
+        `
         *,
         read:com_t_notice_read(notice_id)
-      `)
+      `,
+      )
       .order('is_important', { ascending: false })
       .order('published_at', { ascending: false });
 
     if (error) {
-      logger.error("notice:get_all_failed", error.message, { ...ctx, err: error });
+      logger.error('notice:get_all_failed', error.message, { ...ctx, err: error });
       return { success: false, data: [], error: error.message };
     }
 
@@ -48,7 +50,7 @@ export async function getNoticesAction(): Promise<{
 
     return { success: true, data: notices };
   } catch (err) {
-    logger.error("notice:get_all_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('notice:get_all_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, data: [], error: 'Unexpected error' };
   }
 }
@@ -64,9 +66,7 @@ export async function getUnreadNoticeCountAction(): Promise<number> {
     if (!user) return 0;
 
     // 公開中お知らせの notice_id 一覧
-    const { data: allNotices, error: noticeError } = await supabase
-      .from('com_m_notice')
-      .select('notice_id');
+    const { data: allNotices, error: noticeError } = await supabase.from('com_m_notice').select('notice_id');
 
     if (noticeError || !allNotices) return 0;
 
@@ -85,7 +85,10 @@ export async function getUnreadNoticeCountAction(): Promise<number> {
     const readIds = new Set((readData || []).map((r) => r.notice_id));
     return noticeIds.filter((id: string) => !readIds.has(id)).length;
   } catch (err) {
-    logger.error("notice:unread_count_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('notice:unread_count_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return 0;
   }
 }
@@ -103,27 +106,25 @@ export async function markNoticeAsReadAction(noticeId: string): Promise<{
     const user = await getAuthUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
-    const { error } = await supabase
-      .from('com_t_notice_read')
-      .upsert(
-        {
-          notice_id: noticeId,
-          user_id: user.id,
-          read_at: new Date().toISOString(),
-          insert_date: new Date().toISOString(),
-          update_date: new Date().toISOString(),
-        },
-        { onConflict: 'notice_id,user_id', ignoreDuplicates: true }
-      );
+    const { error } = await supabase.from('com_t_notice_read').upsert(
+      {
+        notice_id: noticeId,
+        user_id: user.id,
+        read_at: new Date().toISOString(),
+        insert_date: new Date().toISOString(),
+        update_date: new Date().toISOString(),
+      },
+      { onConflict: 'notice_id,user_id', ignoreDuplicates: true },
+    );
 
     if (error) {
-      logger.error("notice:mark_read_failed", error.message, { ...ctx, err: error });
+      logger.error('notice:mark_read_failed', error.message, { ...ctx, err: error });
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error("notice:mark_read_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('notice:mark_read_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -144,7 +145,7 @@ export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise
     if (!user) return { success: false, error: 'Unauthorized' };
 
     const now = new Date().toISOString();
-    const rows = noticeIds.map(notice_id => ({
+    const rows = noticeIds.map((notice_id) => ({
       notice_id,
       user_id: user.id,
       read_at: now,
@@ -157,13 +158,16 @@ export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise
       .upsert(rows, { onConflict: 'notice_id,user_id', ignoreDuplicates: true });
 
     if (error) {
-      logger.error("notice:mark_read_batch_failed", error.message, { ...ctx, err: error });
+      logger.error('notice:mark_read_batch_failed', error.message, { ...ctx, err: error });
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error("notice:mark_read_batch_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    logger.error('notice:mark_read_batch_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+    });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -184,14 +188,19 @@ export async function recordNoticeCtaClickAction(noticeId: string): Promise<{
 
     const now = new Date().toISOString();
     // 未読なら既読の行を作る（押した日時も同時に入れる）
-    const { error: upsertError } = await supabase
-      .from('com_t_notice_read')
-      .upsert(
-        { notice_id: noticeId, user_id: user.id, read_at: now, cta_clicked_at: now, insert_date: now, update_date: now },
-        { onConflict: 'notice_id,user_id', ignoreDuplicates: true }
-      );
+    const { error: upsertError } = await supabase.from('com_t_notice_read').upsert(
+      {
+        notice_id: noticeId,
+        user_id: user.id,
+        read_at: now,
+        cta_clicked_at: now,
+        insert_date: now,
+        update_date: now,
+      },
+      { onConflict: 'notice_id,user_id', ignoreDuplicates: true },
+    );
     if (upsertError) {
-      logger.error("notice:cta_click_failed", upsertError.message, { ...ctx, err: upsertError, payload: { noticeId } });
+      logger.error('notice:cta_click_failed', upsertError.message, { ...ctx, err: upsertError, payload: { noticeId } });
       return { success: false, error: upsertError.message };
     }
 
@@ -203,13 +212,17 @@ export async function recordNoticeCtaClickAction(noticeId: string): Promise<{
       .eq('user_id', user.id)
       .is('cta_clicked_at', null);
     if (updateError) {
-      logger.error("notice:cta_click_failed", updateError.message, { ...ctx, err: updateError, payload: { noticeId } });
+      logger.error('notice:cta_click_failed', updateError.message, { ...ctx, err: updateError, payload: { noticeId } });
       return { success: false, error: updateError.message };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error("notice:cta_click_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { noticeId } });
+    logger.error('notice:cta_click_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+      ...ctx,
+      err,
+      payload: { noticeId },
+    });
     return { success: false, error: 'Unexpected error' };
   }
 }
@@ -218,32 +231,28 @@ export async function recordNoticeCtaClickAction(noticeId: string): Promise<{
  * Supabase Storage (notices バケット) から添付ファイルの公開URLを取得
  * @param path Storageパス (例: notices/c7aaeab6.../file.pdf)
  */
-export async function getNoticeAttachmentUrlAction(
-  path: string
-): Promise<{ url: string | null; error?: string }> {
+export async function getNoticeAttachmentUrlAction(path: string): Promise<{ url: string | null; error?: string }> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
 
     // Public バケット 'notices' から公開URLを取得
-    const { data } = supabase.storage
-      .from('notices')
-      .getPublicUrl(path);
+    const { data } = supabase.storage.from('notices').getPublicUrl(path);
 
     if (data?.publicUrl) {
       return { url: data.publicUrl };
     }
 
-    logger.error("notice:get_attachment_url_failed", 'Failed to generate public URL', {
+    logger.error('notice:get_attachment_url_failed', 'Failed to generate public URL', {
       ...ctx,
-      payload: { path }
+      payload: { path },
     });
     return { url: null, error: 'Failed to generate public URL' };
   } catch (err) {
-    logger.error("notice:get_attachment_url_unexpected", err instanceof Error ? err.message : 'Unknown error', {
+    logger.error('notice:get_attachment_url_unexpected', err instanceof Error ? err.message : 'Unknown error', {
       ...ctx,
       err,
-      payload: { path }
+      payload: { path },
     });
     return { url: null, error: 'Unexpected error' };
   }

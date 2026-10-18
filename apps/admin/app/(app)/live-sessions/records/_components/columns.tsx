@@ -25,7 +25,9 @@ export function createColumns(t: TableT, { tStatus, onCorrect }: ColumnOptions):
       accessorKey: 'start_datetime',
       header: t('startHeader'),
       cell: ({ row }) => (
-        <span className="whitespace-nowrap text-slate-600">{formatDateTimeByZone(row.original.start_datetime, REPORTING_TIMEZONE, false)}</span>
+        <span className="whitespace-nowrap text-slate-600">
+          {formatDateTimeByZone(row.original.start_datetime, REPORTING_TIMEZONE, false)}
+        </span>
       ),
     },
     {
@@ -52,7 +54,11 @@ export function createColumns(t: TableT, { tStatus, onCorrect }: ColumnOptions):
             <Badge variant="outline" className={`${badge.className} text-[10px] font-bold`}>
               {badge.label}
             </Badge>
-            <SessionOutcomeFlags conductedVia={record.conducted_via} outcomeMismatch={record.outcome_mismatch} isCorrected={record.is_corrected} />
+            <SessionOutcomeFlags
+              conductedVia={record.conducted_via}
+              outcomeMismatch={record.outcome_mismatch}
+              isCorrected={record.is_corrected}
+            />
           </div>
         );
       },
@@ -63,7 +69,13 @@ export function createColumns(t: TableT, { tStatus, onCorrect }: ColumnOptions):
       meta: { className: 'hidden lg:table-cell' },
       cell: ({ row }) => {
         const note = row.original.status_note ?? row.original.cancel_reason;
-        return note ? <p className="max-w-xs truncate text-xs text-slate-500" title={note}>{note}</p> : <span className="text-xs text-slate-300">-</span>;
+        return note ? (
+          <p className="max-w-xs truncate text-xs text-slate-500" title={note}>
+            {note}
+          </p>
+        ) : (
+          <span className="text-xs text-slate-300">-</span>
+        );
       },
     },
     {

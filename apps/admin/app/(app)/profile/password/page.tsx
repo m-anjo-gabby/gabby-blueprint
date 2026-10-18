@@ -77,9 +77,7 @@ export default function PasswordChangePage() {
               onChange={(e) => setCurrentPassword(e.target.value)}
               required
             />
-            {currentPasswordError && (
-              <p className="text-[11px] text-rose-600 font-bold ml-1">{currentPasswordError}</p>
-            )}
+            {currentPasswordError && <p className="text-[11px] text-rose-600 font-bold ml-1">{currentPasswordError}</p>}
           </div>
 
           <NewPasswordFields

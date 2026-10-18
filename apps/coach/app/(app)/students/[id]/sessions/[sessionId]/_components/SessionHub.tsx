@@ -29,7 +29,12 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { EndSessionDialog } from '@/components/session/EndSessionDialog';
 import { useLiveSessionEndSignal } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionEndSignal';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
-import { SESSION_STATUS, isConductedOutcome, type SessionOutcome, type SessionResultSummary } from '@gabby/types/session';
+import {
+  SESSION_STATUS,
+  isConductedOutcome,
+  type SessionOutcome,
+  type SessionResultSummary,
+} from '@gabby/types/session';
 
 interface Props {
   studentId: string;
@@ -73,13 +78,7 @@ interface Props {
  * どうかで出し分けず常時没入表示にする）。Live Sprint等コンテンツ側の没入判定（URLの
  * ?session_id=の有無）とは独立しており、混同しないこと（apps/coach/lib/liveSession/context.ts参照）。
  */
-export function SessionHub({
-  studentId,
-  session,
-  dialoguePractice,
-  prep,
-  selfTraining,
-}: Props) {
+export function SessionHub({ studentId, session, dialoguePractice, prep, selfTraining }: Props) {
   const router = useRouter();
   const user = useUserStore((state) => state.user);
   const timezone = user?.timezone || 'Asia/Tokyo';
@@ -101,7 +100,11 @@ export function SessionHub({
   const handleRecorded = (outcome: SessionOutcome) => {
     // コーチの欠席・通信トラブル等はキャンセル扱いになり、実施されていないセッションのため
     // 宿題投稿を促す結果画面には遷移しない（このハブ画面はSCHEDULED専用のため、いずれの場合もこのハブには戻らない）
-    router.push(isConductedOutcome(outcome) ? `/students/${studentId}/sessions/${session.session_id}/result` : `/students/${studentId}`);
+    router.push(
+      isConductedOutcome(outcome)
+        ? `/students/${studentId}/sessions/${session.session_id}/result`
+        : `/students/${studentId}`,
+    );
   };
 
   // 終了予定時刻超過の警告は時間経過で状態が変わるため、画面を開いたまま放置されても
@@ -154,12 +157,15 @@ export function SessionHub({
         backLabel="Back to Overview"
         info={
           <div className="flex items-center gap-2">
-            <span className={`inline-flex text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
+            <span
+              className={`inline-flex text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}
+            >
               {badge.label}
             </span>
             {isTimezoneReady && (
               <span className="hidden md:inline text-[11px] font-bold text-slate-500 whitespace-nowrap">
-                {formatDateTimeEn(session.start_datetime, timezone)} – {formatDateTimeEn(session.end_datetime, timezone)}
+                {formatDateTimeEn(session.start_datetime, timezone)} –{' '}
+                {formatDateTimeEn(session.end_datetime, timezone)}
               </span>
             )}
           </div>
@@ -168,148 +174,160 @@ export function SessionHub({
       <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
         <div className="max-w-5xl mx-auto space-y-8 pb-8">
           <p className="text-[13px] text-slate-500 max-w-2xl">
-            Prep for this session, then click Start Live Session below to begin the call — it opens in a separate
-            tab (or window), so you can keep this page open for training (e.g. Live Sprint) and prep info.
+            Prep for this session, then click Start Live Session below to begin the call — it opens in a separate tab
+            (or window), so you can keep this page open for training (e.g. Live Sprint) and prep info.
           </p>
 
           <Section label="Session Info" icon={Info}>
-          <Card className="rounded-2xl border-slate-200 shadow-sm">
-            <CardContent className="pt-5 space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className={`inline-flex text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
-                  {badge.label}
-                </span>
-                {isActionable && hasCoachJoined && (
-                  <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-emerald-50 text-emerald-700 border-emerald-200">
-                    <BadgeCheck size={11} />
-                    You joined
+            <Card className="rounded-2xl border-slate-200 shadow-sm">
+              <CardContent className="pt-5 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span
+                    className={`inline-flex text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}
+                  >
+                    {badge.label}
                   </span>
-                )}
-              </div>
-
-              {isActionable && hasCallEndedElsewhere && (
-                <div className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-strong">
-                  <PhoneOff size={13} className="shrink-0" />
-                  The call ended in the other tab. Press End Session below to record the outcome.
+                  {isActionable && hasCoachJoined && (
+                    <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-emerald-50 text-emerald-700 border-emerald-200">
+                      <BadgeCheck size={11} />
+                      You joined
+                    </span>
+                  )}
                 </div>
-              )}
 
-              {/* 誤ったセッションを操作してしまうことを防ぐため、日時は強調して表示する */}
-              <div className="rounded-xl bg-slate-50/80 border border-slate-100 px-4 py-3">
-                {isTimezoneReady ? (
-                  <p className="text-base font-black text-slate-800 tracking-tight">
-                    {formatDateTimeEn(session.start_datetime, timezone)} – {formatDateTimeEn(session.end_datetime, timezone)}
-                  </p>
-                ) : (
-                  <div className="h-5 w-56 max-w-full rounded bg-slate-200 animate-pulse" />
-                )}
-              </div>
-  
-              {isActionable ? (
-                <div className="space-y-1.5 pt-1">
-                  {isPastScheduledEnd && (
-                    <div className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
-                      <TriangleAlert size={13} className="shrink-0" />
-                      This session’s scheduled end time has passed. Please press End Session to record what happened
-                      (including if the lesson was held on an external Zoom, or didn’t take place).
-                    </div>
-                  )}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {!isPastActionWindow && (
-                      <Link
-                        href={`/students/${studentId}/room/${session.session_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Opens in a new tab, so you can keep sprint and material screens open alongside the call"
-                        onClick={handleStartLiveSessionClick}
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-brand hover:bg-brand-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-brand-200"
-                      >
-                        <Video size={14} />
-                        Start Live Session
-                        <ExternalLink size={12} className="opacity-70" />
-                      </Link>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleEndSessionClick}
-                      icon={<CheckCircle2 />}
-                      title="Record this session’s outcome"
-                      className="h-auto gap-1.5 text-xs font-bold text-slate-600 bg-white border-slate-200 hover:bg-slate-50 px-4 py-2.5 rounded-full [&_svg]:size-3.5"
-                    >
-                      End Session
-                    </Button>
+                {isActionable && hasCallEndedElsewhere && (
+                  <div className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-strong">
+                    <PhoneOff size={13} className="shrink-0" />
+                    The call ended in the other tab. Press End Session below to record the outcome.
                   </div>
-                  {showNotStartedNotice && (
-                    <p className="flex items-center gap-1 text-[11px] text-amber-600 font-semibold">
-                      <TriangleAlert size={11} className="shrink-0" />
-                      You can record the outcome once the session has started ({isTimezoneReady ? formatDateTimeEn(session.start_datetime, timezone) : '…'}). To cancel before then, use Cancel on the student’s overview.
-                    </p>
-                  )}
-                  {isPastActionWindow ? (
-                    <p className="flex items-center gap-1 text-[11px] text-slate-400">
-                      <Clock size={11} className="shrink-0" />
-                      Starting a new call or Live Sprint is no longer available for this session — press End Session to record the outcome.
+                )}
+
+                {/* 誤ったセッションを操作してしまうことを防ぐため、日時は強調して表示する */}
+                <div className="rounded-xl bg-slate-50/80 border border-slate-100 px-4 py-3">
+                  {isTimezoneReady ? (
+                    <p className="text-base font-black text-slate-800 tracking-tight">
+                      {formatDateTimeEn(session.start_datetime, timezone)} –{' '}
+                      {formatDateTimeEn(session.end_datetime, timezone)}
                     </p>
                   ) : (
-                    <p className={`flex items-center gap-1 text-[11px] ${showEarlyJoinNotice ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>
-                      {showEarlyJoinNotice ? <TriangleAlert size={11} className="shrink-0" /> : <Clock size={11} className="shrink-0" />}
-                      {showEarlyJoinNotice
-                        ? `Not yet — you can start at ${formatDateTimeEn(earliestJoinTime, timezone)}`
-                        : `Available starting ${formatDateTimeEn(earliestJoinTime, timezone)}`}
-                    </p>
+                    <div className="h-5 w-56 max-w-full rounded bg-slate-200 animate-pulse" />
                   )}
                 </div>
-              ) : (
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3">
-                  <p className="text-xs text-slate-500">This lesson has already been finalized.</p>
-                  <Link
-                    href={`/students/${studentId}/sessions/${session.session_id}/result`}
-                    className="shrink-0 text-xs font-bold text-brand hover:text-brand-500 transition-colors"
-                  >
-                    View Session Result
-                  </Link>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </Section>
-  
-        {isActionable && !isPastActionWindow && (
-          <Section label="Training">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="rounded-2xl border-slate-200 shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                    <Zap size={14} className="fill-current text-amber-400" />
-                    Live Sprint
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-2 space-y-3">
-                  <p className="text-xs text-slate-500">Run a scored practice drill together during the call.</p>
-                  <Link
-                    href={withLiveSessionParam(`/students/${studentId}/lesson-sprint`, session.session_id)}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 transition-colors px-4 py-2.5 rounded-full shadow-sm"
-                  >
-                    Start
-                    <ArrowRight size={12} />
-                  </Link>
-                </CardContent>
-              </Card>
-  
-              {dialoguePractice}
-            </div>
+
+                {isActionable ? (
+                  <div className="space-y-1.5 pt-1">
+                    {isPastScheduledEnd && (
+                      <div className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                        <TriangleAlert size={13} className="shrink-0" />
+                        This session’s scheduled end time has passed. Please press End Session to record what happened
+                        (including if the lesson was held on an external Zoom, or didn’t take place).
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {!isPastActionWindow && (
+                        <Link
+                          href={`/students/${studentId}/room/${session.session_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Opens in a new tab, so you can keep sprint and material screens open alongside the call"
+                          onClick={handleStartLiveSessionClick}
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-brand hover:bg-brand-500 transition-colors px-4 py-2.5 rounded-full shadow-md shadow-brand-200"
+                        >
+                          <Video size={14} />
+                          Start Live Session
+                          <ExternalLink size={12} className="opacity-70" />
+                        </Link>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleEndSessionClick}
+                        icon={<CheckCircle2 />}
+                        title="Record this session’s outcome"
+                        className="h-auto gap-1.5 text-xs font-bold text-slate-600 bg-white border-slate-200 hover:bg-slate-50 px-4 py-2.5 rounded-full [&_svg]:size-3.5"
+                      >
+                        End Session
+                      </Button>
+                    </div>
+                    {showNotStartedNotice && (
+                      <p className="flex items-center gap-1 text-[11px] text-amber-600 font-semibold">
+                        <TriangleAlert size={11} className="shrink-0" />
+                        You can record the outcome once the session has started (
+                        {isTimezoneReady ? formatDateTimeEn(session.start_datetime, timezone) : '…'}). To cancel before
+                        then, use Cancel on the student’s overview.
+                      </p>
+                    )}
+                    {isPastActionWindow ? (
+                      <p className="flex items-center gap-1 text-[11px] text-slate-400">
+                        <Clock size={11} className="shrink-0" />
+                        Starting a new call or Live Sprint is no longer available for this session — press End Session
+                        to record the outcome.
+                      </p>
+                    ) : (
+                      <p
+                        className={`flex items-center gap-1 text-[11px] ${showEarlyJoinNotice ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}
+                      >
+                        {showEarlyJoinNotice ? (
+                          <TriangleAlert size={11} className="shrink-0" />
+                        ) : (
+                          <Clock size={11} className="shrink-0" />
+                        )}
+                        {showEarlyJoinNotice
+                          ? `Not yet — you can start at ${formatDateTimeEn(earliestJoinTime, timezone)}`
+                          : `Available starting ${formatDateTimeEn(earliestJoinTime, timezone)}`}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3">
+                    <p className="text-xs text-slate-500">This lesson has already been finalized.</p>
+                    <Link
+                      href={`/students/${studentId}/sessions/${session.session_id}/result`}
+                      className="shrink-0 text-xs font-bold text-brand hover:text-brand-500 transition-colors"
+                    >
+                      View Session Result
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </Section>
-        )}
-  
-        <Section label="Prep" icon={History}>
-          {prep}
-        </Section>
-  
-        <Section label="Self-Training" icon={TrendingUp}>
-          {selfTraining}
-        </Section>
-      </div>
+
+          {isActionable && !isPastActionWindow && (
+            <Section label="Training">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                      <Zap size={14} className="fill-current text-amber-400" />
+                      Live Sprint
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-2 space-y-3">
+                    <p className="text-xs text-slate-500">Run a scored practice drill together during the call.</p>
+                    <Link
+                      href={withLiveSessionParam(`/students/${studentId}/lesson-sprint`, session.session_id)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 transition-colors px-4 py-2.5 rounded-full shadow-sm"
+                    >
+                      Start
+                      <ArrowRight size={12} />
+                    </Link>
+                  </CardContent>
+                </Card>
+
+                {dialoguePractice}
+              </div>
+            </Section>
+          )}
+
+          <Section label="Prep" icon={History}>
+            {prep}
+          </Section>
+
+          <Section label="Self-Training" icon={TrendingUp}>
+            {selfTraining}
+          </Section>
+        </div>
       </div>
 
       <EndSessionDialog

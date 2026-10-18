@@ -6,7 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { cancelSessionAsAdmin } from '@/actions/adminLiveSessionAction';
 import { formatSessionDateTime } from './formatSessionDateTime';
@@ -73,14 +80,25 @@ export function CancelSessionDialog({ target, onClose, onCancelled }: Props) {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('reasonLabel')}</Label>
-            <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('reasonPlaceholder')} />
+            <Textarea
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={t('reasonPlaceholder')}
+            />
           </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => handleClose(false)} disabled={isCancelling}>
             {t('close')}
           </Button>
-          <Button pending={isCancelling} type="button" onClick={handleCancel} disabled={isCancelling} className="bg-rose-600 hover:bg-rose-700">
+          <Button
+            pending={isCancelling}
+            type="button"
+            onClick={handleCancel}
+            disabled={isCancelling}
+            className="bg-rose-600 hover:bg-rose-700"
+          >
             {t('confirmButton')}
           </Button>
         </DialogFooter>

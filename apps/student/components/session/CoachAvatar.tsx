@@ -18,7 +18,7 @@ export function CoachAvatar({ iconPath, size, className }: CoachAvatarProps) {
       style={{ width: size, height: size }}
       className={cn(
         'flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-soft text-brand-500',
-        className
+        className,
       )}
     >
       {iconUrl ? (

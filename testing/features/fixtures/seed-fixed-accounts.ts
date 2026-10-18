@@ -18,33 +18,43 @@
  *   既に期間の重なる有効ライセンスがある場合は新規作成をスキップする（dev等、本スクリプト
  *   導入前に作られた固定アカウントとの互換のため）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from "../../helpers/env.ts";
-import { createAdminClient, signInAsRole } from "../../helpers/auth.ts";
-import { assertReleaseApplied } from "../../helpers/preflight.ts";
-import { currentTermIndex, termOf, type Term } from "../../helpers/fixture-terms.ts";
-import { createFixtureKit } from "../../helpers/fixture-accounts.ts";
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
+import { createAdminClient, signInAsRole } from '../../helpers/auth.ts';
+import { assertReleaseApplied } from '../../helpers/preflight.ts';
+import { currentTermIndex, termOf, type Term } from '../../helpers/fixture-terms.ts';
+import { createFixtureKit } from '../../helpers/fixture-accounts.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);
 
 const PASSWORD_ENV = process.env.QA_LIVE_SESSION_TEST_PASSWORD;
 if (!PASSWORD_ENV) {
-  throw new Error("QA_LIVE_SESSION_TEST_PASSWORD が未設定です。実行前に環境変数を設定してください。");
+  throw new Error('QA_LIVE_SESSION_TEST_PASSWORD が未設定です。実行前に環境変数を設定してください。');
 }
 const PASSWORD: string = PASSWORD_ENV;
 
-const FIXED_CLIENT_NAME = "【QA固定】E2E/データ主体共通アカウント";
-const POPUP_CLIENT_NAME = "【QA固定】ポップアップ検証";
-const ADMIN_EMAIL = "qa-admin@gabby-qa-test.example";
+const FIXED_CLIENT_NAME = '【QA固定】E2E/データ主体共通アカウント';
+const POPUP_CLIENT_NAME = '【QA固定】ポップアップ検証';
+const ADMIN_EMAIL = 'qa-admin@gabby-qa-test.example';
 
 const admin = await createAdminClient();
 
 console.log(`\n=== 固定アカウント投入: env=${env} ===`);
 
 await assertReleaseApplied(admin, [
-  { name: "admin_match_student_with_coach", dummyArgs: { p_ticket_id: "00000000-0000-0000-0000-000000000000", p_coach_id: "00000000-0000-0000-0000-000000000000", p_slot_no: 1, p_day_of_week: 1, p_start_time: "10:00:00", p_end_time: "10:30:00" } },
+  {
+    name: 'admin_match_student_with_coach',
+    dummyArgs: {
+      p_ticket_id: '00000000-0000-0000-0000-000000000000',
+      p_coach_id: '00000000-0000-0000-0000-000000000000',
+      p_slot_no: 1,
+      p_day_of_week: 1,
+      p_start_time: '10:00:00',
+      p_end_time: '10:30:00',
+    },
+  },
 ]);
-console.log("preflight OK: admin_match_student_with_coach は反映済み");
+console.log('preflight OK: admin_match_student_with_coach は反映済み');
 
 // ---------------------------------------------------------------------------
 // ターム（testing/helpers/fixture-terms.ts）
@@ -58,8 +68,19 @@ console.log(`当期: ${termOf(CUR).label} / 前期: ${termOf(PREV).label} / 次�
 // ---------------------------------------------------------------------------
 // マスタ系・契約・ライセンス（testing/helpers/fixture-accounts.ts）
 // ---------------------------------------------------------------------------
-const { ensureClient, findAuthUserByEmail, ensureUser, ensureRole, ensureCoachProfile, ensureCoachAvailability, ensureContract, ensureLicense, ensureSessionTicket, ensureContentAccess, ensureGenericSprintAccess } =
-  createFixtureKit(admin, PASSWORD);
+const {
+  ensureClient,
+  findAuthUserByEmail,
+  ensureUser,
+  ensureRole,
+  ensureCoachProfile,
+  ensureCoachAvailability,
+  ensureContract,
+  ensureLicense,
+  ensureSessionTicket,
+  ensureContentAccess,
+  ensureGenericSprintAccess,
+} = createFixtureKit(admin, PASSWORD);
 
 // ---------------------------------------------------------------------------
 // 学習履歴（生徒モニタリング画面の「過去分」検証用）
@@ -77,18 +98,18 @@ interface HistoryContents {
 async function pickHistoryContents(clientId: string): Promise<HistoryContents> {
   const pick = async (contentType: number): Promise<string> => {
     const { data, error } = await admin
-      .from("com_m_contents")
-      .select("content_id, content_scope")
-      .eq("content_type", contentType)
-      .in("content_scope", [0, 1])
-      .eq("status", 1)
-      .order("content_scope")
-      .order("content_id")
+      .from('com_m_contents')
+      .select('content_id, content_scope')
+      .eq('content_type', contentType)
+      .in('content_scope', [0, 1])
+      .eq('status', 1)
+      .order('content_scope')
+      .order('content_id')
       .limit(1)
       .single();
     if (error) throw new Error(`content_type=${contentType}の公開中教材が見つかりません: ${error.message}`);
     if (data.content_scope === 1) {
-      await ensureContentAccess(clientId, data.content_id as string, "【QA固定】学習履歴フィクスチャ用");
+      await ensureContentAccess(clientId, data.content_id as string, '【QA固定】学習履歴フィクスチャ用');
     }
     return data.content_id as string;
   };
@@ -96,31 +117,68 @@ async function pickHistoryContents(clientId: string): Promise<HistoryContents> {
 }
 
 /** 対象月の10日(JST)に、単語ドリル・スプリント・スプリントドリルの実績を1件ずつ作る。実行日より未来の月は作らない。 */
-async function ensureMonthlyHistory(userId: string, year: number, month: number, contents: HistoryContents): Promise<boolean> {
-  const trainingDate = `${year}-${String(month).padStart(2, "0")}-10`;
+async function ensureMonthlyHistory(
+  userId: string,
+  year: number,
+  month: number,
+  contents: HistoryContents,
+): Promise<boolean> {
+  const trainingDate = `${year}-${String(month).padStart(2, '0')}-10`;
   const trainedAt = new Date(Date.UTC(year, month - 1, 10, 3, 0, 0)); // JST 12:00
   if (trainedAt > NOW) return false;
 
-  const { data: word } = await admin.from("self_t_word_summary").select("summary_id").eq("user_id", userId).eq("training_date", trainingDate).limit(1);
+  const { data: word } = await admin
+    .from('self_t_word_summary')
+    .select('summary_id')
+    .eq('user_id', userId)
+    .eq('training_date', trainingDate)
+    .limit(1);
   if (!word || word.length === 0) {
-    const { error } = await admin.from("self_t_word_summary").insert({ user_id: userId, content_id: contents.wordContentId, training_date: trainingDate, word_count: 10, phrase_count: 5, assessment_count: 8 });
-    if (error) throw error;
-  }
-
-  const { data: drill } = await admin.from("self_t_sprint_summary").select("summary_id").eq("user_id", userId).eq("training_date", trainingDate).limit(1);
-  if (!drill || drill.length === 0) {
-    const { error } = await admin.from("self_t_sprint_summary").insert({ user_id: userId, content_id: contents.sprintContentId, training_date: trainingDate, question_count: 20, assessment_count: 15, speed_count: 5, structure_count: 5, builders_count: 5, mastery_count: 5 });
-    if (error) throw error;
-  }
-
-  const { data: sprint } = await admin.from("self_t_sprint").select("self_sprint_id").eq("user_id", userId).eq("insert_date", trainedAt.toISOString()).limit(1);
-  if (!sprint || sprint.length === 0) {
-    const { error } = await admin.from("self_t_sprint").insert({
+    const { error } = await admin.from('self_t_word_summary').insert({
       user_id: userId,
-      sprint_type: "1",
+      content_id: contents.wordContentId,
+      training_date: trainingDate,
+      word_count: 10,
+      phrase_count: 5,
+      assessment_count: 8,
+    });
+    if (error) throw error;
+  }
+
+  const { data: drill } = await admin
+    .from('self_t_sprint_summary')
+    .select('summary_id')
+    .eq('user_id', userId)
+    .eq('training_date', trainingDate)
+    .limit(1);
+  if (!drill || drill.length === 0) {
+    const { error } = await admin.from('self_t_sprint_summary').insert({
+      user_id: userId,
       content_id: contents.sprintContentId,
-      question_type: "0",
-      answer_type: "0",
+      training_date: trainingDate,
+      question_count: 20,
+      assessment_count: 15,
+      speed_count: 5,
+      structure_count: 5,
+      builders_count: 5,
+      mastery_count: 5,
+    });
+    if (error) throw error;
+  }
+
+  const { data: sprint } = await admin
+    .from('self_t_sprint')
+    .select('self_sprint_id')
+    .eq('user_id', userId)
+    .eq('insert_date', trainedAt.toISOString())
+    .limit(1);
+  if (!sprint || sprint.length === 0) {
+    const { error } = await admin.from('self_t_sprint').insert({
+      user_id: userId,
+      sprint_type: '1',
+      content_id: contents.sprintContentId,
+      question_type: '0',
+      answer_type: '0',
       difficulty_level: 1,
       time_limit_sec: 60,
       total_answered: 10,
@@ -143,25 +201,29 @@ async function ensureTermHistory(userId: string, term: Term, contents: HistoryCo
 // ライブ契約（qa-student-01 × qa-coach-ca-01）
 // ---------------------------------------------------------------------------
 async function ensureLiveMatch(studentId: string, coachId: string, clientId: string, term: Term): Promise<void> {
-  const contractId = await ensureContract(clientId, "LIVE_WEEKLY1_3M", term, 1);
+  const contractId = await ensureContract(clientId, 'LIVE_WEEKLY1_3M', term, 1);
   const licenseId = await ensureLicense(studentId, contractId, term, 1);
   if (!licenseId) return;
 
-  const ticketId = await ensureSessionTicket(licenseId, contractId, studentId, "LIVE_WEEKLY1_3M");
+  const ticketId = await ensureSessionTicket(licenseId, contractId, studentId, 'LIVE_WEEKLY1_3M');
 
-  const { data: schedule } = await admin.from("com_m_lesson_schedule").select("schedule_id").eq("ticket_id", ticketId).limit(1);
+  const { data: schedule } = await admin
+    .from('com_m_lesson_schedule')
+    .select('schedule_id')
+    .eq('ticket_id', ticketId)
+    .limit(1);
   if (schedule && schedule.length > 0) return;
 
   // コーチのAvailability（バンクーバーの月曜18:00〜）に沿う、日本時間の火曜10:00枠でマッチング成立させる
   // （直接マッチングの曜日・時刻は生徒のタイムゾーン。投入済みの環境の枠は、当時の仕様の「バンクーバーの月曜18:00」基準のまま）
   const adminClient = await signInAsRole(ADMIN_EMAIL, PASSWORD);
-  const { data: scheduleId, error } = await adminClient.rpc("admin_match_student_with_coach", {
+  const { data: scheduleId, error } = await adminClient.rpc('admin_match_student_with_coach', {
     p_ticket_id: ticketId,
     p_coach_id: coachId,
     p_slot_no: 1,
     p_day_of_week: 2,
-    p_start_time: "10:00:00",
-    p_end_time: "10:30:00",
+    p_start_time: '10:00:00',
+    p_end_time: '10:30:00',
   });
   if (error) throw error;
   console.log(`  ライブ契約のマッチングを確立: ${term.label} schedule=${scheduleId}`);
@@ -172,26 +234,46 @@ async function ensureLiveMatch(studentId: string, coachId: string, clientId: str
 // ---------------------------------------------------------------------------
 const clientId = await ensureClient(FIXED_CLIENT_NAME);
 const contents = await pickHistoryContents(clientId);
-for (const c of await ensureGenericSprintAccess(clientId, "【QA固定】汎用スプリントの検証用")) console.log(`汎用スプリント: ${c.contentName}`);
+for (const c of await ensureGenericSprintAccess(clientId, '【QA固定】汎用スプリントの検証用'))
+  console.log(`汎用スプリント: ${c.contentName}`);
 
 const adminUserId =
-  (await findAuthUserByEmail(ADMIN_EMAIL)) ?? (await ensureUser({ email: ADMIN_EMAIL, userType: "0", userName: "QAアドミン", clientId: null }));
+  (await findAuthUserByEmail(ADMIN_EMAIL)) ??
+  (await ensureUser({ email: ADMIN_EMAIL, userType: '0', userName: 'QAアドミン', clientId: null }));
 // アドミンの画面はロール（admin）で表示可否を決めるため、ロールが無いと顧客管理等を開けない
-await ensureRole(adminUserId, "admin");
+await ensureRole(adminUserId, 'admin');
 
-const coachCa = await ensureUser({ email: "qa-coach-ca-01@gabby-qa-test.example", userType: "2", userName: "QAコーチCA01", clientId, timezone: "America/Vancouver" });
-const coachUs = await ensureUser({ email: "qa-coach-us-01@gabby-qa-test.example", userType: "2", userName: "QAコーチUS01", clientId, timezone: "America/New_York" });
-await ensureCoachProfile(coachCa, "CA");
-await ensureCoachAvailability(coachCa, "America/Vancouver", [1, 3, 5], "18:00:00", "22:00:00");
-await ensureCoachProfile(coachUs, "US");
-await ensureCoachAvailability(coachUs, "America/New_York", [2, 4], "10:00:00", "16:00:00");
+const coachCa = await ensureUser({
+  email: 'qa-coach-ca-01@gabby-qa-test.example',
+  userType: '2',
+  userName: 'QAコーチCA01',
+  clientId,
+  timezone: 'America/Vancouver',
+});
+const coachUs = await ensureUser({
+  email: 'qa-coach-us-01@gabby-qa-test.example',
+  userType: '2',
+  userName: 'QAコーチUS01',
+  clientId,
+  timezone: 'America/New_York',
+});
+await ensureCoachProfile(coachCa, 'CA');
+await ensureCoachAvailability(coachCa, 'America/Vancouver', [1, 3, 5], '18:00:00', '22:00:00');
+await ensureCoachProfile(coachUs, 'US');
+await ensureCoachAvailability(coachUs, 'America/New_York', [2, 4], '10:00:00', '16:00:00');
 // デモコーチ（通常の生徒の「専属コーチを探す」には出ず、デモの生徒にだけ出る）
-const coachDemo = await ensureUser({ email: "qa-coach-demo-01@gabby-qa-test.example", userType: "2", userName: "QAコーチDEMO01（デモ）", clientId, timezone: "Asia/Tokyo" });
-await ensureRole(coachDemo, "demo_user");
-await ensureCoachProfile(coachDemo, "JP");
-await ensureCoachAvailability(coachDemo, "Asia/Tokyo", [6], "10:00:00", "12:00:00");
+const coachDemo = await ensureUser({
+  email: 'qa-coach-demo-01@gabby-qa-test.example',
+  userType: '2',
+  userName: 'QAコーチDEMO01（デモ）',
+  clientId,
+  timezone: 'Asia/Tokyo',
+});
+await ensureRole(coachDemo, 'demo_user');
+await ensureCoachProfile(coachDemo, 'JP');
+await ensureCoachAvailability(coachDemo, 'Asia/Tokyo', [6], '10:00:00', '12:00:00');
 
-const appContract = async (term: Term) => ensureContract(clientId, "BLUEPRINT_ONLY", term, 10);
+const appContract = async (term: Term) => ensureContract(clientId, 'BLUEPRINT_ONLY', term, 10);
 
 /** ペルソナ定義: 各タームで付与するライセンス状態（null=付与しない）と、学習履歴を作るか。 */
 interface Persona {
@@ -199,33 +281,37 @@ interface Persona {
   name: string;
   roles?: string[];
   prev: 0 | 1 | null;
-  cur: 0 | 1 | "live" | null;
+  cur: 0 | 1 | 'live' | null;
   next: 0 | 1 | null;
   /** ライセンスの無い当期にも学習履歴を作る（モニタリングの除外確認用） */
   historyWithoutLicense?: boolean;
 }
 
 const personas: Persona[] = [
-  { no: "01", name: "QA生徒01（継続・ライブ受講）", prev: 1, cur: "live", next: null },
-  { no: "02", name: "QA生徒02（モニター）", roles: ["monitor"], prev: 1, cur: 1, next: null },
-  { no: "03", name: "QA生徒03（前期のみ・解約）", prev: 1, cur: null, next: null, historyWithoutLicense: true },
-  { no: "04", name: "QA生徒04（当期ライセンス停止）", prev: 1, cur: 0, next: null, historyWithoutLicense: true },
-  { no: "05", name: "QA生徒05（次期から開始）", prev: null, cur: null, next: 1 },
-  { no: "06", name: "QA生徒06（デモユーザー）", roles: ["demo_user"], prev: 1, cur: 1, next: null },
+  { no: '01', name: 'QA生徒01（継続・ライブ受講）', prev: 1, cur: 'live', next: null },
+  { no: '02', name: 'QA生徒02（モニター）', roles: ['monitor'], prev: 1, cur: 1, next: null },
+  { no: '03', name: 'QA生徒03（前期のみ・解約）', prev: 1, cur: null, next: null, historyWithoutLicense: true },
+  { no: '04', name: 'QA生徒04（当期ライセンス停止）', prev: 1, cur: 0, next: null, historyWithoutLicense: true },
+  { no: '05', name: 'QA生徒05（次期から開始）', prev: null, cur: null, next: 1 },
+  { no: '06', name: 'QA生徒06（デモユーザー）', roles: ['demo_user'], prev: 1, cur: 1, next: null },
 ];
 
 const studentIds: Record<string, string> = {};
 for (const p of personas) {
   const email = `qa-student-${p.no}@gabby-qa-test.example`;
-  const userId = await ensureUser({ email, userType: "1", userName: p.name, clientId });
+  const userId = await ensureUser({ email, userType: '1', userName: p.name, clientId });
   studentIds[p.no] = userId;
   for (const r of p.roles ?? []) await ensureRole(userId, r);
   console.log(`- ${email} ${p.name}`);
 
-  for (const [termIndex, state] of [[PREV, p.prev], [CUR, p.cur], [NEXT, p.next]] as const) {
+  for (const [termIndex, state] of [
+    [PREV, p.prev],
+    [CUR, p.cur],
+    [NEXT, p.next],
+  ] as const) {
     if (state === null) continue;
     const term = termOf(termIndex);
-    if (state === "live") {
+    if (state === 'live') {
       await ensureLiveMatch(userId, coachCa, clientId, term);
     } else {
       await ensureLicense(userId, await appContract(term), term, state);
@@ -239,14 +325,19 @@ for (const p of personas) {
 // 他の固定アカウントに影響しないよう専用テナントに所属させる
 const popupClientId = await ensureClient(POPUP_CLIENT_NAME);
 const popupStudent = await ensureUser({
-  email: "qa-student-07@gabby-qa-test.example",
-  userType: "1",
-  userName: "QA生徒07（ポップアップ検証）",
+  email: 'qa-student-07@gabby-qa-test.example',
+  userType: '1',
+  userName: 'QA生徒07（ポップアップ検証）',
   clientId: popupClientId,
 });
-await ensureLicense(popupStudent, await ensureContract(popupClientId, "BLUEPRINT_ONLY", termOf(CUR), 1), termOf(CUR), 1);
-studentIds["07"] = popupStudent;
-console.log("- qa-student-07@gabby-qa-test.example QA生徒07（ポップアップ検証）");
+await ensureLicense(
+  popupStudent,
+  await ensureContract(popupClientId, 'BLUEPRINT_ONLY', termOf(CUR), 1),
+  termOf(CUR),
+  1,
+);
+studentIds['07'] = popupStudent;
+console.log('- qa-student-07@gabby-qa-test.example QA生徒07（ポップアップ検証）');
 
-console.log("\n=== 投入完了 ===");
+console.log('\n=== 投入完了 ===');
 console.log({ clientId, popupClientId, coachCa, coachUs, coachDemo, students: studentIds });

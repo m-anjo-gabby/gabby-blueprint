@@ -19,7 +19,7 @@ export default function NotFound() {
       <div className="w-full max-w-lg bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-xl shadow-slate-200/50 min-h-[420px] flex flex-col justify-center items-center text-center relative overflow-hidden">
         {/* 装飾用のトップライン（アドミンのインフラ感を表現） */}
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-400 to-orange-500" />
-        
+
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -44,9 +44,7 @@ export default function NotFound() {
                 404 Resource
               </span>
             </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              指定されたリソースが見つかりません
-            </h1>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">指定されたリソースが見つかりません</h1>
             <p className="text-sm text-slate-500 mt-2.5 leading-relaxed max-w-sm font-medium">
               アクセスしようとした管理エンドポイント、または対象データへのパスが存在しないか、変更されています。
             </p>
@@ -54,8 +52,8 @@ export default function NotFound() {
 
           {/* アクションボタン */}
           <div className="w-full space-y-4">
-            <Link 
-              href="/dashboard" 
+            <Link
+              href="/dashboard"
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 min-h-[52px] shadow-lg shadow-slate-900/10 hover:shadow-xl hover:shadow-slate-900/20"
             >
               <LayoutDashboard size={18} className="text-amber-400" />
@@ -66,7 +64,6 @@ export default function NotFound() {
               Status Code: 404 / Route Object Not Found
             </p>
           </div>
-
         </motion.div>
       </div>
     </div>

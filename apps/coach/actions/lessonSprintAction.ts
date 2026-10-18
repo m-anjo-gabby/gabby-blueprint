@@ -50,7 +50,7 @@ export async function getAvailableSprintContents(studentId: string): Promise<Les
 export async function getLessonSprintQuestions(
   contentId: string,
   questionType: SprintQuestionType,
-  difficultyLevel: number
+  difficultyLevel: number,
 ): Promise<{ success: true; questions: SprintQuestion[] } | { success: false; message: string }> {
   const result = await getLessonSprintQuestionsCore(contentId, questionType, difficultyLevel);
   if (!result.success) {
@@ -65,7 +65,7 @@ export async function getLessonSprintQuestions(
  * Saves a completed Lesson Sprint session's results
  */
 export async function createLessonSprintResult(
-  input: CreateLessonSprintResultInput
+  input: CreateLessonSprintResultInput,
 ): Promise<{ success: true; lessonSprintId: string } | { success: false; message: string }> {
   const result = await createLessonSprintResultCore(input);
   if (!result.success) {
@@ -97,7 +97,7 @@ export async function getLessonSprintHistory(studentId: string): Promise<LessonS
 export async function getLessonSprintHistoryPage(
   studentId: string,
   cursor: string | null,
-  limit: number
+  limit: number,
 ): Promise<{ items: LessonSprintHistoryListItem[]; nextCursor: string | null }> {
   const result = await getLessonSprintHistoryPageCore(studentId, cursor, limit);
   if (!result.success) {
@@ -112,8 +112,10 @@ export async function getLessonSprintHistoryPage(
  * Fetches one Lesson Sprint result with its questions reconstructed in play order
  */
 export async function getLessonSprintResult(
-  lessonSprintId: string
-): Promise<{ success: true; record: LessonSprintRecord; questions: SprintQuestion[] } | { success: false; message: string }> {
+  lessonSprintId: string,
+): Promise<
+  { success: true; record: LessonSprintRecord; questions: SprintQuestion[] } | { success: false; message: string }
+> {
   const result = await getLessonSprintResultCore(lessonSprintId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -128,7 +130,7 @@ export async function getLessonSprintResult(
  */
 export async function updateLessonSprintSessionNote(
   lessonSprintId: string,
-  sessionNote: string
+  sessionNote: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
   const trimmed = sessionNote.trim();
   const result = await updateLessonSprintSessionNoteCore(lessonSprintId, trimmed.length > 0 ? trimmed : null);

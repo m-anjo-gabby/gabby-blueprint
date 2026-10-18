@@ -49,7 +49,10 @@ export function buildNotificationMail({
   links,
 }: NotificationEmailTemplateProps): MailContent {
   const title = details?.title ?? notificationTitle;
-  const blocks: MailBlock[] = [{ kind: 'title', text: title }, quoted ? { kind: 'quote', text: body } : { kind: 'paragraph', text: body }];
+  const blocks: MailBlock[] = [
+    { kind: 'title', text: title },
+    quoted ? { kind: 'quote', text: body } : { kind: 'paragraph', text: body },
+  ];
   if (details?.block) blocks.push(details.block);
   if (actionUrl) blocks.push({ kind: 'button', label: COPY[language].action, href: actionUrl });
 
