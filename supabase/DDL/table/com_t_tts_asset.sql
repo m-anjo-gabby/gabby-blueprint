@@ -13,7 +13,8 @@ CREATE TABLE public.com_t_tts_asset (
     tts_adjustments          jsonb,
     created_by               uuid,
     created_at               timestamp with time zone NOT NULL DEFAULT now(),
-    updated_at               timestamp with time zone NOT NULL DEFAULT now()
+    updated_at               timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT chk_tts_asset_tts_ssml_mode CHECK (tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text]))
 );
 
 COMMENT ON TABLE public.com_t_tts_asset IS '汎用音声資産テーブル（TTS Designer履歴）';

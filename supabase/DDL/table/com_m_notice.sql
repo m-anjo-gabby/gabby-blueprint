@@ -33,7 +33,8 @@ CREATE TABLE public.com_m_notice (
     cta_url                  text,
     CONSTRAINT chk_notice_coach_display CHECK (target_type::text <> 'COACH'::text OR display_mode::text <> 'HOME'::text AND image_path IS NULL AND cta_url IS NULL),
     CONSTRAINT chk_notice_cta CHECK ((cta_label IS NULL) = (cta_url IS NULL) AND (cta_label IS NULL OR char_length(cta_label) >= 1 AND char_length(cta_label) <= 30) AND (cta_url IS NULL OR cta_url ~ '^(/([^/]|$)|https://)'::text)),
-    CONSTRAINT chk_notice_display_mode CHECK (display_mode::text = ANY (ARRAY['POPUP'::character varying, 'HOME'::character varying, 'LIST'::character varying]::text[])),
+    CONSTRAINT chk_notice_display_mode CHECK (display_mode::text = ANY (ARRAY['POPUP'::character varying::text, 'HOME'::character varying::text, 'LIST'::character varying::text])),
+    CONSTRAINT chk_notice_notice_type CHECK (notice_type::text = ANY (ARRAY['INFO'::text, 'CAMPAIGN'::text, 'MAINTENANCE'::text, 'UPDATE'::text])),
     CONSTRAINT chk_notice_target CHECK (target_type::text = 'ALL'::text AND client_id IS NULL OR target_type::text = 'CLIENT'::text AND client_id IS NOT NULL OR target_type::text = 'COACH'::text AND client_id IS NULL),
     CONSTRAINT chk_notice_target_type CHECK (target_type::text = ANY (ARRAY['ALL'::text, 'CLIENT'::text, 'COACH'::text]))
 );
@@ -42,7 +43,7 @@ COMMENT ON TABLE public.com_m_notice IS 'お知らせマスタ';
 COMMENT ON COLUMN public.com_m_notice.notice_id IS 'お知らせID';
 COMMENT ON COLUMN public.com_m_notice.target_type IS '配信対象タイプ (ALL: 全体 / CLIENT: 顧客単位)';
 COMMENT ON COLUMN public.com_m_notice.client_id IS '対象顧客ID (target_typeがCLIENTの場合に使用)';
-COMMENT ON COLUMN public.com_m_notice.notice_type IS 'お知らせ種別 (INFO, CAMPAIGN, MAINTENANCE 等)';
+COMMENT ON COLUMN public.com_m_notice.notice_type IS 'お知らせ種別 (INFO, CAMPAIGN, MAINTENANCE, UPDATE)';
 COMMENT ON COLUMN public.com_m_notice.is_important IS '重要フラグ (重要バッジ表示用)';
 COMMENT ON COLUMN public.com_m_notice.title IS 'タイトル';
 COMMENT ON COLUMN public.com_m_notice.content IS '本文 (Markdown形式も想定)';

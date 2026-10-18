@@ -54,6 +54,7 @@ CREATE TABLE public.com_m_sprint_questions (
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT chk_sprint_questions_question_type CHECK (question_type = ANY (ARRAY['0'::text, '4'::text, '5'::text, '6'::text])),
     CONSTRAINT chk_sprint_questions_sprint_type CHECK (sprint_type = ANY (ARRAY['0'::text, '1'::text])),
+    CONSTRAINT chk_sprint_questions_tts_ssml_mode CHECK ((statement_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])) AND (question_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])) AND (answer_sentence_yes_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])) AND (answer_sentence_no_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text]))),
     CONSTRAINT chk_sprint_questions_tts_status CHECK ((statement_tts_status = ANY (ARRAY[0, 1, 2, 9])) AND (question_tts_status = ANY (ARRAY[0, 1, 2, 9])) AND (answer_sentence_yes_tts_status = ANY (ARRAY[0, 1, 2, 9])) AND (answer_sentence_no_tts_status = ANY (ARRAY[0, 1, 2, 9])))
 );
 
@@ -69,28 +70,28 @@ COMMENT ON COLUMN public.com_m_sprint_questions.statement_en IS 'ステートメ
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_ja IS 'ステートメント（親文・日本語訳）';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_voice IS 'ステートメント生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_ssml IS 'ステートメント用TTS SSMLテキスト';
-COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_ssml_mode IS 'ステートメント用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_ssml_mode IS 'ステートメント用TTS SSML生成モード（auto/manual）';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_adjustments IS 'ステートメント用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_status IS 'ステートメント用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_en IS 'クエスチョン（指示文/問い・英語）';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_ja IS 'クエスチョン（指示文/問い・日本語訳）';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_voice IS 'クエスチョン生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_ssml IS 'クエスチョン用TTS SSMLテキスト';
-COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_ssml_mode IS 'クエスチョン用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_ssml_mode IS 'クエスチョン用TTS SSML生成モード（auto/manual）';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_adjustments IS 'クエスチョン用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_status IS 'クエスチョン用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_en IS '解答（YES/通常正解文・英語）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_ja IS '解答（YES/通常正解文・日本語訳）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_voice IS '解答（YES）生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_ssml IS '解答（YES）用TTS SSMLテキスト';
-COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_ssml_mode IS '解答（YES）用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_ssml_mode IS '解答（YES）用TTS SSML生成モード（auto/manual）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_adjustments IS '解答（YES）用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_status IS '解答（YES）用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_en IS '解答（NO/否定文・英語 ※Speed専用）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_ja IS '解答（NO/否定文・日本語訳 ※Speed専用）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_voice IS '解答（NO）生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_ssml IS '解答（NO）用TTS SSMLテキスト';
-COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_ssml_mode IS '解答（NO）用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_ssml_mode IS '解答（NO）用TTS SSML生成モード（auto/manual）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_adjustments IS '解答（NO）用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_status IS '解答（NO）用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 COMMENT ON COLUMN public.com_m_sprint_questions.last_tts_date IS '最終TTS音声生成日時';

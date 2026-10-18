@@ -31,6 +31,7 @@ CREATE TABLE public.com_m_color_vowel_dictionary (
     lemma                    text,
     CONSTRAINT unique_word_and_pos UNIQUE (word_en, part_of_speech),
     CONSTRAINT chk_cv_dictionary_status CHECK (status = ANY (ARRAY['live'::text, 'pending'::text])),
+    CONSTRAINT chk_cv_dictionary_tts_ssml_mode CHECK (tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])),
     CONSTRAINT chk_cv_dictionary_tts_status CHECK (tts_status = ANY (ARRAY[0, 1, 2, 9]))
 );
 

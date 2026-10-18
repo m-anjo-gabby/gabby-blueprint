@@ -8,19 +8,17 @@
  */
 import type { Database as GeneratedDatabase, Json } from './database';
 import type { CalendarEventMessageAttachment, CalendarEventType } from './calendarEvent';
-import type { ChatMessageType } from './chat';
 import type { AdminCoachRatingsRpcResult } from './coachRating';
 import type { DayOfWeek } from './coachAvailability';
 import type { ContentMetadata } from './content';
 import type { PurgeClientResult, WithdrawUserResult } from './dataDeletion';
 import type { MonitorSprintDrillHistoryRow, MonitorSprintHistoryRow, MonitorWordHistoryRow } from './monitor';
-import type { NoticeAttachment, NoticeType } from './notice';
+import type { NoticeAttachment } from './notice';
 import type { SessionOutcome } from './session';
-import type { TtsSsmlMode } from './sprint';
 import type { ResumeMetadata, UserTrainingPerformanceResponse } from './training';
 import type { TrainingReportData } from './trainingReport';
 import type { LicenseState, UserType } from './user';
-import type { PhraseType, TTSAdjustmentData, TTSAssetAdjustments } from './word';
+import type { TTSAdjustmentData, TTSAssetAdjustments } from './word';
 
 export type { Json };
 
@@ -80,28 +78,21 @@ interface PublicOverrides extends SchemaOverrides {
     com_t_matching_request: { requested_day_of_week: DayOfWeek };
     // 値が増える前提で CHECK 制約を付けていない区分値（正本はアプリの型。DDL のコメントに明記）
     com_m_calendar_event: { event_type: CalendarEventType };
-    // CHECK 制約が無い区分値の列（DDL の規約では CHECK 制約を付ける。付けたらここから消す）。
-    // com_m_notice.notice_type・com_m_phrase.phrase_type・各表の *tts_ssml_mode も同じ（上の各表に含める）
-    com_t_chat: { message_type: ChatMessageType };
 
     // JSON の列の中身
     // TTS の調整（声・速さと単語ごとの強調・間）。管理画面の TTS の作成ダイアログが保存する
-    com_m_color_vowel_dictionary: { tts_adjustments: TTSAdjustmentData | null; tts_ssml_mode: TtsSsmlMode };
-    com_m_phrase: { tts_adjustments: TTSAdjustmentData | null; tts_ssml_mode: TtsSsmlMode; phrase_type: PhraseType };
+    com_m_color_vowel_dictionary: { tts_adjustments: TTSAdjustmentData | null };
+    com_m_phrase: { tts_adjustments: TTSAdjustmentData | null };
     com_m_sprint_questions: {
       statement_tts_adjustments: TTSAdjustmentData | null;
       question_tts_adjustments: TTSAdjustmentData | null;
       answer_sentence_yes_tts_adjustments: TTSAdjustmentData | null;
       answer_sentence_no_tts_adjustments: TTSAdjustmentData | null;
-      statement_tts_ssml_mode: TtsSsmlMode;
-      question_tts_ssml_mode: TtsSsmlMode;
-      answer_sentence_yes_tts_ssml_mode: TtsSsmlMode;
-      answer_sentence_no_tts_ssml_mode: TtsSsmlMode;
     };
-    com_t_tts_asset: { tts_adjustments: TTSAssetAdjustments | null; tts_ssml_mode: TtsSsmlMode };
+    com_t_tts_asset: { tts_adjustments: TTSAssetAdjustments | null };
     com_m_ai_knowledge_base: { metadata: Record<string, unknown> };
     com_m_contents: { metadata: ContentMetadata };
-    com_m_notice: { attachments: NoticeAttachment[]; notice_type: NoticeType };
+    com_m_notice: { attachments: NoticeAttachment[] };
     com_t_calendar_event_message: { attachments: CalendarEventMessageAttachment[] };
     com_t_resume_contents: { metadata: ResumeMetadata };
     // 解答履歴は CHECK 制約で配列であることだけを保証する。要素は読む側で検証する（packages/lib/sprint/answeredHistory.ts）

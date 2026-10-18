@@ -72,6 +72,12 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // 実DBから生成する型（supabase/release/types.mjs）は生成の形のままにする（手で直すと作り直すたびに崩れる）
+  {
+    files: ['packages/types/database.ts'],
+    rules: { '@typescript-eslint/consistent-type-definitions': 'off' },
+  },
+
   // ログは共通ロガー（サーバー: logger、ブラウザ: clientLogger）に集約する。docs/LOGGING.md
   {
     files: ['apps/**/*.{ts,tsx}', 'packages/**/*.{ts,tsx}'],

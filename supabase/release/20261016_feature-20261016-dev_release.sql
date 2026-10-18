@@ -3425,3 +3425,93 @@ REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SC
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM anon;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】契約の管理用の列（contract_name・note）を、生徒・コーチから読めないようにする
+--
+-- 【内容】
+--   com_m_contract は RLS で顧客側のユーザー（自分の顧客の契約）と担当コーチ（担当生徒の契約）も行を参照できるため、
+--   アドミンだけが使う管理名（contract_name）と備考（note）も読めていた。authenticated の参照の権限を列単位にし、
+--   この2列を外す（行の範囲は RLS のまま）。生徒・コーチの画面は plan_name 等の列を名前で指定して読んでおり、
+--   アドミンは service_role で読むため、アプリの変更は不要。anon は RLS で行が見えないが、参照の権限も外す。
+--   列を足したら、生徒・コーチが読む列であればこの GRANT にも加える（DDL/table/com_m_contract.sql の設計メモ）。
+--
+-- 対応ファイル: DDL/table/com_m_contract.sql
+-- =========================================================================
+
+BEGIN;
+
+REVOKE SELECT ON public.com_m_contract FROM anon, authenticated;
+GRANT SELECT (
+    contract_id, client_id, plan_name, plan_name_en, plan_id, contract_type, max_licenses,
+    weekly_frequency, total_sessions, has_dialogue_practice, start_date, end_date, status,
+    insert_date, update_date
+) ON public.com_m_contract TO authenticated;
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】区分値の列の CHECK 制約と、NULL を許していた列の NOT NULL
+--
+-- 【内容】
+--   アプリの型（packages/types）で値を決めているのに DB で縛っていなかった区分値の列に CHECK 制約を付け、
+--   列のコメントをアプリの定数にそろえる（DDL/README.md「テーブル設計の規約」）。
+--   - com_t_chat.message_type: TEXT / IMAGE / FILE / SYSTEM（packages/types/chat.ts の CHAT_MESSAGE_TYPES）
+--   - com_m_notice.notice_type: INFO / CAMPAIGN / MAINTENANCE / UPDATE（packages/types/notice.ts の NOTICE_TYPES）
+--   - com_m_phrase.phrase_type: 1〜5（packages/types/word.ts の PHRASE_TYPES。コメントが古い名前のままだった）
+--   - 各表の *tts_ssml_mode: auto / manual（packages/types/sprint.ts の TtsSsmlMode）
+--   あわせて、既定値があり NULL の行が無いのに NULL を許していた列を NOT NULL にする
+--   （com_m_user.user_type・locale_id、com_m_contract.status・insert_date・update_date）。
+--   dev・staging・本番とも、違反する値・NULL の行が無いことを確認済み（2026-10-18）。
+--
+-- 対応ファイル: DDL/table/com_t_chat.sql, com_m_notice.sql, com_m_phrase.sql, com_m_color_vowel_dictionary.sql,
+--   com_t_tts_asset.sql, com_m_sprint_questions.sql, com_m_user.sql, com_m_contract.sql
+-- =========================================================================
+
+BEGIN;
+
+ALTER TABLE public.com_t_chat DROP CONSTRAINT IF EXISTS chk_chat_message_type;
+ALTER TABLE public.com_t_chat ADD CONSTRAINT chk_chat_message_type
+    CHECK (message_type::text = ANY (ARRAY['TEXT'::text, 'IMAGE'::text, 'FILE'::text, 'SYSTEM'::text]));
+
+ALTER TABLE public.com_m_notice DROP CONSTRAINT IF EXISTS chk_notice_notice_type;
+ALTER TABLE public.com_m_notice ADD CONSTRAINT chk_notice_notice_type
+    CHECK (notice_type::text = ANY (ARRAY['INFO'::text, 'CAMPAIGN'::text, 'MAINTENANCE'::text, 'UPDATE'::text]));
+COMMENT ON COLUMN public.com_m_notice.notice_type IS 'お知らせ種別 (INFO, CAMPAIGN, MAINTENANCE, UPDATE)';
+
+ALTER TABLE public.com_m_phrase DROP CONSTRAINT IF EXISTS chk_phrase_phrase_type;
+ALTER TABLE public.com_m_phrase ADD CONSTRAINT chk_phrase_phrase_type CHECK (phrase_type = ANY (ARRAY[1, 2, 3, 4, 5]));
+COMMENT ON COLUMN public.com_m_phrase.phrase_type IS
+    'フレーズ種別（1: Target Vocabulary 2: Use a Collocation 3: Build a Sentence 4: Use It at Work 5: Expand the Sentence）';
+
+ALTER TABLE public.com_m_phrase DROP CONSTRAINT IF EXISTS chk_phrase_tts_ssml_mode;
+ALTER TABLE public.com_m_phrase ADD CONSTRAINT chk_phrase_tts_ssml_mode
+    CHECK (tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text]));
+
+ALTER TABLE public.com_m_color_vowel_dictionary DROP CONSTRAINT IF EXISTS chk_cv_dictionary_tts_ssml_mode;
+ALTER TABLE public.com_m_color_vowel_dictionary ADD CONSTRAINT chk_cv_dictionary_tts_ssml_mode
+    CHECK (tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text]));
+
+ALTER TABLE public.com_t_tts_asset DROP CONSTRAINT IF EXISTS chk_tts_asset_tts_ssml_mode;
+ALTER TABLE public.com_t_tts_asset ADD CONSTRAINT chk_tts_asset_tts_ssml_mode
+    CHECK (tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text]));
+
+ALTER TABLE public.com_m_sprint_questions DROP CONSTRAINT IF EXISTS chk_sprint_questions_tts_ssml_mode;
+ALTER TABLE public.com_m_sprint_questions ADD CONSTRAINT chk_sprint_questions_tts_ssml_mode CHECK (
+    statement_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])
+    AND question_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])
+    AND answer_sentence_yes_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])
+    AND answer_sentence_no_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])
+);
+COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_ssml_mode IS 'ステートメント用TTS SSML生成モード（auto/manual）';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_ssml_mode IS 'クエスチョン用TTS SSML生成モード（auto/manual）';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_ssml_mode IS '解答（YES）用TTS SSML生成モード（auto/manual）';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_ssml_mode IS '解答（NO）用TTS SSML生成モード（auto/manual）';
+
+ALTER TABLE public.com_m_user ALTER COLUMN user_type SET NOT NULL, ALTER COLUMN locale_id SET NOT NULL;
+ALTER TABLE public.com_m_contract
+    ALTER COLUMN status SET NOT NULL,
+    ALTER COLUMN insert_date SET NOT NULL,
+    ALTER COLUMN update_date SET NOT NULL;
+
+COMMIT;

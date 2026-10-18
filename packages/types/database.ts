@@ -8,11 +8,11 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.18"
   }
   private: {
     Tables: {
@@ -640,7 +640,7 @@ export interface Database {
           syllables: string
           tts_adjustments: Json | null
           tts_ssml: string | null
-          tts_ssml_mode: string
+          tts_ssml_mode: "auto" | "manual"
           tts_status: 0 | 1 | 2 | 9
           update_date: string
           word_en: string
@@ -661,7 +661,7 @@ export interface Database {
           syllables: string
           tts_adjustments?: Json | null
           tts_ssml?: string | null
-          tts_ssml_mode?: string
+          tts_ssml_mode?: "auto" | "manual"
           tts_status?: 0 | 1 | 2 | 9
           update_date?: string
           word_en: string
@@ -682,7 +682,7 @@ export interface Database {
           syllables?: string
           tts_adjustments?: Json | null
           tts_ssml?: string | null
-          tts_ssml_mode?: string
+          tts_ssml_mode?: "auto" | "manual"
           tts_status?: 0 | 1 | 2 | 9
           update_date?: string
           word_en?: string
@@ -865,16 +865,16 @@ export interface Database {
           contract_type: 1 | 2
           end_date: string
           has_dialogue_practice: boolean
-          insert_date: string | null
+          insert_date: string
           max_licenses: number
           note: string | null
           plan_id: string
           plan_name: string
           plan_name_en: string
           start_date: string
-          status: 0 | 1 | 9 | null
+          status: 0 | 1 | 9
           total_sessions: number | null
-          update_date: string | null
+          update_date: string
           weekly_frequency: number | null
         }
         Insert: {
@@ -884,16 +884,16 @@ export interface Database {
           contract_type?: 1 | 2
           end_date: string
           has_dialogue_practice?: boolean
-          insert_date?: string | null
+          insert_date?: string
           max_licenses: number
           note?: string | null
           plan_id: string
           plan_name: string
           plan_name_en: string
           start_date: string
-          status?: 0 | 1 | 9 | null
+          status?: 0 | 1 | 9
           total_sessions?: number | null
-          update_date?: string | null
+          update_date?: string
           weekly_frequency?: number | null
         }
         Update: {
@@ -903,16 +903,16 @@ export interface Database {
           contract_type?: 1 | 2
           end_date?: string
           has_dialogue_practice?: boolean
-          insert_date?: string | null
+          insert_date?: string
           max_licenses?: number
           note?: string | null
           plan_id?: string
           plan_name?: string
           plan_name_en?: string
           start_date?: string
-          status?: 0 | 1 | 9 | null
+          status?: 0 | 1 | 9
           total_sessions?: number | null
-          update_date?: string | null
+          update_date?: string
           weekly_frequency?: number | null
         }
         Relationships: [
@@ -1167,7 +1167,7 @@ export interface Database {
           is_important: boolean
           is_published: boolean
           notice_id: string
-          notice_type: string
+          notice_type: "INFO" | "CAMPAIGN" | "MAINTENANCE" | "UPDATE"
           published_at: string
           target_type: "ALL" | "CLIENT" | "COACH"
           title: string
@@ -1186,7 +1186,7 @@ export interface Database {
           is_important?: boolean
           is_published?: boolean
           notice_id?: string
-          notice_type?: string
+          notice_type?: "INFO" | "CAMPAIGN" | "MAINTENANCE" | "UPDATE"
           published_at: string
           target_type?: "ALL" | "CLIENT" | "COACH"
           title: string
@@ -1205,7 +1205,7 @@ export interface Database {
           is_important?: boolean
           is_published?: boolean
           notice_id?: string
-          notice_type?: string
+          notice_type?: "INFO" | "CAMPAIGN" | "MAINTENANCE" | "UPDATE"
           published_at?: string
           target_type?: "ALL" | "CLIENT" | "COACH"
           title?: string
@@ -1229,12 +1229,12 @@ export interface Database {
           phrase_en: string
           phrase_id: string
           phrase_ja: string
-          phrase_type: number
+          phrase_type: 1 | 2 | 3 | 4 | 5
           seq_no: number
           status: "live" | "pending"
           tts_adjustments: Json | null
           tts_ssml: string | null
-          tts_ssml_mode: string
+          tts_ssml_mode: "auto" | "manual"
           tts_status: 0 | 1 | 2 | 9
           update_date: string
           word_id: string
@@ -1246,12 +1246,12 @@ export interface Database {
           phrase_en: string
           phrase_id?: string
           phrase_ja: string
-          phrase_type: number
+          phrase_type: 1 | 2 | 3 | 4 | 5
           seq_no?: number
           status?: "live" | "pending"
           tts_adjustments?: Json | null
           tts_ssml?: string | null
-          tts_ssml_mode?: string
+          tts_ssml_mode?: "auto" | "manual"
           tts_status?: 0 | 1 | 2 | 9
           update_date?: string
           word_id: string
@@ -1263,12 +1263,12 @@ export interface Database {
           phrase_en?: string
           phrase_id?: string
           phrase_ja?: string
-          phrase_type?: number
+          phrase_type?: 1 | 2 | 3 | 4 | 5
           seq_no?: number
           status?: "live" | "pending"
           tts_adjustments?: Json | null
           tts_ssml?: string | null
-          tts_ssml_mode?: string
+          tts_ssml_mode?: "auto" | "manual"
           tts_status?: 0 | 1 | 2 | 9
           update_date?: string
           word_id?: string
@@ -1334,14 +1334,14 @@ export interface Database {
           answer_sentence_no_ja: string | null
           answer_sentence_no_tts_adjustments: Json | null
           answer_sentence_no_tts_ssml: string | null
-          answer_sentence_no_tts_ssml_mode: string
+          answer_sentence_no_tts_ssml_mode: "auto" | "manual"
           answer_sentence_no_tts_status: 0 | 1 | 2 | 9
           answer_sentence_no_voice: string | null
           answer_sentence_yes_en: string
           answer_sentence_yes_ja: string | null
           answer_sentence_yes_tts_adjustments: Json | null
           answer_sentence_yes_tts_ssml: string | null
-          answer_sentence_yes_tts_ssml_mode: string
+          answer_sentence_yes_tts_ssml_mode: "auto" | "manual"
           answer_sentence_yes_tts_status: 0 | 1 | 2 | 9
           answer_sentence_yes_voice: string | null
           content_id: string
@@ -1356,7 +1356,7 @@ export interface Database {
           question_ja: string | null
           question_tts_adjustments: Json | null
           question_tts_ssml: string | null
-          question_tts_ssml_mode: string
+          question_tts_ssml_mode: "auto" | "manual"
           question_tts_status: 0 | 1 | 2 | 9
           question_type: "0" | "4" | "5" | "6"
           question_voice: string | null
@@ -1366,7 +1366,7 @@ export interface Database {
           statement_ja: string | null
           statement_tts_adjustments: Json | null
           statement_tts_ssml: string | null
-          statement_tts_ssml_mode: string
+          statement_tts_ssml_mode: "auto" | "manual"
           statement_tts_status: 0 | 1 | 2 | 9
           statement_voice: string | null
           update_date: string
@@ -1376,14 +1376,14 @@ export interface Database {
           answer_sentence_no_ja?: string | null
           answer_sentence_no_tts_adjustments?: Json | null
           answer_sentence_no_tts_ssml?: string | null
-          answer_sentence_no_tts_ssml_mode?: string
+          answer_sentence_no_tts_ssml_mode?: "auto" | "manual"
           answer_sentence_no_tts_status?: 0 | 1 | 2 | 9
           answer_sentence_no_voice?: string | null
           answer_sentence_yes_en: string
           answer_sentence_yes_ja?: string | null
           answer_sentence_yes_tts_adjustments?: Json | null
           answer_sentence_yes_tts_ssml?: string | null
-          answer_sentence_yes_tts_ssml_mode?: string
+          answer_sentence_yes_tts_ssml_mode?: "auto" | "manual"
           answer_sentence_yes_tts_status?: 0 | 1 | 2 | 9
           answer_sentence_yes_voice?: string | null
           content_id: string
@@ -1398,7 +1398,7 @@ export interface Database {
           question_ja?: string | null
           question_tts_adjustments?: Json | null
           question_tts_ssml?: string | null
-          question_tts_ssml_mode?: string
+          question_tts_ssml_mode?: "auto" | "manual"
           question_tts_status?: 0 | 1 | 2 | 9
           question_type: "0" | "4" | "5" | "6"
           question_voice?: string | null
@@ -1408,7 +1408,7 @@ export interface Database {
           statement_ja?: string | null
           statement_tts_adjustments?: Json | null
           statement_tts_ssml?: string | null
-          statement_tts_ssml_mode?: string
+          statement_tts_ssml_mode?: "auto" | "manual"
           statement_tts_status?: 0 | 1 | 2 | 9
           statement_voice?: string | null
           update_date?: string
@@ -1418,14 +1418,14 @@ export interface Database {
           answer_sentence_no_ja?: string | null
           answer_sentence_no_tts_adjustments?: Json | null
           answer_sentence_no_tts_ssml?: string | null
-          answer_sentence_no_tts_ssml_mode?: string
+          answer_sentence_no_tts_ssml_mode?: "auto" | "manual"
           answer_sentence_no_tts_status?: 0 | 1 | 2 | 9
           answer_sentence_no_voice?: string | null
           answer_sentence_yes_en?: string
           answer_sentence_yes_ja?: string | null
           answer_sentence_yes_tts_adjustments?: Json | null
           answer_sentence_yes_tts_ssml?: string | null
-          answer_sentence_yes_tts_ssml_mode?: string
+          answer_sentence_yes_tts_ssml_mode?: "auto" | "manual"
           answer_sentence_yes_tts_status?: 0 | 1 | 2 | 9
           answer_sentence_yes_voice?: string | null
           content_id?: string
@@ -1440,7 +1440,7 @@ export interface Database {
           question_ja?: string | null
           question_tts_adjustments?: Json | null
           question_tts_ssml?: string | null
-          question_tts_ssml_mode?: string
+          question_tts_ssml_mode?: "auto" | "manual"
           question_tts_status?: 0 | 1 | 2 | 9
           question_type?: "0" | "4" | "5" | "6"
           question_voice?: string | null
@@ -1450,7 +1450,7 @@ export interface Database {
           statement_ja?: string | null
           statement_tts_adjustments?: Json | null
           statement_tts_ssml?: string | null
-          statement_tts_ssml_mode?: string
+          statement_tts_ssml_mode?: "auto" | "manual"
           statement_tts_status?: 0 | 1 | 2 | 9
           statement_voice?: string | null
           update_date?: string
@@ -1577,7 +1577,7 @@ export interface Database {
           icon_path: string | null
           id: string
           insert_date: string
-          locale_id: string | null
+          locale_id: string
           locked_until: string | null
           login_failed_count: number
           status: 0 | 1 | 9
@@ -1585,14 +1585,14 @@ export interface Database {
           update_date: string
           user_id: number
           user_name: string | null
-          user_type: "0" | "1" | "2" | null
+          user_type: "0" | "1" | "2"
         }
         Insert: {
           client_id?: string | null
           icon_path?: string | null
           id: string
           insert_date?: string
-          locale_id?: string | null
+          locale_id?: string
           locked_until?: string | null
           login_failed_count?: number
           status?: 0 | 1 | 9
@@ -1600,14 +1600,14 @@ export interface Database {
           update_date?: string
           user_id?: number
           user_name?: string | null
-          user_type?: "0" | "1" | "2" | null
+          user_type?: "0" | "1" | "2"
         }
         Update: {
           client_id?: string | null
           icon_path?: string | null
           id?: string
           insert_date?: string
-          locale_id?: string | null
+          locale_id?: string
           locked_until?: string | null
           login_failed_count?: number
           status?: 0 | 1 | 9
@@ -1615,7 +1615,7 @@ export interface Database {
           update_date?: string
           user_id?: number
           user_name?: string | null
-          user_type?: "0" | "1" | "2" | null
+          user_type?: "0" | "1" | "2"
         }
         Relationships: [
           {
@@ -1877,7 +1877,7 @@ export interface Database {
           created_at: string
           deleted_at: string | null
           message: string
-          message_type: string
+          message_type: "TEXT" | "IMAGE" | "FILE" | "SYSTEM"
           room_id: string
           sender_user_id: string
         }
@@ -1886,7 +1886,7 @@ export interface Database {
           created_at?: string
           deleted_at?: string | null
           message: string
-          message_type?: string
+          message_type?: "TEXT" | "IMAGE" | "FILE" | "SYSTEM"
           room_id: string
           sender_user_id: string
         }
@@ -1895,7 +1895,7 @@ export interface Database {
           created_at?: string
           deleted_at?: string | null
           message?: string
-          message_type?: string
+          message_type?: "TEXT" | "IMAGE" | "FILE" | "SYSTEM"
           room_id?: string
           sender_user_id?: string
         }
@@ -3676,7 +3676,7 @@ export interface Database {
           raw_text: string
           tts_adjustments: Json | null
           tts_ssml: string | null
-          tts_ssml_mode: string
+          tts_ssml_mode: "auto" | "manual"
           updated_at: string
         }
         Insert: {
@@ -3688,7 +3688,7 @@ export interface Database {
           raw_text: string
           tts_adjustments?: Json | null
           tts_ssml?: string | null
-          tts_ssml_mode?: string
+          tts_ssml_mode?: "auto" | "manual"
           updated_at?: string
         }
         Update: {
@@ -3700,7 +3700,7 @@ export interface Database {
           raw_text?: string
           tts_adjustments?: Json | null
           tts_ssml?: string | null
-          tts_ssml_mode?: string
+          tts_ssml_mode?: "auto" | "manual"
           updated_at?: string
         }
         Relationships: []

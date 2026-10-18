@@ -15,7 +15,8 @@ CREATE TABLE public.com_t_chat (
     message                  text         NOT NULL,
     message_type             character varying(10) NOT NULL DEFAULT 'TEXT'::character varying,
     created_at               timestamp with time zone NOT NULL DEFAULT now(),
-    deleted_at               timestamp with time zone
+    deleted_at               timestamp with time zone,
+    CONSTRAINT chk_chat_message_type CHECK (message_type::text = ANY (ARRAY['TEXT'::text, 'IMAGE'::text, 'FILE'::text, 'SYSTEM'::text]))
 );
 
 COMMENT ON TABLE public.com_t_chat IS 'チャットメッセージ';
