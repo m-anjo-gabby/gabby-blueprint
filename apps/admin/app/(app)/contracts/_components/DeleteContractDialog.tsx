@@ -62,7 +62,7 @@ export function DeleteContractDialog({ contract }: Props) {
         showToast(t('toastDeleted'), 'success');
         resetAndClose();
         router.refresh();
-      } else if (result.reason === 'has_history') {
+      } else if (result.errorCode === 'has_history') {
         setStage('blocked_by_history');
       } else {
         showToast(result.message || t('toastDeleteFailed'), 'error');

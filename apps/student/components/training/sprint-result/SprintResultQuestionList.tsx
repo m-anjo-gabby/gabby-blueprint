@@ -8,7 +8,7 @@ import type { SprintQuestion } from '@gabby/types/sprint';
 import type { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
 import type { SprintHistoryItem } from '@/actions/sprintAction';
 import { toggleSprintQuestionFavorite } from '@/actions/sprintFavoriteAction';
-import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
+import { FAVORITE_TOGGLE_NETWORK_ERROR } from '@/constants/favorites';
 import { cn } from '@/lib/utils';
 import { SprintPhraseBlock, type SprintPhraseVariant } from './SprintPhraseBlock';
 import { SprintFeedback } from '@/app/(app)/training/sprint/play/_components/SprintFeedback';
@@ -271,9 +271,9 @@ export function SprintResultQuestionList({
     setFavorite(questionId, next);
     // 登録上限の超過・失敗は戻り値で返る
     const result = await toggleSprintQuestionFavorite(questionId, next).catch(() => FAVORITE_TOGGLE_NETWORK_ERROR);
-    if (!result.ok) {
+    if (!result.success) {
       setFavorite(questionId, !next);
-      showToast(getFavoriteToggleErrorMessage(result), 'error');
+      showToast(result.message, 'error');
       return;
     }
     showToast(next ? 'お気に入りに追加しました' : 'お気に入りを解除しました', 'success');

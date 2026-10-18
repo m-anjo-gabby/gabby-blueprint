@@ -33,7 +33,7 @@ export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
       const result = await deleteContractPlan(plan.plan_id);
       if (result.success) {
         showToast(t('toastDeleted'), 'success');
-      } else if ('reason' in result && result.reason === 'in_use') {
+      } else if (result.errorCode === 'in_use') {
         showToast(t('toastInUse'), 'error');
       } else {
         showToast(result.message || t('toastDeleteFailed'), 'error');

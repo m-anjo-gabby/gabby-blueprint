@@ -271,10 +271,10 @@ export async function moveSprintQuestionsLevel(
   try {
     const meta = QUESTION_TYPES[type];
     if (!meta || !Number.isInteger(toLevel) || toLevel < meta.minLevel || toLevel > meta.maxLevel) {
-      return { success: false, message: 'Invalid level' };
+      return { success: false, message: t('contents.errors.invalidLevel') };
     }
     if (questionIds.length === 0) {
-      return { success: false, message: 'No questions selected' };
+      return { success: false, message: t('contents.errors.noQuestionsSelected') };
     }
 
     const supabase = await createAdminClient();
@@ -289,10 +289,10 @@ export async function moveSprintQuestionsLevel(
     if (fetchError) throw fetchError;
     const fromLevels = new Set((sources ?? []).map((q) => q.difficulty_level));
     if (!sources || sources.length !== questionIds.length || fromLevels.size !== 1) {
-      return { success: false, message: 'Questions not found' };
+      return { success: false, message: t('contents.errors.questionsNotFound') };
     }
     if (fromLevels.has(toLevel)) {
-      return { success: false, message: 'Same level' };
+      return { success: false, message: t('contents.errors.sameLevel') };
     }
 
     const now = new Date().toISOString();

@@ -327,7 +327,7 @@ export async function upsertCalendarEvent(
  */
 export async function deleteCalendarEvent(
   calendarEventId: string,
-): Promise<{ success: true } | { success: false; reason?: 'held'; message: string }> {
+): Promise<{ success: true } | { success: false; errorCode?: 'held'; message: string }> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -339,7 +339,7 @@ export async function deleteCalendarEvent(
       .maybeSingle();
     if (fetchError) throw fetchError;
     if (event && new Date(event.start_datetime).getTime() <= Date.now()) {
-      return { success: false, reason: 'held', message: 'Event already held' };
+      return { success: false, errorCode: 'held', message: t('calendarEvents.dataTable.toastDeleteHeld') };
     }
 
     const { data: messages, error: messagesError } = await supabase

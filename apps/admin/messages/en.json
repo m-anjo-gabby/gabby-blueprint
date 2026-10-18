@@ -62,7 +62,8 @@
       "fileRequired": "No file selected.",
       "uploadFailed": "Upload failed.",
       "saveFailed": "Failed to save.",
-      "deleteFailed": "Failed to delete."
+      "deleteFailed": "Failed to delete.",
+      "invalidInput": "Please check your input."
     },
     "results": {
       "registered": "Registered.",
@@ -2564,7 +2565,11 @@
     },
     "errors": {
       "sessionNoInUse": "This session number is already in use.",
-      "duplicateSeqNo": "The display order (Seq No) is duplicated."
+      "duplicateSeqNo": "The display order (Seq No) is duplicated.",
+      "invalidLevel": "The destination level is invalid.",
+      "noQuestionsSelected": "No questions are selected.",
+      "questionsNotFound": "The selected questions were not found.",
+      "sameLevel": "The destination is the same as the current level."
     }
   },
   "companyProfiles": {

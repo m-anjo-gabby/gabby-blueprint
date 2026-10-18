@@ -130,7 +130,7 @@ export async function deleteDialogueSession(dialogueSessionId: string, contentId
 
     if (error) {
       if (isInUseError(error))
-        return { success: false, reason: 'in_use' as const, message: t('common.errors.unexpected') };
+        return { success: false, errorCode: 'in_use' as const, message: t('common.errors.unexpected') };
       logger.error('dialogue:delete_session_failed', error.message, {
         ...ctx,
         err: error,

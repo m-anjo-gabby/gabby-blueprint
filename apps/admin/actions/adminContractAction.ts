@@ -199,7 +199,7 @@ export async function deleteContractPlan(planId: string) {
 
     if (error) {
       if (isInUseError(error))
-        return { success: false, reason: 'in_use' as const, message: t('common.errors.unexpected') };
+        return { success: false, errorCode: 'in_use' as const, message: t('common.errors.unexpected') };
       logger.error('contract:delete_contract_plan_failed', error.message, { ...ctx, err: error, payload: { planId } });
       return { success: false, message: t('common.errors.unexpected') };
     }
@@ -607,7 +607,7 @@ export async function deleteContract(contractId: string) {
         return {
           success: false,
           message: t('contracts.errors.hasLicenseHistory'),
-          reason: 'has_history' as const,
+          errorCode: 'has_history' as const,
         };
       }
       logger.error('contract:delete_contract_failed', error.message, { ...ctx, err: error, payload: { contractId } });

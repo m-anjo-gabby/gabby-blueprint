@@ -179,7 +179,7 @@ export async function deleteClient(clientId: string): Promise<ClientResponse> {
     const { error } = await supabase.from('com_m_client').delete().eq('client_id', clientId);
 
     if (error) {
-      if (isInUseError(error)) return { success: false, reason: 'in_use', message: t('common.errors.unexpected') };
+      if (isInUseError(error)) return { success: false, errorCode: 'in_use', message: t('common.errors.unexpected') };
       logger.error('client:delete_client_failed', error.message, { ...ctx, err: error, payload: { clientId } });
       return { success: false, message: t('common.errors.unexpected') };
     }

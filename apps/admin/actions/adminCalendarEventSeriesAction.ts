@@ -222,7 +222,7 @@ export async function createCalendarEventSeries(
   const ctx = await getLogContext();
   try {
     const sessions = buildSessionPayloads(common, rows);
-    if (!series.title.trim() || !sessions) return { success: false, message: 'invalid_input' };
+    if (!series.title.trim() || !sessions) return { success: false, message: t('common.errors.invalidInput') };
 
     const supabase = createAdminClient();
     const { data, error } = await supabase.rpc('admin_create_calendar_event_series', {
@@ -267,7 +267,7 @@ export async function addCalendarEventSeriesSessions(
   const ctx = await getLogContext();
   try {
     const sessions = buildSessionPayloads(common, rows);
-    if (!sessions) return { success: false, message: 'invalid_session' };
+    if (!sessions) return { success: false, message: t('common.errors.invalidInput') };
 
     const supabase = createAdminClient();
     const { data, error } = await supabase.rpc('admin_add_calendar_event_series_sessions', {

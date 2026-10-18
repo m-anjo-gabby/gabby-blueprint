@@ -239,7 +239,7 @@ export async function deleteContent(contentId: string) {
 
     if (error) {
       if (isInUseError(error))
-        return { success: false, reason: 'in_use' as const, message: t('common.errors.unexpected') };
+        return { success: false, errorCode: 'in_use' as const, message: t('common.errors.unexpected') };
       logger.error('content:delete_content_failed', error.message, { ...ctx, err: error, payload: { contentId } });
       return { success: false, message: t('common.errors.unexpected') };
     }

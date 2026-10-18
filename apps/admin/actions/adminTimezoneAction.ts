@@ -94,7 +94,7 @@ export async function deleteTimezone(timezone: string) {
 
     if (error) {
       if (isInUseError(error))
-        return { success: false, reason: 'in_use' as const, message: t('common.errors.unexpected') };
+        return { success: false, errorCode: 'in_use' as const, message: t('common.errors.unexpected') };
       logger.error('timezone:delete_timezone_failed', error.message, { ...ctx, err: error, payload: { timezone } });
       return { success: false, message: t('common.errors.unexpected') };
     }

@@ -62,7 +62,8 @@
       "fileRequired": "ファイルが選択されていません",
       "uploadFailed": "アップロードに失敗しました",
       "saveFailed": "保存に失敗しました",
-      "deleteFailed": "削除に失敗しました"
+      "deleteFailed": "削除に失敗しました",
+      "invalidInput": "入力内容を確認してください"
     },
     "results": {
       "registered": "登録しました",
@@ -2564,7 +2565,11 @@
     },
     "errors": {
       "sessionNoInUse": "このセッション番号は既に使用されています",
-      "duplicateSeqNo": "表示順 (Seq No) が重複しています。"
+      "duplicateSeqNo": "表示順 (Seq No) が重複しています。",
+      "invalidLevel": "移動先のレベルが正しくありません",
+      "noQuestionsSelected": "問題が選択されていません",
+      "questionsNotFound": "対象の問題が見つかりませんでした",
+      "sameLevel": "移動先が現在と同じレベルです"
     }
   },
   "companyProfiles": {

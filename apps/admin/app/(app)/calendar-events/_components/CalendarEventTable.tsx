@@ -40,7 +40,7 @@ export function CalendarEventTable({
       const result = await deleteCalendarEvent(event.calendar_event_id);
       if (result.success) {
         showToast(t('toastDeleted'), 'success');
-      } else if (result.reason === 'held') {
+      } else if (result.errorCode === 'held') {
         showToast(t('toastDeleteHeld'), 'error');
       } else {
         showToast(result.message || t('toastDeleteFailed'), 'error');

@@ -1,7 +1,12 @@
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { FAVORITE_LIMIT_ERROR_CODE, type FavoriteToggleResult } from '@/constants/favorites';
+import {
+  FAVORITE_LIMIT_ERROR_CODE,
+  FAVORITE_LIMIT_MESSAGE,
+  FAVORITE_UPDATE_ERROR_MESSAGE,
+  type FavoriteToggleResult,
+} from '@/constants/favorites';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
@@ -47,7 +52,7 @@ function writeFavorite(
 
 /**
  * お気に入りの登録・解除（各 Server Action から呼ぶサーバー専用の共通処理）。
- * 本人の行だけを操作する（RLSでも本人に限定）。登録上限はDBのトリガーで判定し、超過は reason: 'limit' で返す。
+ * 本人の行だけを操作する（RLSでも本人に限定）。登録上限はDBのトリガーで判定し、超過は errorCode: 'limit' で返す。
  */
 export async function toggleFavoriteRow(
   target: FavoriteTarget,
@@ -59,27 +64,27 @@ export async function toggleFavoriteRow(
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { ok: false, reason: 'error' };
+    if (!user) return { success: false, message: FAVORITE_UPDATE_ERROR_MESSAGE };
 
     const { error } = await writeFavorite(supabase, target, user.id, targetId, isFavorite);
 
     if (error) {
       if (error.code === FAVORITE_LIMIT_ERROR_CODE) {
         logger.info('favorite:limit_exceeded', 'Favorite limit exceeded', { ...ctx, payload });
-        return { ok: false, reason: 'limit' };
+        return { success: false, errorCode: 'limit', message: FAVORITE_LIMIT_MESSAGE };
       }
       logger.error('favorite:toggle_failed', error.message, { ...ctx, err: error, payload });
-      return { ok: false, reason: 'error' };
+      return { success: false, message: FAVORITE_UPDATE_ERROR_MESSAGE };
     }
 
     logger.info('favorite:toggle_success', `Favorite ${isFavorite ? 'added' : 'removed'}`, { ...ctx, payload });
-    return { ok: true };
+    return { success: true };
   } catch (err) {
     logger.error('favorite:toggle_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload,
     });
-    return { ok: false, reason: 'error' };
+    return { success: false, message: FAVORITE_UPDATE_ERROR_MESSAGE };
   }
 }

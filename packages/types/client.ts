@@ -59,7 +59,7 @@ export interface ClientPayload {
 export interface ClientResponse {
   success: boolean;
   /** in_use: 契約・ユーザー等の参照が残っていて物理削除できない */
-  reason?: 'in_use';
+  errorCode?: 'in_use';
   message?: string;
   client?: ClientRecord;
 }

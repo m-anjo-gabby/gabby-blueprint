@@ -15,7 +15,7 @@ import { FavoriteOnlyToggle } from './FavoriteOnlyToggle';
 
 // Actions & Hooks
 import { toggleContentFavorite } from '@/actions/contentAction';
-import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
+import { FAVORITE_TOGGLE_NETWORK_ERROR } from '@/constants/favorites';
 import type { ContentItem } from '@gabby/types/content';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
@@ -99,10 +99,10 @@ export function LibraryView({ initialContents, renderId }: LibraryViewProps) {
 
     // 2. サーバーサイド処理（登録上限の超過・失敗は戻り値で返る）
     const result = await toggleContentFavorite(contentId, nextState).catch(() => FAVORITE_TOGGLE_NETWORK_ERROR);
-    if (!result.ok) {
+    if (!result.success) {
       // 3. 失敗時のロールバック
       updateFavoriteStatus(contentId, currentState);
-      showToast(getFavoriteToggleErrorMessage(result), 'error');
+      showToast(result.message, 'error');
       return;
     }
 

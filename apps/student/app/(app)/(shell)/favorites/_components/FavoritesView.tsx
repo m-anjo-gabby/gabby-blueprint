@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { FavoriteKindSection } from './FavoriteKindSection';
 import { FavoriteAudioProvider } from './FavoriteAudioProvider';
 import { replaceSearchParams } from '@/lib/replaceSearchParams';
-import { FAVORITE_TOGGLE_NETWORK_ERROR, getFavoriteToggleErrorMessage } from '@/constants/favorites';
+import { FAVORITE_TOGGLE_NETWORK_ERROR } from '@/constants/favorites';
 import {
   FAVORITE_KINDS,
   FAVORITE_KIND_IDS,
@@ -83,7 +83,7 @@ export function FavoritesView({ initialLists, renderId }: FavoritesViewProps) {
       // 楽観的に一覧から外し、失敗した場合は元の位置に戻す
       replaceList((list) => list.filter((i) => def.getKey(i) !== key));
       const result = await def.remove(item).catch(() => FAVORITE_TOGGLE_NETWORK_ERROR);
-      if (result.ok) {
+      if (result.success) {
         showToast('お気に入りから削除しました', 'success');
         return;
       }
@@ -93,7 +93,7 @@ export function FavoritesView({ initialLists, renderId }: FavoritesViewProps) {
         next.splice(Math.max(0, Math.min(index, next.length)), 0, item);
         return next;
       });
-      showToast(getFavoriteToggleErrorMessage(result), 'error');
+      showToast(result.message, 'error');
     },
     [lists, setLists, showConfirm, showToast],
   );
