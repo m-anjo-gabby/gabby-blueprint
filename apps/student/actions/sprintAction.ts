@@ -21,6 +21,7 @@ import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { toIsoMonthInZone } from '@gabby/lib/date/date';
 import { getMyTimezone } from '@/lib/userTimezone';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
 
 const logger = createLogger('student');
 const SPRINT_LIMIT_COUNT = 10;
@@ -68,35 +69,34 @@ export interface CreateSprintScoreInput {
 }
 
 /**
- * スプリント結果取得のレスポンス型
+ * スプリント結果の取得で返す値
  */
-export interface SprintResultResponse {
-  success: boolean;
-  data: {
-    scoreRecord: {
-      self_sprint_id: string;
-      user_id: string;
-      sprint_type: string;
-      content_id: string;
-      question_type: string;
-      answer_type: string;
-      difficulty_level: number;
-      time_limit_sec: number;
-      total_answered: number;
-      answered_history: SprintHistoryItem[]; // 問題ごとの回答の履歴
-      insert_date: string;
-      update_date: string;
-    };
-    questions: SprintQuestion[];
-    totalAssessmentCount: number;
-    averageAssessmentScore: number;
-    // 教材メタデータから解決した「レベル概念の有無」。
-    // 呼び出し側（page.tsx）が別途 getContent で再取得する必要がないよう、
-    // self_t_sprint と com_m_contents を1クエリでJOINして解決した値をここに含める。
-    hasLevel: boolean;
-  } | null;
-  error?: string;
+export interface SprintResultData {
+  scoreRecord: {
+    self_sprint_id: string;
+    user_id: string;
+    sprint_type: string;
+    content_id: string;
+    question_type: string;
+    answer_type: string;
+    difficulty_level: number;
+    time_limit_sec: number;
+    total_answered: number;
+    answered_history: SprintHistoryItem[]; // 問題ごとの回答の履歴
+    insert_date: string;
+    update_date: string;
+  };
+  questions: SprintQuestion[];
+  totalAssessmentCount: number;
+  averageAssessmentScore: number;
+  // 教材メタデータから解決した「レベル概念の有無」。
+  // 呼び出し側（page.tsx）が別途 getContent で再取得する必要がないよう、
+  // self_t_sprint と com_m_contents を1クエリでJOINして解決した値をここに含める。
+  hasLevel: boolean;
 }
+
+/** スプリント結果の取得の結果 */
+export type SprintResultResponse = CoreResult<{ data: SprintResultData }, BasicErrorCode>;
 
 // ユーティリティ・ヘルパー
 function shuffleArray<T>(array: T[]): T[] {
@@ -143,7 +143,7 @@ export async function getSprintQuestions(
         ...ctx,
         payload: { question_type: safeType, difficulty_level: safeLevel },
       });
-      return { success: false, data: null, errorCode: 'level_locked' };
+      return { success: false, errorCode: 'level_locked' };
     }
 
     const { data: fetchedData, error } = await supabase
@@ -159,7 +159,7 @@ export async function getSprintQuestions(
 
     if (rawRows.length === 0) {
       logger.info('sprint:fetch_empty', 'No questions found at all for this content/type/level', ctx);
-      return { success: false, data: null, errorCode: 'no_questions' };
+      return { success: false, errorCode: 'no_questions' };
     }
 
     let finalData: SprintQuestion[] = [];
@@ -211,11 +211,7 @@ export async function getSprintQuestions(
       err: error,
     });
 
-    return {
-      success: false,
-      data: null,
-      error: getErrorMessage(error, 'Failed to fetch sprint questions'),
-    };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -224,7 +220,7 @@ export async function getSprintQuestions(
  */
 export async function createSprintScore(
   input: CreateSprintScoreInput,
-): Promise<{ success: boolean; data: { self_sprint_id: string } | null; error?: string }> {
+): Promise<CoreResult<{ data: { self_sprint_id: string } }, 'invalid_input' | BasicErrorCode>> {
   const ctx = await getLogContext();
 
   try {
@@ -241,7 +237,7 @@ export async function createSprintScore(
         ...ctx,
         payload: { issues: parsedHistory.error.issues.slice(0, 5) },
       });
-      return { success: false, data: null, error: 'Invalid sprint history' };
+      return { success: false, errorCode: 'invalid_input' };
     }
 
     // self_t_sprint へ登録する（answered_history は JSONB のため配列をそのまま渡す）
@@ -277,7 +273,7 @@ export async function createSprintScore(
       ...ctx,
       err: error,
     });
-    return { success: false, data: null, error: getErrorMessage(error, 'Failed to save sprint results') };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -390,7 +386,7 @@ export async function getSprintResult(self_sprint_id: string): Promise<SprintRes
       ...ctx,
       err: error,
     });
-    return { success: false, data: null, error: getErrorMessage(error, 'Failed to load session results') };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -489,11 +485,7 @@ export async function getUserSprintHistory(yearMonth: string) {
       ...ctx,
       err: error,
     });
-    return {
-      success: false,
-      data: { sessions: [], drills: [] },
-      error: getErrorMessage(error),
-    };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -529,7 +521,7 @@ export async function getLastSprintSession(contentId?: string) {
       ...ctx,
       err: error,
     });
-    return { success: false, data: null, error: getErrorMessage(error) };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -559,7 +551,7 @@ export async function getSprintProgress() {
       ...ctx,
       err: error,
     });
-    return { success: false, data: null, error: getErrorMessage(error) };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -640,6 +632,6 @@ export async function getContent(contentId: string) {
     return { success: true, data, availableLevels };
   } catch (error) {
     logger.error('sprint:get_content_failed', getErrorMessage(error), { ...ctx, err: error });
-    return { success: false, error: getErrorMessage(error) };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }

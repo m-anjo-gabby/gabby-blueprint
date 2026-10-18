@@ -273,7 +273,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
           const fileFormData = new FormData();
           fileFormData.append('file', att.file);
           const res = await uploadNoticeFile(noticeId, fileFormData);
-          if (!res.success || !res.attachment) {
+          if (!res.success) {
             showToast(res.message || t('errorUploadFailed', { name: att.name }), 'error');
             setIsSaving(false);
             return;
@@ -298,7 +298,7 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
         const imageFormData = new FormData();
         imageFormData.append('file', image.file);
         const res = await uploadNoticeImage(noticeId, imageFormData);
-        if (!res.success || !res.path) {
+        if (!res.success) {
           showToast(res.message || t('errorImageUploadFailed'), 'error');
           setIsSaving(false);
           return;

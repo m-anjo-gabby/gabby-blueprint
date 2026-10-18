@@ -25,5 +25,5 @@ export default async function WordHistoryPage({ searchParams }: PageProps) {
   // key={targetMonth} は付与しない：月切り替えのたびにフルリマウントされ、
   // モーダルのフェードインや「今月」ボタンの登場アニメーションが毎回再生されてガタつくため、
   // Client Component側の状態・アニメーションを維持したままpropsの更新のみで反映する
-  return <WordHistoryView initialData={res.data || []} targetMonth={targetMonth} />;
+  return <WordHistoryView initialData={res.success ? res.data : []} targetMonth={targetMonth} />;
 }

@@ -1,3 +1,4 @@
+import type { BasicErrorCode, CoreResult } from './action';
 import type { TTSAdjustmentData, TtsStatus } from './word';
 
 /**
@@ -265,16 +266,15 @@ export interface FavoriteSprintQuestionItem extends FavoriteSprintQuestionFields
   has_level: boolean;
 }
 
-export interface SprintQuestionResponse {
-  success: boolean;
-  data: SprintQuestion[] | null;
-  error?: string;
-  /**
-   * 'level_locked': 生徒のレベル管理上、まだ選べないレベルが指定された
-   * 'no_questions': 指定した種別・レベルに問題が無い
-   */
-  errorCode?: 'level_locked' | 'no_questions';
-}
+/**
+ * スプリントの出題の取得の結果。失敗の errorCode:
+ * - 'level_locked': 生徒のレベル管理上、まだ選べないレベルが指定された
+ * - 'no_questions': 指定した種別・レベルに問題が無い
+ */
+export type SprintQuestionResponse = CoreResult<
+  { data: SprintQuestion[] },
+  'level_locked' | 'no_questions' | BasicErrorCode
+>;
 
 /**
  * 教材ごとの「問題が存在するレベル」を種別ごとに並べたもの（昇順）。

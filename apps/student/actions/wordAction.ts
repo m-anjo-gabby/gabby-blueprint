@@ -15,6 +15,7 @@ import { toggleFavoriteRow } from '@/lib/favoriteToggle';
 import { FAVORITE_LIMIT, type FavoriteToggleResult } from '@/constants/favorites';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
 
 const logger = createLogger('student');
 
@@ -262,7 +263,7 @@ export interface WordSummaryHistoryItem {
  */
 export async function getUserWordHistory(
   yearMonth: string,
-): Promise<{ success: boolean; data: WordSummaryHistoryItem[]; error?: string }> {
+): Promise<CoreResult<{ data: WordSummaryHistoryItem[] }, BasicErrorCode>> {
   const ctx = await getLogContext();
 
   try {
@@ -315,6 +316,6 @@ export async function getUserWordHistory(
       ...ctx,
       err: error,
     });
-    return { success: false, data: [], error: getErrorMessage(error) };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }

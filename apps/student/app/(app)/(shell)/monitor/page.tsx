@@ -40,9 +40,10 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
     getMonitorSprintHistory(startDate, endDate, filterUserIds, includeMonitor),
   ]);
 
-  const users = userListResult.data;
-  const wordHistory = wordHistoryResult.data;
-  const sprintHistory = sprintHistoryResult.data;
+  // 取得の失敗は各アクションでログに残し、空の一覧として表示する
+  const users = userListResult.success ? userListResult.data : [];
+  const wordHistory = wordHistoryResult.success ? wordHistoryResult.data : [];
+  const sprintHistory = sprintHistoryResult.success ? sprintHistoryResult.data : { sessions: [], drills: [] };
 
   return (
     <>

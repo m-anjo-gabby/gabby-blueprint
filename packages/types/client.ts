@@ -1,5 +1,6 @@
 // packages/types/client.ts
 import type { TableRow } from './db';
+import type { ActionResult } from './action';
 
 // com_m_client.status
 export const CLIENT_STATUS = {
@@ -54,12 +55,6 @@ export interface ClientPayload {
 }
 
 /**
- * ClientResponse: サーバーアクションの共通戻り値型
+ * 顧客のアクションの結果。errorCode の in_use: 契約・ユーザー等の参照が残っていて物理削除できない
  */
-export interface ClientResponse {
-  success: boolean;
-  /** in_use: 契約・ユーザー等の参照が残っていて物理削除できない */
-  errorCode?: 'in_use';
-  message?: string;
-  client?: ClientRecord;
-}
+export type ClientResponse = ActionResult<{ client?: ClientRecord }, 'in_use'>;

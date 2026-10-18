@@ -110,11 +110,13 @@ export async function updateNotice(input: NoticeInput): Promise<ActionResult<{ n
 - `message` に DB・外部サービス・例外の本文（`error.message` 等）を入れない。本文はログに残し（`err` にエラーそのものを渡す。LOGGING.md）、画面には「予期せぬエラー」等の共通の文言を返す。
 - 画面で分岐が必要な失敗（使用中で消せない・期限切れ等）だけ `errorCode` も返す（`ActionResult<T, 'in_use'>`）。画面は `errorCode` で分岐し、文言は画面側で出してもよい。
 - 想定内の失敗（入力の誤り・権限なし・見つからない等）は `throw` せず、結果で返す（本番の Next.js はアクションで投げたエラーの本文を画面に渡さない）。
-- 共通部分の実装（`*Core`）は `CoreResult<T, C>` を返す。失敗は `{ success: false, errorCode }` だけで、文言は持たない。各アプリのアクションが `errorCode` を自分の言語の文言に変える（例: admin の `Record<ProfileIconErrorCode, MessageKey>`、coach の `Record<CoachAvailabilityErrorCode, string>`）。`XxxErrorCode` の型は `packages/types/<domain>.ts` に置く。
+- 共通部分の実装（`*Core`）は `CoreResult<T, C>` を返す。失敗は `{ success: false, errorCode }` だけで、文言は持たない。各アプリのアクションが `errorCode` を自分の言語の文言に変える（例: admin の `Record<ProfileIconErrorCode, MessageKey>`、coach の `Record<CoachAvailabilityErrorCode, string>`）。`XxxErrorCode` の型は `packages/types/<domain>.ts` に置く。種別を分けない場合は `BasicErrorCode`（`'unauthorized' | 'unexpected_error'`）。
+- 3アプリから直接呼ぶ共通のアクション（chat・お知らせ・通知）も `CoreResult` を返し、画面の文言は呼び出す側（共通の部品は各アプリが渡すラベル）で出す（例: `ChatActionErrorCode` と admin の `useChatErrorMessage`）。
 
 ### 画面のデータの取得（Server Component）
 
-- 画面の表示に使う取得関数は、失敗をログに残して `null`（1件）または `[]`（一覧）を返し、画面は「取得できなかった」表示か空の表示にする（今の書き方。区画ごとに `Suspense` で分ける場合も同じ）。
+- 画面の表示に使う取得関数は、失敗をログに残して `null`（1件）または `[]`（一覧）を返し、画面は「取得できなかった」表示か空の表示にする（区画ごとに `Suspense` で分ける場合も同じ）。
+- 取得の成否で画面の出し方を変える場合は `CoreResult<{ data: T }, BasicErrorCode>` を返し、画面は `res.success ? res.data : 既定値` で受ける（例: student の学習記録・モニター）。
 - 想定外の失敗で画面を出せない場合は `throw` し、`error.tsx` に任せる。投げる `Error` の文言は開発者向け（画面には出ない）でよい。
 
 ### `catch`
@@ -137,9 +139,6 @@ export async function updateNotice(input: NoticeInput): Promise<ActionResult<{ n
 
 | 残っている形 | 直し方 |
 |---|---|
-| `packages/lib` の chat・お知らせ・通知のアクションが `{ success: false, error: error.message }` を返す | `CoreResult`（`errorCode`）にし、各アプリで文言に変える |
-| アクションごとに結果の型をその場で書いている（`Promise<{ success: true } \| { success: false; message: string }>` 等） | `ActionResult` に置き換える |
-| 使用中で消せない失敗を `reason: 'in_use'` で返している | `errorCode: 'in_use'` にする |
+| 戻り値の型を書いていないアクション（student の `sprintAction.ts` の一部等。成否が `boolean` に広がる） | 戻り値の型（`CoreResult` / `ActionResult`）を書く |
 | 略語を全部大文字にした名前（`URL` 等。`CV`・`TTS` を除く） | 1語の扱い（`Url`）にする |
 | props の型名が `Props` | `XxxProps` にする |
-| 部品を `export default` している（ヘッダー・サイドバー・ダッシュボードの部品等） | 名前付きの export にし、import 側も直す |

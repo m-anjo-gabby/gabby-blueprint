@@ -6,16 +6,13 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { USER_STATUS, USER_TYPES } from '@gabby/types/user';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-interface StartImpersonationResult {
-  success: boolean;
-  url?: string;
-  message?: string;
-}
+type StartImpersonationResult = ActionResult<{ url: string }>;
 
 /**
  * 対象ユーザーとして生徒ポータル／コーチポータルへ代理ログインするためのマジックリンクを発行する。

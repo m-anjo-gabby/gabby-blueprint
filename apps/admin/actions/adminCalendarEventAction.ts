@@ -667,7 +667,7 @@ export async function deleteCalendarEventMessage(
 export async function uploadCalendarEventMessageFile(
   calendarEventMessageId: string,
   formData: FormData,
-): Promise<{ success: boolean; attachment?: CalendarEventMessageAttachment; message?: string }> {
+): Promise<ActionResult<{ attachment: CalendarEventMessageAttachment }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -732,9 +732,7 @@ export async function getCalendarEventMessageAttachmentUrl(path: string): Promis
 /**
  * アナウンス添付ファイルの削除（Storageから物理削除。送信前の差し替え用）
  */
-export async function deleteCalendarEventMessageFile(
-  storagePath: string,
-): Promise<{ success: boolean; message?: string }> {
+export async function deleteCalendarEventMessageFile(storagePath: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

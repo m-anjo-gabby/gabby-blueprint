@@ -203,12 +203,12 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       });
 
       setUiView(selectedConfig.mode);
-    } else if (response.errorCode === 'level_locked') {
+    } else if (!response.success && response.errorCode === 'level_locked') {
       // まだ選べないレベル（URLの level 指定・レベル管理の再開等）は、選択画面へ戻す（レベルは選択画面が選べるものに補正する）
       showToast('このレベルはまだ選択できません。別のレベルを選択してください。', 'error');
       setConfig({ questionType });
       setUiView('selecting');
-    } else if (response.errorCode === 'no_questions') {
+    } else if (!response.success && response.errorCode === 'no_questions') {
       // 問題の無いレベル（画面を開いた後に問題が移動・削除された等）は選択肢から外して選択画面へ戻す
       markLevelUnavailable(questionType, difficultyLevel);
       showToast('このレベルには問題がありません。別のレベルを選択してください。', 'error');

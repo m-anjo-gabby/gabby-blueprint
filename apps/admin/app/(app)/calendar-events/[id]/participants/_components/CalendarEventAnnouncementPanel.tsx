@@ -145,7 +145,7 @@ export function CalendarEventAnnouncementPanel({
         const fileFormData = new FormData();
         fileFormData.append('file', att.file);
         const res = await uploadCalendarEventMessageFile(messageId, fileFormData);
-        if (!res.success || !res.attachment) {
+        if (!res.success) {
           showToast(res.message || t('toastUploadFailed', { name: att.name }), 'error');
           setIsSaving(false);
           return;

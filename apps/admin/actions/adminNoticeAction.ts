@@ -24,6 +24,7 @@ import { USER_STATUS, USER_TYPES, isUserType, type UserType } from '@gabby/types
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
 import type { ServerTranslator } from '@/i18n/types';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -582,10 +583,7 @@ const NOTICE_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
  * 見出し画像のアップロード（FormData）
  * Storageバケット "notices" に notices/{notice_id}/image/{uuid}.{拡張子} で保存し、パスを返す
  */
-export async function uploadNoticeImage(
-  noticeId: string,
-  formData: FormData,
-): Promise<{ success: boolean; path?: string; message?: string }> {
+export async function uploadNoticeImage(noticeId: string, formData: FormData): Promise<ActionResult<{ path: string }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -634,7 +632,7 @@ export async function uploadNoticeImage(
 export async function uploadNoticeFile(
   noticeId: string,
   formData: FormData,
-): Promise<{ success: boolean; attachment?: NoticeAttachment; message?: string }> {
+): Promise<ActionResult<{ attachment: NoticeAttachment }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -692,7 +690,7 @@ export async function uploadNoticeFile(
 /**
  * 添付ファイルの削除 (Storageから物理削除)
  */
-export async function deleteNoticeFile(storagePath: string): Promise<{ success: boolean; message?: string }> {
+export async function deleteNoticeFile(storagePath: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

@@ -22,7 +22,7 @@ export default async function TrainingLogPage({ searchParams }: PageProps) {
 
   return (
     <TrainingPerformance
-      initialData={res.data || { words: [], sprint_sessions: [], sprint_drills: [] }}
+      initialData={res.success ? res.data : { words: [], sprint_sessions: [], sprint_drills: [] }}
       targetMonth={targetMonth}
     />
   );

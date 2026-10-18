@@ -6,6 +6,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import type { UserTrainingPerformanceResponse } from '@gabby/types/training';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
 
 const logger = createLogger('student');
 
@@ -15,7 +16,7 @@ const logger = createLogger('student');
  */
 export async function getUserTrainingPerformance(
   yearMonth: string,
-): Promise<{ success: boolean; data: UserTrainingPerformanceResponse; error?: string }> {
+): Promise<CoreResult<{ data: UserTrainingPerformanceResponse }, BasicErrorCode>> {
   const ctx = await getLogContext();
 
   try {
@@ -42,16 +43,8 @@ export async function getUserTrainingPerformance(
     );
     return { success: true, data: resData };
   } catch (error) {
-    const message = getErrorMessage(error, String(error));
-    logger.error('performance:get_user_performance_failed', 'Failed to fetch user performance data', {
-      ...ctx,
-      payload: { error: message },
-    });
-    return {
-      success: false,
-      data: { words: [], sprint_sessions: [], sprint_drills: [] },
-      error: message,
-    };
+    logger.error('performance:get_user_performance_failed', getErrorMessage(error), { ...ctx, err: error });
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 

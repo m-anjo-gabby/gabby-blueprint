@@ -5,7 +5,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { type WordSummaryHistoryItem } from './wordAction'; // Re-use type
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
 
 const logger = createLogger('monitor');
 
@@ -99,7 +99,7 @@ export async function getMonitorUserList(
   startDate: string,
   endDate: string,
   includeMonitor: boolean = false,
-): Promise<{ success: boolean; data: MonitorUser[]; error?: string }> {
+): Promise<CoreResult<{ data: MonitorUser[] }, BasicErrorCode>> {
   const ctx = await getLogContext();
 
   try {
@@ -124,7 +124,7 @@ export async function getMonitorUserList(
       ...ctx,
       err: error,
     });
-    return { success: false, data: [], error: getErrorMessage(error) };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -136,7 +136,7 @@ export async function getMonitorWordHistory(
   endDate: string,
   userIds?: string[],
   includeMonitor: boolean = false,
-): Promise<{ success: boolean; data: MonitorWordSummaryHistoryItem[]; error?: string }> {
+): Promise<CoreResult<{ data: MonitorWordSummaryHistoryItem[] }, BasicErrorCode>> {
   const ctx = await getLogContext();
 
   try {
@@ -178,7 +178,7 @@ export async function getMonitorWordHistory(
       err: error,
       payload: { startDate, endDate, userIds, includeMonitor },
     });
-    return { success: false, data: [], error: getErrorMessage(error) };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -190,7 +190,7 @@ export async function getMonitorSprintHistory(
   endDate: string,
   userIds?: string[],
   includeMonitor: boolean = false,
-): Promise<{ success: boolean; data: MonitorSprintHistoryResponse; error?: string }> {
+): Promise<CoreResult<{ data: MonitorSprintHistoryResponse }, BasicErrorCode>> {
   const ctx = await getLogContext();
 
   try {
@@ -284,10 +284,6 @@ export async function getMonitorSprintHistory(
       ...ctx,
       err: error,
     });
-    return {
-      success: false,
-      data: { sessions: [], drills: [] },
-      error: getErrorMessage(error),
-    };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }

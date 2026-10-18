@@ -323,7 +323,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
           history: history,
         });
 
-        if (res.success && res.data) {
+        if (res.success) {
           setResultId(res.data.self_sprint_id);
           if (currentSecondsLeft <= 0) {
             setShowTimeUpOverlay(true);
@@ -339,7 +339,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
             }, SPRINT_FLOW_TIMING.sprint.resultRedirectBufferMs);
           }
         } else {
-          throw new Error(res.error || 'Failed to persist score history');
+          throw new Error(`Failed to persist score history: ${res.errorCode}`);
         }
       } catch (err) {
         clientLogger.error('sprint:save_score_failed', 'Sprint score save failed', { err });

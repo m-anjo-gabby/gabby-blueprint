@@ -41,7 +41,7 @@ export function ImpersonateButton({ user, compact = false }: Props) {
     setLoading(true);
     try {
       const result = await startImpersonation(user.id, reason);
-      if (result.success && result.url) {
+      if (result.success) {
         // ユーザー種別ごとに固定のウィンドウ名を指定し、同一種別への連続代理ログインは
         // 既存タブを再利用させる（生徒⇔コーチは別タブで共存可能なまま維持する）。
         // window.opener は意図的に切り離さない。切り離すと別オリジンの生徒／コーチポータルを
