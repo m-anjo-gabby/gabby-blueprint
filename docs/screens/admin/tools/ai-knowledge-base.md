@@ -54,5 +54,5 @@
 - `apps/admin/app/(app)/tools/ai-knowledge-base/_components/KnowledgeEntryFormDialog.tsx`
 - `apps/admin/app/(app)/tools/ai-knowledge-base/_lib/knowledgeSourceTypes.ts`
 - `apps/admin/actions/aiKnowledgeBaseAction.ts`（`getKnowledgeEntries`,
-  `saveKnowledgeEntryAction`, `deleteKnowledgeEntryAction`。RPCは使わず`com_m_ai_knowledge_base`
+  `saveKnowledgeEntry`, `deleteKnowledgeEntry`。RPCは使わず`com_m_ai_knowledge_base`
   テーブルを直接操作する。保存時にEmbeddingをこのサーバーアクション内で生成する）

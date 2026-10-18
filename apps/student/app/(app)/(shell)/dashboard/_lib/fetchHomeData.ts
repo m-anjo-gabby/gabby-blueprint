@@ -4,7 +4,7 @@ import { getLatestResumeContent } from '@/actions/contentAction';
 import { getMyActivePlans, type MyPlan } from '@/actions/dashboardAction';
 import {
   getMyTrainingLifetimeStats,
-  getUserTrainingPerformanceAction,
+  getUserTrainingPerformance,
   type TrainingLifetimeStats,
 } from '@/actions/performanceAction';
 import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
@@ -29,7 +29,7 @@ export async function fetchHomeData(): Promise<HomeData> {
 
   const [assignments, performances, lifetimeStats, timezones, resume, plans] = await Promise.all([
     getMyDialogueAssignments(),
-    Promise.all(monthKeys.map((month) => getUserTrainingPerformanceAction(month))),
+    Promise.all(monthKeys.map((month) => getUserTrainingPerformance(month))),
     getMyTrainingLifetimeStats(),
     getTimezoneList(),
     getLatestResumeContent(),

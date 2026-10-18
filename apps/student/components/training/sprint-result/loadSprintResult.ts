@@ -1,4 +1,4 @@
-import { getSprintResultAction, type SprintHistoryItem } from '@/actions/sprintAction';
+import { getSprintResult, type SprintHistoryItem } from '@/actions/sprintAction';
 import { getFavoriteSprintQuestionIds } from '@/actions/sprintFavoriteAction';
 import { getSprintTitle } from '@gabby/lib';
 import { readSprintHistory } from '@gabby/lib/sprint/answeredHistory';
@@ -9,7 +9,7 @@ import type { SprintResultData } from './types';
  * 本人の結果が取得できない場合は null を返すので、呼び出し側で notFound() にする。
  */
 export async function loadSprintResult(selfSprintId: string): Promise<SprintResultData | null> {
-  const res = await getSprintResultAction(selfSprintId);
+  const res = await getSprintResult(selfSprintId);
   if (!res.success || !res.data) return null;
 
   // 発話数・平均スコア・hasLevel は Server Action 側で計算済み

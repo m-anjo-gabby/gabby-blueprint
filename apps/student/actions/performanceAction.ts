@@ -13,7 +13,7 @@ const logger = createLogger('student');
  * ログイン中ユーザーの特定月のトレーニング実績を一括取得する (RPC経由)
  * @param yearMonth 'YYYY-MM' 形式の文字列
  */
-export async function getUserTrainingPerformanceAction(
+export async function getUserTrainingPerformance(
   yearMonth: string,
 ): Promise<{ success: boolean; data: UserTrainingPerformanceResponse; error?: string }> {
   const ctx = await getLogContext();

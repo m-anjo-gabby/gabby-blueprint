@@ -15,7 +15,7 @@ const logger = createLogger('common');
  * - 既読状態 (is_read) を LEFT JOIN で付与
  * - RLS により target_type / user_type に応じた対象のみ返る（生徒/コーチ共通で利用可能）
  */
-export async function getNoticesAction(): Promise<{
+export async function getNotices(): Promise<{
   success: boolean;
   data: NoticeItem[];
   error?: string;
@@ -59,7 +59,7 @@ export async function getNoticesAction(): Promise<{
 /**
  * 未読件数を取得（ヘッダーバッジ用）
  */
-export async function getUnreadNoticeCountAction(): Promise<number> {
+export async function getUnreadNoticeCount(): Promise<number> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -97,7 +97,7 @@ export async function getUnreadNoticeCountAction(): Promise<number> {
 /**
  * 指定のお知らせを既読にする（UPSERT）
  */
-export async function markNoticeAsReadAction(noticeId: string): Promise<{
+export async function markNoticeAsRead(noticeId: string): Promise<{
   success: boolean;
   error?: string;
 }> {
@@ -133,7 +133,7 @@ export async function markNoticeAsReadAction(noticeId: string): Promise<{
 /**
  * 複数のお知らせをまとめて既読にする（ダイアログ表示後の一括既読化）
  */
-export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise<{
+export async function markNoticesAsReadBatch(noticeIds: string[]): Promise<{
   success: boolean;
   error?: string;
 }> {
@@ -177,7 +177,7 @@ export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise
  * 行動ボタンを押したことを記録する（既読も兼ねる）。
  * 押した日時は最初の1回だけを残す（2回目以降は更新しない）。
  */
-export async function recordNoticeCtaClickAction(noticeId: string): Promise<{
+export async function recordNoticeCtaClick(noticeId: string): Promise<{
   success: boolean;
   error?: string;
 }> {
@@ -232,7 +232,7 @@ export async function recordNoticeCtaClickAction(noticeId: string): Promise<{
  * Supabase Storage (notices バケット) から添付ファイルの公開URLを取得
  * @param path Storageパス (例: notices/c7aaeab6.../file.pdf)
  */
-export async function getNoticeAttachmentUrlAction(path: string): Promise<{ url: string | null; error?: string }> {
+export async function getNoticeAttachmentUrl(path: string): Promise<{ url: string | null; error?: string }> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();

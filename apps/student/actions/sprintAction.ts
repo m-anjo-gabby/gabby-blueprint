@@ -93,7 +93,7 @@ export interface SprintResultResponse {
     totalAssessmentCount: number;
     averageAssessmentScore: number;
     // 🛠️ 教材メタデータから解決した「レベル概念の有無」。
-    // 呼び出し側（page.tsx）が別途 getContentAction で再取得する必要がないよう、
+    // 呼び出し側（page.tsx）が別途 getContent で再取得する必要がないよう、
     // self_t_sprint と com_m_contents を1クエリでJOINして解決した値をここに含める。
     hasLevel: boolean;
   } | null;
@@ -119,7 +119,7 @@ function shuffleArray<T>(array: T[]): T[] {
 /**
  * スプリント教材データをフェッチ・サンプリングするServer Action
  */
-export async function getSprintQuestionsAction(
+export async function getSprintQuestions(
   content_id: string,
   question_type: SprintQuestionType,
   difficulty_level: number,
@@ -205,14 +205,14 @@ export async function getSprintQuestionsAction(
       finalData = targetGroupIds.flatMap((groupId) => groupMap.get(groupId) || []);
     }
 
-    logger.debug('sprint:fetch_success', 'getSprintQuestionsAction success', {
+    logger.debug('sprint:fetch_success', 'getSprintQuestions success', {
       ...ctx,
       payload: { mode, count: finalData.length },
     });
 
     return { success: true, data: finalData };
   } catch (error) {
-    logger.error('sprint:fetch_failed', 'getSprintQuestionsAction error', {
+    logger.error('sprint:fetch_failed', 'getSprintQuestions error', {
       ...ctx,
       err: error,
     });
@@ -228,7 +228,7 @@ export async function getSprintQuestionsAction(
 /**
  * 自主トレスプリント結果・履歴をDBに登録するServer Action
  */
-export async function createSprintScoreAction(
+export async function createSprintScore(
   input: CreateSprintScoreInput,
 ): Promise<{ success: boolean; data: { self_sprint_id: string } | null; error?: string }> {
   const ctx = await getLogContext();
@@ -290,7 +290,7 @@ export async function createSprintScoreAction(
 /**
  * 指定された結果IDから、当時の「出題・解答順序」の通りに問題を再構築してフェッチするServer Action
  */
-export async function getSprintResultAction(self_sprint_id: string): Promise<SprintResultResponse> {
+export async function getSprintResult(self_sprint_id: string): Promise<SprintResultResponse> {
   const ctx = await getLogContext();
 
   try {
@@ -302,7 +302,7 @@ export async function getSprintResultAction(self_sprint_id: string): Promise<Spr
 
     // ① スコア・履歴レコードを1件取得（本人のレコードのみ）
     // 🛠️ hasLevel 解決に必要な教材メタデータ（com_m_contents.metadata）を同一クエリでJOIN取得し、
-    // 呼び出し側（page.tsx）での直列2回目のDB往復（getContentAction）を不要にする
+    // 呼び出し側（page.tsx）での直列2回目のDB往復（getContent）を不要にする
     const { data: scoreRecord, error: scoreError } = await supabase
       .from('self_t_sprint')
       .select('*, com_m_contents(metadata)')
@@ -404,7 +404,7 @@ export async function getSprintResultAction(self_sprint_id: string): Promise<Spr
  * ユーザーの特定月のスプリント履歴一覧を取得する
  * @param yearMonth 'YYYY-MM' 形式の文字列
  */
-export async function getUserSprintHistoryAction(yearMonth: string) {
+export async function getUserSprintHistory(yearMonth: string) {
   const ctx = await getLogContext();
 
   try {
@@ -507,7 +507,7 @@ export async function getUserSprintHistoryAction(yearMonth: string) {
  * ユーザーの最後のスプリントセッション設定（種別・レベル・制限時間）を取得する
  * 目的: セッション開始前の設定画面での初期値復元
  */
-export async function getLastSprintSessionAction(contentId?: string) {
+export async function getLastSprintSession(contentId?: string) {
   const ctx = await getLogContext();
 
   try {
@@ -542,7 +542,7 @@ export async function getLastSprintSessionAction(contentId?: string) {
 /**
  * ユーザーのスプリント進捗状況（各種別の到達レベル）を取得する
  */
-export async function getSprintProgressAction() {
+export async function getSprintProgress() {
   const ctx = await getLogContext();
 
   try {
@@ -622,7 +622,7 @@ export async function reportSprintProgress(
 /**
  * 教材情報を取得するServer Action
  */
-export async function getContentAction(contentId: string) {
+export async function getContent(contentId: string) {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();

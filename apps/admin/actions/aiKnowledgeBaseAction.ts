@@ -1,7 +1,11 @@
 'use server';
 
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { upsertKnowledgeEntry, deleteKnowledgeEntry, type KnowledgeSourceType } from '@gabby/lib/ai';
+import {
+  upsertKnowledgeEntry,
+  deleteKnowledgeEntry as deleteKnowledgeEntryCore,
+  type KnowledgeSourceType,
+} from '@gabby/lib/ai';
 import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
@@ -85,7 +89,7 @@ export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<L
  * ナレッジの新規登録/更新。
  * 本文からEmbeddingを再生成してcom_m_ai_knowledge_baseへ保存する（packages/lib/ai）。
  */
-export async function saveKnowledgeEntryAction(payload: {
+export async function saveKnowledgeEntry(payload: {
   knowledgeId?: string;
   sourceType: KnowledgeSourceType;
   title: string;
@@ -117,10 +121,10 @@ export async function saveKnowledgeEntryAction(payload: {
 /**
  * ナレッジの論理削除
  */
-export async function deleteKnowledgeEntryAction(knowledgeId: string) {
+export async function deleteKnowledgeEntry(knowledgeId: string) {
   const ctx = await getLogContext();
   try {
-    await deleteKnowledgeEntry(knowledgeId);
+    await deleteKnowledgeEntryCore(knowledgeId);
 
     logger.info('aiKb:delete_success', `Knowledge entry deleted: ${knowledgeId}`, { ...ctx, payload: { knowledgeId } });
 

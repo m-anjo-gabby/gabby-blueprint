@@ -25,7 +25,7 @@ import { type WordAdjustment } from '@gabby/types/word';
 import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { AZURE_GENERAL_VOICES, AZURE_STYLES } from '@gabby/types/azure';
-import { saveTTSAssetAction } from '@/actions/adminTTSAction';
+import { saveTTSAsset } from '@/actions/adminTTSAction';
 import { buildSSML } from '@gabby/lib/azure/ssml';
 import { cn } from '@/lib/utils';
 
@@ -139,7 +139,7 @@ export default function TTSAssetGenerator() {
     if (!phraseEn || !ssml) return;
     setIsProcessing(true);
     try {
-      const result = await saveTTSAssetAction({
+      const result = await saveTTSAsset({
         raw_text: phraseEn,
         comment: memo || undefined,
         ssml: ssml,

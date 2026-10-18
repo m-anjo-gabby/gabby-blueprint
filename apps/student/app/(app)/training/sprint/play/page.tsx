@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useEffect } from 'react';
-import { getSprintQuestionsAction, getLastSprintSessionAction, getContentAction } from '@/actions/sprintAction';
+import { getSprintQuestions, getLastSprintSession, getContent } from '@/actions/sprintAction';
 import { SprintSelect } from './_components/SprintSelect';
 import { SprintDrillPlayer } from './_components/SprintDrillPlayer';
 import { SprintTimePlayer } from './_components/SprintTimePlayer';
@@ -83,7 +83,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       } else {
         // プレイヤーからの戻りでない（完全な初回アクセス時）は、従来通りDB履歴やURLから取得
         let dbConfig = null;
-        const res = await getLastSprintSessionAction();
+        const res = await getLastSprintSession();
         if (res && res.success && res.data) {
           dbConfig = res.data;
         }
@@ -125,7 +125,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       // コンテンツのメタデータを取得してストアに格納
       const fallbackContentId = targetConfig.contentId;
       if (fallbackContentId) {
-        const contentRes = await getContentAction(fallbackContentId);
+        const contentRes = await getContent(fallbackContentId);
         if (contentRes && contentRes.success && contentRes.data) {
           setContentMetadata(contentRes.data.metadata?.sprint || null, contentRes.availableLevels ?? null);
           setContentName(contentRes.data.content_name || null);
@@ -186,12 +186,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
       return;
     }
 
-    const response = await getSprintQuestionsAction(
-      targetContentId,
-      questionType,
-      difficultyLevel,
-      selectedConfig.mode,
-    );
+    const response = await getSprintQuestions(targetContentId, questionType, difficultyLevel, selectedConfig.mode);
 
     if (response.success && response.data && response.data.length > 0) {
       const sprintType = toSprintType(resolvedParams.sprint_type || response.data[0]?.sprint_type);

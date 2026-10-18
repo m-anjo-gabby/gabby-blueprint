@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { deleteTTSAssetAction, type TTSAssetListItem } from '@/actions/adminTTSAction';
+import { deleteTTSAsset, type TTSAssetListItem } from '@/actions/adminTTSAction';
 import { DataTable } from '@/components/list/DataTable';
 import { DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
 import { ListToolbar } from '@/components/list/ListToolbar';
@@ -26,7 +26,7 @@ export function TTSAssetTable({ data, totalCount, pageCount }: TTSAssetTableProp
 
   const handleDelete = (asset: TTSAssetListItem) => {
     startDelete(async () => {
-      const result = await deleteTTSAssetAction(asset.asset_id);
+      const result = await deleteTTSAsset(asset.asset_id);
       showToast(
         result.success ? 'Asset deleted successfully' : result.message || 'Failed to delete asset',
         result.success ? 'success' : 'error',

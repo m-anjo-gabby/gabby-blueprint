@@ -116,7 +116,7 @@ export async function savePhrase(
  * 汎用音声作成用保存処理
  * 自由入力フレーズの音声生成 + 履歴保存 (com_t_tts_asset)
  */
-export async function saveTTSAssetAction(payload: {
+export async function saveTTSAsset(payload: {
   raw_text: string;
   comment?: string;
   ssml: string;
@@ -245,7 +245,7 @@ export async function getTTSAssets(params: ListParams): Promise<ListResult<TTSAs
  * 汎用音声ファイル削除
  * DBレコードの削除 + Storage上の物理ファイル削除（削除するファイルは画面から受け取らず、削除したレコードのパスを使う）
  */
-export async function deleteTTSAssetAction(assetId: string) {
+export async function deleteTTSAsset(assetId: string) {
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();

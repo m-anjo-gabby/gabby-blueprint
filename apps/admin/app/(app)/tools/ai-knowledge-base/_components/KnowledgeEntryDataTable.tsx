@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { deleteKnowledgeEntryAction, type KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
+import { deleteKnowledgeEntry, type KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
 import { DataTable } from '@/components/list/DataTable';
 import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
 import { ListSelectFilter } from '@/components/list/ListSelectFilter';
@@ -30,7 +30,7 @@ export function KnowledgeEntryDataTable({ data, totalCount, pageCount }: Knowled
 
   const handleDelete = (entry: KnowledgeEntry) => {
     startDelete(async () => {
-      const result = await deleteKnowledgeEntryAction(entry.knowledge_id);
+      const result = await deleteKnowledgeEntry(entry.knowledge_id);
       if (result.success) {
         showToast(t('toastDeleted'), 'success');
       } else {

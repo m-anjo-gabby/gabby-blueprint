@@ -13,7 +13,7 @@ const logger = createLogger('common');
  * ログインユーザー宛の通知一覧を取得する（最新発生順）。
  * RLSにより自身(user_id = auth.uid())の行のみが返る。
  */
-export async function getNotificationsAction(): Promise<{
+export async function getNotifications(): Promise<{
   success: boolean;
   data: NotificationItem[];
   error?: string;
@@ -48,7 +48,7 @@ export async function getNotificationsAction(): Promise<{
 /**
  * 未読件数を取得（ヘッダーバッジ用）
  */
-export async function getUnreadNotificationCountAction(): Promise<number> {
+export async function getUnreadNotificationCount(): Promise<number> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -78,7 +78,7 @@ export async function getUnreadNotificationCountAction(): Promise<number> {
 /**
  * 指定の通知を既読にする
  */
-export async function markNotificationAsReadAction(notificationId: string): Promise<{
+export async function markNotificationAsRead(notificationId: string): Promise<{
   success: boolean;
   error?: string;
 }> {
@@ -112,7 +112,7 @@ export async function markNotificationAsReadAction(notificationId: string): Prom
 /**
  * 未読の通知をまとめて既読にする
  */
-export async function markAllNotificationsAsReadAction(): Promise<{
+export async function markAllNotificationsAsRead(): Promise<{
   success: boolean;
   error?: string;
 }> {

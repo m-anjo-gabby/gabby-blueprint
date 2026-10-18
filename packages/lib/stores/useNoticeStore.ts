@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import {
-  getNoticesAction,
-  markNoticeAsReadAction,
-  markNoticesAsReadBatchAction,
-  recordNoticeCtaClickAction,
+  getNotices,
+  markNoticeAsRead,
+  markNoticesAsReadBatch,
+  recordNoticeCtaClick,
 } from '@gabby/lib/notice/actions/noticeActions';
 import { type NoticeItem } from '@gabby/types/notice';
 import { clientLogger } from '../logger/client';
@@ -67,7 +67,7 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
 
     set({ isLoading: true });
     try {
-      const res = await getNoticesAction();
+      const res = await getNotices();
       if (!res.success) return;
       get().applyNotices(res.data);
     } catch (err) {
@@ -90,12 +90,12 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
   markAsRead: async (noticeId: string) => {
     // 楽観的 UI 更新
     set((state) => markReadInState(state, noticeId));
-    await markNoticeAsReadAction(noticeId);
+    await markNoticeAsRead(noticeId);
   },
 
   recordCtaClick: async (noticeId: string) => {
     set((state) => markReadInState(state, noticeId));
-    await recordNoticeCtaClickAction(noticeId);
+    await recordNoticeCtaClick(noticeId);
   },
 
   markBatchAsRead: async (noticeIds: string[]) => {
@@ -110,7 +110,7 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
         dialogNotices: state.dialogNotices.filter((n) => !readSet.has(n.notice_id)),
       };
     });
-    await markNoticesAsReadBatchAction(noticeIds);
+    await markNoticesAsReadBatch(noticeIds);
   },
 
   dismissDialog: () => {

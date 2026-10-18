@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import {
-  getNotificationsAction,
-  markNotificationAsReadAction,
-  markAllNotificationsAsReadAction,
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
 } from '@gabby/lib/notification/actions/notificationActions';
 import { type NotificationItem } from '@gabby/types/notification';
 import { clientLogger } from '../logger/client';
@@ -39,7 +39,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     set({ isLoading: true });
     try {
-      const res = await getNotificationsAction();
+      const res = await getNotifications();
       if (!res.success) return;
       get().applyNotifications(res.data);
     } catch (err) {
@@ -67,7 +67,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
           (state.notifications.find((n) => n.notification_id === notificationId && !n.is_read) ? 1 : 0),
       ),
     }));
-    await markNotificationAsReadAction(notificationId);
+    await markNotificationAsRead(notificationId);
   },
 
   markAllAsRead: async () => {
@@ -75,6 +75,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       notifications: state.notifications.map((n) => ({ ...n, is_read: true })),
       unreadCount: 0,
     }));
-    await markAllNotificationsAsReadAction();
+    await markAllNotificationsAsRead();
   },
 }));

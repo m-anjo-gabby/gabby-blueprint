@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Download, Eye, Loader2, Paperclip } from 'lucide-react';
 import type { NoticeAttachment } from '@gabby/types/notice';
-import { getNoticeAttachmentUrlAction } from '../../notice/actions/noticeActions';
+import { getNoticeAttachmentUrl } from '../../notice/actions/noticeActions';
 import { isPreviewableFile, forceDownloadFile } from '../../notice/download';
 import type { NoticeLabels } from '../../notice/labels';
 import { clientLogger } from '../../logger/client';
@@ -40,7 +40,7 @@ export function NoticeAttachmentList({ attachments, labels, preview = false }: N
   const handlePreview = async (att: NoticeAttachment) => {
     setPending({ attachmentId: att.id, kind: 'preview' });
     try {
-      const { url } = await getNoticeAttachmentUrlAction(att.path);
+      const { url } = await getNoticeAttachmentUrl(att.path);
       if (url) window.open(url, '_blank', 'noopener,noreferrer');
     } finally {
       setPending(null);
@@ -50,7 +50,7 @@ export function NoticeAttachmentList({ attachments, labels, preview = false }: N
   const handleDownload = async (att: NoticeAttachment) => {
     setPending({ attachmentId: att.id, kind: 'download' });
     try {
-      const { url } = await getNoticeAttachmentUrlAction(att.path);
+      const { url } = await getNoticeAttachmentUrl(att.path);
       if (url) await forceDownloadFile(url, att.name);
     } catch (err) {
       clientLogger.error('notice:download_attachment_failed', 'Attachment download failed', { err });

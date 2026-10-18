@@ -36,7 +36,7 @@ import { useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackF
 import type { AnalysisResult } from '@gabby/types/speechAssessment';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 import { useSprintStore } from '@/stores/useSprintStore';
-import { createSprintScoreAction, type SprintHistoryItem } from '@/actions/sprintAction';
+import { createSprintScore, type SprintHistoryItem } from '@/actions/sprintAction';
 import { useSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useSprintTimers';
 import { ExitProcessingOverlay } from './ExitProcessingOverlay';
 import { getSprintResultHref } from '@/components/training/sprint-result/links';
@@ -311,7 +311,7 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
       });
 
       try {
-        const res = await createSprintScoreAction({
+        const res = await createSprintScore({
           sprint_type: sprintType,
           content_id: contentId,
           question_type: questionType as '0' | '4' | '5' | '6',

@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert } from '@/components/ui/alert';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { saveKnowledgeEntryAction, type KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
+import { saveKnowledgeEntry, type KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
 import { PlusCircle, Edit, Sparkles, Loader2 } from 'lucide-react';
 import { getKnowledgeSourceTypeOptions } from '../_lib/knowledgeSourceTypes';
 
@@ -60,7 +60,7 @@ export function KnowledgeEntryFormDialog({ mode = 'create', initialData, onSucce
   const onSubmit = async (values: EntryFormValues) => {
     setServerError(null);
     try {
-      const result = await saveKnowledgeEntryAction({
+      const result = await saveKnowledgeEntry({
         knowledgeId: mode === 'edit' ? initialData?.knowledge_id : undefined,
         sourceType: values.sourceType,
         title: values.title,

@@ -66,7 +66,7 @@ async function inferActiveSessionId(
 
 const logger = createLogger('common');
 
-// 生徒アプリの自主トレスプリント（getSprintQuestionsAction）と同じサンプリング件数。
+// 生徒アプリの自主トレスプリント（getSprintQuestions）と同じサンプリング件数。
 // Lesson Sprintは常に「スプリント」相当の出題数に揃える（ドリル全量モードは持たない）。
 const SPRINT_LIMIT_COUNT = 10;
 const SPRINT_SPEED_LIMIT_COUNT = 30;
@@ -154,7 +154,7 @@ export async function getAvailableSprintContentsCore(studentId: string): Promise
 
 /**
  * 指定条件のスプリント問題をサンプリング取得する（com_m_sprint_questionsは生徒/コーチ共通マスタ）
- * apps/student/actions/sprintAction.ts の getSprintQuestionsAction のロジックを踏襲。
+ * apps/student/actions/sprintAction.ts の getSprintQuestions のロジックを踏襲。
  */
 export async function getLessonSprintQuestionsCore(
   contentId: string,

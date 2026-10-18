@@ -260,7 +260,7 @@ export interface WordSummaryHistoryItem {
  * ユーザーの特定月の単語ドリル履歴一覧を取得する
  * @param yearMonth 'YYYY-MM' 形式の文字列
  */
-export async function getUserWordHistoryAction(
+export async function getUserWordHistory(
   yearMonth: string,
 ): Promise<{ success: boolean; data: WordSummaryHistoryItem[]; error?: string }> {
   const ctx = await getLogContext();

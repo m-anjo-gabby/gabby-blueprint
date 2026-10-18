@@ -1,4 +1,4 @@
-import { getUserSprintHistoryAction } from '@/actions/sprintAction';
+import { getUserSprintHistory } from '@/actions/sprintAction';
 import { SprintHistoryView } from './_components/SprintHistoryView';
 import { resolveTargetMonth } from '@/lib/userTimezone';
 
@@ -14,7 +14,7 @@ export default async function SprintHistoryPage({ searchParams }: PageProps) {
   // 月指定がない場合は、生徒のタイムゾーンでの今月
   const targetMonth = await resolveTargetMonth(month);
 
-  const res = await getUserSprintHistoryAction(targetMonth);
+  const res = await getUserSprintHistory(targetMonth);
 
   return <SprintHistoryView initialData={res.data || { sessions: [], drills: [] }} targetMonth={targetMonth} />;
 }

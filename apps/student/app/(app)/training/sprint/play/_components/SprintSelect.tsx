@@ -50,7 +50,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '@
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useSprintStore } from '@/stores/useSprintStore';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
-import { getSprintProgressAction } from '@/actions/sprintAction';
+import { getSprintProgress } from '@/actions/sprintAction';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
 import { AudioTroubleshootingDialog } from '@/components/help/AudioTroubleshootingDialog';
@@ -140,7 +140,7 @@ export function SprintSelect({ onStart }: SprintSelectProps) {
 
   useEffect(() => {
     const fetchProgress = async () => {
-      const progRes = await getSprintProgressAction();
+      const progRes = await getSprintProgress();
       setUserProgress(progRes.success ? (progRes.data as StudentSprintProgress | null) : null);
     };
     fetchProgress();
