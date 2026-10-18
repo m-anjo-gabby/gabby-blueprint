@@ -1,7 +1,18 @@
-# ロールと基本方針
+# このファイルについて
 
-- あなたは「Blueprint開発サポート」（シニアエンジニア）として、英語学習アプリ『Gabby Blueprint English』の開発（gabby-blueprint-student）を包括的に支援してください。
-- チャット欄にコードを提示して終わるのではなく、エディタ上の対象ファイルを直接書き換え（インライン編集）、または新規ファイルを直接生成・修正して実装を完了させてください。
+英語学習アプリ『Gabby Blueprint』（学習者・コーチ・運営の3アプリのモノレポ）の開発の規約。ここには全作業に効く決まりと正本の場所だけを書き、詳細は各正本に置く。
+
+| 対象 | 正本 |
+| :--- | :--- |
+| コードの書き方 | `docs/CODING.md` |
+| 画面の作り方 | `docs/UI.md`（全アプリ共通）/ `docs/UI-ADMIN.md` / `docs/UI-STUDENT.md` |
+| ログ | `docs/LOGGING.md` |
+| 依存パッケージ・版 | `docs/DEPENDENCIES.md` |
+| データの削除 | `docs/DATA-DELETION.md` |
+| テーブル設計・DDL | `supabase/DDL/README.md` |
+| リリース | `docs/RELEASE.md` |
+| テスト | `testing/CONVENTIONS.md` / `testing/e2e/CONVENTIONS.md` |
+| 環境変数 | `scripts/vercel-env/README.md` |
 
 # 1. 技術スタックとバージョン
 
@@ -23,8 +34,9 @@
 
 # 2. 特定機能の実装仕様
 
-- 英語学習（単語帳・フレーズ）機能:
-  - 音声読み上げ（TTS）および文字起こし（STT）の実装には、Web Speech API および Azure Speech SDK (`microsoft-cognitiveservices-speech-sdk`) を使用した最適な実装パターンを提示すること。
+- 音声（読み上げ・聞き取り・発話の評価）:
+  - 教材の音声は admin で Azure Speech（`packages/lib/azure/tts.ts`）で事前に作って保存し、student は保存した音声を再生する（無い場合は Web Speech の読み上げ）。
+  - 聞き取りは Web Speech API を `packages/lib/audio/core`（共有の AudioContext・発話の区間の確保・認識器の差し替え。E2E では偽の認識器）経由で使い、画面から直接呼ばない。発話の評価は `analyzePhrase`（`packages/lib/assessment/`）。自主トレーニングは無料の範囲（Web Speech）で行い、有料の評価サービスはスピーキングテストに限って検討する。
 - 状態管理:
   - グローバルな状態管理には `zustand` (v5) を、コンポーネント単位や局所的な管理には React Context または React標準の State を適切に使い分けること。
 - リッチテキスト・マークダウン:
@@ -37,15 +49,14 @@
 - 共通化: 複数アプリ（admin/coach/student）にまたがるロジック・型定義は `packages/types` や `packages/lib` に集約し、アプリごとの重複実装を避けること。
 - ブランド色（全アプリ共通）: 画面・共通UIのブランド色は `brand` / `brand-strong` / `brand-soft` / `brand-N`（および `gold`）トークンで書き、パレット名（`indigo-*` 等）を直接書かない。詳細は `docs/UI.md`「ブランド色」。
 - 画面の作り方: 正本は `docs/UI.md`（全アプリ共通: ブランド色・ローディング表示・初期表示のデータ取得・ダイアログのフォーカス・チャット）、`docs/UI-ADMIN.md`（admin: 一覧・next-intl）、`docs/UI-STUDENT.md`（student: UI実装規約）。各アプリと `packages/lib` の `CLAUDE.md` が読み込むため、そのファイルを触ると自動で読まれる。要点: 画面の枠は本物にし、データに依存する区画だけを本番と同じ形の骨組みにする。初期表示に必要なデータは表示後にブラウザからサーバーアクションで取りに行かず、サーバーで取得する。
-- ログ（全アプリ共通）: 規約は `docs/LOGGING.md` が正本。サーバーは `createLogger(service)`（`packages/lib/logger/`）、ブラウザは `clientLogger`（`logger/client.ts`。`/api/client-log` へ `sendBeacon` で送る。ログの送信に Server Action を使わない）を使い、`console.*` は使わない（ESLint の `no-console`）。イベント名は `<domain>:<action>_<outcome>`（outcome は `success` / `failed` / `unexpected` / `denied`）。エラーは `err` にエラーそのものを渡し（`error.message` だけを渡さない）、`catch` の値からメッセージを取り出すときは `getErrorMessage`（`logger/errorMessage.ts`）を使い、文脈の型（`LogContext`）に無い値は `payload` に入れる。氏名・本文等の個人情報は `payload` に入れない。監査・業務の履歴はログではなく DB に残す。
+- ログ（全アプリ共通）: 規約は `docs/LOGGING.md` が正本。サーバーは `createLogger(service)`、ブラウザは `clientLogger` を使い、`console.*` は使わない（ESLint の `no-console`）。イベント名は `<domain>:<action>_<outcome>`。エラーは `err` にエラーそのものを渡す。氏名・本文等の個人情報は `payload` に入れない。監査・業務の履歴はログではなく DB に残す。
 - 環境変数（全アプリ共通）: アプリの環境変数は `scripts/vercel-env/manifest.mjs` が正本（使うアプリ・環境ごとの値の決め方・秘密かどうか）。`process.env` で新しい変数を使う場合や、使わなくなった場合は同じタスクで定義を追加・廃止（`removed: true`）し、`pnpm vercel-env --write-examples` で `apps/*/.env.example` を作り直す（`.env.example` を直接編集しない）。staging・本番への反映は Vercel の画面ではなく `pnpm vercel-env --env=<staging|prod> --apply` で行い、リリースで追加・変更する変数はリリーススクリプト冒頭の手順にも書く。詳細は `scripts/vercel-env/README.md`。
 - 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラー・警告がない状態にしてから完了とすること（lint は警告も失敗にしている。書式は `prettier --check`。全体は `pnpm check` で、GitHub Actions の `CI` も同じ内容を push のたびに実行する）。
 
 # 4. コミュニケーション・トーン
 
-- プロフェッショナルかつ効率的なシニアエンジニアとしての口調（〜してください、〜します）を維持してください。
-- 回答は技術的に正確かつ簡潔にまとめ、複数ステップがある場合は箇条書きや番号付きリストで構造化すること。
-- 『Gabby Blueprint English』（英語学習アプリ）のユーザー体験（UX）向上に繋がる、建設的で前向きなアドバイスを必要に応じて付加すること。
+- 回答は日本語の敬体（〜してください、〜します）で、技術的に正確かつ簡潔にまとめる。複数ステップがある場合は箇条書きや番号付きリストで構造化する。
+- 依頼の範囲を守る。範囲外で気づいた問題（不具合・利用者の体験を損なう点等）は、直さずに報告する。
 
 # 5. モノレポ構造と アプリ別 UI 言語方針
 
