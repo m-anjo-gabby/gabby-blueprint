@@ -55,7 +55,25 @@
     },
     "monthLabel": "{year}年{month}月",
     "prevMonth": "前月",
-    "nextMonth": "翌月"
+    "nextMonth": "翌月",
+    "errors": {
+      "unexpected": "予期せぬエラーが発生しました",
+      "sessionExpired": "セッションが切れています。再度ログインしてください。",
+      "fileRequired": "ファイルが選択されていません",
+      "uploadFailed": "アップロードに失敗しました",
+      "saveFailed": "保存に失敗しました",
+      "deleteFailed": "削除に失敗しました"
+    },
+    "results": {
+      "registered": "登録しました",
+      "deleted": "削除しました",
+      "saved": "保存しました",
+      "audioUpdated": "音声を更新しました"
+    },
+    "fallback": {
+      "contract": "不明な契約",
+      "plan": "不明なプラン"
+    }
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -540,6 +558,32 @@
       "sourceLegacy": "移行データ",
       "sourceInitial": "初期値",
       "unknownStudent": "（不明）"
+    },
+    "errors": {
+      "reasonRequired": "理由の入力は必須です",
+      "adminInfoFailed": "管理者情報の取得に失敗しました。再ログイン後にお試しください",
+      "userNotFound": "対象ユーザーが見つかりませんでした",
+      "impersonateRoleOnly": "生徒・コーチアカウントのみ代理ログインできます",
+      "authUserNotFound": "対象ユーザーの認証情報が見つかりませんでした",
+      "auditLogFailed": "監査ログの記録に失敗しました",
+      "loginLinkFailed": "ログインリンクの発行に失敗しました",
+      "portalUrlMissing": "ポータルのURL設定が見つかりませんでした",
+      "invalidLevel": "レベルの値が不正です。",
+      "levelUpdateFailed": "レベルの更新に失敗しました。",
+      "invalidStage": "ステージの値が不正です。",
+      "sameStage": "現在と同じステージが指定されています。",
+      "stageUpdateFailed": "ステージの更新に失敗しました。",
+      "levelManagedFailed": "レベル管理の設定に失敗しました。",
+      "emailExists": "登録済みメールです。",
+      "emailInviting": "招待中（本登録前）のメールアドレスです。招待メールを再送してください。",
+      "createDataFailed": "データの作成に失敗しました。",
+      "inviteMailFailed": "招待メールの送信に失敗しました",
+      "createAccountFailed": "アカウントの作成に失敗しました。",
+      "invitationNotFound": "対象の招待データが見つからないか、既に登録が完了しています。",
+      "resendFailed": "メールの再送に失敗しました。",
+      "authUpdateFailed": "認証情報の更新に失敗しました",
+      "userUpdateFailed": "ユーザー情報の更新に失敗しました",
+      "createInvitationFailed": "招待データの作成に失敗しました"
     }
   },
   "paymentSettings": {
@@ -551,7 +595,12 @@
     "rateAmountLabel": "単価",
     "currencyCodeLabel": "通貨コード",
     "saveRate": "単価を保存",
-    "toastRateUpdated": "セッション単価を更新しました"
+    "toastRateUpdated": "セッション単価を更新しました",
+    "errors": {
+      "invalidRate": "単価には0以上の数値を指定してください。",
+      "currencyRequired": "通貨コードを指定してください。",
+      "rateUpdateFailed": "セッション単価の更新に失敗しました。"
+    }
   },
   "notification": {
     "title": "通知",
@@ -597,6 +646,14 @@
       "submitLabel": "パスワードを更新",
       "submitLoadingLabel": "更新中...",
       "backToDashboard": "ダッシュボードに戻る"
+    },
+    "errors": {
+      "fileTooLarge": "ファイルサイズは5MBまでです。",
+      "invalidImageType": "PNG・JPEG・WebP形式の画像のみアップロードできます。",
+      "iconUploadFailed": "画像のアップロードに失敗しました。",
+      "profileUpdateFailed": "プロフィールの更新に失敗しました。",
+      "timezoneUnavailable": "選択されたタイムゾーンは利用できません。",
+      "timezoneUpdateFailed": "タイムゾーンの更新に失敗しました。"
     }
   },
   "clients": {
@@ -1070,6 +1127,11 @@
       "recordButton": "記録",
       "correctButton": "修正",
       "noData": "該当する記録はありません"
+    },
+    "errors": {
+      "slotTaken": "この枠には既にリクエストまたはマッチングが存在します",
+      "usedUpBeforeCoachChange": "この枠は、コーチ交代前のセッションで契約の回数を使い切っているため、マッチングできません",
+      "noBookableSessions": "このコーチの指定の時間帯は、契約期間内に予約できる回がありません（全ての回が他の予定と重なっています）"
     }
   },
   "monthlyReports": {
@@ -1127,6 +1189,12 @@
     },
     "invoiceButton": {
       "button": "請求書(INVOICE)PDF"
+    },
+    "errors": {
+      "fetchFailed": "レポートの取得に失敗しました。",
+      "unfinishedSessions": "終了処理未実施のセッションが残っているため承認できません。先に該当セッションの終了処理を完了してください。",
+      "approveFailed": "承認に失敗しました。",
+      "unapproveFailed": "承認の取消しに失敗しました。"
     }
   },
   "notice": {
@@ -1274,6 +1342,17 @@
       "ctaClicked": "ボタンを押した",
       "ctaRateOfRead": "既読の{rate}%",
       "ctaClickedAtHeader": "ボタンを押した日時 (JST)"
+    },
+    "errors": {
+      "invalidDisplayMode": "表示方法が正しくありません",
+      "coachHomeNotAllowed": "コーチ向けのお知らせでは「ホームのカード」を選べません",
+      "ctaBothRequired": "行動ボタンは文言とリンク先を両方入力してください",
+      "ctaLabelTooLong": "行動ボタンの文言は{max}文字以内で入力してください",
+      "ctaUrlInvalid": "行動ボタンのリンク先は「/」で始まるアプリ内の画面か「https://」で始まるURLを入力してください",
+      "invalidPublishStart": "有効な公開開始日時を入力してください",
+      "imageRequired": "画像が選択されていません",
+      "imageType": "画像はPNG・JPEG・WebPのいずれかを選んでください",
+      "imageTooLarge": "画像は2MB以下のファイルを選んでください"
     }
   },
   "calendarEvents": {
@@ -1490,6 +1569,10 @@
         "clientRequired": "対象の顧客を選択してください"
       },
       "searchPlaceholder": "シリーズ名で検索..."
+    },
+    "errors": {
+      "invalidStartDatetime": "開始日時が不正です",
+      "titleAndBodyRequired": "タイトルと本文は必須です"
     }
   },
   "chat": {
@@ -1831,6 +1914,27 @@
         "isActiveOn": "契約の作成でプランの選択肢に表示します",
         "isActiveOff": "販売終了。選択肢に表示しません（作成済みの契約には影響しません）"
       }
+    },
+    "errors": {
+      "overlapLicense": "このユーザーは既に期間が重なるライセンス「{contractName}」（{start}〜{end}）を保有しているため割当できません",
+      "duplicateContractName": "この顧客には同じ契約名の契約が既に存在します。別の契約名を入力してください",
+      "planNotFound": "選択されたプランが見つかりませんでした",
+      "licenseCheckFailed": "既存ライセンスの確認に失敗しました",
+      "maxBelowAssigned": "既に{count}件のライセンスが割り当てられているため、上限をそれ未満に変更できません",
+      "licenseOutsidePeriod": "既存のライセンス期間が新しい契約期間からはみ出すため、契約期間を変更できません（対象ライセンスの期間を先に調整してください）",
+      "contractCheckFailed": "契約情報の確認に失敗しました",
+      "hasLicenses": "ライセンスが割り当てられているため削除できません",
+      "hasLicenseHistory": "過去にライセンス発行の実績があるため、この契約は削除できません",
+      "contractNotFound": "対象の契約情報が見つかりませんでした",
+      "licenseWithinContract": "ライセンス期間は契約期間内で指定してください",
+      "assignmentCheckFailed": "割当状況の確認に失敗しました",
+      "limitReached": "上限数に達しているため追加できません",
+      "concurrentAssign": "同時に別の操作でライセンスが登録されたため、この期間には割当できません。最新の状態を確認してやり直してください。",
+      "licenseNotFound": "対象のライセンスが見つかりませんでした",
+      "startAfterEnd": "開始日は終了日以前を指定してください",
+      "concurrentUpdate": "同時に別の操作でライセンスが登録・変更されたため、この期間には設定できません。最新の状態を確認してやり直してください。",
+      "allUsersOverlap": "対象ユーザーは全員、期間が重複する既存のライセンスを保有しているため割当できません",
+      "concurrentBulkAssign": "同時に別の操作でライセンスが登録されたため、一括割当に失敗しました。対象ユーザーを見直し再実行してください。"
     }
   },
   "tools": {
@@ -2026,6 +2130,14 @@
         "confirmBody": "<bold>{count}</bold> 件の音声ファイルを生成します。既存の音声は上書きされます。",
         "errorDialogTitle": "処理完了（エラーあり）",
         "errorDialogBody": "一括生成が完了しましたが、一部にエラーがありました。"
+      },
+      "errors": {
+        "invalidEntry": "不正なデータが含まれています: {word} ({partOfSpeech})"
+      }
+    },
+    "ttsDesigner": {
+      "results": {
+        "assetSaved": "資産を保存しました"
       }
     }
   },
@@ -2449,6 +2561,10 @@
           }
         }
       }
+    },
+    "errors": {
+      "sessionNoInUse": "このセッション番号は既に使用されています",
+      "duplicateSeqNo": "表示順 (Seq No) が重複しています。"
     }
   },
   "companyProfiles": {

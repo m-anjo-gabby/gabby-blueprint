@@ -11,6 +11,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { type AdminCoachSummary } from '@gabby/types/adminLiveSession';
 import { type CoachMonthlyReport } from '@gabby/types/monthlyReport';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -23,12 +24,13 @@ export async function getCoachMonthlyReportForAdmin(
   coachId: string,
   reportMonth: string,
 ): Promise<{ success: true; report: CoachMonthlyReport } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   const result = await getAdminCoachMonthlyReportCore(coachId, reportMonth);
 
   if (!result.success) {
     logger.error('admin:get_monthly_report_failed', result.errorCode, ctx);
-    return { success: false, message: 'レポートの取得に失敗しました。' };
+    return { success: false, message: t('monthlyReports.errors.fetchFailed') };
   }
 
   return { success: true, report: result.report };
@@ -38,6 +40,7 @@ export async function approveMonthlyReport(
   coachId: string,
   reportMonth: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   const result = await approveCoachMonthlyReportCore(coachId, reportMonth);
 
@@ -45,8 +48,8 @@ export async function approveMonthlyReport(
     logger.error('admin:approve_monthly_report_failed', result.errorCode, ctx);
     const message =
       result.errorCode === 'unresolved_sessions_exist'
-        ? '終了処理未実施のセッションが残っているため承認できません。先に該当セッションの終了処理を完了してください。'
-        : '承認に失敗しました。';
+        ? t('monthlyReports.errors.unfinishedSessions')
+        : t('monthlyReports.errors.approveFailed');
     return { success: false, message };
   }
 
@@ -58,12 +61,13 @@ export async function revokeMonthlyReportApproval(
   coachId: string,
   reportMonth: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   const result = await revokeCoachMonthlyReportApprovalCore(coachId, reportMonth);
 
   if (!result.success) {
     logger.error('admin:revoke_monthly_report_failed', result.errorCode, ctx);
-    return { success: false, message: '承認の取消しに失敗しました。' };
+    return { success: false, message: t('monthlyReports.errors.unapproveFailed') };
   }
 
   revalidatePath('/monthly-reports');

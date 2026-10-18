@@ -55,7 +55,25 @@
     },
     "monthLabel": "{month} {year}",
     "prevMonth": "Previous month",
-    "nextMonth": "Next month"
+    "nextMonth": "Next month",
+    "errors": {
+      "unexpected": "An unexpected error occurred.",
+      "sessionExpired": "Your session has expired. Please sign in again.",
+      "fileRequired": "No file selected.",
+      "uploadFailed": "Upload failed.",
+      "saveFailed": "Failed to save.",
+      "deleteFailed": "Failed to delete."
+    },
+    "results": {
+      "registered": "Registered.",
+      "deleted": "Deleted.",
+      "saved": "Saved.",
+      "audioUpdated": "Audio updated."
+    },
+    "fallback": {
+      "contract": "Unknown contract",
+      "plan": "Unknown plan"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -540,6 +558,32 @@
       "sourceLegacy": "Migrated",
       "sourceInitial": "Initial",
       "unknownStudent": "(Unknown)"
+    },
+    "errors": {
+      "reasonRequired": "A reason is required.",
+      "adminInfoFailed": "Failed to load your admin information. Please sign in again and retry.",
+      "userNotFound": "The user was not found.",
+      "impersonateRoleOnly": "Only student and coach accounts can be impersonated.",
+      "authUserNotFound": "The user's authentication record was not found.",
+      "auditLogFailed": "Failed to record the audit log.",
+      "loginLinkFailed": "Failed to issue the login link.",
+      "portalUrlMissing": "The portal URL is not configured.",
+      "invalidLevel": "The level is invalid.",
+      "levelUpdateFailed": "Failed to update the level.",
+      "invalidStage": "The stage is invalid.",
+      "sameStage": "The selected stage is the same as the current one.",
+      "stageUpdateFailed": "Failed to update the stage.",
+      "levelManagedFailed": "Failed to change the level management setting.",
+      "emailExists": "This email address is already registered.",
+      "emailInviting": "This email address has a pending invitation. Please resend the invitation email.",
+      "createDataFailed": "Failed to create the data.",
+      "inviteMailFailed": "Failed to send the invitation email.",
+      "createAccountFailed": "Failed to create the account.",
+      "invitationNotFound": "The invitation was not found, or registration is already complete.",
+      "resendFailed": "Failed to resend the email.",
+      "authUpdateFailed": "Failed to update the authentication record.",
+      "userUpdateFailed": "Failed to update the user.",
+      "createInvitationFailed": "Failed to create the invitation."
     }
   },
   "paymentSettings": {
@@ -551,7 +595,12 @@
     "rateAmountLabel": "Rate",
     "currencyCodeLabel": "Currency code",
     "saveRate": "Save rate",
-    "toastRateUpdated": "Session pay rate updated"
+    "toastRateUpdated": "Session pay rate updated",
+    "errors": {
+      "invalidRate": "The rate must be a number of 0 or more.",
+      "currencyRequired": "Enter a currency code.",
+      "rateUpdateFailed": "Failed to update the session rate."
+    }
   },
   "notification": {
     "title": "Notifications",
@@ -597,6 +646,14 @@
       "submitLabel": "Update password",
       "submitLoadingLabel": "Updating...",
       "backToDashboard": "Back to dashboard"
+    },
+    "errors": {
+      "fileTooLarge": "Files must be 5 MB or smaller.",
+      "invalidImageType": "Only PNG, JPEG, or WebP images can be uploaded.",
+      "iconUploadFailed": "Failed to upload the image.",
+      "profileUpdateFailed": "Failed to update the profile.",
+      "timezoneUnavailable": "The selected time zone is not available.",
+      "timezoneUpdateFailed": "Failed to update the time zone."
     }
   },
   "clients": {
@@ -1070,6 +1127,11 @@
       "recordButton": "Record",
       "correctButton": "Correct",
       "noData": "No matching records"
+    },
+    "errors": {
+      "slotTaken": "This slot already has a request or a match.",
+      "usedUpBeforeCoachChange": "This slot cannot be matched because the contract's sessions were used up before the coach change.",
+      "noBookableSessions": "This coach has no bookable sessions in the selected time slot within the contract period (all of them overlap other schedules)."
     }
   },
   "monthlyReports": {
@@ -1127,6 +1189,12 @@
     },
     "invoiceButton": {
       "button": "Invoice PDF"
+    },
+    "errors": {
+      "fetchFailed": "Failed to load the report.",
+      "unfinishedSessions": "Cannot approve because some sessions have not been ended. End those sessions first.",
+      "approveFailed": "Failed to approve.",
+      "unapproveFailed": "Failed to cancel the approval."
     }
   },
   "notice": {
@@ -1274,6 +1342,17 @@
       "ctaClicked": "Clicked button",
       "ctaRateOfRead": "{rate}% of read",
       "ctaClickedAtHeader": "Button clicked at (JST)"
+    },
+    "errors": {
+      "invalidDisplayMode": "The display mode is invalid.",
+      "coachHomeNotAllowed": "\"Home card\" is not available for coach notices.",
+      "ctaBothRequired": "Enter both the label and the link for the action button.",
+      "ctaLabelTooLong": "The action button label must be {max} characters or fewer.",
+      "ctaUrlInvalid": "The action button link must be an in-app path starting with \"/\" or a URL starting with \"https://\".",
+      "invalidPublishStart": "Enter a valid publish start date and time.",
+      "imageRequired": "No image selected.",
+      "imageType": "Choose a PNG, JPEG, or WebP image.",
+      "imageTooLarge": "Choose an image of 2 MB or less."
     }
   },
   "calendarEvents": {
@@ -1490,6 +1569,10 @@
         "clientRequired": "Please select a client"
       },
       "searchPlaceholder": "Search by series name..."
+    },
+    "errors": {
+      "invalidStartDatetime": "The start date and time is invalid.",
+      "titleAndBodyRequired": "Title and body are required."
     }
   },
   "chat": {
@@ -1831,6 +1914,27 @@
         "isActiveOn": "Shown in the plan options when creating a contract",
         "isActiveOff": "Discontinued. Not shown in the options (existing contracts are not affected)"
       }
+    },
+    "errors": {
+      "overlapLicense": "This user already has an overlapping license \"{contractName}\" ({start} – {end}), so it cannot be assigned.",
+      "duplicateContractName": "This client already has a contract with the same name. Please enter a different contract name.",
+      "planNotFound": "The selected plan was not found.",
+      "licenseCheckFailed": "Failed to check the existing licenses.",
+      "maxBelowAssigned": "{count} licenses are already assigned, so the limit cannot be set below that.",
+      "licenseOutsidePeriod": "Existing license periods fall outside the new contract period, so the period cannot be changed (adjust those licenses first).",
+      "contractCheckFailed": "Failed to check the contract.",
+      "hasLicenses": "This contract cannot be deleted because licenses are assigned.",
+      "hasLicenseHistory": "This contract cannot be deleted because licenses have been issued under it.",
+      "contractNotFound": "The contract was not found.",
+      "licenseWithinContract": "The license period must be within the contract period.",
+      "assignmentCheckFailed": "Failed to check the current assignments.",
+      "limitReached": "Cannot add more because the limit has been reached.",
+      "concurrentAssign": "Another operation registered a license at the same time, so it cannot be assigned for this period. Check the latest state and try again.",
+      "licenseNotFound": "The license was not found.",
+      "startAfterEnd": "The start date must be on or before the end date.",
+      "concurrentUpdate": "Another operation registered or changed a license at the same time, so this period cannot be set. Check the latest state and try again.",
+      "allUsersOverlap": "All selected users already have an overlapping license, so none can be assigned.",
+      "concurrentBulkAssign": "Another operation registered a license at the same time, so the bulk assignment failed. Review the selected users and try again."
     }
   },
   "tools": {
@@ -2026,6 +2130,14 @@
         "confirmBody": "This will generate <bold>{count}</bold> audio files. Existing audio will be overwritten.",
         "errorDialogTitle": "Processing Complete (with errors)",
         "errorDialogBody": "Bulk generation is complete, but some entries had errors."
+      },
+      "errors": {
+        "invalidEntry": "The data contains an invalid entry: {word} ({partOfSpeech})"
+      }
+    },
+    "ttsDesigner": {
+      "results": {
+        "assetSaved": "Asset saved."
       }
     }
   },
@@ -2449,6 +2561,10 @@
           }
         }
       }
+    },
+    "errors": {
+      "sessionNoInUse": "This session number is already in use.",
+      "duplicateSeqNo": "The display order (Seq No) is duplicated."
     }
   },
   "companyProfiles": {

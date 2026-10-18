@@ -8,6 +8,7 @@ import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -65,6 +66,7 @@ export async function getWordsByContentId(contentId: string): Promise<WordRecord
  * 単語の登録または更新 (Upsert)
  */
 export async function upsertWord(payload: WordInput) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -105,7 +107,7 @@ export async function upsertWord(payload: WordInput) {
 
     if (error) {
       logger.error('word:upsert_word_failed', error.message, { ...ctx, err: error, payload });
-      return { success: false, message: error.message || 'データベース操作に失敗しました' };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('word:upsert_word_success', `Word ${isEdit ? 'updated' : 'created'}: ${payload.word_en}`, {
@@ -121,7 +123,7 @@ export async function upsertWord(payload: WordInput) {
       err: error,
       payload,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -129,6 +131,7 @@ export async function upsertWord(payload: WordInput) {
  * 単語の物理削除（関連するStorage内の音声ファイルも含む）
  */
 export async function deleteWord(wordId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -171,7 +174,7 @@ export async function deleteWord(wordId: string) {
       err: error,
       payload: { wordId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -266,6 +269,7 @@ export async function getPhrasesByContentId(contentId: string): Promise<PhraseRe
  * フレーズの登録または更新 (Upsert)
  */
 export async function upsertPhrase(payload: PhraseInput) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -303,9 +307,9 @@ export async function upsertPhrase(payload: PhraseInput) {
     if (error) {
       logger.error('word:upsert_phrase_failed', error.message, { ...ctx, err: error, payload });
       if (error.code === '23505') {
-        return { success: false, message: '表示順 (Seq No) が重複しています。' };
+        return { success: false, message: t('contents.errors.duplicateSeqNo') };
       }
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('word:upsert_phrase_success', `Phrase ${isEdit ? 'updated' : 'created'} for word: ${payload.word_id}`, {
@@ -321,7 +325,7 @@ export async function upsertPhrase(payload: PhraseInput) {
       err: error,
       payload,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -329,6 +333,7 @@ export async function upsertPhrase(payload: PhraseInput) {
  * フレーズの物理削除
  */
 export async function deletePhrase(phraseId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -360,7 +365,7 @@ export async function deletePhrase(phraseId: string) {
       err: error,
       payload: { phraseId },
     });
-    return { success: false, message: getErrorMessage(error, '予期せぬエラーが発生しました') };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -368,6 +373,7 @@ export async function deletePhrase(phraseId: string) {
  * 単語とフレーズの一括Upsert
  */
 export async function bulkUpsertWordsAndPhrases(contentId: string, payload: WordBulkImportItem[]) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -471,6 +477,6 @@ export async function bulkUpsertWordsAndPhrases(contentId: string, payload: Word
       err,
       payload: { contentId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

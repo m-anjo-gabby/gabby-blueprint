@@ -5,6 +5,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { USER_STATUS, USER_TYPES } from '@gabby/types/user';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -22,11 +23,12 @@ interface StartImpersonationResult {
  * 発行のたびに監査ログ(com_t_admin_impersonation_log)へ理由付きで記録する。
  */
 export async function startImpersonation(targetUserId: string, reason: string): Promise<StartImpersonationResult> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
 
   const trimmedReason = reason?.trim();
   if (!trimmedReason) {
-    return { success: false, message: '理由の入力は必須です' };
+    return { success: false, message: t('users.errors.reasonRequired') };
   }
 
   if (!ctx.userId || !UUID_PATTERN.test(ctx.userId)) {
@@ -34,7 +36,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
       ...ctx,
       payload: { targetUserId },
     });
-    return { success: false, message: '管理者情報の取得に失敗しました。再ログイン後にお試しください' };
+    return { success: false, message: t('users.errors.adminInfoFailed') };
   }
 
   try {
@@ -53,13 +55,13 @@ export async function startImpersonation(targetUserId: string, reason: string): 
         err: targetUserError,
         payload: { targetUserId },
       });
-      return { success: false, message: '対象ユーザーが見つかりませんでした' };
+      return { success: false, message: t('users.errors.userNotFound') };
     }
 
     const isImpersonatableType =
       targetUser.user_type === USER_TYPES.STUDENT || targetUser.user_type === USER_TYPES.COACH;
     if (!isImpersonatableType || targetUser.status !== USER_STATUS.ACTIVE) {
-      return { success: false, message: '生徒・コーチアカウントのみ代理ログインできます' };
+      return { success: false, message: t('users.errors.impersonateRoleOnly') };
     }
 
     // Authユーザー情報（メールアドレス）はcom_m_userに持たないため、Admin APIで別途取得
@@ -70,7 +72,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
         err: authUserError,
         payload: { targetUserId },
       });
-      return { success: false, message: '対象ユーザーの認証情報が見つかりませんでした' };
+      return { success: false, message: t('users.errors.authUserNotFound') };
     }
 
     // 監査ログを先に記録し、発行したマジックリンクとの相関IDを採番する
@@ -90,7 +92,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
         err: logError,
         payload: { targetUserId },
       });
-      return { success: false, message: '監査ログの記録に失敗しました' };
+      return { success: false, message: t('users.errors.auditLogFailed') };
     }
 
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
@@ -105,7 +107,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
         err: linkError,
         payload: { targetUserId, impersonationId: logRow.impersonation_id },
       });
-      return { success: false, message: 'ログインリンクの発行に失敗しました' };
+      return { success: false, message: t('users.errors.loginLinkFailed') };
     }
 
     logger.warn('impersonation:started', `Admin started impersonation of user: ${authUserData.user.email}`, {
@@ -121,7 +123,7 @@ export async function startImpersonation(targetUserId: string, reason: string): 
         ...ctx,
         payload: { targetUserId },
       });
-      return { success: false, message: 'ポータルのURL設定が見つかりませんでした' };
+      return { success: false, message: t('users.errors.portalUrlMissing') };
     }
 
     const impersonateUrl = new URL('/auth/impersonate', portalBaseUrl);
@@ -135,6 +137,6 @@ export async function startImpersonation(targetUserId: string, reason: string): 
       err: error,
       payload: { targetUserId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

@@ -14,6 +14,7 @@ import {
 import { getCalendarEvents } from './adminCalendarEventAction';
 import type { Json } from '@gabby/types/db';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -113,6 +114,7 @@ export async function updateCalendarEventSeries(
   seriesId: string,
   formData: CalendarEventSeriesFormData,
 ): Promise<{ success: true } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -130,7 +132,7 @@ export async function updateCalendarEventSeries(
         err: error,
         payload: { seriesId, ...formData },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
     logger.info('calendarEventSeries:update_success', `Calendar event series updated: ${seriesId}`, ctx);
     revalidatePath(SERIES_PATH, 'layout');
@@ -141,7 +143,7 @@ export async function updateCalendarEventSeries(
       ...ctx,
       err: error,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -151,13 +153,14 @@ export async function updateCalendarEventSeries(
 export async function deleteCalendarEventSeries(
   seriesId: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
     const { error } = await supabase.from('com_m_calendar_event_series').delete().eq('series_id', seriesId);
     if (error) {
       logger.error('calendarEventSeries:delete_failed', error.message, { ...ctx, err: error, payload: { seriesId } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
     logger.info('calendarEventSeries:delete_success', 'Calendar event series deleted', {
       ...ctx,
@@ -171,7 +174,7 @@ export async function deleteCalendarEventSeries(
       ...ctx,
       err: error,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -215,6 +218,7 @@ export async function createCalendarEventSeries(
   common: SeriesSessionCommon,
   rows: SeriesSessionRow[],
 ): Promise<{ success: true; seriesId: string } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const sessions = buildSessionPayloads(common, rows);
@@ -232,7 +236,7 @@ export async function createCalendarEventSeries(
         err: error,
         payload: { title: series.title, count: rows.length },
       });
-      return { success: false, message: error?.message ?? 'create_failed' };
+      return { success: false, message: t('common.errors.unexpected') };
     }
     logger.info(
       'calendarEventSeries:create_success',
@@ -247,7 +251,7 @@ export async function createCalendarEventSeries(
       ...ctx,
       err: error,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -259,6 +263,7 @@ export async function addCalendarEventSeriesSessions(
   common: SeriesSessionCommon,
   rows: SeriesSessionRow[],
 ): Promise<{ success: true; count: number } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const sessions = buildSessionPayloads(common, rows);
@@ -275,7 +280,7 @@ export async function addCalendarEventSeriesSessions(
         err: error,
         payload: { seriesId, count: rows.length },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
     const count = Array.isArray(data) ? data.length : 0;
     logger.info('calendarEventSeries:add_sessions_success', `Added ${count} sessions`, {
@@ -287,6 +292,6 @@ export async function addCalendarEventSeriesSessions(
     return { success: true, count };
   } catch (error) {
     logger.error('calendarEventSeries:add_sessions_unexpected', getErrorMessage(error), { ...ctx, err: error });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

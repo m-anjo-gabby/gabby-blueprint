@@ -10,6 +10,7 @@ import { MAX_STAGE, type StageLevels } from '@gabby/types/stageProgression';
 import { clampLevel, computeStage, getForcedLevels, getStageGoals } from '@gabby/lib/sprint/stageProgression';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -74,11 +75,12 @@ export async function updateStudentSprintLevel(
   questionType: SprintQuestionType,
   newLevel: number,
 ): Promise<StudentProgressActionResult> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
 
   try {
     if (!Number.isInteger(newLevel) || clampLevel(questionType, newLevel) !== newLevel) {
-      return { success: false, message: 'レベルの値が不正です。' };
+      return { success: false, message: t('users.errors.invalidLevel') };
     }
 
     const supabase = createAdminClient();
@@ -106,7 +108,7 @@ export async function updateStudentSprintLevel(
         err: error,
         payload: { userId, questionType, newLevel },
       });
-      return { success: false, message: 'レベルの更新に失敗しました。' };
+      return { success: false, message: t('users.errors.levelUpdateFailed') };
     }
 
     revalidatePath('/users', 'layout');
@@ -120,7 +122,7 @@ export async function updateStudentSprintLevel(
       ...ctx,
       err,
     });
-    return { success: false, message: 'システムエラーが発生しました。' };
+    return { success: false, message: t('common.systemError') };
   }
 }
 
@@ -131,18 +133,19 @@ export async function updateStudentSprintLevel(
  *   （到達条件マスタは種別ごとに単調増加のため、この値は必ず目標ステージちょうどに一致する）。
  */
 export async function setStudentSprintStage(userId: string, targetStage: number): Promise<StudentProgressActionResult> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
 
   try {
     if (!Number.isInteger(targetStage) || targetStage < 0 || targetStage > MAX_STAGE) {
-      return { success: false, message: 'ステージの値が不正です。' };
+      return { success: false, message: t('users.errors.invalidStage') };
     }
 
     const supabase = createAdminClient();
     const current = await fetchProgress(supabase, userId);
 
     if (targetStage === current.stage) {
-      return { success: false, message: '現在と同じステージが指定されています。' };
+      return { success: false, message: t('users.errors.sameStage') };
     }
 
     const newLevels =
@@ -162,7 +165,7 @@ export async function setStudentSprintStage(userId: string, targetStage: number)
         err: error,
         payload: { userId, targetStage },
       });
-      return { success: false, message: 'ステージの更新に失敗しました。' };
+      return { success: false, message: t('users.errors.stageUpdateFailed') };
     }
 
     revalidatePath('/users', 'layout');
@@ -176,7 +179,7 @@ export async function setStudentSprintStage(userId: string, targetStage: number)
       ...ctx,
       err,
     });
-    return { success: false, message: 'システムエラーが発生しました。' };
+    return { success: false, message: t('common.systemError') };
   }
 }
 
@@ -188,6 +191,7 @@ export async function setStudentSprintLevelManaged(
   userId: string,
   levelManaged: boolean,
 ): Promise<StudentProgressActionResult> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
 
   try {
@@ -205,7 +209,7 @@ export async function setStudentSprintLevelManaged(
         err: error,
         payload: { userId, levelManaged },
       });
-      return { success: false, message: 'レベル管理の設定に失敗しました。' };
+      return { success: false, message: t('users.errors.levelManagedFailed') };
     }
 
     revalidatePath('/users', 'layout');
@@ -219,6 +223,6 @@ export async function setStudentSprintLevelManaged(
       ...ctx,
       err,
     });
-    return { success: false, message: 'システムエラーが発生しました。' };
+    return { success: false, message: t('common.systemError') };
   }
 }

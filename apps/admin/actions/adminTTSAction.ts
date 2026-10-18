@@ -9,6 +9,7 @@ import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import type { TTSAdjustmentData, TTSAssetAdjustments } from '@gabby/types/word';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -24,6 +25,7 @@ export async function savePhrase(
   adjustmentData: TTSAdjustmentData,
   currentAudioPath?: string | null, // フロントから現在のパスを受け取る
 ) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -99,7 +101,7 @@ export async function savePhrase(
 
     return {
       success: true,
-      message: '音声を更新しました',
+      message: t('common.results.audioUpdated'),
       path: newFilePath,
     };
   } catch (error) {
@@ -108,7 +110,7 @@ export async function savePhrase(
       err: error,
       payload: { phraseId, wordId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -123,6 +125,7 @@ export async function saveTTSAsset(payload: {
   mode: 'auto' | 'manual';
   adjustments: TTSAssetAdjustments;
 }) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -185,7 +188,7 @@ export async function saveTTSAsset(payload: {
 
     return {
       success: true,
-      message: '資産を保存しました',
+      message: t('tools.ttsDesigner.results.assetSaved'),
       data,
     };
   } catch (error) {
@@ -194,7 +197,7 @@ export async function saveTTSAsset(payload: {
       err: error,
       payload,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -246,6 +249,7 @@ export async function getTTSAssets(params: ListParams): Promise<ListResult<TTSAs
  * DBレコードの削除 + Storage上の物理ファイル削除（削除するファイルは画面から受け取らず、削除したレコードのパスを使う）
  */
 export async function deleteTTSAsset(assetId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -283,13 +287,13 @@ export async function deleteTTSAsset(assetId: string) {
     });
 
     revalidatePath('/tools/tts-designer');
-    return { success: true, message: '削除しました' };
+    return { success: true, message: t('common.results.deleted') };
   } catch (error) {
     logger.error('tts:delete_asset_unexpected', getErrorMessage(error), {
       ...ctx,
       err: error,
       payload: { assetId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

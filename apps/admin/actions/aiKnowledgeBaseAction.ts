@@ -12,6 +12,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 const TOOL_PATH = '/tools/ai-knowledge-base';
@@ -95,6 +96,7 @@ export async function saveKnowledgeEntry(payload: {
   title: string;
   body: string;
 }) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const entry = await upsertKnowledgeEntry({
@@ -111,10 +113,10 @@ export async function saveKnowledgeEntry(payload: {
     });
 
     revalidatePath(TOOL_PATH);
-    return { success: true, message: '保存しました', data: entry };
+    return { success: true, message: t('common.results.saved'), data: entry };
   } catch (err) {
     logger.error('aiKb:save_failed', getErrorMessage(err, 'Unknown'), { ...ctx, err, payload });
-    return { success: false, message: '保存に失敗しました' };
+    return { success: false, message: t('common.errors.saveFailed') };
   }
 }
 
@@ -122,6 +124,7 @@ export async function saveKnowledgeEntry(payload: {
  * ナレッジの論理削除
  */
 export async function deleteKnowledgeEntry(knowledgeId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     await deleteKnowledgeEntryCore(knowledgeId);
@@ -129,13 +132,13 @@ export async function deleteKnowledgeEntry(knowledgeId: string) {
     logger.info('aiKb:delete_success', `Knowledge entry deleted: ${knowledgeId}`, { ...ctx, payload: { knowledgeId } });
 
     revalidatePath(TOOL_PATH);
-    return { success: true, message: '削除しました' };
+    return { success: true, message: t('common.results.deleted') };
   } catch (err) {
     logger.error('aiKb:delete_failed', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
       payload: { knowledgeId },
     });
-    return { success: false, message: '削除に失敗しました' };
+    return { success: false, message: t('common.errors.deleteFailed') };
   }
 }

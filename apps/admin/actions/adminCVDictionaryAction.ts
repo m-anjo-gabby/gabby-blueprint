@@ -17,6 +17,7 @@ import {
   validateCVImportEntry,
 } from '@/lib/cvDictionaryImport';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -126,6 +127,7 @@ export async function upsertCVDictionaryEntry(
       'word_en' | 'part_of_speech' | 'syllables' | 'stress_vowel_spelling' | 'cv_id'
     >,
 ) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -152,14 +154,14 @@ export async function upsertCVDictionaryEntry(
 
     if (error) {
       logger.error('cvDict:upsert_failed', error.message, { ...ctx, err: error, payload });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     revalidatePath('/tools/cv-dictionary');
-    return { success: true, message: '登録しました' };
+    return { success: true, message: t('common.results.registered') };
   } catch (err) {
     logger.error('cvDict:upsert_unexpected', getErrorMessage(err, 'Unknown'), { ...ctx, err, payload });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -167,6 +169,7 @@ export async function upsertCVDictionaryEntry(
  * エントリの削除
  */
 export async function deleteCVDictionaryEntry(wordEn: string, partOfSpeech: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -187,7 +190,7 @@ export async function deleteCVDictionaryEntry(wordEn: string, partOfSpeech: stri
 
     if (error) {
       logger.error('cvDict:delete_failed', error.message, { ...ctx, err: error, payload: { wordEn, partOfSpeech } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     // Storage上の音声ファイルを削除（audioバケット）
@@ -196,14 +199,14 @@ export async function deleteCVDictionaryEntry(wordEn: string, partOfSpeech: stri
     }
 
     revalidatePath('/tools/cv-dictionary');
-    return { success: true, message: '削除しました' };
+    return { success: true, message: t('common.results.deleted') };
   } catch (err) {
     logger.error('cvDict:delete_unexpected', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
       payload: { wordEn, partOfSpeech },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -244,13 +247,17 @@ export async function getCVDictionaryKeys(): Promise<CVDictionaryKey[]> {
  * ファイル内の重複キーは先勝ちで除外する（内容差異の検出はクライアント側プレビューで行う）
  */
 export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVImportMode) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const invalid = entries.find((e) => validateCVImportEntry(e) !== null);
     if (invalid) {
       return {
         success: false,
-        message: `不正なデータが含まれています: ${invalid.word_en} (${invalid.part_of_speech})`,
+        message: t('tools.cvDictionary.errors.invalidEntry', {
+          word: invalid.word_en,
+          partOfSpeech: invalid.part_of_speech,
+        }),
       };
     }
 
@@ -298,7 +305,7 @@ export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVI
         .upsert(rows, { onConflict: 'word_en,part_of_speech' });
       if (error) {
         logger.error('cvDict:bulk_upsert_failed', error.message, { ...ctx, err: error });
-        return { success: false, message: error.message };
+        return { success: false, message: t('common.errors.unexpected') };
       }
     }
 
@@ -310,7 +317,7 @@ export async function bulkUpsertCVDictionary(entries: CVImportEntry[], mode: CVI
     return { success: true, message: '', inserted: insertCount, updated: updateCount, skipped: skipCount };
   } catch (err) {
     logger.error('cvDict:bulk_upsert_unexpected', getErrorMessage(err, 'Unknown'), { ...ctx, err });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -330,6 +337,7 @@ export async function saveCVDictionaryAudio(
   adjustmentData: TTSAdjustmentData,
   currentAudioPath?: string | null,
 ) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -400,14 +408,14 @@ export async function saveCVDictionaryAudio(
     });
 
     revalidatePath('/tools/cv-dictionary');
-    return { success: true, message: '音声を更新しました', path: newFilePath };
+    return { success: true, message: t('common.results.audioUpdated'), path: newFilePath };
   } catch (err) {
     logger.error('cvDict:audio_save_unexpected', getErrorMessage(err, 'Unknown'), {
       ...ctx,
       err,
       payload: { wordEn, partOfSpeech },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 

@@ -24,6 +24,7 @@ import { validatePasswordStrength } from '@gabby/lib/auth/validation'; // パス
 import { randomBytes } from 'crypto'; // 暗号トークン生成用
 import { getPortalBaseUrl } from '@gabby/lib/navigation/portalUrl';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -53,22 +54,22 @@ function getInvitationExpiry(): Date {
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-const EMAIL_EXISTS_MESSAGE = '登録済みメールです。';
-const EMAIL_INVITING_MESSAGE = '招待中（本登録前）のメールアドレスです。招待メールを再送してください。';
-
 /**
  * 招待・即時作成の前に、メールアドレスが使われていないかを確かめる（大文字小文字は区別しない）。
  * - 認証のアカウントがある（削除済みのユーザーを含む）→ 登録済み
  * - 本登録前の招待がある → 招待中（再送で対応する）
  * - 本登録済みの招待が残っているがアカウントが無い（ユーザーを削除した）→ 古い招待を消して使えるようにする
- * 戻り値はエラーの文言（使えるなら null）。
+ * 戻り値はエラーの文言の翻訳キー（使えるなら null）。
  */
-async function checkEmailAvailable(supabase: AdminClient, email: string): Promise<string | null> {
+async function checkEmailAvailable(
+  supabase: AdminClient,
+  email: string,
+): Promise<'users.errors.emailExists' | 'users.errors.emailInviting' | null> {
   const { data: authUserId, error: authError } = await supabase.rpc('fn_find_auth_user_id_by_email', {
     p_email: email,
   });
   if (authError) throw authError;
-  if (authUserId) return EMAIL_EXISTS_MESSAGE;
+  if (authUserId) return 'users.errors.emailExists';
 
   const { data: invitation, error: invitationError } = await supabase
     .from('com_t_invitation')
@@ -77,7 +78,7 @@ async function checkEmailAvailable(supabase: AdminClient, email: string): Promis
     .maybeSingle();
   if (invitationError) throw invitationError;
   if (!invitation) return null;
-  if (!invitation.accepted_at) return EMAIL_INVITING_MESSAGE;
+  if (!invitation.accepted_at) return 'users.errors.emailInviting';
 
   const { error: deleteError } = await supabase.from('com_t_invitation').delete().eq('id', invitation.id);
   if (deleteError) throw deleteError;
@@ -174,6 +175,7 @@ export async function getUserById(id: string): Promise<UserRecord | null> {
 export async function createUser(
   payload: CreateUserPayload & { roles?: string[]; contract_id?: string },
 ): Promise<CreateUserResponse> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   const { email, user_name, client_id, user_type, roles = [], contract_id } = payload;
 
@@ -186,7 +188,7 @@ export async function createUser(
     // 登録済み・招待中のアドレスでないか先に確認します
     const conflict = await checkEmailAvailable(supabase, email);
     if (conflict) {
-      return { success: false, user_id: null, errorType: 'email_exists', message: conflict };
+      return { success: false, user_id: null, errorType: 'email_exists', message: t(conflict) };
     }
 
     // 有効期限を 3日間に設定（従来の24時間制限を突破） -> 共通ヘルパーを利用
@@ -215,14 +217,19 @@ export async function createUser(
     if (error) {
       if (error.code === '23505') {
         // Postgresの一意制約違反（確認の直後に同じメールアドレスで招待された場合）
-        return { success: false, user_id: null, errorType: 'email_exists', message: EMAIL_INVITING_MESSAGE };
+        return { success: false, user_id: null, errorType: 'email_exists', message: t('users.errors.emailInviting') };
       }
       logger.error('user:create_user_invite_failed', error.message, { ...ctx, err: error, payload });
-      return { success: false, user_id: null, errorType: 'unexpected_error', message: error.message };
+      return { success: false, user_id: null, errorType: 'unexpected_error', message: t('common.errors.unexpected') };
     }
 
     if (!inviteData) {
-      return { success: false, user_id: null, errorType: 'unexpected_error', message: 'データの作成に失敗しました。' };
+      return {
+        success: false,
+        user_id: null,
+        errorType: 'unexpected_error',
+        message: t('users.errors.createDataFailed'),
+      };
     }
 
     const userId = inviteData.id; // 既存機能（一括インポートなど）との互換性のため、発行された招待ID(UUID)を仮のuserIdとして引き継ぐ
@@ -278,7 +285,7 @@ export async function createUser(
       success: true,
       user_id: userId,
       errorType: null,
-      message: mailResult.success ? null : mailResult.error || '招待メールの送信に失敗しました',
+      message: mailResult.success ? null : mailResult.error || t('users.errors.inviteMailFailed'),
     };
   } catch (err) {
     logger.error('user:create_user_unexpected', getErrorMessage(err), {
@@ -286,7 +293,7 @@ export async function createUser(
       err,
       payload,
     });
-    return { success: false, user_id: null, errorType: 'unexpected_error', message: '予期せぬエラーが発生しました' };
+    return { success: false, user_id: null, errorType: 'unexpected_error', message: t('common.errors.unexpected') };
   }
 }
 
@@ -298,6 +305,7 @@ export async function createUser(
 export async function createUserDirect(
   payload: CreateUserPayload & { roles?: string[]; contract_id?: string; password: string },
 ): Promise<CreateUserResponse> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   const { email, user_name, client_id, user_type, roles = [], contract_id, password } = payload;
 
@@ -312,7 +320,7 @@ export async function createUserDirect(
     // 登録済み・招待中のアドレスでないか先に確認します（招待中のアドレスに作ると、残った招待のリンクで本登録できなくなる）
     const conflict = await checkEmailAvailable(supabase, email);
     if (conflict) {
-      return { success: false, user_id: null, errorType: 'email_exists', message: conflict };
+      return { success: false, user_id: null, errorType: 'email_exists', message: t(conflict) };
     }
 
     // Supabase Auth側へ確認済み(email_confirm: true)のユーザーとして即時作成
@@ -331,7 +339,7 @@ export async function createUserDirect(
 
     if (authError || !authData.user) {
       if (authError?.code === 'email_exists') {
-        return { success: false, user_id: null, errorType: 'email_exists', message: EMAIL_EXISTS_MESSAGE };
+        return { success: false, user_id: null, errorType: 'email_exists', message: t('users.errors.emailExists') };
       }
       logger.error('user:create_user_direct_auth_failed', authError?.message || 'User object null', {
         ...ctx,
@@ -342,7 +350,7 @@ export async function createUserDirect(
         success: false,
         user_id: null,
         errorType: 'unexpected_error',
-        message: authError?.message || 'アカウントの作成に失敗しました。',
+        message: t('users.errors.createAccountFailed'),
       };
     }
 
@@ -430,7 +438,7 @@ export async function createUserDirect(
       err,
       payload: { ...payload, password: undefined },
     });
-    return { success: false, user_id: null, errorType: 'unexpected_error', message: '予期せぬエラーが発生しました' };
+    return { success: false, user_id: null, errorType: 'unexpected_error', message: t('common.errors.unexpected') };
   }
 }
 
@@ -438,6 +446,7 @@ export async function createUserDirect(
  * ユーザー再招待招待アクション
  */
 export async function resendInvite(email: string, userType?: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -455,7 +464,7 @@ export async function resendInvite(email: string, userType?: string) {
 
     if (fetchError || !currentInvite) {
       logger.warn('user:resend_invite_not_found', `No active invitation found for: ${email}`, { ...ctx });
-      return { success: false, message: '対象の招待データが見つからないか、既に登録が完了しています。' };
+      return { success: false, message: t('users.errors.invitationNotFound') };
     }
 
     // 💡 改善: 安全性の向上として有効期限を送信時点から付け直し、新しいワンタイムトークンを再生成します -> 💡 共通ヘルパーを利用
@@ -498,7 +507,7 @@ export async function resendInvite(email: string, userType?: string) {
       .eq('id', currentInvite.id);
 
     if (!mailResult.success) {
-      return { success: false, message: 'メールの再送に失敗しました。' };
+      return { success: false, message: t('users.errors.resendFailed') };
     }
 
     logger.info('user:resend_invite_success', `Invite resent to: ${email}`, {
@@ -514,7 +523,7 @@ export async function resendInvite(email: string, userType?: string) {
       err: error,
       payload: { email },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -522,6 +531,7 @@ export async function resendInvite(email: string, userType?: string) {
  * ユーザー更新アクション
  */
 export async function updateUser(id: string, payload: CreateUserPayload & { roles?: string[] }) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   const { email, user_name, client_id, user_type, roles = [] } = payload;
 
@@ -572,7 +582,7 @@ export async function updateUser(id: string, payload: CreateUserPayload & { role
         err: authError,
         payload: { id, payload },
       });
-      return { success: false, errorType: 'update_error', message: `Auth更新失敗: ${authError.message}` };
+      return { success: false, errorType: 'update_error', message: t('users.errors.authUpdateFailed') };
     }
 
     // 3. ユーザマスタ (public.com_m_user) の更新
@@ -588,7 +598,7 @@ export async function updateUser(id: string, payload: CreateUserPayload & { role
 
     if (dbError) {
       logger.error('user:update_user_db_failed', dbError.message, { ...ctx, err: dbError, payload: { id, payload } });
-      return { success: false, errorType: 'update_error', message: `マスタ更新に失敗しました: ${dbError.message}` };
+      return { success: false, errorType: 'update_error', message: t('users.errors.userUpdateFailed') };
     }
 
     logger.info('user:update_user_success', `User updated: ${email}`, {
@@ -604,7 +614,7 @@ export async function updateUser(id: string, payload: CreateUserPayload & { role
       err,
       payload: { id, payload },
     });
-    return { success: false, errorType: 'unexpected_error', message: '予期せぬエラーが発生しました' };
+    return { success: false, errorType: 'unexpected_error', message: t('common.errors.unexpected') };
   }
 }
 
@@ -612,6 +622,7 @@ export async function updateUser(id: string, payload: CreateUserPayload & { role
  * ユーザー一括登録アクション
  */
 export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): Promise<BulkImportResponse> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   const results: BulkImportResultDetail[] = [];
   let successCount = 0;
@@ -640,7 +651,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
         results.push({
           email: user.email,
           status: 'error',
-          message: result.message || '招待データの作成に失敗しました',
+          message: result.message || t('users.errors.createInvitationFailed'),
         });
       }
     } catch (err) {
@@ -650,7 +661,7 @@ export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): 
         payload: { email: user.email },
       });
       errorCount++;
-      results.push({ email: user.email, status: 'error', message: '予期せぬエラーが発生しました' });
+      results.push({ email: user.email, status: 'error', message: t('common.errors.unexpected') });
     }
   }
 

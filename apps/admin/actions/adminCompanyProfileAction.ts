@@ -15,12 +15,11 @@ import {
   type CompanyProfile,
   isCompanyCode,
 } from '@gabby/types/companyProfile';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
 const PAGE_PATH = '/company-profiles';
-
-type ActionResult = { success: true } | { success: false; message: string };
 
 export type CompanyProfileInput = Pick<
   CompanyProfile,

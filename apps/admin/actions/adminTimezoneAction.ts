@@ -8,6 +8,7 @@ import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -40,6 +41,7 @@ export async function getTimezones() {
  * IANA形式として不正な値はDB側のトリガー（validate_iana_timezone）で拒否される。
  */
 export async function upsertTimezone(payload: TableInsert<'com_m_timezone'>) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -58,7 +60,7 @@ export async function upsertTimezone(payload: TableInsert<'com_m_timezone'>) {
 
     if (error) {
       logger.error('timezone:upsert_timezone_failed', error.message, { ...ctx, err: error, payload });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     const savedTimezone = data as TimezoneMaster;
@@ -75,7 +77,7 @@ export async function upsertTimezone(payload: TableInsert<'com_m_timezone'>) {
       err: error,
       payload,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -84,15 +86,17 @@ export async function upsertTimezone(payload: TableInsert<'com_m_timezone'>) {
  * 使用停止（is_active = false）にするよう案内する
  */
 export async function deleteTimezone(timezone: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
     const { error } = await supabase.from('com_m_timezone').delete().eq('timezone', timezone);
 
     if (error) {
-      if (isInUseError(error)) return { success: false, reason: 'in_use' as const, message: error.message };
+      if (isInUseError(error))
+        return { success: false, reason: 'in_use' as const, message: t('common.errors.unexpected') };
       logger.error('timezone:delete_timezone_failed', error.message, { ...ctx, err: error, payload: { timezone } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('timezone:delete_timezone_success', 'Timezone deleted', { ...ctx, payload: { timezone } });
@@ -105,6 +109,6 @@ export async function deleteTimezone(timezone: string) {
       err: error,
       payload: { timezone },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

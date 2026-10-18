@@ -10,6 +10,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { containsPattern } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -90,6 +91,7 @@ export async function getClients(params: ListParams): Promise<ListResult<ClientR
  * 顧客新規作成
  */
 export async function createClient(payload: ClientPayload): Promise<ClientResponse> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -98,7 +100,7 @@ export async function createClient(payload: ClientPayload): Promise<ClientRespon
 
     if (error) {
       logger.error('client:create_client_failed', error.message, { ...ctx, err: error, payload });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     const newClient = data[0] as ClientRecord;
@@ -115,7 +117,7 @@ export async function createClient(payload: ClientPayload): Promise<ClientRespon
       err: error,
       payload,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -123,6 +125,7 @@ export async function createClient(payload: ClientPayload): Promise<ClientRespon
  * 顧客情報の更新
  */
 export async function updateClient(clientId: string, payload: ClientPayload): Promise<ClientResponse> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -142,7 +145,7 @@ export async function updateClient(clientId: string, payload: ClientPayload): Pr
         err: error,
         payload: { clientId, ...payload },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     const updatedClient = data[0] as ClientRecord;
@@ -159,7 +162,7 @@ export async function updateClient(clientId: string, payload: ClientPayload): Pr
       err: error,
       payload: { clientId, ...payload },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -168,6 +171,7 @@ export async function updateClient(clientId: string, payload: ClientPayload): Pr
  * 取引の終了（status）か、DangerZone の一括削除（purgeClient）を案内する
  */
 export async function deleteClient(clientId: string): Promise<ClientResponse> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -175,9 +179,9 @@ export async function deleteClient(clientId: string): Promise<ClientResponse> {
     const { error } = await supabase.from('com_m_client').delete().eq('client_id', clientId);
 
     if (error) {
-      if (isInUseError(error)) return { success: false, reason: 'in_use', message: error.message };
+      if (isInUseError(error)) return { success: false, reason: 'in_use', message: t('common.errors.unexpected') };
       logger.error('client:delete_client_failed', error.message, { ...ctx, err: error, payload: { clientId } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('client:delete_client_success', `Client deleted`, {
@@ -193,6 +197,6 @@ export async function deleteClient(clientId: string): Promise<ClientResponse> {
       err: error,
       payload: { clientId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

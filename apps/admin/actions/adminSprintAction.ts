@@ -10,6 +10,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -49,6 +50,7 @@ export async function getSprintQuestionsByFilter(contentId: string, type: Sprint
  * スプリント問題の複数一括登録・更新
  */
 export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -72,7 +74,7 @@ export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]
     return { success: true };
   } catch (err) {
     logger.error('sprint:bulk_upsert_failed', getErrorMessage(err), { ...ctx, err, payload: questions });
-    return { success: false, message: getErrorMessage(err) };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -81,6 +83,7 @@ export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]
  * 回答の履歴（JSON）は問題IDだけを持つため残り、画面では「削除された問題」と表示する）
  */
 export async function deleteSprintQuestion(questionId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -98,7 +101,7 @@ export async function deleteSprintQuestion(questionId: string) {
     return { success: true };
   } catch (err) {
     logger.error('sprint:delete_failed', getErrorMessage(err), { ...ctx, err, payload: { questionId } });
-    return { success: false, message: getErrorMessage(err) };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -170,6 +173,7 @@ export async function saveSprintAudio(
   adjustmentData: TTSAdjustmentData,
   currentPath?: string | null,
 ) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -246,7 +250,7 @@ export async function saveSprintAudio(
     return { success: true, path: filePath };
   } catch (err) {
     logger.error('sprint:save_audio_failed', getErrorMessage(err), { ...ctx, err, payload: { questionId, section } });
-    return { success: false, message: getErrorMessage(err) };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -262,6 +266,7 @@ export async function moveSprintQuestionsLevel(
   questionIds: string[],
   toLevel: number,
 ) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const meta = QUESTION_TYPES[type];
@@ -327,9 +332,12 @@ export async function moveSprintQuestionsLevel(
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
   } catch (err) {
-    const message = getErrorMessage(err);
-    logger.error('sprint:move_level_failed', message, { ...ctx, payload: { contentId, type, questionIds, toLevel } });
-    return { success: false, message };
+    logger.error('sprint:move_level_failed', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { contentId, type, questionIds, toLevel },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -337,13 +345,18 @@ export async function moveSprintQuestionsLevel(
  * 同一グループの基本文を一括更新
  */
 export async function updateGroupStatement(groupId: string, statementEn: string, statementJa: string | null) {
+  const t = await getTranslations();
+  const ctx = await getLogContext();
   const supabase = await createAdminClient();
   const { error } = await supabase
     .from('com_m_sprint_questions')
     .update({ statement_en: statementEn, statement_ja: statementJa, update_date: new Date().toISOString() })
     .eq('group_id', groupId);
 
-  if (error) return { success: false, message: error.message };
+  if (error) {
+    logger.error('sprint:update_group_statement_failed', error.message, { ...ctx, err: error, payload: { groupId } });
+    return { success: false, message: t('common.errors.unexpected') };
+  }
   return { success: true };
 }
 
@@ -356,6 +369,7 @@ export async function bulkImportSprintQuestions(
   level: number,
   questions: Omit<SprintQuestionInput, 'content_id' | 'question_type' | 'difficulty_level'>[],
 ) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -413,6 +427,6 @@ export async function bulkImportSprintQuestions(
       err,
       payload: { contentId, type, level, count: questions.length },
     });
-    return { success: false, message: getErrorMessage(err) };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

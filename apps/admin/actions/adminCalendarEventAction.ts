@@ -19,6 +19,7 @@ import {
   type CalendarEventMessageAttachment,
 } from '@gabby/types/calendarEvent';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -258,13 +259,14 @@ async function syncCalendarEventCoaches(calendarEventId: string, coachIds: strin
 export async function upsertCalendarEvent(
   formData: CalendarEventFormData,
 ): Promise<{ success: true; data: CalendarEventItem } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
 
     const startUtc = jstDateTimeToUtcIso(formData.start_date, formData.start_time);
     if (!startUtc) {
-      return { success: false, message: '開始日時が不正です' };
+      return { success: false, message: t('calendarEvents.errors.invalidStartDatetime') };
     }
     const endUtc =
       formData.end_date && formData.end_time ? jstDateTimeToUtcIso(formData.end_date, formData.end_time) : null;
@@ -296,7 +298,7 @@ export async function upsertCalendarEvent(
         err: error,
         payload: formData,
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     await syncCalendarEventCoaches(data.calendar_event_id, formData.coach_ids ?? []);
@@ -315,7 +317,7 @@ export async function upsertCalendarEvent(
       err: error,
       payload: formData,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -326,6 +328,7 @@ export async function upsertCalendarEvent(
 export async function deleteCalendarEvent(
   calendarEventId: string,
 ): Promise<{ success: true } | { success: false; reason?: 'held'; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -353,7 +356,7 @@ export async function deleteCalendarEvent(
         err: error,
         payload: { calendarEventId },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     // アナウンス（メッセージ）は CASCADE で消えるため、その添付のファイルを消す
@@ -379,7 +382,7 @@ export async function deleteCalendarEvent(
       err: error,
       payload: { calendarEventId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -499,10 +502,11 @@ export async function createCalendarEventMessage(
   calendarEventId: string,
   formData: CalendarEventMessageFormData,
 ): Promise<{ success: true } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     if (!formData.title.trim() || !formData.content.trim()) {
-      return { success: false, message: 'タイトルと本文は必須です' };
+      return { success: false, message: t('calendarEvents.errors.titleAndBodyRequired') };
     }
 
     const supabase = createAdminClient();
@@ -520,7 +524,7 @@ export async function createCalendarEventMessage(
         err: error,
         payload: { calendarEventId, ...formData },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('calendarEvent:create_message_success', 'Calendar event message sent', {
@@ -536,7 +540,7 @@ export async function createCalendarEventMessage(
       err: error,
       payload: { calendarEventId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -548,10 +552,11 @@ export async function updateCalendarEventMessage(
   calendarEventId: string,
   formData: CalendarEventMessageFormData,
 ): Promise<{ success: true } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     if (!formData.title.trim() || !formData.content.trim()) {
-      return { success: false, message: 'タイトルと本文は必須です' };
+      return { success: false, message: t('calendarEvents.errors.titleAndBodyRequired') };
     }
 
     const supabase = createAdminClient();
@@ -571,7 +576,7 @@ export async function updateCalendarEventMessage(
         err: error,
         payload: { calendarEventMessageId, ...formData },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('calendarEvent:update_message_success', 'Calendar event message updated', {
@@ -587,7 +592,7 @@ export async function updateCalendarEventMessage(
       err: error,
       payload: { calendarEventMessageId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -598,6 +603,7 @@ export async function deleteCalendarEventMessage(
   calendarEventMessageId: string,
   calendarEventId: string,
 ): Promise<{ success: true } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -614,7 +620,7 @@ export async function deleteCalendarEventMessage(
         err: fetchError,
         payload: { calendarEventMessageId },
       });
-      return { success: false, message: fetchError.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     const attachments: CalendarEventMessageAttachment[] = Array.isArray(message?.attachments)
@@ -635,7 +641,7 @@ export async function deleteCalendarEventMessage(
         err: error,
         payload: { calendarEventMessageId },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('calendarEvent:delete_message_success', 'Calendar event message deleted', {
@@ -651,7 +657,7 @@ export async function deleteCalendarEventMessage(
       err: error,
       payload: { calendarEventMessageId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -663,11 +669,12 @@ export async function uploadCalendarEventMessageFile(
   calendarEventMessageId: string,
   formData: FormData,
 ): Promise<{ success: boolean; attachment?: CalendarEventMessageAttachment; message?: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const file = formData.get('file') as File;
     if (!file) {
-      return { success: false, message: 'ファイルが選択されていません' };
+      return { success: false, message: t('common.errors.fileRequired') };
     }
 
     const supabase = createAdminClient();
@@ -687,7 +694,7 @@ export async function uploadCalendarEventMessageFile(
         err: uploadError,
         payload: { calendarEventMessageId, fileName: file.name },
       });
-      return { success: false, message: `アップロードに失敗しました: ${uploadError.message}` };
+      return { success: false, message: t('common.errors.uploadFailed') };
     }
 
     const newAttachment: CalendarEventMessageAttachment = {
@@ -710,7 +717,7 @@ export async function uploadCalendarEventMessageFile(
       err: error,
       payload: { calendarEventMessageId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -729,6 +736,7 @@ export async function getCalendarEventMessageAttachmentUrl(path: string): Promis
 export async function deleteCalendarEventMessageFile(
   storagePath: string,
 ): Promise<{ success: boolean; message?: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -742,7 +750,7 @@ export async function deleteCalendarEventMessageFile(
         err: error,
         payload: { storagePath },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     return { success: true };
@@ -752,6 +760,6 @@ export async function deleteCalendarEventMessageFile(
       err: error,
       payload: { storagePath },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

@@ -27,6 +27,7 @@ import {
 import type { ConductedVia, SessionOutcome, SessionOutcomeEvidence } from '@gabby/types/session';
 import { USER_TYPES } from '@gabby/types/user';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -78,6 +79,7 @@ export async function getClientStudents(clientId: string): Promise<GetClientStud
  * 追加で持たせ、「対象の選択」セクションのプラン情報表示に使う。
  */
 export async function getStudentLiveSessionContractsForAdmin(studentId: string): Promise<AdminContractSummary[]> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -103,14 +105,14 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
         .select('license_id, status, start_date, end_date')
         .in(
           'license_id',
-          tickets.map((t) => t.license_id),
+          tickets.map((ticket) => ticket.license_id),
         ),
       supabase
         .from('com_m_contract')
         .select('contract_id, contract_name, plan_name')
         .in(
           'contract_id',
-          tickets.map((t) => t.contract_id),
+          tickets.map((ticket) => ticket.contract_id),
         ),
     ]);
 
@@ -136,22 +138,22 @@ export async function getStudentLiveSessionContractsForAdmin(studentId: string):
     const now = new Date();
 
     return tickets
-      .map((t) => {
-        const license = licenseById.get(t.license_id);
+      .map((ticket) => {
+        const license = licenseById.get(ticket.license_id);
         if (!license) return null;
         const isCurrent =
           license.status === 1 && new Date(license.start_date) <= now && now <= new Date(license.end_date);
         return {
-          ticket_id: t.ticket_id,
-          license_id: t.license_id,
+          ticket_id: ticket.ticket_id,
+          license_id: ticket.license_id,
           start_date: license.start_date,
           end_date: license.end_date,
           is_current: isCurrent,
-          weekly_frequency: t.weekly_frequency,
-          contract_name: contractById.get(t.contract_id)?.contract_name ?? '(不明な契約)',
-          plan_name: contractById.get(t.contract_id)?.plan_name ?? '(不明なプラン)',
-          total_sessions: t.total_sessions,
-          used_sessions: t.used_sessions,
+          weekly_frequency: ticket.weekly_frequency,
+          contract_name: contractById.get(ticket.contract_id)?.contract_name ?? `(${t('common.fallback.contract')})`,
+          plan_name: contractById.get(ticket.contract_id)?.plan_name ?? `(${t('common.fallback.plan')})`,
+          total_sessions: ticket.total_sessions,
+          used_sessions: ticket.used_sessions,
         };
       })
       .filter((c): c is AdminContractSummary => c !== null)
@@ -284,6 +286,7 @@ export async function getSessionsForTicket(ticketId: string): Promise<AdminSessi
  * セッション結果・チャット・宿題は変更されない。
  */
 export async function releaseLessonScheduleSlot(scheduleId: string): Promise<ReleaseLessonScheduleSlotResult> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -296,7 +299,7 @@ export async function releaseLessonScheduleSlot(scheduleId: string): Promise<Rel
         err: error,
         payload: { scheduleId },
       });
-      return { success: false, errorCode: 'unexpected_error', message: error.message };
+      return { success: false, errorCode: 'unexpected_error', message: t('common.errors.unexpected') };
     }
 
     logger.info('liveSession:release_schedule_slot_success', 'Lesson schedule slot released', {
@@ -312,7 +315,7 @@ export async function releaseLessonScheduleSlot(scheduleId: string): Promise<Rel
       err,
       payload: { scheduleId },
     });
-    return { success: false, errorCode: 'unexpected_error', message: '予期せぬエラーが発生しました' };
+    return { success: false, errorCode: 'unexpected_error', message: t('common.errors.unexpected') };
   }
 }
 
@@ -362,6 +365,7 @@ export async function cancelSessionAsAdmin(
   refundTicket: boolean,
   reason?: string,
 ): Promise<AdminSessionActionResult> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -379,7 +383,7 @@ export async function cancelSessionAsAdmin(
         err: error,
         payload: { sessionId, refundTicket },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     revalidatePath('/live-sessions');
@@ -390,7 +394,7 @@ export async function cancelSessionAsAdmin(
       err,
       payload: { sessionId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -412,6 +416,7 @@ export async function bookMakeupSessionAsAdmin(
   startIso: string,
   endIso: string,
 ): Promise<AdminSessionActionResult> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -427,7 +432,7 @@ export async function bookMakeupSessionAsAdmin(
         err: error,
         payload: { scheduleId, startIso, endIso },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     revalidatePath('/live-sessions');
@@ -438,7 +443,7 @@ export async function bookMakeupSessionAsAdmin(
       err,
       payload: { scheduleId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -454,6 +459,7 @@ export async function matchStudentWithCoachAsAdmin(params: {
   startTime: string;
   endTime: string;
 }): Promise<AdminSessionActionResult> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -469,23 +475,22 @@ export async function matchStudentWithCoachAsAdmin(params: {
     if (error) {
       logger.error('liveSession:admin_match_failed', error.message, { ...ctx, err: error, payload: params });
       if (error.code === '23505') {
-        return { success: false, message: 'この枠には既にリクエストまたはマッチングが存在します' };
+        return { success: false, message: t('liveSessions.errors.slotTaken') };
       }
       // 直接マッチングは予約できる回数の割合の基準を適用しない（重なる回は飛ばして作る）。1回も予約できない場合だけ失敗する
       if (error.message?.includes('NO_REMAINING_SESSIONS')) {
         return {
           success: false,
-          message: 'この枠は、コーチ交代前のセッションで契約の回数を使い切っているため、マッチングできません',
+          message: t('liveSessions.errors.usedUpBeforeCoachChange'),
         };
       }
       if (error.message?.includes('NO_BOOKABLE_SESSION')) {
         return {
           success: false,
-          message:
-            'このコーチの指定の時間帯は、契約期間内に予約できる回がありません（全ての回が他の予定と重なっています）',
+          message: t('liveSessions.errors.noBookableSessions'),
         };
       }
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     revalidatePath('/live-sessions');
@@ -496,7 +501,7 @@ export async function matchStudentWithCoachAsAdmin(params: {
       err,
       payload: params,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -516,6 +521,7 @@ export async function adjustTargetSessionsAsAdmin(
   newTargetSessions: number,
   reason: string,
 ): Promise<AdminSessionActionResult> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -531,7 +537,7 @@ export async function adjustTargetSessionsAsAdmin(
         err: error,
         payload: { scheduleId, newTargetSessions, reason },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('liveSession:adjust_target_sessions_success', 'Schedule target_sessions adjusted', {
@@ -547,7 +553,7 @@ export async function adjustTargetSessionsAsAdmin(
       err,
       payload: { scheduleId, newTargetSessions, reason },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -629,6 +635,7 @@ export async function correctSessionOutcomeAsAdmin(
   conductedVia: ConductedVia | null,
   reason: string,
 ): Promise<AdminSessionActionResult> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -645,7 +652,7 @@ export async function correctSessionOutcomeAsAdmin(
         err: error,
         payload: { sessionId, outcome, conductedVia },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('liveSession:correct_outcome_success', 'Session outcome corrected', {
@@ -660,7 +667,7 @@ export async function correctSessionOutcomeAsAdmin(
       err,
       payload: { sessionId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 

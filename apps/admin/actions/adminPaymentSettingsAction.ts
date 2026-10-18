@@ -5,6 +5,7 @@ import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { type SessionPayRate } from '@gabby/types/monthlyReport';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -31,12 +32,13 @@ export async function getSessionPayRate(): Promise<SessionPayRate | null> {
 export async function updateSessionPayRate(
   input: SessionPayRate,
 ): Promise<{ success: true } | { success: false; message: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   if (!(input.rate_amount >= 0)) {
-    return { success: false, message: '単価には0以上の数値を指定してください。' };
+    return { success: false, message: t('paymentSettings.errors.invalidRate') };
   }
   if (!input.currency_code.trim()) {
-    return { success: false, message: '通貨コードを指定してください。' };
+    return { success: false, message: t('paymentSettings.errors.currencyRequired') };
   }
 
   const supabase = createAdminClient();
@@ -51,7 +53,7 @@ export async function updateSessionPayRate(
 
   if (error) {
     logger.error('admin:update_session_pay_rate_failed', error.message, { ...ctx, err: error });
-    return { success: false, message: 'セッション単価の更新に失敗しました。' };
+    return { success: false, message: t('paymentSettings.errors.rateUpdateFailed') };
   }
 
   revalidatePath('/payment-settings');

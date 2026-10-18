@@ -17,6 +17,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -136,6 +137,7 @@ export type ContentUpsertInput = Pick<ContentRecord, 'content_name' | 'content_l
   Partial<Omit<ContentRecord, 'content_name' | 'content_label'>>;
 
 export async function upsertContent(payload: ContentUpsertInput) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -184,7 +186,7 @@ export async function upsertContent(payload: ContentUpsertInput) {
 
     if (error) {
       logger.error('content:upsert_content_failed', error.message, { ...ctx, err: error, payload });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     const savedContent = data?.[0] as Content;
@@ -205,7 +207,7 @@ export async function upsertContent(payload: ContentUpsertInput) {
       err: error,
       payload,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -214,6 +216,7 @@ export async function upsertContent(payload: ContentUpsertInput) {
  * 非公開（status = 0）にするよう案内する
  */
 export async function deleteContent(contentId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -235,9 +238,10 @@ export async function deleteContent(contentId: string) {
     const { error } = await supabase.from('com_m_contents').delete().eq('content_id', contentId);
 
     if (error) {
-      if (isInUseError(error)) return { success: false, reason: 'in_use' as const, message: error.message };
+      if (isInUseError(error))
+        return { success: false, reason: 'in_use' as const, message: t('common.errors.unexpected') };
       logger.error('content:delete_content_failed', error.message, { ...ctx, err: error, payload: { contentId } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     const { error: questionDeleteError } = await supabase
@@ -282,7 +286,7 @@ export async function deleteContent(contentId: string) {
       err: error,
       payload: { contentId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -349,6 +353,7 @@ export async function getTagAssignmentData(contentId: string) {
  * 教材にタグを割り当てる
  */
 export async function assignTag(contentId: string, tagId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -360,7 +365,7 @@ export async function assignTag(contentId: string, tagId: string) {
 
     if (error) {
       logger.error('content:assign_tag_failed', error.message, { ...ctx, err: error, payload: { contentId, tagId } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('content:assign_tag_success', `Tag assigned to content`, {
@@ -375,7 +380,7 @@ export async function assignTag(contentId: string, tagId: string) {
       err: error,
       payload: { contentId, tagId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -383,6 +388,7 @@ export async function assignTag(contentId: string, tagId: string) {
  * 教材からタグの割当を解除する
  */
 export async function removeTag(contentId: string, tagId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -395,7 +401,7 @@ export async function removeTag(contentId: string, tagId: string) {
 
     if (error) {
       logger.error('content:remove_tag_failed', error.message, { ...ctx, err: error, payload: { contentId, tagId } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('content:remove_tag_success', `Tag removed from content`, {
@@ -410,7 +416,7 @@ export async function removeTag(contentId: string, tagId: string) {
       err: error,
       payload: { contentId, tagId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -470,6 +476,7 @@ export async function getContentAccessData(contentId: string) {
  * クライアントに教材アクセス権を付与
  */
 export async function assignAccess(contentId: string, clientId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -483,7 +490,7 @@ export async function assignAccess(contentId: string, clientId: string) {
         err: error,
         payload: { contentId, clientId },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('content:assign_access_success', `Access assigned to client`, {
@@ -499,7 +506,7 @@ export async function assignAccess(contentId: string, clientId: string) {
       err: error,
       payload: { contentId, clientId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -507,6 +514,7 @@ export async function assignAccess(contentId: string, clientId: string) {
  * クライアントの教材アクセス権を解除
  */
 export async function removeAccess(contentId: string, clientId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -522,7 +530,7 @@ export async function removeAccess(contentId: string, clientId: string) {
         err: error,
         payload: { contentId, clientId },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('content:remove_access_success', `Access removed from client`, {
@@ -538,6 +546,6 @@ export async function removeAccess(contentId: string, clientId: string) {
       err: error,
       payload: { contentId, clientId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

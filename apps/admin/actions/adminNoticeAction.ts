@@ -22,6 +22,8 @@ import { containsPattern } from '@gabby/lib/supabase/ilike';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 import { USER_STATUS, USER_TYPES, isUserType, type UserType } from '@gabby/types/user';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
+import type { ServerTranslator } from '@/i18n/types';
 
 const logger = createLogger('admin');
 
@@ -56,27 +58,28 @@ type DisplayFields = Pick<NoticeFormData, 'display_mode'> & {
  * コーチ向けはコーチアプリが未対応のため、ホームのカード・見出し画像・行動ボタンを使わない（DB の chk_notice_coach_display と同じ）。
  */
 function toDisplayFields(
+  t: ServerTranslator,
   formData: NoticeFormData,
 ): { ok: true; fields: DisplayFields } | { ok: false; message: string } {
   if (!NOTICE_DISPLAY_MODES.includes(formData.display_mode)) {
-    return { ok: false, message: '表示方法が正しくありません' };
+    return { ok: false, message: t('notice.errors.invalidDisplayMode') };
   }
   const isCoach = formData.target_type === 'COACH';
   if (isCoach && formData.display_mode === 'HOME') {
-    return { ok: false, message: 'コーチ向けのお知らせでは「ホームのカード」を選べません' };
+    return { ok: false, message: t('notice.errors.coachHomeNotAllowed') };
   }
   const ctaLabel = isCoach ? '' : (formData.cta_label ?? '').trim();
   const ctaUrl = isCoach ? '' : (formData.cta_url ?? '').trim();
   if (Boolean(ctaLabel) !== Boolean(ctaUrl)) {
-    return { ok: false, message: '行動ボタンは文言とリンク先を両方入力してください' };
+    return { ok: false, message: t('notice.errors.ctaBothRequired') };
   }
   if (ctaLabel.length > NOTICE_CTA_LABEL_MAX) {
-    return { ok: false, message: `行動ボタンの文言は${NOTICE_CTA_LABEL_MAX}文字以内で入力してください` };
+    return { ok: false, message: t('notice.errors.ctaLabelTooLong', { max: NOTICE_CTA_LABEL_MAX }) };
   }
   if (ctaUrl && !isValidNoticeCtaUrl(ctaUrl)) {
     return {
       ok: false,
-      message: '行動ボタンのリンク先は「/」で始まるアプリ内の画面か「https://」で始まるURLを入力してください',
+      message: t('notice.errors.ctaUrlInvalid'),
     };
   }
   return {
@@ -407,18 +410,19 @@ export async function getNoticeReadStatus(
  * お知らせの新規作成
  */
 export async function createNotice(formData: NoticeFormData) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
 
     const publishedUtc = jstToUtcIso(formData.published_at);
     if (!publishedUtc) {
-      return { success: false, message: '有効な公開開始日時を入力してください' };
+      return { success: false, message: t('notice.errors.invalidPublishStart') };
     }
 
     const expiredUtc = formData.expired_at ? jstToUtcIso(formData.expired_at) : null;
 
-    const display = toDisplayFields(formData);
+    const display = toDisplayFields(t, formData);
     if (!display.ok) {
       return { success: false, message: display.message };
     }
@@ -442,7 +446,7 @@ export async function createNotice(formData: NoticeFormData) {
 
     if (error) {
       logger.error('notice:create_failed', error.message, { ...ctx, err: error, payload: formData });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('notice:create_success', `Notice created: ${data.notice_id}`, {
@@ -458,7 +462,7 @@ export async function createNotice(formData: NoticeFormData) {
       err: error,
       payload: formData,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -466,18 +470,19 @@ export async function createNotice(formData: NoticeFormData) {
  * お知らせの更新
  */
 export async function updateNotice(noticeId: string, formData: NoticeFormData) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
 
     const publishedUtc = jstToUtcIso(formData.published_at);
     if (!publishedUtc) {
-      return { success: false, message: '有効な公開開始日時を入力してください' };
+      return { success: false, message: t('notice.errors.invalidPublishStart') };
     }
 
     const expiredUtc = formData.expired_at ? jstToUtcIso(formData.expired_at) : null;
 
-    const display = toDisplayFields(formData);
+    const display = toDisplayFields(t, formData);
     if (!display.ok) {
       return { success: false, message: display.message };
     }
@@ -501,7 +506,7 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData) {
 
     if (error) {
       logger.error('notice:update_failed', error.message, { ...ctx, err: error, payload: { noticeId, ...formData } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('notice:update_success', `Notice updated: ${noticeId}`, {
@@ -518,7 +523,7 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData) {
       err: error,
       payload: { noticeId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -526,6 +531,7 @@ export async function updateNotice(noticeId: string, formData: NoticeFormData) {
  * お知らせの削除（既読の記録も一緒に消える）。削除の後に画像・添付のファイルを消す
  */
 export async function deleteNotice(noticeId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -539,7 +545,7 @@ export async function deleteNotice(noticeId: string) {
 
     if (error) {
       logger.error('notice:delete_failed', error.message, { ...ctx, err: error, payload: { noticeId } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     if (deleted) {
@@ -564,7 +570,7 @@ export async function deleteNotice(noticeId: string) {
       err: error,
       payload: { noticeId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -580,18 +586,19 @@ export async function uploadNoticeImage(
   noticeId: string,
   formData: FormData,
 ): Promise<{ success: boolean; path?: string; message?: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const file = formData.get('file');
     if (!(file instanceof File)) {
-      return { success: false, message: '画像が選択されていません' };
+      return { success: false, message: t('notice.errors.imageRequired') };
     }
     const ext = NOTICE_IMAGE_TYPES[file.type];
     if (!ext) {
-      return { success: false, message: '画像はPNG・JPEG・WebPのいずれかを選んでください' };
+      return { success: false, message: t('notice.errors.imageType') };
     }
     if (file.size > NOTICE_IMAGE_MAX_BYTES) {
-      return { success: false, message: '画像は2MB以下のファイルを選んでください' };
+      return { success: false, message: t('notice.errors.imageTooLarge') };
     }
 
     const supabase = createAdminClient();
@@ -602,7 +609,7 @@ export async function uploadNoticeImage(
 
     if (error) {
       logger.error('notice:upload_image_failed', error.message, { ...ctx, err: error, payload: { noticeId } });
-      return { success: false, message: `アップロードに失敗しました: ${error.message}` };
+      return { success: false, message: t('common.errors.uploadFailed') };
     }
 
     logger.info('notice:upload_image_success', `Notice image uploaded: ${storagePath}`, {
@@ -616,7 +623,7 @@ export async function uploadNoticeImage(
       err: error,
       payload: { noticeId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -628,11 +635,12 @@ export async function uploadNoticeFile(
   noticeId: string,
   formData: FormData,
 ): Promise<{ success: boolean; attachment?: NoticeAttachment; message?: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const file = formData.get('file') as File;
     if (!file) {
-      return { success: false, message: 'ファイルが選択されていません' };
+      return { success: false, message: t('common.errors.fileRequired') };
     }
 
     const supabase = createAdminClient();
@@ -654,7 +662,7 @@ export async function uploadNoticeFile(
         err: uploadError,
         payload: { noticeId, fileName: file.name },
       });
-      return { success: false, message: `アップロードに失敗しました: ${uploadError.message}` };
+      return { success: false, message: t('common.errors.uploadFailed') };
     }
 
     const newAttachment: NoticeAttachment = {
@@ -677,7 +685,7 @@ export async function uploadNoticeFile(
       err: error,
       payload: { noticeId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -685,6 +693,7 @@ export async function uploadNoticeFile(
  * 添付ファイルの削除 (Storageから物理削除)
  */
 export async function deleteNoticeFile(storagePath: string): Promise<{ success: boolean; message?: string }> {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -694,7 +703,7 @@ export async function deleteNoticeFile(storagePath: string): Promise<{ success: 
 
     if (error) {
       logger.error('notice:delete_file_failed', error.message, { ...ctx, err: error, payload: { storagePath } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('notice:delete_file_success', `Attachment removed: ${cleanPath}`, { ...ctx, payload: { storagePath } });
@@ -705,6 +714,6 @@ export async function deleteNoticeFile(storagePath: string): Promise<{ success: 
       err: error,
       payload: { storagePath },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

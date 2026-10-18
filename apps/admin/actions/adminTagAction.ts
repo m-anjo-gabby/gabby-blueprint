@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -39,6 +40,7 @@ export async function getTags() {
 /** * タグの保存（新規・更新）
  */
 export async function upsertTag(payload: TableInsert<'com_m_contents_tag'>) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -55,7 +57,7 @@ export async function upsertTag(payload: TableInsert<'com_m_contents_tag'>) {
 
     if (error) {
       logger.error('tag:upsert_tag_failed', error.message, { ...ctx, err: error, payload });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     const savedTag = data as ContentTag;
@@ -72,7 +74,7 @@ export async function upsertTag(payload: TableInsert<'com_m_contents_tag'>) {
       err: error,
       payload,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -80,6 +82,7 @@ export async function upsertTag(payload: TableInsert<'com_m_contents_tag'>) {
  * タグの削除（教材との紐付けも一緒に消える）
  */
 export async function deleteTag(tagId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -87,7 +90,7 @@ export async function deleteTag(tagId: string) {
 
     if (error) {
       logger.error('tag:delete_tag_failed', error.message, { ...ctx, err: error, payload: { tagId } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('tag:delete_tag_success', `Tag deleted`, {
@@ -103,6 +106,6 @@ export async function deleteTag(tagId: string) {
       err: error,
       payload: { tagId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

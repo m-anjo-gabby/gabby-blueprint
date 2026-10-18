@@ -7,6 +7,7 @@ import { isInUseError } from '@gabby/lib/supabase/pgErrors';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getTranslations } from 'next-intl/server';
 
 const logger = createLogger('admin');
 
@@ -55,6 +56,7 @@ interface UpsertDialogueSessionPayload {
  * ダイアログプラクティス セッション明細の登録・更新 (Upsert)
  */
 export async function upsertDialogueSession(payload: UpsertDialogueSessionPayload) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -89,9 +91,9 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
       logger.error('dialogue:upsert_session_failed', error.message, { ...ctx, err: error, payload });
       // UNIQUE(content_id, session_no) 制約違反を分かりやすいメッセージに変換
       if (error.code === '23505') {
-        return { success: false, message: 'このセッション番号は既に使用されています' };
+        return { success: false, message: t('contents.errors.sessionNoInUse') };
       }
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('dialogue:upsert_session_success', `Dialogue session ${isEdit ? 'updated' : 'created'}`, {
@@ -107,7 +109,7 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
       err: error,
       payload,
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -116,6 +118,7 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
  * 進捗・会話ログがあるセッションは外部キー（RESTRICT）で止まる
  */
 export async function deleteDialogueSession(dialogueSessionId: string, contentId: string) {
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -126,13 +129,14 @@ export async function deleteDialogueSession(dialogueSessionId: string, contentId
       .eq('dialogue_session_id', dialogueSessionId);
 
     if (error) {
-      if (isInUseError(error)) return { success: false, reason: 'in_use' as const, message: error.message };
+      if (isInUseError(error))
+        return { success: false, reason: 'in_use' as const, message: t('common.errors.unexpected') };
       logger.error('dialogue:delete_session_failed', error.message, {
         ...ctx,
         err: error,
         payload: { dialogueSessionId },
       });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('dialogue:delete_session_success', 'Dialogue session deleted', {
@@ -148,6 +152,6 @@ export async function deleteDialogueSession(dialogueSessionId: string, contentId
       err: error,
       payload: { dialogueSessionId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
