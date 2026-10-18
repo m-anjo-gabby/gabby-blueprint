@@ -31,8 +31,6 @@
 
 | ファイル | 確かめること |
 |---|---|
-| `auth/returnTo.ts` | ログイン後の戻り先が自サイトのパスに限られること（外部の URL・`//` 始まり等を通さない） |
-| `monthlyReport/buildInvoiceNumber.ts` | 請求書の番号が同じコーチ・同じ月から常に同じ値になること（`INV-YYYYMM-コーチIDの先頭8桁`） |
 | `sprint/availableLevels.ts`・`sprint/stageProgression.ts` | スプリントのレベル・段階の選び方と進み方 |
 | `sprint/answeredHistory.ts` | 解答の履歴（JSON）の検証で、壊れた要素を除けること |
 | `assessment/inputNormalization.ts`・`native-speech.ts`・`wordClassification.ts`・`phoneticConfusions.ts` | 発話の評価（正規化・語の分類・聞き違えやすい音）の判定 |
