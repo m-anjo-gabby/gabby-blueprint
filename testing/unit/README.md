@@ -33,8 +33,7 @@
 
 ### 中（表示の文字の組み立て）
 
-`chat/messageGrouping.ts`・`chat/links.ts`・`notice/plainText.ts`・`notice/links.ts`・`coachRating/format.ts`・`date/dateEn.ts`・
-`userLegal/formatLegalName.ts`・`azure/ssml.ts`・`colorVowel/phonemes.ts`・`auth/validation.ts`・`logger/errorMessage.ts`
+今は無し（2026-10-18 に全件を足した）。新しく見つけたらここに足す。
 
 ### 対象外（単体テストでは確かめない）
 
