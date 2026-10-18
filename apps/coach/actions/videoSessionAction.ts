@@ -10,6 +10,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { type LiveSessionRoomAccess, type LiveSessionRoomErrorCode } from '@gabby/types/liveSessionRoom';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('coach');
 const EARLY_JOIN_MINUTES = LIVE_SESSION_EARLY_JOIN_BEFORE_MS / 60000;
@@ -27,7 +28,7 @@ const LIVE_SESSION_ROOM_ERROR_MESSAGES_EN: Record<LiveSessionRoomErrorCode, stri
  */
 export async function getLiveSessionRoomAccess(
   sessionId: string,
-): Promise<{ success: true; access: LiveSessionRoomAccess } | { success: false; message: string }> {
+): Promise<ActionResult<{ access: LiveSessionRoomAccess }>> {
   const result = await getCoachLiveSessionRoomAccessCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();

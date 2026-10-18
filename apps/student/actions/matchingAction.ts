@@ -29,6 +29,7 @@ import {
 import { type CountryMaster } from '@gabby/types/country';
 import { type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
 import { type DayOfWeek } from '@gabby/types/coachAvailability';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('student');
 
@@ -158,7 +159,7 @@ export async function getMyBookableTickets(): Promise<BookableTicketSlot[]> {
  */
 export async function createMatchingRequest(
   input: CreateMatchingRequestInput,
-): Promise<{ success: true; requestId: string; expiresAt: string | null } | { success: false; message: string }> {
+): Promise<ActionResult<{ requestId: string; expiresAt: string | null }>> {
   const ctx = await getLogContext();
   const result = await createMatchingRequestCore(input);
 
@@ -179,7 +180,7 @@ export async function getMatchingSlotOptions(
   coachId: string,
   slotNo: number,
   candidates: { day_of_week: DayOfWeek; start_time: string }[],
-): Promise<{ success: true; options: MatchingSlotOption[] } | { success: false; message: string }> {
+): Promise<ActionResult<{ options: MatchingSlotOption[] }>> {
   const result = await getMatchingSlotOptionsCore(ticketId, coachId, slotNo, candidates);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -192,9 +193,7 @@ export async function getMatchingSlotOptions(
 /**
  * 承認待ちの自分のマッチングリクエストを取り下げる（宛先のコーチにアプリ内で通知される）
  */
-export async function withdrawMatchingRequest(
-  requestId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function withdrawMatchingRequest(requestId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await withdrawMatchingRequestCore(requestId);
 

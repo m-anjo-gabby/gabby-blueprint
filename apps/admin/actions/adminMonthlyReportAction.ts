@@ -12,6 +12,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { type AdminCoachSummary } from '@gabby/types/adminLiveSession';
 import { type CoachMonthlyReport } from '@gabby/types/monthlyReport';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -23,7 +24,7 @@ export async function getCoachesForMonthlyReport(): Promise<AdminCoachSummary[]>
 export async function getCoachMonthlyReportForAdmin(
   coachId: string,
   reportMonth: string,
-): Promise<{ success: true; report: CoachMonthlyReport } | { success: false; message: string }> {
+): Promise<ActionResult<{ report: CoachMonthlyReport }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   const result = await getAdminCoachMonthlyReportCore(coachId, reportMonth);
@@ -36,10 +37,7 @@ export async function getCoachMonthlyReportForAdmin(
   return { success: true, report: result.report };
 }
 
-export async function approveMonthlyReport(
-  coachId: string,
-  reportMonth: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function approveMonthlyReport(coachId: string, reportMonth: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   const result = await approveCoachMonthlyReportCore(coachId, reportMonth);
@@ -57,10 +55,7 @@ export async function approveMonthlyReport(
   return { success: true };
 }
 
-export async function revokeMonthlyReportApproval(
-  coachId: string,
-  reportMonth: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function revokeMonthlyReportApproval(coachId: string, reportMonth: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   const result = await revokeCoachMonthlyReportApprovalCore(coachId, reportMonth);

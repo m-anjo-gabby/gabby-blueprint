@@ -19,6 +19,7 @@ import {
 } from '@gabby/types/lessonSprint';
 import { type CoachStudentErrorCode } from '@gabby/types/coachStudent';
 import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('coach');
 
@@ -51,7 +52,7 @@ export async function getLessonSprintQuestions(
   contentId: string,
   questionType: SprintQuestionType,
   difficultyLevel: number,
-): Promise<{ success: true; questions: SprintQuestion[] } | { success: false; message: string }> {
+): Promise<ActionResult<{ questions: SprintQuestion[] }>> {
   const result = await getLessonSprintQuestionsCore(contentId, questionType, difficultyLevel);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -66,7 +67,7 @@ export async function getLessonSprintQuestions(
  */
 export async function createLessonSprintResult(
   input: CreateLessonSprintResultInput,
-): Promise<{ success: true; lessonSprintId: string } | { success: false; message: string }> {
+): Promise<ActionResult<{ lessonSprintId: string }>> {
   const result = await createLessonSprintResultCore(input);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -113,9 +114,7 @@ export async function getLessonSprintHistoryPage(
  */
 export async function getLessonSprintResult(
   lessonSprintId: string,
-): Promise<
-  { success: true; record: LessonSprintRecord; questions: SprintQuestion[] } | { success: false; message: string }
-> {
+): Promise<ActionResult<{ record: LessonSprintRecord; questions: SprintQuestion[] }>> {
   const result = await getLessonSprintResultCore(lessonSprintId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -131,7 +130,7 @@ export async function getLessonSprintResult(
 export async function updateLessonSprintSessionNote(
   lessonSprintId: string,
   sessionNote: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+): Promise<ActionResult> {
   const trimmed = sessionNote.trim();
   const result = await updateLessonSprintSessionNoteCore(lessonSprintId, trimmed.length > 0 ? trimmed : null);
   if (!result.success) {

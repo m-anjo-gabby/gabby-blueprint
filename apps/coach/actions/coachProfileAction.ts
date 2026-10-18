@@ -37,6 +37,7 @@ import {
   type CoachMatchingStatus,
   type CoachZoomSettingsFormValues,
 } from '@gabby/types/coachProfile';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('coach');
 
@@ -90,9 +91,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
 /**
  * Uploads a new profile icon image
  */
-export async function uploadProfileIcon(
-  formData: FormData,
-): Promise<{ success: true; iconPath: string } | { success: false; message: string }> {
+export async function uploadProfileIcon(formData: FormData): Promise<ActionResult<{ iconPath: string }>> {
   const ctx = await getLogContext();
   const result = await uploadProfileIconCore(formData);
 
@@ -108,7 +107,7 @@ export async function uploadProfileIcon(
 /**
  * Removes the current profile icon image
  */
-export async function removeProfileIcon(): Promise<{ success: true } | { success: false; message: string }> {
+export async function removeProfileIcon(): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await removeProfileIconCore();
 
@@ -137,9 +136,7 @@ export async function getTimezoneList(): Promise<TimezoneMaster[]> {
 /**
  * Updates the current coach's own timezone
  */
-export async function updateMyTimezone(
-  timezone: string,
-): Promise<{ success: true; timezone: string } | { success: false; message: string }> {
+export async function updateMyTimezone(timezone: string): Promise<ActionResult<{ timezone: string }>> {
   const ctx = await getLogContext();
   const result = await updateMyTimezoneCore(timezone);
 
@@ -202,7 +199,7 @@ export async function getMyCoachProfile(): Promise<CoachProfileRecord | null> {
  */
 export async function updateMyCoachProfile(
   values: CoachProfileFormValues,
-): Promise<{ success: true; profile: CoachProfileRecord } | { success: false; message: string }> {
+): Promise<ActionResult<{ profile: CoachProfileRecord }>> {
   const ctx = await getLogContext();
   const result = await updateMyCoachProfileCore(values);
 
@@ -236,7 +233,7 @@ export async function getMyCoachMatchingStatus(): Promise<CoachMatchingStatus | 
  */
 export async function updateMyAcceptingStudents(
   acceptingStudents: boolean,
-): Promise<{ success: true; acceptingStudents: boolean } | { success: false; message: string }> {
+): Promise<ActionResult<{ acceptingStudents: boolean }>> {
   const result = await updateMyAcceptingStudentsCore(acceptingStudents);
   if (!result.success) {
     return { success: false, message: COACH_PROFILE_ERROR_MESSAGES_EN[result.errorCode] };
@@ -249,7 +246,7 @@ export async function updateMyAcceptingStudents(
  */
 export async function updateMyCoachZoomSettings(
   values: CoachZoomSettingsFormValues,
-): Promise<{ success: true; profile: CoachProfileRecord } | { success: false; message: string }> {
+): Promise<ActionResult<{ profile: CoachProfileRecord }>> {
   const ctx = await getLogContext();
   const result = await updateMyCoachZoomSettingsCore(values);
 
@@ -265,9 +262,7 @@ export async function updateMyCoachZoomSettings(
 /**
  * Uploads a new coach introduction video
  */
-export async function uploadCoachIntroVideo(
-  formData: FormData,
-): Promise<{ success: true; introVideoPath: string } | { success: false; message: string }> {
+export async function uploadCoachIntroVideo(formData: FormData): Promise<ActionResult<{ introVideoPath: string }>> {
   const ctx = await getLogContext();
   const result = await uploadCoachIntroVideoCore(formData);
 
@@ -283,7 +278,7 @@ export async function uploadCoachIntroVideo(
 /**
  * Removes the current coach introduction video
  */
-export async function removeCoachIntroVideo(): Promise<{ success: true } | { success: false; message: string }> {
+export async function removeCoachIntroVideo(): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await removeCoachIntroVideoCore();
 

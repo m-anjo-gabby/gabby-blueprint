@@ -24,6 +24,7 @@ import {
   type SessionListItem,
   type SessionResultSummary,
 } from '@gabby/types/session';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('student');
 
@@ -87,7 +88,7 @@ export async function cancelSession(
   sessionId: string,
   reason?: string,
   proposedSlots?: { start_datetime: string; end_datetime: string }[],
-): Promise<{ success: true } | { success: false; message: string }> {
+): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await cancelSessionCore(sessionId, reason, proposedSlots);
 
@@ -113,7 +114,7 @@ export async function checkSessionConflict(
   startIso: string,
   endIso: string,
   excludeSessionId?: string,
-): Promise<{ success: true; coachConflict: boolean; studentConflict: boolean } | { success: false; message: string }> {
+): Promise<ActionResult<{ coachConflict: boolean; studentConflict: boolean }>> {
   const ctx = await getLogContext();
   const result = await checkSessionConflictCore(coachId, studentId, startIso, endIso, excludeSessionId);
 
@@ -137,7 +138,7 @@ export async function createSessionBookingRequest(
   startIso: string,
   endIso: string,
   reason?: string,
-): Promise<{ success: true; requestId: string } | { success: false; message: string }> {
+): Promise<ActionResult<{ requestId: string }>> {
   const ctx = await getLogContext();
   const result = await createSessionBookingRequestCore(scheduleId, startIso, endIso, reason);
 
@@ -156,9 +157,7 @@ export async function createSessionBookingRequest(
 /**
  * コーチの応答を待たずに、自分の予約リクエスト（pending中）を取り下げる
  */
-export async function withdrawSessionBookingRequest(
-  requestId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function withdrawSessionBookingRequest(requestId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await withdrawSessionBookingRequestCore(requestId);
 
@@ -214,9 +213,7 @@ export async function getMyProposedRescheduleGroups(): Promise<MyReschedulePropo
 /**
  * コーチ提案の振替候補を承諾する
  */
-export async function acceptRescheduleProposal(
-  proposalId: string,
-): Promise<{ success: true; newSessionId: string } | { success: false; message: string }> {
+export async function acceptRescheduleProposal(proposalId: string): Promise<ActionResult<{ newSessionId: string }>> {
   const ctx = await getLogContext();
   const result = await acceptRescheduleProposalCore(proposalId);
 
@@ -232,9 +229,7 @@ export async function acceptRescheduleProposal(
 /**
  * コーチ提案の振替候補を、同一セッション(キャンセル)単位でまとめて却下する
  */
-export async function declineRescheduleProposals(
-  sessionId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function declineRescheduleProposals(sessionId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await declineRescheduleProposalsCore(sessionId);
 
@@ -253,7 +248,7 @@ export async function declineRescheduleProposals(
  */
 export async function getSessionResultSummary(
   sessionId: string,
-): Promise<{ success: true; session: SessionResultSummary } | { success: false; message: string }> {
+): Promise<ActionResult<{ session: SessionResultSummary }>> {
   const result = await getSessionResultSummaryCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();

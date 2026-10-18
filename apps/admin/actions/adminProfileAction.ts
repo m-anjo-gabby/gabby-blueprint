@@ -9,6 +9,7 @@ import { type ProfileIconErrorCode, type MyProfile, type UpdateTimezoneErrorCode
 import { type TimezoneMaster } from '@gabby/types/timezone';
 import { getTranslations } from 'next-intl/server';
 import type { MessageKey } from '@/i18n/types';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -45,9 +46,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
 /**
  * プロフィールアイコンのアップロード
  */
-export async function uploadProfileIcon(
-  formData: FormData,
-): Promise<{ success: true; iconPath: string } | { success: false; message: string }> {
+export async function uploadProfileIcon(formData: FormData): Promise<ActionResult<{ iconPath: string }>> {
   const ctx = await getLogContext();
   const result = await uploadProfileIconCore(formData);
 
@@ -63,7 +62,7 @@ export async function uploadProfileIcon(
 /**
  * プロフィールアイコンの削除
  */
-export async function removeProfileIcon(): Promise<{ success: true } | { success: false; message: string }> {
+export async function removeProfileIcon(): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await removeProfileIconCore();
 
@@ -92,9 +91,7 @@ export async function getTimezoneList(): Promise<TimezoneMaster[]> {
 /**
  * 自分自身のタイムゾーンの更新
  */
-export async function updateMyTimezone(
-  timezone: string,
-): Promise<{ success: true; timezone: string } | { success: false; message: string }> {
+export async function updateMyTimezone(timezone: string): Promise<ActionResult<{ timezone: string }>> {
   const ctx = await getLogContext();
   const result = await updateMyTimezoneCore(timezone);
 

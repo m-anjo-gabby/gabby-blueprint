@@ -15,6 +15,7 @@ import { getCalendarEvents } from './adminCalendarEventAction';
 import type { Json } from '@gabby/types/db';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -113,7 +114,7 @@ export async function getCalendarEventSeries(
 export async function updateCalendarEventSeries(
   seriesId: string,
   formData: CalendarEventSeriesFormData,
-): Promise<{ success: true } | { success: false; message: string }> {
+): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -150,9 +151,7 @@ export async function updateCalendarEventSeries(
 /**
  * シリーズの削除。属する回は削除せず、単発のイベントとして残す（series_id は ON DELETE SET NULL で外れる）
  */
-export async function deleteCalendarEventSeries(
-  seriesId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function deleteCalendarEventSeries(seriesId: string): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -217,7 +216,7 @@ export async function createCalendarEventSeries(
   series: CalendarEventSeriesFormData,
   common: SeriesSessionCommon,
   rows: SeriesSessionRow[],
-): Promise<{ success: true; seriesId: string } | { success: false; message: string }> {
+): Promise<ActionResult<{ seriesId: string }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -262,7 +261,7 @@ export async function addCalendarEventSeriesSessions(
   seriesId: string,
   common: SeriesSessionCommon,
   rows: SeriesSessionRow[],
-): Promise<{ success: true; count: number } | { success: false; message: string }> {
+): Promise<ActionResult<{ count: number }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

@@ -6,6 +6,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { type SessionPayRate } from '@gabby/types/monthlyReport';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -29,9 +30,7 @@ export async function getSessionPayRate(): Promise<SessionPayRate | null> {
   return data;
 }
 
-export async function updateSessionPayRate(
-  input: SessionPayRate,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function updateSessionPayRate(input: SessionPayRate): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   if (!(input.rate_amount >= 0)) {

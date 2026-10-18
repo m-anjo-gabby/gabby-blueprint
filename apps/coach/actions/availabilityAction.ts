@@ -14,6 +14,7 @@ import {
   type CoachAvailabilityFormValues,
   type CoachAvailabilitySlot,
 } from '@gabby/types/coachAvailability';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('coach');
 
@@ -44,7 +45,7 @@ export async function getMyAvailability(): Promise<CoachAvailabilitySlot[]> {
  */
 export async function addAvailability(
   values: CoachAvailabilityFormValues,
-): Promise<{ success: true; slot: CoachAvailabilitySlot } | { success: false; message: string }> {
+): Promise<ActionResult<{ slot: CoachAvailabilitySlot }>> {
   const ctx = await getLogContext();
   const result = await addAvailabilityCore(values);
 
@@ -60,9 +61,7 @@ export async function addAvailability(
 /**
  * Removes an availability slot
  */
-export async function deleteAvailability(
-  availabilityId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function deleteAvailability(availabilityId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await deleteAvailabilityCore(availabilityId);
 
@@ -91,9 +90,7 @@ export async function getMyAvailabilityConfirmedAt(): Promise<string | null> {
 /**
  * Confirms the current availability without changes (resets the 14-day review reminder)
  */
-export async function confirmAvailability(): Promise<
-  { success: true; confirmedAt: string } | { success: false; message: string }
-> {
+export async function confirmAvailability(): Promise<ActionResult<{ confirmedAt: string }>> {
   const ctx = await getLogContext();
   const result = await confirmMyAvailabilityCore();
 

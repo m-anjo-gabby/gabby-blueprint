@@ -20,6 +20,7 @@ import {
 } from '@gabby/types/calendarEvent';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -258,7 +259,7 @@ async function syncCalendarEventCoaches(calendarEventId: string, coachIds: strin
  */
 export async function upsertCalendarEvent(
   formData: CalendarEventFormData,
-): Promise<{ success: true; data: CalendarEventItem } | { success: false; message: string }> {
+): Promise<ActionResult<{ data: CalendarEventItem }>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -325,9 +326,7 @@ export async function upsertCalendarEvent(
  * カレンダーイベントの削除（参加の登録・担当コーチ・メッセージも一緒に消える）。
  * 開催済み（開始日時を過ぎた）イベントは参加の記録を残すため削除せず、非公開にするよう案内する。
  */
-export async function deleteCalendarEvent(
-  calendarEventId: string,
-): Promise<{ success: true } | { success: false; errorCode?: 'held'; message: string }> {
+export async function deleteCalendarEvent(calendarEventId: string): Promise<ActionResult<object, 'held'>> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -501,7 +500,7 @@ export async function getCalendarEventMessages(calendarEventId: string): Promise
 export async function createCalendarEventMessage(
   calendarEventId: string,
   formData: CalendarEventMessageFormData,
-): Promise<{ success: true } | { success: false; message: string }> {
+): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -551,7 +550,7 @@ export async function updateCalendarEventMessage(
   calendarEventMessageId: string,
   calendarEventId: string,
   formData: CalendarEventMessageFormData,
-): Promise<{ success: true } | { success: false; message: string }> {
+): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {
@@ -602,7 +601,7 @@ export async function updateCalendarEventMessage(
 export async function deleteCalendarEventMessage(
   calendarEventMessageId: string,
   calendarEventId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+): Promise<ActionResult> {
   const t = await getTranslations();
   const ctx = await getLogContext();
   try {

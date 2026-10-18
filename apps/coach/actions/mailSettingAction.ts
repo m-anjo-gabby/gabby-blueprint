@@ -1,6 +1,7 @@
 'use server';
 
 import { getMyMailSettingsCore, updateMyMailSettingCore, type MailSettings } from '@gabby/lib/mail/settingsActions';
+import type { ActionResult } from '@gabby/types/action';
 
 /** Email notification settings (enabled/disabled per category). null if they could not be loaded */
 export async function getMyMailSettings(): Promise<MailSettings | null> {
@@ -8,10 +9,7 @@ export async function getMyMailSettings(): Promise<MailSettings | null> {
 }
 
 /** Update one email notification category */
-export async function updateMyMailSetting(
-  category: string,
-  enabled: boolean,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function updateMyMailSetting(category: string, enabled: boolean): Promise<ActionResult> {
   const result = await updateMyMailSettingCore(category, enabled);
   if (!result.success) {
     return {

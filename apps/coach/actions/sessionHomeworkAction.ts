@@ -16,6 +16,7 @@ import {
   type SessionHomeworkComment,
   type SessionHomeworkEntry,
 } from '@gabby/types/sessionHomework';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('coach');
 
@@ -36,7 +37,7 @@ const ATTACHMENT_ERROR_MESSAGES_EN: Record<HomeworkAttachmentErrorCode, string> 
 export async function uploadSessionHomeworkAttachment(
   sessionId: string,
   formData: FormData,
-): Promise<{ success: true; attachment: PendingHomeworkAttachment } | { success: false; message: string }> {
+): Promise<ActionResult<{ attachment: PendingHomeworkAttachment }>> {
   const result = await uploadSessionHomeworkAttachmentCore(sessionId, formData);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -86,7 +87,7 @@ export async function createSessionHomework(
   sessionId: string,
   homeworkText: string,
   attachments: PendingHomeworkAttachment[] = [],
-): Promise<{ success: true; entry: SessionHomeworkEntry } | { success: false; message: string }> {
+): Promise<ActionResult<{ entry: SessionHomeworkEntry }>> {
   const ctx = await getLogContext();
   const result = await createSessionHomeworkCore(sessionId, homeworkText, attachments);
 
@@ -111,7 +112,7 @@ export async function addHomeworkComment(
   sessionId: string,
   commentText: string,
   attachments: PendingHomeworkAttachment[] = [],
-): Promise<{ success: true; comment: SessionHomeworkComment } | { success: false; message: string }> {
+): Promise<ActionResult<{ comment: SessionHomeworkComment }>> {
   const ctx = await getLogContext();
   const result = await addHomeworkCommentCore(sessionId, commentText, attachments);
 
@@ -132,10 +133,7 @@ export async function addHomeworkComment(
  * Marks (or unmarks) a completed session as "no homework this time", so it no longer shows up
  * as "Homework not posted" in the dashboard's Session Tasks.
  */
-export async function setSessionHomeworkNotNeeded(
-  sessionId: string,
-  notNeeded: boolean,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function setSessionHomeworkNotNeeded(sessionId: string, notNeeded: boolean): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await setSessionHomeworkNotNeededCore(sessionId, notNeeded);
   if (!result.success) {

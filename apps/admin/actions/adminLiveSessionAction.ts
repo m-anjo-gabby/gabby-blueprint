@@ -28,6 +28,7 @@ import type { ConductedVia, SessionOutcome, SessionOutcomeEvidence } from '@gabb
 import { USER_TYPES } from '@gabby/types/user';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -566,7 +567,7 @@ export async function adjustTargetSessionsAsAdmin(
 /** 入退室ログからの実施結果の推定と根拠（結果の修正ダイアログを開いた時に取得する） */
 export async function getSessionOutcomeEvidenceAsAdmin(
   sessionId: string,
-): Promise<{ success: true; evidence: SessionOutcomeEvidence } | { success: false; message: string }> {
+): Promise<ActionResult<{ evidence: SessionOutcomeEvidence }>> {
   const result = await getSessionOutcomeEvidenceCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();

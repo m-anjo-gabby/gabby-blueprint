@@ -17,6 +17,7 @@ import {
   type LogSessionDialogueOpenInput,
 } from '@gabby/types/dialogue';
 import { type CoachStudentErrorCode } from '@gabby/types/coachStudent';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('coach');
 
@@ -48,7 +49,7 @@ export async function getAvailableDialogueContents(studentId: string): Promise<D
 export async function assignDialogueContent(
   studentId: string,
   contentId: string,
-): Promise<{ success: true; assignmentId: string } | { success: false; message: string }> {
+): Promise<ActionResult<{ assignmentId: string }>> {
   const result = await assignDialogueContentCore(studentId, contentId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -61,9 +62,7 @@ export async function assignDialogueContent(
 /**
  * Unassigns a previously assigned Dialogue Practice set
  */
-export async function unassignDialogueContent(
-  assignmentId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function unassignDialogueContent(assignmentId: string): Promise<ActionResult> {
   const result = await unassignDialogueContentCore(assignmentId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -92,9 +91,7 @@ export async function getStudentDialogueAssignments(studentId: string): Promise<
 /**
  * Updates a Dialogue Practice session's completion state and coach notes
  */
-export async function updateDialogueSessionProgress(
-  input: UpdateDialogueSessionProgressInput,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function updateDialogueSessionProgress(input: UpdateDialogueSessionProgressInput): Promise<ActionResult> {
   const result = await updateDialogueSessionProgressCore(input);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -108,9 +105,7 @@ export async function updateDialogueSessionProgress(
  * Records that a coach opened a Dialogue Practice material's material link during a live session.
  * Best-effort logging only — callers should not block the material link on this.
  */
-export async function logSessionDialogueOpen(
-  input: LogSessionDialogueOpenInput,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function logSessionDialogueOpen(input: LogSessionDialogueOpenInput): Promise<ActionResult> {
   const result = await logSessionDialogueOpenCore(input);
   if (!result.success) {
     const ctx = await getLogContext();

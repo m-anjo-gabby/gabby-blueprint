@@ -93,7 +93,7 @@ export async function updateCompanyProfile(
 export async function uploadCompanyLogo(
   companyCode: CompanyCode,
   file: File,
-): Promise<{ success: true; logoPath: string } | { success: false; message: string }> {
+): Promise<ActionResult<{ logoPath: string }>> {
   const ctx = await getLogContext();
   const t = await getTranslations('companyProfiles.errors');
   if (!(await isAdmin())) return { success: false, message: t('forbidden') };

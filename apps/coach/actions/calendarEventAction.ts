@@ -10,6 +10,7 @@ import {
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { type CalendarEventItem, type CalendarEventMessageItem } from '@gabby/types/calendarEvent';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('coach');
 
@@ -31,9 +32,7 @@ export async function getMyCalendarEvents(startIso: string, endIso: string): Pro
 /**
  * Join a calendar event (e.g. a group session) that has RSVP enabled.
  */
-export async function joinCalendarEvent(
-  calendarEventId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function joinCalendarEvent(calendarEventId: string): Promise<ActionResult> {
   const result = await joinCalendarEventCore(calendarEventId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -46,9 +45,7 @@ export async function joinCalendarEvent(
 /**
  * Cancel participation in a calendar event.
  */
-export async function cancelCalendarEventParticipation(
-  calendarEventId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function cancelCalendarEventParticipation(calendarEventId: string): Promise<ActionResult> {
   const result = await cancelCalendarEventParticipationCore(calendarEventId);
   if (!result.success) {
     const ctx = await getLogContext();

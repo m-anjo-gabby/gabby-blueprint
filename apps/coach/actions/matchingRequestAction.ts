@@ -10,6 +10,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { type IncomingMatchingRequestItem, type MatchingRequestErrorCode } from '@gabby/types/matching';
 import { type CoachIncomingRequestItem } from '@gabby/types/coachInbox';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('coach');
 
@@ -69,9 +70,7 @@ export async function getMatchingRequestHistoryPage(
  * Approves a matching request. This automatically creates the recurring
  * lesson schedule and generates all individual sessions for the license period.
  */
-export async function approveMatchingRequest(
-  requestId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function approveMatchingRequest(requestId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await approveMatchingRequestCore(requestId);
 
@@ -87,10 +86,7 @@ export async function approveMatchingRequest(
 /**
  * Rejects a matching request with a required reason
  */
-export async function rejectMatchingRequest(
-  requestId: string,
-  reason: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function rejectMatchingRequest(requestId: string, reason: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await rejectMatchingRequestCore(requestId, reason);
 

@@ -29,6 +29,7 @@ import {
   type SessionResultSummary,
 } from '@gabby/types/session';
 import { type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('coach');
 
@@ -65,7 +66,7 @@ export async function cancelSession(
   sessionId: string,
   reason?: string,
   proposedSlots?: ProposedSlotInput[],
-): Promise<{ success: true } | { success: false; message: string }> {
+): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await cancelSessionCore(sessionId, reason, proposedSlots);
 
@@ -107,7 +108,7 @@ export async function recordSessionOutcome(
  */
 export async function getSessionOutcomeEvidence(
   sessionId: string,
-): Promise<{ success: true; evidence: SessionOutcomeEvidence } | { success: false; message: string }> {
+): Promise<ActionResult<{ evidence: SessionOutcomeEvidence }>> {
   const result = await getSessionOutcomeEvidenceCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -122,7 +123,7 @@ export async function getSessionOutcomeEvidence(
  */
 export async function getSessionResultSummary(
   sessionId: string,
-): Promise<{ success: true; session: SessionResultSummary } | { success: false; message: string }> {
+): Promise<ActionResult<{ session: SessionResultSummary }>> {
   const result = await getSessionResultSummaryCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -163,7 +164,7 @@ export async function checkSessionConflict(
   startIso: string,
   endIso: string,
   excludeSessionId?: string,
-): Promise<{ success: true; coachConflict: boolean; studentConflict: boolean } | { success: false; message: string }> {
+): Promise<ActionResult<{ coachConflict: boolean; studentConflict: boolean }>> {
   const ctx = await getLogContext();
   const result = await checkSessionConflictCore(coachId, studentId, startIso, endIso, excludeSessionId);
 
@@ -178,9 +179,7 @@ export async function checkSessionConflict(
 /**
  * Approves a student's session booking request, creating the confirmed session.
  */
-export async function approveSessionBookingRequest(
-  requestId: string,
-): Promise<{ success: true; newSessionId: string } | { success: false; message: string }> {
+export async function approveSessionBookingRequest(requestId: string): Promise<ActionResult<{ newSessionId: string }>> {
   const ctx = await getLogContext();
   const result = await approveSessionBookingRequestCore(requestId);
 
@@ -196,10 +195,7 @@ export async function approveSessionBookingRequest(
 /**
  * Rejects a student's session booking request. The ticket stays unassigned.
  */
-export async function rejectSessionBookingRequest(
-  requestId: string,
-  reason?: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function rejectSessionBookingRequest(requestId: string, reason?: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await rejectSessionBookingRequestCore(requestId, reason);
 
@@ -215,9 +211,7 @@ export async function rejectSessionBookingRequest(
 /**
  * Accepts one of the candidate times a student proposed when cancelling a session.
  */
-export async function acceptRescheduleProposal(
-  proposalId: string,
-): Promise<{ success: true; newSessionId: string } | { success: false; message: string }> {
+export async function acceptRescheduleProposal(proposalId: string): Promise<ActionResult<{ newSessionId: string }>> {
   const ctx = await getLogContext();
   const result = await acceptRescheduleProposalCore(proposalId);
 
@@ -234,9 +228,7 @@ export async function acceptRescheduleProposal(
  * Declines all candidate times a student proposed for one cancelled session at once
  * (candidates are mutually exclusive choices, so rejection applies to the whole group).
  */
-export async function declineRescheduleProposals(
-  sessionId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function declineRescheduleProposals(sessionId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await declineRescheduleProposalsCore(sessionId);
 

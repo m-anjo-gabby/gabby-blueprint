@@ -16,6 +16,7 @@ import {
   type CalendarEventMessageItem,
   getCalendarEventPhase,
 } from '@gabby/types/calendarEvent';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('student');
 
@@ -80,9 +81,7 @@ export async function getGroupSessionList(): Promise<{ upcoming: CalendarEventIt
 /**
  * シリーズのまだ終わっていない回に、まとめて参加登録する
  */
-export async function joinCalendarEventSeries(
-  seriesId: string,
-): Promise<{ success: true; joinedIds: string[] } | { success: false; message: string }> {
+export async function joinCalendarEventSeries(seriesId: string): Promise<ActionResult<{ joinedIds: string[] }>> {
   const result = await joinCalendarEventSeriesCore(seriesId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -95,9 +94,7 @@ export async function joinCalendarEventSeries(
 /**
  * グループセッション等（rsvp_enabled=TRUE）のカレンダーイベントに参加登録する
  */
-export async function joinCalendarEvent(
-  calendarEventId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function joinCalendarEvent(calendarEventId: string): Promise<ActionResult> {
   const result = await joinCalendarEventCore(calendarEventId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -110,9 +107,7 @@ export async function joinCalendarEvent(
 /**
  * カレンダーイベントの参加をキャンセルする
  */
-export async function cancelCalendarEventParticipation(
-  calendarEventId: string,
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function cancelCalendarEventParticipation(calendarEventId: string): Promise<ActionResult> {
   const result = await cancelCalendarEventParticipationCore(calendarEventId);
   if (!result.success) {
     const ctx = await getLogContext();

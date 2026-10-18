@@ -4,6 +4,7 @@ import { getCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/mont
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { type CoachMonthlyReport, type MonthlyReportErrorCode } from '@gabby/types/monthlyReport';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('coach');
 
@@ -19,9 +20,7 @@ const MONTHLY_REPORT_ERROR_MESSAGES_EN: Record<MonthlyReportErrorCode, string> =
 /**
  * Fetches the current coach's own monthly coaching report (defaults handled by caller: pass "YYYY-MM").
  */
-export async function getMyMonthlyReport(
-  reportMonth: string,
-): Promise<{ success: true; report: CoachMonthlyReport } | { success: false; message: string }> {
+export async function getMyMonthlyReport(reportMonth: string): Promise<ActionResult<{ report: CoachMonthlyReport }>> {
   const ctx = await getLogContext();
   const result = await getCoachMonthlyReportCore(reportMonth);
 

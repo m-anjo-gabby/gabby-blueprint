@@ -32,6 +32,7 @@ import {
   type SelfTrainingWeekSummary,
 } from '@gabby/types/coachStudent';
 import { type SprintQuestionType } from '@gabby/types/sprint';
+import type { ActionResult } from '@gabby/types/action';
 
 const logger = createLogger('coach');
 
@@ -61,7 +62,7 @@ export async function getAssignedStudents(): Promise<AssignedStudentSummary[]> {
  */
 export async function getStudentOverview(
   studentId: string,
-): Promise<{ success: true; profile: StudentOverviewProfile } | { success: false; message: string }> {
+): Promise<ActionResult<{ profile: StudentOverviewProfile }>> {
   const result = await getStudentOverviewCore(studentId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -173,7 +174,7 @@ export async function getSelfTrainingWeekSummary(studentId: string, days = 7): P
 export async function addCoachStudentNote(
   studentId: string,
   noteText: string,
-): Promise<{ success: true; note: CoachStudentNote } | { success: false; message: string }> {
+): Promise<ActionResult<{ note: CoachStudentNote }>> {
   const result = await addCoachStudentNoteCore(studentId, noteText);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -205,7 +206,7 @@ export async function saveContractTrainingReportDraft(
   ticketId: string,
   studentId: string,
   commentText: string,
-): Promise<{ success: true; report: ContractTrainingReport } | { success: false; message: string }> {
+): Promise<ActionResult<{ report: ContractTrainingReport }>> {
   const result = await saveContractTrainingReportDraftCore(ticketId, studentId, commentText);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -220,7 +221,7 @@ export async function saveContractTrainingReportDraft(
  */
 export async function finalizeContractTrainingReport(
   reportId: string,
-): Promise<{ success: true; report: ContractTrainingReport } | { success: false; message: string }> {
+): Promise<ActionResult<{ report: ContractTrainingReport }>> {
   const result = await finalizeContractTrainingReportCore(reportId);
   if (!result.success) {
     const ctx = await getLogContext();
