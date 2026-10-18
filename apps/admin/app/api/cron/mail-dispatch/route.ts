@@ -44,7 +44,9 @@ async function handle(req: NextRequest) {
   }
   try {
     if ((await readTask(req)) === 'daily_report') {
-      return NextResponse.json(await sendMailDailyReport());
+      // 宛先の無い環境（dev 等）でも実行環境の tzdata の版を確かめられるよう、応答にも載せる
+      const runtime = { node: process.version, tz: process.versions.tz };
+      return NextResponse.json({ ...(await sendMailDailyReport()), runtime });
     }
     const summary = await dispatchMail();
     return NextResponse.json(summary);
