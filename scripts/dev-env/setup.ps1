@@ -177,6 +177,9 @@ Push-Location $RepoPath
 try { Invoke-Native 'pnpm' @('install', '--frozen-lockfile') } finally { Pop-Location }
 Write-Ok '依存パッケージをインストールしました。'
 
+# 書式だけの一括変更（.git-blame-ignore-revs）を git blame で飛ばす
+Invoke-Native 'git' @('-C', $RepoPath, 'config', 'blame.ignoreRevsFile', '.git-blame-ignore-revs')
+
 # ---------------------------------------------------------------------------
 Write-Step '5. 環境ファイル等の展開'
 # ---------------------------------------------------------------------------

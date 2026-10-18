@@ -106,6 +106,7 @@ cd C:\react
 git clone https://github.com/m-anjo-gabby/gabby-blueprint.git
 cd gabby-blueprint
 git switch <作業ブランチ>     # 例: feature/20260925-dev
+git config blame.ignoreRevsFile .git-blame-ignore-revs   # 書式だけの一括変更を git blame で飛ばす
 ```
 
 初回の push/pull でブラウザが開き、GitHub へのサインインを求められます（Git Credential Manager）。
@@ -197,7 +198,7 @@ Get-NetTCPConnection -LocalPort 3000,3001,3002 -State Listen -ErrorAction Silent
 | 拡張機能 | 用途 |
 |---|---|
 | ESLint | Lint 表示 |
-| Prettier | 整形 |
+| Prettier | 整形（JS/TS は保存時に整形する。`.vscode/settings.json`） |
 | Tailwind CSS IntelliSense | クラス名の補完 |
 | Claude Code | AI による開発支援（任意） |
 | Japanese Language Pack | VSCode の日本語化（任意） |

@@ -1,0 +1,4 @@
+# git blame で無視するコミット（書式だけの一括変更）。
+# 手元: git config blame.ignoreRevsFile .git-blame-ignore-revs（GitHub の blame は自動で読む）
+# Prettier で JS/TS のコードを一括整形する
+433da62bceda502b04732ae52c3e75b31f804dae
