@@ -105,10 +105,35 @@ export async function uploadChatAttachment(
 /**
  * チャット添付ファイルの公開URL（署名付きURL）を取得
  * "chat" バケットはPrivate運用のため、有効期限付きの署名URLを返す。
+ * 署名は service_role で作るため、先に利用者の権限（RLS: ルームの参加者・アドミン）で添付の行が見えるかを確かめる
+ * （パスを知っていることを見てよい権利の代わりにしない。docs/SECURITY.md 4章）。
  */
 export async function getChatAttachmentUrl(path: string): Promise<{ url: string | null }> {
   const ctx = await getLogContext();
   try {
+    const user = await getAuthUser();
+    if (!user) return { url: null };
+
+    const serverSupabase = await createServerClient();
+    const { data: visible, error: lookupError } = await serverSupabase
+      .from('com_t_chat_attachment')
+      .select('file_path')
+      .eq('file_path', path)
+      .limit(1)
+      .maybeSingle();
+    if (lookupError || !visible) {
+      logger.warn(
+        'chat:get_attachment_url_forbidden',
+        lookupError?.message ?? 'Attachment is not visible to the user',
+        {
+          ...ctx,
+          err: lookupError,
+          payload: { path },
+        },
+      );
+      return { url: null };
+    }
+
     const supabase = createAdminClient();
     const { data, error } = await supabase.storage.from('chat').createSignedUrl(path, 60 * 60);
 

@@ -86,7 +86,8 @@ CREATE TABLE ...       ← 定義（schema.mjs が実DBから生成する。手�
 node supabase/release/schema.mjs --env=dev --check
 ```
 
-正本の定義と dev の実際の定義が違うテーブルを表示します（違いがあれば終了コード 1）。
+正本の定義と dev の実際の定義が違うテーブルと、「関数の権限」に合わない SECURITY DEFINER の関数
+（`search_path` の固定が無い・anon が実行できる）を表示します（どちらかがあれば終了コード 1）。
 リリース前や、リリーススクリプトを dev に適用した後に実行します。`--env=staging` / `prod` で
 他の環境と正本を比べることもできます（未リリースの変更がある間は差分が出るのが正常です）。
 
@@ -107,3 +108,17 @@ Supabase のクライアント（`packages/lib/supabase/*`）は、DB の型で�
 
 `CREATE OR REPLACE` で全体を書いたファイルを、変更のたびに書き直します（追記はしません）。
 先頭のコメントには、テーブルと同じく今有効なルールだけを書きます。
+
+### 関数の権限
+
+SECURITY DEFINER の関数は所有者の権限で RLS を通らずに動くため、次をそろえます（入口全体の考え方は `docs/SECURITY.md`）。
+
+| 項目 | 決まり |
+|---|---|
+| `search_path` | `SET search_path = public` で固定する（呼び出し側が作ったスキーマの同名の表・関数を使わせない）。トリガーの関数も同じ |
+| 実行の権限 | 作成の後に `REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC, anon` を書き、呼ばせる相手だけに `GRANT EXECUTE`（`authenticated` / `service_role`）。サーバーだけから呼ぶ関数は `authenticated` からも外す。anon には与えない（未ログインの処理はサーバーの service_role から呼ぶ）。トリガーの関数は直接呼べないため不要 |
+| 呼び出し元の確認 | `authenticated` が実行できる関数は、中で `auth.uid()`・`auth.jwt()` か、それを使う共通の関数（`get_jwt_user_type()`・`get_jwt_client_id()`・`fn_assert_actor_or_admin()`・`private.get_monitor_client_id()` 等）で、呼び出し元が対象を扱ってよいかを確かめる |
+| 内部の共通の関数 | 他の関数の中からだけ呼ぶものは `private` スキーマに置き、`authenticated` にも実行させない |
+
+正本のファイルの書き忘れは単体テスト（`testing/unit/ddl-function-security.test.ts`）、実DBの状態は `schema.mjs --check`（「ずれの確認」）で止めます。
+確かめずに `authenticated` に実行させる関数を作る場合は、テストの `UNCHECKED_CALLER` に理由とともに書きます。

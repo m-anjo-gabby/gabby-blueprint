@@ -106,10 +106,31 @@ export async function uploadSessionHomeworkAttachmentCore(
 
 /**
  * 宿題添付ファイルの署名付きURLを取得（"homework"バケットは非公開のため都度発行する）
+ * 署名は service_role で作るため、先に利用者の権限（RLS: 宿題のコーチ・生徒・アドミン）で添付の行が見えるかを確かめる
+ * （パスを知っていることを見てよい権利の代わりにしない。docs/SECURITY.md 4章）。
  */
 export async function getSessionHomeworkAttachmentUrl(path: string): Promise<{ url: string | null; error?: string }> {
   const ctx = await getLogContext();
   try {
+    const user = await getAuthUser();
+    if (!user) return { url: null };
+
+    const serverSupabase = await createServerClient();
+    const { data: visible, error: lookupError } = await serverSupabase
+      .from('com_t_session_homework_attachment')
+      .select('file_path')
+      .eq('file_path', path)
+      .limit(1)
+      .maybeSingle();
+    if (lookupError || !visible) {
+      logger.warn(
+        'sessionHomework:get_attachment_url_forbidden',
+        lookupError?.message ?? 'Attachment is not visible to the user',
+        { ...ctx, err: lookupError, payload: { path } },
+      );
+      return { url: null };
+    }
+
     const supabase = createAdminClient();
     const { data, error } = await supabase.storage.from('homework').createSignedUrl(path, 60 * 60);
 

@@ -6,7 +6,7 @@
 // 運用手順は supabase/DDL/README.md を参照。
 //
 // 使い方（リポジトリ直下で実行。DBへは読み取りのみ）:
-//   node supabase/release/schema.mjs --env=dev --check                 正本と実DBの差分を確認
+//   node supabase/release/schema.mjs --env=dev --check                 正本と実DBの差分・SECURITY DEFINER の関数の決まりを確認
 //   node supabase/release/schema.mjs --env=dev --write                 全ての正本のマーカー内を実DBの内容で書き直す
 //   node supabase/release/schema.mjs --env=dev --write com_t_session   指定テーブルのみ書き直す
 //   node supabase/release/schema.mjs --env=dev --print com_t_session   生成結果を表示（ファイルは変更しない）
@@ -339,8 +339,35 @@ async function main() {
     if (uncovered.length > 0)
       console.log(`\n正本（マーカー）の無いテーブル: ${uncovered.length} 件\n  ${uncovered.join('\n  ')}`);
     console.log(diffs.length === 0 && missing.length === 0 ? '\n正本と実DBは一致しています。' : '');
-    if (diffs.length > 0 || missing.length > 0) process.exitCode = 1;
+    const unsafe = await findUnsafeDefinerFunctions(query).catch((e) => fail(`関数の確認に失敗しました: ${e.message}`));
+    if (unsafe.length > 0) {
+      console.log('\nSECURITY DEFINER の決まりに合わない関数（supabase/DDL/README.md「関数の権限」）:');
+      unsafe.forEach((u) => console.log(`  ${u}`));
+    }
+    if (diffs.length > 0 || missing.length > 0 || unsafe.length > 0) process.exitCode = 1;
   }
+}
+
+/**
+ * 実DBの SECURITY DEFINER の関数のうち、search_path を固定していないもの・anon が実行できるもの（トリガー以外）を返す。
+ * 正本のファイルの書き方は単体テスト（testing/unit/ddl-function-security.test.ts）で見ており、こちらは実DBの状態を見る。
+ */
+async function findUnsafeDefinerFunctions(query) {
+  const rows = await query(`
+    SELECT n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS signature,
+           coalesce(array_to_string(p.proconfig, ','), '') LIKE '%search_path=%' AS has_search_path,
+           p.prorettype = 'trigger'::regtype AS is_trigger,
+           has_function_privilege('anon', p.oid, 'EXECUTE') AS anon_can_execute
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE p.prosecdef AND n.nspname IN (${[...SCHEMAS, 'private'].map((s) => `'${s}'`).join(', ')})
+    ORDER BY 1`);
+  return rows.flatMap((r) => {
+    const problems = [];
+    if (!r.has_search_path) problems.push('search_path を固定していない');
+    if (r.anon_can_execute && !r.is_trigger) problems.push('anon が実行できる');
+    return problems.length > 0 ? [`${r.signature}: ${problems.join('・')}`] : [];
+  });
 }
 
 /** 正本側にだけある行を「-」、実DB側にだけある行を「+」で表示する（行単位の簡易な差分） */

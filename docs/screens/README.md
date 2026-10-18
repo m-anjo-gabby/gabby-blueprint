@@ -1,7 +1,7 @@
 # 画面仕様書（docs/screens/）
 
 `docs/screens/`は、チーム共有用の画面単位ドキュメント置き場である。
-[`testing/e2e/specs/`](../testing/e2e/README.md)（複数画面をまたぐ業務フローの仕様書）とは
+[`testing/e2e/specs/`](../../testing/e2e/README.md)（複数画面をまたぐ業務フローの仕様書）とは
 目的・粒度が異なる。
 
 | | `testing/e2e/specs/`（業務フロー仕様書） | `docs/screens/`（画面仕様書） |
@@ -22,17 +22,16 @@
 ## ディレクトリ構成
 
 ```
-docs/
-├── README.md          # 本ファイル
-└── screens/
-    ├── _INDEX.md       # 索引（どの画面の仕様書があるか。まずここを見る）
-    ├── _TEMPLATE.md    # 新規画面仕様書のひな形
-    └── <app>/          # student / coach / admin
-        └── <screen>.md
+docs/screens/
+├── README.md       # 本ファイル
+├── _INDEX.md       # 索引（どの画面の仕様書があるか。まずここを見る）
+├── _TEMPLATE.md    # 新規画面仕様書のひな形
+└── <app>/          # student / coach / admin / common
+    └── <screen>.md
 ```
 
 画面仕様書とは別に、ColorVowel辞書データ作成のナレッジ（要確認台帳・判断基準ガイド）を
-[`cv-dictionary/`](./cv-dictionary/README.md) に置いている（コンテンツチームとの確認記録用。運用は同READMEを参照）。
+[`docs/cv-dictionary/`](../cv-dictionary/README.md) に置いている（コンテンツチームとの確認記録用。運用は同READMEを参照）。
 
 ## 運用ルール（`testing/e2e/`と共通の原則）
 
@@ -43,10 +42,10 @@ docs/
 4. **業務フロー（複数画面をまたぐ話）は書かず、`testing/e2e/specs/`側にリンクする。**
    逆に業務フロー仕様書側も、画面固有の見た目・要素の詳細は書かずここにリンクする。
 5. **仕様書と実装の齟齬・非自明な挙動に気づいたら、
-   [`testing/TEST-JUDGEMENT-GUIDE.md`](../testing/TEST-JUDGEMENT-GUIDE.md)に記録する。**
+   [`testing/TEST-JUDGEMENT-GUIDE.md`](../../testing/TEST-JUDGEMENT-GUIDE.md)に記録する。**
    `testing/e2e/`側と同じ知見蓄積先に一本化する。
 
 ## 新規画面仕様書の作成
 
-`screens/_TEMPLATE.md`をコピーし、対象アプリのディレクトリ（`screens/<app>/`）に画面名で保存する。
+`_TEMPLATE.md`をコピーし、対象アプリのディレクトリ（`<app>/`）に画面名で保存する。
 保存したら`_INDEX.md`にも1行追加する。

@@ -1,6 +1,6 @@
-# Gabby Blueprint English
+# Gabby Blueprint
 
-英語学習アプリ『Gabby Blueprint English』のモノレポ（Turborepo / pnpm Workspaces）です。
+英語学習アプリ『Gabby Blueprint』のモノレポ（Turborepo / pnpm Workspaces）です。
 
 | ディレクトリ | 内容 | ローカルURL |
 |---|---|---|
@@ -10,7 +10,7 @@
 | `packages/lib` / `packages/types` | 共通ロジック・UI・型定義 |  |
 | `supabase/` | DDL・リリーススクリプト（`supabase/release/README.md`） |  |
 | `testing/` | データ主体テスト・E2E（`testing/README.md`） |  |
-| `docs/` | 画面仕様書など（`docs/README.md`） |  |
+| `docs/` | 規約・画面仕様書など（索引は `CLAUDE.md` の表、画面仕様書は `docs/screens/README.md`） |  |
 
 ## はじめに
 
