@@ -24,6 +24,7 @@ admin / coach / student と共通部品（`packages/lib/components`）の画面�
 - B. 画面内の区画単位の遅延表示: 独立した区画（カード）が並び、区画ごとに取得の重さが違う画面は、ページで全件を `await` せずカード・区画ごとの async コンポーネントに分けて `<Suspense fallback={<CardSkeleton />}>` で包む（例: coach `students/[id]/page.tsx`）。区画の骨組みは本番の区画と同じ枠・高さにし、区画の並び（列数・幅）は遅れて届くデータで変わらないようにする（変わると後から出た区画が周りを押し動かす）。判定に複数の取得を使うなど区画同士でデータが連動する場合は、同じ `Suspense` にまとめる。1種類のデータを一覧する画面は、区画に分けず A の画面専用の骨組み（一覧部分だけ骨組み）で足りる。複数区画で同じ取得を使う場合は React の `cache()` で1回にまとめる。クライアント部品が画面全体を持つ場合は、区画を `ReactNode` の差し込み口にしてサーバー側で `Suspense` を渡す（例: coach `sessions/[sessionId]/page.tsx`）。月切替・検索などURLのクエリだけが変わる遷移では `loading.tsx` が出ないため、結果の区画を条件ごとに `key` を変えた `<Suspense>` で包む（例: admin/coach `monthly-reports/page.tsx`）か、切替操作側で `useTransition` の `isPending` を表示する（例: `useMonthNavigator`）。
 - C. 操作中: ボタンの処理中表示は各アプリの `Button` の `pending` プロップ（先頭アイコンは `icon` プロップで渡すと処理中はスピナーに置き換わる）（フォーム送信は `useFormStatus`、それ以外は `useTransition` の `isPending` を渡す）を使い、`Loader2` の個別実装は新規に増やさない。既存の個別実装は、その画面を改修するついでに置き換える。
 - D. 没入画面（ドリル・ライブ通話等）の準備中表示は画面専用の実装を許可する。遷移中の汎用表示は `LoadingScreen`（student は `ImmersiveLoading`）。
+- 読み込みの失敗: 一覧・主な内容の取得に失敗した区画は、空の一覧（「0件」）にせず `SectionLoadError`（`packages/lib/components/common/`）で出す。補助の区画は出さなくてよい。決まりの正本は [CODING.md](./CODING.md) 6章「画面のデータの取得」。
 
 ## ダイアログ・シートを開いた時のフォーカス（全アプリ共通）
 

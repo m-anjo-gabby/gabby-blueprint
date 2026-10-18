@@ -4,6 +4,8 @@ import { MonitorUserList } from './_components/MonitorUserList';
 import { MonitorWordHistoryView } from './_components/MonitorWordHistoryView';
 import { MonitorSprintHistoryView } from './_components/MonitorSprintHistoryView';
 import { currentReportingMonth } from '@gabby/lib/date/reporting';
+import { SectionLoadError } from '@gabby/lib/components/common/SectionLoadError';
+import { LOAD_ERROR_MESSAGE, RELOAD_LABEL } from '@/constants/network';
 import { getMonthRange, parseMonitorView, type MonitorQuery } from './_components/monitorQuery';
 
 export const dynamic = 'force-dynamic';
@@ -40,10 +42,18 @@ export default async function MonitorPage({ searchParams }: MonitorPageProps) {
     getMonitorSprintHistory(startDate, endDate, filterUserIds, includeMonitor),
   ]);
 
-  // 取得の失敗は各アクションでログに残し、空の一覧として表示する
-  const users = userListResult.success ? userListResult.data : [];
-  const wordHistory = wordHistoryResult.success ? wordHistoryResult.data : [];
-  const sprintHistory = sprintHistoryResult.success ? sprintHistoryResult.data : { sessions: [], drills: [] };
+  // 取得の失敗は各アクションでログに残す。「該当する受講生がいない」と見分けがつくよう、空の一覧ではなく読み込みの失敗として出す
+  if (!userListResult.success || !wordHistoryResult.success || !sprintHistoryResult.success) {
+    return (
+      <>
+        <MonitorHeader query={query} />
+        <SectionLoadError message={LOAD_ERROR_MESSAGE} retryLabel={RELOAD_LABEL} />
+      </>
+    );
+  }
+  const users = userListResult.data;
+  const wordHistory = wordHistoryResult.data;
+  const sprintHistory = sprintHistoryResult.data;
 
   return (
     <>
