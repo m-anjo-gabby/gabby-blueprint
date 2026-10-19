@@ -25,6 +25,7 @@ URL は `https://drive.google.com/drive/folders/<ID>`（フォルダ）、`https
 | 50_外部サービスの中 | ID | 中身 |
 |---|---|---|
 | Axiom | `14LWo0CudP-lRPdYnxy7OrwXfW1vzT2Di` | `Axiom（ログの保存とエラーの通知）`（`1mbK7k5jJY3RH6d2uSXX0XN7Z8oeYlY3H13QZGD3053I`。正本は docs/LOGGING.md） |
+| （直下） | — | `会社アカウントへの移行手順`（`1jPyKsLfGtEFIgZsPFVIYe6PpJArlFWuNfqBNx4bJH3s`。全サービス共通の作業の手順。終わったら 90_アーカイブ へ移す） |
 
 A_開発の各フォルダの細かい使い方はまだ決めていない（HISTORY.md の未決事項）。
 
