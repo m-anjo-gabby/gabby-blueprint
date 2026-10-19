@@ -76,15 +76,6 @@ export type Database = {
     }
     Functions: {
       get_monitor_client_id: { Args: never; Returns: string }
-      get_monitor_sprint_history: {
-        Args: {
-          _end_date: string | null
-          _include_monitor?: boolean | null
-          _start_date: string | null
-          _user_ids?: string[] | null
-        }
-        Returns: Json[]
-      }
       get_monitor_target_users: {
         Args: {
           _client_id: string | null
@@ -101,48 +92,6 @@ export type Database = {
           plan_name: string
           user_id: string
         }[]
-      }
-      get_monitor_user_list: {
-        Args: { _include_monitor?: boolean | null }
-        Returns: {
-          client_id: string | null
-          client_name: string | null
-          confirmed_at: string | null
-          contract_id: string | null
-          contract_name: string | null
-          email: string | null
-          id: string | null
-          insert_date: string | null
-          last_mail_error: string | null
-          last_sign_in_at: string | null
-          license_end_date: string | null
-          license_id: string | null
-          license_start_date: string | null
-          license_state: string | null
-          license_status: number | null
-          mail_sent_at: string | null
-          plan_name: string | null
-          roles: string[] | null
-          user_id: number | null
-          user_name: string | null
-          user_status: number | null
-          user_type: string | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "vw_user_list"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      get_monitor_word_history: {
-        Args: {
-          _end_date: string | null
-          _include_monitor?: boolean | null
-          _start_date: string | null
-          _user_ids?: string[] | null
-        }
-        Returns: Json[]
       }
       invoke_mail_dispatch: { Args: { p_body?: Json }; Returns: undefined }
       invoke_mail_dispatch_if_due: { Args: never; Returns: undefined }
@@ -5221,6 +5170,7 @@ export type Database = {
         Args: { p_contract_id: string | null }
         Returns: boolean
       }
+      is_system_admin: { Args: never; Returns: boolean }
       mark_session_homework_viewed: {
         Args: { p_session_id: string | null }
         Returns: undefined

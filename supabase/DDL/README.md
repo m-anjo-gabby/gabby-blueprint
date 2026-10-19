@@ -126,7 +126,8 @@ SECURITY DEFINER の関数は所有者の権限で RLS を通らずに動くた�
 |---|---|
 | `search_path` | `SET search_path = public` で固定する（呼び出し側が作ったスキーマの同名の表・関数を使わせない）。トリガーの関数も同じ |
 | 実行の権限 | 作成の後に `REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC, anon` を書き、呼ばせる相手だけに `GRANT EXECUTE`（`authenticated` / `service_role`）。サーバーだけから呼ぶ関数は `authenticated` からも外す。anon には与えない（未ログインの処理はサーバーの service_role から呼ぶ）。トリガーの関数は直接呼べないため不要 |
-| 呼び出し元の確認 | `authenticated` が実行できる関数は、中で `auth.uid()`・`auth.jwt()` か、それを使う共通の関数（`get_jwt_user_type()`・`get_jwt_client_id()`・`fn_assert_actor_or_admin()`・`private.get_monitor_client_id()` 等）で、呼び出し元が対象を扱ってよいかを確かめる |
+| 呼び出し元の確認 | `authenticated` が実行できる関数は、中で `auth.uid()`・`auth.jwt()` か、それを使う共通の関数（`get_jwt_user_type()`・`is_system_admin()`・`get_jwt_client_id()`・`fn_assert_actor_or_admin()`・`private.get_monitor_client_id()` 等）で、呼び出し元が対象を扱ってよいかを確かめる |
+| admin の権利 | admin の利用者には教材担当（`roles` が `content_manager` だけ）もいるため、関数・RLS で admin に許す操作は `is_system_admin()`（`user_type` が `'0'` で JWT の `roles` に `admin`）で判定し、`get_jwt_user_type() = '0'` だけで許さない。教材担当にも開く表（チャット・TTS の音声・AI のナレッジ）だけは `get_jwt_user_type() = '0'` で判定する |
 | 内部の共通の関数 | 他の関数の中からだけ呼ぶものは `private` スキーマに置き、`authenticated` にも実行させない |
 
 正本のファイルの書き忘れは単体テスト（`testing/unit/ddl-function-security.test.ts`）、実DBの状態は `schema.mjs --check`（「ずれの確認」）で止めます。

@@ -21,7 +21,7 @@ AS $$
 DECLARE
     v_coach jsonb;
 BEGIN
-    IF COALESCE(public.get_jwt_user_type(), '') <> '0' THEN
+    IF NOT public.is_system_admin() THEN
         RAISE EXCEPTION 'NOT_AUTHORIZED: only admins can view coach ratings';
     END IF;
 

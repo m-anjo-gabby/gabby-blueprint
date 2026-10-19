@@ -47,7 +47,7 @@ USING (
     (EXISTS ( SELECT 1
        FROM public.com_t_dialogue_assignment a
          JOIN public.com_m_coach_student_relationship r ON r.student_id = a.student_id
-      WHERE a.assignment_id = com_t_dialogue_session_progress.assignment_id AND r.coach_id = auth.uid())) OR public.get_jwt_user_type() = '0'::text
+      WHERE a.assignment_id = com_t_dialogue_session_progress.assignment_id AND r.coach_id = auth.uid())) OR public.is_system_admin()
 )
 WITH CHECK (
     updated_by_coach_id = auth.uid() AND (EXISTS ( SELECT 1

@@ -47,6 +47,6 @@ CREATE POLICY "Involved users can view session chat" ON public.com_t_session_cha
 USING (
     (EXISTS ( SELECT 1
        FROM public.com_t_session s
-      WHERE s.session_id = com_t_session_chat.session_id AND (s.coach_id = auth.uid() OR s.student_id = auth.uid()))) OR public.get_jwt_user_type() = '0'::text
+      WHERE s.session_id = com_t_session_chat.session_id AND (s.coach_id = auth.uid() OR s.student_id = auth.uid()))) OR public.is_system_admin()
 );
 -- @end-schema

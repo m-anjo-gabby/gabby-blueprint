@@ -63,6 +63,6 @@ ALTER TABLE public.student_t_sprint_level_history ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view sprint level history" ON public.student_t_sprint_level_history FOR SELECT TO authenticated
 USING (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 );
 -- @end-schema

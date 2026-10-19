@@ -3534,3 +3534,1139 @@ DROP FUNCTION IF EXISTS private.get_monitor_word_history(date, date, uuid[], boo
 DROP FUNCTION IF EXISTS private.get_monitor_sprint_history(timestamptz, timestamptz, uuid[], boolean);
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】admin の権利を DB でもシステム管理者に限る（教材担当を外す）
+--
+-- 【内容】
+--   これまで RPC・RLS は「user_type が管理者（'0'）か」だけで admin の権利を判定しており、教材担当
+--   （user_type は '0' で roles = ['content_manager']）も、ブラウザから自分の JWT で直接 RPC・表を呼べば
+--   システム管理者だけの操作（セッションの訂正・規約の作成・マッチング等）ができた。
+--   1. public.is_system_admin()（user_type '0' かつ JWT の roles に 'admin'）を追加する
+--   2. 共通の確認（fn_assert_actor_or_admin / fn_assert_dual_actor_or_admin）と、admin の判定を直接書いている
+--      関数を is_system_admin() に替える。service_role・JWT の無い呼び出し（user_type が NULL）は従来どおり通す
+--   3. 34 の表のポリシーの admin の判定を is_system_admin() に替える。教材担当も使うチャット
+--      （com_t_chat / com_t_chat_attachment / com_t_chat_room / com_t_chat_room_user）とツール
+--      （com_t_tts_asset / com_m_ai_knowledge_base）のポリシーは変えない
+--
+-- 対応ファイル:
+--   DDL/function/is_system_admin.sql（新規）, fn_assert_actor_or_admin.sql, fn_assert_dual_actor_or_admin.sql,
+--   admin_get_coach_ratings.sql, admin_set_coach_matching_suspension.sql, admin_set_coach_specialties.sql,
+--   approve_coach_monthly_report.sql, revoke_coach_monthly_report_approval.sql, approve_matching_request.sql,
+--   fn_matching_slot_availability.sql（get_matching_request_availability）, get_coach_matching_status.sql,
+--   DDL/table/ の各表（schema.mjs で生成）
+-- 【注意】アプリの変更は不要（admin のアプリはロールで画面・アクションを分けており、システム管理者の操作は変わらない）。
+-- =========================================================================
+
+BEGIN;
+
+-- 呼び出し元がシステム管理者か（JWT の app_metadata の user_type が '0' で、roles に 'admin' を持つ）。
+-- admin の利用者には教材担当（roles = ['content_manager']）もいるため、user_type だけで「管理者の権利」を判定しない。
+-- 教材担当にも開く処理（チャットの査閲・教材・ツール）は、従来どおり get_jwt_user_type() = '0' で判定する。
+-- roles は本人が書き換えられない app_metadata にあり、admin のアプリの判定（apps/admin/lib/adminAuth.ts の hasAdminRole）と同じ。
+-- service_role・JWT の無い呼び出しは false を返す。
+CREATE OR REPLACE FUNCTION public.is_system_admin()
+RETURNS boolean AS $$
+  SELECT COALESCE(
+    public.get_jwt_user_type() = '0'
+      AND (current_setting('request.jwt.claims', true)::jsonb -> 'app_metadata' -> 'roles') ? 'admin',
+    false
+  );
+$$ LANGUAGE sql STABLE SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.is_system_admin() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_system_admin() TO authenticated;
+
+-- 権限の確認の共通の関数: 当事者本人 または システム管理者
+-- 呼び出し元が p_actor_id の本人（コーチ・生徒・応答者等）でもシステム管理者（is_system_admin()）でもなければ、例外を投げる。
+-- p_actor_id に NULL を渡すと、システム管理者だけを許す（admin_book_session_direct 等の admin 専用の RPC）。
+-- 教材担当（user_type は管理者だが roles に admin を持たない）は止める。
+-- service_role（サーバー）・JWT の無い呼び出しは user_type が NULL のため通す（呼び出し側のサーバーで確かめる）。
+-- 2名の当事者のどちらでもよい場合で、代理の操作かどうかを後で使うもの（cancel_session・check_session_conflict）は
+-- fn_assert_dual_actor_or_admin() を使う。代理の操作を許さない RPC（create_session_booking_request・finalize_session）は、
+-- この関数を使わず本人だけを確かめる。
+CREATE OR REPLACE FUNCTION public.fn_assert_actor_or_admin(
+    p_actor_id uuid,
+    p_message text DEFAULT 'not authorized'
+)
+RETURNS void
+LANGUAGE plpgsql
+STABLE
+SET search_path = public
+AS $$
+BEGIN
+    IF auth.uid() IS DISTINCT FROM p_actor_id AND public.get_jwt_user_type() IS NOT NULL AND NOT public.is_system_admin() THEN
+        RAISE EXCEPTION '%', p_message;
+    END IF;
+END;
+$$;
+
+-- 内部処理専用（他のSECURITY DEFINER関数から呼ばれる想定で、authenticatedへの直接公開は不要）
+REVOKE EXECUTE ON FUNCTION public.fn_assert_actor_or_admin(uuid, text) FROM PUBLIC, anon, authenticated;
+
+-- 権限の確認の共通の関数: 2名の当事者本人のどちらか または システム管理者
+-- どちらの当事者でもなく、システム管理者（is_system_admin()）でもなければ例外を投げる。
+-- 戻り値は「当事者でない＝システム管理者の代理の操作か」で、cancel_session がチケットの返還・通知の文言の分岐に使う。
+-- service_role（サーバー）・JWT の無い呼び出しは user_type が NULL のため通す（fn_assert_actor_or_admin と同じ）。
+CREATE OR REPLACE FUNCTION public.fn_assert_dual_actor_or_admin(
+    p_actor_id_1 uuid,
+    p_actor_id_2 uuid,
+    p_message text DEFAULT 'not authorized'
+)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+    v_is_neither_actor boolean;
+BEGIN
+    v_is_neither_actor := (auth.uid() IS DISTINCT FROM p_actor_id_1 AND auth.uid() IS DISTINCT FROM p_actor_id_2);
+    IF v_is_neither_actor AND public.get_jwt_user_type() IS NOT NULL AND NOT public.is_system_admin() THEN
+        RAISE EXCEPTION '%', p_message;
+    END IF;
+    RETURN v_is_neither_actor;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_assert_dual_actor_or_admin(uuid, uuid, text) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- アドミンによるコーチ評価の一覧取得RPC
+-- 前提: table/com_t_coach_rating.sql, table/com_t_coach_stats.sql の作成が完了していること。
+---------------------------------------------
+-- admin のユーザー管理 → コーチの「評価」画面（/users/[id]/ratings）で使う。
+-- コーチの氏名・集計（com_t_coach_stats）と、評価の行（新しい順）を生徒・契約の情報とあわせて1回で返す。
+-- 運営へのコメント（feedback）を含むため、アドミン（JWT の user_type='0'）以外は NOT_AUTHORIZED で拒否する。
+-- 対象がコーチでない（存在しない）場合は NULL を返す。
+-- 返す JSON:
+--   { coach: { id, name, email }, stats: { count, overall, coaching, friendliness, recommendation } | null,
+--     ratings: [ { rating_id, source, rated_at, coaching, friendliness, recommendation, feedback,
+--                  student: { id, name, email } | null, plan_name, license_start, license_end } ] }
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_get_coach_ratings(p_coach_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_coach jsonb;
+BEGIN
+    IF NOT public.is_system_admin() THEN
+        RAISE EXCEPTION 'NOT_AUTHORIZED: only admins can view coach ratings';
+    END IF;
+
+    SELECT jsonb_build_object('id', u.id, 'name', u.user_name, 'email', au.email)
+    INTO v_coach
+    FROM public.com_m_user u
+    LEFT JOIN auth.users au ON au.id = u.id
+    WHERE u.id = p_coach_id AND u.user_type = '2';
+
+    IF v_coach IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    RETURN jsonb_build_object(
+        'coach', v_coach,
+        'stats', (
+            SELECT jsonb_build_object(
+                'count', st.rating_count,
+                'overall', st.rating_overall_avg,
+                'coaching', st.rating_coaching_avg,
+                'friendliness', st.rating_friendliness_avg,
+                'recommendation', st.rating_recommendation_avg
+            )
+            FROM public.com_t_coach_stats st
+            WHERE st.coach_id = p_coach_id AND st.rating_count > 0
+        ),
+        'ratings', COALESCE((
+            SELECT jsonb_agg(
+                jsonb_build_object(
+                    'rating_id', r.rating_id,
+                    'source', r.source,
+                    'rated_at', r.rated_at,
+                    'coaching', r.coaching_score,
+                    'friendliness', r.friendliness_score,
+                    'recommendation', r.recommendation_score,
+                    'feedback', r.feedback,
+                    'student', CASE WHEN r.student_id IS NULL THEN NULL
+                        ELSE jsonb_build_object('id', r.student_id, 'name', su.user_name, 'email', sau.email) END,
+                    'plan_name', ct.plan_name,
+                    'license_start', l.start_date,
+                    'license_end', l.end_date
+                )
+                ORDER BY r.rated_at DESC
+            )
+            FROM public.com_t_coach_rating r
+            LEFT JOIN public.com_m_user su ON su.id = r.student_id
+            LEFT JOIN auth.users sau ON sau.id = r.student_id
+            LEFT JOIN public.com_t_user_session_ticket t ON t.ticket_id = r.ticket_id
+            LEFT JOIN public.com_t_user_license l ON l.license_id = t.license_id
+            LEFT JOIN public.com_m_contract ct ON ct.contract_id = t.contract_id
+            WHERE r.coach_id = p_coach_id
+        ), '[]'::jsonb)
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_get_coach_ratings(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_get_coach_ratings(uuid) TO authenticated;
+
+---------------------------------------------
+-- アドミンによるコーチのマッチング休止の設定RPC
+-- 前提: table/com_m_coach_matching_suspension.sql
+---------------------------------------------
+-- admin のユーザー管理 → コーチの「マッチング」ダイアログで使う。
+--   - p_suspended = true  ... 休止にする（既に休止中ならメモだけ更新し、休止した日時は変えない）
+--   - p_suspended = false ... 休止を解除する（行を削除。メモも消える）
+-- 休止で止めるのは新しいマッチングだけ（担当中の生徒・確定済みのセッション・回答待ちの申請はそのまま）。
+-- 検証:
+--   - アドミン（JWT の user_type='0'）以外は NOT_AUTHORIZED
+--   - 対象がコーチでない（存在しない）場合は COACH_NOT_FOUND
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_set_coach_matching_suspension(p_coach_id uuid, p_suspended boolean, p_note text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.is_system_admin() THEN
+        RAISE EXCEPTION 'NOT_AUTHORIZED: only admins can suspend coach matching';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM public.com_m_user WHERE id = p_coach_id AND user_type = '2') THEN
+        RAISE EXCEPTION 'COACH_NOT_FOUND: %', p_coach_id;
+    END IF;
+
+    IF p_suspended THEN
+        INSERT INTO public.com_m_coach_matching_suspension (coach_id, note, suspended_by)
+        VALUES (p_coach_id, NULLIF(btrim(p_note), ''), auth.uid())
+        ON CONFLICT (coach_id) DO UPDATE
+        SET note = EXCLUDED.note,
+            suspended_by = EXCLUDED.suspended_by,
+            update_date = NOW();
+    ELSE
+        DELETE FROM public.com_m_coach_matching_suspension WHERE coach_id = p_coach_id;
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_set_coach_matching_suspension(uuid, boolean, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_set_coach_matching_suspension(uuid, boolean, text) TO authenticated;
+
+---------------------------------------------
+-- アドミンによるコーチの専門の設定RPC
+-- 前提: table/com_m_coach_specialty.sql, table/com_m_coach_specialty_assignment.sql の作成が完了していること。
+---------------------------------------------
+-- admin のユーザー管理 → コーチの「専門」ダイアログで使う。コーチ1人分の専門を、渡したコードの集合に置き換える
+-- （外したものを削除し、足したものを登録する。続けて設定されているものは登録日時を変えない）。
+-- 検証:
+--   - アドミン（JWT の user_type='0'）以外は NOT_AUTHORIZED
+--   - 対象がコーチでない（存在しない）場合は COACH_NOT_FOUND
+--   - 有効なマスタに無いコードは INVALID_SPECIALTY
+--   - 分野（kind='field'）は4つまで（TOO_MANY_FIELDS）。得意分野（kind='skill'）は数えない。
+--     上限はアプリ側の COACH_SPECIALTY_FIELD_MAX（packages/types/coachSpecialty.ts）と揃える。
+-- 返り値: 設定後の専門コード（マスタの表示順）
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.admin_set_coach_specialties(p_coach_id uuid, p_specialty_codes text[])
+RETURNS text[]
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    c_field_max CONSTANT integer := 4;
+    v_codes text[];
+    v_invalid text;
+    v_field_count integer;
+BEGIN
+    IF NOT public.is_system_admin() THEN
+        RAISE EXCEPTION 'NOT_AUTHORIZED: only admins can set coach specialties';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM public.com_m_user WHERE id = p_coach_id AND user_type = '2') THEN
+        RAISE EXCEPTION 'COACH_NOT_FOUND: %', p_coach_id;
+    END IF;
+
+    -- 同じコーチへの同時の設定を順番に処理する（置き換えの途中で混ざらないようにする）
+    PERFORM pg_advisory_xact_lock(hashtext('coach_specialty:' || p_coach_id::text));
+
+    v_codes := ARRAY(SELECT DISTINCT unnest(COALESCE(p_specialty_codes, ARRAY[]::text[])));
+
+    SELECT c INTO v_invalid
+    FROM unnest(v_codes) AS c
+    WHERE NOT EXISTS (
+        SELECT 1 FROM public.com_m_coach_specialty s
+        WHERE s.specialty_code = c AND s.is_active
+    )
+    LIMIT 1;
+    IF v_invalid IS NOT NULL THEN
+        RAISE EXCEPTION 'INVALID_SPECIALTY: %', v_invalid;
+    END IF;
+
+    SELECT count(*) INTO v_field_count
+    FROM public.com_m_coach_specialty s
+    WHERE s.specialty_code = ANY(v_codes) AND s.kind = 'field';
+    IF v_field_count > c_field_max THEN
+        RAISE EXCEPTION 'TOO_MANY_FIELDS: % (max %)', v_field_count, c_field_max;
+    END IF;
+
+    DELETE FROM public.com_m_coach_specialty_assignment
+    WHERE coach_id = p_coach_id AND NOT (specialty_code = ANY(v_codes));
+
+    INSERT INTO public.com_m_coach_specialty_assignment (coach_id, specialty_code, created_by)
+    SELECT p_coach_id, c, auth.uid()
+    FROM unnest(v_codes) AS c
+    ON CONFLICT (coach_id, specialty_code) DO NOTHING;
+
+    RETURN ARRAY(
+        SELECT a.specialty_code
+        FROM public.com_m_coach_specialty_assignment a
+        JOIN public.com_m_coach_specialty s ON s.specialty_code = a.specialty_code
+        WHERE a.coach_id = p_coach_id
+        ORDER BY s.sort_no
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_set_coach_specialties(uuid, text[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_set_coach_specialties(uuid, text[]) TO authenticated;
+
+---------------------------------------------
+-- 月次コーチングレポート承認RPC
+-- 前提: table/com_t_coach_monthly_report_approval.sql, function/get_coach_monthly_sessions.sql,
+--       table/com_m_session_pay_rate.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- アドミンが対象コーチ・対象月の稼働を確認した上で承認する。コーチからの申請フローは無く、
+-- アドミンの一方的な操作のみで確定する。承認時点のセッション集計（get_coach_monthly_sessionsの
+-- counts_toward_totalを生徒別に集計したもの）をJSONBスナップショットとして固定保存し、
+-- 事後のデータ変動（終了処理漏れの遅延解決等）から承認済み表示を保護する。
+--
+-- 【呼び出し元】
+-- apps/adminはcreateAdminClient()(service_role)経由で呼ぶため、本関数内でauth.uid()は
+-- 取得できない（NULLになる）。そのため承認者IDはp_approved_byとして明示的に受け取る
+-- （adminContractAction.tsのperformed_by: resolvePerformedBy(ctx.userId)と同じ理由）。
+--
+-- 【終了処理未実施セッションの承認ブロック】
+-- 終了処理未実施(is_unresolved=true)のセッションが1件でも残っている月は、実績が確定して
+-- いない（completed/no_show等に確定していない）とみなし、承認自体を拒否する。
+-- 画面側（apps/admin ApprovalControlBar）でも同条件で承認ボタンを無効化しているが、
+-- 画面表示後にコーチ側の操作で状態が変わる競合を防ぐため、本RPC側でも同じ判定を行う
+-- （フロント側のチェックはUXのため、こちらが正の防御線）。
+--
+-- 【支払通知書PDF向け単価スナップショット】
+-- コーチ向け月次支払通知書(PDF)の支払額(単価×総セッション数)を、承認後の単価マスタ改定
+-- から保護するため、承認時点のcom_m_session_pay_rateの値をrate_amount/rate_currencyへ
+-- 固定保存する。単価マスタは管理者のみ参照可能（RLS）だが、本関数はSECURITY DEFINERの
+-- ためRLSを経由せず直接参照できる。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.approve_coach_monthly_report(
+    p_coach_id uuid,
+    p_report_month date,
+    p_approved_by uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month date := date_trunc('month', p_report_month)::date;
+    v_snapshot jsonb;
+    v_unresolved_count integer;
+    v_rate_amount numeric(10, 2);
+    v_rate_currency text;
+BEGIN
+    IF public.get_jwt_user_type() IS NOT NULL AND NOT public.is_system_admin() THEN
+        RAISE EXCEPTION 'not authorized to approve this monthly report';
+    END IF;
+
+    SELECT COUNT(*) INTO v_unresolved_count
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month) s
+    WHERE s.is_unresolved;
+
+    IF v_unresolved_count > 0 THEN
+        RAISE EXCEPTION 'cannot approve while % unresolved session(s) remain for this month', v_unresolved_count;
+    END IF;
+
+    SELECT jsonb_build_object(
+        'total', COALESCE(SUM((counts_toward_total)::int), 0),
+        'by_student', COALESCE(
+            (SELECT jsonb_agg(jsonb_build_object('student_id', student_id, 'count', cnt))
+             FROM (
+                 SELECT student_id, SUM((counts_toward_total)::int) AS cnt
+                 FROM public.get_coach_monthly_sessions(p_coach_id, v_month)
+                 GROUP BY student_id
+             ) per_student),
+            '[]'::jsonb
+        )
+    )
+    INTO v_snapshot
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month);
+
+    SELECT rate_amount, currency_code INTO v_rate_amount, v_rate_currency
+    FROM public.com_m_session_pay_rate
+    ORDER BY update_date DESC
+    LIMIT 1;
+
+    INSERT INTO public.com_t_coach_monthly_report_approval (
+        coach_id, report_month, status, session_count_snapshot, rate_amount, rate_currency, approved_by, approved_at, update_date
+    ) VALUES (
+        p_coach_id, v_month, 2, v_snapshot, v_rate_amount, v_rate_currency, p_approved_by, NOW(), NOW()
+    )
+    ON CONFLICT (coach_id, report_month) DO UPDATE
+    SET status = 2,
+        session_count_snapshot = v_snapshot,
+        rate_amount = v_rate_amount,
+        rate_currency = v_rate_currency,
+        approved_by = p_approved_by,
+        approved_at = NOW(),
+        update_date = NOW();
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        p_coach_id,
+        'COACH_REPORT_APPROVED',
+        jsonb_build_object('report_month', v_month),
+        -- 対象の月を開く（月の指定が無いと今月が開くため）
+        '/monthly-reports?month=' || to_char(v_month, 'YYYY-MM')
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) TO authenticated;
+
+---------------------------------------------
+-- 月次コーチングレポート承認取消しRPC
+-- 前提: table/com_t_coach_monthly_report_approval.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- アドミンが承認後に誤りへ気付いた場合に、承認を取り消して未承認状態へ戻す。
+-- コーチへの差し戻し（再申請を促す）フローではなく、単純な承認取消しのみ。
+-- 取消し後は再度approve_coach_monthly_reportで承認し直すことを想定するため、
+-- 承認時点のスナップショット（セッション集計・単価とも）はNULLへ戻す
+-- （再承認時に最新値で作り直される）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.revoke_coach_monthly_report_approval(
+    p_coach_id uuid,
+    p_report_month date
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month date := date_trunc('month', p_report_month)::date;
+    v_approval RECORD;
+BEGIN
+    IF public.get_jwt_user_type() IS NOT NULL AND NOT public.is_system_admin() THEN
+        RAISE EXCEPTION 'not authorized to revoke this monthly report approval';
+    END IF;
+
+    SELECT * INTO v_approval
+    FROM public.com_t_coach_monthly_report_approval
+    WHERE coach_id = p_coach_id AND report_month = v_month
+    FOR UPDATE;
+
+    IF NOT FOUND OR v_approval.status <> 2 THEN
+        RAISE EXCEPTION 'this monthly report is not approved';
+    END IF;
+
+    UPDATE public.com_t_coach_monthly_report_approval
+    SET status = 1,
+        session_count_snapshot = NULL,
+        rate_amount = NULL,
+        rate_currency = NULL,
+        approved_by = NULL,
+        approved_at = NULL,
+        update_date = NOW()
+    WHERE coach_id = p_coach_id AND report_month = v_month;
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        p_coach_id,
+        'COACH_REPORT_APPROVAL_REVOKED',
+        jsonb_build_object('report_month', v_month),
+        -- 対象の月を開く（月の指定が無いと今月が開くため）
+        '/monthly-reports?month=' || to_char(v_month, 'YYYY-MM')
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.revoke_coach_monthly_report_approval(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.revoke_coach_monthly_report_approval(uuid, date) TO authenticated;
+
+-- =========================================================================
+-- approve_matching_request: マッチング申請の承認
+-- =========================================================================
+-- 【役割】
+-- コーチ（またはアドミンの代理）が承認待ちの申請を承認する唯一の入口（com_t_matching_request の直接の更新は RLS で
+-- 許可していない）。本関数は申請を承認済みにすることだけを受け持ち、定期スケジュールの作成・空きの再確認・
+-- セッションの生成は fn_commit_matching_schedule() に任せる（アドミンの直接マッチングと共通）。
+-- 呼び出し者が宛先のコーチ本人かアドミンであることは fn_assert_actor_or_admin() で確かめる。
+--
+-- 【主なルール】
+-- - 回答期限（expires_at。申請から24時間）を過ぎた申請は EXPIRED で拒否する。
+-- - 申請時と同じ判定（fn_matching_slot_availability）で承認時にも空きを確かめ直す（申請から承認までの間に
+--   他の申請が先に承認される競合を防ぐ。同時に走る承認の直列化は fn_commit_matching_schedule のロック）。
+-- - 申請の曜日・時刻は生徒の申請時のタイムゾーン（requested_timezone）の値のため、それを渡して生徒側の時刻で作る。
+-- - コーチ本人の承認では、開始まで24時間未満の回を作らない（欠番として未予約の回に数える）。アドミンの代理は対象外。
+-- - 予約できる回数が割合以上なら、他の予定と重なる回を飛ばして成立する。
+--
+-- 【通知】
+-- 生徒へ成立を通知する（MATCHING_APPROVED。予約できた回数 booked_sessions とコマの回数 target_sessions を入れ、
+-- 未予約の回が残る場合は個別の調整を案内する）。コーチは自分で承認しているため通知しない。
+-- =========================================================================
+
+CREATE OR REPLACE FUNCTION public.approve_matching_request(p_request_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_request RECORD;
+    v_schedule_id uuid;
+    v_coach_name text;
+    v_min_start_datetime timestamptz;
+    v_target_sessions integer;
+    v_booked_sessions integer;
+BEGIN
+    SELECT * INTO v_request FROM public.com_t_matching_request WHERE request_id = p_request_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'matching request % not found', p_request_id;
+    END IF;
+
+    PERFORM public.fn_assert_actor_or_admin(v_request.coach_id, 'not authorized to approve this request');
+
+    IF v_request.status <> 1 THEN
+        RAISE EXCEPTION 'matching request % is not pending (status=%)', p_request_id, v_request.status;
+    END IF;
+
+    -- 回答期限（expires_at）を過ぎた承認待ちは、期限切れの処理（毎分）を待たずに無効として扱う
+    IF v_request.expires_at IS NOT NULL AND v_request.expires_at <= NOW() THEN
+        RAISE EXCEPTION 'EXPIRED: matching request % has expired', p_request_id;
+    END IF;
+
+    UPDATE public.com_t_matching_request
+    SET status = 2, responded_by = auth.uid(), responded_at = NOW(), update_date = NOW()
+    WHERE request_id = p_request_id;
+
+    -- アドミン代理承認は24時間ルールの対象外（admin_match_student_with_coach()と同様）
+    IF public.is_system_admin() THEN
+        v_min_start_datetime := NULL;
+    ELSE
+        v_min_start_datetime := NOW() + interval '24 hours';
+    END IF;
+
+    v_schedule_id := public.fn_commit_matching_schedule(
+        v_request.request_id, v_request.ticket_id, v_request.student_id, v_request.coach_id,
+        v_request.slot_no, v_request.requested_day_of_week, v_request.requested_start_time, v_request.requested_end_time,
+        v_request.requested_timezone, v_min_start_datetime
+    );
+
+    SELECT target_sessions INTO v_target_sessions FROM public.com_m_lesson_schedule WHERE schedule_id = v_schedule_id;
+    SELECT COUNT(*) INTO v_booked_sessions FROM public.com_t_session WHERE schedule_id = v_schedule_id AND status = 1;
+
+    -- 生徒へ、マッチング成立を通知する（コーチは自ら承認操作を行ったため通知不要）
+    SELECT user_name INTO v_coach_name FROM public.com_m_user WHERE id = v_request.coach_id;
+    PERFORM public.fn_notify(
+        v_request.student_id,
+        'MATCHING_APPROVED',
+        jsonb_build_object(
+            'coach_name', v_coach_name, 'schedule_id', v_schedule_id,
+            'booked_sessions', v_booked_sessions, 'target_sessions', v_target_sessions
+        ),
+        '/live-room'
+    );
+
+    RETURN v_schedule_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.approve_matching_request(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_matching_request(uuid) TO authenticated;
+
+---------------------------------------------
+-- 専属コーチのマッチングで、毎週の枠を申請・承認したときに予約できる回数
+-- 前提: function/matching_min_bookable_rate.sql, function/fn_matching_occurrence_busy.sql,
+--       function/fn_weekly_occurrences.sql の作成が完了していること。
+---------------------------------------------
+-- 【背景】
+-- 契約期間内の全ての回を予約できなくても、予約できる回数が一定の割合（matching_min_bookable_rate()）以上なら
+-- 申請・承認できるようにした。残りの回は未予約として、生徒とコーチが個別に日時を調整する。
+-- 申請時（生徒）・承認時（コーチ・アドミン）・申請カレンダーの○△×の表示は、すべて本関数で数える。
+--
+-- 【返す値】
+--   target_sessions   : このコマの残りの回数＝契約上の回数から、コーチ交代等で終了した同じコマの定期スケジュールで
+--                       既に使った回を引いた数（承認時に com_m_lesson_schedule.target_sessions に入る値と同じ）
+--   possible_sessions : p_min_start_datetime（無ければ現在）以降、契約終了までの毎週の回の数
+--   bookable_sessions : そのうち予約できる回の数（上限 target_sessions。承認時に実際に作られる回数）
+--   required_sessions : 申請・承認に必要な回数＝ min(target, possible) × 割合 の切り上げ
+--   is_acceptable     : 申請・承認できるか（実施できる回が1回以上あり、bookable >= required）
+-- 未予約になる回数は target - bookable。そのうち期間が足りない分は max(target - possible, 0)、
+-- 残りはコーチ・生徒の他の予定と重なる分。
+--
+-- 【他の生徒の承認待ちの申請】
+-- p_include_others_pending = true のときだけ、同じコーチ宛ての他の生徒の承認待ちの申請と重なる回も予約できない回と数える
+-- （申請時だけ。承認時は数えない。理由は fn_matching_occurrence_busy 参照）。
+--
+-- 【24時間ルール】
+-- 承認時に作る回は承認から24時間以降（アドミンの代理は除く。approve_matching_request 参照）。申請時は承認の
+-- 時期が分からないため、申請の時点から24時間以降として数える（呼び出し元が p_min_start_datetime で渡す）。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_matching_slot_target_sessions(p_ticket_id uuid, p_slot_no smallint)
+RETURNS smallint
+LANGUAGE sql
+STABLE
+SET search_path = public
+AS $$
+    -- このコマの契約上の回数（商をbaseとし、余りはslot_no昇順に1つずつ多く配分する。table/com_m_lesson_schedule.sqlの
+    -- target_sessionsパッチ参照）から、同じコマの終了した定期スケジュール（コーチ交代等。status<>1）で既に使った回
+    -- （実施済み・予約済み・返還なしのキャンセル。fn_schedule_shortfall の実績と同じ数え方）を差し引く。
+    -- コーチ交代の後に別のコーチで成立させる時、契約の回数を超えて作らない・未予約を多く数えないため。
+    SELECT GREATEST(
+        (t.total_sessions / t.weekly_frequency)
+            + CASE WHEN p_slot_no <= (t.total_sessions % t.weekly_frequency) THEN 1 ELSE 0 END
+            - (
+                SELECT COUNT(*)
+                FROM public.com_t_session x
+                JOIN public.com_m_lesson_schedule ls ON ls.schedule_id = x.schedule_id
+                WHERE ls.ticket_id = p_ticket_id
+                  AND ls.slot_no = p_slot_no
+                  AND ls.status <> 1
+                  AND (x.status IN (1, 2) OR (x.status = 3 AND x.ticket_refunded = false))
+            ),
+        0
+    )::smallint
+    FROM public.com_t_user_session_ticket t
+    WHERE t.ticket_id = p_ticket_id;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_matching_slot_target_sessions(uuid, smallint) FROM PUBLIC, anon, authenticated;
+
+DROP FUNCTION IF EXISTS public.fn_matching_slot_availability(uuid, uuid, smallint, text, smallint, time, time, timestamptz, uuid);
+
+CREATE OR REPLACE FUNCTION public.fn_matching_slot_availability(
+    p_ticket_id uuid,
+    p_coach_id uuid,
+    p_slot_no smallint,
+    p_timezone text,
+    p_day_of_week smallint,
+    p_start_time time,
+    p_end_time time,
+    p_min_start_datetime timestamptz DEFAULT NULL,
+    p_exclude_request_id uuid DEFAULT NULL,
+    p_include_others_pending boolean DEFAULT false
+)
+RETURNS TABLE (
+    target_sessions integer,
+    possible_sessions integer,
+    bookable_sessions integer,
+    required_sessions integer,
+    is_acceptable boolean
+)
+LANGUAGE plpgsql
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+    v_student_id uuid;
+    v_license_start timestamptz;
+    v_license_end timestamptz;
+    v_target integer;
+    v_possible integer;
+    v_free integer;
+    v_denominator integer;
+    v_required integer;
+BEGIN
+    SELECT t.user_id, l.start_date, l.end_date
+    INTO v_student_id, v_license_start, v_license_end
+    FROM public.com_t_user_session_ticket t
+    JOIN public.com_t_user_license l ON l.license_id = t.license_id
+    WHERE t.ticket_id = p_ticket_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'license not found for ticket %', p_ticket_id;
+    END IF;
+
+    v_target := public.fn_matching_slot_target_sessions(p_ticket_id, p_slot_no);
+
+    SELECT COUNT(*),
+           COUNT(*) FILTER (WHERE NOT public.fn_matching_occurrence_busy(
+               p_coach_id, v_student_id, o.start_ts, o.end_ts, NULL, p_exclude_request_id, p_include_others_pending))
+    INTO v_possible, v_free
+    FROM public.fn_weekly_occurrences(
+        p_timezone, p_day_of_week, p_start_time, p_end_time,
+        GREATEST(v_license_start, COALESCE(p_min_start_datetime, NOW())), v_license_end
+    ) o;
+
+    v_denominator := LEAST(v_target, v_possible);
+    v_required := CEIL(v_denominator * public.matching_min_bookable_rate())::integer;
+
+    RETURN QUERY SELECT
+        v_target,
+        v_possible,
+        LEAST(v_target, v_free),
+        v_required,
+        (v_denominator > 0 AND LEAST(v_target, v_free) >= v_required);
+END;
+$$;
+
+-- 内部処理専用（生徒・コーチ向けは get_matching_slot_options / get_matching_request_availability を使う）
+REVOKE EXECUTE ON FUNCTION public.fn_matching_slot_availability(uuid, uuid, smallint, text, smallint, time, time, timestamptz, uuid, boolean) FROM PUBLIC, anon, authenticated;
+
+---------------------------------------------
+-- 生徒向け: 申請カレンダーの候補（毎週の曜日・時刻）ごとの予約できる回数
+---------------------------------------------
+-- 曜日・時刻は生徒の現地時刻で、基準のタイムゾーンはプロフィールの値を使う（申請時の requested_timezone と同じ）。
+-- 同じコーチ宛ての他の生徒の承認待ちの申請と重なる回も、予約できない回と数える（申請時だけの判定）。
+-- 呼び出せるのはチケットの持ち主（とアドミン）。申請時（createMatchingRequestCore）の判定にも使う。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_matching_slot_options(
+    p_ticket_id uuid,
+    p_coach_id uuid,
+    p_slot_no smallint,
+    p_days smallint[],
+    p_start_times time[],
+    p_end_times time[]
+)
+RETURNS TABLE (
+    day_of_week smallint,
+    start_time time,
+    target_sessions integer,
+    possible_sessions integer,
+    bookable_sessions integer,
+    required_sessions integer,
+    is_acceptable boolean
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_student_id uuid;
+    v_timezone text;
+BEGIN
+    SELECT user_id INTO v_student_id FROM public.com_t_user_session_ticket WHERE ticket_id = p_ticket_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'ticket % not found', p_ticket_id;
+    END IF;
+
+    PERFORM public.fn_assert_actor_or_admin(v_student_id, 'not authorized to check this ticket');
+
+    IF array_length(p_days, 1) IS DISTINCT FROM array_length(p_start_times, 1)
+       OR array_length(p_days, 1) IS DISTINCT FROM array_length(p_end_times, 1) THEN
+        RAISE EXCEPTION 'p_days, p_start_times and p_end_times must have the same length';
+    END IF;
+
+    SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_timezone FROM public.com_m_user WHERE id = v_student_id;
+
+    RETURN QUERY
+    SELECT c.dow, c.st, a.target_sessions, a.possible_sessions, a.bookable_sessions, a.required_sessions, a.is_acceptable
+    FROM unnest(p_days, p_start_times, p_end_times) AS c(dow, st, et)
+    CROSS JOIN LATERAL public.fn_matching_slot_availability(
+        p_ticket_id, p_coach_id, p_slot_no, v_timezone, c.dow, c.st, c.et, NOW() + interval '24 hours', NULL, true
+    ) a;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_matching_slot_options(uuid, uuid, smallint, smallint[], time[], time[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_matching_slot_options(uuid, uuid, smallint, smallint[], time[], time[]) TO authenticated;
+
+---------------------------------------------
+-- コーチ向け: 承認待ちの申請を今承認した場合に予約できる回数
+---------------------------------------------
+-- 申請から承認までの間にコーチの予定が埋まると回数が変わるため、承認画面で現在の回数を出す。
+-- 自分宛ての申請（アドミンは全て）だけを返す。承認待ち以外の申請は返さない。
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_matching_request_availability(p_request_ids uuid[])
+RETURNS TABLE (
+    request_id uuid,
+    target_sessions integer,
+    possible_sessions integer,
+    bookable_sessions integer,
+    required_sessions integer,
+    is_acceptable boolean
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT r.request_id, a.target_sessions, a.possible_sessions, a.bookable_sessions, a.required_sessions, a.is_acceptable
+    FROM public.com_t_matching_request r
+    CROSS JOIN LATERAL public.fn_matching_slot_availability(
+        r.ticket_id, r.coach_id, r.slot_no, r.requested_timezone,
+        r.requested_day_of_week, r.requested_start_time, r.requested_end_time,
+        NOW() + interval '24 hours', r.request_id, false
+    ) a
+    WHERE r.request_id = ANY(p_request_ids)
+      AND r.status = 1
+      AND (r.expires_at IS NULL OR r.expires_at > NOW())
+      AND (r.coach_id = auth.uid() OR public.is_system_admin());
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_matching_request_availability(uuid[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_matching_request_availability(uuid[]) TO authenticated;
+
+---------------------------------------------
+-- コーチのマッチング対象の状態の取得
+-- 前提: function/fn_coach_matching_missing_items.sql, table/com_m_coach_matching_suspension.sql,
+--       table/com_m_coach_profile.sql（accepting_students パッチ）
+---------------------------------------------
+-- 生徒の「専属コーチを探す」に出るかどうかの内訳を返す（get_matchable_coach_ids() と同じ条件）。
+--   - コーチ本人: プロフィール画面の「Student matching」カード（足りない項目・受付・休止中かどうか）
+--   - アドミン  : ユーザー管理のコーチの「マッチング」ダイアログ（休止の理由のメモも返す）
+-- 休止の理由のメモは運営の内部メモのため、アドミン以外には NULL を返す。
+-- 検証:
+--   - 本人・アドミン以外は NOT_AUTHORIZED
+--   - 対象のコーチのプロフィールが無い場合は COACH_NOT_FOUND
+---------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_coach_matching_status(p_coach_id uuid)
+RETURNS TABLE (
+    missing_items text[],
+    accepting_students boolean,
+    is_suspended boolean,
+    suspended_note text,
+    suspended_at timestamptz,
+    is_demo boolean
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_is_admin boolean := public.is_system_admin();
+BEGIN
+    IF NOT v_is_admin AND p_coach_id IS DISTINCT FROM auth.uid() THEN
+        RAISE EXCEPTION 'NOT_AUTHORIZED: only the coach or admins can view the matching status';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.com_m_coach_profile p
+        JOIN public.com_m_user u ON u.id = p.user_id AND u.user_type = '2'
+        WHERE p.user_id = p_coach_id
+    ) THEN
+        RAISE EXCEPTION 'COACH_NOT_FOUND: %', p_coach_id;
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        public.fn_coach_matching_missing_items(p.user_id),
+        p.accepting_students,
+        s.coach_id IS NOT NULL,
+        CASE WHEN v_is_admin THEN s.note END,
+        s.insert_date,
+        EXISTS (
+            SELECT 1 FROM public.com_t_user_role r
+            WHERE r.user_id = p.user_id AND r.role_id = 'demo_user'
+        )
+    FROM public.com_m_coach_profile p
+    LEFT JOIN public.com_m_coach_matching_suspension s ON s.coach_id = p.user_id
+    WHERE p.user_id = p_coach_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_coach_matching_status(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coach_matching_status(uuid) TO authenticated;
+
+DROP POLICY IF EXISTS "Admin can manage calendar events" ON public.com_m_calendar_event;
+CREATE POLICY "Admin can manage calendar events" ON public.com_m_calendar_event FOR ALL TO authenticated
+USING (
+    public.is_system_admin()
+)
+WITH CHECK (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admin can manage calendar event series" ON public.com_m_calendar_event_series;
+CREATE POLICY "Admin can manage calendar event series" ON public.com_m_calendar_event_series FOR ALL TO authenticated
+USING (
+    public.is_system_admin()
+)
+WITH CHECK (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admins can view coach matching suspensions" ON public.com_m_coach_matching_suspension;
+CREATE POLICY "Admins can view coach matching suspensions" ON public.com_m_coach_matching_suspension FOR SELECT TO authenticated
+USING (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Involved users can view coach student relationships" ON public.com_m_coach_student_relationship;
+CREATE POLICY "Involved users can view coach student relationships" ON public.com_m_coach_student_relationship FOR SELECT TO authenticated
+USING (
+    student_id = auth.uid() OR coach_id = auth.uid() OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admins can manage company profile" ON public.com_m_company_profile;
+CREATE POLICY "Admins can manage company profile" ON public.com_m_company_profile FOR ALL TO authenticated
+USING (
+    public.is_system_admin()
+)
+WITH CHECK (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admins can manage contract plans" ON public.com_m_contract_plan;
+CREATE POLICY "Admins can manage contract plans" ON public.com_m_contract_plan FOR ALL TO authenticated
+USING (
+    public.is_system_admin()
+)
+WITH CHECK (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Involved users can view lesson schedules" ON public.com_m_lesson_schedule;
+CREATE POLICY "Involved users can view lesson schedules" ON public.com_m_lesson_schedule FOR SELECT TO authenticated
+USING (
+    student_id = auth.uid() OR coach_id = auth.uid() OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admins can manage session pay rate" ON public.com_m_session_pay_rate;
+CREATE POLICY "Admins can manage session pay rate" ON public.com_m_session_pay_rate FOR ALL TO authenticated
+USING (
+    public.is_system_admin()
+)
+WITH CHECK (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admins can manage terms" ON public.com_m_terms;
+CREATE POLICY "Admins can manage terms" ON public.com_m_terms FOR ALL TO authenticated
+USING (
+    public.is_system_admin()
+)
+WITH CHECK (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admins can insert terms revisions" ON public.com_m_terms_revision;
+CREATE POLICY "Admins can insert terms revisions" ON public.com_m_terms_revision FOR INSERT TO authenticated
+WITH CHECK (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admins can manage user legal info" ON public.com_m_user_legal;
+CREATE POLICY "Admins can manage user legal info" ON public.com_m_user_legal FOR ALL TO authenticated
+USING (
+    public.is_system_admin()
+)
+WITH CHECK (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admin can manage calendar event coaches" ON public.com_t_calendar_event_coach;
+CREATE POLICY "Admin can manage calendar event coaches" ON public.com_t_calendar_event_coach FOR ALL TO authenticated
+USING (
+    public.is_system_admin()
+)
+WITH CHECK (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admin can manage calendar event messages" ON public.com_t_calendar_event_message;
+CREATE POLICY "Admin can manage calendar event messages" ON public.com_t_calendar_event_message FOR ALL TO authenticated
+USING (
+    public.is_system_admin()
+)
+WITH CHECK (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Coach and admin can view monthly report approval" ON public.com_t_coach_monthly_report_approval;
+CREATE POLICY "Coach and admin can view monthly report approval" ON public.com_t_coach_monthly_report_approval FOR SELECT TO authenticated
+USING (
+    coach_id = auth.uid() OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Students and admins can view coach ratings" ON public.com_t_coach_rating;
+CREATE POLICY "Students and admins can view coach ratings" ON public.com_t_coach_rating FOR SELECT TO authenticated
+USING (
+    student_id = auth.uid() OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Coaches can view their own student notes" ON public.com_t_coach_student_note;
+CREATE POLICY "Coaches can view their own student notes" ON public.com_t_coach_student_note FOR SELECT TO authenticated
+USING (
+    coach_id = auth.uid() OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Coaches can view training reports of their students" ON public.com_t_contract_training_report;
+CREATE POLICY "Coaches can view training reports of their students" ON public.com_t_contract_training_report FOR SELECT TO authenticated
+USING (
+    coach_id = auth.uid() OR status = 2 AND (EXISTS ( SELECT 1
+       FROM public.com_m_coach_student_relationship r
+      WHERE r.coach_id = auth.uid() AND r.student_id = com_t_contract_training_report.student_id)) OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Coaches can update dialogue assignments" ON public.com_t_dialogue_assignment;
+CREATE POLICY "Coaches can update dialogue assignments" ON public.com_t_dialogue_assignment FOR UPDATE TO authenticated
+USING (
+    (EXISTS ( SELECT 1
+       FROM public.com_m_coach_student_relationship r
+      WHERE r.student_id = com_t_dialogue_assignment.student_id AND r.coach_id = auth.uid())) OR public.is_system_admin()
+)
+WITH CHECK (
+    (EXISTS ( SELECT 1
+       FROM public.com_m_coach_student_relationship r
+      WHERE r.student_id = com_t_dialogue_assignment.student_id AND r.coach_id = auth.uid())) OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Involved users can view dialogue assignments" ON public.com_t_dialogue_assignment;
+CREATE POLICY "Involved users can view dialogue assignments" ON public.com_t_dialogue_assignment FOR SELECT TO authenticated
+USING (
+    student_id = auth.uid() OR (EXISTS ( SELECT 1
+       FROM public.com_m_coach_student_relationship r
+      WHERE r.student_id = com_t_dialogue_assignment.student_id AND r.coach_id = auth.uid())) OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Coaches can manage dialogue session progress for their students" ON public.com_t_dialogue_session_progress;
+CREATE POLICY "Coaches can manage dialogue session progress for their students" ON public.com_t_dialogue_session_progress FOR ALL TO authenticated
+USING (
+    (EXISTS ( SELECT 1
+       FROM public.com_t_dialogue_assignment a
+         JOIN public.com_m_coach_student_relationship r ON r.student_id = a.student_id
+      WHERE a.assignment_id = com_t_dialogue_session_progress.assignment_id AND r.coach_id = auth.uid())) OR public.is_system_admin()
+)
+WITH CHECK (
+    updated_by_coach_id = auth.uid() AND (EXISTS ( SELECT 1
+       FROM public.com_t_dialogue_assignment a
+         JOIN public.com_m_coach_student_relationship r ON r.student_id = a.student_id
+      WHERE a.assignment_id = com_t_dialogue_session_progress.assignment_id AND r.coach_id = auth.uid()))
+);
+
+DROP POLICY IF EXISTS "Admins can manage all invitations" ON public.com_t_invitation;
+CREATE POLICY "Admins can manage all invitations" ON public.com_t_invitation FOR ALL TO authenticated
+USING (
+    public.is_system_admin()
+)
+WITH CHECK (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Involved users can view matching requests" ON public.com_t_matching_request;
+CREATE POLICY "Involved users can view matching requests" ON public.com_t_matching_request FOR SELECT TO authenticated
+USING (
+    student_id = auth.uid() OR coach_id = auth.uid() OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Involved users can view sessions" ON public.com_t_session;
+CREATE POLICY "Involved users can view sessions" ON public.com_t_session FOR SELECT TO authenticated
+USING (
+    student_id = auth.uid() OR coach_id = auth.uid() OR (EXISTS ( SELECT 1
+       FROM public.com_m_coach_student_relationship r
+      WHERE r.student_id = com_t_session.student_id AND r.coach_id = auth.uid())) OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Involved users can view call log" ON public.com_t_session_call_log;
+CREATE POLICY "Involved users can view call log" ON public.com_t_session_call_log FOR SELECT TO authenticated
+USING (
+    (EXISTS ( SELECT 1
+       FROM public.com_t_session s
+      WHERE s.session_id = com_t_session_call_log.session_id AND (s.coach_id = auth.uid() OR s.student_id = auth.uid()))) OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Involved users can view session chat" ON public.com_t_session_chat;
+CREATE POLICY "Involved users can view session chat" ON public.com_t_session_chat FOR SELECT TO authenticated
+USING (
+    (EXISTS ( SELECT 1
+       FROM public.com_t_session s
+      WHERE s.session_id = com_t_session_chat.session_id AND (s.coach_id = auth.uid() OR s.student_id = auth.uid()))) OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Coaches can manage session dialogue logs they created" ON public.com_t_session_dialogue_log;
+CREATE POLICY "Coaches can manage session dialogue logs they created" ON public.com_t_session_dialogue_log FOR ALL TO authenticated
+USING (
+    opened_by_coach_id = auth.uid() OR public.is_system_admin()
+)
+WITH CHECK (
+    opened_by_coach_id = auth.uid() AND (EXISTS ( SELECT 1
+       FROM public.com_t_session s
+         JOIN public.com_t_dialogue_assignment a ON a.assignment_id = com_t_session_dialogue_log.assignment_id
+      WHERE s.session_id = com_t_session_dialogue_log.session_id AND s.coach_id = auth.uid() AND s.student_id = a.student_id))
+);
+
+DROP POLICY IF EXISTS "Coach and student can view session homework" ON public.com_t_session_homework;
+CREATE POLICY "Coach and student can view session homework" ON public.com_t_session_homework FOR SELECT TO authenticated
+USING (
+    coach_id = auth.uid() OR student_id = auth.uid() OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Coach and student can view homework attachments" ON public.com_t_session_homework_attachment;
+CREATE POLICY "Coach and student can view homework attachments" ON public.com_t_session_homework_attachment FOR SELECT TO authenticated
+USING (
+    (EXISTS ( SELECT 1
+       FROM public.com_t_session_homework h
+      WHERE h.homework_id = com_t_session_homework_attachment.homework_id AND (h.coach_id = auth.uid() OR h.student_id = auth.uid()))) OR (EXISTS ( SELECT 1
+       FROM public.com_t_session_homework_comment c
+         JOIN public.com_t_session_homework h ON h.homework_id = c.homework_id
+      WHERE c.comment_id = com_t_session_homework_attachment.comment_id AND (h.coach_id = auth.uid() OR h.student_id = auth.uid()))) OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Coach and student can view homework comments" ON public.com_t_session_homework_comment;
+CREATE POLICY "Coach and student can view homework comments" ON public.com_t_session_homework_comment FOR SELECT TO authenticated
+USING (
+    (EXISTS ( SELECT 1
+       FROM public.com_t_session_homework h
+      WHERE h.homework_id = com_t_session_homework_comment.homework_id AND (h.coach_id = auth.uid() OR h.student_id = auth.uid()))) OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admins can view session outcome history" ON public.com_t_session_outcome_history;
+CREATE POLICY "Admins can view session outcome history" ON public.com_t_session_outcome_history FOR SELECT TO authenticated
+USING (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Involved users can view slot proposals" ON public.com_t_session_slot_proposal;
+CREATE POLICY "Involved users can view slot proposals" ON public.com_t_session_slot_proposal FOR SELECT TO authenticated
+USING (
+    student_id = auth.uid() OR coach_id = auth.uid() OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Admins can view trial applications" ON public.com_t_trial_application;
+CREATE POLICY "Admins can view trial applications" ON public.com_t_trial_application FOR SELECT TO authenticated
+USING (
+    public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Users and Admins can insert agreement history" ON public.com_t_user_terms_agreement;
+CREATE POLICY "Users and Admins can insert agreement history" ON public.com_t_user_terms_agreement FOR INSERT TO authenticated
+WITH CHECK (
+    user_id = auth.uid() OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Users and Admins can view agreement history" ON public.com_t_user_terms_agreement;
+CREATE POLICY "Users and Admins can view agreement history" ON public.com_t_user_terms_agreement FOR SELECT TO authenticated
+USING (
+    user_id = auth.uid() OR public.is_system_admin()
+);
+
+DROP POLICY IF EXISTS "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint;
+CREATE POLICY "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint FOR ALL TO authenticated
+USING (
+    coach_id = auth.uid() OR public.is_system_admin()
+)
+WITH CHECK (
+    coach_id = auth.uid() AND (session_id IS NULL OR (EXISTS ( SELECT 1
+       FROM public.com_t_session s
+      WHERE s.session_id = lesson_t_sprint.session_id AND s.coach_id = auth.uid() AND s.student_id = lesson_t_sprint.student_id)))
+);
+
+DROP POLICY IF EXISTS "Admins can view sprint level history" ON public.student_t_sprint_level_history;
+CREATE POLICY "Admins can view sprint level history" ON public.student_t_sprint_level_history FOR SELECT TO authenticated
+USING (
+    public.is_system_admin()
+);
+
+COMMIT;

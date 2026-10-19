@@ -64,7 +64,7 @@ ALTER TABLE public.lesson_t_sprint ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint FOR ALL TO authenticated
 USING (
-    coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    coach_id = auth.uid() OR public.is_system_admin()
 )
 WITH CHECK (
     coach_id = auth.uid() AND (session_id IS NULL OR (EXISTS ( SELECT 1

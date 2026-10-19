@@ -40,11 +40,11 @@ ALTER TABLE public.com_t_user_terms_agreement ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users and Admins can insert agreement history" ON public.com_t_user_terms_agreement FOR INSERT TO authenticated
 WITH CHECK (
-    user_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    user_id = auth.uid() OR public.is_system_admin()
 );
 
 CREATE POLICY "Users and Admins can view agreement history" ON public.com_t_user_terms_agreement FOR SELECT TO authenticated
 USING (
-    user_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    user_id = auth.uid() OR public.is_system_admin()
 );
 -- @end-schema

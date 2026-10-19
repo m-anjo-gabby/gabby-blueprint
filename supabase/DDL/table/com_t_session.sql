@@ -104,6 +104,6 @@ CREATE POLICY "Involved users can view sessions" ON public.com_t_session FOR SEL
 USING (
     student_id = auth.uid() OR coach_id = auth.uid() OR (EXISTS ( SELECT 1
        FROM public.com_m_coach_student_relationship r
-      WHERE r.student_id = com_t_session.student_id AND r.coach_id = auth.uid())) OR public.get_jwt_user_type() = '0'::text
+      WHERE r.student_id = com_t_session.student_id AND r.coach_id = auth.uid())) OR public.is_system_admin()
 );
 -- @end-schema

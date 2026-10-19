@@ -70,6 +70,6 @@ CREATE POLICY "Coaches can view training reports of their students" ON public.co
 USING (
     coach_id = auth.uid() OR status = 2 AND (EXISTS ( SELECT 1
        FROM public.com_m_coach_student_relationship r
-      WHERE r.coach_id = auth.uid() AND r.student_id = com_t_contract_training_report.student_id)) OR public.get_jwt_user_type() = '0'::text
+      WHERE r.coach_id = auth.uid() AND r.student_id = com_t_contract_training_report.student_id)) OR public.is_system_admin()
 );
 -- @end-schema

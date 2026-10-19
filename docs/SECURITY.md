@@ -44,4 +44,5 @@
 ## 5. DB の関数（RPC）
 
 - SECURITY DEFINER の関数は RLS を通らないため、関数の中で `auth.uid()` 等から呼び出し元を確かめる。`search_path` の固定・実行の権限の決まりは `supabase/DDL/README.md`「関数の権限」。
+- admin に許す操作は、DB でもシステム管理者（`is_system_admin()`）に限る。教材担当も admin の利用者のため、`user_type` だけで判定するとブラウザから直接 RPC・表を呼んでシステム管理者の操作ができてしまう（`supabase/DDL/README.md`「関数の権限」）。
 - service_role から呼ぶと `auth.uid()` が NULL になるため、「本人 OR admin」の判定を service_role の呼び出しで素通りさせない（`CLAUDE.md` 6章）。

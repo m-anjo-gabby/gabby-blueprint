@@ -54,6 +54,6 @@ ALTER TABLE public.com_t_coach_monthly_report_approval ENABLE ROW LEVEL SECURITY
 
 CREATE POLICY "Coach and admin can view monthly report approval" ON public.com_t_coach_monthly_report_approval FOR SELECT TO authenticated
 USING (
-    coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    coach_id = auth.uid() OR public.is_system_admin()
 );
 -- @end-schema

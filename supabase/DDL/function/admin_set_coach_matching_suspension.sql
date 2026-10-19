@@ -17,7 +17,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-    IF COALESCE(public.get_jwt_user_type(), '') <> '0' THEN
+    IF NOT public.is_system_admin() THEN
         RAISE EXCEPTION 'NOT_AUTHORIZED: only admins can suspend coach matching';
     END IF;
 

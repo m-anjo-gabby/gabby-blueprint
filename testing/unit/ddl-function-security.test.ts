@@ -14,7 +14,7 @@ const FUNCTION_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 
 /** 呼び出し元を確かめる書き方（auth.uid() 等を直接使うか、それを使う共通の関数を呼ぶ） */
 const CALLER_CHECK =
-  /\bauth\.uid\(\)|\bauth\.jwt\(\)|\b(get_jwt_user_type|get_jwt_client_id|fn_assert_actor_or_admin|fn_assert_dual_actor_or_admin|get_monitor_client_id)\s*\(/i;
+  /\bauth\.uid\(\)|\bauth\.jwt\(\)|\b(get_jwt_user_type|is_system_admin|get_jwt_client_id|fn_assert_actor_or_admin|fn_assert_dual_actor_or_admin|get_monitor_client_id)\s*\(/i;
 
 /** authenticated に実行させるが、呼び出し元を確かめない関数（関数名 → 理由） */
 const UNCHECKED_CALLER: Record<string, string> = {};

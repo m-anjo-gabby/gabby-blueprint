@@ -47,9 +47,9 @@ ALTER TABLE public.com_t_invitation ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can manage all invitations" ON public.com_t_invitation FOR ALL TO authenticated
 USING (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 )
 WITH CHECK (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 );
 -- @end-schema

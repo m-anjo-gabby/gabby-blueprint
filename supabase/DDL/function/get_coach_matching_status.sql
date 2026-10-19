@@ -26,7 +26,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_is_admin boolean := COALESCE(public.get_jwt_user_type(), '') = '0';
+    v_is_admin boolean := public.is_system_admin();
 BEGIN
     IF NOT v_is_admin AND p_coach_id IS DISTINCT FROM auth.uid() THEN
         RAISE EXCEPTION 'NOT_AUTHORIZED: only the coach or admins can view the matching status';

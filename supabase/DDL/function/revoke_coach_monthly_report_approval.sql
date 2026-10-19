@@ -22,7 +22,7 @@ DECLARE
     v_month date := date_trunc('month', p_report_month)::date;
     v_approval RECORD;
 BEGIN
-    IF public.get_jwt_user_type() <> '0' THEN
+    IF public.get_jwt_user_type() IS NOT NULL AND NOT public.is_system_admin() THEN
         RAISE EXCEPTION 'not authorized to revoke this monthly report approval';
     END IF;
 

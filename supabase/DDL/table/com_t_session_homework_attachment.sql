@@ -40,7 +40,7 @@ USING (
       WHERE h.homework_id = com_t_session_homework_attachment.homework_id AND (h.coach_id = auth.uid() OR h.student_id = auth.uid()))) OR (EXISTS ( SELECT 1
        FROM public.com_t_session_homework_comment c
          JOIN public.com_t_session_homework h ON h.homework_id = c.homework_id
-      WHERE c.comment_id = com_t_session_homework_attachment.comment_id AND (h.coach_id = auth.uid() OR h.student_id = auth.uid()))) OR public.get_jwt_user_type() = '0'::text
+      WHERE c.comment_id = com_t_session_homework_attachment.comment_id AND (h.coach_id = auth.uid() OR h.student_id = auth.uid()))) OR public.is_system_admin()
 );
 
 CREATE POLICY "Coaches can attach files to their own homework posts" ON public.com_t_session_homework_attachment FOR INSERT TO authenticated

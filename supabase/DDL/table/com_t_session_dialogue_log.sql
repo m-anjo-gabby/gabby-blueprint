@@ -37,7 +37,7 @@ ALTER TABLE public.com_t_session_dialogue_log ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coaches can manage session dialogue logs they created" ON public.com_t_session_dialogue_log FOR ALL TO authenticated
 USING (
-    opened_by_coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    opened_by_coach_id = auth.uid() OR public.is_system_admin()
 )
 WITH CHECK (
     opened_by_coach_id = auth.uid() AND (EXISTS ( SELECT 1

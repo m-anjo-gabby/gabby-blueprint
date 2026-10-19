@@ -28,10 +28,10 @@ ALTER TABLE public.com_t_calendar_event_coach ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admin can manage calendar event coaches" ON public.com_t_calendar_event_coach FOR ALL TO authenticated
 USING (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 )
 WITH CHECK (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 );
 
 CREATE POLICY "Coaches can view their own assignments" ON public.com_t_calendar_event_coach FOR SELECT TO authenticated

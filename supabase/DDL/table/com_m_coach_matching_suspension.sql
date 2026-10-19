@@ -36,6 +36,6 @@ ALTER TABLE public.com_m_coach_matching_suspension ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view coach matching suspensions" ON public.com_m_coach_matching_suspension FOR SELECT TO authenticated
 USING (
-    COALESCE(public.get_jwt_user_type(), ''::text) = '0'::text
+    public.is_system_admin()
 );
 -- @end-schema

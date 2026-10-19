@@ -52,10 +52,10 @@ ALTER TABLE public.com_m_user_legal ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can manage user legal info" ON public.com_m_user_legal FOR ALL TO authenticated
 USING (
-    COALESCE(public.get_jwt_user_type(), ''::text) = '0'::text
+    public.is_system_admin()
 )
 WITH CHECK (
-    COALESCE(public.get_jwt_user_type(), ''::text) = '0'::text
+    public.is_system_admin()
 );
 
 CREATE POLICY "Users can view their own legal info" ON public.com_m_user_legal FOR SELECT TO authenticated

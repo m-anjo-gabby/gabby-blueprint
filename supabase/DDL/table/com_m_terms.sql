@@ -36,10 +36,10 @@ ALTER TABLE public.com_m_terms ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can manage terms" ON public.com_m_terms FOR ALL TO authenticated
 USING (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 )
 WITH CHECK (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 );
 
 CREATE POLICY "Terms are viewable by everyone" ON public.com_m_terms FOR SELECT TO public

@@ -24,7 +24,7 @@ DECLARE
     v_invalid text;
     v_field_count integer;
 BEGIN
-    IF COALESCE(public.get_jwt_user_type(), '') <> '0' THEN
+    IF NOT public.is_system_admin() THEN
         RAISE EXCEPTION 'NOT_AUTHORIZED: only admins can set coach specialties';
     END IF;
 

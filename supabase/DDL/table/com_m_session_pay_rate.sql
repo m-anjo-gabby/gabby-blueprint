@@ -31,9 +31,9 @@ ALTER TABLE public.com_m_session_pay_rate ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can manage session pay rate" ON public.com_m_session_pay_rate FOR ALL TO authenticated
 USING (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 )
 WITH CHECK (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 );
 -- @end-schema

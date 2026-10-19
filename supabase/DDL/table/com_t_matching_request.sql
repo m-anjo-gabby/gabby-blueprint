@@ -88,7 +88,7 @@ ALTER TABLE public.com_t_matching_request ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Involved users can view matching requests" ON public.com_t_matching_request FOR SELECT TO authenticated
 USING (
-    student_id = auth.uid() OR coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    student_id = auth.uid() OR coach_id = auth.uid() OR public.is_system_admin()
 );
 
 CREATE POLICY "Students can create their own matching requests" ON public.com_t_matching_request FOR INSERT TO authenticated

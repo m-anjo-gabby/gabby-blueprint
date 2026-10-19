@@ -84,6 +84,6 @@ ALTER TABLE public.com_t_trial_application ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view trial applications" ON public.com_t_trial_application FOR SELECT TO authenticated
 USING (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 );
 -- @end-schema

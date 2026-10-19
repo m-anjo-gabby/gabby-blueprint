@@ -66,6 +66,6 @@ ALTER TABLE public.com_t_coach_rating ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Students and admins can view coach ratings" ON public.com_t_coach_rating FOR SELECT TO authenticated
 USING (
-    student_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    student_id = auth.uid() OR public.is_system_admin()
 );
 -- @end-schema

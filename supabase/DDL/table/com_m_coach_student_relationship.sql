@@ -44,6 +44,6 @@ ALTER TABLE public.com_m_coach_student_relationship ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Involved users can view coach student relationships" ON public.com_m_coach_student_relationship FOR SELECT TO authenticated
 USING (
-    student_id = auth.uid() OR coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    student_id = auth.uid() OR coach_id = auth.uid() OR public.is_system_admin()
 );
 -- @end-schema

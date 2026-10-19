@@ -53,9 +53,9 @@ ALTER TABLE public.com_m_contract_plan ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can manage contract plans" ON public.com_m_contract_plan FOR ALL TO authenticated
 USING (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 )
 WITH CHECK (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 );
 -- @end-schema

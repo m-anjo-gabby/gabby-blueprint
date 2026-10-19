@@ -44,7 +44,7 @@ DECLARE
     v_rate_amount numeric(10, 2);
     v_rate_currency text;
 BEGIN
-    IF public.get_jwt_user_type() <> '0' THEN
+    IF public.get_jwt_user_type() IS NOT NULL AND NOT public.is_system_admin() THEN
         RAISE EXCEPTION 'not authorized to approve this monthly report';
     END IF;
 

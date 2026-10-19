@@ -39,10 +39,10 @@ ALTER TABLE public.com_m_calendar_event_series ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admin can manage calendar event series" ON public.com_m_calendar_event_series FOR ALL TO authenticated
 USING (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 )
 WITH CHECK (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 );
 
 CREATE POLICY "Users can view series of visible events" ON public.com_m_calendar_event_series FOR SELECT TO authenticated

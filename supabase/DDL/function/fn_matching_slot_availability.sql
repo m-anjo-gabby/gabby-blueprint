@@ -216,7 +216,7 @@ AS $$
     WHERE r.request_id = ANY(p_request_ids)
       AND r.status = 1
       AND (r.expires_at IS NULL OR r.expires_at > NOW())
-      AND (r.coach_id = auth.uid() OR public.get_jwt_user_type() = '0');
+      AND (r.coach_id = auth.uid() OR public.is_system_admin());
 $$;
 
 REVOKE EXECUTE ON FUNCTION public.get_matching_request_availability(uuid[]) FROM PUBLIC, anon;

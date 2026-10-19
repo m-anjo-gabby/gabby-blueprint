@@ -55,7 +55,7 @@ BEGIN
     WHERE request_id = p_request_id;
 
     -- アドミン代理承認は24時間ルールの対象外（admin_match_student_with_coach()と同様）
-    IF public.get_jwt_user_type() = '0' THEN
+    IF public.is_system_admin() THEN
         v_min_start_datetime := NULL;
     ELSE
         v_min_start_datetime := NOW() + interval '24 hours';

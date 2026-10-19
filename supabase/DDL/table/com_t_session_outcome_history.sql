@@ -49,6 +49,6 @@ ALTER TABLE public.com_t_session_outcome_history ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view session outcome history" ON public.com_t_session_outcome_history FOR SELECT TO authenticated
 USING (
-    COALESCE(public.get_jwt_user_type(), ''::text) = '0'::text
+    public.is_system_admin()
 );
 -- @end-schema
