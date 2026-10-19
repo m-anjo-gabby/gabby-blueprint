@@ -26,6 +26,14 @@ admin / coach / student と共通部品（`packages/lib/components`）の画面�
 - D. 没入画面（ドリル・ライブ通話等）の準備中表示は画面専用の実装を許可する。遷移中の汎用表示は `LoadingScreen`（student は `ImmersiveLoading`）。
 - 読み込みの失敗: 一覧・主な内容の取得に失敗した区画は、空の一覧（「0件」）にせず `SectionLoadError`（`packages/lib/components/common/`）で出す。補助の区画は出さなくてよい。決まりの正本は [CODING.md](./CODING.md) 6章「画面のデータの取得」。
 
+## 日時の表示（全アプリ共通）
+
+日時・「今日」「今月」は、サーバー（Vercel は UTC）とブラウザで同じ結果になるよう、タイムゾーンを指定して求める。`toLocaleDateString` / `toLocaleString`、`Intl.DateTimeFormat`（`timeZone` なし）、date-fns の `format`、`getMonth()` 等はプロセスのタイムゾーンで決まるため、サーバーで描く部品・Server Component で使わない（ずれた分だけ表示が変わり、クライアント部品ではハイドレーションの不一致（React #418）になる）。
+
+- 書式は `packages/lib/date/date.ts`（`formatZonedDate` / `formatDateTimeByZone` / `toIsoDateInZone` / `toIsoMonthInZone` 等）、coach の英語表記は `date/dateEn.ts` を使う。
+- どのタイムゾーンで出すかは画面の基準に合わせる。admin の一覧・契約期間は日本時間、集計期間は `date/reporting.ts` の `REPORTING_TIMEZONE`、コーチの暦で区切るもの（月次レポート・カレンダー）はコーチの `timezone`。
+- ログイン中の利用者のタイムゾーン（`useTimezone`）はストアの値のため、サーバーで描く区画では使わず、サーバーで取得して渡す。
+
 ## ダイアログ・シートを開いた時のフォーカス（全アプリ共通）
 
 開いただけで中の要素（×ボタン等）にフォーカスの枠が出ないよう、各アプリの `components/ui`（dialog / alert-dialog / sheet / drawer）の Content は `onOpenAutoFocus` の既定を `focusDialogContent`（`packages/lib/components/common/dialogFocus.ts`。枠そのものにフォーカスする）にしている。画面ごとに `onOpenAutoFocus={(e) => e.preventDefault()}` を書かない。Radix の Dialog を直接使う場合も `onOpenAutoFocus={focusDialogContent}` を渡す。開いた時に特定の要素へフォーカスが必要な場合（入力が主のダイアログ等）だけ、その要素に `autoFocus` を付ける。

@@ -6,13 +6,14 @@ import { expect, test } from '../../support/studentApp.ts';
  * スモーク: Color Vowel 辞書のシート（docs/screens/student/training/sprint-result.md「辞書シートの表示」）。
  * スプリント結果の英文の単語をタップ →「Color Vowelを検索」→ 下から出るシートに見出し・音素表記・音声ボタン・Color Vowel の説明が出る。
  * 発音記号（IPA）は表示しない。閲覧のみ（DBは変更しない）。
+ * 状態ペルソナの学習履歴は件数だけで解いた問題（answered_history）を持たないため、問題の英文が出る利用者ペルソナ P01 を使う。
  */
 
 // 辞書に必ず登録されている機能語（教材の英文にほぼ必ず含まれる）
 const COMMON_WORD = /^(the|to|a|for|you|of|and)$/i;
 
 test.describe('Color Vowel 辞書', () => {
-  test.use({ storageState: storageStatePath('liveStudent') });
+  test.use({ storageState: storageStatePath('dailyLearner') });
 
   test('単語をタップして検索すると、シートに音素表記と Color Vowel が表示される', async ({ page }) => {
     await openSprintResultFromHistory(page);

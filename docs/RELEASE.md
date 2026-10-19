@@ -43,13 +43,15 @@ Claude がリリースを進める場合は `.claude/skills/release` に従い�
 ## 2. staging
 
 1. [ ] ステージングPRをマージする（開発ブランチ → `staging`）。
-2. [ ] DB のリリーススクリプトを適用する。
+2. [ ] 環境変数の定義が変わった場合だけ: `pnpm vercel-env --env=staging` で差分を確かめ、`--apply`。
+   反映した値は次のデプロイから使われる（今動いているアプリは変わらない）ため、DB の適用より前に済ませておく
+   （DB の適用からデプロイまでの、旧アプリが失敗しうる時間を短くするため）。
+3. [ ] DB のリリーススクリプトを適用する。
    ```bash
    node supabase/release/run.mjs <file> --env=staging --status
    node supabase/release/run.mjs <file> --env=staging --sections=pending
    ```
    - 複数のリリースをまとめて出す場合は、**古いファイルから順に**適用する。
-3. [ ] 環境変数の定義が変わった場合だけ: `pnpm vercel-env --env=staging` で差分を確かめ、`--apply`。
 4. [ ] アプリをデプロイする: GitHub の Actions → Deploy → Run workflow（Use workflow from は main、environment は `staging`、アプリは3つとも）。
    ```bash
    gh workflow run deploy.yml -f environment=staging
@@ -62,6 +64,10 @@ Claude がリリースを進める場合は `.claude/skills/release` に従い�
    ```
 7. [ ] E2E を途中で止めた場合は、使い捨てデータの残りを確かめて消す（`pnpm --filter @gabby/testing exec tsx e2e/support/authFixtures.leftovers.ts --env=staging`、消す場合は `--delete`）。
 
+- staging で見つかった不具合は、`origin/staging` から hotfix ブランチ（`feature/YYYYMMDD-hotfix`）を作って直し、staging へ PR を出す。
+  開発ブランチは staging へスカッシュマージしているため履歴が分かれており、開発ブランチから出し直すとコンフリクトする。
+  同じ修正を次の開発ブランチにも入れる（内容が同じため、次回のマージでぶつからない）。
+
 ## 3. 本番
 
 1. [ ] 本番PRをマージする（`staging` → `main`）。
@@ -70,14 +76,15 @@ Claude がリリースを進める場合は `.claude/skills/release` に従い�
    ```bash
    export SUPABASE_ACCESS_TOKEN=sbp_...
    ```
-3. [ ] DB のリリーススクリプトを適用する（実行時にプロジェクトの Reference ID の手入力が必要）。
+3. [ ] 環境変数の定義が変わった場合だけ: `pnpm vercel-env --env=prod`（`prod` の手入力あり）で差分を確かめ、`--apply`。
+   staging と同じく、DB の適用より前に済ませておく。
+4. [ ] DB のリリーススクリプトを適用する（実行時にプロジェクトの Reference ID の手入力が必要）。
    ```bash
    node supabase/release/run.mjs <file> --env=prod --status
    node supabase/release/run.mjs <file> --env=prod --sections=pending
    node supabase/release/schema.mjs --env=prod --check
    ```
    - staging と同じく、複数のリリースは古いファイルから順に適用する。
-4. [ ] 環境変数の定義が変わった場合だけ: `pnpm vercel-env --env=prod`（`prod` の手入力あり）で差分を確かめ、`--apply`。
 5. [ ] アプリをデプロイする: Actions → Deploy（environment は `production`、confirm に `prod`）。
    ```bash
    gh workflow run deploy.yml -f environment=production -f confirm=prod
@@ -109,5 +116,5 @@ Claude がリリースを進める場合は `.claude/skills/release` に従い�
 ### 直して前へ進める（DB に関わる場合・基本はこちら）
 
 - [ ] DB の不具合は、直す内容を新しいセクションとしてリリーススクリプトに足し、`run.mjs` で適用する（適用済みのセクションは書き換えない）。
-- [ ] アプリの不具合は、直したコミットを開発ブランチ → staging → main の順に入れ、通常のリリースの手順で出す。急ぐ場合も CI の成功は待つ。
+- [ ] アプリの不具合は、`origin/main`（staging だけの不具合は `origin/staging`）から hotfix ブランチを作って直し、staging → main の順に入れて通常のリリースの手順で出す（開発ブランチから出し直すとスカッシュマージの履歴の違いでコンフリクトする）。同じ修正を次の開発ブランチにも入れる。急ぐ場合も CI の成功は待つ。
 - [ ] 何が起き、どう戻した・直したかを `.claude/skills/release/HISTORY.md` に残す（Claude が進めた場合）。

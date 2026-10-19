@@ -1,16 +1,14 @@
 import { Suspense } from 'react';
+import { toIsoMonthInZone } from '@gabby/lib/date/date';
+import { getMyProfile } from '@/actions/coachProfileAction';
 import { MonthlyReportsPageHeader, MonthlyReportTableSkeleton } from '@/components/common/ToolPageSkeletons';
 import { MonthlyReportSection } from './_components/MonthlyReportSection';
 import { MonthSelector } from './_components/MonthSelector';
 
-function currentYearMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
-
 export default async function MonthlyReportsPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
-  const params = await searchParams;
-  const yearMonth = params.month || currentYearMonth();
+  const [params, profile] = await Promise.all([searchParams, getMyProfile()]);
+  // レポートの月はコーチの暦で区切るため、指定が無ければコーチのタイムゾーンでの今月を開く（サーバーの時刻は UTC）
+  const yearMonth = params.month || toIsoMonthInZone(new Date(), profile?.timezone || 'Asia/Tokyo');
 
   return (
     <div className="space-y-6">

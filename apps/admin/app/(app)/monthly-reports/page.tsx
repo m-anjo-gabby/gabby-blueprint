@@ -1,15 +1,12 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { PageSkeleton } from '@gabby/lib/components/common/PageSkeleton';
+import { toIsoMonthInZone } from '@gabby/lib/date/date';
+import { REPORTING_TIMEZONE } from '@gabby/lib/date/reporting';
 import { getCoachesForMonthlyReport } from '@/actions/adminMonthlyReportAction';
 import { PageHeader } from '@/components/common/PageHeader';
 import { CoachMonthSelector } from './_components/CoachMonthSelector';
 import { MonthlyReportSection } from './_components/MonthlyReportSection';
-
-function currentYearMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
 
 export default async function AdminMonthlyReportsPage({
   searchParams,
@@ -23,8 +20,10 @@ export default async function AdminMonthlyReportsPage({
     getCoachesForMonthlyReport(),
   ]);
   const coachId = params.coachId || coaches[0]?.id || '';
-  const yearMonth = params.month || currentYearMonth();
-  const coachName = coaches.find((c) => c.id === coachId)?.user_name ?? '';
+  const coach = coaches.find((c) => c.id === coachId);
+  // レポートの月はコーチの暦で区切るため、指定が無ければコーチのタイムゾーンでの今月を開く（サーバーの時刻は UTC）
+  const yearMonth = params.month || toIsoMonthInZone(new Date(), coach?.timezone || REPORTING_TIMEZONE);
+  const coachName = coach?.user_name ?? '';
 
   return (
     <div className="space-y-6">

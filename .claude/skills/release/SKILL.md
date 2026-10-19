@@ -19,13 +19,14 @@ description: 開発ブランチ（feature/YYYYMMDD-dev）を staging・本番へ
 
 | 操作 | 誰が | 備考 |
 |---|---|---|
-| PR の作成・マージ | ユーザー | この環境には `gh` が無い。ブランチの push は Claude が行ってよい（依頼がある場合） |
+| PR の作成 | Claude（依頼がある場合） | `gh pr create`。ブランチの push も Claude が行ってよい |
+| PR のマージ | ユーザー | |
 | `release:status`・`run.mjs --status`・`schema.mjs --check`・`--list` | Claude | 読み取りのみ |
 | dev への `run.mjs` | Claude | 確認なしで実行してよい（`echo y |` で確認に答える） |
 | staging への `run.mjs` | Claude（ユーザーの明示の指示の後） | 1回目は自動モードの判定で止められることがある。止められたら回避せず、ユーザーに実行の指示を求める |
 | 本番への `run.mjs` | ユーザー、またはユーザーが一時トークンを渡して指示した場合は Claude | トークンは `SUPABASE_ACCESS_TOKEN` 環境変数で渡す。Reference ID の確認は標準入力で答える |
 | `pnpm vercel-env --apply`・値ファイルへのトークンの記入 | ユーザー | 自動モードでは秘密の書き込みが止められる |
-| GitHub Actions の `Deploy` の実行 | ユーザー | 実行後に Claude が `release:status` で確かめる |
+| GitHub Actions の `Deploy` の実行 | ユーザー、またはユーザーが指示した場合は Claude | `gh workflow run deploy.yml`（フックが毎回確認を求める）。`gh run watch` で終わりを待ち、`release:status` で確かめる |
 | Vercel のプロジェクト設定の変更 | ユーザーの指示がある場合だけ Claude | API で行い、変更後に読み直して確かめる |
 | E2E（staging） | Claude | 対象を絞って実行する（docs/RELEASE.md の 2-6） |
 
@@ -39,6 +40,11 @@ description: 開発ブランチ（feature/YYYYMMDD-dev）を staging・本番へ
 - 複数のリリースをまとめて出す場合は、古いリリーススクリプトから順に適用する。
 - リリーススクリプトの冒頭のコメントは、適用後に書き換えない（セクション1のハッシュが変わり「適用後に内容変更あり」になる）。手順の補足は docs/RELEASE.md に書く。
 - 時間のかかるコマンド（E2E 等）は、最初の要約行（対象の件数）を確かめてから待つ。
+- リリースの途中でユーザーが次の開発ブランチに切り替えていることがある。コミットの前に `git branch --show-current` で作業中のブランチを確かめる。
+- staging で見つかった不具合の修正は、`git worktree add -b feature/YYYYMMDD-hotfix <スクラッチパッドの下> origin/staging` で
+  別の作業フォルダに hotfix ブランチを作って行い、ユーザーの作業中のブランチと作業ツリーに触れない（docs/RELEASE.md 2章の末尾）。
+- Deploy のビルドの失敗は `gh run view <id> --log-failed` で読む。手元の `next build` は `.env.local` を Next が直接読むため、
+  Vercel のビルド（Turborepo の厳格な環境変数モードで、turbo.json に無い秘密の値が渡らない）でだけ失敗することがある。
 
 ## 終わったら（改善の仕組み）
 

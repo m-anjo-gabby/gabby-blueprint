@@ -15,6 +15,9 @@
   アプリ内からの導線は無い。
 - コーポレートサイトからは**別タブのリンク**（`target="_blank" rel="noopener"`）で開く。iframe での埋め込みはできない
   （全アプリで他のサイトへの埋め込みを禁止している。`packages/lib/security/frameHeaders.ts`）。
+- 受付は環境ごとに student の環境変数 `TRIAL_APPLICATION_ENABLED` で切り替える（dev・staging は `true`、本番は試験運用の間 `false`）。
+  `false`・未設定なら `/trial`・`/trial/complete` は 404 にし、申込のアクションも「現在、お申し込みを受け付けていません。」で断る。
+  どの環境でも検索エンジンには載せない（`noindex`）。
 
 ## 画面の構成・状態
 
@@ -92,6 +95,7 @@
 
 - 画面: `apps/student/app/(public)/trial/`（`layout.tsx`〔共通の枠〕・`page.tsx`・`complete/page.tsx`・`_components/TrialApplicationForm.tsx`・`_components/TrialApplicationConfirm.tsx`・`_components/TurnstileWidget.tsx`・`_lib/schema.ts`）、
   公開ルートは `apps/student/proxy.ts`
+- 受付の有無: `packages/lib/trial/availability.ts`（`layout.tsx` とアクションの両方で確かめる）
 - 送信: `apps/student/actions/trialAction.ts` → `packages/lib/security/turnstile.ts`（CAPTCHA の確認）→ `packages/lib/trial/apply.ts` → RPC `fn_submit_trial_application`
 - 本登録: `packages/lib/auth/core.ts`（`acceptInvitationCore`）→ `packages/lib/trial/registration.ts` → RPC `fn_resolve_web_trial_contract`、`packages/lib/license/issue.ts`
 - メール: `packages/lib/mail/templates/TrialEmailTemplates.ts`
