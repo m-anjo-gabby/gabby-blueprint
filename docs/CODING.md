@@ -15,6 +15,7 @@
 | `eslint-disable` の理由（`-- 理由` を必須）・使われなくなった指示 | ESLint（`@eslint-community/eslint-comments`・`reportUnusedDisableDirectives`） | `pnpm lint` |
 | admin のアクションのロールの確認・サーバー側の `catch` の `unstable_rethrow`（6章） | 単体テスト（`testing/unit/admin-action-guard.test.ts`・`server-catch-rethrow.test.ts`） | `pnpm test` |
 | service_role を使うアクションの利用者の確認・DB の関数の権限（SECURITY.md） | 単体テスト（`testing/unit/server-action-auth.test.ts`・`ddl-function-security.test.ts`） | `pnpm test` |
+| 規約の文書（`CLAUDE.md`・`docs/`・`testing/` 等）が挙げるファイルの実在 | 単体テスト（`testing/unit/rule-docs-paths.test.ts`） | `pnpm test` |
 
 まとめて `pnpm check`（push のたびに GitHub Actions の `CI` も同じ内容を実行する）。
 
