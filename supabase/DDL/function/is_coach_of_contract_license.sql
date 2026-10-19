@@ -6,9 +6,8 @@
 -- (infinite recursion detected in policy for relation) になる。
 -- SECURITY DEFINER で回避する（is_chat_room_memberと同様のパターン）
 --
--- 2026-09-03: 担当関係の判定元をcom_m_lesson_schedule（スケジューリング用データ）から
--- 判定専用の派生マスタcom_m_coach_student_relationshipに変更（意味論・挙動は変更なし。
--- 詳細はtable/com_m_coach_student_relationship.sqlを参照）。
+-- 担当関係は、スケジューリング用の com_m_lesson_schedule ではなく判定専用の派生マスタ
+-- com_m_coach_student_relationship で判定する（詳細はtable/com_m_coach_student_relationship.sqlを参照）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.is_coach_of_contract_license(p_contract_id uuid)
 RETURNS boolean AS $$

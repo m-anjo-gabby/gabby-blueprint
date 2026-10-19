@@ -1,26 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { Plus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { createChatRoom, getChatRoomTargetUsers } from '@gabby/lib/chat/actions/roomActions';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { CHAT_ROOM_TYPES, type ChatRoomType, type ChatTargetUser } from '@gabby/types/chat';
+import { type ClientOption } from '@gabby/types/client';
+import { getClientsFilter } from '@/actions/adminClientAction';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { CHAT_ROOM_TYPES, ChatRoomType, ChatTargetUser } from '@gabby/types/chat';
-import { ClientOption } from '@gabby/types/client';
-import { getChatRoomTargetUsers, createChatRoom } from '@gabby/lib/chat/actions/roomActions';
-import { getClientsFilter } from '@/actions/adminClientAction';
-import { ParticipantPicker, ParticipantSelection, EMPTY_PARTICIPANT_SELECTION } from './ParticipantPicker';
 import { GroupParticipantsPicker } from './GroupParticipantsPicker';
+import { EMPTY_PARTICIPANT_SELECTION, ParticipantPicker, type ParticipantSelection } from './ParticipantPicker';
+import { useChatErrorMessage } from './useChatErrorMessage';
 
 interface CreateChatRoomDialogProps {
   onCreated: () => void;
@@ -29,6 +24,7 @@ interface CreateChatRoomDialogProps {
 export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
   const t = useTranslations('chat.createRoomDialog');
   const tCommon = useTranslations('common');
+  const chatErrorMessage = useChatErrorMessage();
   const ROOM_TYPE_LABELS: Record<ChatRoomType, string> = {
     [CHAT_ROOM_TYPES.ONE_ON_ONE]: t('roomTypeOneOnOne'),
     [CHAT_ROOM_TYPES.GROUP]: t('roomTypeGroup'),
@@ -67,7 +63,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
       if (usersRes.success) {
         setCandidateUsers(usersRes.data);
       } else {
-        showToast(usersRes.error || t('toastUsersFetchFailed'), 'error');
+        showToast(chatErrorMessage(usersRes.errorCode, t('toastUsersFetchFailed')), 'error');
       }
       setClients(clientsRes);
     } finally {
@@ -93,8 +89,8 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
         ? await createChatRoom({ roomType, memberIds: [memberIdA, memberIdB] })
         : await createChatRoom({ roomType, memberIds: groupMemberIds, roomName: roomName.trim() });
 
-      if (!res.success || !res.roomId) {
-        showToast(res.error || t('toastCreateFailed'), 'error');
+      if (!res.success) {
+        showToast(chatErrorMessage(res.errorCode, t('toastCreateFailed')), 'error');
         return;
       }
 
@@ -131,9 +127,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
 
           {isOneOnOne ? (
             <div className="space-y-5">
-              <p className="text-xs text-slate-500">
-                {t('oneOnOneHint')}
-              </p>
+              <p className="text-xs text-slate-500">{t('oneOnOneHint')}</p>
 
               <ParticipantPicker
                 label={t('participant1Label')}
@@ -157,9 +151,7 @@ export function CreateChatRoomDialog({ onCreated }: CreateChatRoomDialogProps) {
             </div>
           ) : (
             <div className="space-y-5">
-              <p className="text-xs text-slate-500">
-                {t('groupHint')}
-              </p>
+              <p className="text-xs text-slate-500">{t('groupHint')}</p>
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-600 block">{t('roomNameLabel')}</label>

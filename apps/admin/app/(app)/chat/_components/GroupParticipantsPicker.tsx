@@ -1,15 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Check, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
+import { useMemo, useState } from 'react';
+import { type ChatTargetUser } from '@gabby/types/chat';
+import { type ClientOption } from '@gabby/types/client';
+import { USER_TYPES, type UserType } from '@gabby/types/user';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { UserTypeLabel } from '@/components/common/UserTypeLabel';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SearchableSelect } from '@/components/common/SearchableSelect';
-import { USER_TYPES, UserType, getUserTypeLabel } from '@gabby/types/user';
-import { ChatTargetUser } from '@gabby/types/chat';
-import { ClientOption } from '@gabby/types/client';
+import { cn } from '@/lib/utils';
 
 const SELECTABLE_USER_TYPES: UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
 
@@ -21,7 +22,13 @@ interface GroupParticipantsPickerProps {
   disabled?: boolean;
 }
 
-export function GroupParticipantsPicker({ users, clients, selectedIds, onChange, disabled }: GroupParticipantsPickerProps) {
+export function GroupParticipantsPicker({
+  users,
+  clients,
+  selectedIds,
+  onChange,
+  disabled,
+}: GroupParticipantsPickerProps) {
   const t = useTranslations('chat.groupParticipantsPicker');
   const tCommon = useTranslations('chat.common');
   const ALL_CLIENTS_OPTION = { value: '', label: tCommon('allClientsOption') };
@@ -58,7 +65,7 @@ export function GroupParticipantsPicker({ users, clients, selectedIds, onChange,
         <TabsList className="grid grid-cols-3 w-full">
           {SELECTABLE_USER_TYPES.map((t) => (
             <TabsTrigger key={t} value={t} disabled={disabled}>
-              {getUserTypeLabel(t)}
+              <UserTypeLabel type={t} />
             </TabsTrigger>
           ))}
         </TabsList>
@@ -94,7 +101,9 @@ export function GroupParticipantsPicker({ users, clients, selectedIds, onChange,
                     {u.user_name || tCommon('unnamed')}
                     {u.client_id ? ` - ${clientNameById.get(u.client_id) || tCommon('unknownClient')}` : ''}
                   </span>
-                  <span className="ml-auto pl-2 text-[10px] text-slate-400 shrink-0">{getUserTypeLabel(u.user_type)}</span>
+                  <span className="ml-auto pl-2 text-[10px] text-slate-400 shrink-0">
+                    <UserTypeLabel type={u.user_type} />
+                  </span>
                 </CommandItem>
               );
             })}

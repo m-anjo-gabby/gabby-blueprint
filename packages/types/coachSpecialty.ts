@@ -32,5 +32,4 @@ export interface CoachSpecialtyTag {
 }
 
 export type GetCoachSpecialtyListResult =
-  | { success: true; specialties: CoachSpecialtyMaster[] }
-  | { success: false; errorCode: 'unexpected_error' };
+  { success: true; specialties: CoachSpecialtyMaster[] } | { success: false; errorCode: 'unexpected_error' };

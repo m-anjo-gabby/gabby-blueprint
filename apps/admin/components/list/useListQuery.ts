@@ -1,7 +1,7 @@
 'use client';
 
-import { useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useTransition } from 'react';
 import { parseListParams } from '@/lib/list';
 
 export interface ListQuery<K extends string = never> {
@@ -34,7 +34,7 @@ interface ListQueryOptions {
  */
 export function useListQuery<K extends string = never>(
   filterKeys: readonly K[] = [],
-  { shallow = false }: ListQueryOptions = {}
+  { shallow = false }: ListQueryOptions = {},
 ): ListQuery<K> {
   const router = useRouter();
   const pathname = usePathname();

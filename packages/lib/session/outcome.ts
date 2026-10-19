@@ -1,9 +1,9 @@
 import {
-  SESSION_STATUS,
-  SESSION_OUTCOME,
   CANCEL_CATEGORY,
   CONDUCTED_VIA,
   isConductedOutcome,
+  SESSION_OUTCOME,
+  SESSION_STATUS,
   type CancelCategory,
   type CompletionResult,
   type ConductedVia,
@@ -37,7 +37,11 @@ export function toSessionOutcome(session: {
  * アプリ内の通話で実施したと申告した結果が、入退室ログからの推定と違うか
  * （コーチの入室記録が無い＝推定が null の場合も違うとみなす）。
  */
-export function isOutcomeMismatch(outcome: SessionOutcome, conductedVia: ConductedVia | null, suggestedOutcome: CompletionResult | null): boolean {
+export function isOutcomeMismatch(
+  outcome: SessionOutcome,
+  conductedVia: ConductedVia | null,
+  suggestedOutcome: CompletionResult | null,
+): boolean {
   return isConductedOutcome(outcome) && conductedVia === CONDUCTED_VIA.APP && suggestedOutcome !== outcome;
 }
 
@@ -51,7 +55,7 @@ export type OutcomeReasonKind = 'not_conducted' | 'left_early' | 'external' | 'm
 export function getOutcomeReasonKind(
   outcome: SessionOutcome,
   conductedVia: ConductedVia | null,
-  suggestedOutcome: CompletionResult | null
+  suggestedOutcome: CompletionResult | null,
 ): OutcomeReasonKind | null {
   if (!isConductedOutcome(outcome)) return 'not_conducted';
   if (outcome === SESSION_OUTCOME.STUDENT_LEFT_EARLY) return 'left_early';

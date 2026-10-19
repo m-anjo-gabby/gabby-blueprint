@@ -1,16 +1,20 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
-import type { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
+import type { useTranslations } from 'next-intl';
+import type { ContractPlan } from '@gabby/types/contract';
+import { InactiveBadge } from '@/components/common/InactiveBadge';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { ContractPlan } from '@gabby/types/contract';
 import { ContractPlanFormDialog } from './ContractPlanFormDialog';
 
 type TableT = ReturnType<typeof useTranslations<'contracts.plans.table'>>;
 
-export function createColumns(t: TableT, { onDelete }: { onDelete: (plan: ContractPlan) => void }): ColumnDef<ContractPlan>[] {
+export function createColumns(
+  t: TableT,
+  { onDelete }: { onDelete: (plan: ContractPlan) => void },
+): ListColumnDef<ContractPlan>[] {
   return [
     {
       accessorKey: 'sort_no',
@@ -22,7 +26,10 @@ export function createColumns(t: TableT, { onDelete }: { onDelete: (plan: Contra
       header: t('planNameHeader'),
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <span className="font-bold text-slate-700">{row.original.plan_name}</span>
+          <span className="flex items-center gap-2 font-bold text-slate-700">
+            {row.original.plan_name}
+            {!row.original.is_active && <InactiveBadge label={t('inactiveBadge')} />}
+          </span>
           <span className="text-[11px] text-slate-400">{row.original.plan_name_en}</span>
         </div>
       ),
@@ -57,7 +64,9 @@ export function createColumns(t: TableT, { onDelete }: { onDelete: (plan: Contra
     {
       accessorKey: 'period_months',
       header: t('periodHeader'),
-      cell: ({ row }) => <span className="text-slate-600">{t('periodUnit', { count: row.original.period_months })}</span>,
+      cell: ({ row }) => (
+        <span className="text-slate-600">{t('periodUnit', { count: row.original.period_months })}</span>
+      ),
     },
     {
       accessorKey: 'plan_code',

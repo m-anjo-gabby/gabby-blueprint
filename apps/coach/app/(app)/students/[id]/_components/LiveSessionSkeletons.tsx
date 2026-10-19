@@ -1,10 +1,10 @@
-import Link from 'next/link';
 import { ArrowLeft, BookOpen, History, Info, MessageCircle, MessagesSquare, TrendingUp, Zap } from 'lucide-react';
+import Link from 'next/link';
+import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
+import { ImmersiveShell } from '@/components/common/ImmersiveShell';
+import { Section } from '@/components/common/Section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Section } from '@/components/common/Section';
-import { ImmersiveShell } from '@/components/common/ImmersiveShell';
-import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
 import { buildLiveSessionHubHref } from '@/lib/liveSession/context';
 
 /*
@@ -33,11 +33,17 @@ function TitledCardSkeleton({ title, icon, rows = 2 }: { title: string; icon?: R
   );
 }
 
-// ---------- Session Hub ----------
+// セッションハブ
 
 /** セッションハブの Dialogue Practice カードの骨組み（page.tsx の Suspense の fallback と共有） */
 export function HubDialoguePracticeSkeleton() {
-  return <TitledCardSkeleton title="Dialogue Practice" icon={<MessagesSquare size={14} className="text-slate-400" />} rows={2} />;
+  return (
+    <TitledCardSkeleton
+      title="Dialogue Practice"
+      icon={<MessagesSquare size={14} className="text-slate-400" />}
+      rows={2}
+    />
+  );
 }
 
 /** セッションハブの Prep 区画の骨組み（page.tsx の Suspense の fallback と共有） */
@@ -81,8 +87,8 @@ export function SessionHubSkeleton({ studentId }: { studentId: string }) {
       <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
         <div className="max-w-5xl mx-auto space-y-8 pb-8">
           <p className="text-[13px] text-slate-500 max-w-2xl">
-            Prep for this session, then click Start Live Session below to begin the call — it opens in a separate
-            tab (or window), so you can keep this page open for training (e.g. Live Sprint) and prep info.
+            Prep for this session, then click Start Live Session below to begin the call — it opens in a separate tab
+            (or window), so you can keep this page open for training (e.g. Live Sprint) and prep info.
           </p>
 
           <Section label="Session Info" icon={Info}>
@@ -101,7 +107,11 @@ export function SessionHubSkeleton({ studentId }: { studentId: string }) {
 
           <Section label="Training">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <TitledCardSkeleton title="Live Sprint" icon={<Zap size={14} className="fill-current text-amber-400" />} rows={1} />
+              <TitledCardSkeleton
+                title="Live Sprint"
+                icon={<Zap size={14} className="fill-current text-amber-400" />}
+                rows={1}
+              />
               <HubDialoguePracticeSkeleton />
             </div>
           </Section>
@@ -119,7 +129,7 @@ export function SessionHubSkeleton({ studentId }: { studentId: string }) {
   );
 }
 
-// ---------- Live Sprint（Setup） ----------
+// Live Sprint（準備）
 
 /** Live Sprint の準備画面の骨組み（没入表示の中央のカード。見出し行と教材の選択肢を骨組み） */
 export function LessonSprintSetupSkeleton() {
@@ -149,7 +159,7 @@ export function LessonSprintSetupSkeleton() {
   );
 }
 
-// ---------- Live Sprint Result ----------
+// Live Sprint の結果
 
 /** Live Sprint Result の本文（Summary と設問の2列）の骨組み */
 function LessonSprintResultBody() {
@@ -205,7 +215,7 @@ export function LessonSprintResultSkeleton({ studentId, sessionId }: { studentId
   );
 }
 
-// ---------- Session Result ----------
+// セッションの結果
 
 /** Session Result の骨組み（戻るリンク・見出し・区分・カードの見出しは本物） */
 export function SessionResultSkeleton({ studentId }: { studentId: string }) {

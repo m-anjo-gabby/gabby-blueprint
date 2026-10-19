@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Calendar, ChevronDown } from 'lucide-react';
-import { cn } from "@/lib/utils";
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import React, { useMemo, useState } from 'react';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
-import { motion, AnimatePresence } from 'framer-motion';
-import { WordSummaryHistoryItem } from '@/actions/wordAction';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { type WordSummaryHistoryItem } from '@/actions/wordAction';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
+import { cn } from '@/lib/utils';
+import { HistoryDayListSkeleton, HistoryEmpty, HistoryMetric } from '../../../_components/HistoryParts';
 import { MonthSwitcher } from '../../../_components/MonthSwitcher';
 import { StatTile } from '../../../_components/StatTile';
-import { HistoryDayListSkeleton, HistoryEmpty, HistoryMetric } from '../../../_components/HistoryParts';
 
 interface WordHistoryViewProps {
   /** 月の履歴。null は読み込み中（loading.tsx）で、見出し・月切替は本物のまま数値と一覧を骨組みにする */
@@ -23,20 +23,20 @@ interface GroupedWordHistory {
   [date: string]: WordSummaryHistoryItem[];
 }
 
-export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, targetMonth }) => {
+export function WordHistoryView({ initialData, targetMonth }: WordHistoryViewProps) {
   const isLoading = initialData === null;
   const items = useMemo(() => initialData ?? [], [initialData]);
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
   const timezone = useTimezone();
 
-  // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算等）はSprint履歴画面と共通のためフック化
+  // 月ナビゲーション（前月/翌月の年またぎ計算等）はSprint履歴画面と共通のためフック化
   const monthNavigator = useMonthNavigator({
     targetMonth,
     basePath: '/training/word/history',
     navigate: 'replace',
   });
 
-  // 📊 ヘッダーの月次サマリー用集計（追加のAPIコールなしで算出）
+  // ヘッダーの月次サマリー用集計（追加のAPIコールなしで算出）
   const monthlyTotals = useMemo(() => {
     return items.reduce(
       (acc, s) => {
@@ -44,22 +44,22 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
         acc.phrases += s.phrase_count;
         return acc;
       },
-      { words: 0, phrases: 0 }
+      { words: 0, phrases: 0 },
     );
   }, [items]);
 
-  // 🎯 日付ごとにグループ化（React Compiler が確実に追随できるよう外部関数参照を排除し、依存配列を修正）
+  // 日付ごとにまとめる
   const groupedData = useMemo(() => {
     const groups: GroupedWordHistory = {};
 
-    items.forEach(session => {
-      // 💡 外部関数を通さず、直接インラインでタイムゾーン付きフォーマットを実行
+    items.forEach((session) => {
+      // 外部関数を通さず、直接インラインでタイムゾーン付きフォーマットを実行
       const dateStr = formatZonedDate(session.training_date, timezone);
       if (!groups[dateStr]) groups[dateStr] = [];
       groups[dateStr].push(session);
     });
 
-    Object.keys(groups).forEach(date => {
+    Object.keys(groups).forEach((date) => {
       groups[date].sort((a, b) => {
         const nameA = a.com_m_contents?.content_name || '';
         const nameB = b.com_m_contents?.content_name || '';
@@ -68,12 +68,10 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
     });
 
     return groups;
-  }, [items, timezone]); // 💡 静的解析が一致するよう `timezone` を依存配列にしっかり追加
+  }, [items, timezone]);
 
   const toggleDate = (date: string) => {
-    setExpandedDates(prev =>
-      prev.includes(date) ? prev.filter(d => d !== date) : [...prev, date]
-    );
+    setExpandedDates((prev) => (prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date]));
   };
 
   // ソートの計算量最適化
@@ -108,7 +106,11 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
             const totalAssessmentsDay = sessions.reduce((acc, s) => acc + s.assessment_count, 0);
 
             return (
-              <motion.div key={date} layout="position" className="overflow-hidden rounded-card border border-line bg-surface">
+              <motion.div
+                key={date}
+                layout="position"
+                className="overflow-hidden rounded-card border border-line bg-surface"
+              >
                 <button
                   type="button"
                   onClick={() => toggleDate(date)}
@@ -123,7 +125,13 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                       <HistoryMetric metric="speech" label="発話" value={totalAssessmentsDay} />
                     </div>
                   </div>
-                  <ChevronDown size={18} className={cn('shrink-0 text-ink-subtle transition-transform duration-200', isExpanded && 'rotate-180')} />
+                  <ChevronDown
+                    size={18}
+                    className={cn(
+                      'shrink-0 text-ink-subtle transition-transform duration-200',
+                      isExpanded && 'rotate-180',
+                    )}
+                  />
                 </button>
 
                 <AnimatePresence initial={false}>
@@ -138,7 +146,9 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
                       <ul className="space-y-2 p-3 sm:p-4">
                         {sessions.map((session) => (
                           <li key={session.content_id} className="rounded-control border border-line bg-surface p-3.5">
-                            <p className="text-sm font-semibold text-ink">{session.com_m_contents?.content_name || '教材データなし'}</p>
+                            <p className="text-sm font-semibold text-ink">
+                              {session.com_m_contents?.content_name || '教材データなし'}
+                            </p>
                             <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                               <HistoryMetric metric="word" label="単語" value={session.word_count} />
                               <HistoryMetric metric="phrase" label="フレーズ" value={session.phrase_count} />
@@ -157,4 +167,4 @@ export const WordHistoryView: React.FC<WordHistoryViewProps> = ({ initialData, t
       </div>
     </>
   );
-};
+}

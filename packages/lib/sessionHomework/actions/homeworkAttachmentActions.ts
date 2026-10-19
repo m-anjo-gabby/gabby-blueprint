@@ -1,16 +1,18 @@
 'use server';
 
-import { createServerClient } from '@gabby/lib/supabase/server';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import {
   HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES,
   HOMEWORK_ATTACHMENT_MAX_SIZE,
-  PendingHomeworkAttachment,
-  UploadHomeworkAttachmentResult,
+  type PendingHomeworkAttachment,
+  type UploadHomeworkAttachmentResult,
 } from '@gabby/types/sessionHomework';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -23,7 +25,7 @@ const logger = createLogger('common');
  */
 export async function uploadSessionHomeworkAttachmentCore(
   sessionId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<UploadHomeworkAttachmentResult> {
   const ctx = await getLogContext();
   try {
@@ -37,7 +39,11 @@ export async function uploadSessionHomeworkAttachmentCore(
     }
 
     const mimeType = file.type || 'application/octet-stream';
-    if (!HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES.includes(mimeType as (typeof HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES)[number])) {
+    if (
+      !HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES.includes(
+        mimeType as (typeof HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES)[number],
+      )
+    ) {
       return { success: false, errorCode: 'unsupported_type' };
     }
 
@@ -87,7 +93,8 @@ export async function uploadSessionHomeworkAttachmentCore(
 
     return { success: true, attachment };
   } catch (err) {
-    logger.error('sessionHomework:upload_attachment_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('sessionHomework:upload_attachment_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { sessionId },
@@ -98,10 +105,31 @@ export async function uploadSessionHomeworkAttachmentCore(
 
 /**
  * 宿題添付ファイルの署名付きURLを取得（"homework"バケットは非公開のため都度発行する）
+ * 署名は service_role で作るため、先に利用者の権限（RLS: 宿題のコーチ・生徒・アドミン）で添付の行が見えるかを確かめる
+ * （パスを知っていることを見てよい権利の代わりにしない。docs/SECURITY.md 4章）。
  */
 export async function getSessionHomeworkAttachmentUrl(path: string): Promise<{ url: string | null; error?: string }> {
   const ctx = await getLogContext();
   try {
+    const user = await getAuthUser();
+    if (!user) return { url: null };
+
+    const serverSupabase = await createServerClient();
+    const { data: visible, error: lookupError } = await serverSupabase
+      .from('com_t_session_homework_attachment')
+      .select('file_path')
+      .eq('file_path', path)
+      .limit(1)
+      .maybeSingle();
+    if (lookupError || !visible) {
+      logger.warn(
+        'sessionHomework:get_attachment_url_forbidden',
+        lookupError?.message ?? 'Attachment is not visible to the user',
+        { ...ctx, err: lookupError, payload: { path } },
+      );
+      return { url: null };
+    }
+
     const supabase = createAdminClient();
     const { data, error } = await supabase.storage.from('homework').createSignedUrl(path, 60 * 60);
 
@@ -116,7 +144,8 @@ export async function getSessionHomeworkAttachmentUrl(path: string): Promise<{ u
 
     return { url: data.signedUrl };
   } catch (err) {
-    logger.error('sessionHomework:get_attachment_url_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('sessionHomework:get_attachment_url_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { path },

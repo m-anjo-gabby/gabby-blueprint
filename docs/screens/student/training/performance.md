@@ -57,6 +57,6 @@ PC（lg以上）では 2・3 を左、4 を右に並べる。モバイルでは�
 - `apps/student/app/(app)/(shell)/training/performance/page.tsx`
 - `apps/student/app/(app)/(shell)/training/performance/_components/TrainingPerformance.tsx`
 - `apps/student/app/(app)/(shell)/training/_components/`（`MonthSwitcher` / `StatTile` / `HistoryParts`。履歴画面と共通）
-- `apps/student/actions/performanceAction.ts`（`getUserTrainingPerformanceAction`）
+- `apps/student/actions/performanceAction.ts`（`getUserTrainingPerformance`）
 - `packages/lib/hooks/useMonthNavigator.ts`（単語履歴・スプリント履歴画面と共通の月ナビゲーション）
 - 指標・教材種別のアイコンと分類色: `packages/lib/content/ui.ts`（`getTrainingMetricConfig` / `getContentTypeConfig`）

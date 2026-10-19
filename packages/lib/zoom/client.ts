@@ -1,7 +1,9 @@
 'use client';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ZoomClient = any;
+import type ZoomVideo from '@zoom/videosdk';
+
+// SDK は画面で使う時だけ読み込む（import()）ため、型だけを参照する
+type ZoomClient = ReturnType<typeof ZoomVideo.createClient>;
 
 let clientInitPromise: Promise<ZoomClient> | null = null;
 

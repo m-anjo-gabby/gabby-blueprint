@@ -1,5 +1,5 @@
 ---------------------------------------------
--- 月次コーチングレポート承認取消しRPC (2026-09-13 追加)
+-- 月次コーチングレポート承認取消しRPC
 -- 前提: table/com_t_coach_monthly_report_approval.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】
@@ -22,7 +22,7 @@ DECLARE
     v_month date := date_trunc('month', p_report_month)::date;
     v_approval RECORD;
 BEGIN
-    IF public.get_jwt_user_type() <> '0' THEN
+    IF public.get_jwt_user_type() IS NOT NULL AND NOT public.is_system_admin() THEN
         RAISE EXCEPTION 'not authorized to revoke this monthly report approval';
     END IF;
 
@@ -50,7 +50,7 @@ BEGIN
         p_coach_id,
         'COACH_REPORT_APPROVAL_REVOKED',
         jsonb_build_object('report_month', v_month),
-        -- 対象の月を開く（月の指定が無いと今月が開くため。2026-10-06変更）
+        -- 対象の月を開く（月の指定が無いと今月が開くため）
         '/monthly-reports?month=' || to_char(v_month, 'YYYY-MM')
     );
 END;

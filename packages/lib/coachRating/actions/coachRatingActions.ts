@@ -1,29 +1,31 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
 import { z } from 'zod';
-import { createServerClient } from '../../supabase/server';
-import { createLogger } from '../../logger';
-import { getLogContext } from '../../logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import {
   COACH_RATING_FEEDBACK_MAX_LENGTH,
   COACH_RATING_MAX,
   COACH_RATING_MIN,
-  CoachRatingStats,
-  PendingCoachRating,
-  SubmitCoachRatingInput,
-  SubmitCoachRatingResult,
+  type CoachRatingStats,
+  type PendingCoachRating,
+  type SubmitCoachRatingInput,
+  type SubmitCoachRatingResult,
 } from '@gabby/types/coachRating';
+import { createLogger } from '../../logger';
+import { getLogContext } from '../../logger/context';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 
-type CoachStatsRow = {
+interface CoachStatsRow {
   coach_id: string;
   rating_count: number;
   rating_overall_avg: number | string | null;
   rating_coaching_avg: number | string | null;
   rating_friendliness_avg: number | string | null;
-};
+}
 
 // numeric 列は PostgREST から文字列で返ることがあるため数値にそろえる
 const toNumberOrNull = (value: number | string | null): number | null => (value === null ? null : Number(value));
@@ -60,12 +62,16 @@ export async function getCoachRatingStatsCore(coachIds: string[]): Promise<Map<s
     }
     return statsById;
   } catch (err) {
-    logger.error('coach_rating:get_stats_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coach_rating:get_stats_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return statsById;
   }
 }
 
-type PendingCoachRatingRow = {
+interface PendingCoachRatingRow {
   ticket_id: string;
   coach_id: string;
   coach_name: string | null;
@@ -73,7 +79,7 @@ type PendingCoachRatingRow = {
   plan_name: string | null;
   license_end_date: string;
   completed_count: number;
-};
+}
 
 /**
  * ログイン中の生徒が評価を待っている「契約×コーチ」の一覧を取得する（対象の判定は fn_coach_rating_targets）。
@@ -100,7 +106,11 @@ export async function getMyPendingCoachRatingsCore(): Promise<PendingCoachRating
       completedCount: row.completed_count,
     }));
   } catch (err) {
-    logger.error('coach_rating:get_pending_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coach_rating:get_pending_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return [];
   }
 }
@@ -142,14 +152,27 @@ export async function submitCoachRatingCore(input: SubmitCoachRatingInput): Prom
       if (error.message?.includes('INVALID_SCORE') || error.message?.includes('FEEDBACK_TOO_LONG')) {
         return { success: false, errorCode: 'invalid_input' };
       }
-      logger.error('coach_rating:submit_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { ticketId, coachId } });
+      logger.error('coach_rating:submit_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { ticketId, coachId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    logger.info('coach_rating:submit_success', 'Coach rating submitted', { ...ctx, userId: user.id, payload: { ticketId, coachId } });
+    logger.info('coach_rating:submit_success', 'Coach rating submitted', {
+      ...ctx,
+      userId: user.id,
+      payload: { ticketId, coachId },
+    });
     return { success: true };
   } catch (err) {
-    logger.error('coach_rating:submit_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coach_rating:submit_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

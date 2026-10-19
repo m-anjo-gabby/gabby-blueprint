@@ -7,8 +7,8 @@
  * - 周りに白い余白を付け、表示サイズ（MAIL_LOGO_WIDTH × MAIL_LOGO_HEIGHT）の2倍で書き出す（高解像度の画面向け）
  * - 減色して容量を抑える（メールを開くたびに読み込まれるため）
  */
-import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,7 +26,10 @@ const DISPLAY_HEIGHT = 60;
 const PADDING = 6;
 
 const scale = 2;
-const trimmed = await sharp(SOURCE).flatten({ background: '#ffffff' }).trim({ background: '#ffffff', threshold: 10 }).toBuffer();
+const trimmed = await sharp(SOURCE)
+  .flatten({ background: '#ffffff' })
+  .trim({ background: '#ffffff', threshold: 10 })
+  .toBuffer();
 const png = await sharp(trimmed)
   .resize({
     width: (DISPLAY_WIDTH - PADDING * 2) * scale,
@@ -34,7 +37,13 @@ const png = await sharp(trimmed)
     fit: 'contain',
     background: '#ffffff',
   })
-  .extend({ top: PADDING * scale, bottom: PADDING * scale, left: PADDING * scale, right: PADDING * scale, background: '#ffffff' })
+  .extend({
+    top: PADDING * scale,
+    bottom: PADDING * scale,
+    left: PADDING * scale,
+    right: PADDING * scale,
+    background: '#ffffff',
+  })
   .png({ palette: true, colours: 64, compressionLevel: 9 })
   .toBuffer();
 

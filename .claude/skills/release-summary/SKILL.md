@@ -76,3 +76,4 @@ node .claude/skills/release-summary/scripts/to-pdf.mjs <スクラッチパッド
    - 手順・材料の不足 → この SKILL.md の手順、または collect.mjs を直す。
 3. [HISTORY.md](HISTORY.md) の「改善の記録」に、何を直したかを1行足す。
 4. 同じ指摘が2回出たら、改善ルールから writing-rules.md の本文へ格上げする（ルールの置き場所を1か所にする）。
+5. HISTORY.md の各節を直近10件にする。

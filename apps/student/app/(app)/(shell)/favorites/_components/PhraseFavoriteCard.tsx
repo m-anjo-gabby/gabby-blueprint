@@ -1,8 +1,8 @@
 'use client';
 
 import { Trash2, Volume2 } from 'lucide-react';
-import type { FavoritePhraseItem } from '@gabby/types/word';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import type { FavoritePhraseItem } from '@gabby/types/word';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useFavoriteAudio } from './FavoriteAudioProvider';
@@ -36,7 +36,9 @@ export function PhraseFavoriteCard({ phrase, onRemove }: PhraseFavoriteCardProps
           <span className="truncate">{phrase.content_name}</span>
           {phrase.word_en && (
             <>
-              <span aria-hidden className="text-ink-subtle">·</span>
+              <span aria-hidden className="text-ink-subtle">
+                ·
+              </span>
               <span className="shrink-0 font-semibold text-ink-soft">{phrase.word_en}</span>
             </>
           )}

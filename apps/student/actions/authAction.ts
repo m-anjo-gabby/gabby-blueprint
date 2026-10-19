@@ -1,7 +1,7 @@
 'use server';
 
-import { createPortalAuthActions } from '@gabby/lib/auth/portalActions';
 import { AUTH_ERROR_MESSAGES_JA } from '@gabby/lib/auth/errors';
+import { createPortalAuthActions } from '@gabby/lib/auth/portalActions';
 import { USER_TYPES } from '@gabby/types/user';
 
 /**
@@ -29,10 +29,7 @@ const {
   signOutMode: 'revalidate',
   // 再設定メールは日本語
   resetMailLanguage: 'ja',
-  guardUser: (user) =>
-    user.app_metadata?.user_type === USER_TYPES.ADMIN
-      ? { ok: false }
-      : { ok: true },
+  guardUser: (user) => (user.app_metadata?.user_type === USER_TYPES.ADMIN ? { ok: false } : { ok: true }),
 });
 
 export {

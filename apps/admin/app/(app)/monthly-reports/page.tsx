@@ -1,10 +1,10 @@
-import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { getCoachesForMonthlyReport } from '@/actions/adminMonthlyReportAction';
+import { Suspense } from 'react';
 import { PageSkeleton } from '@gabby/lib/components/common/PageSkeleton';
+import { getCoachesForMonthlyReport } from '@/actions/adminMonthlyReportAction';
+import { PageHeader } from '@/components/common/PageHeader';
 import { CoachMonthSelector } from './_components/CoachMonthSelector';
 import { MonthlyReportSection } from './_components/MonthlyReportSection';
-import { PageHeader } from '@/components/common/PageHeader';
 
 function currentYearMonth(): string {
   const now = new Date();

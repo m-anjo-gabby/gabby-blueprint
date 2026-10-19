@@ -1,12 +1,21 @@
 'use server';
 
-import { createServerClient } from '@gabby/lib/supabase/server';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { USER_TYPES } from '@gabby/types/user';
-import { CHAT_MESSAGE_TYPES, ChatAttachmentRecord, ChatMessage, SendChatMessagePayload } from '@gabby/types/chat';
-import { getCurrentUserWithType } from './roomActions';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
+import type { CoreResult } from '@gabby/types/action';
+import {
+  CHAT_MESSAGE_TYPES,
+  type ChatActionErrorCode,
+  type ChatAttachmentRecord,
+  type ChatMessage,
+  type SendChatMessagePayload,
+} from '@gabby/types/chat';
+import { USER_TYPES } from '@gabby/types/user';
+import { getCurrentUserWithType } from './roomActions';
 
 const logger = createLogger('common');
 
@@ -15,9 +24,11 @@ const MESSAGE_SELECT_WITH_ATTACHMENTS = '*, com_t_chat_attachment(*)';
 /**
  * Supabaseの結合結果 (com_t_chat_attachment) を ChatMessage.attachments に正規化する
  */
-function normalizeMessageRow(row: Omit<ChatMessage, 'attachments'> & {
-  com_t_chat_attachment?: ChatAttachmentRecord[] | null;
-}): ChatMessage {
+function normalizeMessageRow(
+  row: Omit<ChatMessage, 'attachments'> & {
+    com_t_chat_attachment?: ChatAttachmentRecord[] | null;
+  },
+): ChatMessage {
   const { com_t_chat_attachment, ...rest } = row;
   return { ...rest, attachments: com_t_chat_attachment ?? [] };
 }
@@ -36,25 +47,26 @@ function maskIfDeleted(msg: ChatMessage): ChatMessage {
  * （複数添付・添付+コメントの同時投稿に対応）。
  */
 export async function sendChatMessage(
-  payload: SendChatMessagePayload
-): Promise<{ success: boolean; data?: ChatMessage; error?: string }> {
+  payload: SendChatMessagePayload,
+): Promise<CoreResult<{ data: ChatMessage }, ChatActionErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const message = payload.message.trim();
     const attachments = payload.attachments ?? [];
     if (!message && attachments.length === 0) {
-      return { success: false, error: 'Message must not be empty' };
+      return { success: false, errorCode: 'invalid_input' };
     }
 
-    const messageType = attachments.length === 0
-      ? CHAT_MESSAGE_TYPES.TEXT
-      : attachments.every((a) => a.file_type.startsWith('image/'))
-        ? CHAT_MESSAGE_TYPES.IMAGE
-        : CHAT_MESSAGE_TYPES.FILE;
+    const messageType =
+      attachments.length === 0
+        ? CHAT_MESSAGE_TYPES.TEXT
+        : attachments.every((a) => a.file_type.startsWith('image/'))
+          ? CHAT_MESSAGE_TYPES.IMAGE
+          : CHAT_MESSAGE_TYPES.FILE;
 
     const { data: chatRow, error } = await supabase
       .from('com_t_chat')
@@ -68,8 +80,12 @@ export async function sendChatMessage(
       .single();
 
     if (error) {
-      logger.error('chat:send_message_failed', error.message, { ...ctx, err: error, payload: { roomId: payload.roomId } });
-      return { success: false, error: error.message };
+      logger.error('chat:send_message_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { roomId: payload.roomId },
+      });
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     if (attachments.length > 0) {
@@ -82,7 +98,7 @@ export async function sendChatMessage(
             file_name: a.file_name,
             file_type: a.file_type,
             file_size: a.file_size,
-          }))
+          })),
         )
         .select('*');
 
@@ -100,12 +116,13 @@ export async function sendChatMessage(
 
     return { success: true, data: { ...chatRow, attachments: [] } as ChatMessage };
   } catch (err) {
-    logger.error('chat:send_message_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('chat:send_message_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { roomId: payload.roomId },
     });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -117,14 +134,14 @@ export async function getChatMessages(params: {
   roomId: string;
   limit?: number;
   cursor?: string;
-}): Promise<{ success: boolean; data: ChatMessage[]; hasMore: boolean; error?: string }> {
+}): Promise<CoreResult<{ data: ChatMessage[]; hasMore: boolean }, ChatActionErrorCode>> {
   const ctx = await getLogContext();
   const limit = params.limit ?? 20;
 
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, data: [], hasMore: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     // 論理削除済みメッセージも「削除されたことが分かる」形で表示するため除外しない（本文はマスクして返す）
     let query = supabase
@@ -141,8 +158,12 @@ export async function getChatMessages(params: {
     const { data, error } = await query;
 
     if (error) {
-      logger.error('chat:get_messages_failed', error.message, { ...ctx, err: error, payload: { roomId: params.roomId } });
-      return { success: false, data: [], hasMore: false, error: error.message };
+      logger.error('chat:get_messages_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { roomId: params.roomId },
+      });
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     const rows = data || [];
@@ -150,12 +171,13 @@ export async function getChatMessages(params: {
 
     return { success: true, data: rows.slice(0, limit).map((m) => maskIfDeleted(normalizeMessageRow(m))), hasMore };
   } catch (err) {
-    logger.error('chat:get_messages_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('chat:get_messages_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { roomId: params.roomId },
     });
-    return { success: false, data: [], hasMore: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -164,11 +186,9 @@ export async function getChatMessages(params: {
  * Realtime購読のINSERTイベントは com_t_chat のカラムしか運ばないため、
  * 添付ファイルを含む完全な形で画面に反映するためのハイドレーション用に使う。
  */
-export async function getChatMessageById(chatId: string): Promise<{
-  success: boolean;
-  data?: ChatMessage;
-  error?: string;
-}> {
+export async function getChatMessageById(
+  chatId: string,
+): Promise<CoreResult<{ data: ChatMessage }, ChatActionErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -179,18 +199,23 @@ export async function getChatMessageById(chatId: string): Promise<{
       .single();
 
     if (error || !data) {
-      logger.error('chat:get_message_by_id_failed', error?.message || 'Not found', { ...ctx, err: error, payload: { chatId } });
-      return { success: false, error: error?.message || 'Not found' };
+      logger.error('chat:get_message_by_id_failed', error?.message || 'Not found', {
+        ...ctx,
+        err: error,
+        payload: { chatId },
+      });
+      return { success: false, errorCode: 'not_found' };
     }
 
     return { success: true, data: maskIfDeleted(normalizeMessageRow(data)) };
   } catch (err) {
-    logger.error('chat:get_message_by_id_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('chat:get_message_by_id_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { chatId },
     });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -202,12 +227,12 @@ export async function getChatMessageById(chatId: string): Promise<{
 export async function markAsRead(params: {
   roomId: string;
   chatId: string;
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<CoreResult<object, ChatActionErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     // 既読位置は前にしか進めない（古いタブ等から古い位置で上書きされると、相手に見せる「既読」が戻ってしまうため）
     const { data: membership } = await supabase
@@ -238,7 +263,7 @@ export async function markAsRead(params: {
 
     if (error) {
       logger.error('chat:mark_read_failed', error.message, { ...ctx, err: error, payload: params });
-      return { success: false, error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     // 通知側の既読化は失敗してもチャット既読自体は成功として扱う（通知はベストエフォート）
@@ -250,17 +275,22 @@ export async function markAsRead(params: {
       .eq('dedup_key', params.roomId);
 
     if (notificationError) {
-      logger.warn('chat:mark_read_notification_sync_failed', notificationError.message, { ...ctx, err: notificationError, payload: params });
+      logger.warn('chat:mark_read_notification_sync_failed', notificationError.message, {
+        ...ctx,
+        err: notificationError,
+        payload: params,
+      });
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('chat:mark_read_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('chat:mark_read_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: params,
     });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -268,20 +298,18 @@ export async function markAsRead(params: {
  * メッセージの論理削除（Adminのみ、ポリシー違反等のモデレーション用途）
  * 削除後、本文はマスクされ「削除されたメッセージです」として表示される。
  */
-export async function deleteChatMessage(params: {
-  chatId: string;
-}): Promise<{ success: boolean; error?: string }> {
+export async function deleteChatMessage(params: { chatId: string }): Promise<CoreResult<object, ChatActionErrorCode>> {
   const ctx = await getLogContext();
   try {
     const currentUser = await getCurrentUserWithType();
-    if (!currentUser) return { success: false, error: 'Unauthorized' };
+    if (!currentUser) return { success: false, errorCode: 'unauthorized' };
 
     if (currentUser.user_type !== USER_TYPES.ADMIN) {
       logger.warn('chat:delete_message_forbidden', 'Non-admin user attempted to delete a chat message', {
         ...ctx,
         payload: params,
       });
-      return { success: false, error: 'Only admins can delete messages' };
+      return { success: false, errorCode: 'forbidden' };
     }
 
     const supabase = await createServerClient();
@@ -292,17 +320,18 @@ export async function deleteChatMessage(params: {
 
     if (error) {
       logger.error('chat:delete_message_failed', error.message, { ...ctx, err: error, payload: params });
-      return { success: false, error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     logger.info('chat:delete_message_success', `Chat message deleted: ${params.chatId}`, { ...ctx, payload: params });
     return { success: true };
   } catch (err) {
-    logger.error('chat:delete_message_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('chat:delete_message_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: params,
     });
-    return { success: false, error: 'Unexpected error' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }

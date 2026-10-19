@@ -37,7 +37,13 @@ export const NOTICE_LABELS_JA: NoticeLabels = {
   readMore: '続きを読む',
   moreNotices: (count) => `ほかに新しいお知らせが${count}件あります`,
   opensInNewTab: '（別のタブで開きます）',
-  attachments: { title: '添付ファイル', preview: '表示', previewHint: '別タブで表示', save: '保存', saveHint: '端末に保存' },
+  attachments: {
+    title: '添付ファイル',
+    preview: '表示',
+    previewHint: '別タブで表示',
+    save: '保存',
+    saveHint: '端末に保存',
+  },
   homeCard: {
     region: 'お知らせ',
     dismiss: 'このお知らせを閉じる',
@@ -57,7 +63,13 @@ export const NOTICE_LABELS_EN: NoticeLabels = {
   readMore: 'Read more',
   moreNotices: (count) => `${count} more new ${count === 1 ? 'notice' : 'notices'}`,
   opensInNewTab: '(opens in a new tab)',
-  attachments: { title: 'Attachments', preview: 'Preview', previewHint: 'Open in a new tab', save: 'Save', saveHint: 'Download' },
+  attachments: {
+    title: 'Attachments',
+    preview: 'Preview',
+    previewHint: 'Open in a new tab',
+    save: 'Save',
+    saveHint: 'Download',
+  },
   homeCard: {
     region: 'Notice',
     dismiss: 'Dismiss this notice',

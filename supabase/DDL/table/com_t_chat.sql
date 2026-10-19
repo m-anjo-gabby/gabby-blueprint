@@ -3,7 +3,7 @@
 -- =========================================================================
 -- 【書き込み・参照】
 -- 送信は、参加しているルームに自分（sender_user_id = auth.uid()）としてだけできる（管理者も参加していないルームでは送れない）。
--- 管理者は、参加していないルームを含めてすべてのメッセージを参照（査閲）でき、規約違反等のメッセージを論理削除できる。
+-- 管理者は、参加していないルームを含めてすべてのメッセージを参照（査閲）でき、規約違反等のメッセージを取り消せる（deleted_at。画面には本文・添付を出さず「削除されたメッセージ」と表示する）。
 -- Realtime の配信対象にしている。
 -- =========================================================================
 
@@ -15,7 +15,8 @@ CREATE TABLE public.com_t_chat (
     message                  text         NOT NULL,
     message_type             character varying(10) NOT NULL DEFAULT 'TEXT'::character varying,
     created_at               timestamp with time zone NOT NULL DEFAULT now(),
-    deleted_at               timestamp with time zone
+    deleted_at               timestamp with time zone,
+    CONSTRAINT chk_chat_message_type CHECK (message_type::text = ANY (ARRAY['TEXT'::text, 'IMAGE'::text, 'FILE'::text, 'SYSTEM'::text]))
 );
 
 COMMENT ON TABLE public.com_t_chat IS 'チャットメッセージ';
@@ -27,6 +28,7 @@ COMMENT ON COLUMN public.com_t_chat.message_type IS 'メッセージ種別 (TEXT
 COMMENT ON COLUMN public.com_t_chat.created_at IS '送信日時';
 COMMENT ON COLUMN public.com_t_chat.deleted_at IS '論理削除日時 (NULL: 未削除)';
 
+CREATE INDEX idx_chat_sender ON public.com_t_chat (sender_user_id);
 CREATE INDEX idx_com_t_chat_room_id ON public.com_t_chat (room_id, created_at DESC);
 
 CREATE TRIGGER on_chat_message_insert_notify AFTER INSERT ON public.com_t_chat FOR EACH ROW EXECUTE FUNCTION public.notify_chat_new_message();

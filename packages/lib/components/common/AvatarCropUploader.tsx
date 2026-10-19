@@ -1,11 +1,12 @@
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
+import { Camera, Loader2, Trash2, User, X } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import Cropper, { type Area, type Point } from 'react-easy-crop';
-import { User, Camera, Trash2, Loader2, X } from 'lucide-react';
-import { getCroppedImageBlob } from '../../profile/cropImage';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { getCroppedImageBlob } from '../../profile/cropImage';
+import { ExternalImage } from './ExternalImage';
 
 export interface AvatarCropUploaderLabels {
   /** モーダルのタイトル */
@@ -136,8 +137,7 @@ export function AvatarCropUploader({
           style={{ width: size, height: size }}
         >
           {currentImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={currentImageUrl} alt="" className="w-full h-full object-cover" />
+            <ExternalImage src={currentImageUrl} alt="" className="w-full h-full object-cover" />
           ) : (
             <User size={size * 0.5} className="text-slate-400" />
           )}
@@ -158,9 +158,7 @@ export function AvatarCropUploader({
         />
       </div>
 
-      {validationError && (
-        <p className="text-xs font-bold text-rose-500">{validationError}</p>
-      )}
+      {validationError && <p className="text-xs font-bold text-rose-500">{validationError}</p>}
 
       {onRemove && currentImageUrl && (
         <button

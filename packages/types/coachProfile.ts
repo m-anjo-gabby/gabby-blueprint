@@ -9,13 +9,9 @@ import type { CoachSpecialtyTag } from './coachSpecialty';
 export const COACH_INTRO_VIDEO_MAX_SIZE = 100 * 1024 * 1024;
 
 // コーチ紹介ビデオとして許可するMIMEタイプ
-export const COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES = [
-  'video/mp4',
-  'video/webm',
-  'video/quicktime',
-] as const;
+export const COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'] as const;
 
-export type CoachIntroVideoMimeType = typeof COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES[number];
+export type CoachIntroVideoMimeType = (typeof COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES)[number];
 
 /**
  * 生徒の「専属コーチを探す」に出るための必須項目（紹介ビデオは任意）。
@@ -68,7 +64,6 @@ export interface CoachProfileRecord {
   intro_video_path: string | null; // 紹介ビデオのStorageパス（profileバケット内）
   zoom_meeting_url: string | null; // ライブセッション用の固定ビデオ通話URL（生徒への公開範囲はUI側で制御。公開プロフィールの一部としては扱わない）
   accepting_students: boolean; // 新規の生徒の受付（コーチ本人が切り替える。false の間は生徒のコーチ選択に出さない）
-  delete_flg: string;
   insert_date: string;
   update_date: string;
 }
@@ -86,19 +81,14 @@ export interface CoachProfileFormValues {
   introduction: string | null;
 }
 
-export type CoachProfileErrorCode =
-  | 'unauthorized'
-  | 'invalid_input'
-  | 'db_update_failed'
-  | 'unexpected_error';
+export type CoachProfileErrorCode = 'unauthorized' | 'invalid_input' | 'db_update_failed' | 'unexpected_error';
 
 export type GetMyCoachProfileResult =
   | { success: true; profile: CoachProfileRecord }
   | { success: false; errorCode: 'unauthorized' | 'not_found' | 'unexpected_error' };
 
 export type UpdateMyCoachProfileResult =
-  | { success: true; profile: CoachProfileRecord }
-  | { success: false; errorCode: CoachProfileErrorCode };
+  { success: true; profile: CoachProfileRecord } | { success: false; errorCode: CoachProfileErrorCode };
 
 /**
  * CoachMatchingStatus: 生徒の「専属コーチを探す」に出るかどうかの内訳（get_coach_matching_status RPC）。
@@ -124,8 +114,7 @@ export type GetCoachMatchingStatusResult =
   | { success: false; errorCode: 'unauthorized' | 'not_found' | 'unexpected_error' };
 
 export type UpdateMyAcceptingStudentsResult =
-  | { success: true; acceptingStudents: boolean }
-  | { success: false; errorCode: CoachProfileErrorCode };
+  { success: true; acceptingStudents: boolean } | { success: false; errorCode: CoachProfileErrorCode };
 
 /**
  * CoachZoomSettingsFormValues: ライブセッション用ビデオ通話URL(Zoom)の編集フォーム値
@@ -137,8 +126,7 @@ export interface CoachZoomSettingsFormValues {
 }
 
 export type UpdateMyCoachZoomSettingsResult =
-  | { success: true; profile: CoachProfileRecord }
-  | { success: false; errorCode: CoachProfileErrorCode };
+  { success: true; profile: CoachProfileRecord } | { success: false; errorCode: CoachProfileErrorCode };
 
 /**
  * CoachIntroVideoErrorCode: 紹介ビデオ操作失敗時のエラー種別
@@ -154,12 +142,9 @@ export type CoachIntroVideoErrorCode =
   | 'unexpected_error';
 
 export type UploadCoachIntroVideoResult =
-  | { success: true; introVideoPath: string }
-  | { success: false; errorCode: CoachIntroVideoErrorCode };
+  { success: true; introVideoPath: string } | { success: false; errorCode: CoachIntroVideoErrorCode };
 
-export type RemoveCoachIntroVideoResult =
-  | { success: true }
-  | { success: false; errorCode: CoachIntroVideoErrorCode };
+export type RemoveCoachIntroVideoResult = { success: true } | { success: false; errorCode: CoachIntroVideoErrorCode };
 
 /**
  * ----------------------------------------------

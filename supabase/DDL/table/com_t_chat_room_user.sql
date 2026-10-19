@@ -13,13 +13,14 @@ CREATE TABLE public.com_t_chat_room_user (
     last_read_chat_id        uuid,
     joined_at                timestamp with time zone NOT NULL DEFAULT now(),
     left_at                  timestamp with time zone,
-    CONSTRAINT com_t_chat_room_user_pkey PRIMARY KEY (room_id, user_id)
+    CONSTRAINT com_t_chat_room_user_pkey PRIMARY KEY (room_id, user_id),
+    CONSTRAINT chk_chat_room_user_user_type CHECK (user_type = ANY (ARRAY['0'::text, '1'::text, '2'::text]))
 );
 
 COMMENT ON TABLE public.com_t_chat_room_user IS 'チャット参加者 & 未読管理';
 COMMENT ON COLUMN public.com_t_chat_room_user.room_id IS 'ルームID';
 COMMENT ON COLUMN public.com_t_chat_room_user.user_id IS 'ユーザID';
-COMMENT ON COLUMN public.com_t_chat_room_user.user_type IS '参加者種別 (ADMIN, STUDENT, COACH)';
+COMMENT ON COLUMN public.com_t_chat_room_user.user_type IS '参加者の種別（com_m_user.user_type の写し。0:管理者 1:生徒 2:コーチ）';
 COMMENT ON COLUMN public.com_t_chat_room_user.last_read_chat_id IS '最終既読メッセージID (未読件数算出用)';
 COMMENT ON COLUMN public.com_t_chat_room_user.joined_at IS '参加日時';
 COMMENT ON COLUMN public.com_t_chat_room_user.left_at IS '退出日時 (NULL: 参加中)';

@@ -33,7 +33,7 @@ CREATE POLICY "Coach and student can view homework comments" ON public.com_t_ses
 USING (
     (EXISTS ( SELECT 1
        FROM public.com_t_session_homework h
-      WHERE h.homework_id = com_t_session_homework_comment.homework_id AND (h.coach_id = auth.uid() OR h.student_id = auth.uid()))) OR public.get_jwt_user_type() = '0'::text
+      WHERE h.homework_id = com_t_session_homework_comment.homework_id AND (h.coach_id = auth.uid() OR h.student_id = auth.uid()))) OR public.is_system_admin()
 );
 
 CREATE POLICY "Coaches can post comments on their own homework posts" ON public.com_t_session_homework_comment FOR INSERT TO authenticated

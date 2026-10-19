@@ -1,20 +1,29 @@
 // apps/admin/actions/adminContractAction.ts
 'use server';
 
-import { createAdminClient } from "@gabby/lib/supabase/admin";
-import { formatToJstDate, getUtcRangeFromJstDate } from "@gabby/lib/date/date";
+import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
-import { createLogger } from '@gabby/lib/logger';
-import { getLogContext } from '@gabby/lib/logger/context';
-import { ilikeAny } from '@gabby/lib/supabase/ilike';
-import { toRange, type ListParams, type ListResult } from '@/lib/list';
-import type { ContractDetail } from '@gabby/types/contract';
+import { unstable_rethrow } from 'next/navigation';
+import { formatToJstDate, getUtcRangeFromJstDate } from '@gabby/lib/date/date';
 import {
   ISSUED_LICENSE_COLUMNS,
   recordIssuedLicenses,
   recordLicenseHistory,
   resolvePerformedBy,
 } from '@gabby/lib/license/issue';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { ilikeAny } from '@gabby/lib/supabase/ilike';
+import { isInUseError } from '@gabby/lib/supabase/pgErrors';
+import type { ActionFailure, ActionResult } from '@gabby/types/action';
+import type { ContractDetail, ContractStatus, ContractType } from '@gabby/types/contract';
+import type { TableInsert, TableRow, TableUpdate, ViewRow } from '@gabby/types/db';
+import { USER_TYPES } from '@gabby/types/user';
+import type { ServerTranslator } from '@/i18n/types';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 
 const logger = createLogger('admin');
 
@@ -26,12 +35,9 @@ function isWithinContractPeriod(
   licenseStartUtc: string,
   licenseEndUtc: string,
   contractStartUtc: string,
-  contractEndUtc: string
+  contractEndUtc: string,
 ): boolean {
-  return (
-    new Date(licenseStartUtc) >= new Date(contractStartUtc) &&
-    new Date(licenseEndUtc) <= new Date(contractEndUtc)
-  );
+  return new Date(licenseStartUtc) >= new Date(contractStartUtc) && new Date(licenseEndUtc) <= new Date(contractEndUtc);
 }
 
 /**
@@ -47,8 +53,9 @@ async function findOverlappingLicense(
   userId: string,
   startUtc: string,
   endUtc: string,
-  excludeLicenseId?: string
+  excludeLicenseId?: string,
 ): Promise<{ start_date: string; end_date: string; contract_name: string } | null> {
+  const t = await getTranslations();
   let query = supabase
     .from('com_t_user_license')
     .select('license_id, start_date, end_date, com_m_contract(contract_name)')
@@ -65,37 +72,41 @@ async function findOverlappingLicense(
   const { data, error } = await query;
   if (error || !data || data.length === 0) return null;
 
-  const row = data[0] as unknown as {
-    start_date: string;
-    end_date: string;
-    com_m_contract: { contract_name: string } | null;
-  };
+  const row = data[0];
   return {
     start_date: row.start_date,
     end_date: row.end_date,
-    contract_name: row.com_m_contract?.contract_name || '不明な契約',
+    contract_name: row.com_m_contract?.contract_name || t('common.fallback.contract'),
   };
 }
 
-function buildOverlapMessage(overlap: { start_date: string; end_date: string; contract_name: string }): string {
-  return `このユーザーは既に期間が重なるライセンス「${overlap.contract_name}」（${formatToJstDate(overlap.start_date)}〜${formatToJstDate(overlap.end_date)}）を保有しているため割当できません`;
+function buildOverlapMessage(
+  t: ServerTranslator,
+  overlap: { start_date: string; end_date: string; contract_name: string },
+): string {
+  return t('contracts.errors.overlapLicense', {
+    contractName: overlap.contract_name,
+    start: formatToJstDate(overlap.start_date),
+    end: formatToJstDate(overlap.end_date),
+  });
 }
 
 // com_m_contract (client_id, contract_name) の一意制約違反
 const UNIQUE_VIOLATION = '23505';
-const DUPLICATE_CONTRACT_NAME_MESSAGE = 'この顧客には同じ契約名の契約が既に存在します。別の契約名を入力してください';
 
 /**
  * 契約プランマスタの一覧取得（契約登録フォームの選択肢・プランマスタ管理画面の両方で使用）
  */
 export async function getContractPlans() {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('com_m_contract_plan')
-      .select('plan_id, plan_code, plan_name, plan_name_en, contract_type, weekly_frequency, period_months, total_sessions, has_dialogue_practice, sort_no')
-      .eq('delete_flg', '0')
+      .select(
+        'plan_id, plan_code, plan_name, plan_name_en, contract_type, weekly_frequency, period_months, total_sessions, has_dialogue_practice, sort_no, is_active',
+      )
       .order('sort_no', { ascending: true });
 
     if (error) {
@@ -105,7 +116,11 @@ export async function getContractPlans() {
 
     return data || [];
   } catch (error) {
-    logger.error('contract:get_contract_plans_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    unstable_rethrow(error);
+    logger.error('contract:get_contract_plans_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+    });
     return [];
   }
 }
@@ -122,13 +137,16 @@ export async function upsertContractPlan(payload: {
   plan_code: string;
   plan_name: string;
   plan_name_en: string;
-  contract_type: number;
+  contract_type: ContractType;
   weekly_frequency: number | null;
   period_months: number;
   total_sessions: number | null;
   has_dialogue_practice: boolean;
   sort_no: number;
-}) {
+  is_active: boolean;
+}): Promise<ActionResult<{ data: TableRow<'com_m_contract_plan'> }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -138,7 +156,6 @@ export async function upsertContractPlan(payload: {
       .from('com_m_contract_plan')
       .upsert({
         ...payload,
-        delete_flg: '0',
         update_date: new Date().toISOString(),
       })
       .select()
@@ -146,50 +163,64 @@ export async function upsertContractPlan(payload: {
 
     if (error) {
       logger.error('contract:upsert_contract_plan_failed', error.message, { ...ctx, err: error, payload });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
-    logger.info('contract:upsert_contract_plan_success', `Contract plan ${isEdit ? 'updated' : 'created'}: ${data.plan_code}`, {
-      ...ctx,
-      payload: { planId: data.plan_id, isEdit },
-    });
+    logger.info(
+      'contract:upsert_contract_plan_success',
+      `Contract plan ${isEdit ? 'updated' : 'created'}: ${data.plan_code}`,
+      {
+        ...ctx,
+        payload: { planId: data.plan_id, isEdit },
+      },
+    );
 
     revalidatePath('/contracts/plans');
     revalidatePath('/contracts');
     return { success: true, data };
   } catch (error) {
-    logger.error('contract:upsert_contract_plan_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('contract:upsert_contract_plan_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload,
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
 /**
- * 契約プランの論理削除（プランマスタ管理画面用）
- * 既存契約からの参照(plan_id)はそのまま残るため、過去に選択済みの契約には影響しない
- * （選択肢に表示されなくなるだけ）。
+ * 契約プランの削除（誤登録の取り消し。プランマスタ管理画面用）
+ * 契約で使われているプランは外部キー（RESTRICT）で止まり、販売終了（is_active = false）にするよう案内する。
  */
-export async function deleteContractPlan(planId: string) {
+export async function deleteContractPlan(planId: string): Promise<ActionResult<object, 'in_use'>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
-    const { error } = await supabase
-      .from('com_m_contract_plan')
-      .update({ delete_flg: '1', update_date: new Date().toISOString() })
-      .eq('plan_id', planId);
+    const { error } = await supabase.from('com_m_contract_plan').delete().eq('plan_id', planId);
 
     if (error) {
+      if (isInUseError(error))
+        return { success: false, errorCode: 'in_use' as const, message: t('common.errors.unexpected') };
       logger.error('contract:delete_contract_plan_failed', error.message, { ...ctx, err: error, payload: { planId } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
-    logger.info('contract:delete_contract_plan_success', 'Contract plan logically deleted', { ...ctx, payload: { planId } });
+    logger.info('contract:delete_contract_plan_success', 'Contract plan deleted', { ...ctx, payload: { planId } });
 
     revalidatePath('/contracts/plans');
     revalidatePath('/contracts');
     return { success: true };
   } catch (error) {
-    logger.error('contract:delete_contract_plan_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { planId } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('contract:delete_contract_plan_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { planId },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -197,15 +228,17 @@ export async function deleteContractPlan(planId: string) {
  * 契約情報の一覧取得（ページネーション・顧客名/契約名の部分一致検索・顧客での絞り込み）
  */
 export async function getContracts(params: ListParams<'clientId'>): Promise<ListResult<ContractDetail>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
-  const { q, filters: { clientId } } = params;
+  const {
+    q,
+    filters: { clientId },
+  } = params;
   try {
     const supabase = await createAdminClient();
     const [from, to] = toRange(params);
 
-    let query = supabase
-      .from('vw_contract_details')
-      .select('*', { count: 'exact' });
+    let query = supabase.from('vw_contract_details').select('*', { count: 'exact' });
 
     if (q) {
       query = query.or(ilikeAny(['client_name', 'contract_name'], q));
@@ -215,17 +248,25 @@ export async function getContracts(params: ListParams<'clientId'>): Promise<List
       query = query.eq('client_id', clientId);
     }
 
-    const { data: contracts, count, error } = await query
+    const {
+      data: contracts,
+      count,
+      error,
+    } = await query
       .order('insert_date', { ascending: false })
       .order('contract_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
       .range(from, to);
 
     if (error) {
-      logger.error('contract:get_contracts_failed', error.message, { ...ctx, err: error, payload: { from, to, clientId } });
+      logger.error('contract:get_contracts_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { from, to, clientId },
+      });
       throw new Error(error.message);
     }
 
-    const rows = (contracts || []).map(contract => ({
+    const rows = (contracts || []).map((contract) => ({
       ...contract,
       start_date: contract.start_date ? formatToJstDate(contract.start_date) : '',
       end_date: contract.end_date ? formatToJstDate(contract.end_date) : '',
@@ -236,7 +277,12 @@ export async function getContracts(params: ListParams<'clientId'>): Promise<List
       totalCount: count || 0,
     };
   } catch (error) {
-    logger.error('contract:get_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId } });
+    unstable_rethrow(error);
+    logger.error('contract:get_contracts_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { clientId },
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -245,10 +291,11 @@ export async function getContracts(params: ListParams<'clientId'>): Promise<List
  * 特定顧客の「現在有効かつ枠がある」契約一覧を取得
  */
 export async function getActiveContractsByClient(clientId: string, userId?: string) {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
-    
+
     const { data: contracts, error } = await supabase
       .from('vw_contract_details')
       .select('*')
@@ -259,7 +306,11 @@ export async function getActiveContractsByClient(clientId: string, userId?: stri
       .order('contract_name', { ascending: true });
 
     if (error || !contracts) {
-      logger.error('contract:get_active_contracts_failed', error?.message || 'No contracts found', { ...ctx, err: error, payload: { clientId, userId } });
+      logger.error('contract:get_active_contracts_failed', error?.message || 'No contracts found', {
+        ...ctx,
+        err: error,
+        payload: { clientId, userId },
+      });
       return [];
     }
 
@@ -273,22 +324,33 @@ export async function getActiveContractsByClient(clientId: string, userId?: stri
       // 既存ライセンスと契約IDが同じ、または有効なライセンスと期間が重複する契約は選択肢から除外する
       // （生徒への複数ライセンス付与は契約更新に伴う次タームへの切替のみを想定しているため）。
       // 期間の重複は findOverlappingLicense と同じく停止（status=0）したライセンスを含めない。
-      const available = contracts.filter(c => !licenses.some(l =>
-        l.contract_id === c.contract_id ||
-        (l.status === 1 && new Date(l.start_date) <= new Date(c.end_date) && new Date(l.end_date) >= new Date(c.start_date))
-      ));
+      const available = contracts.filter(
+        (c) =>
+          !licenses.some(
+            (l) =>
+              l.contract_id === c.contract_id ||
+              (l.status === 1 &&
+                new Date(l.start_date) <= new Date(c.end_date) &&
+                new Date(l.end_date) >= new Date(c.start_date)),
+          ),
+      );
       return formatContracts(available);
     }
 
     return formatContracts(contracts);
   } catch (error) {
-    logger.error('contract:get_active_contracts_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { clientId, userId } });
+    unstable_rethrow(error);
+    logger.error('contract:get_active_contracts_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { clientId, userId },
+    });
     return [];
   }
 }
 
-function formatContracts(contracts: any[]) {
-  return contracts.map(contract => ({
+function formatContracts(contracts: ViewRow<'vw_contract_details'>[]) {
+  return contracts.map((contract) => ({
     ...contract,
     start_date: contract.start_date ? formatToJstDate(contract.start_date) : '',
     end_date: contract.end_date ? formatToJstDate(contract.end_date) : '',
@@ -317,7 +379,9 @@ export async function createContract(params: {
   weekly_frequency?: number | null;
   total_sessions?: number | null;
   has_dialogue_practice: boolean;
-}) {
+}): Promise<ActionResult<{ contract: TableRow<'com_m_contract'> }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -330,8 +394,12 @@ export async function createContract(params: {
       .single();
 
     if (planError || !plan) {
-      logger.error('contract:create_contract_plan_lookup_failed', planError?.message || 'Plan not found', { ...ctx, err: planError, payload: params });
-      return { success: false, message: '選択されたプランが見つかりませんでした' };
+      logger.error('contract:create_contract_plan_lookup_failed', planError?.message || 'Plan not found', {
+        ...ctx,
+        err: planError,
+        payload: params,
+      });
+      return { success: false, message: t('contracts.errors.planNotFound') };
     }
 
     const isLive = plan.contract_type === 2;
@@ -354,27 +422,33 @@ export async function createContract(params: {
           weekly_frequency: isLive ? params.weekly_frequency : null,
           total_sessions: isLive ? params.total_sessions : null,
           has_dialogue_practice: isLive ? params.has_dialogue_practice : false,
-        }
+        },
       ])
       .select();
 
     if (error) {
       logger.error('contract:create_contract_failed', error.message, { ...ctx, err: error, payload: params });
-      if (error.code === UNIQUE_VIOLATION) return { success: false, message: DUPLICATE_CONTRACT_NAME_MESSAGE };
-      return { success: false, message: error.message };
+      if (error.code === UNIQUE_VIOLATION)
+        return { success: false, message: t('contracts.errors.duplicateContractName') };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     const newContract = data[0];
-    logger.info('contract:create_contract_success', `Contract created for client: ${params.client_id}`, { 
+    logger.info('contract:create_contract_success', `Contract created for client: ${params.client_id}`, {
       ...ctx,
-      payload: { contractId: newContract.contract_id, clientId: params.client_id } 
+      payload: { contractId: newContract.contract_id, clientId: params.client_id },
     });
 
     revalidatePath('/contracts');
     return { success: true, contract: newContract };
   } catch (error) {
-    logger.error('contract:create_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: params });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('contract:create_contract_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: params,
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -392,13 +466,15 @@ export async function updateContract(
     max_licenses: number;
     start_date: string;
     end_date: string;
-    status: number;
+    status: ContractStatus;
     note?: string | null;
     weekly_frequency?: number | null;
     total_sessions?: number | null;
     has_dialogue_practice: boolean;
-  }
-) {
+  },
+): Promise<ActionResult<{ contract: TableRow<'com_m_contract'> }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -411,8 +487,12 @@ export async function updateContract(
       .single();
 
     if (planError || !plan) {
-      logger.error('contract:update_contract_plan_lookup_failed', planError?.message || 'Plan not found', { ...ctx, err: planError, payload: { contractId, ...params } });
-      return { success: false, message: '選択されたプランが見つかりませんでした' };
+      logger.error('contract:update_contract_plan_lookup_failed', planError?.message || 'Plan not found', {
+        ...ctx,
+        err: planError,
+        payload: { contractId, ...params },
+      });
+      return { success: false, message: t('contracts.errors.planNotFound') };
     }
 
     const isLive = plan.contract_type === 2;
@@ -425,21 +505,31 @@ export async function updateContract(
       .eq('contract_id', contractId);
 
     if (licensesError) {
-      logger.error('contract:update_contract_licenses_lookup_failed', licensesError.message, { ...ctx, err: licensesError, payload: { contractId } });
-      return { success: false, message: '既存ライセンスの確認に失敗しました' };
+      logger.error('contract:update_contract_licenses_lookup_failed', licensesError.message, {
+        ...ctx,
+        err: licensesError,
+        payload: { contractId },
+      });
+      return { success: false, message: t('contracts.errors.licenseCheckFailed') };
     }
 
     const licenses = existingLicenses || [];
 
     if (licenses.length > params.max_licenses) {
-      return { success: false, message: `既に${licenses.length}件のライセンスが割り当てられているため、上限をそれ未満に変更できません` };
+      return {
+        success: false,
+        message: t('contracts.errors.maxBelowAssigned', { count: licenses.length }),
+      };
     }
 
-    const outOfRangeLicense = licenses.find(l =>
-      new Date(l.start_date) < new Date(startUtc) || new Date(l.end_date) > new Date(endUtc)
+    const outOfRangeLicense = licenses.find(
+      (l) => new Date(l.start_date) < new Date(startUtc) || new Date(l.end_date) > new Date(endUtc),
     );
     if (outOfRangeLicense) {
-      return { success: false, message: '既存のライセンス期間が新しい契約期間からはみ出すため、契約期間を変更できません（対象ライセンスの期間を先に調整してください）' };
+      return {
+        success: false,
+        message: t('contracts.errors.licenseOutsidePeriod'),
+      };
     }
 
     const { data, error } = await supabase
@@ -465,21 +555,31 @@ export async function updateContract(
       .select();
 
     if (error) {
-      logger.error('contract:update_contract_failed', error.message, { ...ctx, err: error, payload: { contractId, ...params } });
-      if (error.code === UNIQUE_VIOLATION) return { success: false, message: DUPLICATE_CONTRACT_NAME_MESSAGE };
-      return { success: false, message: error.message };
+      logger.error('contract:update_contract_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { contractId, ...params },
+      });
+      if (error.code === UNIQUE_VIOLATION)
+        return { success: false, message: t('contracts.errors.duplicateContractName') };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
-    logger.info('contract:update_contract_success', `Contract updated`, { 
+    logger.info('contract:update_contract_success', `Contract updated`, {
       ...ctx,
-      payload: { contractId } 
+      payload: { contractId },
     });
 
     revalidatePath('/contracts');
     return { success: true, contract: data[0] };
   } catch (error) {
-    logger.error('contract:update_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId, ...params } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('contract:update_contract_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { contractId, ...params },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -489,7 +589,9 @@ export async function updateContract(
  * 過去に一度でも割当実績がある契約は、履歴テーブル（com_t_user_license_history等）に
  * 残る外部キー参照により、アプリ側のチェックをすり抜けてもDB制約(23503)で削除が拒否される。
  */
-export async function deleteContract(contractId: string) {
+export async function deleteContract(contractId: string): Promise<ActionResult<object, 'has_history'>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -500,29 +602,30 @@ export async function deleteContract(contractId: string) {
       .eq('contract_id', contractId);
 
     if (countError) {
-      logger.error('contract:delete_contract_count_failed', countError.message, { ...ctx, err: countError, payload: { contractId } });
-      return { success: false, message: '契約情報の確認に失敗しました' };
+      logger.error('contract:delete_contract_count_failed', countError.message, {
+        ...ctx,
+        err: countError,
+        payload: { contractId },
+      });
+      return { success: false, message: t('contracts.errors.contractCheckFailed') };
     }
 
     if ((count || 0) > 0) {
-      return { success: false, message: 'ライセンスが割り当てられているため削除できません' };
+      return { success: false, message: t('contracts.errors.hasLicenses') };
     }
 
-    const { error } = await supabase
-      .from('com_m_contract')
-      .delete()
-      .eq('contract_id', contractId);
+    const { error } = await supabase.from('com_m_contract').delete().eq('contract_id', contractId);
 
     if (error) {
       if (error.code === '23503') {
         return {
           success: false,
-          message: '過去にライセンス発行の実績があるため、この契約は削除できません',
-          reason: 'has_history' as const,
+          message: t('contracts.errors.hasLicenseHistory'),
+          errorCode: 'has_history' as const,
         };
       }
       logger.error('contract:delete_contract_failed', error.message, { ...ctx, err: error, payload: { contractId } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('contract:delete_contract_success', 'Contract deleted', { ...ctx, payload: { contractId } });
@@ -530,8 +633,13 @@ export async function deleteContract(contractId: string) {
     revalidatePath('/contracts');
     return { success: true };
   } catch (error) {
-    logger.error('contract:delete_contract_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('contract:delete_contract_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { contractId },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -542,43 +650,70 @@ export async function deleteContract(contractId: string) {
  * 実運用契約には絶対に使用しないこと。呼び出し元では、通常の削除ボタンとは
  * 別の強い確認UI（対象名の入力等）を経由させる。
  */
-export async function purgeContractWithHistory(contractId: string) {
+export async function purgeContractWithHistory(contractId: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
 
     // DB側の履歴は本処理で失われるため、削除前の件数だけはアプリログに残しておく
     const [licenseCount, licenseHistoryCount, ticketHistoryCount] = await Promise.all([
-      supabase.from('com_t_user_license').select('license_id', { count: 'exact', head: true }).eq('contract_id', contractId),
-      supabase.from('com_t_user_license_history').select('history_id', { count: 'exact', head: true }).eq('contract_id', contractId),
-      supabase.from('com_t_user_session_ticket_history').select('history_id', { count: 'exact', head: true }).eq('contract_id', contractId),
+      supabase
+        .from('com_t_user_license')
+        .select('license_id', { count: 'exact', head: true })
+        .eq('contract_id', contractId),
+      supabase
+        .from('com_t_user_license_history')
+        .select('history_id', { count: 'exact', head: true })
+        .eq('contract_id', contractId),
+      supabase
+        .from('com_t_user_session_ticket_history')
+        .select('history_id', { count: 'exact', head: true })
+        .eq('contract_id', contractId),
     ]);
 
-    logger.warn('contract:purge_contract_with_history_started', 'Purging contract including assignment/license history (irreversible)', {
-      ...ctx,
-      payload: {
-        contractId,
-        currentLicenseCount: licenseCount.count || 0,
-        licenseHistoryCount: licenseHistoryCount.count || 0,
-        ticketHistoryCount: ticketHistoryCount.count || 0,
+    logger.warn(
+      'contract:purge_contract_with_history_started',
+      'Purging contract including assignment/license history (irreversible)',
+      {
+        ...ctx,
+        payload: {
+          contractId,
+          currentLicenseCount: licenseCount.count || 0,
+          licenseHistoryCount: licenseHistoryCount.count || 0,
+          ticketHistoryCount: ticketHistoryCount.count || 0,
+        },
       },
-    });
+    );
 
     const { error } = await supabase.rpc('purge_contract_with_history', { p_contract_id: contractId });
 
     if (error) {
-      logger.error('contract:purge_contract_with_history_failed', error.message, { ...ctx, err: error, payload: { contractId } });
-      return { success: false, message: error.message };
+      logger.error('contract:purge_contract_with_history_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { contractId },
+      });
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
-    logger.warn('contract:purge_contract_with_history_success', 'Contract purged including history', { ...ctx, payload: { contractId } });
+    logger.warn('contract:purge_contract_with_history_success', 'Contract purged including history', {
+      ...ctx,
+      payload: { contractId },
+    });
 
     revalidatePath('/contracts');
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
-    logger.error('contract:purge_contract_with_history_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('contract:purge_contract_with_history_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { contractId },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -586,6 +721,7 @@ export async function purgeContractWithHistory(contractId: string) {
  * ライセンス割当用のユーザーリスト取得
  */
 export async function getLicenseAssignmentUsers(contractId: string, clientId: string) {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -595,11 +731,15 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
       .from('vw_user_list')
       .select('id, user_name, email, license_id')
       .eq('client_id', clientId)
-      .eq('user_type', 1);
+      .eq('user_type', USER_TYPES.STUDENT);
 
     if (userError) {
-      logger.error('contract:get_license_assignment_users_view_failed', userError.message, { ...ctx, err: userError, payload: { contractId, clientId } });
-      throw new Error("ユーザーデータの取得に失敗しました");
+      logger.error('contract:get_license_assignment_users_view_failed', userError.message, {
+        ...ctx,
+        err: userError,
+        payload: { contractId, clientId },
+      });
+      throw new Error('ユーザーデータの取得に失敗しました');
     }
 
     const { data: currentAssignments, error: assignError } = await supabase
@@ -608,15 +748,19 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
       .eq('contract_id', contractId);
 
     if (assignError) {
-      logger.error('contract:get_license_assignment_users_assignments_failed', assignError.message, { ...ctx, err: assignError, payload: { contractId, clientId } });
-      throw new Error("割当情報の取得に失敗しました");
+      logger.error('contract:get_license_assignment_users_assignments_failed', assignError.message, {
+        ...ctx,
+        err: assignError,
+        payload: { contractId, clientId },
+      });
+      throw new Error('割当情報の取得に失敗しました');
     }
 
     // vw_user_list.license_idはユーザー単位で「直近の契約に関わらず最も関連性の高い
     // 1件」を返す仕様のため、この契約(contractId)配下の割当かどうかの判定・license_id/
     // statusの表示にはそのまま使わず、必ずこちらの直接クエリ結果を正とする
     const assignmentByUserId = new Map(
-      (currentAssignments || []).map(a => [a.user_id, { license_id: a.license_id, status: a.status }])
+      (currentAssignments || []).map((a) => [a.user_id, { license_id: a.license_id, status: a.status }]),
     );
 
     // ライブセッション付き契約の場合、割当済みユーザーのチケット消化状況を合わせて取得する
@@ -625,12 +769,14 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
       .select('user_id, used_sessions, total_sessions')
       .eq('contract_id', contractId);
 
-    const ticketByUserId = new Map((tickets || []).map(t => [t.user_id, { used_sessions: t.used_sessions, total_sessions: t.total_sessions }]));
+    const ticketByUserId = new Map(
+      (tickets || []).map((t) => [t.user_id, { used_sessions: t.used_sessions, total_sessions: t.total_sessions }]),
+    );
 
     return {
       assignedUsers: (allUsers || [])
-        .filter(u => assignmentByUserId.has(u.id))
-        .map(u => {
+        .filter((u) => assignmentByUserId.has(u.id))
+        .map((u) => {
           const assignment = assignmentByUserId.get(u.id)!;
           return {
             ...u,
@@ -639,10 +785,15 @@ export async function getLicenseAssignmentUsers(contractId: string, clientId: st
             ticket: ticketByUserId.get(u.id) ?? null,
           };
         }),
-      unassignedUsers: (allUsers || []).filter(u => !assignmentByUserId.has(u.id)),
+      unassignedUsers: (allUsers || []).filter((u) => !assignmentByUserId.has(u.id)),
     };
   } catch (error) {
-    logger.error('contract:get_license_assignment_users_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId, clientId } });
+    unstable_rethrow(error);
+    logger.error('contract:get_license_assignment_users_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { contractId, clientId },
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }
@@ -654,8 +805,10 @@ export async function assignLicenseToUser(
   contractId: string,
   userId: string,
   startDateJst: string,
-  endDateJst: string
-) {
+  endDateJst: string,
+): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -664,22 +817,28 @@ export async function assignLicenseToUser(
     // 契約期間内に収まっているかを検証（UI表記「ライセンスの有効期間は契約期間に準じます」との整合）
     const { data: contract, error: contractError } = await supabase
       .from('com_m_contract')
-      .select('start_date, end_date, contract_type, weekly_frequency, total_sessions, max_licenses, has_dialogue_practice')
+      .select(
+        'start_date, end_date, contract_type, weekly_frequency, total_sessions, max_licenses, has_dialogue_practice',
+      )
       .eq('contract_id', contractId)
       .single();
 
     if (contractError || !contract) {
-      logger.error('contract:assign_license_contract_lookup_failed', contractError?.message || 'Contract not found', { ...ctx, err: contractError, payload: { contractId } });
-      return { success: false, message: '対象の契約情報が見つかりませんでした' };
+      logger.error('contract:assign_license_contract_lookup_failed', contractError?.message || 'Contract not found', {
+        ...ctx,
+        err: contractError,
+        payload: { contractId },
+      });
+      return { success: false, message: t('contracts.errors.contractNotFound') };
     }
 
     if (!isWithinContractPeriod(startUtc, endUtc, contract.start_date, contract.end_date)) {
-      return { success: false, message: 'ライセンス期間は契約期間内で指定してください' };
+      return { success: false, message: t('contracts.errors.licenseWithinContract') };
     }
 
     const overlap = await findOverlappingLicense(supabase, userId, startUtc, endUtc);
     if (overlap) {
-      return { success: false, message: buildOverlapMessage(overlap) };
+      return { success: false, message: buildOverlapMessage(t, overlap) };
     }
 
     // UI側の上限チェック（isLicenseFull）は表示専用のため、書き込み直前に改めてサーバー側で検証する
@@ -690,12 +849,16 @@ export async function assignLicenseToUser(
       .eq('contract_id', contractId);
 
     if (countError) {
-      logger.error('contract:assign_license_count_failed', countError.message, { ...ctx, err: countError, payload: { contractId } });
-      return { success: false, message: '割当状況の確認に失敗しました' };
+      logger.error('contract:assign_license_count_failed', countError.message, {
+        ...ctx,
+        err: countError,
+        payload: { contractId },
+      });
+      return { success: false, message: t('contracts.errors.assignmentCheckFailed') };
     }
 
     if ((assignedCount || 0) >= contract.max_licenses) {
-      return { success: false, message: '上限数に達しているため追加できません' };
+      return { success: false, message: t('contracts.errors.limitReached') };
     }
 
     const { data: inserted, error } = await supabase
@@ -714,30 +877,46 @@ export async function assignLicenseToUser(
     if (error) {
       // 排他制約(DB側の最終防衛線)違反。同時操作によるレースで期間が重なった場合のみ発生し得る
       if (error.code === '23P01') {
-        return { success: false, message: '同時に別の操作でライセンスが登録されたため、この期間には割当できません。最新の状態を確認してやり直してください。' };
+        return {
+          success: false,
+          message: t('contracts.errors.concurrentAssign'),
+        };
       }
-      logger.error('contract:assign_license_failed', error.message, { ...ctx, err: error, payload: { contractId, userId, startDateJst, endDateJst } });
-      return { success: false, message: error.message };
+      logger.error('contract:assign_license_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { contractId, userId, startDateJst, endDateJst },
+      });
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
-    await recordIssuedLicenses(supabase, {
-      contractId,
-      contract,
-      rows: [inserted],
-      performedBy: resolvePerformedBy(ctx.userId),
-    }, ctx);
+    await recordIssuedLicenses(
+      supabase,
+      {
+        contractId,
+        contract,
+        rows: [inserted],
+        performedBy: resolvePerformedBy(ctx.userId),
+      },
+      ctx,
+    );
 
     logger.info('contract:assign_license_success', `License assigned to user`, {
       ...ctx,
-      payload: { contractId, userId }
+      payload: { contractId, userId },
     });
 
     revalidatePath('/contracts');
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
-    logger.error('contract:assign_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId, userId } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('contract:assign_license_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { contractId, userId },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -754,7 +933,9 @@ export async function assignLicenseToUser(
  * 実施済みのセッション結果・チャット・宿題は一切変更されない。
  * 無効化前の状態を変更履歴（action = invalidated）に残す。
  */
-export async function invalidateUserLicense(licenseId: string) {
+export async function invalidateUserLicense(licenseId: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -767,41 +948,54 @@ export async function invalidateUserLicense(licenseId: string) {
       .single();
 
     if (existingError || !existing) {
-      logger.error('contract:invalidate_license_lookup_failed', existingError?.message || 'License not found', { ...ctx, err: existingError, payload: { licenseId } });
-      return { success: false, message: '対象のライセンスが見つかりませんでした' };
+      logger.error('contract:invalidate_license_lookup_failed', existingError?.message || 'License not found', {
+        ...ctx,
+        err: existingError,
+        payload: { licenseId },
+      });
+      return { success: false, message: t('contracts.errors.licenseNotFound') };
     }
 
     const { error } = await supabase.rpc('invalidate_user_license', { p_license_id: licenseId });
 
     if (error) {
       logger.error('contract:invalidate_license_failed', error.message, { ...ctx, err: error, payload: { licenseId } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
-    await recordLicenseHistory(supabase, {
-      license_id: existing.license_id,
-      contract_id: existing.contract_id,
-      user_id: existing.user_id,
-      action: 'invalidated',
-      status: existing.status,
-      start_date: existing.start_date,
-      end_date: existing.end_date,
-      has_dialogue_practice: existing.has_dialogue_practice,
-      note: existing.note,
-      performed_by: resolvePerformedBy(ctx.userId),
-    }, ctx);
+    await recordLicenseHistory(
+      supabase,
+      {
+        license_id: existing.license_id,
+        contract_id: existing.contract_id,
+        user_id: existing.user_id,
+        action: 'invalidated',
+        status: existing.status,
+        start_date: existing.start_date,
+        end_date: existing.end_date,
+        has_dialogue_practice: existing.has_dialogue_practice,
+        note: existing.note,
+        performed_by: resolvePerformedBy(ctx.userId),
+      },
+      ctx,
+    );
 
     logger.info('contract:invalidate_license_success', `License invalidated`, {
       ...ctx,
-      payload: { licenseId }
+      payload: { licenseId },
     });
 
     revalidatePath('/contracts');
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
-    logger.error('contract:invalidate_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { licenseId } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('contract:invalidate_license_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { licenseId },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -818,10 +1012,12 @@ export async function updateUserLicense(
   updates: {
     start_date?: string;
     end_date?: string;
-    status?: number;
+    status?: TableRow<'com_t_user_license'>['status'];
     note?: string | null;
-  }
-) {
+  },
+): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -834,15 +1030,19 @@ export async function updateUserLicense(
       .single();
 
     if (existingError || !existing) {
-      logger.error('contract:update_user_license_lookup_failed', existingError?.message || 'License not found', { ...ctx, err: existingError, payload: { licenseId } });
-      return { success: false, message: '対象のライセンスが見つかりませんでした' };
+      logger.error('contract:update_user_license_lookup_failed', existingError?.message || 'License not found', {
+        ...ctx,
+        err: existingError,
+        payload: { licenseId },
+      });
+      return { success: false, message: t('contracts.errors.licenseNotFound') };
     }
 
-    const payload: any = { ...updates };
+    const payload: TableUpdate<'com_t_user_license'> = { ...updates };
 
     if (updates.start_date || updates.end_date) {
-      const tempStart = updates.start_date || "2000-01-01";
-      const tempEnd = updates.end_date || "2099-12-31";
+      const tempStart = updates.start_date || '2000-01-01';
+      const tempEnd = updates.end_date || '2099-12-31';
       const { startUtc, endUtc } = getUtcRangeFromJstDate(tempStart, tempEnd);
       if (updates.start_date) payload.start_date = startUtc;
       if (updates.end_date) payload.end_date = endUtc;
@@ -859,13 +1059,19 @@ export async function updateUserLicense(
       const effectiveEnd = payload.end_date || existing.end_date;
 
       if (new Date(effectiveStart) > new Date(effectiveEnd)) {
-        return { success: false, message: '開始日は終了日以前を指定してください' };
+        return { success: false, message: t('contracts.errors.startAfterEnd') };
       }
 
       if (effectiveStatus === 1) {
-        const overlap = await findOverlappingLicense(supabase, existing.user_id, effectiveStart, effectiveEnd, licenseId);
+        const overlap = await findOverlappingLicense(
+          supabase,
+          existing.user_id,
+          effectiveStart,
+          effectiveEnd,
+          licenseId,
+        );
         if (overlap) {
-          return { success: false, message: buildOverlapMessage(overlap) };
+          return { success: false, message: buildOverlapMessage(t, overlap) };
         }
       }
     }
@@ -881,49 +1087,78 @@ export async function updateUserLicense(
     if (error) {
       // 排他制約(DB側の最終防衛線)違反。同時操作によるレースで期間が重なった場合のみ発生し得る
       if (error.code === '23P01') {
-        return { success: false, message: '同時に別の操作でライセンスが登録・変更されたため、この期間には設定できません。最新の状態を確認してやり直してください。' };
+        return {
+          success: false,
+          message: t('contracts.errors.concurrentUpdate'),
+        };
       }
-      logger.error('contract:update_user_license_failed', error.message, { ...ctx, err: error, payload: { licenseId, updates } });
-      return { success: false, message: error.message };
+      logger.error('contract:update_user_license_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { licenseId, updates },
+      });
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     // 更新前の状態を履歴として記録（何から何に変わったかは insert_date の並びで追える）
-    await recordLicenseHistory(supabase, {
-      license_id: existing.license_id,
-      contract_id: existing.contract_id,
-      user_id: existing.user_id,
-      action: 'updated',
-      status: existing.status,
-      start_date: existing.start_date,
-      end_date: existing.end_date,
-      has_dialogue_practice: existing.has_dialogue_practice,
-      note: existing.note,
-      performed_by: resolvePerformedBy(ctx.userId),
-    }, ctx);
+    await recordLicenseHistory(
+      supabase,
+      {
+        license_id: existing.license_id,
+        contract_id: existing.contract_id,
+        user_id: existing.user_id,
+        action: 'updated',
+        status: existing.status,
+        start_date: existing.start_date,
+        end_date: existing.end_date,
+        has_dialogue_practice: existing.has_dialogue_practice,
+        note: existing.note,
+        performed_by: resolvePerformedBy(ctx.userId),
+      },
+      ctx,
+    );
 
     logger.info('contract:update_user_license_success', `User license updated`, {
       ...ctx,
-      payload: { licenseId }
+      payload: { licenseId },
     });
 
     revalidatePath('/contracts');
     revalidatePath('/users', 'layout');
     return { success: true };
   } catch (error) {
-    logger.error('contract:update_user_license_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { licenseId, updates } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('contract:update_user_license_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { licenseId, updates },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
 /**
  * ライセンスの一括割当
  */
+/** 一括割当の結果。期間の重なり・上限で割り当てなかった生徒は、成功・失敗のどちらでも返す */
+export type BulkAssignLicensesResult =
+  | {
+      success: true;
+      successCount: number;
+      assignedUserIds: string[];
+      skippedForOverlap: string[];
+      skippedForCapacity: string[];
+    }
+  | (ActionFailure & { errorCount: number; skippedForOverlap?: string[]; skippedForCapacity?: string[] });
+
 export async function bulkAssignLicenses(
   contractId: string,
   userIds: string[],
   startDateJst: string,
-  endDateJst: string
-) {
+  endDateJst: string,
+): Promise<BulkAssignLicensesResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -932,30 +1167,39 @@ export async function bulkAssignLicenses(
     // 契約期間内に収まっているかを検証（個別割当と同じ制御を一括割当にも適用）
     const { data: contract, error: contractError } = await supabase
       .from('com_m_contract')
-      .select('start_date, end_date, contract_type, weekly_frequency, total_sessions, max_licenses, has_dialogue_practice')
+      .select(
+        'start_date, end_date, contract_type, weekly_frequency, total_sessions, max_licenses, has_dialogue_practice',
+      )
       .eq('contract_id', contractId)
       .single();
 
     if (contractError || !contract) {
-      logger.error('contract:bulk_assign_licenses_contract_lookup_failed', contractError?.message || 'Contract not found', { ...ctx, err: contractError, payload: { contractId } });
-      return { success: false, message: '対象の契約情報が見つかりませんでした', errorCount: userIds.length };
+      logger.error(
+        'contract:bulk_assign_licenses_contract_lookup_failed',
+        contractError?.message || 'Contract not found',
+        { ...ctx, err: contractError, payload: { contractId } },
+      );
+      return { success: false, message: t('contracts.errors.contractNotFound'), errorCount: userIds.length };
     }
 
     if (!isWithinContractPeriod(startUtc, endUtc, contract.start_date, contract.end_date)) {
-      return { success: false, message: 'ライセンス期間は契約期間内で指定してください', errorCount: userIds.length };
+      return { success: false, message: t('contracts.errors.licenseWithinContract'), errorCount: userIds.length };
     }
 
     // 期間が重複する既存ライセンスを持つユーザーは対象から除外する
     const overlapResults = await Promise.all(
-      userIds.map(async userId => ({ userId, overlap: await findOverlappingLicense(supabase, userId, startUtc, endUtc) }))
+      userIds.map(async (userId) => ({
+        userId,
+        overlap: await findOverlappingLicense(supabase, userId, startUtc, endUtc),
+      })),
     );
-    const skippedForOverlap = overlapResults.filter(r => r.overlap).map(r => r.userId);
-    let targetUserIds = overlapResults.filter(r => !r.overlap).map(r => r.userId);
+    const skippedForOverlap = overlapResults.filter((r) => r.overlap).map((r) => r.userId);
+    let targetUserIds = overlapResults.filter((r) => !r.overlap).map((r) => r.userId);
 
     if (targetUserIds.length === 0) {
       return {
         success: false,
-        message: '対象ユーザーは全員、期間が重複する既存のライセンスを保有しているため割当できません',
+        message: t('contracts.errors.allUsersOverlap'),
         errorCount: userIds.length,
         skippedForOverlap,
       };
@@ -968,8 +1212,12 @@ export async function bulkAssignLicenses(
       .eq('contract_id', contractId);
 
     if (countError) {
-      logger.error('contract:bulk_assign_licenses_count_failed', countError.message, { ...ctx, err: countError, payload: { contractId } });
-      return { success: false, message: '割当状況の確認に失敗しました', errorCount: userIds.length };
+      logger.error('contract:bulk_assign_licenses_count_failed', countError.message, {
+        ...ctx,
+        err: countError,
+        payload: { contractId },
+      });
+      return { success: false, message: t('contracts.errors.assignmentCheckFailed'), errorCount: userIds.length };
     }
 
     const remainingSlots = Math.max(contract.max_licenses - (assignedCount || 0), 0);
@@ -979,14 +1227,14 @@ export async function bulkAssignLicenses(
     if (targetUserIds.length === 0) {
       return {
         success: false,
-        message: '上限数に達しているため追加できません',
+        message: t('contracts.errors.limitReached'),
         errorCount: userIds.length,
         skippedForOverlap,
         skippedForCapacity,
       };
     }
 
-    const insertData = targetUserIds.map(userId => ({
+    const insertData: TableInsert<'com_t_user_license'>[] = targetUserIds.map((userId) => ({
       contract_id: contractId,
       user_id: userId,
       status: 1,
@@ -995,31 +1243,40 @@ export async function bulkAssignLicenses(
       has_dialogue_practice: contract.has_dialogue_practice,
     }));
 
-    const { data, error } = await supabase
-      .from('com_t_user_license')
-      .insert(insertData)
-      .select(ISSUED_LICENSE_COLUMNS);
+    const { data, error } = await supabase.from('com_t_user_license').insert(insertData).select(ISSUED_LICENSE_COLUMNS);
 
     if (error) {
       // 排他制約(DB側の最終防衛線)違反。同時操作によるレースで期間が重なった場合のみ発生し得る
       // （1件でも重なれば複数行INSERT全体が失敗するため、対象を見直した上での再実行を促す）
       if (error.code === '23P01') {
-        return { success: false, message: '同時に別の操作でライセンスが登録されたため、一括割当に失敗しました。対象ユーザーを見直し再実行してください。', errorCount: userIds.length };
+        return {
+          success: false,
+          message: t('contracts.errors.concurrentBulkAssign'),
+          errorCount: userIds.length,
+        };
       }
-      logger.error('contract:bulk_assign_licenses_failed', error.message, { ...ctx, err: error, payload: { contractId, userIds, startDateJst, endDateJst } });
-      return { success: false, message: error.message, errorCount: userIds.length };
+      logger.error('contract:bulk_assign_licenses_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { contractId, userIds, startDateJst, endDateJst },
+      });
+      return { success: false, message: t('common.errors.unexpected'), errorCount: userIds.length };
     }
 
-    await recordIssuedLicenses(supabase, {
-      contractId,
-      contract,
-      rows: data || [],
-      performedBy: resolvePerformedBy(ctx.userId),
-    }, ctx);
+    await recordIssuedLicenses(
+      supabase,
+      {
+        contractId,
+        contract,
+        rows: data || [],
+        performedBy: resolvePerformedBy(ctx.userId),
+      },
+      ctx,
+    );
 
     logger.info('contract:bulk_assign_licenses_success', `Bulk licenses assigned`, {
       ...ctx,
-      payload: { contractId, count: data?.length || 0 }
+      payload: { contractId, count: data?.length || 0 },
     });
 
     revalidatePath('/users', 'layout');
@@ -1028,13 +1285,18 @@ export async function bulkAssignLicenses(
     return {
       success: true,
       successCount: data?.length || 0,
-      assignedUserIds: (data || []).map(d => d.user_id),
+      assignedUserIds: (data || []).map((d) => d.user_id),
       skippedForOverlap,
       skippedForCapacity,
     };
   } catch (error) {
-    logger.error('contract:bulk_assign_licenses_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contractId, userIds } });
-    return { success: false, message: '予期せぬエラーが発生しました', errorCount: userIds.length };
+    unstable_rethrow(error);
+    logger.error('contract:bulk_assign_licenses_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { contractId, userIds },
+    });
+    return { success: false, message: t('common.errors.unexpected'), errorCount: userIds.length };
   }
 }
 
@@ -1042,15 +1304,19 @@ export async function bulkAssignLicenses(
  * ユーザーのライセンス履歴
  */
 export async function getLicenseTimeline(userId: string) {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('com_t_user_license')
-      .select(`
+      .select(
+        `
         *,
         com_m_contract (contract_name, plan_name)
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .order('start_date', { ascending: false });
 
@@ -1059,11 +1325,12 @@ export async function getLicenseTimeline(userId: string) {
       throw error;
     }
 
-    // 💡 解除済み（物理削除済み）のライセンスは履歴テーブル側から補完し、
+    // 解除済み（物理削除済み）のライセンスは履歴テーブル側から補完し、
     // 「解除すると履歴が消える」問題を解消する。現行のライセンス一覧の並び・形状には影響しない。
     const { data: removedHistory, error: historyError } = await supabase
       .from('com_t_user_license_history')
-      .select(`
+      .select(
+        `
         license_id,
         contract_id,
         status,
@@ -1072,25 +1339,30 @@ export async function getLicenseTimeline(userId: string) {
         note,
         performed_at,
         com_m_contract (contract_name, plan_name)
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .eq('action', 'removed')
       .order('performed_at', { ascending: false });
 
     if (historyError) {
-      logger.error('contract:get_license_removed_history_failed', historyError.message, { ...ctx, err: historyError, payload: { userId } });
+      logger.error('contract:get_license_removed_history_failed', historyError.message, {
+        ...ctx,
+        err: historyError,
+        payload: { userId },
+      });
     }
 
-    const liveLicenses = (data || []).map(l => ({
+    const liveLicenses = (data || []).map((l) => ({
       ...l,
       is_removed: false,
       start_date: formatToJstDate(l.start_date),
       end_date: formatToJstDate(l.end_date),
-      contract_name: (l as any).com_m_contract?.contract_name || '不明な契約',
-      plan_name: (l as any).com_m_contract?.plan_name || '不明なプラン'
+      contract_name: l.com_m_contract?.contract_name || t('common.fallback.contract'),
+      plan_name: l.com_m_contract?.plan_name || t('common.fallback.plan'),
     }));
 
-    const removedLicenses = (removedHistory || []).map(h => ({
+    const removedLicenses = (removedHistory || []).map((h) => ({
       license_id: h.license_id,
       contract_id: h.contract_id,
       status: h.status,
@@ -1099,13 +1371,18 @@ export async function getLicenseTimeline(userId: string) {
       removed_at: h.performed_at,
       start_date: formatToJstDate(h.start_date),
       end_date: formatToJstDate(h.end_date),
-      contract_name: (h as any).com_m_contract?.contract_name || '不明な契約',
-      plan_name: (h as any).com_m_contract?.plan_name || '不明なプラン'
+      contract_name: h.com_m_contract?.contract_name || t('common.fallback.contract'),
+      plan_name: h.com_m_contract?.plan_name || t('common.fallback.plan'),
     }));
 
     return [...liveLicenses, ...removedLicenses];
   } catch (error) {
-    logger.error('contract:get_license_timeline_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { userId } });
+    unstable_rethrow(error);
+    logger.error('contract:get_license_timeline_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { userId },
+    });
     throw error instanceof Error ? error : new Error('予期せぬエラーが発生しました');
   }
 }

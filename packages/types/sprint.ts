@@ -1,8 +1,16 @@
+import type { BasicErrorCode, CoreResult } from './action';
+import type { TTSAdjustmentData, TtsStatus } from './word';
+
 /**
  * スプリント種別
  * '0':汎用スプリント, '1':コーパススプリント
  */
 export type SprintType = '0' | '1';
+
+/** URL・DB 由来の値（数値で届くことがある）をスプリント種別にする。'1' 以外は汎用（'0'） */
+export function toSprintType(value: unknown): SprintType {
+  return String(value) === '1' ? '1' : '0';
+}
 
 /**
  * スプリント種別定義（汎用 / コーパス）のメタデータ定義
@@ -41,14 +49,17 @@ export type SprintAnswerType = '0' | '1';
 /**
  * 各スプリント種別のメタデータ定義（レベルマップ内包型）
  */
+/** 種別ごとのレベルを持つ student_m_sprint_progress の列 */
+export type SprintLevelColumn = 'level_speed' | 'level_builders' | 'level_structure' | 'level_mastery';
+
 export interface QuestionTypeMetadata {
   label: string;
   value: SprintQuestionType;
   seq_no: number;
-  dbKey: string;      // ユーザー進捗レコードのDBカラム名
-  hasBasic: boolean;      // レベル0(Basic)が存在するかどうか
-  minLevel: number;       // 最小レベル (0 または 1)
-  maxLevel: number;       // 上限レベル (5 または 10)
+  dbKey: SprintLevelColumn; // ユーザー進捗レコードのDBカラム名
+  hasBasic: boolean; // レベル0(Basic)が存在するかどうか
+  minLevel: number; // 最小レベル (0 または 1)
+  maxLevel: number; // 上限レベル (5 または 10)
   recommendedTimeSec: number; // 種別に応じた推奨スプリント制限時間（秒）
 }
 
@@ -56,20 +67,56 @@ export interface QuestionTypeMetadata {
  * スプリント問題種別の画面表示用マスタ
  */
 export const QUESTION_TYPES: Record<SprintQuestionType, QuestionTypeMetadata> = {
-  '0': { label: 'UG Speed', value: '0', seq_no: 1, dbKey: 'level_speed', hasBasic: true, minLevel: 0, maxLevel: 10, recommendedTimeSec: 60 },
-  '5': { label: 'UG Builders', value: '5', seq_no: 2, dbKey: 'level_builders', hasBasic: false, minLevel: 1, maxLevel: 5, recommendedTimeSec: 90 },
-  '4': { label: 'UG Structure', value: '4', seq_no: 3, dbKey: 'level_structure', hasBasic: true, minLevel: 0, maxLevel: 10, recommendedTimeSec: 120 },
-  '6': { label: 'UG Mastery', value: '6', seq_no: 4, dbKey: 'level_mastery', hasBasic: false, minLevel: 1, maxLevel: 10, recommendedTimeSec: 120 },
+  '0': {
+    label: 'UG Speed',
+    value: '0',
+    seq_no: 1,
+    dbKey: 'level_speed',
+    hasBasic: true,
+    minLevel: 0,
+    maxLevel: 10,
+    recommendedTimeSec: 60,
+  },
+  '5': {
+    label: 'UG Builders',
+    value: '5',
+    seq_no: 2,
+    dbKey: 'level_builders',
+    hasBasic: false,
+    minLevel: 1,
+    maxLevel: 5,
+    recommendedTimeSec: 90,
+  },
+  '4': {
+    label: 'UG Structure',
+    value: '4',
+    seq_no: 3,
+    dbKey: 'level_structure',
+    hasBasic: true,
+    minLevel: 0,
+    maxLevel: 10,
+    recommendedTimeSec: 120,
+  },
+  '6': {
+    label: 'UG Mastery',
+    value: '6',
+    seq_no: 4,
+    dbKey: 'level_mastery',
+    hasBasic: false,
+    minLevel: 1,
+    maxLevel: 10,
+    recommendedTimeSec: 120,
+  },
 } as const;
 
 /**
  * スプリント制限時間オプションの型定義
  */
 export interface SprintTimeOption {
-  value: number;       // 秒数 (60, 90, 120, 150)
-  label: string;       // 画面表示用 (例: '60s')
-  desc: string;        // サブテキスト
-  seq_no: number;      // 表示順制御用
+  value: number; // 秒数 (60, 90, 120, 150)
+  label: string; // 画面表示用 (例: '60s')
+  desc: string; // サブテキスト
+  seq_no: number; // 表示順制御用
 }
 
 /**
@@ -82,10 +129,10 @@ export const DEFAULT_SPRINT_TIME_KEY = 2 as const; // 2 = スダンダード(90s
  * 制限時間オプションの実体マスタデータ (キーは連番)
  */
 export const SPRINT_TIME_OPTIONS: Record<number, SprintTimeOption> = {
-  1: { value: 60,  label: '60s',  desc: 'クイックアタック', seq_no: 1 },
-  2: { value: 90,  label: '90s',  desc: 'スタンダード',     seq_no: 2 },
-  3: { value: 120, label: '120s', desc: 'ディープラン',     seq_no: 3 },
-  4: { value: 150, label: '150s', desc: 'インテンシブ',     seq_no: 4 },
+  1: { value: 60, label: '60s', desc: 'クイックアタック', seq_no: 1 },
+  2: { value: 90, label: '90s', desc: 'スタンダード', seq_no: 2 },
+  3: { value: 120, label: '120s', desc: 'ディープラン', seq_no: 3 },
+  4: { value: 150, label: '150s', desc: 'インテンシブ', seq_no: 4 },
 } as const;
 
 /**
@@ -106,24 +153,24 @@ export interface SprintConfig {
  */
 export const SPRINT_FLOW_TIMING = {
   shared: {
-    statementQuestionGapMs: 150,      // 基本文と問いの間の隙間
-    micReleaseSessionRestoreMs: 300,  // マイク停止後、AudioSessionをplaybackへ戻すまでの遅延
-    initialCushionFirstMs: 600,       // 1問目の開始前クッション
-    initialCushionSubsequentMs: 300,  // 2問目以降の開始前クッション
-    exitSafetyBufferMs: 1000,         // 終了処理後、画面遷移までの安全バッファ
+    statementQuestionGapMs: 150, // 基本文と問いの間の隙間
+    micReleaseSessionRestoreMs: 300, // マイク停止後、AudioSessionをplaybackへ戻すまでの遅延
+    initialCushionFirstMs: 600, // 1問目の開始前クッション
+    initialCushionSubsequentMs: 300, // 2問目以降の開始前クッション
+    exitSafetyBufferMs: 1000, // 終了処理後、画面遷移までの安全バッファ
   },
   drill: {
-    thinkingTimeMs: 2000,             // 問いのあとの沈黙（自動再生時）
-    nextCardDelayMs: 2000,            // 解答が終わって次へ行くまでの余韻
-    yesNoAnswerGapMs: 500,            // YES/NO解答再生の間隔
+    thinkingTimeMs: 2000, // 問いのあとの沈黙（自動再生時）
+    nextCardDelayMs: 2000, // 解答が終わって次へ行くまでの余韻
+    yesNoAnswerGapMs: 500, // YES/NO解答再生の間隔
     postRecordingAnswerDelayMs: 1500, // 録音完了直後に解答再生を始めるまでの遅延
   },
   sprint: {
-    preChimeGapMs: 200,               // 問い再生終了からチャイム・録音開始までの間隔
-    resultRedirectBufferMs: 250,      // 結果画面遷移前の安全バッファ
-    visualFeedbackHoldGoodMs: 1000,   // excellent/great/goodスコア表示の保持時間
-    visualFeedbackHoldPoorMs: 800,    // fair/poorスコア表示の保持時間
-    resultAutoPlayDelayMs: 800,       // 実施直後の結果画面で「全て再生」を自動で始めるまでの間（画面の表示を落ち着かせる）
+    preChimeGapMs: 200, // 問い再生終了からチャイム・録音開始までの間隔
+    resultRedirectBufferMs: 250, // 結果画面遷移前の安全バッファ
+    visualFeedbackHoldGoodMs: 1000, // excellent/great/goodスコア表示の保持時間
+    visualFeedbackHoldPoorMs: 800, // fair/poorスコア表示の保持時間
+    resultAutoPlayDelayMs: 800, // 実施直後の結果画面で「全て再生」を自動で始めるまでの間（画面の表示を落ち着かせる）
   },
 } as const;
 
@@ -132,8 +179,8 @@ export const SPRINT_FLOW_TIMING = {
  */
 export interface SprintQuestion {
   question_id: string; // UUID
-  content_id: string;  // UUID
-  sprint_type: string; // 0:汎用スプリント, 1:コーパススプリント
+  content_id: string; // UUID
+  sprint_type: SprintType; // 0:汎用スプリント, 1:コーパススプリント
   question_type: SprintQuestionType;
   difficulty_level: number;
   group_id: string | null; // UUID (Speedの場合はnull)
@@ -145,8 +192,8 @@ export interface SprintQuestion {
   statement_voice: string | null;
   statement_tts_ssml: string | null;
   statement_tts_ssml_mode: TtsSsmlMode;
-  statement_tts_adjustments: any | null;
-  statement_tts_status: number;
+  statement_tts_adjustments: TTSAdjustmentData | null;
+  statement_tts_status: TtsStatus;
 
   // ② クエスチョン（問い・指示）セクション
   question_en: string;
@@ -154,8 +201,8 @@ export interface SprintQuestion {
   question_voice: string | null;
   question_tts_ssml: string | null;
   question_tts_ssml_mode: TtsSsmlMode;
-  question_tts_adjustments: any | null;
-  question_tts_status: number;
+  question_tts_adjustments: TTSAdjustmentData | null;
+  question_tts_status: TtsStatus;
 
   // ③ 解答（YES・通常正解文）セクション
   answer_sentence_yes_en: string;
@@ -163,8 +210,8 @@ export interface SprintQuestion {
   answer_sentence_yes_voice: string | null;
   answer_sentence_yes_tts_ssml: string | null;
   answer_sentence_yes_tts_ssml_mode: TtsSsmlMode;
-  answer_sentence_yes_tts_adjustments: any | null;
-  answer_sentence_yes_tts_status: number;
+  answer_sentence_yes_tts_adjustments: TTSAdjustmentData | null;
+  answer_sentence_yes_tts_status: TtsStatus;
 
   // ④ 解答（NO・否定文 ※Speed専用）セクション
   answer_sentence_no_en: string | null;
@@ -172,25 +219,35 @@ export interface SprintQuestion {
   answer_sentence_no_voice: string | null;
   answer_sentence_no_tts_ssml: string | null;
   answer_sentence_no_tts_ssml_mode: TtsSsmlMode;
-  answer_sentence_no_tts_adjustments: any | null;
-  answer_sentence_no_tts_status: number;
+  answer_sentence_no_tts_adjustments: TTSAdjustmentData | null;
+  answer_sentence_no_tts_status: TtsStatus;
 
   // 管理・移行・システム共通カラム
   last_tts_date: string | null;
   legacy_question_id: number | null;
   legacy_group_id: number | null;
-  delete_flg: string;
   insert_date: string;
   update_date: string;
 }
 
 /** お気に入り一覧で使う問題の列（一覧の転送量を抑えるため、TTSの調整データ等は取得しない） */
 export const FAVORITE_SPRINT_QUESTION_COLUMNS = [
-  'question_id', 'content_id', 'question_type', 'difficulty_level',
-  'statement_en', 'statement_ja', 'statement_voice',
-  'question_en', 'question_ja', 'question_voice',
-  'answer_sentence_yes_en', 'answer_sentence_yes_ja', 'answer_sentence_yes_voice',
-  'answer_sentence_no_en', 'answer_sentence_no_ja', 'answer_sentence_no_voice',
+  'question_id',
+  'content_id',
+  'question_type',
+  'difficulty_level',
+  'statement_en',
+  'statement_ja',
+  'statement_voice',
+  'question_en',
+  'question_ja',
+  'question_voice',
+  'answer_sentence_yes_en',
+  'answer_sentence_yes_ja',
+  'answer_sentence_yes_voice',
+  'answer_sentence_no_en',
+  'answer_sentence_no_ja',
+  'answer_sentence_no_voice',
 ] as const;
 
 export type FavoriteSprintQuestionFields = Pick<SprintQuestion, (typeof FAVORITE_SPRINT_QUESTION_COLUMNS)[number]>;
@@ -209,16 +266,15 @@ export interface FavoriteSprintQuestionItem extends FavoriteSprintQuestionFields
   has_level: boolean;
 }
 
-export interface SprintQuestionResponse {
-  success: boolean;
-  data: SprintQuestion[] | null;
-  error?: string;
-  /**
-   * 'level_locked': 生徒のレベル管理上、まだ選べないレベルが指定された
-   * 'no_questions': 指定した種別・レベルに問題が無い
-   */
-  errorCode?: 'level_locked' | 'no_questions';
-}
+/**
+ * スプリントの出題の取得の結果。失敗の errorCode:
+ * - 'level_locked': 生徒のレベル管理上、まだ選べないレベルが指定された
+ * - 'no_questions': 指定した種別・レベルに問題が無い
+ */
+export type SprintQuestionResponse = CoreResult<
+  { data: SprintQuestion[] },
+  'level_locked' | 'no_questions' | BasicErrorCode
+>;
 
 /**
  * 教材ごとの「問題が存在するレベル」を種別ごとに並べたもの（昇順）。

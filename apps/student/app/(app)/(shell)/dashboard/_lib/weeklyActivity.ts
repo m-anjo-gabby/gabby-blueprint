@@ -1,5 +1,5 @@
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import type { UserTrainingPerformanceResponse } from '@/actions/performanceAction';
+import type { UserTrainingPerformanceResponse } from '@gabby/types/training';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const WEEKDAY_LABELS = ['月', '火', '水', '木', '金', '土', '日'];
@@ -77,7 +77,7 @@ export function buildCurrentWeek(activities: TrainingActivity[], timeZone: strin
 export function resolveStreakDays(
   stats: { current_streak_days: number; last_training_date: string | null } | null,
   timeZone: string,
-  nowMs: number
+  nowMs: number,
 ): number {
   if (!stats?.last_training_date) return 0;
   const todayIso = toIsoDateInZone(nowMs, timeZone);

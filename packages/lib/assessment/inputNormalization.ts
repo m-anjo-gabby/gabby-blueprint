@@ -39,8 +39,7 @@ function collapseRepeats(words: string[]): string[] {
  * ここで除去する記号セットは native-speech.ts の各所（calculateSimilarity等）と揃えている
  * （アポストロフィは "don't" 等の短縮形を壊さないよう対象外）。
  */
-const normalizeWord = (word: string): string =>
-  word.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+const normalizeWord = (word: string): string => word.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '');
 
 /**
  * Web Speech APIの認識結果に対する前処理パイプライン。
@@ -53,8 +52,8 @@ const normalizeWord = (word: string): string =>
  * 各施策を独立に追加・調整できるようにしている。
  */
 export function preprocessInputWords(rawInputWords: string[]): string[] {
-  const normalized = rawInputWords.map(normalizeWord).filter(w => w.length > 0);
-  const expanded = normalized.flatMap(w => CONTRACTIONS[w] ?? [w]);
-  const withoutFillers = expanded.filter(w => !FILLER_WORDS.has(w));
+  const normalized = rawInputWords.map(normalizeWord).filter((w) => w.length > 0);
+  const expanded = normalized.flatMap((w) => CONTRACTIONS[w] ?? [w]);
+  const withoutFillers = expanded.filter((w) => !FILLER_WORDS.has(w));
   return collapseRepeats(withoutFillers);
 }

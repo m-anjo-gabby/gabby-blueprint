@@ -1,14 +1,14 @@
 import { Suspense } from 'react';
-import { HomeView } from './_components/HomeView';
-import { LiveSessionSection } from './_components/LiveSessionSection';
-import { LiveSessionCardSkeleton } from './_components/LiveSessionCard';
-import { HomeEventSection } from './_components/HomeEventSection';
-import { HomeEventCardSkeleton } from './_components/HomeEventCard';
-import { HomeNoticeCard } from './_components/HomeNoticeCard';
-import { fetchHomeData } from './_lib/fetchHomeData';
-import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
 import { createRenderId } from '@gabby/lib/navigation/renderId';
 import { getNoticesCached } from '@gabby/lib/notice/getNoticesCached';
+import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
+import { HomeEventCardSkeleton } from './_components/HomeEventCard';
+import { HomeEventSection } from './_components/HomeEventSection';
+import { HomeNoticeCard } from './_components/HomeNoticeCard';
+import { HomeView } from './_components/HomeView';
+import { LiveSessionCardSkeleton } from './_components/LiveSessionCard';
+import { LiveSessionSection } from './_components/LiveSessionSection';
+import { fetchHomeData } from './_lib/fetchHomeData';
 
 /**
  * ホーム（ダッシュボード）
@@ -21,13 +21,10 @@ import { getNoticesCached } from '@gabby/lib/notice/getNoticesCached';
  */
 export default async function DashboardPage() {
   // 契約一覧は (app)/layout.tsx と同じ取得を使う（1リクエスト内で1回）
-  const [{ assignments, activities, lifetimeStats, timezoneNames, resume, plans }, liveContracts, notices] = await Promise.all([
-    fetchHomeData(),
-    getMyLiveSessionContractsCached(),
-    getNoticesCached(),
-  ]);
+  const [{ assignments, activities, lifetimeStats, timezoneNames, resume, plans }, liveContracts, notices] =
+    await Promise.all([fetchHomeData(), getMyLiveSessionContractsCached(), getNoticesCached()]);
   // 取得順（重要→公開日の新しい順）のまま先頭を出す
-  const homeNotices = notices.data.filter((n) => n.display_mode === 'HOME' && !n.is_read);
+  const homeNotices = (notices.success ? notices.data : []).filter((n) => n.display_mode === 'HOME' && !n.is_read);
   const liveContract = liveContracts.find((c) => c.is_current) ?? liveContracts.find((c) => c.is_active);
 
   return (

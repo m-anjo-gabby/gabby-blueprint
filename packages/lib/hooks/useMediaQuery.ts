@@ -14,11 +14,11 @@ export function useMediaQuery(query: string): boolean {
       mql.addEventListener('change', onChange);
       return () => mql.removeEventListener('change', onChange);
     },
-    [query]
+    [query],
   );
   return useSyncExternalStore(
     subscribe,
     () => window.matchMedia(query).matches,
-    () => false
+    () => false,
   );
 }

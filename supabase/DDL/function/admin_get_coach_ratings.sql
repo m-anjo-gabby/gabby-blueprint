@@ -1,5 +1,5 @@
 ---------------------------------------------
--- アドミンによるコーチ評価の一覧取得RPC (2026-10-10 追加)
+-- アドミンによるコーチ評価の一覧取得RPC
 -- 前提: table/com_t_coach_rating.sql, table/com_t_coach_stats.sql の作成が完了していること。
 ---------------------------------------------
 -- admin のユーザー管理 → コーチの「評価」画面（/users/[id]/ratings）で使う。
@@ -21,7 +21,7 @@ AS $$
 DECLARE
     v_coach jsonb;
 BEGIN
-    IF COALESCE(public.get_jwt_user_type(), '') <> '0' THEN
+    IF NOT public.is_system_admin() THEN
         RAISE EXCEPTION 'NOT_AUTHORIZED: only admins can view coach ratings';
     END IF;
 

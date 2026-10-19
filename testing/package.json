@@ -10,16 +10,19 @@
     "e2e:report": "playwright show-report e2e/.artifacts/report",
     "e2e:preflight:coach": "tsx e2e/support/coachE2e.preflight.ts",
     "e2e:preflight:coach:staging": "tsx e2e/support/coachE2e.preflight.ts --env=staging",
-    "unit": "tsx --test unit/*.test.ts"
+    "unit": "tsx --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=unit/lcov.info unit/*.test.ts",
+    "unit:coverage-summary": "node unit/coverage-summary.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@gabby/lib": "workspace:*",
-    "@supabase/supabase-js": "^2.94.0"
+    "@supabase/supabase-js": "catalog:"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
-    "@types/node": "^20",
-    "cross-env": "^10.1.0",
-    "dotenv": "^17.4.2"
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "cross-env": "catalog:",
+    "dotenv": "catalog:",
+    "typescript": "catalog:"
   }
 }

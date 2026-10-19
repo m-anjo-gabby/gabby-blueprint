@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import {
-  getNotificationsAction,
-  markNotificationAsReadAction,
-  markAllNotificationsAsReadAction,
+  getNotifications,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
 } from '@gabby/lib/notification/actions/notificationActions';
-import { NotificationItem } from '@gabby/types/notification';
+import { type NotificationItem } from '@gabby/types/notification';
 import { clientLogger } from '../logger/client';
 
 interface NotificationState {
@@ -39,7 +39,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     set({ isLoading: true });
     try {
-      const res = await getNotificationsAction();
+      const res = await getNotifications();
       if (!res.success) return;
       get().applyNotifications(res.data);
     } catch (err) {
@@ -59,15 +59,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     // 楽観的UI更新
     set((state) => ({
       notifications: state.notifications.map((n) =>
-        n.notification_id === notificationId ? { ...n, is_read: true } : n
+        n.notification_id === notificationId ? { ...n, is_read: true } : n,
       ),
       unreadCount: Math.max(
         0,
         state.unreadCount -
-          (state.notifications.find((n) => n.notification_id === notificationId && !n.is_read) ? 1 : 0)
+          (state.notifications.find((n) => n.notification_id === notificationId && !n.is_read) ? 1 : 0),
       ),
     }));
-    await markNotificationAsReadAction(notificationId);
+    await markNotificationAsRead(notificationId);
   },
 
   markAllAsRead: async () => {
@@ -75,6 +75,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       notifications: state.notifications.map((n) => ({ ...n, is_read: true })),
       unreadCount: 0,
     }));
-    await markAllNotificationsAsReadAction();
+    await markAllNotificationsAsRead();
   },
 }));

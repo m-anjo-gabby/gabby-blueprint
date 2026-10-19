@@ -19,7 +19,7 @@ const ICONS: Record<string, LucideIcon> = { Sparkles, Flame, MessageCircle };
 
 export function getNotificationDisplay(
   notification: Pick<NotificationItem, 'notification_type' | 'payload'>,
-  locale: NotificationLocale
+  locale: NotificationLocale,
 ): NotificationDisplay {
   const type = notification.notification_type;
   const meta = isNotificationType(type) ? NOTIFICATION_TYPES[type] : null;

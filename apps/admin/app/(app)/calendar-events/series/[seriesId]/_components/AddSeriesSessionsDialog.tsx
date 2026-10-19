@@ -1,22 +1,22 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CalendarPlus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo, useState, useTransition } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTranslations } from 'next-intl';
-import { CalendarPlus } from 'lucide-react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import type { CalendarEventCoachOption, CalendarEventItem } from '@gabby/types/calendarEvent';
 import type { ClientOption } from '@gabby/types/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Form } from '@/components/ui/form';
 import { addCalendarEventSeriesSessions } from '@/actions/adminCalendarEventSeriesAction';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form } from '@/components/ui/form';
 import { SeriesSessionsFields } from '../../_components/SeriesSessionsFields';
 import {
-  refineSeriesSessions,
   createSeriesSessionsShape,
+  refineSeriesSessions,
   sessionsAfter,
   toSeriesSessionsPayload,
   type SeriesSessionsValues,
@@ -67,7 +67,10 @@ export function AddSeriesSessionsDialog({ seriesId, sessions, coaches, clients }
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none" icon={<CalendarPlus size={16} />}>
+        <Button
+          className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none"
+          icon={<CalendarPlus size={16} />}
+        >
           {t('addSessionsButton')}
         </Button>
       </DialogTrigger>

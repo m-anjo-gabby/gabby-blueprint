@@ -20,7 +20,12 @@ const components: Components = {
   ul: (props) => <ul {...domProps(props)} className="my-3 list-disc space-y-1 pl-5" />,
   ol: (props) => <ol {...domProps(props)} className="my-3 list-decimal space-y-1 pl-5" />,
   a: (props) => (
-    <a {...domProps(props)} className="font-bold text-brand underline hover:text-brand-strong" target="_blank" rel="noopener noreferrer" />
+    <a
+      {...domProps(props)}
+      className="font-bold text-brand underline hover:text-brand-strong"
+      target="_blank"
+      rel="noopener noreferrer"
+    />
   ),
   blockquote: (props) => (
     <blockquote {...domProps(props)} className="my-3 border-l-4 border-brand-200 pl-4 text-ink-muted" />
@@ -34,7 +39,10 @@ const components: Components = {
   th: (props) => <th {...domProps(props)} className="border border-line bg-canvas px-2 py-1.5 font-bold text-ink" />,
   td: (props) => <td {...domProps(props)} className="border border-line px-2 py-1.5" />,
   code: ({ className, ...props }) => (
-    <code {...domProps(props)} className={cn('rounded bg-line/60 px-1.5 py-0.5 font-mono text-xs text-ink', className)} />
+    <code
+      {...domProps(props)}
+      className={cn('rounded bg-line/60 px-1.5 py-0.5 font-mono text-xs text-ink', className)}
+    />
   ),
 };
 

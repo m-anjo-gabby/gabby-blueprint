@@ -1,16 +1,20 @@
 'use client';
 
+import { MessagesSquare, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Plus, MessagesSquare } from 'lucide-react';
+import {
+  DIALOGUE_CATEGORIES,
+  type DialogueAssignmentSummary,
+  type DialogueCategory,
+  type DialogueContentSummary,
+} from '@gabby/types/dialogue';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
-import type { DialogueAssignmentSummary, DialogueCategory, DialogueContentSummary } from '@gabby/types/dialogue';
-import { useDialoguePracticeAssignments } from '../../_hooks/useDialoguePracticeAssignments';
 import { AssignDialogueDialog } from '../../_components/AssignDialogueDialog';
+import { useDialoguePracticeAssignments } from '../../_hooks/useDialoguePracticeAssignments';
 import { DialogueAssignmentCard } from './DialogueAssignmentCard';
 
-interface Props {
+interface DialoguePracticeManagerProps {
   studentId: string;
   availableContents: DialogueContentSummary[];
   initialAssignments: DialogueAssignmentSummary[];
@@ -23,7 +27,11 @@ function filterLabel(filter: CategoryFilter): string {
   return filter === 'all' ? 'All' : DIALOGUE_CATEGORIES[filter].label;
 }
 
-export function DialoguePracticeManager({ studentId, availableContents, initialAssignments }: Props) {
+export function DialoguePracticeManager({
+  studentId,
+  availableContents,
+  initialAssignments,
+}: DialoguePracticeManagerProps) {
   const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<CategoryFilter>('all');
   const { assignments, assignedContentIds, isRefreshing, handleAssigned, handleUnassign, handleProgressChange } =
@@ -36,7 +44,7 @@ export function DialoguePracticeManager({ studentId, availableContents, initialA
 
   const filteredAssignments = useMemo(
     () => (activeFilter === 'all' ? assignments : assignments.filter((a) => a.category_id === activeFilter)),
-    [assignments, activeFilter]
+    [assignments, activeFilter],
   );
 
   return (

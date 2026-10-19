@@ -1,6 +1,7 @@
 'use server';
 
 import { getMyPendingCoachRatingsCore, submitCoachRatingCore } from '@gabby/lib/coachRating/actions/coachRatingActions';
+import type { ActionResult } from '@gabby/types/action';
 import type { CoachRatingErrorCode, PendingCoachRating, SubmitCoachRatingInput } from '@gabby/types/coachRating';
 
 const COACH_RATING_ERROR_MESSAGES_JA: Record<CoachRatingErrorCode, string> = {
@@ -17,9 +18,7 @@ export async function getMyPendingCoachRatings(): Promise<PendingCoachRating[]> 
 }
 
 /** コーチを評価する */
-export async function submitCoachRating(
-  input: SubmitCoachRatingInput
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function submitCoachRating(input: SubmitCoachRatingInput): Promise<ActionResult> {
   const result = await submitCoachRatingCore(input);
   if (!result.success) return { success: false, message: COACH_RATING_ERROR_MESSAGES_JA[result.errorCode] };
   return { success: true };

@@ -1,16 +1,18 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
-import { createServerClient } from '../../supabase/server';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import {
+  LIVE_SESSION_ROOM_ROLE,
+  type CheckLiveSessionJoinableResult,
+  type GetLiveSessionRoomAccessResult,
+  type RecordCallJoinResult,
+} from '@gabby/types/liveSessionRoom';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
+import { createServerClient } from '../../supabase/server';
 import { generateVideoSdkSignature } from '../../zoom/signature';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../constants';
-import {
-  CheckLiveSessionJoinableResult,
-  GetLiveSessionRoomAccessResult,
-  LIVE_SESSION_ROOM_ROLE,
-  RecordCallJoinResult,
-} from '@gabby/types/liveSessionRoom';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -32,17 +34,17 @@ function buildSessionName(sessionId: string): string {
 
 /** ログイン中生徒が、現在有効なライブセッションチケットを保持しているか判定する */
 async function hasActiveLiveSessionTicket(supabase: SupabaseClient, userId: string): Promise<boolean> {
-  const { data: tickets } = await supabase
-    .from('com_t_user_session_ticket')
-    .select('license_id')
-    .eq('user_id', userId);
+  const { data: tickets } = await supabase.from('com_t_user_session_ticket').select('license_id').eq('user_id', userId);
 
   if (!tickets || tickets.length === 0) return false;
 
   const { data: licenses } = await supabase
     .from('com_t_user_license')
     .select('license_id, status, end_date')
-    .in('license_id', tickets.map((t) => t.license_id));
+    .in(
+      'license_id',
+      tickets.map((t) => t.license_id),
+    );
 
   const now = new Date();
   return (licenses ?? []).some((l) => l.status === 1 && new Date(l.end_date) >= now);
@@ -69,7 +71,12 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
       .maybeSingle();
 
     if (sessionError) {
-      logger.error('liveSessionRoom:coach_access_session_lookup_failed', sessionError.message, { ...ctx, err: sessionError, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:coach_access_session_lookup_failed', sessionError.message, {
+        ...ctx,
+        err: sessionError,
+        userId: user.id,
+        payload: { sessionId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!session || session.coach_id !== user.id) {
@@ -85,7 +92,11 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
     ]);
 
     if (coachError || studentError || !coach || !student) {
-      logger.error('liveSessionRoom:coach_access_user_lookup_failed', coachError?.message ?? studentError?.message ?? 'user not found', { ...ctx, err: coachError, userId: user.id, payload: { sessionId } });
+      logger.error(
+        'liveSessionRoom:coach_access_user_lookup_failed',
+        coachError?.message ?? studentError?.message ?? 'user not found',
+        { ...ctx, err: coachError, userId: user.id, payload: { sessionId } },
+      );
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -111,7 +122,11 @@ export async function getCoachLiveSessionRoomAccessCore(sessionId: string): Prom
       },
     };
   } catch (err) {
-    logger.error('liveSessionRoom:coach_access_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('liveSessionRoom:coach_access_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -142,7 +157,12 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
       .maybeSingle();
 
     if (sessionError) {
-      logger.error('liveSessionRoom:student_access_session_lookup_failed', sessionError.message, { ...ctx, err: sessionError, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:student_access_session_lookup_failed', sessionError.message, {
+        ...ctx,
+        err: sessionError,
+        userId: user.id,
+        payload: { sessionId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!session || session.student_id !== user.id) {
@@ -158,7 +178,11 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
     ]);
 
     if (studentError || coachError || !student || !coach) {
-      logger.error('liveSessionRoom:student_access_user_lookup_failed', studentError?.message ?? coachError?.message ?? 'user not found', { ...ctx, err: studentError, userId: user.id, payload: { sessionId } });
+      logger.error(
+        'liveSessionRoom:student_access_user_lookup_failed',
+        studentError?.message ?? coachError?.message ?? 'user not found',
+        { ...ctx, err: studentError, userId: user.id, payload: { sessionId } },
+      );
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -184,7 +208,11 @@ export async function getStudentLiveSessionRoomAccessCore(sessionId: string): Pr
       },
     };
   } catch (err) {
-    logger.error('liveSessionRoom:student_access_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('liveSessionRoom:student_access_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -209,19 +237,30 @@ export async function checkStudentLiveSessionJoinableCore(sessionId: string): Pr
       .maybeSingle();
 
     if (error) {
-      logger.error('liveSessionRoom:student_joinable_lookup_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:student_joinable_lookup_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { sessionId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!session || session.student_id !== user.id) {
       return { success: false, errorCode: 'forbidden' };
     }
     if (isTooEarlyToJoin(session.start_datetime)) {
-      const availableAt = new Date(new Date(session.start_datetime).getTime() - LIVE_SESSION_EARLY_JOIN_BEFORE_MS).toISOString();
+      const availableAt = new Date(
+        new Date(session.start_datetime).getTime() - LIVE_SESSION_EARLY_JOIN_BEFORE_MS,
+      ).toISOString();
       return { success: true, joinable: false, availableAt };
     }
     return { success: true, joinable: true };
   } catch (err) {
-    logger.error('liveSessionRoom:student_joinable_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('liveSessionRoom:student_joinable_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -230,7 +269,10 @@ export async function checkStudentLiveSessionJoinableCore(sessionId: string): Pr
  * ライブセッション通話への入室を記録する(record_session_call_join RPC呼び出し)。
  * 入室日時はRPC側でNOW()により確定するため、ここではsession_id/zoomSessionIdのみ渡す。
  */
-export async function recordSessionCallJoinCore(sessionId: string, zoomSessionId: string | null): Promise<RecordCallJoinResult> {
+export async function recordSessionCallJoinCore(
+  sessionId: string,
+  zoomSessionId: string | null,
+): Promise<RecordCallJoinResult> {
   const ctx = await getLogContext();
 
   try {
@@ -244,13 +286,22 @@ export async function recordSessionCallJoinCore(sessionId: string, zoomSessionId
     });
 
     if (error || !data) {
-      logger.error('liveSessionRoom:record_call_join_failed', error?.message ?? 'No call_log_id returned', { ...ctx, err: error, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:record_call_join_failed', error?.message ?? 'No call_log_id returned', {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { sessionId },
+      });
       return { success: false, errorCode: 'forbidden' };
     }
 
     return { success: true, callLogId: data as string };
   } catch (err) {
-    logger.error('liveSessionRoom:record_call_join_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('liveSessionRoom:record_call_join_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -270,13 +321,22 @@ export async function recordSessionCallLeaveCore(callLogId: string): Promise<{ s
 
     const { error } = await supabase.rpc('record_session_call_leave', { p_call_log_id: callLogId });
     if (error) {
-      logger.error('liveSessionRoom:record_call_leave_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { callLogId } });
+      logger.error('liveSessionRoom:record_call_leave_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { callLogId },
+      });
       return { success: false };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('liveSessionRoom:record_call_leave_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('liveSessionRoom:record_call_leave_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false };
   }
 }
@@ -308,7 +368,12 @@ export async function recordSessionChatMessageCore(sessionId: string, message: s
       .maybeSingle();
 
     if (sessionError || !session) {
-      logger.error('liveSessionRoom:record_chat_session_lookup_failed', sessionError?.message ?? 'session not found', { ...ctx, err: sessionError, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:record_chat_session_lookup_failed', sessionError?.message ?? 'session not found', {
+        ...ctx,
+        err: sessionError,
+        userId: user.id,
+        payload: { sessionId },
+      });
       return { success: false };
     }
 
@@ -325,13 +390,22 @@ export async function recordSessionChatMessageCore(sessionId: string, message: s
     });
 
     if (error) {
-      logger.error('liveSessionRoom:record_chat_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionId } });
+      logger.error('liveSessionRoom:record_chat_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { sessionId },
+      });
       return { success: false };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('liveSessionRoom:record_chat_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('liveSessionRoom:record_chat_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false };
   }
 }

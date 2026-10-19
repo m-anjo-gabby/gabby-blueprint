@@ -179,7 +179,7 @@ BEGIN
                 'session_start_datetime', v_session.start_datetime,
                 'proposal_count', v_proposal_count
             ),
-            -- 振替候補の提案はコーチが承認・却下するため、承認できるカレンダー（Pending Requests）へ (2026-10-06変更)
+            -- 振替候補の提案はコーチが承認・却下するため、承認できるカレンダー（Pending Requests）へ
             CASE WHEN v_proposal_count > 0 THEN '/calendar' ELSE '/students/' || v_session.student_id END
         );
     END IF;

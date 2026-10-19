@@ -21,7 +21,6 @@ CREATE TABLE public.com_m_calendar_event_series (
     event_type               character varying(30) NOT NULL DEFAULT 'GROUP_SESSION'::character varying,
     title                    text         NOT NULL,
     description              text,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now()
 );
@@ -31,23 +30,24 @@ COMMENT ON COLUMN public.com_m_calendar_event_series.series_id IS 'シリーズI
 COMMENT ON COLUMN public.com_m_calendar_event_series.event_type IS 'イベント種別（各回の event_type と同じ値。正本は packages/types/calendarEvent.ts）';
 COMMENT ON COLUMN public.com_m_calendar_event_series.title IS 'シリーズ名（企画名）';
 COMMENT ON COLUMN public.com_m_calendar_event_series.description IS 'シリーズの説明（企画の紹介文、任意）';
-COMMENT ON COLUMN public.com_m_calendar_event_series.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_calendar_event_series.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_calendar_event_series.update_date IS '更新日時';
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_calendar_event_series FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_calendar_event_series ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admin can manage calendar event series" ON public.com_m_calendar_event_series FOR ALL TO authenticated
 USING (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 )
 WITH CHECK (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 );
 
 CREATE POLICY "Users can view series of visible events" ON public.com_m_calendar_event_series FOR SELECT TO authenticated
 USING (
-    delete_flg = '0'::text AND (EXISTS ( SELECT 1
+    (EXISTS ( SELECT 1
        FROM public.com_m_calendar_event e
       WHERE e.series_id = com_m_calendar_event_series.series_id))
 );

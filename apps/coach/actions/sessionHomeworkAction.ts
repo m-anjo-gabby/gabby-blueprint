@@ -1,20 +1,21 @@
 'use server';
 
-import {
-  getSessionHomeworkCore,
-  getRecentSessionHomeworkCore,
-  createSessionHomeworkCore,
-  addHomeworkCommentCore,
-  setSessionHomeworkNotNeededCore,
-} from '@gabby/lib/sessionHomework/actions/sessionHomeworkActions';
-import { uploadSessionHomeworkAttachmentCore } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { uploadSessionHomeworkAttachmentCore } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
 import {
-  HomeworkAttachmentErrorCode,
-  PendingHomeworkAttachment,
-  SessionHomeworkComment,
-  SessionHomeworkEntry,
+  addHomeworkCommentCore,
+  createSessionHomeworkCore,
+  getRecentSessionHomeworkCore,
+  getSessionHomeworkCore,
+  setSessionHomeworkNotNeededCore,
+} from '@gabby/lib/sessionHomework/actions/sessionHomeworkActions';
+import type { ActionResult } from '@gabby/types/action';
+import {
+  type HomeworkAttachmentErrorCode,
+  type PendingHomeworkAttachment,
+  type SessionHomeworkComment,
+  type SessionHomeworkEntry,
 } from '@gabby/types/sessionHomework';
 
 const logger = createLogger('coach');
@@ -30,13 +31,13 @@ const ATTACHMENT_ERROR_MESSAGES_EN: Record<HomeworkAttachmentErrorCode, string> 
 };
 
 /**
- * Uploads a homework attachment (body or follow-up comment) before posting it.
- * Only the session's own coach can upload.
+ * 宿題の添付ファイル（本文・追記のコメント）を、投稿の前にアップロードする。
+ * アップロードできるのは、そのセッションのコーチだけ。
  */
 export async function uploadSessionHomeworkAttachment(
   sessionId: string,
-  formData: FormData
-): Promise<{ success: true; attachment: PendingHomeworkAttachment } | { success: false; message: string }> {
+  formData: FormData,
+): Promise<ActionResult<{ attachment: PendingHomeworkAttachment }>> {
   const result = await uploadSessionHomeworkAttachmentCore(sessionId, formData);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -47,8 +48,8 @@ export async function uploadSessionHomeworkAttachment(
 }
 
 /**
- * Fetches the homework body (with follow-up comments) for a session, if posted yet.
- * Visible to the coach who posted it and the student it's for.
+ * セッションの宿題の本文（追記のコメントを含む）を、投稿済みなら取得する。
+ * 見られるのは、投稿したコーチと、宿題の相手の生徒。
  */
 export async function getSessionHomework(sessionId: string): Promise<SessionHomeworkEntry | null> {
   const result = await getSessionHomeworkCore(sessionId);
@@ -61,10 +62,13 @@ export async function getSessionHomework(sessionId: string): Promise<SessionHome
 }
 
 /**
- * Fetches the most recent homework posts for this student, excluding the given session
- * (used by the session prep/execution hub to show "last homework" without navigating away).
+ * その生徒の最近の宿題を、指定のセッションを除いて取得する
+ * （セッションの準備・実施の画面で、移動せずに「前回の宿題」を出すのに使う）。
  */
-export async function getRecentSessionHomework(studentId: string, excludeSessionId: string): Promise<SessionHomeworkEntry[]> {
+export async function getRecentSessionHomework(
+  studentId: string,
+  excludeSessionId: string,
+): Promise<SessionHomeworkEntry[]> {
   const result = await getRecentSessionHomeworkCore(studentId, excludeSessionId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -75,21 +79,24 @@ export async function getRecentSessionHomework(studentId: string, excludeSession
 }
 
 /**
- * Creates the homework body (free text + already-uploaded attachments) for a session. Coach-only, one per session — there is no edit/delete
- * action for posted homework. Fails with 'already_exists' if homework was already posted
- * for this session (use addHomeworkComment for follow-ups instead).
+ * セッションの宿題の本文（自由記述とアップロード済みの添付）を作る。コーチだけが、セッションごとに1つ作れ、編集・削除は無い
+ * （投稿した宿題への操作）。そのセッションの宿題が投稿済みなら 'already_exists' で失敗する
+ * （追記は addHomeworkComment を使う）。
  */
 export async function createSessionHomework(
   sessionId: string,
   homeworkText: string,
-  attachments: PendingHomeworkAttachment[] = []
-): Promise<{ success: true; entry: SessionHomeworkEntry } | { success: false; message: string }> {
+  attachments: PendingHomeworkAttachment[] = [],
+): Promise<ActionResult<{ entry: SessionHomeworkEntry }>> {
   const ctx = await getLogContext();
   const result = await createSessionHomeworkCore(sessionId, homeworkText, attachments);
 
   if (!result.success) {
     logger.error('coach:create_session_homework_failed', result.errorCode, ctx);
-    const message = result.errorCode === 'already_exists' ? 'Homework was already posted for this session.' : 'Failed to post homework. Please try again.';
+    const message =
+      result.errorCode === 'already_exists'
+        ? 'Homework was already posted for this session.'
+        : 'Failed to post homework. Please try again.';
     return { success: false, message };
   }
 
@@ -98,20 +105,23 @@ export async function createSessionHomework(
 }
 
 /**
- * Adds a follow-up comment (free text + already-uploaded attachments) to the already-posted
- * homework for a session. Coach-only, append-only.
+ * 投稿済みのセッションの宿題に、追記のコメント（自由記述とアップロード済みの添付）を足す。
+ * コーチだけが足せ、足すだけ（編集・削除は無い）。
  */
 export async function addHomeworkComment(
   sessionId: string,
   commentText: string,
-  attachments: PendingHomeworkAttachment[] = []
-): Promise<{ success: true; comment: SessionHomeworkComment } | { success: false; message: string }> {
+  attachments: PendingHomeworkAttachment[] = [],
+): Promise<ActionResult<{ comment: SessionHomeworkComment }>> {
   const ctx = await getLogContext();
   const result = await addHomeworkCommentCore(sessionId, commentText, attachments);
 
   if (!result.success) {
     logger.error('coach:add_homework_comment_failed', result.errorCode, ctx);
-    const message = result.errorCode === 'not_found' ? 'Homework has not been posted for this session yet.' : 'Failed to post comment. Please try again.';
+    const message =
+      result.errorCode === 'not_found'
+        ? 'Homework has not been posted for this session yet.'
+        : 'Failed to post comment. Please try again.';
     return { success: false, message };
   }
 
@@ -120,13 +130,10 @@ export async function addHomeworkComment(
 }
 
 /**
- * Marks (or unmarks) a completed session as "no homework this time", so it no longer shows up
- * as "Homework not posted" in the dashboard's Session Tasks.
+ * 終わったセッションを「今回は宿題なし」にする（または外す）。ダッシュボードの
+ * セッションのタスクに「宿題の未投稿」として出なくなる。
  */
-export async function setSessionHomeworkNotNeeded(
-  sessionId: string,
-  notNeeded: boolean
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function setSessionHomeworkNotNeeded(sessionId: string, notNeeded: boolean): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await setSessionHomeworkNotNeededCore(sessionId, notNeeded);
   if (!result.success) {

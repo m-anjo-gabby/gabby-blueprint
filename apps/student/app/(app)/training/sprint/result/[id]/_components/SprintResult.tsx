@@ -1,24 +1,24 @@
 // apps\student\app\(app)\training\sprint\result\[id]\_components\SprintResult.tsx
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { ChevronLeft, Home } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { SPRINT_FLOW_TIMING } from '@gabby/types/sprint';
-import { ChevronLeft, Home } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { SPRINT_FLOW_TIMING } from '@gabby/types/sprint';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
-import { useSprintResultPlayback } from '@/components/training/sprint-result/useSprintResultPlayback';
+import { SPRINT_RESULT_AUTOPLAY_PARAM } from '@/components/training/sprint-result/links';
 import { SprintResultQuestionList } from '@/components/training/sprint-result/SprintResultQuestionList';
 import {
+  getSprintSelectHref,
   SprintResultActions,
   SprintResultSummary,
-  getSprintSelectHref,
 } from '@/components/training/sprint-result/SprintResultSummary';
 import type { SprintResultData } from '@/components/training/sprint-result/types';
-import { SPRINT_RESULT_AUTOPLAY_PARAM } from '@/components/training/sprint-result/links';
+import { useSprintResultPlayback } from '@/components/training/sprint-result/useSprintResultPlayback';
 
 // 見出しの並び（戻る・見出し・日付）は履歴側の ShellPageHeader と揃える
 const NAV_BUTTON_CLASS =
@@ -62,15 +62,25 @@ export function SprintResult({ scoreData, questions, courseTitle, favoriteQuesti
       {/* ヘッダー：戻る・見出し・日付（履歴側の結果画面と同じ並び）。ホームへはナビが無いため右端に置く */}
       <header className="shrink-0 space-y-1.5 border-b border-line px-5 pb-4 pt-4 sm:px-6 sm:pt-5">
         <div className="flex items-center gap-2">
-          <Link href={selectHref} replace className={`-ml-2 ${NAV_BUTTON_CLASS}`} aria-label="スプリント選択に戻る" title="スプリント選択に戻る">
+          <Link
+            href={selectHref}
+            replace
+            className={`-ml-2 ${NAV_BUTTON_CLASS}`}
+            aria-label="スプリント選択に戻る"
+            title="スプリント選択に戻る"
+          >
             <ChevronLeft size={22} />
           </Link>
-          <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight text-ink sm:text-3xl">スプリント結果</h1>
+          <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+            スプリント結果
+          </h1>
           <Link href="/dashboard" className={NAV_BUTTON_CLASS} aria-label="ホームに戻る" title="ホームに戻る">
             <Home size={20} />
           </Link>
         </div>
-        <p className="text-sm leading-relaxed text-ink-muted tabular-nums">{formatZonedDate(scoreData.created_at, timezone)}</p>
+        <p className="text-sm leading-relaxed text-ink-muted tabular-nums">
+          {formatZonedDate(scoreData.created_at, timezone)}
+        </p>
       </header>
 
       {/* 結果サマリーと出題リスト（履歴側と同じくサマリーも一緒にスクロールさせ、リストを広く見せる） */}
@@ -89,7 +99,12 @@ export function SprintResult({ scoreData, questions, courseTitle, favoriteQuesti
         <SprintResultActions scoreData={scoreData} playback={playback} />
       </div>
 
-      <AudioResumeBanner status={playback.resumeStatus} onResume={() => { playback.unlockAudioContext(); }} />
+      <AudioResumeBanner
+        status={playback.resumeStatus}
+        onResume={() => {
+          playback.unlockAudioContext();
+        }}
+      />
     </ImmersivePanel>
   );
 }

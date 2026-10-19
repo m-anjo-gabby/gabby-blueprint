@@ -1,3 +1,5 @@
+import type { ActionResult } from '@gabby/types/action';
+
 /**
  * 認証系アクション（ログイン・パスワード再設定・変更）のエラー種別
  *
@@ -37,6 +39,9 @@ export const AUTH_ERROR_CODES = [
 
 export type AuthErrorCode = (typeof AUTH_ERROR_CODES)[number];
 
+/** 画面から呼ぶ認証のアクション（各アプリの *AuthAction.ts）の結果。失敗の message はアプリの表示言語の文言 */
+export type AuthActionResult = ActionResult<object, AuthErrorCode>;
+
 /**
  * 日本語の既定文言（student と、文言を持たないアプリのフォールバック）
  * `portal_forbidden` はポータルごとに案内先が異なるため、各アプリで上書きする。
@@ -53,9 +58,12 @@ export const AUTH_ERROR_MESSAGES_JA: Record<AuthErrorCode, string> = {
   password_too_short: 'パスワードは8文字以上で入力してください。',
   password_needs_alnum: 'パスワードには英字と数字を両方含めてください。',
   password_same_as_old: '新しいパスワードは現在と同じものは使用できません。',
-  password_leaked: 'このパスワードは過去にデータ漏洩の被害に遭った可能性があるため使用できません。他のパスワードを指定してください。',
-  password_weak: 'このパスワードは単純すぎるか推測されやすいため使用できません。より複雑なパスワードを設定してください。',
-  session_invalid: '認証セッションが無効、または期限が切れています。一度ログアウトして再度ログインしてからお試しください。',
+  password_leaked:
+    'このパスワードは過去にデータ漏洩の被害に遭った可能性があるため使用できません。他のパスワードを指定してください。',
+  password_weak:
+    'このパスワードは単純すぎるか推測されやすいため使用できません。より複雑なパスワードを設定してください。',
+  session_invalid:
+    '認証セッションが無効、または期限が切れています。一度ログアウトして再度ログインしてからお試しください。',
   password_update_failed: 'パスワードの更新に失敗しました。',
   session_timeout: 'セッションがタイムアウトしました。再度ログインしてください。',
   current_password_incorrect: '現在のパスワードが正しくありません。',

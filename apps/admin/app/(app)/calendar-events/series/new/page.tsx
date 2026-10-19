@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
-import { getCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
 import { getCoachesFilter } from '@/actions/adminCalendarEventAction';
+import { getCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { PageHeader } from '@/components/common/PageHeader';
 import { sessionsAfter, sessionsCopiedFrom } from '../_lib/seriesSessions';
@@ -11,7 +11,11 @@ import { SeriesCreateForm } from './_components/SeriesCreateForm';
  * `?from=<seriesId>` は「このシリーズを元に作成」（翌月分など）: シリーズ名・説明と、各回の時刻・担当コーチ・共通設定を引き継ぎ、
  * 日付を元のシリーズの最後の回の1週間後から並べ直す。
  */
-export default async function CalendarEventSeriesNewPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
+export default async function CalendarEventSeriesNewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
   const t = await getTranslations('calendarEvents.series');
   const { from } = await searchParams;
   const [source, coaches, clients] = await Promise.all([

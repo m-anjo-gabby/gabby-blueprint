@@ -1,28 +1,28 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { ContentFrame, type ContentWidth } from './PageFrames';
-import { AppShell } from './AppShell';
-import { ImmersiveLoading, RouteLoading } from './RouteLoading';
-import { isImmersivePath, isTrainingSectionPath } from '@/constants/navigation';
-import { TrainingSectionNav } from './TrainingSectionNav';
-import { SHELL_CONTENT_WIDTH } from '@/constants/shellLayout';
-import { HomeSkeleton } from '@/app/(app)/(shell)/dashboard/_components/HomeSkeleton';
-import { LibrarySkeleton } from '@/app/(app)/(shell)/library/_components/LibrarySkeleton';
-import { FavoritesSkeleton } from '@/app/(app)/(shell)/favorites/_components/FavoritesSkeleton';
+import type { ReactNode } from 'react';
 import { CalendarSkeleton } from '@/app/(app)/(shell)/calendar/_components/CalendarSkeleton';
 import { CoachMatchingSkeleton } from '@/app/(app)/(shell)/coach-matching/_components/CoachMatchingSkeleton';
+import { HomeSkeleton } from '@/app/(app)/(shell)/dashboard/_components/HomeSkeleton';
+import { FavoritesSkeleton } from '@/app/(app)/(shell)/favorites/_components/FavoritesSkeleton';
+import { GroupSessionsSkeleton } from '@/app/(app)/(shell)/group-sessions/_components/GroupSessionsSkeleton';
+import { LibrarySkeleton } from '@/app/(app)/(shell)/library/_components/LibrarySkeleton';
+import { LiveRoomRouteSkeleton } from '@/app/(app)/(shell)/live-room/_components/LiveRoomSkeleton';
 import { MonitorSkeleton } from '@/app/(app)/(shell)/monitor/_components/MonitorSkeleton';
 import { NoticeRouteSkeleton } from '@/app/(app)/(shell)/notice/_components/NoticeSkeleton';
 import { NotificationRouteSkeleton } from '@/app/(app)/(shell)/notification/_components/NotificationSkeleton';
 import { ProfileRouteSkeleton } from '@/app/(app)/(shell)/profile/_components/ProfileSkeleton';
-import { LiveRoomRouteSkeleton } from '@/app/(app)/(shell)/live-room/_components/LiveRoomSkeleton';
-import { TrainingPerformanceSkeleton } from '@/app/(app)/(shell)/training/performance/_components/TrainingPerformanceSkeleton';
-import { WordHistorySkeleton } from '@/app/(app)/(shell)/training/word/history/_components/WordHistorySkeleton';
-import { SprintHistoryRouteSkeleton } from '@/app/(app)/(shell)/training/sprint/history/_components/SprintHistoryRouteSkeleton';
 import { DialogueSkeleton } from '@/app/(app)/(shell)/training/dialogue/_components/DialogueSkeleton';
-import { GroupSessionsSkeleton } from '@/app/(app)/(shell)/group-sessions/_components/GroupSessionsSkeleton';
+import { TrainingPerformanceSkeleton } from '@/app/(app)/(shell)/training/performance/_components/TrainingPerformanceSkeleton';
+import { SprintHistoryRouteSkeleton } from '@/app/(app)/(shell)/training/sprint/history/_components/SprintHistoryRouteSkeleton';
+import { WordHistorySkeleton } from '@/app/(app)/(shell)/training/word/history/_components/WordHistorySkeleton';
+import { isImmersivePath, isTrainingSectionPath } from '@/constants/navigation';
+import { SHELL_CONTENT_WIDTH } from '@/constants/shellLayout';
+import { AppShell } from './AppShell';
+import { ContentFrame, type ContentWidth } from './PageFrames';
+import { ImmersiveLoading, RouteLoading } from './RouteLoading';
+import { TrainingSectionNav } from './TrainingSectionNav';
 
 /** 表示中のパスに対応する、シェル内の画面の枠の幅と骨組み（各画面のフォルダの loading.tsx と同じ部品） */
 function resolveShellSkeleton(pathname: string): { width: ContentWidth; skeleton: ReactNode } | 'chat' | null {
@@ -53,9 +53,12 @@ function resolveShellSkeleton(pathname: string): { width: ContentWidth; skeleton
     case 'chat':
       return 'chat';
     case 'training':
-      if (second === 'performance') return { width: SHELL_CONTENT_WIDTH.trainingPerformance, skeleton: <TrainingPerformanceSkeleton /> };
-      if (second === 'word' && third === 'history') return { width: SHELL_CONTENT_WIDTH.wordHistory, skeleton: <WordHistorySkeleton /> };
-      if (second === 'sprint' && third === 'history') return { width: SHELL_CONTENT_WIDTH.sprintHistory, skeleton: <SprintHistoryRouteSkeleton /> };
+      if (second === 'performance')
+        return { width: SHELL_CONTENT_WIDTH.trainingPerformance, skeleton: <TrainingPerformanceSkeleton /> };
+      if (second === 'word' && third === 'history')
+        return { width: SHELL_CONTENT_WIDTH.wordHistory, skeleton: <WordHistorySkeleton /> };
+      if (second === 'sprint' && third === 'history')
+        return { width: SHELL_CONTENT_WIDTH.sprintHistory, skeleton: <SprintHistoryRouteSkeleton /> };
       if (second === 'dialogue') return { width: SHELL_CONTENT_WIDTH.dialogue, skeleton: <DialogueSkeleton /> };
       return null;
     default:

@@ -1,12 +1,15 @@
-import { CONDUCTED_VIA, SESSION_OUTCOME } from '@gabby/types/session';
 import type { SessionOutcomeFieldsLabels } from '@gabby/lib/components/common/SessionOutcomeFields';
 import type { OutcomeReasonKind } from '@gabby/lib/session/outcome';
+import { CONDUCTED_VIA, SESSION_OUTCOME } from '@gabby/types/session';
 
-/** English labels for the shared session outcome fields (Coach portal End Session dialog). */
+/** 共通のセッションの結果の入力欄の英語の文言（コーチのポータルのセッションの終了のダイアログ）。 */
 export const COACH_SESSION_OUTCOME_LABELS: SessionOutcomeFieldsLabels = {
   outcomeLegend: 'What happened?',
   outcomes: {
-    [SESSION_OUTCOME.COMPLETED]: { label: 'Completed', hint: "The lesson took place. Uses one of the student's sessions." },
+    [SESSION_OUTCOME.COMPLETED]: {
+      label: 'Completed',
+      hint: "The lesson took place. Uses one of the student's sessions.",
+    },
     [SESSION_OUTCOME.STUDENT_LEFT_EARLY]: {
       label: 'Ended early (student’s reason)',
       hint: "The student had to leave early. Uses one of the student's sessions.",
@@ -42,7 +45,7 @@ export const COACH_SESSION_OUTCOME_LABELS: SessionOutcomeFieldsLabels = {
   reasonPlaceholder: 'e.g. The app call kept dropping, so we switched to my Zoom and finished the lesson there.',
 };
 
-/** Why a note is required (shown above the note field). */
+/** メモが必須な理由（メモの欄の上に出す）。 */
 export const COACH_OUTCOME_REASON_HINTS: Record<OutcomeReasonKind, string> = {
   not_conducted: 'Please explain why the lesson didn’t take place.',
   left_early: 'Please note why the student left early.',

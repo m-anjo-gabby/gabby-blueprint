@@ -13,5 +13,8 @@ const SUPPORT_LABEL = {
 
 /** アカウント関連（招待・パスワード再設定）のフッター（問い合わせ先。併記は言語の順に並べる） */
 export function supportFooter(langs: MailLocale[]): MailFooterLine[] {
-  return langs.map((lang) => ({ text: SUPPORT_LABEL[lang], link: { label: SUPPORT_EMAIL, href: `mailto:${SUPPORT_EMAIL}` } }));
+  return langs.map((lang) => ({
+    text: SUPPORT_LABEL[lang],
+    link: { label: SUPPORT_EMAIL, href: `mailto:${SUPPORT_EMAIL}` },
+  }));
 }

@@ -1,23 +1,30 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { bookMakeupSessionAsAdmin } from '@/actions/adminLiveSessionAction';
-import { ADMIN_TIME_OPTIONS } from './adminTimeOptions';
 import type { AdminScheduleSlotSummary } from '@gabby/types/adminLiveSession';
+import { bookMakeupSessionAsAdmin } from '@/actions/adminLiveSessionAction';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { ADMIN_TIME_OPTIONS } from './adminTimeOptions';
 
-interface Props {
+interface BookSessionDialogProps {
   target: AdminScheduleSlotSummary | null;
   onClose: () => void;
   onBooked: () => Promise<void> | void;
 }
 
 /** 未割当チケットの新規予約（アドミン代理操作）。コーチの空き時間内である必要がある。 */
-export function BookSessionDialog({ target, onClose, onBooked }: Props) {
+export function BookSessionDialog({ target, onClose, onBooked }: BookSessionDialogProps) {
   const t = useTranslations('liveSessions.bookDialog');
   const { showToast } = useToast();
   const [date, setDate] = useState('');
@@ -37,7 +44,8 @@ export function BookSessionDialog({ target, onClose, onBooked }: Props) {
     try {
       const [startH, startM, startS] = target.start_time.split(':').map(Number);
       const [endH, endM, endS] = target.end_time.split(':').map(Number);
-      const duration = ((endH * 60 + endM) * 60 + (endS ?? 0)) * 1000 - ((startH * 60 + startM) * 60 + (startS ?? 0)) * 1000;
+      const duration =
+        ((endH * 60 + endM) * 60 + (endS ?? 0)) * 1000 - ((startH * 60 + startM) * 60 + (startS ?? 0)) * 1000;
       const newStart = new Date(`${date}T${time}:00`);
       const newEnd = new Date(newStart.getTime() + duration);
       const result = await bookMakeupSessionAsAdmin(target.schedule_id, newStart.toISOString(), newEnd.toISOString());
@@ -79,8 +87,14 @@ export function BookSessionDialog({ target, onClose, onBooked }: Props) {
               onChange={(e) => setTime(e.target.value)}
               className="flex h-9 w-full rounded-md border border-input bg-white px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <option value="" disabled>{t('timePlaceholder')}</option>
-              {ADMIN_TIME_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+              <option value="" disabled>
+                {t('timePlaceholder')}
+              </option>
+              {ADMIN_TIME_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
             </select>
           </div>
         </div>

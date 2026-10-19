@@ -1,12 +1,12 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
-import type { useTranslations } from 'next-intl';
 import { Library, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import type { useTranslations } from 'next-intl';
+import type { KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
+import { cn } from '@/lib/utils';
 import type { KnowledgeSourceTypeOption } from '../_lib/knowledgeSourceTypes';
 import { KnowledgeEntryFormDialog } from './KnowledgeEntryFormDialog';
 
@@ -17,7 +17,10 @@ interface ColumnOptions {
   onDelete: (entry: KnowledgeEntry) => void;
 }
 
-export function createColumns(t: ListT, { sourceTypeOptions, onDelete }: ColumnOptions): ColumnDef<KnowledgeEntry>[] {
+export function createColumns(
+  t: ListT,
+  { sourceTypeOptions, onDelete }: ColumnOptions,
+): ListColumnDef<KnowledgeEntry>[] {
   return [
     {
       accessorKey: 'source_type',
@@ -28,7 +31,10 @@ export function createColumns(t: ListT, { sourceTypeOptions, onDelete }: ColumnO
         return (
           <Badge
             variant="outline"
-            className={cn('gap-1 border-none px-2 text-[10px] font-bold', option?.badgeClassName ?? 'bg-slate-100 text-slate-500')}
+            className={cn(
+              'gap-1 border-none px-2 text-[10px] font-bold',
+              option?.badgeClassName ?? 'bg-slate-100 text-slate-500',
+            )}
           >
             <Icon size={12} />
             {option?.label ?? row.original.source_type}

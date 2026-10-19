@@ -1,9 +1,11 @@
 'use server';
 
-import { createServerClient } from '../../supabase/server';
+import { unstable_rethrow } from 'next/navigation';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { type GetCoachSpecialtyListResult } from '@gabby/types/coachSpecialty';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { GetCoachSpecialtyListResult } from '@gabby/types/coachSpecialty';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 
@@ -18,7 +20,7 @@ export async function getCoachSpecialtyListCore(): Promise<GetCoachSpecialtyList
     const { data, error } = await supabase
       .from('com_m_coach_specialty')
       .select('specialty_code, kind, name_en, name_ja, sort_no')
-      .eq('delete_flg', '0')
+      .eq('is_active', true)
       .order('sort_no', { ascending: true });
 
     if (error) {
@@ -28,7 +30,11 @@ export async function getCoachSpecialtyListCore(): Promise<GetCoachSpecialtyList
 
     return { success: true, specialties: data ?? [] };
   } catch (err) {
-    logger.error('coach_specialty:get_list_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coach_specialty:get_list_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -60,7 +66,11 @@ export async function getCoachSpecialtyCodesCore(coachIds: string[]): Promise<Ma
     }
     return codesById;
   } catch (err) {
-    logger.error('coach_specialty:get_codes_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coach_specialty:get_codes_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return codesById;
   }
 }

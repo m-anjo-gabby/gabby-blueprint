@@ -1,8 +1,8 @@
 'use client';
 
-import { useMyChatRooms } from '@gabby/lib/components/chat/useMyChatRooms';
-import { ChatSplitLayout } from '@gabby/lib/components/chat/ChatSplitLayout';
 import { ChatRoomListPane } from '@gabby/lib/components/chat/ChatRoomListPane';
+import { ChatSplitLayout } from '@gabby/lib/components/chat/ChatSplitLayout';
+import { useMyChatRooms } from '@gabby/lib/components/chat/useMyChatRooms';
 import { CHAT_LABELS, CHAT_SPLIT_BREAKPOINT } from '@/constants/chat';
 
 /** チャットの2ペイン（左: ルーム一覧 / 右: 選択中のルーム）。モバイルでは端まで広げ、sm 以上はカードとして浮かせる */

@@ -1,7 +1,7 @@
 import 'server-only';
-import { createAdminClient } from '../../supabase/admin';
-import { createLogger } from '../../logger';
 import { REPORTING_TIMEZONE } from '../../date/reporting';
+import { createLogger } from '../../logger';
+import { createAdminClient } from '../../supabase/admin';
 import { sendCore } from '../core';
 import { renderMail } from '../render';
 import {
@@ -80,10 +80,19 @@ export async function sendMailDailyReport(nowMs = Date.now()): Promise<MailDaily
       .select('mail_id', { count: 'exact', head: true })
       .eq('status', 'PENDING')
       .lt('scheduled_at', overdueBefore),
-    admin.from('com_t_mail_outbox').select('mail_id', { count: 'exact', head: true }).eq('status', 'SENT').gte('sent_at', since),
-    admin.from('com_t_mail_outbox').select('mail_id', { count: 'exact', head: true }).eq('status', 'SKIPPED').gte('update_date', since),
+    admin
+      .from('com_t_mail_outbox')
+      .select('mail_id', { count: 'exact', head: true })
+      .eq('status', 'SENT')
+      .gte('sent_at', since),
+    admin
+      .from('com_t_mail_outbox')
+      .select('mail_id', { count: 'exact', head: true })
+      .eq('status', 'SKIPPED')
+      .gte('update_date', since),
   ]);
-  const queryError = failedResult.error ?? eventResult.error ?? overdueResult.error ?? sentResult.error ?? skippedResult.error;
+  const queryError =
+    failedResult.error ?? eventResult.error ?? overdueResult.error ?? sentResult.error ?? skippedResult.error;
   if (queryError) throw new Error(`mail_daily_report_query_failed: ${queryError.message}`);
 
   const failed: MailDailyReportItem[] = (failedResult.data ?? []).map((row) => {
@@ -118,7 +127,16 @@ export async function sendMailDailyReport(nowMs = Date.now()): Promise<MailDaily
     await sendCore({ to, ...rendered, sender: 'notify', kind: 'ops_daily_report' });
   }
   logger.info('mail:daily_report_sent', 'メール配信の日次の要約を送りました', {
-    payload: { recipients: recipients.length, issues, sent: props.sentCount, failed: failed.length, deliveryProblems: deliveryProblems.length, overdue: props.overdueCount },
+    payload: {
+      recipients: recipients.length,
+      issues,
+      sent: props.sentCount,
+      failed: failed.length,
+      deliveryProblems: deliveryProblems.length,
+      overdue: props.overdueCount,
+      // Vercel は Node のマイナー版を自動で上げるため、時差の計算に使う tzdata の版を毎日の記録で確かめられるようにする
+      runtime: { node: process.version, tz: process.versions.tz },
+    },
   });
   return { sent: recipients.length, issues };
 }

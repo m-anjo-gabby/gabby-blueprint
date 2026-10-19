@@ -1,33 +1,49 @@
 'use client';
 
+import { CalendarClock, Check, TriangleAlert, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Check, X, CalendarClock, TriangleAlert } from 'lucide-react';
+import {
+  convertWeeklyTimeZone,
+  getFirstLiveSessionOccurrence,
+  getLessonEndTime,
+  getWeeklyTimeChanges,
+  toIsoDateInZone,
+} from '@gabby/lib/date/date';
+import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
+import {
+  getMatchingUnbookedBreakdown,
+  MATCHING_REQUEST_STATUS,
+  type IncomingMatchingRequestItem,
+} from '@gabby/types/matching';
+import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { convertWeeklyTimeZone, getFirstLiveSessionOccurrence, getLessonEndTime, getWeeklyTimeChanges, toIsoDateInZone } from '@gabby/lib/date/date';
-import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
-import { IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS, getMatchingUnbookedBreakdown } from '@gabby/types/matching';
+import { Textarea } from '@/components/ui/textarea';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
-import { DayOfWeek } from '@gabby/types/coachAvailability';
-import { RequestKindTag } from './RequestKindTag';
+import { RequestKindTag, WebTrialTag } from './RequestKindTag';
 
 const STATUS_BADGE: Record<number, { label: string; className: string }> = {
   [MATCHING_REQUEST_STATUS.PENDING]: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  [MATCHING_REQUEST_STATUS.APPROVED]: { label: 'Approved', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  [MATCHING_REQUEST_STATUS.APPROVED]: {
+    label: 'Approved',
+    className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
   [MATCHING_REQUEST_STATUS.REJECTED]: { label: 'Rejected', className: 'bg-rose-50 text-rose-700 border-rose-200' },
-  [MATCHING_REQUEST_STATUS.CANCELLED]: { label: 'Withdrawn', className: 'bg-slate-100 text-slate-600 border-slate-200' },
+  [MATCHING_REQUEST_STATUS.CANCELLED]: {
+    label: 'Withdrawn',
+    className: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
   [MATCHING_REQUEST_STATUS.EXPIRED]: { label: 'Expired', className: 'bg-slate-100 text-slate-600 border-slate-200' },
 };
 
@@ -51,59 +67,97 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
 
-  // Requests expire 24 hours after they are sent. A pending request past its deadline is treated as expired
-  // even before the every-minute expiry job updates its status.
+  // 依頼は送ってから24時間で期限が切れる。期限を過ぎた保留中の依頼は、毎分の期限切れの処理が
+  // 状態を更新する前でも、期限切れとして扱う。
   const isExpired =
     request.status === MATCHING_REQUEST_STATUS.EXPIRED ||
-    (request.status === MATCHING_REQUEST_STATUS.PENDING && !!request.expires_at && new Date(request.expires_at).getTime() <= Date.now());
+    (request.status === MATCHING_REQUEST_STATUS.PENDING &&
+      !!request.expires_at &&
+      new Date(request.expires_at).getTime() <= Date.now());
   const badge = STATUS_BADGE[isExpired ? MATCHING_REQUEST_STATUS.EXPIRED : request.status];
   const isPending = request.status === MATCHING_REQUEST_STATUS.PENDING && !isExpired;
 
-  // How many lessons would be booked if approved now. Lessons that clash with the coach's other bookings or days off
-  // are skipped and left for the student and coach to arrange individually. Below the required number, approval is blocked.
+  // 今承認すると何回のレッスンが予約されるか。コーチのほかの予約・休みと重なるレッスンは
+  // 飛ばし、生徒とコーチが個別に調整する。必要な回数に届かなければ、承認できない。
   const availability = isPending ? request.availability : null;
   const breakdown = availability ? getMatchingUnbookedBreakdown(availability) : null;
   const canApprove = !availability || availability.is_acceptable;
   const droppedSinceRequest =
-    availability && request.requested_bookable_sessions !== null && availability.bookable_sessions < request.requested_bookable_sessions;
+    availability &&
+    request.requested_bookable_sessions !== null &&
+    availability.bookable_sessions < request.requested_bookable_sessions;
 
-  // The requested day/time is the student's local time (requested_timezone) and stays fixed for the whole
-  // contract. Shown here in the coach's timezone, using the offset of the next occurrence.
+  // 依頼の曜日・時刻は生徒の手元の時刻（requested_timezone）で、契約の間ずっと変わらない。
+  // ここでは次の回の UTC からのずれを使って、コーチのタイムゾーンで出す。
   const coachSlot = useMemo(
     () =>
       convertWeeklyTimeZone(
-        { day_of_week: request.requested_day_of_week, start_time: request.requested_start_time, end_time: request.requested_end_time },
+        {
+          day_of_week: request.requested_day_of_week,
+          start_time: request.requested_start_time,
+          end_time: request.requested_end_time,
+        },
         request.requested_timezone,
-        timezone
+        timezone,
       ),
-    [request.requested_day_of_week, request.requested_start_time, request.requested_end_time, request.requested_timezone, timezone]
+    [
+      request.requested_day_of_week,
+      request.requested_start_time,
+      request.requested_end_time,
+      request.requested_timezone,
+      timezone,
+    ],
   );
   const studentSlotLabel = `${DAY_OF_WEEK_LABEL_EN[request.requested_day_of_week as DayOfWeek]} ${formatTimeRange(request.requested_start_time, request.requested_end_time)}`;
   const coachSlotLabel = `${DAY_OF_WEEK_LABEL_EN[coachSlot.day_of_week as DayOfWeek]} ${formatTimeRange(coachSlot.start_time, coachSlot.end_time)}`;
 
-  // First live session date: nearest occurrence of the requested day/time that is at least
-  // 24 real hours from now (not just "tomorrow" by calendar date, to stay correct across timezones)
-  // and within the student's contract period (a renewal contract may start in the future).
-  // Only meaningful while pending — once approved, the actual date is fixed in com_t_session.
+  // 最初のライブセッションの日: 依頼の曜日・時刻のうち、今から実時間で24時間以上先で
+  // （暦の「明日」ではなく。タイムゾーンをまたいでも正しくするため）、
+  // 生徒の契約の期間内（更新の契約は先に始まることがある）の、一番近い回。
+  // 意味があるのは保留中の間だけ。承認した後は、実際の日が com_t_session に決まる。
   const firstSession = useMemo(() => {
     if (!isPending) return null;
     const notBefore = request.license_start_date ? new Date(request.license_start_date) : undefined;
     const first = getFirstLiveSessionOccurrence(
-      request.requested_day_of_week, request.requested_start_time, request.requested_timezone, timezone, undefined, notBefore
+      request.requested_day_of_week,
+      request.requested_start_time,
+      request.requested_timezone,
+      timezone,
+      undefined,
+      notBefore,
     );
     if (request.license_end_date && first.instant > new Date(request.license_end_date)) return null;
     return first;
-  }, [isPending, request.requested_day_of_week, request.requested_start_time, request.requested_timezone, request.license_start_date, request.license_end_date, timezone]);
+  }, [
+    isPending,
+    request.requested_day_of_week,
+    request.requested_start_time,
+    request.requested_timezone,
+    request.license_start_date,
+    request.license_end_date,
+    timezone,
+  ]);
 
-  // Daylight saving time (the coach's or the student's) can move the lesson in the coach's local time during
-  // the contract. List each change after the first session so the coach can check it still works for them.
+  // 夏時間（コーチ・生徒のどちらか）で、契約の間にコーチの手元の時刻でのレッスンの時刻が
+  // 動くことがある。最初のセッションの後の変更を並べ、コーチが続けて都合がつくかを確かめられるようにする。
   const laterTimeChanges = useMemo(() => {
     if (!firstSession || !request.license_end_date) return [];
     return getWeeklyTimeChanges(
-      request.requested_day_of_week, request.requested_start_time, request.requested_timezone, timezone,
-      firstSession.instant, new Date(request.license_end_date)
+      request.requested_day_of_week,
+      request.requested_start_time,
+      request.requested_timezone,
+      timezone,
+      firstSession.instant,
+      new Date(request.license_end_date),
     ).slice(1);
-  }, [firstSession, request.requested_day_of_week, request.requested_start_time, request.requested_timezone, request.license_end_date, timezone]);
+  }, [
+    firstSession,
+    request.requested_day_of_week,
+    request.requested_start_time,
+    request.requested_timezone,
+    request.license_end_date,
+    timezone,
+  ]);
 
   const handleApprove = async () => {
     const bookingText =
@@ -114,8 +168,10 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
     const ok = await showConfirm(
       'Approve this request?',
       bookingText +
-        (laterTimeChanges.length > 0 ? ' The time in your timezone changes during the contract because of daylight saving time.' : ''),
-      { variant: 'info', confirmText: 'Approve', cancelText: 'Cancel' }
+        (laterTimeChanges.length > 0
+          ? ' The time in your timezone changes during the contract because of daylight saving time.'
+          : ''),
+      { variant: 'info', confirmText: 'Approve', cancelText: 'Cancel' },
     );
     if (!ok) return;
 
@@ -162,7 +218,10 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <RequestKindTag kind="matching" />
+          <div className="flex flex-wrap items-center gap-1.5">
+            <RequestKindTag kind="matching" />
+            {request.is_web_trial && <WebTrialTag />}
+          </div>
           <p className="text-sm font-black text-slate-800 mt-1.5">{request.student_name}</p>
           <p className="text-xs text-slate-500 mt-0.5">
             Slot {request.slot_no} &middot; {coachSlotLabel}
@@ -186,14 +245,20 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
             </p>
           )}
           {laterTimeChanges.map((change) => (
-            <p key={change.from.toISOString()} className="flex items-center gap-1 text-[11px] font-bold text-amber-700 mt-1">
+            <p
+              key={change.from.toISOString()}
+              className="flex items-center gap-1 text-[11px] font-bold text-amber-700 mt-1"
+            >
               <CalendarClock size={12} />
               From {formatDateEn(change.from, timezone)}: {DAY_OF_WEEK_LABEL_EN[change.day_of_week as DayOfWeek]}{' '}
-              {formatTimeRange(change.start_time, getLessonEndTime(change.start_time))} (your time, daylight saving time)
+              {formatTimeRange(change.start_time, getLessonEndTime(change.start_time))} (your time, daylight saving
+              time)
             </p>
           ))}
         </div>
-        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
+        <span
+          className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}
+        >
           {badge.label}
         </span>
       </div>
@@ -212,8 +277,12 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
             Bookable now: {availability.bookable_sessions} of {availability.target_sessions} lessons
             {request.requested_bookable_sessions !== null && ` (${request.requested_bookable_sessions} when requested)`}
           </p>
-          {breakdown.conflicts > 0 && <p>{breakdown.conflicts} lesson(s) clash with your other bookings or days off.</p>}
-          {breakdown.periodShort > 0 && <p>{breakdown.periodShort} lesson(s) don&apos;t fit in the remaining license period.</p>}
+          {breakdown.conflicts > 0 && (
+            <p>{breakdown.conflicts} lesson(s) clash with your other bookings or days off.</p>
+          )}
+          {breakdown.periodShort > 0 && (
+            <p>{breakdown.periodShort} lesson(s) don&apos;t fit in the remaining license period.</p>
+          )}
           {droppedSinceRequest && availability.is_acceptable && (
             <p className="flex items-center gap-1 font-bold">
               <TriangleAlert size={12} />
@@ -222,17 +291,21 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
           )}
           {!availability.is_acceptable ? (
             <p className="font-bold">
-              At least {availability.required_sessions} lessons are needed to approve. Please reject this request with a reason so the
-              student can choose another time.
+              At least {availability.required_sessions} lessons are needed to approve. Please reject this request with a
+              reason so the student can choose another time.
             </p>
           ) : (
-            breakdown.unbooked > 0 && <p>After approval, please arrange the unbooked lesson(s) with the student individually.</p>
+            breakdown.unbooked > 0 && (
+              <p>After approval, please arrange the unbooked lesson(s) with the student individually.</p>
+            )
           )}
         </div>
       )}
 
       {request.status === MATCHING_REQUEST_STATUS.REJECTED && request.reject_reason && (
-        <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{request.reject_reason}</p>
+        <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">
+          {request.reject_reason}
+        </p>
       )}
 
       {isPending && (

@@ -1,10 +1,7 @@
 ---------------------------------------------
--- 2. ドリル履歴関数（セキュリティ修正版）
+-- get_monitor_word_history: モニター画面の単語ドリルの履歴
 ---------------------------------------------
--- 【2026-09-22 抜本改修】対象生徒の判定を private.get_monitor_target_users に一本化。
--- 従来はライセンス状態を一切見ず client_id の一致のみで絞り込んでいたため、対象期間に
--- 有効な契約を持っていない生徒（そもそも一度も契約していない等）の履歴も表示され得た。
--- 他のモニターRPCと同じ「対象期間に有効な契約を持っていた生徒」の定義に揃える。
+-- 対象生徒は、他のモニターRPCと同じ「対象期間に有効な契約を持っていた生徒」（private.get_monitor_target_users）に限る。
 CREATE OR REPLACE FUNCTION public.get_monitor_word_history(
     _start_date DATE,
     _end_date DATE,
@@ -19,10 +16,8 @@ AS $$
 DECLARE
     _client_id UUID;
 BEGIN
-    _client_id := public.get_jwt_client_id();
-    IF _client_id IS NULL THEN
-        RAISE EXCEPTION 'Client ID not found in JWT.';
-    END IF;
+    -- モニターのロールを持つ利用者だけが、自分のクライアントの受講生を参照できる
+    _client_id := private.get_monitor_client_id();
 
     RETURN QUERY
     WITH target_users AS (
@@ -50,7 +45,7 @@ BEGIN
 END;
 $$;
 
--- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+-- 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
 ALTER FUNCTION public.get_monitor_word_history(DATE, DATE, UUID[], BOOLEAN) OWNER TO postgres;
 REVOKE EXECUTE ON FUNCTION public.get_monitor_word_history(DATE, DATE, UUID[], BOOLEAN) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.get_monitor_word_history(DATE, DATE, UUID[], BOOLEAN) TO authenticated;

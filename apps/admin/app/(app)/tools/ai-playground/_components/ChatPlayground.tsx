@@ -1,25 +1,25 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { BookOpenCheck, Bot, Loader2, Send, Trash2, User } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Send, Loader2, Bot, User, Trash2, BookOpenCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@gabby/lib/hooks/useToast';
+import { useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '@gabby/lib/ai';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { clientLogger } from '@gabby/lib/logger/client';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 
 interface KnowledgeSourceRef {
   title: string;
   similarity: number;
 }
 
-export default function ChatPlayground() {
+export function ChatPlayground() {
   const t = useTranslations('tools.aiPlayground.chat');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sourcesByIndex, setSourcesByIndex] = useState<Record<number, KnowledgeSourceRef[]>>({});
@@ -119,9 +119,7 @@ export default function ChatPlayground() {
       <ScrollArea className="h-[480px] px-6 py-6">
         <div className="space-y-5">
           {messages.length === 0 && (
-            <p className="text-sm text-slate-300 italic py-10 text-center">
-              {t('emptyState')}
-            </p>
+            <p className="text-sm text-slate-300 italic py-10 text-center">{t('emptyState')}</p>
           )}
           {messages.map((m, i) => (
             <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -138,7 +136,9 @@ export default function ChatPlayground() {
                     m.role === 'user' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-800'
                   }`}
                 >
-                  {m.content ? m.content : isLoading && i === messages.length - 1 ? (
+                  {m.content ? (
+                    m.content
+                  ) : isLoading && i === messages.length - 1 ? (
                     <Loader2 size={14} className="animate-spin" />
                   ) : (
                     ''

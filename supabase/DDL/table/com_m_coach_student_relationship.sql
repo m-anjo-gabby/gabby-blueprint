@@ -20,8 +20,8 @@
 -- @schema public.com_m_coach_student_relationship
 CREATE TABLE public.com_m_coach_student_relationship (
     relationship_id          uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id),
-    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id),
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     is_active                boolean      NOT NULL DEFAULT true,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
@@ -38,10 +38,12 @@ COMMENT ON COLUMN public.com_m_coach_student_relationship.update_date IS '更新
 
 CREATE INDEX idx_coach_student_relationship_student ON public.com_m_coach_student_relationship (student_id);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_coach_student_relationship FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_coach_student_relationship ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Involved users can view coach student relationships" ON public.com_m_coach_student_relationship FOR SELECT TO authenticated
 USING (
-    student_id = auth.uid() OR coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    student_id = auth.uid() OR coach_id = auth.uid() OR public.is_system_admin()
 );
 -- @end-schema

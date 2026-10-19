@@ -1,25 +1,19 @@
 'use client';
 
-import React, { useMemo, useEffect, useRef } from 'react';
+import { ChevronRight, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerClose,
-} from "@/components/ui/drawer";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
-import { X, ChevronRight } from 'lucide-react';
 
 interface WordIndexProps {
   isOpen: boolean;
   onSelect: (idx: number) => void;
 }
 
-export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
+export function WordIndex({ isOpen, onSelect }: WordIndexProps) {
   const activeWordRef = useRef<HTMLButtonElement | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const horizontalScrollRef = useRef<HTMLDivElement | null>(null);
@@ -29,15 +23,13 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
   // 1. 表示用データの加工: ソートロジックの集約
   const displayWords = useMemo(() => {
     const list = words.map((w, originalIdx) => ({ ...w, originalIdx }));
-    return sortOrder === 'alpha'
-      ? [...list].sort((a, b) => a.word_en.localeCompare(b.word_en))
-      : list;
+    return sortOrder === 'alpha' ? [...list].sort((a, b) => a.word_en.localeCompare(b.word_en)) : list;
   }, [words, sortOrder]);
 
   // 2. A-Zナビゲーション用のユニークな頭文字リスト
   const alphabetIndex = useMemo(() => {
     if (sortOrder !== 'alpha') return [];
-    return Array.from(new Set(displayWords.map(w => w.word_en.charAt(0).toUpperCase()))).sort();
+    return Array.from(new Set(displayWords.map((w) => w.word_en.charAt(0).toUpperCase()))).sort();
   }, [displayWords, sortOrder]);
 
   // 3. PC操作支援: 水平インデックスをマウスホイールでスクロール
@@ -68,10 +60,12 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
   useEffect(() => {
     if (isOpen) {
       const timer = setTimeout(() => {
-        const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+        const viewport = scrollAreaRef.current?.querySelector(
+          '[data-radix-scroll-area-viewport]',
+        ) as HTMLElement | null;
         if (viewport && activeWordRef.current) {
           const target = activeWordRef.current;
-          const scrollTo = target.offsetTop - (viewport.clientHeight / 2) + (target.clientHeight / 2);
+          const scrollTo = target.offsetTop - viewport.clientHeight / 2 + target.clientHeight / 2;
           viewport.scrollTo({ top: scrollTo, behavior: 'auto' });
         }
       }, 100);
@@ -80,13 +74,13 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
   }, [isOpen, sortOrder, wordIdx]);
 
   return (
-    <Drawer 
-      open={isOpen} 
+    <Drawer
+      open={isOpen}
       onOpenChange={setShowIndex}
       // ハンドル以外でのドラッグによるクローズを無効化し、操作を安定させる
       dismissible={true}
     >
-      <DrawerContent 
+      <DrawerContent
         className="max-w-2xl mx-auto h-[85vh] bg-white border-none rounded-t-panel shadow-2xl outline-none flex flex-col overflow-hidden text-ink"
         onPointerDownOutside={(e) => {
           // PC操作対応: スクロールバー操作中の誤判定（外部クリックとみなされる挙動）を防ぐ
@@ -96,7 +90,6 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
           }
         }}
       >
-        
         {/* 固定ヘッダーセクション: ハンドルエリアのみドラッグ可能に制限 */}
         <div className="shrink-0">
           <div className="flex justify-center py-4 cursor-grab active:cursor-grabbing">
@@ -118,10 +111,16 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
           <div className="px-8 pt-6 pb-4" data-vaul-no-drag>
             <Tabs value={sortOrder} onValueChange={(v) => setSortOrder(v as 'default' | 'alpha')}>
               <TabsList className="flex w-full bg-canvas/50 p-1 rounded-control h-11 border border-line/60">
-                <TabsTrigger value="default" className="flex-1 text-xs font-bold rounded-xl data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:shadow-sm transition-all">
+                <TabsTrigger
+                  value="default"
+                  className="flex-1 text-xs font-bold rounded-xl data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:shadow-sm transition-all"
+                >
                   出題順
                 </TabsTrigger>
-                <TabsTrigger value="alpha" className="flex-1 text-xs font-bold rounded-xl data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:shadow-sm transition-all">
+                <TabsTrigger
+                  value="alpha"
+                  className="flex-1 text-xs font-bold rounded-xl data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:shadow-sm transition-all"
+                >
                   A - Z
                 </TabsTrigger>
               </TabsList>
@@ -134,13 +133,10 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
               {/* PC向け視認性向上: 左右のフェードエフェクト */}
               <div className="absolute left-8 top-0 bottom-4 w-4 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="absolute right-8 top-0 bottom-4 w-4 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
-              
+
               <ScrollArea className="w-full">
-                <div 
-                  ref={horizontalScrollRef}
-                  className="flex gap-2 pb-2 overflow-x-auto no-scrollbar scroll-smooth"
-                >
-                  {alphabetIndex.map(char => (
+                <div ref={horizontalScrollRef} className="flex gap-2 pb-2 overflow-x-auto no-scrollbar scroll-smooth">
+                  {alphabetIndex.map((char) => (
                     <button
                       key={char}
                       onClick={() => scrollToSection(char)}
@@ -162,7 +158,9 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
             <div className="px-6 py-4 space-y-2 pb-32">
               {displayWords.map((w, idx) => {
                 const initial = w.word_en.charAt(0).toUpperCase();
-                const isFirst = sortOrder === 'alpha' && (idx === 0 || displayWords[idx - 1].word_en.charAt(0).toUpperCase() !== initial);
+                const isFirst =
+                  sortOrder === 'alpha' &&
+                  (idx === 0 || displayWords[idx - 1].word_en.charAt(0).toUpperCase() !== initial);
                 const isActive = wordIdx === w.originalIdx;
 
                 return (
@@ -180,43 +178,53 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
                       ref={isActive ? activeWordRef : null}
                       onClick={() => onSelect(w.originalIdx)}
                       className={cn(
-                        "w-full flex items-center gap-4 px-5 py-4 rounded-card transition-all duration-300 outline-none border-2 text-left",
+                        'w-full flex items-center gap-4 px-5 py-4 rounded-card transition-all duration-300 outline-none border-2 text-left',
                         isActive
-                          ? "bg-brand-50/40 border-brand-400 shadow-sm"
-                          : "bg-white border-transparent hover:border-line/60 hover:bg-canvas group"
+                          ? 'bg-brand-50/40 border-brand-400 shadow-sm'
+                          : 'bg-white border-transparent hover:border-line/60 hover:bg-canvas group',
                       )}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3">
                           {sortOrder === 'default' && (
-                            <span className={cn(
-                              "text-[11px] font-mono font-bold w-5 text-right shrink-0",
-                              isActive ? "text-brand-400" : "text-ink-subtle"
-                            )}>
+                            <span
+                              className={cn(
+                                'text-[11px] font-mono font-bold w-5 text-right shrink-0',
+                                isActive ? 'text-brand-400' : 'text-ink-subtle',
+                              )}
+                            >
                               {(w.originalIdx + 1).toString().padStart(2, '0')}
                             </span>
                           )}
-                          <span className={cn(
-                            "text-[17px] font-bold tracking-tight truncate block",
-                            isActive ? "text-brand-strong" : "text-ink-soft"
-                          )}>
+                          <span
+                            className={cn(
+                              'text-[17px] font-bold tracking-tight truncate block',
+                              isActive ? 'text-brand-strong' : 'text-ink-soft',
+                            )}
+                          >
                             {w.word_en}
                           </span>
                         </div>
-                        <p className={cn(
-                          "text-xs font-medium truncate mt-0.5 block",
-                          isActive ? "text-brand-500/70" : "text-ink-subtle",
-                          sortOrder === 'default' ? "ml-8" : "ml-0"
-                        )}>
+                        <p
+                          className={cn(
+                            'text-xs font-medium truncate mt-0.5 block',
+                            isActive ? 'text-brand-500/70' : 'text-ink-subtle',
+                            sortOrder === 'default' ? 'ml-8' : 'ml-0',
+                          )}
+                        >
                           {w.word_ja}
                         </p>
                       </div>
-                      
+
                       {/* 右端アクション表示 */}
-                      <div className={cn(
-                        "h-8 w-8 rounded-full flex items-center justify-center transition-all shrink-0",
-                        isActive ? "bg-brand-500 text-white shadow-sm" : "bg-canvas text-line opacity-0 group-hover:opacity-100"
-                      )}>
+                      <div
+                        className={cn(
+                          'h-8 w-8 rounded-full flex items-center justify-center transition-all shrink-0',
+                          isActive
+                            ? 'bg-brand-500 text-white shadow-sm'
+                            : 'bg-canvas text-line opacity-0 group-hover:opacity-100',
+                        )}
+                      >
                         <ChevronRight size={16} strokeWidth={3} />
                       </div>
                     </button>
@@ -231,4 +239,4 @@ export const WordIndex: React.FC<WordIndexProps> = ({ isOpen, onSelect }) => {
       </DrawerContent>
     </Drawer>
   );
-};
+}

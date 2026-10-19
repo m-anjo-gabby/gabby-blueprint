@@ -1,15 +1,15 @@
 'use client';
 
-import type { MouseEvent } from 'react';
-import Link from 'next/link';
 import { ChevronRight, X } from 'lucide-react';
+import Link from 'next/link';
+import type { MouseEvent } from 'react';
 import type { NoticeItem } from '@gabby/types/notice';
 import { useHydrated } from '../../hooks/useHydrated';
-import { toNoticePlainText } from '../../notice/plainText';
-import { getNoticeImageUrl } from '../../notice/links';
 import type { NoticeLabels } from '../../notice/labels';
-import { NoticeMeta } from './NoticeMeta';
+import { getNoticeImageUrl } from '../../notice/links';
+import { toNoticePlainText } from '../../notice/plainText';
 import { NoticeCtaLink, NoticeImage } from './NoticeCta';
+import { NoticeMeta } from './NoticeMeta';
 
 interface NoticeHomeCardProps {
   notice: NoticeItem;
@@ -30,7 +30,15 @@ interface NoticeHomeCardProps {
  * ホームの上部に出すお知らせのカード（割り込まずに知らせる）。見た目だけを受け持ち、既読の扱いは使う側で行う。
  * 生徒のホームと、アドミンのプレビューで共通。
  */
-export function NoticeHomeCard({ notice, labels, moreCount, onDismiss, onOpenDetail, imageUrl, preview = false }: NoticeHomeCardProps) {
+export function NoticeHomeCard({
+  notice,
+  labels,
+  moreCount,
+  onDismiss,
+  onOpenDetail,
+  imageUrl,
+  preview = false,
+}: NoticeHomeCardProps) {
   const isHydrated = useHydrated();
   const src = imageUrl !== undefined ? imageUrl : getNoticeImageUrl(notice.image_path);
   const handleMoreClick = (event: MouseEvent<HTMLAnchorElement>) => {

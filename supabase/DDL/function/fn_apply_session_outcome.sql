@@ -1,6 +1,6 @@
 ---------------------------------------------
--- ライブセッションの実施結果の反映 共通ヘルパー関数 (2026-10-14 追加)
--- 前提: table/com_t_session.sql（2026-10-14パッチ）, table/com_t_session_outcome_history.sql,
+-- ライブセッションの実施結果の反映 共通ヘルパー関数
+-- 前提: table/com_t_session.sql, table/com_t_session_outcome_history.sql,
 --       function/fn_consume_session_ticket.sql, function/fn_restore_session_ticket.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】

@@ -1,9 +1,16 @@
 'use client';
 
-import { useState } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { ALL_OPTION, type ResolvedFilter } from './favoriteFilters';
@@ -22,7 +29,10 @@ const optionLabel = (filter: ResolvedFilter) =>
   filter.options.find((o) => o.id === filter.value)?.label ?? filter.allLabel;
 
 /** PC（md以上）: 検索欄の横に並べるセレクト */
-export function FavoriteFilterSelects({ filters, onChange }: Pick<FavoriteFilterControlsProps, 'filters' | 'onChange'>) {
+export function FavoriteFilterSelects({
+  filters,
+  onChange,
+}: Pick<FavoriteFilterControlsProps, 'filters' | 'onChange'>) {
   if (filters.length === 0) return null;
   return (
     <>
@@ -64,13 +74,15 @@ export function FavoriteFilterSheetButton({ filters, onChange, onClearAll, resul
         aria-label={count > 0 ? `絞り込み（${count}件の条件を指定中）` : '絞り込み'}
         className={cn(
           'h-11 shrink-0 gap-1.5 rounded-control border-line bg-surface px-3.5 text-sm font-semibold text-ink-soft shadow-none md:hidden',
-          count > 0 && 'border-brand-200 text-brand'
+          count > 0 && 'border-brand-200 text-brand',
         )}
       >
         <SlidersHorizontal size={16} />
         絞り込み
         {count > 0 && (
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-xs font-bold text-white">{count}</span>
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-xs font-bold text-white">
+            {count}
+          </span>
         )}
       </Button>
 
@@ -147,7 +159,15 @@ export function FavoriteFilterChips({ filters, onChange }: Pick<FavoriteFilterCo
   );
 }
 
-function ChoiceChip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
+function ChoiceChip({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
@@ -155,7 +175,7 @@ function ChoiceChip({ selected, onClick, children }: { selected: boolean; onClic
       aria-pressed={selected}
       className={cn(
         'flex h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors',
-        selected ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-ink-soft hover:border-brand-200'
+        selected ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-ink-soft hover:border-brand-200',
       )}
     >
       {children}

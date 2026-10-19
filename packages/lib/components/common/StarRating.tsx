@@ -1,9 +1,9 @@
 'use client';
 
-import { useRef, useState, type KeyboardEvent } from 'react';
 import { Star } from 'lucide-react';
-import { cn } from '../../utils';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { roundRatingToHalf } from '../../coachRating/format';
+import { cn } from '../../utils';
 
 const STAR_COUNT = 5;
 const STARS = Array.from({ length: STAR_COUNT }, (_, i) => i + 1);
@@ -60,7 +60,15 @@ export interface StarRatingInputProps {
  * 星1〜5の入力。ラジオボタンのグループとして振る舞う（Tab で入り、矢印キーで選ぶ）。
  * マウスを重ねた星までを仮に塗って見せる。
  */
-export function StarRatingInput({ value, onChange, label, getOptionLabel, size = 32, disabled = false, className }: StarRatingInputProps) {
+export function StarRatingInput({
+  value,
+  onChange,
+  label,
+  getOptionLabel,
+  size = 32,
+  disabled = false,
+  className,
+}: StarRatingInputProps) {
   const [hovered, setHovered] = useState<number | null>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const shown = hovered ?? value ?? 0;

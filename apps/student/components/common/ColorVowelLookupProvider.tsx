@@ -1,24 +1,22 @@
 // apps\student\components\common\ColorVowelLookupProvider.tsx
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
+import { Search } from 'lucide-react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search } from 'lucide-react';
-import { lookupColorVowelDictionary } from '@/actions/colorVowelAction';
-import type { ColorVowelDicResult } from '@gabby/types/colorVowel';
-import { cn } from '@/lib/utils';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { clientLogger } from '@gabby/lib/logger/client';
+import type { ColorVowelDicResult } from '@gabby/types/colorVowel';
+import { lookupColorVowelDictionary } from '@/actions/colorVowelAction';
+import { cn } from '@/lib/utils';
 import {
   ColorVowelDictionarySheet,
   type DictionaryAudioType,
   type DictionaryLookupStatus,
 } from './ColorVowelDictionarySheet';
 
-// -----------------------------------------------------------------------
 // Context & 型定義
-// -----------------------------------------------------------------------
 
 export interface ColorVowelLookupContextType {
   openTooltip: (word: string, rect: DOMRect, wordKey: string) => void;
@@ -53,9 +51,7 @@ interface TooltipState {
   placement: 'top' | 'bottom';
 }
 
-// -----------------------------------------------------------------------
 // ユーティリティ
-// -----------------------------------------------------------------------
 
 /**
  * 単語要素の DOMRect からツールチップ表示位置を計算する。
@@ -64,10 +60,7 @@ function resolveTooltipPositionFromRect(rect: DOMRect): Omit<TooltipState, 'text
   const GAP = 8; // 単語とツールチップの間隔
   const HORIZONTAL_PADDING = 70;
 
-  const x = Math.max(
-    HORIZONTAL_PADDING,
-    Math.min(window.innerWidth - HORIZONTAL_PADDING, rect.left + rect.width / 2)
-  );
+  const x = Math.max(HORIZONTAL_PADDING, Math.min(window.innerWidth - HORIZONTAL_PADDING, rect.left + rect.width / 2));
 
   if (rect.top > 70) {
     // 上側表示: y = 単語上端 - GAP → translateY(-100%) でツールチップ本体を上に退避
@@ -79,9 +72,7 @@ function resolveTooltipPositionFromRect(rect: DOMRect): Omit<TooltipState, 'text
   }
 }
 
-// -----------------------------------------------------------------------
 // メインコンポーネント
-// -----------------------------------------------------------------------
 
 export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderProps) {
   const [mounted, setMounted] = React.useState(false);
@@ -206,7 +197,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
       closeTooltip,
       activeWordKey: tooltip?.key ?? null,
     }),
-    [openTooltip, closeTooltip, tooltip]
+    [openTooltip, closeTooltip, tooltip],
   );
 
   return (
@@ -226,9 +217,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                   top: tooltip.y,
                   // top 時: translateY(-100%) でボックス全体を y 座標より上に押し上げ
                   // bottom 時: translateX(-50%) のみで上端が y になる
-                  transform: tooltip.placement === 'top'
-                    ? 'translateX(-50%) translateY(-100%)'
-                    : 'translateX(-50%)',
+                  transform: tooltip.placement === 'top' ? 'translateX(-50%) translateY(-100%)' : 'translateX(-50%)',
                   zIndex: 9999,
                   pointerEvents: 'auto',
                 }}
@@ -252,7 +241,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
                       'text-xs font-semibold text-white shadow-2xl',
                       'ring-1 ring-black/10',
                       'hover:bg-ink-soft active:scale-[0.95]',
-                      'transition-all duration-150 select-none'
+                      'transition-all duration-150 select-none',
                     )}
                   >
                     <Search className="h-3.5 w-3.5 shrink-0 opacity-75" />
@@ -291,7 +280,7 @@ export function ColorVowelLookupProvider({ children }: ColorVowelLookupProviderP
               </div>
             )}
           </AnimatePresence>,
-          document.body
+          document.body,
         )}
 
       {/* ── 辞書結果シート ── */}

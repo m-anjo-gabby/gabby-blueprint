@@ -1,13 +1,16 @@
-import { getMySessions } from '@/actions/sessionAction';
-import { getMyCalendarEvents } from '@/actions/calendarEventAction';
-import { SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
 import { getMonthGridRange } from '@gabby/lib/calendar/monthGridRange';
+import { SESSION_NON_ACTIONABLE_STATUSES } from '@gabby/types/session';
+import { getMyCalendarEvents } from '@/actions/calendarEventAction';
+import { getMySessions } from '@/actions/sessionAction';
 import { CalendarBoard } from './CalendarBoard';
 
 /** 月のセッション・イベントをサーバーで取得して、カレンダーを描く（page.tsx で月ごとの Suspense に包む） */
 export async function CalendarMonthSection({ month }: { month: string }) {
   const { startIso, endIso } = getMonthGridRange(month);
-  const [sessions, events] = await Promise.all([getMySessions(startIso, endIso), getMyCalendarEvents(startIso, endIso)]);
+  const [sessions, events] = await Promise.all([
+    getMySessions(startIso, endIso),
+    getMyCalendarEvents(startIso, endIso),
+  ]);
   return (
     <CalendarBoard
       month={month}

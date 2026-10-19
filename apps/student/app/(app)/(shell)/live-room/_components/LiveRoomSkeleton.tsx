@@ -1,17 +1,17 @@
 'use client';
 
+import { BookOpen, CalendarDays, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, CalendarDays, MessageCircle } from 'lucide-react';
 import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
+import { SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
+import { RouteSkeleton } from '@/components/shell/RouteLoading';
+import { useShellNavContext } from '@/components/shell/ShellNavContext';
+import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
-import { RouteSkeleton } from '@/components/shell/RouteLoading';
-import { SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
-import { useShellNavContext } from '@/components/shell/ShellNavContext';
-import { LiveSessionIntro } from './LiveSessionIntro';
 import { SectionHeading, SessionResultPageHeader } from '../sessions/[sessionId]/result/_components/SessionResultParts';
+import { LiveSessionIntro } from './LiveSessionIntro';
 
 const SPRINT = getTrainingMetricConfig('sprint');
 const HISTORY_ROW_COUNT = 3;
@@ -80,7 +80,10 @@ function LiveSessionHubSkeleton() {
 
         <div>
           <ShellSectionTitle>履歴</ShellSectionTitle>
-          <ul aria-hidden className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface shadow-xs">
+          <ul
+            aria-hidden
+            className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface shadow-xs"
+          >
             {Array.from({ length: HISTORY_ROW_COUNT }, (_, i) => (
               <li key={i} className="flex items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1 space-y-1.5">
@@ -140,7 +143,9 @@ function SessionResultSkeleton() {
           lines={['w-3/4', 'w-1/2']}
         />
         <ResultSectionSkeleton
-          heading={<SectionHeading icon={MessageCircle} iconClassName="bg-brand-soft text-brand" title="チャット履歴" />}
+          heading={
+            <SectionHeading icon={MessageCircle} iconClassName="bg-brand-soft text-brand" title="チャット履歴" />
+          }
           lines={['w-2/3', 'w-1/2']}
         />
       </div>

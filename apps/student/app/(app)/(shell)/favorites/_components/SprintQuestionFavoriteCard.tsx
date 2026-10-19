@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import type { FavoriteSprintQuestionItem } from '@gabby/types/sprint';
+import { useState } from 'react';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import type { FavoriteSprintQuestionItem } from '@gabby/types/sprint';
 import { SprintPhraseBlock, type SprintPhraseVariant } from '@/components/training/sprint-result/SprintPhraseBlock';
 import { cn } from '@/lib/utils';
 import { useFavoriteAudio } from './FavoriteAudioProvider';
@@ -27,12 +27,40 @@ function getSentences(q: FavoriteSprintQuestionItem): SentenceDef[] {
   const hasNoAnswer = !!q.answer_sentence_no_en;
   const sentences: SentenceDef[] = [];
   if (q.statement_en) {
-    sentences.push({ key: 'st', variant: 'statement', label: '基本文', en: q.statement_en, ja: q.statement_ja, voice: q.statement_voice });
+    sentences.push({
+      key: 'st',
+      variant: 'statement',
+      label: '基本文',
+      en: q.statement_en,
+      ja: q.statement_ja,
+      voice: q.statement_voice,
+    });
   }
-  sentences.push({ key: 'q', variant: 'question', label: isQuestionBased ? '質問文' : '指示文', en: q.question_en, ja: q.question_ja, voice: q.question_voice });
-  sentences.push({ key: 'yes', variant: 'yes', label: hasNoAnswer ? '解答文（Yes）' : '解答文', en: q.answer_sentence_yes_en, ja: q.answer_sentence_yes_ja, voice: q.answer_sentence_yes_voice });
+  sentences.push({
+    key: 'q',
+    variant: 'question',
+    label: isQuestionBased ? '質問文' : '指示文',
+    en: q.question_en,
+    ja: q.question_ja,
+    voice: q.question_voice,
+  });
+  sentences.push({
+    key: 'yes',
+    variant: 'yes',
+    label: hasNoAnswer ? '解答文（Yes）' : '解答文',
+    en: q.answer_sentence_yes_en,
+    ja: q.answer_sentence_yes_ja,
+    voice: q.answer_sentence_yes_voice,
+  });
   if (q.answer_sentence_no_en) {
-    sentences.push({ key: 'no', variant: 'no', label: '解答文（No）', en: q.answer_sentence_no_en, ja: q.answer_sentence_no_ja, voice: q.answer_sentence_no_voice });
+    sentences.push({
+      key: 'no',
+      variant: 'no',
+      label: '解答文（No）',
+      en: q.answer_sentence_no_en,
+      ja: q.answer_sentence_no_ja,
+      voice: q.answer_sentence_no_voice,
+    });
   }
   return sentences;
 }
@@ -54,7 +82,9 @@ export function SprintQuestionFavoriteCard({ question, onRemove }: SprintQuestio
         <p className="flex min-w-0 items-center gap-1.5 pt-1 text-xs text-ink-muted">
           <SourceIcon size={14} className={cn('shrink-0', theme.iconText)} />
           <span className="truncate">{question.content_name}</span>
-          <span aria-hidden className="text-ink-subtle">·</span>
+          <span aria-hidden className="text-ink-subtle">
+            ·
+          </span>
           <span className="shrink-0 font-semibold text-ink-soft">{question.sprint_title}</span>
         </p>
         <button

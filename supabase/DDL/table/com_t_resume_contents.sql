@@ -18,6 +18,10 @@ COMMENT ON COLUMN public.com_t_resume_contents.item_id IS 'アイテムID（word
 COMMENT ON COLUMN public.com_t_resume_contents.metadata IS 'メタデータ';
 COMMENT ON COLUMN public.com_t_resume_contents.update_date IS '更新日時';
 
+CREATE INDEX idx_resume_contents_content ON public.com_t_resume_contents (content_id);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_resume_contents FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_resume_contents ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage their own resume points" ON public.com_t_resume_contents FOR ALL TO authenticated

@@ -1,18 +1,18 @@
 'use client';
 
-import { useState } from 'react';
 import { CalendarClock, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@gabby/lib/hooks/useToast';
+import { useState } from 'react';
+import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useNow } from '@gabby/lib/hooks/useNow';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { formatSessionSlot, formatTimeUntil } from '@/lib/sessionFormat';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type MyRescheduleProposalGroup } from '@gabby/types/session';
 import { acceptRescheduleProposal, declineRescheduleProposals } from '@/actions/sessionAction';
-import { MyRescheduleProposalGroup } from '@gabby/types/session';
+import { Button } from '@/components/ui/button';
+import { formatSessionSlot, formatTimeUntil } from '@/lib/sessionFormat';
+import { cn } from '@/lib/utils';
 
-interface Props {
+interface RescheduleProposalCardProps {
   group: MyRescheduleProposalGroup;
   timezone: string;
   onAccepted: () => void;
@@ -24,7 +24,7 @@ interface Props {
  * コーチ都合のキャンセルで届いた振替候補。何が起きたか（元の予定）・回答期限・候補を1枚にまとめ、
  * 候補を選んでその場で確定できるようにする。候補が合わない場合は見送って自分でリクエストする導線を出す。
  */
-export function RescheduleProposalCard({ group, timezone, onAccepted, onDeclined }: Props) {
+export function RescheduleProposalCard({ group, timezone, onAccepted, onDeclined }: RescheduleProposalCardProps) {
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
   const nowMs = useNow();
@@ -33,10 +33,14 @@ export function RescheduleProposalCard({ group, timezone, onAccepted, onDeclined
   const [isDeclining, setIsDeclining] = useState(false);
   const isBusy = isAccepting || isDeclining;
 
-  const original = formatSessionSlot(group.original_session_start_datetime, group.original_session_end_datetime, timezone);
+  const original = formatSessionSlot(
+    group.original_session_start_datetime,
+    group.original_session_end_datetime,
+    timezone,
+  );
   const expiresAt = group.candidates.reduce(
     (earliest, c) => (c.expires_at < earliest ? c.expires_at : earliest),
-    group.candidates[0]?.expires_at ?? ''
+    group.candidates[0]?.expires_at ?? '',
   );
   const remaining = nowMs !== null && expiresAt ? formatTimeUntil(expiresAt, nowMs) : null;
 
@@ -60,7 +64,7 @@ export function RescheduleProposalCard({ group, timezone, onAccepted, onDeclined
     const confirmed = await showConfirm(
       '候補をすべて見送りますか？',
       'この回は未予約として残ります。続けて、ご希望の日時をコーチにリクエストできます。',
-      { variant: 'warning', confirmText: '見送る', cancelText: '候補から選ぶ' }
+      { variant: 'warning', confirmText: '見送る', cancelText: '候補から選ぶ' },
     );
     if (!confirmed) return;
 
@@ -86,7 +90,10 @@ export function RescheduleProposalCard({ group, timezone, onAccepted, onDeclined
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-ink">{group.coach_name}コーチの都合でキャンセルになりました</p>
           <p className="mt-1 text-xs text-ink-muted tabular-nums">
-            元の予定：<span className="line-through">{original.date} {original.time}</span>
+            元の予定：
+            <span className="line-through">
+              {original.date} {original.time}
+            </span>
           </p>
         </div>
       </div>
@@ -106,13 +113,13 @@ export function RescheduleProposalCard({ group, timezone, onAccepted, onDeclined
               onClick={() => setSelectedId(candidate.proposal_id)}
               className={cn(
                 'flex w-full items-center gap-3 rounded-control border px-3.5 py-3 text-left transition-colors disabled:opacity-60',
-                selected ? 'border-brand bg-brand-soft' : 'border-line bg-surface hover:border-brand-200'
+                selected ? 'border-brand bg-brand-soft' : 'border-line bg-surface hover:border-brand-200',
               )}
             >
               <span
                 className={cn(
                   'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
-                  selected ? 'border-brand bg-brand text-white' : 'border-line bg-surface'
+                  selected ? 'border-brand bg-brand text-white' : 'border-line bg-surface',
                 )}
               >
                 {selected && <Check size={12} strokeWidth={3} />}
@@ -127,7 +134,15 @@ export function RescheduleProposalCard({ group, timezone, onAccepted, onDeclined
       </div>
 
       <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Button type="button" variant="ghost" size="sm" className="text-ink-muted" pending={isDeclining} disabled={isAccepting} onClick={handleDecline}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-ink-muted"
+          pending={isDeclining}
+          disabled={isAccepting}
+          onClick={handleDecline}
+        >
           候補以外の日時を希望する
         </Button>
         <Button type="button" pending={isAccepting} disabled={!selectedId || isDeclining} onClick={handleAccept}>

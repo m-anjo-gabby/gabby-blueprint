@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
 import { Loader2 } from 'lucide-react';
+import React from 'react';
 
 interface ExitProcessingOverlayProps {
   visible: boolean;
@@ -11,7 +11,7 @@ interface ExitProcessingOverlayProps {
  * Drill/Sprint両プレイヤーで共通の「終了処理中」ローディングオーバーレイ。
  * マイク解放待ちの間、ユーザーの二重操作を防ぐために表示する。
  */
-export const ExitProcessingOverlay: React.FC<ExitProcessingOverlayProps> = ({ visible }) => {
+export function ExitProcessingOverlay({ visible }: ExitProcessingOverlayProps) {
   if (!visible) return null;
 
   return (
@@ -25,4 +25,4 @@ export const ExitProcessingOverlay: React.FC<ExitProcessingOverlayProps> = ({ vi
       </div>
     </div>
   );
-};
+}

@@ -14,11 +14,14 @@ function floorToMinute(ms: number): number {
 
 function scheduleTick() {
   const now = Date.now();
-  timer = setTimeout(() => {
-    currentMinute = floorToMinute(Date.now());
-    listeners.forEach((listener) => listener());
-    scheduleTick();
-  }, 60_000 - (now % 60_000));
+  timer = setTimeout(
+    () => {
+      currentMinute = floorToMinute(Date.now());
+      listeners.forEach((listener) => listener());
+      scheduleTick();
+    },
+    60_000 - (now % 60_000),
+  );
 }
 
 function subscribe(listener: () => void) {

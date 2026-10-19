@@ -1,18 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
 import { ShieldCheck } from 'lucide-react';
-import { useChatStore } from '@gabby/lib/stores/useChatStore';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useLocale, useTranslations } from 'next-intl';
+import { useEffect, useMemo, useState } from 'react';
 import { getAllChatRoomsForAdmin } from '@gabby/lib/chat/actions/roomActions';
 import { filterChatRoomsByClient, getChatRoomClientOptions } from '@gabby/lib/chat/roomDisplay';
-import { ChatSplitLayout } from '@gabby/lib/components/chat/ChatSplitLayout';
 import { ChatRoomListPane } from '@gabby/lib/components/chat/ChatRoomListPane';
+import { ChatSplitLayout } from '@gabby/lib/components/chat/ChatSplitLayout';
 import { useMyChatRooms } from '@gabby/lib/components/chat/useMyChatRooms';
+import { useChatStore } from '@gabby/lib/stores/useChatStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { cn } from '@gabby/lib/utils';
-import { USER_TYPES } from '@gabby/types/user';
 import type { ChatRoomListItem } from '@gabby/types/chat';
+import { USER_TYPES } from '@gabby/types/user';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { CHAT_SPLIT_BREAKPOINT } from '@/constants/chat';
 import { CreateChatRoomDialog } from './CreateChatRoomDialog';
@@ -59,11 +59,11 @@ function AdminChatRoomList() {
     };
   }, [mode]);
 
-  const sourceRooms = useMemo(() => (mode === 'mine' ? myRooms : allRooms ?? []), [mode, myRooms, allRooms]);
+  const sourceRooms = useMemo(() => (mode === 'mine' ? myRooms : (allRooms ?? [])), [mode, myRooms, allRooms]);
   const isLoading = mode === 'mine' ? isLoadingMyRooms : allRooms === null;
   const clientOptions = useMemo(
     () => getChatRoomClientOptions(sourceRooms, t('unnamedGroupClient'), locale === 'en' ? 'en' : 'ja'),
-    [sourceRooms, t, locale]
+    [sourceRooms, t, locale],
   );
   const rooms = useMemo(() => filterChatRoomsByClient(sourceRooms, clientFilter), [sourceRooms, clientFilter]);
 
@@ -84,7 +84,7 @@ function AdminChatRoomList() {
                   onClick={() => setMode(value)}
                   className={cn(
                     'flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-bold transition-colors',
-                    mode === value ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
+                    mode === value ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted',
                   )}
                 >
                   {value === 'all' && <ShieldCheck size={13} />}

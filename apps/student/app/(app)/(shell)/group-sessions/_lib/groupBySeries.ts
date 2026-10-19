@@ -1,4 +1,8 @@
-import { getCalendarEventPhase, type CalendarEventItem, type CalendarEventSeriesSummary } from '@gabby/types/calendarEvent';
+import {
+  getCalendarEventPhase,
+  type CalendarEventItem,
+  type CalendarEventSeriesSummary,
+} from '@gabby/types/calendarEvent';
 
 export interface SeriesGroup {
   series: CalendarEventSeriesSummary;
@@ -28,6 +32,6 @@ export function groupBySeries(events: CalendarEventItem[]): { groups: SeriesGrou
 /** シリーズの「すべての回に参加する」の対象（参加確認があり、終了しておらず、まだ参加登録していない回） */
 export function getJoinableSessions(sessions: CalendarEventItem[], nowMs: number | null): CalendarEventItem[] {
   return sessions.filter(
-    (s) => s.rsvp_enabled && !s.is_joined && (nowMs === null || getCalendarEventPhase(s, nowMs) !== 'ended')
+    (s) => s.rsvp_enabled && !s.is_joined && (nowMs === null || getCalendarEventPhase(s, nowMs) !== 'ended'),
   );
 }

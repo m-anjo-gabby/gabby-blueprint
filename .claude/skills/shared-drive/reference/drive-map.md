@@ -20,6 +20,13 @@ URL は `https://drive.google.com/drive/folders/<ID>`（フォルダ）、`https
 | 60_旧システム移行 | `19IBynMbxbuLYay2v6vSWWiKpNKt66TEP` | 旧システムからの移行の資料 |
 | 90_アーカイブ | `1Btixn9B1V0rl1wXUVfo9hWn2O67AaDmb` | 古くなった資料 |
 
+50_外部サービス は、サービスごとにフォルダを作り、設定と方針の控え（Googleドキュメント。正本はリポジトリ）を置く。
+
+| 50_外部サービスの中 | ID | 中身 |
+|---|---|---|
+| Axiom | `14LWo0CudP-lRPdYnxy7OrwXfW1vzT2Di` | `Axiom（ログの保存とエラーの通知）`（`1mbK7k5jJY3RH6d2uSXX0XN7Z8oeYlY3H13QZGD3053I`。正本は docs/LOGGING.md） |
+| （直下） | — | `会社アカウントへの移行手順`（`1jPyKsLfGtEFIgZsPFVIYe6PpJArlFWuNfqBNx4bJH3s`。全サービス共通の作業の手順。終わったら 90_アーカイブ へ移す） |
+
 A_開発の各フォルダの細かい使い方はまだ決めていない（HISTORY.md の未決事項）。
 
 ## B_運営共有（運営スタッフも見る）

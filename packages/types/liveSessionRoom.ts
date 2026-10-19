@@ -9,7 +9,7 @@ export const LIVE_SESSION_ROOM_ROLE = {
   HOST: 1,
   PARTICIPANT: 0,
 } as const;
-export type LiveSessionRoomRole = typeof LIVE_SESSION_ROOM_ROLE[keyof typeof LIVE_SESSION_ROOM_ROLE];
+export type LiveSessionRoomRole = (typeof LIVE_SESSION_ROOM_ROLE)[keyof typeof LIVE_SESSION_ROOM_ROLE];
 
 /** ルーム入室に必要な、Zoom Video SDKへの参加情報一式 */
 export interface LiveSessionRoomAccess {
@@ -28,11 +28,11 @@ export interface LiveSessionRoomAccess {
   startDatetime: string;
 }
 
-export type LiveSessionRoomErrorCode = 'unauthorized' | 'forbidden' | 'not_eligible' | 'not_yet_available' | 'unexpected_error';
+export type LiveSessionRoomErrorCode =
+  'unauthorized' | 'forbidden' | 'not_eligible' | 'not_yet_available' | 'unexpected_error';
 
 export type GetLiveSessionRoomAccessResult =
-  | { success: true; access: LiveSessionRoomAccess }
-  | { success: false; errorCode: LiveSessionRoomErrorCode };
+  { success: true; access: LiveSessionRoomAccess } | { success: false; errorCode: LiveSessionRoomErrorCode };
 
 /**
  * 入室ボタンを押した時の入室可否の確認結果（サーバーの時刻で判定する）。
@@ -45,5 +45,4 @@ export type CheckLiveSessionJoinableResult =
 
 /** 通話 入室記録RPC(record_session_call_join)の結果 */
 export type RecordCallJoinResult =
-  | { success: true; callLogId: string }
-  | { success: false; errorCode: LiveSessionRoomErrorCode };
+  { success: true; callLogId: string } | { success: false; errorCode: LiveSessionRoomErrorCode };

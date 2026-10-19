@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
-import { LayoutDashboard, ServerCrash, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { LayoutDashboard, ServerCrash, ShieldAlert } from 'lucide-react';
+import { useEffect } from 'react';
 import { clientLogger } from '@gabby/lib/logger/client';
+import { reloadTo } from '@gabby/lib/navigation/reloadTo';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -21,7 +22,7 @@ export default function Error({ error }: ErrorProps) {
 
   const handleBackToDashboard = () => {
     // ブラウザのメモリ空間およびステートをクリアして安全にダッシュボードへ退避
-    window.location.href = '/dashboard';
+    reloadTo('/dashboard');
   };
 
   return (
@@ -29,7 +30,7 @@ export default function Error({ error }: ErrorProps) {
       <div className="w-full max-w-lg bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-xl shadow-slate-200/50 min-h-[460px] flex flex-col justify-center items-center text-center relative overflow-hidden">
         {/* 致命的エラーを示すトップライン（インフラパネルと連動） */}
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-rose-500 to-red-600" />
-        
+
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -54,9 +55,7 @@ export default function Error({ error }: ErrorProps) {
                 Console Exception
               </span>
             </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              例外エラーが検出されました
-            </h1>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">例外エラーが検出されました</h1>
             <p className="text-sm text-slate-500 mt-2.5 leading-relaxed max-w-md font-medium">
               アドミン関数の実行、またはデータベース通信中に予期せぬハンドリング例外が発生しました。この事象はコアシステムログに構造化データとして保存されました。
             </p>
@@ -77,7 +76,7 @@ export default function Error({ error }: ErrorProps) {
 
           {/* 復旧用退避導線 */}
           <div className="w-full space-y-3">
-            <button 
+            <button
               onClick={handleBackToDashboard}
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 min-h-[52px] shadow-lg shadow-slate-900/10 hover:shadow-xl hover:shadow-slate-900/20"
             >
@@ -85,7 +84,6 @@ export default function Error({ error }: ErrorProps) {
               ダッシュボードへ戻る
             </button>
           </div>
-
         </motion.div>
       </div>
     </div>

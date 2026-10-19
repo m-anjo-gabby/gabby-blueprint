@@ -1,9 +1,10 @@
 'use client';
 
-import { GraduationCap, Award, Clock, Briefcase, MessageSquare } from 'lucide-react';
-import { CoachProfileCardData, CoachProfileCardLabels } from '@gabby/types/coachProfile';
-import { StarRatingDisplay } from './StarRating';
+import { Award, Briefcase, Clock, GraduationCap, MessageSquare } from 'lucide-react';
+import { type CoachProfileCardData, type CoachProfileCardLabels } from '@gabby/types/coachProfile';
 import { CoachSpecialtyTags } from './CoachSpecialtyTags';
+import { ExternalImage } from './ExternalImage';
+import { StarRatingDisplay } from './StarRating';
 
 export interface CoachProfileCardProps {
   data: CoachProfileCardData;
@@ -32,8 +33,7 @@ export function CoachProfileCardHeader({ data, className = 'flex items-center ga
     <div className={className}>
       <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 text-xl font-bold">
         {data.iconUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.iconUrl} alt={data.userName} className="w-full h-full object-cover" />
+          <ExternalImage src={data.iconUrl} alt={data.userName} className="w-full h-full object-cover" />
         ) : (
           data.userName.charAt(0).toUpperCase()
         )}
@@ -43,8 +43,11 @@ export function CoachProfileCardHeader({ data, className = 'flex items-center ga
         {data.countryName && (
           <div className="flex items-center gap-1.5 mt-1">
             {data.countryFlagUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={data.countryFlagUrl} alt={data.countryName} className="w-4 h-4 rounded-full object-cover" />
+              <ExternalImage
+                src={data.countryFlagUrl}
+                alt={data.countryName}
+                className="w-4 h-4 rounded-full object-cover"
+              />
             )}
             <span className="text-xs text-slate-500">{data.countryName}</span>
           </div>

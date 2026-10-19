@@ -1,5 +1,5 @@
 ---------------------------------------------
--- 月次コーチングレポート: コーチ担当の有効契約生徒一覧RPC (2026-09-13 追加)
+-- 月次コーチングレポート: コーチ担当の有効契約生徒一覧RPC
 -- 前提: table/com_m_coach_student_relationship.sql, table/com_t_user_license.sql,
 --       table/com_m_contract.sql の作成が完了していること。
 ---------------------------------------------
@@ -12,11 +12,11 @@
 -- 担当関係(com_m_coach_student_relationship)はstatus不問（is_activeを問わない）で対象とする。
 -- コーチ交代直後で当月分の実績が残っているケースを取りこぼさないため。
 --
--- 【月範囲判定 (2026-09-13 コーチのタイムゾーン基準に修正)】
+-- 【月範囲判定】
 -- get_coach_monthly_sessions.sqlと同じ理由・同じ方式で、月の境界をUTCではなくコーチ自身の
 -- タイムゾーン(com_m_user.timezone、呼び出しの都度DBから直接参照)を基準に判定する。
 --
--- 【権限チェックの共通化 (2026-09-15追加)】
+-- 【権限チェックの共通化】
 -- fn_assert_actor_or_admin()を使う（前提: function/fn_assert_actor_or_admin.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.get_coach_monthly_active_students(p_coach_id uuid, p_report_month date)

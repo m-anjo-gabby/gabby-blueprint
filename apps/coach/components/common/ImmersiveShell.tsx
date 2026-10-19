@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-interface Props {
+interface ImmersiveShellProps {
   /** falseの場合はオーバーレイ化せずchildrenをそのまま描画する（通常のHeader/Sidebar付き表示） */
   active: boolean;
   children: ReactNode;
@@ -16,12 +16,8 @@ interface Props {
  * ちらつきを避けるための表示モードで、セッションハブ・Live Sprint等で共通利用する。
  * レイアウト（flex/overflow/paddingの違い）は呼び出し側の用途ごとにclassNameで指定する。
  */
-export function ImmersiveShell({ active, children, className }: Props) {
+export function ImmersiveShell({ active, children, className }: ImmersiveShellProps) {
   if (!active) return <>{children}</>;
 
-  return (
-    <div className={cn('fixed inset-0 z-40 w-full h-full bg-slate-50', className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn('fixed inset-0 z-40 w-full h-full bg-slate-50', className)}>{children}</div>;
 }

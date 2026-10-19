@@ -8,9 +8,11 @@ CREATE TABLE public.com_m_client (
     client_name              text         NOT NULL,
     client_type              smallint     NOT NULL DEFAULT 1,
     industry_type            smallint     NOT NULL DEFAULT 1,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
-    update_date              timestamp with time zone NOT NULL DEFAULT now()
+    update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    status                   smallint     NOT NULL DEFAULT 1,
+    CONSTRAINT chk_client_status CHECK (status = ANY (ARRAY[1, 9])),
+    CONSTRAINT chk_client_type CHECK (client_type = ANY (ARRAY[0, 1, 2]))
 );
 
 COMMENT ON TABLE public.com_m_client IS '顧客情報マスタ';
@@ -18,9 +20,11 @@ COMMENT ON COLUMN public.com_m_client.client_id IS '顧客ID';
 COMMENT ON COLUMN public.com_m_client.client_name IS '顧客名称（企業名・団体名）';
 COMMENT ON COLUMN public.com_m_client.client_type IS '顧客種別 0: 初期テナント 1:法人, 2:個人';
 COMMENT ON COLUMN public.com_m_client.industry_type IS '業界区分';
-COMMENT ON COLUMN public.com_m_client.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_client.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_client.update_date IS '更新日時';
+COMMENT ON COLUMN public.com_m_client.status IS '状態 1:取引中 9:取引終了';
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_client FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_client ENABLE ROW LEVEL SECURITY;
 

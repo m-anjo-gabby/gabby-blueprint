@@ -125,7 +125,7 @@
 - `apps/student/app/(app)/(shell)/training/sprint/history/[id]/page.tsx`、`_components/SprintResultDetail.tsx`（シェル画面）
 - `apps/student/components/training/sprint-result/`（両画面で共通：`loadSprintResult.ts` のデータ取得、
   `useSprintResultPlayback.ts` の音声再生、`SprintResultSummary.tsx`、`SprintResultQuestionList.tsx`）
-- `apps/student/actions/sprintAction.ts`（`getSprintResultAction`）
+- `apps/student/actions/sprintAction.ts`（`getSprintResult`）
 - `apps/student/actions/sprintFavoriteAction.ts`（`getFavoriteSprintQuestionIds`・`toggleSprintQuestionFavorite`。
   ☆の初期表示と切り替え。テーブルは `com_t_favorite_sprint_question`）
 - `apps/student/components/training/sprint-result/SprintPhraseBlock.tsx`（1文の表示ブロック。お気に入り画面と共用）

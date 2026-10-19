@@ -1,6 +1,6 @@
 import { fakeSpeechRecognizer, isFakeSpeechRequested } from './fake';
-import { webSpeechRecognizer } from './webSpeech';
 import type { SpeechRecognizerEngine } from './types';
+import { webSpeechRecognizer } from './webSpeech';
 
 export type { SpeechRecognizerEngine, RecognitionCallbacks, RecognitionHandle, RecognitionStartOptions } from './types';
 

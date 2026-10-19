@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
@@ -50,7 +51,8 @@ function decode(value: string | undefined): RecoveryMarker | null {
   try {
     const parsed = JSON.parse(Buffer.from(body, 'base64url').toString('utf-8'));
     if (typeof parsed?.sid === 'string' && typeof parsed?.exp === 'number') return parsed as RecoveryMarker;
-  } catch {
+  } catch (thrown) {
+    unstable_rethrow(thrown);
     // 不正な値は無効として扱う
   }
   return null;

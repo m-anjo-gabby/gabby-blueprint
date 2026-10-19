@@ -1,5 +1,5 @@
-import type { RecognitionCallbacks, RecognitionHandle, RecognitionStartOptions, SpeechRecognizerEngine } from './types';
 import { clientLogger } from '../../../logger/client';
+import type { RecognitionCallbacks, RecognitionHandle, RecognitionStartOptions, SpeechRecognizerEngine } from './types';
 
 type SpeechRecognitionConstructor = new () => SpeechRecognition;
 
@@ -10,15 +10,14 @@ interface RecognitionErrorEventLike extends Event {
 
 function getSpeechRecognitionClass(): SpeechRecognitionConstructor | null {
   if (typeof window === 'undefined') return null;
-  const w = window as unknown as {
+  const w: {
     SpeechRecognition?: SpeechRecognitionConstructor;
     webkitSpeechRecognition?: SpeechRecognitionConstructor;
-  };
+  } = window;
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-const isMobileDevice = () =>
-  typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const isMobileDevice = () => typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
 /**
  * ブラウザ標準の Web Speech API（SpeechRecognition）による認識。
@@ -37,7 +36,11 @@ export const webSpeechRecognizer: SpeechRecognizerEngine = {
     if (!SpeechRecognitionClass) {
       clientLogger.warn('speech:not_supported', 'Web Speech API is not supported in this browser');
       queueMicrotask(() => callbacks.onError?.('not-supported'));
-      return { stop: () => { /* no-op */ } };
+      return {
+        stop: () => {
+          /* no-op */
+        },
+      };
     }
 
     let active = true;
@@ -52,7 +55,7 @@ export const webSpeechRecognizer: SpeechRecognizerEngine = {
 
     recognition.onend = () => {
       if (!active) return;
-      // 🚀 止められていなければ自動的に再開して認識を継続する（Edge/Safari等で途中終了するため）
+      // 止められていなければ自動的に再開して認識を継続する（Edge/Safari等で途中終了するため）
       try {
         recognition.start();
       } catch (e) {
@@ -66,7 +69,11 @@ export const webSpeechRecognizer: SpeechRecognizerEngine = {
       clientLogger.debug('speech:recognition_failed', 'Speech recognition error', { payload: { error } });
       if (error === 'no-speech' || error === 'aborted') return;
       active = false;
-      try { recognition.abort(); } catch { /* no-op */ }
+      try {
+        recognition.abort();
+      } catch {
+        /* no-op */
+      }
       callbacks.onError?.(error);
     };
 
@@ -95,7 +102,11 @@ export const webSpeechRecognizer: SpeechRecognizerEngine = {
         if (!active) return;
         active = false;
         // abort() を使用することで、Edge等での不要な後追いイベントを遮断
-        try { recognition.abort(); } catch { /* 停止済み */ }
+        try {
+          recognition.abort();
+        } catch {
+          /* 停止済み */
+        }
       },
     };
   },

@@ -1,5 +1,5 @@
 ---------------------------------------------
--- 指定生徒が利用可能なコンテンツID一覧の取得 (2026-09-24 追加)
+-- 指定生徒が利用可能なコンテンツID一覧の取得
 --
 -- 【背景】
 -- コーチが生徒に教材を割り当てる／レッスンで使用する画面（Dialogue Practiceの割当、
@@ -12,7 +12,7 @@
 -- 「対象生徒本人が生徒アプリで閲覧できる教材」と同じ範囲を、担当コーチの権限で返す。
 --   - content_scope=0（共通）
 --   - content_scope=1（クライアント限定）のうち、生徒のclient_idにcom_m_contents_accessがあるもの
---   - content_scope=9（非公開）・論理削除済みは常に除外
+--   - 非公開（status=0）は常に除外
 -- コーチはcom_m_userのRLSで生徒のclient_idを、com_m_contents_accessのRLSで他テナントの
 -- アクセス権を参照できないため、SECURITY DEFINERで判定する。
 -- 呼び出し元(auth.uid())が対象生徒の担当コーチ（com_m_coach_student_relationshipに行がある。
@@ -34,8 +34,7 @@ AS $$
   FROM public.com_m_contents c
   JOIN public.com_m_user u ON u.id = p_student_id
   WHERE c.content_type = p_content_type
-    AND c.delete_flg = '0'
-    AND c.content_scope <> 9
+    AND c.status = 1
     AND EXISTS (
       SELECT 1 FROM public.com_m_coach_student_relationship r
       WHERE r.coach_id = auth.uid()
@@ -47,7 +46,6 @@ AS $$
         SELECT 1 FROM public.com_m_contents_access a
         WHERE a.content_id = c.content_id
           AND a.client_id = u.client_id
-          AND a.delete_flg = '0'
       )
     );
 $$;

@@ -24,8 +24,17 @@ export function ContractDataTable({ data, totalCount, pageCount, clients }: Cont
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
-        <ClientFilter clients={clients} value={query.filters.clientId} onChange={(value) => query.setFilter('clientId', value)} />
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      >
+        <ClientFilter
+          clients={clients}
+          value={query.filters.clientId}
+          onChange={(value) => query.setFilter('clientId', value)}
+        />
       </ListToolbar>
       <DataTable
         columns={createColumns(t, locale)}

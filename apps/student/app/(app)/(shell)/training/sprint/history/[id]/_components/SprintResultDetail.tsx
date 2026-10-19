@@ -2,12 +2,12 @@
 
 import { formatZonedDate, toIsoMonthInZone } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
-import { useSprintResultPlayback } from '@/components/training/sprint-result/useSprintResultPlayback';
+import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { SprintResultQuestionList } from '@/components/training/sprint-result/SprintResultQuestionList';
 import { SprintResultActions, SprintResultSummary } from '@/components/training/sprint-result/SprintResultSummary';
 import type { SprintResultData } from '@/components/training/sprint-result/types';
+import { useSprintResultPlayback } from '@/components/training/sprint-result/useSprintResultPlayback';
 
 /**
  * スプリントの履歴から開く結果画面（シェル画面）。
@@ -41,7 +41,12 @@ export function SprintResultDetail({ scoreData, questions, courseTitle, favorite
         initialFavoriteIds={favoriteQuestionIds}
       />
 
-      <AudioResumeBanner status={playback.resumeStatus} onResume={() => { playback.unlockAudioContext(); }} />
+      <AudioResumeBanner
+        status={playback.resumeStatus}
+        onResume={() => {
+          playback.unlockAudioContext();
+        }}
+      />
     </>
   );
 }

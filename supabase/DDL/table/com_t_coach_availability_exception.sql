@@ -35,6 +35,8 @@ COMMENT ON COLUMN public.com_t_coach_availability_exception.update_date IS 'æ›´æ
 
 CREATE INDEX idx_availability_exception_coach_date ON public.com_t_coach_availability_exception (coach_id, exception_date);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_coach_availability_exception FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_coach_availability_exception ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coaches can manage their own availability exceptions" ON public.com_t_coach_availability_exception FOR ALL TO authenticated

@@ -114,6 +114,12 @@ export const NOTIFICATION_TYPES = {
     icon: 'CalendarClock',
     badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
   },
+  // 管理者宛て。Webトライアルの申込があった（fn_submit_trial_application）。管理者宛てのためメールは送らない
+  // （サポート窓口へは申込の処理が別にメールを送る）
+  TRIAL_APPLIED: {
+    icon: 'UserPlus',
+    badgeClass: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
@@ -272,6 +278,17 @@ export const NOTIFICATION_MESSAGE_BUILDERS: Record<
           title: '対応可能時間を確認してください',
           body: '最後の確認から2週間が経ちました。夏時間の切り替え等で表示がずれていないか確認してください。',
         },
+  TRIAL_APPLIED: (payload) => ({
+    title: payload.kind === 'reapply' ? 'Webトライアルの再申込' : 'Webトライアルの申込',
+    body: `${String(payload.applicant_name ?? '')}様から${TRIAL_APPLIED_NOTE_JA[String(payload.kind)] ?? 'Webトライアルの申込がありました。'}`,
+  }),
+};
+
+const TRIAL_APPLIED_NOTE_JA: Record<string, string> = {
+  new: 'Webトライアルの申込がありました。',
+  reapply: '再度の申込がありました（パスワード設定前のため、招待を出し直しました）。',
+  registered: '申込がありました（登録済みのアドレスのため、ログインの案内を送りました）。',
+  invited: '申込がありました（トライアル以外の招待中のアドレスです。個別に対応してください）。',
 };
 
 /** payload.report_month ("YYYY-MM-DD"等) を "YYYY年M月" 表記へ変換する（通知本文用） */

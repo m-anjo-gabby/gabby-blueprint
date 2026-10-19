@@ -14,7 +14,7 @@ export function pickTimezoneName(
   timeZone: string,
   names: TimezoneNames | null | undefined,
   kind: 'display' | 'short',
-  language: 'ja' | 'en'
+  language: 'ja' | 'en',
 ): string {
   return names?.[`${kind === 'display' ? 'display_name' : 'short_name'}_${language}`] || timeZone;
 }

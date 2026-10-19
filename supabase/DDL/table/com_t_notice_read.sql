@@ -25,6 +25,8 @@ COMMENT ON COLUMN public.com_t_notice_read.cta_clicked_at IS '行動ボタンを
 
 CREATE INDEX idx_notice_read_user ON public.com_t_notice_read (user_id);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_notice_read FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_notice_read ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage their own notice read status" ON public.com_t_notice_read FOR ALL TO authenticated

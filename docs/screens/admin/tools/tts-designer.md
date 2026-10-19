@@ -55,7 +55,7 @@
 - `apps/admin/app/(app)/tools/tts-designer/_components/TTSAssetGenerator.tsx`
 - `apps/admin/app/(app)/tools/tts-designer/_components/TTSAssetTable.tsx`, `_components/columns.tsx`
 - `apps/admin/components/list/`（一覧の共通部品）, `apps/admin/lib/list.ts`。E2E: `testing/e2e/tests/admin/list-filters.spec.ts`（仕様: `testing/e2e/specs/admin/list-filters.md`）
-- `apps/admin/actions/adminTTSAction.ts`（`getTTSAssets`, `saveTTSAssetAction`, `deleteTTSAssetAction`。RPCは
+- `apps/admin/actions/adminTTSAction.ts`（`getTTSAssets`, `saveTTSAsset`, `deleteTTSAsset`。RPCは
   使わず`com_t_tts_asset`テーブルとStorage `audio`バケットを直接操作する）
-- `packages/lib/azure/ssml.ts`（`buildSSML`）, `packages/lib/hooks/usePlayAzureSpeech`,
+- `packages/lib/azure/ssml.ts`（`buildSsml`）, `packages/lib/hooks/usePlayAzureSpeech`,
   `packages/lib/hooks/usePlayAudioSpeech`

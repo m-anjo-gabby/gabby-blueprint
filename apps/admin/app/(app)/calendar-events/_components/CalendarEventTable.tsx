@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import type { CalendarEventItem } from '@gabby/types/calendarEvent';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import type { CalendarEventItem } from '@gabby/types/calendarEvent';
 import { deleteCalendarEvent } from '@/actions/adminCalendarEventAction';
 import { DataTable } from '@/components/list/DataTable';
-import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
-import { createColumns } from './columns';
+import { boldChunks, DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
 import type { CalendarEventFormOptions } from './CalendarEventFormDialog';
+import { createColumns } from './columns';
 
 interface CalendarEventTableProps {
   data: CalendarEventItem[];
@@ -23,7 +23,13 @@ interface CalendarEventTableProps {
 }
 
 /** カレンダーイベントの表と削除の確認（一覧・シリーズの詳細で共用） */
-export function CalendarEventTable({ data, formOptions, hideSeries = false, pending = false, standalone = false }: CalendarEventTableProps) {
+export function CalendarEventTable({
+  data,
+  formOptions,
+  hideSeries = false,
+  pending = false,
+  standalone = false,
+}: CalendarEventTableProps) {
   const t = useTranslations('calendarEvents.dataTable');
   const { showToast } = useToast();
   const [deleting, setDeleting] = useState<CalendarEventItem | null>(null);
@@ -34,6 +40,8 @@ export function CalendarEventTable({ data, formOptions, hideSeries = false, pend
       const result = await deleteCalendarEvent(event.calendar_event_id);
       if (result.success) {
         showToast(t('toastDeleted'), 'success');
+      } else if (result.errorCode === 'held') {
+        showToast(t('toastDeleteHeld'), 'error');
       } else {
         showToast(result.message || t('toastDeleteFailed'), 'error');
       }

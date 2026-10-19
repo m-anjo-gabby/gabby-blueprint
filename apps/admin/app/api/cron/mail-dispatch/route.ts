@@ -1,8 +1,10 @@
 import { timingSafeEqual } from 'node:crypto';
+import { unstable_rethrow } from 'next/navigation';
 import { NextResponse, type NextRequest } from 'next/server';
-import { dispatchMail } from '@gabby/lib/mail/dispatch/dispatchMail';
-import { sendMailDailyReport } from '@gabby/lib/mail/dispatch/dailyReport';
 import { createLogger } from '@gabby/lib/logger';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { sendMailDailyReport } from '@gabby/lib/mail/dispatch/dailyReport';
+import { dispatchMail } from '@gabby/lib/mail/dispatch/dispatchMail';
 
 const logger = createLogger('mail');
 
@@ -26,7 +28,8 @@ async function readTask(req: NextRequest): Promise<string | null> {
   try {
     const body: unknown = await req.json();
     return body && typeof body === 'object' && 'task' in body && typeof body.task === 'string' ? body.task : null;
-  } catch {
+  } catch (thrown) {
+    unstable_rethrow(thrown);
     return null;
   }
 }
@@ -43,12 +46,15 @@ async function handle(req: NextRequest) {
   }
   try {
     if ((await readTask(req)) === 'daily_report') {
-      return NextResponse.json(await sendMailDailyReport());
+      // 宛先の無い環境（dev 等）でも実行環境の tzdata の版を確かめられるよう、応答にも載せる
+      const runtime = { node: process.version, tz: process.versions.tz };
+      return NextResponse.json({ ...(await sendMailDailyReport()), runtime });
     }
     const summary = await dispatchMail();
     return NextResponse.json(summary);
   } catch (err) {
-    logger.error('mail:dispatch_route_failed', err instanceof Error ? err.message : 'Unknown error', { err });
+    unstable_rethrow(err);
+    logger.error('mail:dispatch_route_failed', getErrorMessage(err), { err });
     return NextResponse.json({ error: 'dispatch_failed' }, { status: 500 });
   }
 }

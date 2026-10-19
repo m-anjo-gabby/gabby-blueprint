@@ -2,8 +2,8 @@ import { getTranslations } from 'next-intl/server';
 import { getClients } from '@/actions/adminClientAction';
 import { PageHeader } from '@/components/common/PageHeader';
 import { parseListParams, toPageCount, type RawSearchParams } from '@/lib/list';
-import { ClientFormDialog } from './_components/ClientFormDialog';
 import { ClientDataTable } from './_components/ClientDataTable';
+import { ClientFormDialog } from './_components/ClientFormDialog';
 
 export default async function AdminClientsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   const [t, params] = await Promise.all([getTranslations('clients.page'), searchParams]);

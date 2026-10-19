@@ -2,8 +2,8 @@ import 'server-only';
 import type { NotificationType } from '@gabby/types/notification';
 import { getNotificationText } from '@gabby/types/notificationText';
 import { renderMail } from '../../render';
-import { buildChatUnreadMail, buildNotificationMail } from '../../templates/NotificationEmailTemplate';
 import { buildNotificationDetails } from '../../templates/notificationDetails';
+import { buildChatUnreadMail, buildNotificationMail } from '../../templates/NotificationEmailTemplate';
 import { NOTIFICATION_MAIL_TYPES } from '../registry';
 import type { MailHandler } from '../types';
 import { loadNotificationFacts } from './notificationFacts';
@@ -46,7 +46,7 @@ export const notificationHandler: MailHandler = async ({ admin, row, recipient, 
         preview: readText(payload, 'preview'),
         actionUrl,
         links,
-      })
+      }),
     );
   }
 
@@ -60,8 +60,14 @@ export const notificationHandler: MailHandler = async ({ admin, row, recipient, 
       title: text.title,
       body: text.body,
       actionUrl,
-      details: buildNotificationDetails({ type, facts, timeZone: recipient.timezone, zoneName: recipient.timezoneName, language }),
+      details: buildNotificationDetails({
+        type,
+        facts,
+        timeZone: recipient.timezone,
+        zoneName: recipient.timezoneName,
+        language,
+      }),
       links,
-    })
+    }),
   );
 };

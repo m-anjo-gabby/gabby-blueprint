@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { Eye } from 'lucide-react';
+import { useState } from 'react';
 import { CoachProfileCard } from '@gabby/lib/components/common/CoachProfileCard';
 import { CoachProfileDialog } from '@gabby/lib/components/common/CoachProfileDialog';
-import { CoachProfileCardData, CoachProfileDialogLabels } from '@gabby/types/coachProfile';
+import { type CoachProfileCardData, type CoachProfileDialogLabels } from '@gabby/types/coachProfile';
 
 interface LivePreviewPanelProps {
   data: CoachProfileCardData;

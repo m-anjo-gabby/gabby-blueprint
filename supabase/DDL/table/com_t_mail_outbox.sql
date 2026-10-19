@@ -47,8 +47,8 @@ CREATE TABLE public.com_t_mail_outbox (
     delivery_detail          text,
     delivery_updated_at      timestamp with time zone,
     CONSTRAINT com_t_mail_outbox_user_id_mail_type_dedup_key_key UNIQUE (user_id, mail_type, dedup_key),
-    CONSTRAINT chk_mail_outbox_delivery_status CHECK (delivery_status::text = ANY (ARRAY['DELAYED'::character varying, 'DELIVERED'::character varying, 'BOUNCED'::character varying, 'FAILED'::character varying, 'SUPPRESSED'::character varying, 'COMPLAINED'::character varying]::text[])),
-    CONSTRAINT chk_mail_outbox_status CHECK (status::text = ANY (ARRAY['PENDING'::character varying, 'SENDING'::character varying, 'SENT'::character varying, 'SKIPPED'::character varying, 'FAILED'::character varying]::text[]))
+    CONSTRAINT chk_mail_outbox_delivery_status CHECK (delivery_status::text = ANY (ARRAY['DELAYED'::character varying::text, 'DELIVERED'::character varying::text, 'BOUNCED'::character varying::text, 'FAILED'::character varying::text, 'SUPPRESSED'::character varying::text, 'COMPLAINED'::character varying::text])),
+    CONSTRAINT chk_mail_outbox_status CHECK (status::text = ANY (ARRAY['PENDING'::character varying::text, 'SENDING'::character varying::text, 'SENT'::character varying::text, 'SKIPPED'::character varying::text, 'FAILED'::character varying::text]))
 );
 
 COMMENT ON TABLE public.com_t_mail_outbox IS 'メール送信待ち・送信履歴（通知・リマインダーのメール。送信は送信処理がまとめて行う）';
@@ -71,11 +71,12 @@ COMMENT ON COLUMN public.com_t_mail_outbox.delivery_status IS '到達状況 (Res
 COMMENT ON COLUMN public.com_t_mail_outbox.delivery_detail IS '到達状況の詳細（不達の理由等）';
 COMMENT ON COLUMN public.com_t_mail_outbox.delivery_updated_at IS '到達状況の更新日時';
 
-CREATE INDEX idx_mail_outbox_pending ON public.com_t_mail_outbox (scheduled_at) WHERE status::text = ANY (ARRAY['PENDING'::character varying, 'SENDING'::character varying]::text[]);
+CREATE INDEX idx_mail_outbox_pending ON public.com_t_mail_outbox (scheduled_at) WHERE status::text = ANY (ARRAY['PENDING'::character varying::text, 'SENDING'::character varying::text]);
 CREATE INDEX idx_mail_outbox_provider_message ON public.com_t_mail_outbox (provider_message_id) WHERE provider_message_id IS NOT NULL;
 CREATE INDEX idx_mail_outbox_user ON public.com_t_mail_outbox (user_id, insert_date DESC);
 
 CREATE TRIGGER trg_mail_outbox_dispatch AFTER INSERT ON public.com_t_mail_outbox REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION private.on_mail_outbox_inserted();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_mail_outbox FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_t_mail_outbox ENABLE ROW LEVEL SECURITY;
 -- @end-schema

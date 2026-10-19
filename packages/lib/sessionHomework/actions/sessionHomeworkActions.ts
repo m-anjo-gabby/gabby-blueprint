@@ -1,20 +1,22 @@
 'use server';
 
-import { createServerClient } from '@gabby/lib/supabase/server';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import {
-  AddHomeworkCommentResult,
-  CreateSessionHomeworkResult,
-  GetRecentSessionHomeworkResult,
-  GetSessionHomeworkResult,
-  PendingHomeworkAttachment,
-  SessionHomeworkAttachment,
-  SessionHomeworkComment,
-  SessionHomeworkEntry,
-  SetHomeworkNotNeededResult,
-} from '@gabby/types/sessionHomework';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
+import {
+  type AddHomeworkCommentResult,
+  type CreateSessionHomeworkResult,
+  type GetRecentSessionHomeworkResult,
+  type GetSessionHomeworkResult,
+  type PendingHomeworkAttachment,
+  type SessionHomeworkAttachment,
+  type SessionHomeworkComment,
+  type SessionHomeworkEntry,
+  type SetHomeworkNotNeededResult,
+} from '@gabby/types/sessionHomework';
 
 const logger = createLogger('common');
 
@@ -22,7 +24,9 @@ const ATTACHMENT_SELECT = 'com_t_session_homework_attachment(*)';
 const HOMEWORK_SELECT_WITH_COMMENTS = `*, ${ATTACHMENT_SELECT}, com_t_session_homework_comment(*, ${ATTACHMENT_SELECT})`;
 
 type RawAttachmentRow = SessionHomeworkAttachment;
-type RawCommentRow = Omit<SessionHomeworkComment, 'attachments'> & { com_t_session_homework_attachment?: RawAttachmentRow[] | null };
+type RawCommentRow = Omit<SessionHomeworkComment, 'attachments'> & {
+  com_t_session_homework_attachment?: RawAttachmentRow[] | null;
+};
 type RawHomeworkRow = Omit<SessionHomeworkEntry, 'attachments' | 'comments'> & {
   com_t_session_homework_attachment?: RawAttachmentRow[] | null;
   com_t_session_homework_comment?: RawCommentRow[] | null;
@@ -60,13 +64,22 @@ export async function getSessionHomeworkCore(sessionId: string): Promise<GetSess
       .maybeSingle();
 
     if (error) {
-      logger.error('sessionHomework:get_homework_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionId } });
+      logger.error('sessionHomework:get_homework_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { sessionId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return { success: true, homework: data ? normalizeHomeworkRow(data as unknown as RawHomeworkRow) : null };
+    return { success: true, homework: data ? normalizeHomeworkRow(data) : null };
   } catch (err) {
-    logger.error('sessionHomework:get_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('sessionHomework:get_homework_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -79,7 +92,7 @@ export async function getSessionHomeworkCore(sessionId: string): Promise<GetSess
 export async function getRecentSessionHomeworkCore(
   studentId: string,
   excludeSessionId: string,
-  limit = 3
+  limit = 3,
 ): Promise<GetRecentSessionHomeworkResult> {
   const ctx = await getLogContext();
 
@@ -98,15 +111,21 @@ export async function getRecentSessionHomeworkCore(
       .limit(limit);
 
     if (error) {
-      logger.error('sessionHomework:get_recent_homework_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { studentId } });
+      logger.error('sessionHomework:get_recent_homework_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    const entries: SessionHomeworkEntry[] = (data ?? []).map((row) => normalizeHomeworkRow(row as unknown as RawHomeworkRow));
+    const entries: SessionHomeworkEntry[] = (data ?? []).map((row) => normalizeHomeworkRow(row));
 
     return { success: true, entries };
   } catch (err) {
-    logger.error('sessionHomework:get_recent_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('sessionHomework:get_recent_homework_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -122,7 +141,7 @@ export async function getRecentSessionHomeworkCore(
 export async function createSessionHomeworkCore(
   sessionId: string,
   homeworkText: string,
-  attachments: PendingHomeworkAttachment[] = []
+  attachments: PendingHomeworkAttachment[] = [],
 ): Promise<CreateSessionHomeworkResult> {
   const ctx = await getLogContext();
 
@@ -143,7 +162,11 @@ export async function createSessionHomeworkCore(
       .maybeSingle();
 
     if (sessionError || !session) {
-      logger.error('sessionHomework:create_homework_session_lookup_failed', sessionError?.message ?? 'session not found', { ...ctx, err: sessionError, userId: user.id, payload: { sessionId } });
+      logger.error(
+        'sessionHomework:create_homework_session_lookup_failed',
+        sessionError?.message ?? 'session not found',
+        { ...ctx, err: sessionError, userId: user.id, payload: { sessionId } },
+      );
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (session.coach_id !== user.id) {
@@ -163,7 +186,12 @@ export async function createSessionHomeworkCore(
 
     if (error || !homeworkRow) {
       const errorCode = error?.code === '23505' ? 'already_exists' : 'unexpected_error';
-      logger.error('sessionHomework:create_homework_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id, payload: { sessionId } });
+      logger.error('sessionHomework:create_homework_failed', error?.message ?? 'No row inserted', {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { sessionId },
+      });
       return { success: false, errorCode };
     }
 
@@ -178,7 +206,7 @@ export async function createSessionHomeworkCore(
             file_name: a.file_name,
             file_type: a.file_type,
             file_size: a.file_size,
-          }))
+          })),
         )
         .select('*');
 
@@ -194,13 +222,21 @@ export async function createSessionHomeworkCore(
       }
     }
 
-    logger.info('sessionHomework:create_homework_success', 'Homework posted', { ...ctx, userId: user.id, payload: { sessionId } });
+    logger.info('sessionHomework:create_homework_success', 'Homework posted', {
+      ...ctx,
+      userId: user.id,
+      payload: { sessionId },
+    });
     return {
       success: true,
       entry: { ...homeworkRow, attachments: attachmentRows, comments: [] } as SessionHomeworkEntry,
     };
   } catch (err) {
-    logger.error('sessionHomework:create_homework_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('sessionHomework:create_homework_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -213,7 +249,7 @@ export async function createSessionHomeworkCore(
 export async function addHomeworkCommentCore(
   sessionId: string,
   commentText: string,
-  attachments: PendingHomeworkAttachment[] = []
+  attachments: PendingHomeworkAttachment[] = [],
 ): Promise<AddHomeworkCommentResult> {
   const ctx = await getLogContext();
 
@@ -234,7 +270,12 @@ export async function addHomeworkCommentCore(
       .maybeSingle();
 
     if (homeworkError) {
-      logger.error('sessionHomework:add_comment_homework_lookup_failed', homeworkError.message, { ...ctx, err: homeworkError, userId: user.id, payload: { sessionId } });
+      logger.error('sessionHomework:add_comment_homework_lookup_failed', homeworkError.message, {
+        ...ctx,
+        err: homeworkError,
+        userId: user.id,
+        payload: { sessionId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!homework) {
@@ -255,7 +296,12 @@ export async function addHomeworkCommentCore(
       .single();
 
     if (error || !commentRow) {
-      logger.error('sessionHomework:add_comment_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id, payload: { sessionId } });
+      logger.error('sessionHomework:add_comment_failed', error?.message ?? 'No row inserted', {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { sessionId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -270,7 +316,7 @@ export async function addHomeworkCommentCore(
             file_name: a.file_name,
             file_type: a.file_type,
             file_size: a.file_size,
-          }))
+          })),
         )
         .select('*');
 
@@ -286,10 +332,18 @@ export async function addHomeworkCommentCore(
       }
     }
 
-    logger.info('sessionHomework:add_comment_success', 'Homework comment posted', { ...ctx, userId: user.id, payload: { sessionId } });
+    logger.info('sessionHomework:add_comment_success', 'Homework comment posted', {
+      ...ctx,
+      userId: user.id,
+      payload: { sessionId },
+    });
     return { success: true, comment: { ...commentRow, attachments: attachmentRows } as SessionHomeworkComment };
   } catch (err) {
-    logger.error('sessionHomework:add_comment_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('sessionHomework:add_comment_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -308,7 +362,12 @@ export async function markSessionHomeworkViewedCore(sessionId: string): Promise<
       logger.error('sessionHomework:mark_viewed_failed', error.message, { ...ctx, err: error, payload: { sessionId } });
     }
   } catch (err) {
-    logger.error('sessionHomework:mark_viewed_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { sessionId } });
+    unstable_rethrow(err);
+    logger.error('sessionHomework:mark_viewed_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { sessionId },
+    });
   }
 }
 
@@ -316,16 +375,27 @@ export async function markSessionHomeworkViewedCore(sessionId: string): Promise<
  * 「今回は宿題なし」を設定・解除する（set_session_homework_not_needed RPC。担当コーチ本人・実施済みの回のみ）。
  * 設定した回はコーチのダッシュボードの Session Tasks の「Homework not posted」に出なくなる。
  */
-export async function setSessionHomeworkNotNeededCore(sessionId: string, notNeeded: boolean): Promise<SetHomeworkNotNeededResult> {
+export async function setSessionHomeworkNotNeededCore(
+  sessionId: string,
+  notNeeded: boolean,
+): Promise<SetHomeworkNotNeededResult> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { error } = await supabase.rpc('set_session_homework_not_needed', { p_session_id: sessionId, p_not_needed: notNeeded });
+    const { error } = await supabase.rpc('set_session_homework_not_needed', {
+      p_session_id: sessionId,
+      p_not_needed: notNeeded,
+    });
     if (error) {
-      logger.error('sessionHomework:set_not_needed_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { sessionId, notNeeded } });
+      logger.error('sessionHomework:set_not_needed_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { sessionId, notNeeded },
+      });
       const errorCode = error.message.includes('not authorized')
         ? 'forbidden'
         : error.message.includes('not found')
@@ -336,10 +406,19 @@ export async function setSessionHomeworkNotNeededCore(sessionId: string, notNeed
       return { success: false, errorCode };
     }
 
-    logger.info('sessionHomework:set_not_needed_success', 'Homework not-needed flag updated', { ...ctx, userId: user.id, payload: { sessionId, notNeeded } });
+    logger.info('sessionHomework:set_not_needed_success', 'Homework not-needed flag updated', {
+      ...ctx,
+      userId: user.id,
+      payload: { sessionId, notNeeded },
+    });
     return { success: true };
   } catch (err) {
-    logger.error('sessionHomework:set_not_needed_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { sessionId } });
+    unstable_rethrow(err);
+    logger.error('sessionHomework:set_not_needed_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { sessionId },
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

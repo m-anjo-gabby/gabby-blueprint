@@ -1,10 +1,12 @@
 'use client';
 
+import { CalendarCheck, CalendarX, TriangleAlert } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
-import { CalendarCheck, CalendarX, TriangleAlert } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type MonthlyReportApproval } from '@gabby/types/monthlyReport';
+import { approveMonthlyReport, revokeMonthlyReportApproval } from '@/actions/adminMonthlyReportAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,9 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { approveMonthlyReport, revokeMonthlyReportApproval } from '@/actions/adminMonthlyReportAction';
-import { MonthlyReportApproval } from '@gabby/types/monthlyReport';
+import { Button } from '@/components/ui/button';
 
 export function ApprovalControlBar({
   coachId,
@@ -84,7 +84,9 @@ export function ApprovalControlBar({
             {t('approvedBadge')}
             {approval?.approved_at && (
               <span className="font-normal text-emerald-600">
-                {t('approvedAtFormatted', { datetime: new Date(approval.approved_at).toLocaleString(locale === 'en' ? 'en-US' : 'ja-JP') })}
+                {t('approvedAtFormatted', {
+                  datetime: new Date(approval.approved_at).toLocaleString(locale === 'en' ? 'en-US' : 'ja-JP'),
+                })}
               </span>
             )}
           </span>
@@ -95,7 +97,8 @@ export function ApprovalControlBar({
         )}
 
         <span className="text-sm text-slate-500">
-          {t('totalSessionsLabel')}<span className="font-bold text-slate-800">{grandTotal}</span>
+          {t('totalSessionsLabel')}
+          <span className="font-bold text-slate-800">{grandTotal}</span>
           <span className="text-xs text-slate-400">
             {t('breakdownLabel', { completed: completedCount, lateCancel: lateCancelCount, noShow: noShowCount })}
           </span>
@@ -131,9 +134,7 @@ export function ApprovalControlBar({
               <AlertDialogHeader>
                 <AlertDialogTitle>{isApproved ? t('revokeConfirmTitle') : t('approveConfirmTitle')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {isApproved
-                    ? t('revokeConfirmBody')
-                    : t('approveConfirmBody', { count: grandTotal })}
+                  {isApproved ? t('revokeConfirmBody') : t('approveConfirmBody', { count: grandTotal })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -157,9 +158,7 @@ export function ApprovalControlBar({
         </p>
       )}
 
-      <p className="mt-2 text-[11px] text-slate-400">
-        {t('timezoneNote', { timezone: coachTimezoneName })}
-      </p>
+      <p className="mt-2 text-[11px] text-slate-400">{t('timezoneNote', { timezone: coachTimezoneName })}</p>
     </div>
   );
 }

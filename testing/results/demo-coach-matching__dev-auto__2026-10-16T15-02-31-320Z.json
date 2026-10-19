@@ -1,0 +1,31 @@
+{
+  "scenario": "demo-coach-matching",
+  "env": "dev",
+  "tag": "auto",
+  "executedAt": "2026-10-16T15:02:31.320Z",
+  "gitCommit": "7573d016",
+  "gitBranch": "feature/20261016-dev",
+  "totalChecks": 4,
+  "passed": 4,
+  "failed": 0,
+  "ok": true,
+  "checks": [
+    {
+      "name": "com_m_role: demo_user が共通ロール（target_user_type=NULL）になっている（コーチにも付与できる）",
+      "ok": true,
+      "detail": "target_user_type=null"
+    },
+    {
+      "name": "通常の生徒(01): 通常コーチ(CA01/US01)が対象に含まれる",
+      "ok": true
+    },
+    {
+      "name": "通常の生徒(01): デモコーチは対象に含まれない（一覧に出ない）",
+      "ok": true
+    },
+    {
+      "name": "通常の生徒(01): デモコーチIDを指定した申請時チェックは該当なし（not_eligible になる）",
+      "ok": true
+    }
+  ]
+}

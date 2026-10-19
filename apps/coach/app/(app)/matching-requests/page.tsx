@@ -1,7 +1,7 @@
-import { getPendingIncomingRequestsForCoach, getMatchingRequestHistoryPage } from '@/actions/matchingRequestAction';
+import { getMatchingRequestHistoryPage, getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
 import { getBookingRequestHistoryPage, getRescheduleProposalHistoryPage } from '@/actions/sessionAction';
-import { MatchingRequestsView } from './_components/MatchingRequestsView';
 import { RequestsPageHeader } from '@/components/common/ToolPageSkeletons';
+import { MatchingRequestsView } from './_components/MatchingRequestsView';
 
 const HISTORY_PAGE_SIZE = 10;
 

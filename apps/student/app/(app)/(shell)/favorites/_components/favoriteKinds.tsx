@@ -1,16 +1,16 @@
-import type { ReactNode } from 'react';
 import { MessageSquareQuote, Zap, type LucideIcon } from 'lucide-react';
-import type { FavoritePhraseItem } from '@gabby/types/word';
-import { QUESTION_TYPES, type FavoriteSprintQuestionItem, type SprintQuestionType } from '@gabby/types/sprint';
+import type { ReactNode } from 'react';
 import { formatSprintLevelLabel } from '@gabby/lib';
-import { toggleFavorite } from '@/actions/wordAction';
+import { QUESTION_TYPES, type FavoriteSprintQuestionItem, type SprintQuestionType } from '@gabby/types/sprint';
+import type { FavoritePhraseItem } from '@gabby/types/word';
 import { toggleSprintQuestionFavorite } from '@/actions/sprintFavoriteAction';
-import type { FavoriteToggleResult } from '@/constants/favorites';
+import { toggleFavorite } from '@/actions/wordAction';
 import type { PillTabItem } from '@/components/shell/PillTabs';
+import type { FavoriteToggleResult } from '@/constants/favorites';
 import { PhraseFavoriteCardSkeleton, SprintQuestionFavoriteCardSkeleton } from './FavoriteCardSkeletons';
+import type { FavoriteFilterDef } from './favoriteFilters';
 import { PhraseFavoriteCard } from './PhraseFavoriteCard';
 import { SprintQuestionFavoriteCard } from './SprintQuestionFavoriteCard';
-import type { FavoriteFilterDef } from './favoriteFilters';
 
 /**
  * お気に入りの種別ごとの項目の型。
@@ -79,7 +79,9 @@ export const FAVORITE_KINDS: { [K in FavoriteKindId]: FavoriteKindDef<FavoriteIt
     columns: 1,
     getKey: (p) => p.phrase_id,
     getSearchText: (p) => [p.phrase_en, p.phrase_ja, p.word_en].filter(Boolean).join(' '),
-    filters: [contentFilter((p) => p.content_id && p.content_name ? { id: p.content_id, name: p.content_name } : null)],
+    filters: [
+      contentFilter((p) => (p.content_id && p.content_name ? { id: p.content_id, name: p.content_name } : null)),
+    ],
     remove: (p) => toggleFavorite(p.phrase_id, false),
     renderItem: (p, onRemove) => <PhraseFavoriteCard phrase={p} onRemove={onRemove} />,
     renderSkeleton: () => <PhraseFavoriteCardSkeleton />,
@@ -94,10 +96,19 @@ export const FAVORITE_KINDS: { [K in FavoriteKindId]: FavoriteKindDef<FavoriteIt
     emptyAction: { label: 'スプリントの履歴を見る', href: '/training/sprint/history' },
     columns: 1,
     getKey: (q) => q.question_id,
-    getSearchText: (q) => [
-      q.statement_en, q.statement_ja, q.question_en, q.question_ja,
-      q.answer_sentence_yes_en, q.answer_sentence_yes_ja, q.answer_sentence_no_en, q.answer_sentence_no_ja,
-    ].filter(Boolean).join(' '),
+    getSearchText: (q) =>
+      [
+        q.statement_en,
+        q.statement_ja,
+        q.question_en,
+        q.question_ja,
+        q.answer_sentence_yes_en,
+        q.answer_sentence_yes_ja,
+        q.answer_sentence_no_en,
+        q.answer_sentence_no_ja,
+      ]
+        .filter(Boolean)
+        .join(' '),
     filters: [
       contentFilter((q) => ({ id: q.content_id, name: q.content_name })),
       {
@@ -115,9 +126,14 @@ export const FAVORITE_KINDS: { [K in FavoriteKindId]: FavoriteKindDef<FavoriteIt
         label: 'レベル',
         allLabel: 'すべてのレベル',
         requires: 'type',
-        getOption: (q) => q.has_level
-          ? { id: String(q.difficulty_level), label: formatSprintLevelLabel(q.question_type, q.difficulty_level), order: q.difficulty_level }
-          : null,
+        getOption: (q) =>
+          q.has_level
+            ? {
+                id: String(q.difficulty_level),
+                label: formatSprintLevelLabel(q.question_type, q.difficulty_level),
+                order: q.difficulty_level,
+              }
+            : null,
       },
     ],
     remove: (q) => toggleSprintQuestionFavorite(q.question_id, false),

@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * service_role権限のクライアント。
@@ -13,7 +13,9 @@ export async function createAdminClient(): Promise<SupabaseClient> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が未ロードです。先に loadTestEnv() を呼んでください。");
+    throw new Error(
+      'NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY が未ロードです。先に loadTestEnv() を呼んでください。',
+    );
   }
 
   return createClient(supabaseUrl, serviceRoleKey, {
@@ -30,7 +32,9 @@ export async function signInAsRole(email: string, password: string): Promise<Sup
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY が未ロードです。先に loadTestEnv() を呼んでください。");
+    throw new Error(
+      'NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY が未ロードです。先に loadTestEnv() を呼んでください。',
+    );
   }
 
   const client = createClient(supabaseUrl, supabaseAnonKey, {
@@ -39,7 +43,7 @@ export async function signInAsRole(email: string, password: string): Promise<Sup
 
   const { data, error } = await client.auth.signInWithPassword({ email, password });
   if (error || !data.session) {
-    throw new Error(`サインインに失敗しました (${email}): ${error?.message ?? "unknown error"}`);
+    throw new Error(`サインインに失敗しました (${email}): ${error?.message ?? 'unknown error'}`);
   }
 
   return client;
@@ -51,5 +55,5 @@ export async function signInAsRole(email: string, password: string): Promise<Sup
  * （E2Eのログイン状態・ブラウザで確認中のセッション）までログアウトされる（TEST-JUDGEMENT-GUIDE.md KJ-2026-0930-02）。
  */
 export async function signOutRole(client: SupabaseClient): Promise<void> {
-  await client.auth.signOut({ scope: "local" });
+  await client.auth.signOut({ scope: 'local' });
 }

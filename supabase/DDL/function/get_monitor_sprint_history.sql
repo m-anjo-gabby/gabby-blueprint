@@ -1,14 +1,10 @@
 ---------------------------------------------
--- 3. スプリント履歴関数（セキュリティ修正版）
+-- get_monitor_sprint_history: モニター画面のスプリントの履歴
 ---------------------------------------------
--- 【2026-09-22 抜本改修】対象生徒の判定を private.get_monitor_target_users に一本化。
--- 従来は get_monitor_user_list（表示用の付随情報まで結合する重い一覧関数）を対象生徒の
--- 絞り込みだけの目的で呼び出していた。対象生徒の判定ロジック自体は private.get_monitor_target_users
--- に集約されたため、本関数はそちらを直接呼び出す（余計なJOINを避け、判定ロジックの変更も
--- 一箇所で完結する）。
--- 【2026-10-03 改修】対象期間を日付（集計期間のタイムゾーン＝日本時間の暦日）で受け取り、各回は実施した
--- 生徒のタイムゾーンでの実施日（training_date）で絞って返す（各実績は生徒のタイムゾーンでの実施日で数える。
--- testing/e2e/specs/training/training-stats.md）。引数の型が変わるため旧シグネチャを削除してから作成する。
+-- 対象生徒の判定は private.get_monitor_target_users に任せる（表示用の一覧関数 get_monitor_user_list を経由しない）。
+-- 対象期間は日付（集計期間のタイムゾーン＝日本時間の暦日）で受け取り、各回は実施した生徒のタイムゾーンでの
+-- 実施日（training_date）で絞って返す（testing/e2e/specs/training/training-stats.md）。
+-- 引数が timestamptz だった旧シグネチャを削除してから作成する。
 DROP FUNCTION IF EXISTS public.get_monitor_sprint_history(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID[], BOOLEAN);
 
 CREATE OR REPLACE FUNCTION public.get_monitor_sprint_history(
@@ -25,10 +21,8 @@ AS $$
 DECLARE
     _client_id UUID;
 BEGIN
-    _client_id := public.get_jwt_client_id();
-    IF _client_id IS NULL THEN
-        RAISE EXCEPTION 'Client ID not found in JWT.';
-    END IF;
+    -- モニターのロールを持つ利用者だけが、自分のクライアントの受講生を参照できる
+    _client_id := private.get_monitor_client_id();
 
     RETURN QUERY
     WITH target_users AS (
@@ -65,7 +59,7 @@ BEGIN
 END;
 $$;
 
--- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+-- 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
 ALTER FUNCTION public.get_monitor_sprint_history(DATE, DATE, UUID[], BOOLEAN) OWNER TO postgres;
 REVOKE EXECUTE ON FUNCTION public.get_monitor_sprint_history(DATE, DATE, UUID[], BOOLEAN) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.get_monitor_sprint_history(DATE, DATE, UUID[], BOOLEAN) TO authenticated;

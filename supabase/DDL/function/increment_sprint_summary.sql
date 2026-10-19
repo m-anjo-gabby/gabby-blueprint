@@ -27,7 +27,7 @@ BEGIN
   -- 1. ユーザーマスタからタイムゾーンを取得（デフォルトは 'Asia/Tokyo'）
   SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_user_timezone
   FROM public.com_m_user
-  WHERE id = v_user_id AND delete_flg = '0';
+  WHERE id = v_user_id;
 
   -- 2. ユーザーのタイムゾーン基準で現在日付を切り出す
   v_local_today := (CURRENT_TIMESTAMP AT TIME ZONE v_user_timezone)::date;
@@ -78,7 +78,7 @@ BEGIN
     update_date = NOW();
 
   -- 5. 学習実績サマリー（通算学習日数・連続学習日数・最終トレーニング日・通算発話評価回数）を更新
-  -- 💡 ドリルモードのため通算スプリント本数・回答数（total_sprint_sessions/total_sprint_answers）は
+  -- ドリルモードのため通算スプリント本数・回答数（total_sprint_sessions/total_sprint_answers）は
   --    加算しない。これらはセッションモード（self_t_sprint への INSERT）専用のカウンタ。
   PERFORM public.update_training_lifetime_stats(
     v_user_id,

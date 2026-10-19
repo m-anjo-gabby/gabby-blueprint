@@ -5,9 +5,9 @@ import {
   type SessionActionTarget,
 } from '@gabby/lib/components/common/SessionActionDialog';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import type { SessionListItem } from '@gabby/types/session';
 import { cancelSession, checkSessionConflict } from '@/actions/sessionAction';
 import { STUDENT_SESSION_ACTION_LABELS } from '@/constants/sessionActionDialog';
-import type { SessionListItem } from '@gabby/types/session';
 
 export type { SessionActionTarget };
 

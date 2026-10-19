@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { Tag } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { getContents } from '@/actions/adminContentAction';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';

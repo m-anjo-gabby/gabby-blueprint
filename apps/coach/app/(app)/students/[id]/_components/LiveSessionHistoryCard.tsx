@@ -1,36 +1,40 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { CalendarClock, ChevronRight, Loader2, TriangleAlert, User, Video, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import type {
+  CoachSessionListItem,
+  LiveSessionShortfallItem,
+  StudentLiveSessionContractSummary,
+} from '@gabby/types/coachStudent';
+import {
+  isSelfInitiatedCancel,
+  SESSION_NON_ACTIONABLE_STATUSES,
+  SESSION_RESULT_STATUSES,
+  SESSION_STATUS,
+  type SessionListItem,
+} from '@gabby/types/session';
+import { getStudentSessionsByTicket } from '@/actions/studentAction';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getSessionStatusBadge } from '@/constants/session';
+import { cn } from '@/lib/utils';
 import { formatWeeklySlotEn } from '@/lib/weeklySlot';
-import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import {
-  SESSION_STATUS,
-  SessionListItem,
-  SESSION_NON_ACTIONABLE_STATUSES,
-  SESSION_RESULT_STATUSES,
-  isSelfInitiatedCancel,
-} from '@gabby/types/session';
-import type { CoachSessionListItem, LiveSessionShortfallItem, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
-import { getStudentSessionsByTicket } from '@/actions/studentAction';
-import { SessionActionDialog, SessionActionTarget } from '../../../calendar/_components/SessionActionDialog';
+import { SessionActionDialog, type SessionActionTarget } from '../../../calendar/_components/SessionActionDialog';
 
 function toSessionListItem(
   session: CoachSessionListItem,
   studentId: string,
   studentName: string,
-  studentTimezone: string
+  studentTimezone: string,
 ): SessionListItem {
   return {
     session_id: session.session_id,
@@ -54,10 +58,15 @@ function toSessionListItem(
 const HISTORY_PAGE_SIZE = 10;
 
 function formatContractDate(iso: string, timezone: string): string {
-  return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: timezone }).format(new Date(iso));
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: timezone,
+  }).format(new Date(iso));
 }
 
-interface Props {
+interface LiveSessionHistoryCardProps {
   studentId: string;
   studentName: string;
   studentTimezone: string;
@@ -75,13 +84,13 @@ export function LiveSessionHistoryCard({
   initialTicketId,
   initialSessions,
   shortfalls,
-}: Props) {
+}: LiveSessionHistoryCardProps) {
   const timezone = useTimezone();
   const myId = useUserStore((state) => state.user?.id);
   const router = useRouter();
   const [selectedTicketId, setSelectedTicketId] = useState(initialTicketId);
   const [sessionsByTicket, setSessionsByTicket] = useState<Record<string, CoachSessionListItem[]>>(
-    initialTicketId ? { [initialTicketId]: initialSessions } : {}
+    initialTicketId ? { [initialTicketId]: initialSessions } : {},
   );
   const [actionTarget, setActionTarget] = useState<SessionActionTarget | null>(null);
   // 他コーチと分担している契約(週2回等)では、デフォルトは自分の担当分のみを表示する。
@@ -104,7 +113,7 @@ export function LiveSessionHistoryCard({
   // ものに限定して参照可能にする（キャンセル・振替等の管理系ステータスは参照価値が無いため
   // 常に除外）。デフォルト(OFF)は自分の担当分のみを表示する。
   const visibleSessions = (sessions ?? []).filter(
-    (s) => s.coach_id === myId || (showOtherCoach && !SESSION_NON_ACTIONABLE_STATUSES.includes(s.status))
+    (s) => s.coach_id === myId || (showOtherCoach && !SESSION_NON_ACTIONABLE_STATUSES.includes(s.status)),
   );
   const now = new Date();
   // 終了予定時刻を過ぎてもEnd Sessionで記録されず残っているセッション（要対応）も、ここに
@@ -149,7 +158,7 @@ export function LiveSessionHistoryCard({
     setSessionsByTicket((prev) => ({
       ...prev,
       [selectedTicketId]: (prev[selectedTicketId] ?? []).map((s) =>
-        s.session_id === sessionId ? { ...s, ...patch } as CoachSessionListItem : s
+        s.session_id === sessionId ? ({ ...s, ...patch } as CoachSessionListItem) : s,
       ),
     }));
     // キャンセルの返還可否・振替による新規行の追加はこのカードの外(shortfalls)にも影響するため、
@@ -167,9 +176,10 @@ export function LiveSessionHistoryCard({
     // キャンセル・振替済み（Changesタブ対象）は実施されていないため、Hub/結果画面への
     // 導線を出さない（押しても実質何も無い画面に遷移してしまうため）
     const isLinkable = isOwn && !SESSION_NON_ACTIONABLE_STATUSES.includes(session.status);
-    const href = session.status === SESSION_STATUS.SCHEDULED
-      ? `/students/${studentId}/sessions/${session.session_id}`
-      : `/students/${studentId}/sessions/${session.session_id}/result`;
+    const href =
+      session.status === SESSION_STATUS.SCHEDULED
+        ? `/students/${studentId}/sessions/${session.session_id}`
+        : `/students/${studentId}/sessions/${session.session_id}/result`;
 
     // 行全体をタップ領域にする（以前は日時部分だけがLinkでCancelボタンの領域はタップしても
     // 反応しなかった）。<a>の中に<button>をネストするのは無効なHTMLになるため、Linkでは
@@ -193,7 +203,7 @@ export function LiveSessionHistoryCard({
         }}
         className={cn(
           'flex flex-col gap-2 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/60 transition-colors',
-          isLinkable && 'cursor-pointer hover:bg-slate-100/80'
+          isLinkable && 'cursor-pointer hover:bg-slate-100/80',
         )}
       >
         <div className="flex items-center justify-between gap-3">
@@ -209,7 +219,9 @@ export function LiveSessionHistoryCard({
             )}
           </div>
           <span className="flex items-center gap-1.5 shrink-0">
-            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
+            <span
+              className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}
+            >
               {badge.label}
             </span>
             {isLinkable && <ChevronRight size={14} className="text-slate-300" />}
@@ -224,7 +236,10 @@ export function LiveSessionHistoryCard({
               className="text-rose-600 border-rose-200 hover:bg-rose-50"
               onClick={(e) => {
                 e.stopPropagation();
-                setActionTarget({ session: toSessionListItem(session, studentId, studentName, studentTimezone), mode: 'cancel' });
+                setActionTarget({
+                  session: toSessionListItem(session, studentId, studentName, studentTimezone),
+                  mode: 'cancel',
+                });
               }}
             >
               <X size={13} />
@@ -232,7 +247,9 @@ export function LiveSessionHistoryCard({
             </Button>
           </div>
         )}
-        {needsAction && <p className="text-[11px] font-semibold text-red-600 pl-1">Needs your action — tap to open the Hub.</p>}
+        {needsAction && (
+          <p className="text-[11px] font-semibold text-red-600 pl-1">Needs your action — tap to open the Hub.</p>
+        )}
       </li>
     );
   };
@@ -283,7 +300,8 @@ export function LiveSessionHistoryCard({
             <ul className="space-y-1.5 pl-5.5">
               {shortfalls.map((s) => (
                 <li key={s.schedule_id} className="text-[11px] font-semibold text-amber-700">
-                  {formatWeeklySlotEn(s, s.schedule_timezone, timezone)}: only {s.actual_sessions} of {s.expected_sessions} sessions scheduled ({s.shortfall} short). The student can request a new booking.
+                  {formatWeeklySlotEn(s, s.schedule_timezone, timezone)}: only {s.actual_sessions} of{' '}
+                  {s.expected_sessions} sessions scheduled ({s.shortfall} short). The student can request a new booking.
                 </li>
               ))}
             </ul>
@@ -311,9 +329,7 @@ export function LiveSessionHistoryCard({
               <>
                 {showScheduledTab && (
                   <TabsContent value="scheduled">
-                    <ul className="space-y-2 max-h-96 overflow-y-auto">
-                      {scheduledSessions.map(renderSessionRow)}
-                    </ul>
+                    <ul className="space-y-2 max-h-96 overflow-y-auto">{scheduledSessions.map(renderSessionRow)}</ul>
                   </TabsContent>
                 )}
 
@@ -329,7 +345,13 @@ export function LiveSessionHistoryCard({
                         {completedReveal.visibleItems.map(renderSessionRow)}
                       </ul>
                       {completedReveal.hasMore && (
-                        <Button type="button" size="sm" variant="outline" className="w-full" onClick={completedReveal.showMore}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          onClick={completedReveal.showMore}
+                        >
                           Show {completedReveal.remainingCount} more
                         </Button>
                       )}
@@ -349,7 +371,13 @@ export function LiveSessionHistoryCard({
                         {historyReveal.visibleItems.map(renderSessionRow)}
                       </ul>
                       {historyReveal.hasMore && (
-                        <Button type="button" size="sm" variant="outline" className="w-full" onClick={historyReveal.showMore}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          onClick={historyReveal.showMore}
+                        >
                           Show {historyReveal.remainingCount} more
                         </Button>
                       )}

@@ -1,22 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import { ExternalLink, Loader2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
+import { useMemo, useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { DIALOGUE_CATEGORIES, type DialogueCategory, type DialogueContentSummary } from '@gabby/types/dialogue';
 import { assignDialogueContent } from '@/actions/dialogueAction';
-import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
-import type { DialogueCategory, DialogueContentSummary } from '@gabby/types/dialogue';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-interface Props {
+interface AssignDialogueDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   studentId: string;
@@ -38,7 +31,7 @@ export function AssignDialogueDialog({
   availableContents,
   assignedContentIds,
   onAssigned,
-}: Props) {
+}: AssignDialogueDialogProps) {
   const [activeCategory, setActiveCategory] = useState<DialogueCategory>(1);
   const [assigningContentId, setAssigningContentId] = useState<string | null>(null);
   const { showToast } = useToast();
@@ -85,10 +78,14 @@ export function AssignDialogueDialog({
 
           {CATEGORY_ORDER.map((c) => {
             const contents = (contentsByCategory.get(c) ?? []).filter(
-              (content) => !assignedContentIds.has(content.content_id)
+              (content) => !assignedContentIds.has(content.content_id),
             );
             return (
-              <TabsContent key={c} value={String(c)} className={`${LIST_AREA_HEIGHT} overflow-y-auto space-y-1.5 mt-3 pr-1`}>
+              <TabsContent
+                key={c}
+                value={String(c)}
+                className={`${LIST_AREA_HEIGHT} overflow-y-auto space-y-1.5 mt-3 pr-1`}
+              >
                 {contents.length === 0 ? (
                   <p className="text-xs text-slate-400 text-center py-8">No unassigned sets in this category.</p>
                 ) : (

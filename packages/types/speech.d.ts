@@ -8,6 +8,9 @@ declare global {
   interface Window {
     SpeechRecognition: typeof SpeechRecognition;
     webkitSpeechRecognition: typeof SpeechRecognition;
+    /** 古い Safari は接頭辞付きの名前だけを持つ（無いブラウザもある） */
+    webkitAudioContext?: typeof AudioContext;
+    webkitOfflineAudioContext?: typeof OfflineAudioContext;
   }
 
   // クラス（コンストラクタ）としての定義
@@ -28,7 +31,7 @@ declare global {
     maxAlternatives: number;
     onstart: (event: Event) => void;
     onend: (event: Event) => void;
-    onerror: (event: any) => void;
+    onerror: (event: Event) => void;
     onresult: (event: SpeechRecognitionEvent) => void;
     start(): void;
     stop(): void;

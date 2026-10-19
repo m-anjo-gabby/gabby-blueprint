@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { LucideIcon } from 'lucide-react';
+import { type LucideIcon } from 'lucide-react';
+import { type ReactNode } from 'react';
 
 interface ProfileFieldGroupProps {
   icon: LucideIcon;

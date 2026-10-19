@@ -10,7 +10,15 @@ export const USER_TYPES = {
 } as const;
 
 // 値の型を抽出 ( '0' | '1' | '2' )
-export type UserType = typeof USER_TYPES[keyof typeof USER_TYPES];
+export type UserType = (typeof USER_TYPES)[keyof typeof USER_TYPES];
+
+/** 画面・URL から受け取った値がユーザー種別か */
+export function isUserType(value: unknown): value is UserType {
+  return Object.values(USER_TYPES).includes(value as UserType);
+}
+
+/** ユーザー一覧のライセンス・招待の状態（private.vw_user_list.license_state） */
+export type LicenseState = 'none' | 'active' | 'future' | 'expired' | 'mail_failed' | 'expired_invite' | 'inviting';
 
 export const USER_TYPE_MAP: Record<UserType, string> = {
   [USER_TYPES.ADMIN]: '管理者',
@@ -23,35 +31,42 @@ export const getUserTypeLabel = (type: string | null | undefined): string => {
   return USER_TYPE_MAP[type as UserType] ?? '不明';
 };
 
+// com_m_user.status（規約は docs/DATA-DELETION.md）
+// 停止: ログインできない（認証のアカウントを停止する）。退会済み: 個人情報を消去済みで、業務の記録だけが残る
+export const USER_STATUS = {
+  SUSPENDED: 0,
+  ACTIVE: 1,
+  WITHDRAWN: 9,
+} as const;
+export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
+
 /**
  * ----------------------------------------------
  * 型定義
  * ----------------------------------------------
  */
 
-
 /**
  * UserBase: ユーザー情報の最小共通単位
  * アプリ全体で「ユーザー」を指す際に必須となる基本フィールド
  */
 export interface UserBase {
-  id: string;               // auth.users.id (UUID)
-  user_id: number;          // com_m_user.user_id (BIGSERIAL)
+  id: string; // auth.users.id (UUID)
+  user_id: number; // com_m_user.user_id (BIGSERIAL)
   client_id: string | null;
-  user_type: string;        // '1': student, '0': admin 等
+  user_type: string; // '1': student, '0': admin 等
   user_name: string | null;
   icon_path: string | null; // プロフィールアイコン画像のStorageパス（profileバケット内）
-  timezone: string;         // IANAタイムゾーン名 (例: 'Asia/Tokyo')
+  timezone: string; // IANAタイムゾーン名 (例: 'Asia/Tokyo')
   locale_id: string;
-  
+
   // パスワード連続失敗・ロックアウト制御用
-  login_failed_count: number;       // 連続ログイン失敗回数
-  locked_until: string | null;      // ロック解除日時 (ISO文字列、NULL時は非ロック)
-  
-  // DDLの物理順序に合わせてフッター情報を整理
-  delete_flg: string;       // 論理削除フラグ ('0': 未削除, '1': 削除済)
-  insert_date: string;      // 登録日時 (ISO文字列)
-  update_date: string;      // 更新日時 (ISO文字列)
+  login_failed_count: number; // 連続ログイン失敗回数
+  locked_until: string | null; // ロック解除日時 (ISO文字列、NULL時は非ロック)
+
+  status: UserStatus; // USER_STATUS（1:有効 0:停止 9:退会済み）
+  insert_date: string; // 登録日時 (ISO文字列)
+  update_date: string; // 更新日時 (ISO文字列)
 }
 
 /**
@@ -59,14 +74,16 @@ export interface UserBase {
  * vw_user_list (View) の全カラムと一致し、
  * ライセンス情報や顧客名を含んだリッチなデータ型
  */
-export interface UserRecord extends UserBase {
-  email?: string;             // auth.users から取得
+export interface UserRecord extends Omit<UserBase, 'status'> {
+  /** ユーザーの状態（USER_STATUS）。招待中（本登録前）は null */
+  user_status: UserStatus | null;
+  email?: string; // auth.users から取得（退会済みは認証のアカウントが無いため無い）
   client_name: string | null; // com_m_client から結合
-  last_sign_in_at?: string;   // auth.users から取得
+  last_sign_in_at?: string; // auth.users から取得
   confirmed_at?: string | null;
 
   // ロール情報
-  roles?: string[]; 
+  roles?: string[];
 
   // ライセンス関連 (com_t_user_license 等の結合情報)
   contract_id: string | null;
@@ -76,7 +93,7 @@ export interface UserRecord extends UserBase {
   license_end_date: string | null;
   plan_name: string | null;
   contract_name: string | null; // アドミン管理用の契約名
-  license_state: 'none' | 'active' | 'future' | 'expired' | 'mail_failed' | 'expired_invite' | 'inviting';
+  license_state: LicenseState;
 
   // 招待メール関連
   mail_sent_at?: string | null;
@@ -91,7 +108,7 @@ export interface CreateUserPayload {
   email: string;
   user_name: string;
   client_id: string;
-  user_type: string;
+  user_type: UserType;
   timezone?: string; // オプショナルでフロントから指定可能にする場合
   roles?: string[];
 }
@@ -99,30 +116,30 @@ export interface CreateUserPayload {
 /**
  * CreateUserResponse: 登録処理の戻り値規格
  */
-export type CreateUserResponse = 
-  | { 
-      success: true; 
-      user_id: string; 
-      errorType: null; 
-      message: string | null; 
+export type CreateUserResponse =
+  | {
+      success: true;
+      user_id: string;
+      errorType: null;
+      message: string | null;
     }
-  | { 
-      success: false; 
-      user_id: null; 
-      errorType: string; 
-      message: string; 
+  | {
+      success: false;
+      user_id: null;
+      errorType: string;
+      message: string;
     };
 
 /**
  * CSV / Bulk Import 関連
  */
 export interface RawCsvRow {
-  'メールアドレス'?: string;
-  'email'?: string;
-  '名前'?: string;
-  'user_name'?: string;
-  '顧客名'?: string;
-  'client_name'?: string;
+  メールアドレス?: string;
+  email?: string;
+  名前?: string;
+  user_name?: string;
+  顧客名?: string;
+  client_name?: string;
 }
 
 export interface BulkUser extends CreateUserPayload {
@@ -138,8 +155,8 @@ export interface BulkImportResultDetail {
   message?: string | null;
 }
 
-export interface BulkImportResponse {
-  success: boolean;
+/** ユーザーの一括登録の結果（行ごとの成否は details。アクションは ActionResult<BulkImportSummary> で返す） */
+export interface BulkImportSummary {
   total: number;
   successCount: number;
   errorCount: number;

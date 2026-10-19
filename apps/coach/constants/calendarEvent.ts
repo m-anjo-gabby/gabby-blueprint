@@ -1,6 +1,6 @@
-import { CalendarEventType } from '@gabby/types/calendarEvent';
+import { type CalendarEventType } from '@gabby/types/calendarEvent';
 
-/** English calendar-event-type labels for the Coach portal (structural color/badgeClass still comes from the shared CALENDAR_EVENT_TYPES). */
+/** コーチのポータルの英語のイベントの種別のラベル（色・badgeClass は共通の CALENDAR_EVENT_TYPES のまま）。 */
 export const CALENDAR_EVENT_TYPE_LABEL_EN: Record<CalendarEventType, string> = {
   GROUP_SESSION: 'Group Session',
   MAINTENANCE: 'Maintenance',

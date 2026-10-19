@@ -1,9 +1,9 @@
 'use client';
 
+import { Moon, Sun, Sunrise, Sunset } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { Sunrise, Sun, Sunset, Moon } from 'lucide-react';
-import { cn } from '../../utils';
 import { getHourInZone, getTimeOfDayCategory, isInconsiderateHour, type TimeOfDayCategory } from '../../date/date';
+import { cn } from '../../utils';
 
 const TIME_OF_DAY_ICONS: Record<TimeOfDayCategory, ComponentType<{ size?: number; className?: string }>> = {
   morning: Sunrise,
@@ -32,7 +32,14 @@ export interface CounterpartLocalTimeProps {
  * 相手にとって深夜早朝にあたる時間帯は、視覚的に気づけるよう強調表示する。
  * 文言・フォーマットは一切ハードコードせず、すべて呼び出し側から注入する。
  */
-export function CounterpartLocalTime({ datetime, timezone, label, cautionText, format, className }: CounterpartLocalTimeProps) {
+export function CounterpartLocalTime({
+  datetime,
+  timezone,
+  label,
+  cautionText,
+  format,
+  className,
+}: CounterpartLocalTimeProps) {
   if (!datetime || !timezone) return null;
   if (isNaN(new Date(datetime).getTime())) return null;
 
@@ -46,7 +53,7 @@ export function CounterpartLocalTime({ datetime, timezone, label, cautionText, f
       className={cn(
         'flex flex-wrap items-center gap-1.5 text-[11px] font-semibold rounded-md border px-2 py-1 w-fit',
         caution ? 'text-amber-700 bg-amber-50 border-amber-100' : 'text-slate-500 bg-slate-50 border-slate-100',
-        className
+        className,
       )}
     >
       <Icon size={13} className="shrink-0" />

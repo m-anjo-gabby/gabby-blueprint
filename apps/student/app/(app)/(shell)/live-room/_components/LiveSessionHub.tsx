@@ -1,35 +1,40 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { ChevronRight, Star, Ticket, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, Star, Ticket, Users } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { LiveContractSelect, formatContractDate, formatContractPeriod } from '@/components/session/LiveContractSelect';
-import { CountBadge, ShellSectionTitle } from '@/components/shell/ShellPage';
-import { LiveRoomPageHeader } from './LiveRoomSkeleton';
-import { useToast } from '@gabby/lib/hooks/useToast';
+import { useState, useTransition } from 'react';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { withdrawSessionBookingRequest } from '@/actions/sessionAction';
-import {
-  MyBookingRequestItem,
-  MyRescheduleProposalGroup,
-  SessionListItem,
-  SESSION_RESULT_STATUSES,
-  isSelfInitiatedCancel,
-} from '@gabby/types/session';
-import { BookableTicketSlot, LiveSessionContractSummary, LiveSessionOverview, NextContractMatching } from '@gabby/types/matching';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import type { PendingCoachRating } from '@gabby/types/coachRating';
-import { SessionActionDialog, SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
+import {
+  type BookableTicketSlot,
+  type LiveSessionContractSummary,
+  type LiveSessionOverview,
+  type NextContractMatching,
+} from '@gabby/types/matching';
+import {
+  isSelfInitiatedCancel,
+  SESSION_RESULT_STATUSES,
+  type MyBookingRequestItem,
+  type MyRescheduleProposalGroup,
+  type SessionListItem,
+} from '@gabby/types/session';
+import { withdrawSessionBookingRequest } from '@/actions/sessionAction';
+import { formatContractDate, formatContractPeriod, LiveContractSelect } from '@/components/session/LiveContractSelect';
+import { CountBadge, ShellSectionTitle } from '@/components/shell/ShellPage';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
-import { RescheduleProposalCard } from './RescheduleProposalCard';
-import { NextSessionPanel } from './NextSessionPanel';
-import { ContractOverviewCard } from './ContractOverviewCard';
-import { UpcomingSessionList } from './UpcomingSessionList';
-import { SessionHistoryList } from './SessionHistoryList';
+import { SessionActionDialog, type SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { CoachRatingDialog } from './CoachRatingDialog';
-import { PreviousSessionLink, PreviousSessionSummary } from './PreviousSessionLink';
+import { ContractOverviewCard } from './ContractOverviewCard';
+import { LiveRoomPageHeader } from './LiveRoomSkeleton';
+import { NextSessionPanel } from './NextSessionPanel';
+import { PreviousSessionLink, type PreviousSessionSummary } from './PreviousSessionLink';
+import { RescheduleProposalCard } from './RescheduleProposalCard';
+import { SessionHistoryList } from './SessionHistoryList';
+import { UpcomingSessionList } from './UpcomingSessionList';
 
 // 履歴に出すのは、結果画面へ進める実施済みと、生徒・コーチ本人起因のキャンセルのみ
 // （ライセンス無効化・コーチ交代等の運用都合のキャンセルは表示しない。isSelfInitiatedCancel参照）
@@ -63,7 +68,7 @@ function ActionNotice({
   );
 }
 
-interface Props {
+interface LiveSessionHubProps {
   contracts: LiveSessionContractSummary[];
   selectedContract: LiveSessionContractSummary;
   overview: LiveSessionOverview | null;
@@ -100,7 +105,7 @@ export function LiveSessionHub({
   proposedGroups,
   bookingRequests,
   pendingRatings,
-}: Props) {
+}: LiveSessionHubProps) {
   const timezone = useTimezone();
   const router = useRouter();
   const { showToast } = useToast();
@@ -116,16 +121,22 @@ export function LiveSessionHub({
   const refresh = () => startRefresh(() => router.refresh());
 
   const isCurrent = selectedContract.is_current;
-  const historySessions = pastSessions.filter((s) => RESULT_LINKABLE_STATUSES.has(s.status) || isSelfInitiatedCancel(s));
+  const historySessions = pastSessions.filter(
+    (s) => RESULT_LINKABLE_STATUSES.has(s.status) || isSelfInitiatedCancel(s),
+  );
   const [nextSession, ...laterSessions] = isCurrent ? upcomingSessions : [];
 
   // 未予約の回のうち、予約リクエスト・振替候補（届いた候補・自分が提案した候補）の回答待ちになっている分は「調整中」として差し引く
   const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length + proposedGroups.length : 0;
   const unbookedCount = isCurrent && overview ? Math.max(overview.unbooked_count - adjustingCount, 0) : 0;
   // 専属コーチの未選択は、表示中の契約が有効（現在の契約、または開始前の契約）なら案内する
-  const unmatchedSlotCount = selectedContract.is_active && overview ? overview.slots.filter((s) => s.status === 'unmatched').length : 0;
+  const unmatchedSlotCount =
+    selectedContract.is_active && overview ? overview.slots.filter((s) => s.status === 'unmatched').length : 0;
   // 現在の契約の選択が済んでいれば、次の契約（継続用）の選択を促す
-  const nextUnmatched = isCurrent && unmatchedSlotCount === 0 && nextContractMatching && nextContractMatching.unmatchedCount > 0 ? nextContractMatching : null;
+  const nextUnmatched =
+    isCurrent && unmatchedSlotCount === 0 && nextContractMatching && nextContractMatching.unmatchedCount > 0
+      ? nextContractMatching
+      : null;
   const showBookingNotice = unbookedCount > 0 && bookableSlots.length > 0;
   const bookingDialogOpen = isBookingOpen || (isBookingAfterDecline && !isRefreshing && bookableSlots.length > 0);
   const closeBookingDialog = () => {
@@ -166,11 +177,18 @@ export function LiveSessionHub({
 
       {contracts.length > 1 && (
         <div className="mb-5">
-          <LiveContractSelect contracts={contracts} selectedTicketId={selectedContract.ticket_id} onChange={handleContractChange} />
+          <LiveContractSelect
+            contracts={contracts}
+            selectedTicketId={selectedContract.ticket_id}
+            onChange={handleContractChange}
+          />
         </div>
       )}
 
-      <div className={cn('space-y-8 transition-opacity', isRefreshing && 'pointer-events-none opacity-60')} aria-busy={isRefreshing}>
+      <div
+        className={cn('space-y-8 transition-opacity', isRefreshing && 'pointer-events-none opacity-60')}
+        aria-busy={isRefreshing}
+      >
         {hasActions && (
           <div>
             <ShellSectionTitle aside={<CountBadge count={actionCount} />}>対応が必要です</ShellSectionTitle>
@@ -271,7 +289,12 @@ export function LiveSessionHub({
         )}
 
         {overview && (
-          <ContractOverviewCard contract={selectedContract} overview={overview} timezone={timezone} adjustingCount={adjustingCount} />
+          <ContractOverviewCard
+            contract={selectedContract}
+            overview={overview}
+            timezone={timezone}
+            adjustingCount={adjustingCount}
+          />
         )}
 
         {isCurrent && (laterSessions.length > 0 || bookingRequests.length > 0 || proposedGroups.length > 0) && (

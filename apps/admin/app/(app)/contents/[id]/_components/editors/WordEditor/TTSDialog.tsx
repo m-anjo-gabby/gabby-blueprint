@@ -1,24 +1,46 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import {
+  Check,
+  Copy,
+  Loader2,
+  Mic2,
+  PencilLine,
+  Play,
+  PlusCircle,
+  RotateCcw,
+  Save,
+  Sparkles,
+  Volume2,
+  XCircle,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Switch } from '@/components/ui/switch';
-import { Loader2, Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, XCircle, PencilLine, Check, Copy } from 'lucide-react';
-import { PhraseRecord, TTSAdjustmentData, WordAdjustment } from '@gabby/types/word';
-import { usePlayAzureSpeech, TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { useCallback, useEffect, useState } from 'react';
+import { buildSsml } from '@gabby/lib/azure/ssml';
+import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
+import { type PhraseRecord, type TTSAdjustmentData, type WordAdjustment } from '@gabby/types/word';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
-import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
-import { buildSSML } from '@gabby/lib/azure/ssml';
 
 interface TTSDialogProps {
   phrase: PhraseRecord;
@@ -28,8 +50,8 @@ interface TTSDialogProps {
 
 // コントロールエリア初期パラメータ
 const DEFAULT_PARAMS: TTSParameters = {
-  voice: "en-US-JennyNeural",
-  style: "friendly",
+  voice: 'en-US-JennyNeural',
+  style: 'friendly',
   rate: 1.0,
   pitch: 0,
 };
@@ -46,8 +68,8 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
   const [showSaveAlert, setShowSaveAlert] = useState(false); // 保存確認用
   const [copied, setCopied] = useState(false);
 
-  const { speak, generateSSML, isSpeaking, error, setError } = usePlayAzureSpeech();
-  const { save, isSaving } = useSaveAzureSpeech();
+  const { speak, generateSsml, isSpeaking, error, setError } = usePlayAzureSpeech();
+  const { save } = useSaveAzureSpeech();
   const { showToast } = useToast();
 
   // 単語配列の初期化
@@ -69,29 +91,32 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
   const playOriginal = () => {
     if (isSpeaking) return;
     // 調整（adjustments）を一切適用しない、素のテキストでのSSMLを生成
-    const originalSsml = generateSSML(phrase.phrase_en, DEFAULT_PARAMS);
+    const originalSsml = generateSsml(phrase.phrase_en, DEFAULT_PARAMS);
     speak(originalSsml);
   };
 
   // SSML再構築ロジック
-  const rebuildSSML = useCallback((currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
-    return buildSSML(phrase.phrase_en, {
-      settings: currentParams,
-      words: currentAdjs
-    });
-  }, [phrase.phrase_en]);
+  const rebuildSsml = useCallback(
+    (currentParams: TTSParameters, currentAdjs: WordAdjustment[]) => {
+      return buildSsml(phrase.phrase_en, {
+        settings: currentParams,
+        words: currentAdjs,
+      });
+    },
+    [phrase.phrase_en],
+  );
 
   // Autoモード時のみ、設定変更をSSMLに反映
   useEffect(() => {
     if (ssmlMode === 'auto') {
-      const newSsml = rebuildSSML(params, adjustments);
+      const newSsml = rebuildSsml(params, adjustments);
       setSsml(newSsml);
     }
-  }, [params, adjustments, ssmlMode, rebuildSSML]);
+  }, [params, adjustments, ssmlMode, rebuildSsml]);
 
   const updateAdjustment = (id: string, updates: Partial<WordAdjustment>) => {
     if (ssmlMode === 'manual') return; // 手動モード時はガード
-    setAdjustments(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+    setAdjustments((prev) => prev.map((a) => (a.id === id ? { ...a, ...updates } : a)));
   };
 
   // モード切替時のハンドラ
@@ -103,38 +128,39 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
     } else {
       // Auto -> Manual はそのまま移行
       setSsmlMode('manual');
-      showToast(t('toastManualMode'), "info");
+      showToast(t('toastManualMode'), 'info');
     }
   };
 
   // 手動編集を破棄してAutoに戻す
   const confirmReturnToAuto = () => {
     setSsmlMode('auto');
-    const resetSsml = rebuildSSML(params, adjustments);
+    const resetSsml = rebuildSsml(params, adjustments);
     setSsml(resetSsml);
     setShowModeAlert(false);
-    showToast(t('toastAutoMode'), "success");
+    showToast(t('toastAutoMode'), 'success');
   };
 
   const handleReset = () => {
     if (error) setError(null);
     setParams(DEFAULT_PARAMS);
-    setAdjustments(prev => prev.map(a => ({ 
-      ...a, 
-      emphasis: false, 
-      emphasisLevel: 'moderate',
-      breakAfter: false, 
-      breakDuration: 300,
-      ipa: '' 
-    })));
+    setAdjustments((prev) =>
+      prev.map((a) => ({
+        ...a,
+        emphasis: false,
+        emphasisLevel: 'moderate',
+        breakAfter: false,
+        breakDuration: 300,
+        ipa: '',
+      })),
+    );
     setSsmlMode('auto');
-    showToast(t('toastReset'), "info");
+    showToast(t('toastReset'), 'info');
   };
 
   const handleSave = async () => {
     setIsProcessing(true);
     try {
-
       // 保存用のデータ構造を作成
       const adjustmentData: TTSAdjustmentData = {
         settings: {
@@ -149,14 +175,14 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
       // phrase_id, ssml に加え、現在のモードも保存
       const result = await save(phrase.phrase_id, phrase.word_id, ssml, ssmlMode, adjustmentData, phrase.audio_path);
       if (result.success) {
-        showToast(t('toastSaved'), "success");
+        showToast(t('toastSaved'), 'success');
         onUpdate();
         setOpen(false);
       } else {
-        showToast(result.message || t('toastSaveFailed'), "error");
+        showToast(result.message || t('toastSaveFailed'), 'error');
       }
-    } catch (e) {
-      showToast(t('toastError'), "error");
+    } catch {
+      showToast(t('toastError'), 'error');
     } finally {
       setIsProcessing(false);
       setShowSaveAlert(false);
@@ -169,78 +195,37 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
     setTimeout(() => setCopied(false), 2000); // 2秒後にアイコンを戻す
   };
 
-  // --- 初期化・復元ロジック ---
-  const initializeDialog = useCallback(() => {
-    // 1. 基本パラメータのリセット
-    setParams(DEFAULT_PARAMS);
-    setError(null);
-    setCopied(false);
-
-    // 2. モードの同期
-    const mode = phrase.tts_ssml_mode || 'auto';
-    setSsmlMode(mode);
-
-    // 3. SSMLがある場合はそれをセット、なければ空
-    const currentSsml = phrase.tts_ssml || '';
-    setSsml(currentSsml);
-
-    // 4. WordAdjustmentの復元または新規作成
-    if (mode === 'auto' && currentSsml) {
-      const words = phrase.phrase_en.split(' ').map((word, i) => ({
-        id: `word-${i}`,
-        fullText: word,
-        text: word.replace(/[.,!?;:]/g, ''),
-        emphasis: false,
-        emphasisLevel: 'moderate' as const,
-        breakAfter: false,
-        breakDuration: 300,
-        ipa: '',
-      }));
-      setAdjustments(words);
-    } else {
-      // 新規作成時（またはManual時）のデフォルト初期化
-      const words = phrase.phrase_en.split(' ').map((word, i) => ({
-        id: `word-${i}`,
-        fullText: word,
-        text: word.replace(/[.,!?;:]/g, ''),
-        emphasis: false,
-        emphasisLevel: 'moderate' as const,
-        breakAfter: false,
-        breakDuration: 300,
-        ipa: '',
-      }));
-      setAdjustments(words);
-    }
-  }, [phrase]);
-
   /**
    * ダイアログの開閉状態が変更された際の処理
    * 開く瞬間にDBから最新の調整状態（JSON）を各Stateに復元します
    */
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
-    
+
     if (isOpen) {
       // 1. 基本情報の同期
       setSsmlMode(phrase.tts_ssml_mode || 'auto');
       setSsml(phrase.tts_ssml || '');
 
       // 2. 原文から最新の単語リスト（Base）を必ず生成
-      const textToSplit = phrase.phrase_en || "";
-      const currentWordsBase: WordAdjustment[] = textToSplit.split(' ').filter(Boolean).map((word, i) => ({
-        id: `word-${i}`,
-        fullText: word,
-        text: word.replace(/[.,!?;:]/g, ''),
-        emphasis: false,
-        emphasisLevel: 'moderate' as const,
-        breakAfter: false,
-        breakDuration: 300,
-        ipa: '',
-      }));
+      const textToSplit = phrase.phrase_en || '';
+      const currentWordsBase: WordAdjustment[] = textToSplit
+        .split(' ')
+        .filter(Boolean)
+        .map((word, i) => ({
+          id: `word-${i}`,
+          fullText: word,
+          text: word.replace(/[.,!?;:]/g, ''),
+          emphasis: false,
+          emphasisLevel: 'moderate' as const,
+          breakAfter: false,
+          breakDuration: 300,
+          ipa: '',
+        }));
 
       // 3. 調整データの復元
       if (phrase.tts_adjustments) {
-        const data = phrase.tts_adjustments as unknown as TTSAdjustmentData;
+        const data = phrase.tts_adjustments;
 
         // 設定の復元
         if (data.settings) {
@@ -257,7 +242,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
           // 保存された単語データがある場合のみマージ
           const mergedWords = currentWordsBase.map((base, i) => {
             const saved = data.words[i];
-            return (saved && saved.text === base.text) ? { ...base, ...saved } : base;
+            return saved && saved.text === base.text ? { ...base, ...saved } : base;
           });
           setAdjustments(mergedWords);
         } else {
@@ -277,7 +262,6 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>{children}</DialogTrigger>
         <DialogContent className="max-w-5xl p-0 overflow-hidden border-none shadow-2xl focus:outline-none [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button:focus]:ring-0 [&>button:focus]:outline-none">
-          
           {/* フォーカス奪取防止用の隠し要素 */}
           <span className="sr-only" tabIndex={0} />
 
@@ -295,15 +279,20 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
           </DialogHeader>
 
           {/* 原文表示セクション：Manual時は操作不可に */}
-          <div className={`px-8 py-6 bg-brand-50/30 border-b border-brand-100/50 transition-all duration-300 ${ssmlMode === 'manual' ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}>
+          <div
+            className={`px-8 py-6 bg-brand-50/30 border-b border-brand-100/50 transition-all duration-300 ${ssmlMode === 'manual' ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}
+          >
             <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-x-2 gap-y-3">
               {adjustments.map((adj) => (
                 <Popover key={adj.id}>
                   <PopoverTrigger asChild>
-                    <span className={`text-xl font-bold leading-snug tracking-tight cursor-pointer px-1 rounded transition-all border-b-2 
-                      ${adj.emphasis || adj.ipa || adj.breakAfter 
-                        ? 'text-brand bg-brand-100 border-brand-500' 
-                        : 'text-slate-800 border-transparent hover:bg-slate-100'}`}
+                    <span
+                      className={`text-xl font-bold leading-snug tracking-tight cursor-pointer px-1 rounded transition-all border-b-2 
+                      ${
+                        adj.emphasis || adj.ipa || adj.breakAfter
+                          ? 'text-brand bg-brand-100 border-brand-500'
+                          : 'text-slate-800 border-transparent hover:bg-slate-100'
+                      }`}
                     >
                       {adj.fullText}
                     </span>
@@ -312,31 +301,39 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
                     <div className="space-y-5">
                       <div className="flex items-center justify-between border-b pb-2">
                         <span className="text-sm font-black text-slate-700">{adj.text}</span>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-slate-400 hover:text-rose-500" 
-                          onClick={() => updateAdjustment(adj.id, { emphasis: false, breakAfter: false, ipa: '' })}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-slate-400 hover:text-rose-500"
+                          onClick={() => updateAdjustment(adj.id, { emphasis: false, breakAfter: false, ipa: '' })}
+                        >
                           <RotateCcw size={12} />
                         </Button>
                       </div>
-                      
+
                       {/* 強調設定 */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                            <Sparkles size={12} className={adj.emphasis ? "text-amber-500" : ""} /> Emphasis
+                            <Sparkles size={12} className={adj.emphasis ? 'text-amber-500' : ''} /> Emphasis
                           </Label>
-                          <Button 
-                            variant={adj.emphasis ? "default" : "outline"} 
-                            size="sm" className="h-6 px-2 text-[9px]"
+                          <Button
+                            variant={adj.emphasis ? 'default' : 'outline'}
+                            size="sm"
+                            className="h-6 px-2 text-[9px]"
                             onClick={() => updateAdjustment(adj.id, { emphasis: !adj.emphasis })}
                           >
-                            {adj.emphasis ? "ON" : "OFF"}
+                            {adj.emphasis ? 'ON' : 'OFF'}
                           </Button>
                         </div>
                         {adj.emphasis && (
                           <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-md">
                             {(['reduced', 'moderate', 'strong'] as const).map((level) => (
-                              <button key={level} onClick={() => updateAdjustment(adj.id, { emphasisLevel: level })}
-                                className={`text-[9px] py-1 rounded transition-all ${adj.emphasisLevel === level ? 'bg-white shadow-sm font-bold text-brand' : 'text-slate-500 hover:text-slate-700'}`}>
+                              <button
+                                key={level}
+                                onClick={() => updateAdjustment(adj.id, { emphasisLevel: level })}
+                                className={`text-[9px] py-1 rounded transition-all ${adj.emphasisLevel === level ? 'bg-white shadow-sm font-bold text-brand' : 'text-slate-500 hover:text-slate-700'}`}
+                              >
                                 {level}
                               </button>
                             ))}
@@ -348,14 +345,15 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
                       <div className="space-y-2 border-t pt-3">
                         <div className="flex items-center justify-between">
                           <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                            <PlusCircle size={12} className={adj.breakAfter ? "text-brand-500" : ""} /> Pause After
+                            <PlusCircle size={12} className={adj.breakAfter ? 'text-brand-500' : ''} /> Pause After
                           </Label>
-                          <Button 
-                            variant={adj.breakAfter ? "default" : "outline"} 
-                            size="sm" className="h-6 px-2 text-[9px]"
+                          <Button
+                            variant={adj.breakAfter ? 'default' : 'outline'}
+                            size="sm"
+                            className="h-6 px-2 text-[9px]"
                             onClick={() => updateAdjustment(adj.id, { breakAfter: !adj.breakAfter })}
                           >
-                            {adj.breakAfter ? "ON" : "OFF"}
+                            {adj.breakAfter ? 'ON' : 'OFF'}
                           </Button>
                         </div>
                         {adj.breakAfter && (
@@ -364,7 +362,13 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
                               <span>Duration:</span>
                               <span>{adj.breakDuration}ms</span>
                             </div>
-                            <Slider value={[adj.breakDuration]} min={50} max={1000} step={50} onValueChange={([v]) => updateAdjustment(adj.id, { breakDuration: v })} />
+                            <Slider
+                              value={[adj.breakDuration]}
+                              min={50}
+                              max={1000}
+                              step={50}
+                              onValueChange={([v]) => updateAdjustment(adj.id, { breakDuration: v })}
+                            />
                           </div>
                         )}
                       </div>
@@ -374,7 +378,12 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
                         <Label className="text-[9px] font-bold text-slate-400 uppercase flex items-center gap-1 italic">
                           <Mic2 size={10} /> IPA Pronunciation
                         </Label>
-                        <Input value={adj.ipa} onChange={(e) => updateAdjustment(adj.id, { ipa: e.target.value })} className="h-7 text-xs font-mono bg-slate-50" placeholder="ex: æpl" />
+                        <Input
+                          value={adj.ipa}
+                          onChange={(e) => updateAdjustment(adj.id, { ipa: e.target.value })}
+                          className="h-7 text-xs font-mono bg-slate-50"
+                          placeholder="ex: æpl"
+                        />
                       </div>
                     </div>
                   </PopoverContent>
@@ -385,14 +394,16 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 bg-white">
             {/* 左：コントロールパネル */}
-            <div className={`p-8 space-y-8 border-r border-slate-100 transition-opacity ${ssmlMode === 'manual' ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+            <div
+              className={`p-8 space-y-8 border-r border-slate-100 transition-opacity ${ssmlMode === 'manual' ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
+            >
               <div className="space-y-4">
                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Voice Settings</Label>
-                
+
                 {/* Voice Select */}
-                <Select 
-                  value={params.voice} 
-                  onValueChange={(v) => setParams(p => ({...p, voice: v as AzureVoice}))}
+                <Select
+                  value={params.voice}
+                  onValueChange={(v) => setParams((p) => ({ ...p, voice: v as AzureVoice }))}
                 >
                   <SelectTrigger className="w-full bg-slate-50 border-slate-200 font-medium">
                     <SelectValue placeholder="Select Voice" />
@@ -407,9 +418,9 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
                 </Select>
 
                 {/* Style Select */}
-                <Select 
-                  value={params.style} 
-                  onValueChange={(v) => setParams(p => ({...p, style: v as AzureStyle}))}
+                <Select
+                  value={params.style}
+                  onValueChange={(v) => setParams((p) => ({ ...p, style: v as AzureStyle }))}
                 >
                   <SelectTrigger className="w-full bg-slate-50 border-slate-200 font-medium">
                     <SelectValue placeholder="Select Style" />
@@ -426,12 +437,28 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
 
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Speed: {params.rate}x</Label>
-                  <Slider value={[params.rate]} min={0.5} max={1.5} step={0.05} onValueChange={([v]) => setParams(p => ({...p, rate: v}))} />
+                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Speed: {params.rate}x
+                  </Label>
+                  <Slider
+                    value={[params.rate]}
+                    min={0.5}
+                    max={1.5}
+                    step={0.05}
+                    onValueChange={([v]) => setParams((p) => ({ ...p, rate: v }))}
+                  />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pitch: {params.pitch}%</Label>
-                  <Slider value={[params.pitch]} min={-20} max={20} step={1} onValueChange={([v]) => setParams(p => ({...p, pitch: v}))} />
+                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Pitch: {params.pitch}%
+                  </Label>
+                  <Slider
+                    value={[params.pitch]}
+                    min={-20}
+                    max={20}
+                    step={1}
+                    onValueChange={([v]) => setParams((p) => ({ ...p, pitch: v }))}
+                  />
                 </div>
               </div>
             </div>
@@ -442,13 +469,18 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
                   SSML Code <Sparkles size={10} className="text-brand-500" />
                 </Label>
-                <Button variant="ghost" size="sm" onClick={handleReset} className="h-6 text-[10px] gap-1 text-slate-400 hover:text-rose-500 transition-colors">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleReset}
+                  className="h-6 text-[10px] gap-1 text-slate-400 hover:text-rose-500 transition-colors"
+                >
                   <RotateCcw size={10} /> Reset
                 </Button>
               </div>
-              
+
               <div className="flex flex-col flex-grow border border-slate-200 rounded-xl overflow-hidden shadow-inner bg-slate-900">
-                <Textarea 
+                <Textarea
                   value={ssml}
                   readOnly={ssmlMode === 'auto'}
                   onChange={(e) => {
@@ -460,21 +492,23 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
                   placeholder="Enter SSML code here..."
                 />
 
-                <div className={`flex items-center justify-between px-3 py-2 border-t transition-colors ${ssmlMode === 'manual' ? 'bg-rose-950/30 border-rose-900/30' : 'bg-slate-800 border-slate-700'}`}>
+                <div
+                  className={`flex items-center justify-between px-3 py-2 border-t transition-colors ${ssmlMode === 'manual' ? 'bg-rose-950/30 border-rose-900/30' : 'bg-slate-800 border-slate-700'}`}
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 bg-black/20 p-1 rounded-md">
-                      <button 
+                      <button
                         onClick={() => ssmlMode === 'manual' && handleModeToggle(false)}
                         className={`text-[8px] font-black px-2 py-0.5 rounded transition-all ${ssmlMode === 'auto' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-400'}`}
                       >
                         AUTO
                       </button>
-                      <Switch 
-                        checked={ssmlMode === 'manual'} 
+                      <Switch
+                        checked={ssmlMode === 'manual'}
                         onCheckedChange={handleModeToggle}
                         className="data-[state=checked]:bg-rose-500 scale-75"
                       />
-                      <button 
+                      <button
                         onClick={() => ssmlMode === 'auto' && handleModeToggle(true)}
                         className={`text-[8px] font-black px-2 py-0.5 rounded transition-all ${ssmlMode === 'manual' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-400'}`}
                       >
@@ -489,13 +523,21 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-7 px-3 text-[9px] font-bold text-slate-400 hover:text-white hover:bg-slate-700 gap-1.5 transition-all"
                       onClick={handleCopy}
                     >
-                      {copied ? <><Check size={10} className="text-emerald-400" /> COPIED!</> : <><Copy size={10} /> COPY SSML</>}
+                      {copied ? (
+                        <>
+                          <Check size={10} className="text-emerald-400" /> COPIED!
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={10} /> COPY SSML
+                        </>
+                      )}
                     </Button>
                     <div className="text-[8px] font-mono text-slate-500 px-2 uppercase tracking-tighter border-l border-slate-700 ml-1">
                       {ssml.length} chars
@@ -518,8 +560,8 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
 
           {/* フッター */}
           <DialogFooter className="p-4 bg-white border-t border-slate-100 flex items-center justify-end gap-3 sm:justify-end">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className="px-4 text-slate-400 font-bold h-12 rounded-full gap-2 hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
               onClick={playOriginal}
               disabled={isSpeaking || isProcessing}
@@ -528,8 +570,8 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
               ORIGINAL
             </Button>
 
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="px-8 border-2 border-brand-100 text-brand font-bold h-12 rounded-full gap-2 hover:bg-brand-50 transition-all"
               onClick={() => {
                 if (isSpeaking) return;
@@ -541,7 +583,7 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
               LISTEN
             </Button>
 
-            <Button 
+            <Button
               className={`px-12 font-black h-12 rounded-full shadow-lg gap-2 text-white transition-all
                 ${ssmlMode === 'manual' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-brand hover:bg-brand-strong'}`}
               onClick={() => setShowSaveAlert(true)}
@@ -578,16 +620,16 @@ export function TTSDialog({ phrase, onUpdate, children }: TTSDialogProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Save Audio?</AlertDialogTitle>
             <AlertDialogDescription>
-              {ssmlMode === 'manual' 
-                ? "The audio will be generated and saved using your manually edited SSML code." 
-                : "The audio will be generated and saved using the current parameter settings."}
+              {ssmlMode === 'manual'
+                ? 'The audio will be generated and saved using your manually edited SSML code.'
+                : 'The audio will be generated and saved using the current parameter settings.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setShowSaveAlert(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleSave} 
-              className={ssmlMode === 'manual' ? "bg-rose-600 hover:bg-rose-700" : "bg-brand hover:bg-brand-strong"}
+            <AlertDialogAction
+              onClick={handleSave}
+              className={ssmlMode === 'manual' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-brand hover:bg-brand-strong'}
             >
               Confirm Save
             </AlertDialogAction>

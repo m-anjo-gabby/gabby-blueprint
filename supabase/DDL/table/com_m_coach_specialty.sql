@@ -20,9 +20,9 @@ CREATE TABLE public.com_m_coach_specialty (
     name_en                  text         NOT NULL,
     name_ja                  text         NOT NULL,
     sort_no                  smallint     NOT NULL DEFAULT 1,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    is_active                boolean      NOT NULL DEFAULT true,
     CONSTRAINT chk_coach_specialty_kind CHECK (kind = ANY (ARRAY['field'::text, 'skill'::text]))
 );
 
@@ -32,14 +32,16 @@ COMMENT ON COLUMN public.com_m_coach_specialty.kind IS '種類 field:分野（�
 COMMENT ON COLUMN public.com_m_coach_specialty.name_en IS '名称（英語表記、coach/adminアプリ用）';
 COMMENT ON COLUMN public.com_m_coach_specialty.name_ja IS '名称（日本語表記、student/adminアプリ用）';
 COMMENT ON COLUMN public.com_m_coach_specialty.sort_no IS '表示順';
-COMMENT ON COLUMN public.com_m_coach_specialty.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_coach_specialty.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_coach_specialty.update_date IS '更新日時';
+COMMENT ON COLUMN public.com_m_coach_specialty.is_active IS '使用中（専門分野の設定で選択肢に出す）';
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_coach_specialty FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_coach_specialty ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can view coach specialties" ON public.com_m_coach_specialty FOR SELECT TO authenticated
 USING (
-    delete_flg = '0'::text
+    true
 );
 -- @end-schema

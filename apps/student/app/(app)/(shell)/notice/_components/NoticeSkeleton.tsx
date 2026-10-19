@@ -1,6 +1,6 @@
+import { RouteSkeleton } from '@/components/shell/RouteLoading';
 import { CountBadge, ShellPageHeader } from '@/components/shell/ShellPage';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RouteSkeleton } from '@/components/shell/RouteLoading';
 
 const SKELETON_COUNT = 4;
 

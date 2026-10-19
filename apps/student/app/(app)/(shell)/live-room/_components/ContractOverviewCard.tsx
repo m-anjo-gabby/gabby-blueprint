@@ -1,16 +1,21 @@
 'use client';
 
-import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import { convertWeeklyTimeZone, formatDateTimeByZone } from '@gabby/lib/date/date';
-import { DayOfWeek } from '@gabby/types/coachAvailability';
-import { LiveSessionContractSummary, LiveSessionOverview, SlotStatusItem } from '@gabby/types/matching';
-import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
+import { type LiveSessionContractSummary, type LiveSessionOverview, type SlotStatusItem } from '@gabby/types/matching';
 import { ShellSectionTitle } from '@/components/shell/ShellPage';
+import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import { SessionBreakdown } from './SessionBreakdown';
 
 function formatContractDate(iso: string, timezone: string): string {
-  return new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: timezone }).format(new Date(iso));
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    timeZone: timezone,
+  }).format(new Date(iso));
 }
 
 /** コマの行の操作（マッチング画面へ。承認待ちの申請の確認・取り下げ、未選択のコマのコーチ選び） */
@@ -43,7 +48,7 @@ function SlotRow({
       ? convertWeeklyTimeZone(
           { day_of_week: slot.day_of_week, start_time: slot.start_time, end_time: slot.end_time },
           slot.schedule_timezone || 'Asia/Tokyo',
-          timezone
+          timezone,
         )
       : null;
   const scheduleLabel = schedule
@@ -75,7 +80,7 @@ function SlotRow({
   );
 }
 
-interface Props {
+interface ContractOverviewCardProps {
   contract: LiveSessionContractSummary;
   overview: LiveSessionOverview;
   timezone: string;
@@ -84,7 +89,7 @@ interface Props {
 }
 
 /** 契約の状況（プラン名・期間・週の回数、回数の内訳バーと、コマごとの担当コーチ・曜日時刻） */
-export function ContractOverviewCard({ contract, overview, timezone, adjustingCount }: Props) {
+export function ContractOverviewCard({ contract, overview, timezone, adjustingCount }: ContractOverviewCardProps) {
   return (
     <div>
       <ShellSectionTitle>{contract.is_current ? '契約の状況' : '契約の実績'}</ShellSectionTitle>
@@ -92,7 +97,8 @@ export function ContractOverviewCard({ contract, overview, timezone, adjustingCo
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line pb-4">
           <p className="min-w-0 text-base font-bold text-ink">{contract.plan_name}</p>
           <p className="text-xs text-ink-muted tabular-nums">
-            {formatContractDate(contract.start_date, timezone)}〜{formatContractDate(contract.end_date, timezone)}・週{overview.weekly_frequency}回
+            {formatContractDate(contract.start_date, timezone)}〜{formatContractDate(contract.end_date, timezone)}・週
+            {overview.weekly_frequency}回
           </p>
         </div>
 
@@ -102,7 +108,12 @@ export function ContractOverviewCard({ contract, overview, timezone, adjustingCo
           <span className="text-sm text-ink-muted">/ {overview.total_sessions}回</span>
         </p>
 
-        <SessionBreakdown overview={overview} isCurrent={contract.is_current} adjustingCount={adjustingCount} className="mt-4" />
+        <SessionBreakdown
+          overview={overview}
+          isCurrent={contract.is_current}
+          adjustingCount={adjustingCount}
+          className="mt-4"
+        />
 
         {/* 有効な契約（現在の契約・開始前の次の契約）は、コマごとの担当と、承認待ち・未選択のコマのマッチング画面への導線を出す */}
         {contract.is_active && overview.slots.length > 0 && (

@@ -10,7 +10,7 @@
 CREATE TABLE public.self_t_sprint_summary (
     summary_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE RESTRICT,
     training_date            date         NOT NULL DEFAULT CURRENT_DATE,
     question_count           integer      NOT NULL DEFAULT 1,
     assessment_count         integer      NOT NULL DEFAULT 0,
@@ -34,6 +34,8 @@ COMMENT ON COLUMN public.self_t_sprint_summary.mastery_count IS 'その日に学
 CREATE INDEX idx_self_t_sprint_summary_content_id ON public.self_t_sprint_summary (content_id);
 CREATE INDEX idx_sprint_daily_summary_perf ON public.self_t_sprint_summary (user_id, training_date DESC);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.self_t_sprint_summary FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.self_t_sprint_summary ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coaches can view their assigned students' sprint summaries" ON public.self_t_sprint_summary FOR SELECT TO authenticated
@@ -41,13 +43,6 @@ USING (
     (EXISTS ( SELECT 1
        FROM public.com_m_coach_student_relationship r
       WHERE r.student_id = self_t_sprint_summary.user_id AND r.coach_id = auth.uid()))
-);
-
-CREATE POLICY "Managers can view client's sprint summaries" ON public.self_t_sprint_summary FOR SELECT TO authenticated
-USING (
-    (EXISTS ( SELECT 1
-       FROM public.com_m_user u
-      WHERE u.id = self_t_sprint_summary.user_id AND u.client_id = public.get_jwt_client_id()))
 );
 
 CREATE POLICY "Users can manage their own sprint summaries" ON public.self_t_sprint_summary FOR ALL TO authenticated

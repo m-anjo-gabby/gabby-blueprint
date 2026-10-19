@@ -1,5 +1,5 @@
 ---------------------------------------------
--- record_mail_event: メールの到達状況の出来事を記録する (2026-10-06 追加)
+-- record_mail_event: メールの到達状況の出来事を記録する
 ---------------------------------------------
 -- 前提: table/com_t_mail_event.sql, table/com_t_mail_outbox.sql, table/com_t_user_mail_setting.sql の作成が完了していること。
 -- 呼び出し元: admin の /api/webhooks/resend（Resend の Webhook。署名を確かめたうえで service_role で呼ぶ）

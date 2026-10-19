@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUserStore } from '../stores/useUserStore';
+import { useMemo, useTransition } from 'react';
 import { toIsoMonthInZone } from '../date/date';
+import { useUserStore } from '../stores/useUserStore';
 
 export interface UseMonthNavigatorOptions {
   /** 表示中の月（"YYYY-MM"形式） */
@@ -27,7 +27,7 @@ export function useMonthNavigator({ targetMonth, basePath, navigate = 'push' }: 
 
   const currentMonthStr = useMemo(() => toIsoMonthInZone(new Date(), timezone), [timezone]);
 
-  // 💡 router遷移をuseTransitionでラップし、月移動中のペンディング状態をUI側で表示できるようにする
+  // router遷移をuseTransitionでラップし、月移動中のペンディング状態をUI側で表示できるようにする
   const goToMonth = (targetMonthStr: string) => {
     const url = `${basePath}?month=${targetMonthStr}`;
 

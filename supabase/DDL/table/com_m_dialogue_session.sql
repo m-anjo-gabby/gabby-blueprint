@@ -10,14 +10,13 @@
 -- @schema public.com_m_dialogue_session
 CREATE TABLE public.com_m_dialogue_session (
     dialogue_session_id      uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id),
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
     session_no               smallint     NOT NULL,
     coach_slides_title       text,
     coach_slides_link        text,
     student_slides_title     text,
     student_slides_link      text,
     admin_notes              text,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT com_m_dialogue_session_content_id_session_no_key UNIQUE (content_id, session_no)
@@ -32,16 +31,17 @@ COMMENT ON COLUMN public.com_m_dialogue_session.coach_slides_link IS 'コーチ�
 COMMENT ON COLUMN public.com_m_dialogue_session.student_slides_title IS '生徒用スライドの表示タイトル';
 COMMENT ON COLUMN public.com_m_dialogue_session.student_slides_link IS '生徒用スライドのURL（Google Slides）。汎用教材ではセット内の全セッションで同一リンクを想定、コーパス教材ではコーチ用と同一リンクとなる場合がある';
 COMMENT ON COLUMN public.com_m_dialogue_session.admin_notes IS '教材制作・運用メモ（管理者向け。生徒別の学習進捗メモはcom_t_dialogue_session_progress.notesで別管理）';
-COMMENT ON COLUMN public.com_m_dialogue_session.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_dialogue_session.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_dialogue_session.update_date IS '更新日時';
 
-CREATE INDEX idx_dialogue_session_content ON public.com_m_dialogue_session (content_id, session_no) WHERE delete_flg = '0'::text;
+CREATE INDEX idx_dialogue_session_content ON public.com_m_dialogue_session (content_id, session_no);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_dialogue_session FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_dialogue_session ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow select access for authenticated users" ON public.com_m_dialogue_session FOR SELECT TO authenticated
 USING (
-    delete_flg = '0'::text
+    true
 );
 -- @end-schema

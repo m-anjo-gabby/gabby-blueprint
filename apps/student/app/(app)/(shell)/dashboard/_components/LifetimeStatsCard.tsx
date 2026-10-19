@@ -1,5 +1,5 @@
-import { Award, CalendarDays, type LucideIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { Award, CalendarDays, type LucideIcon } from 'lucide-react';
 import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
 import type { TrainingLifetimeStats } from '@/actions/performanceAction';
 import { cn } from '@/lib/utils';
@@ -117,7 +117,15 @@ const STEP_STATE_LABEL: Record<MilestoneStep['state'], string> = {
  * 節目の段階表示（点を線でつなぎ、到達済みの節目を塗る）。高さは点の行（h-4）＋間隔＋数値の行（h-4）で固定。
  * 次の節目へ向かう区間は、直近の節目からの進み具合の分だけ線を伸ばす。
  */
-function MilestoneLadder({ steps, progressPercent, unit }: { steps: MilestoneStep[]; progressPercent: number; unit: string }) {
+function MilestoneLadder({
+  steps,
+  progressPercent,
+  unit,
+}: {
+  steps: MilestoneStep[];
+  progressPercent: number;
+  unit: string;
+}) {
   const count = steps.length;
   const nextPosition = steps.findIndex((step) => step.state === 'next');
   // 線は両端の点の中心から中心まで。最初の点より手前（最初の節目に未到達）は伸ばさない
@@ -143,7 +151,7 @@ function MilestoneLadder({ steps, progressPercent, unit }: { steps: MilestoneSte
               aria-hidden
               className={cn(
                 'text-[11px] leading-4 tabular-nums',
-                step.state === 'next' ? 'font-bold text-brand-strong' : 'text-ink-muted'
+                step.state === 'next' ? 'font-bold text-brand-strong' : 'text-ink-muted',
               )}
             >
               {step.value.toLocaleString()}

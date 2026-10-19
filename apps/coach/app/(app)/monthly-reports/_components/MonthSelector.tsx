@@ -1,10 +1,10 @@
 'use client';
 
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { MonthPickerPopover } from './MonthPickerPopover';
 
-/** Adds/subtracts whole months to a "YYYY-MM" string, returning a new "YYYY-MM" string */
+/** "YYYY-MM" の文字列に月を足し引きし、新しい "YYYY-MM" の文字列を返す */
 function shiftMonth(yearMonth: string, delta: number): string {
   const [year, month] = yearMonth.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1 + delta, 1));

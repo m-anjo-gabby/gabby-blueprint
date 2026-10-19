@@ -22,7 +22,6 @@ CREATE TABLE public.com_m_ai_knowledge_base (
     metadata                 jsonb        NOT NULL DEFAULT '{}'::jsonb,
     embedding                public.vector(768),
     embedding_model          text,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     created_by               uuid,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now()
@@ -36,13 +35,14 @@ COMMENT ON COLUMN public.com_m_ai_knowledge_base.body IS '本文（埋め込み�
 COMMENT ON COLUMN public.com_m_ai_knowledge_base.metadata IS '付加情報（JSON。source_typeごとに異なる項目を許容）';
 COMMENT ON COLUMN public.com_m_ai_knowledge_base.embedding IS 'Geminiで生成したベクトル（次元768）';
 COMMENT ON COLUMN public.com_m_ai_knowledge_base.embedding_model IS '埋め込み生成に使用したモデルID';
-COMMENT ON COLUMN public.com_m_ai_knowledge_base.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_ai_knowledge_base.created_by IS '作成者ID';
 COMMENT ON COLUMN public.com_m_ai_knowledge_base.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_ai_knowledge_base.update_date IS '更新日時';
 
 CREATE INDEX idx_com_m_ai_knowledge_base_embedding ON public.com_m_ai_knowledge_base USING hnsw (embedding public.vector_cosine_ops);
-CREATE INDEX idx_com_m_ai_knowledge_base_source_type ON public.com_m_ai_knowledge_base (source_type) WHERE delete_flg = '0'::text;
+CREATE INDEX idx_com_m_ai_knowledge_base_source_type ON public.com_m_ai_knowledge_base (source_type);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_ai_knowledge_base FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_ai_knowledge_base ENABLE ROW LEVEL SECURITY;
 

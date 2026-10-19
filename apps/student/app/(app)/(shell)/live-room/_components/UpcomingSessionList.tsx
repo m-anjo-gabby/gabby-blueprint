@@ -1,11 +1,11 @@
 'use client';
 
 import { Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { CoachAvatar } from '@/components/session/CoachAvatar';
-import { formatSessionSlot } from '@/lib/sessionFormat';
 import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
-import { MyBookingRequestItem, MyRescheduleProposalGroup, SessionListItem } from '@gabby/types/session';
+import { type MyBookingRequestItem, type MyRescheduleProposalGroup, type SessionListItem } from '@gabby/types/session';
+import { CoachAvatar } from '@/components/session/CoachAvatar';
+import { Button } from '@/components/ui/button';
+import { formatSessionSlot } from '@/lib/sessionFormat';
 
 const PAGE_SIZE = 5;
 
@@ -14,7 +14,7 @@ type UpcomingItem =
   | { kind: 'request'; startIso: string; request: MyBookingRequestItem }
   | { kind: 'proposal'; startIso: string; group: MyRescheduleProposalGroup };
 
-interface Props {
+interface UpcomingSessionListProps {
   sessions: SessionListItem[];
   requests: MyBookingRequestItem[];
   /** 自分がキャンセル時に提案し、コーチの回答待ちの振替候補（キャンセル単位） */
@@ -29,11 +29,23 @@ interface Props {
  * 今後の予定。確定済みのセッションと、コーチの承認待ちの予約リクエスト・振替候補を日時順に並べる。
  * 振替候補は取り下げられない（コーチが選ぶか、回答期限で無効になる）ため操作を出さない。
  */
-export function UpcomingSessionList({ sessions, requests, proposals, timezone, withdrawingRequestId, onCancelSession, onWithdrawRequest }: Props) {
+export function UpcomingSessionList({
+  sessions,
+  requests,
+  proposals,
+  timezone,
+  withdrawingRequestId,
+  onCancelSession,
+  onWithdrawRequest,
+}: UpcomingSessionListProps) {
   const items: UpcomingItem[] = [
     ...sessions.map((session) => ({ kind: 'session' as const, startIso: session.start_datetime, session })),
     ...requests.map((request) => ({ kind: 'request' as const, startIso: request.requested_start_datetime, request })),
-    ...proposals.map((group) => ({ kind: 'proposal' as const, startIso: group.candidates[0]?.proposed_start_datetime ?? group.insert_date, group })),
+    ...proposals.map((group) => ({
+      kind: 'proposal' as const,
+      startIso: group.candidates[0]?.proposed_start_datetime ?? group.insert_date,
+      group,
+    })),
   ].sort((a, b) => a.startIso.localeCompare(b.startIso));
   const reveal = useIncrementalReveal(items, PAGE_SIZE);
 
@@ -45,7 +57,11 @@ export function UpcomingSessionList({ sessions, requests, proposals, timezone, w
         {reveal.visibleItems.map((item) => {
           if (item.kind === 'proposal') {
             const { group } = item;
-            const original = formatSessionSlot(group.original_session_start_datetime, group.original_session_end_datetime, timezone);
+            const original = formatSessionSlot(
+              group.original_session_start_datetime,
+              group.original_session_end_datetime,
+              timezone,
+            );
             return (
               <li key={`proposal-${group.session_id}`} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-dashed border-line text-ink-subtle">
@@ -54,7 +70,11 @@ export function UpcomingSessionList({ sessions, requests, proposals, timezone, w
                 <div className="min-w-0 flex-1">
                   <ul className="space-y-0.5 font-semibold text-ink-soft tabular-nums">
                     {group.candidates.map((candidate) => {
-                      const slot = formatSessionSlot(candidate.proposed_start_datetime, candidate.proposed_end_datetime, timezone);
+                      const slot = formatSessionSlot(
+                        candidate.proposed_start_datetime,
+                        candidate.proposed_end_datetime,
+                        timezone,
+                      );
                       return (
                         <li key={candidate.proposal_id} className="flex flex-wrap items-baseline gap-x-2">
                           <span className="text-sm">{slot.date}</span>
@@ -64,7 +84,9 @@ export function UpcomingSessionList({ sessions, requests, proposals, timezone, w
                     })}
                   </ul>
                   <p className="mt-0.5 text-xs text-ink-muted">
-                    <span className="mr-1.5 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand-strong">振替の候補・回答待ち</span>
+                    <span className="mr-1.5 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand-strong">
+                      振替の候補・回答待ち
+                    </span>
                     {group.coach_name} コーチ（元の予定：{original.date}）
                   </p>
                 </div>
@@ -86,7 +108,9 @@ export function UpcomingSessionList({ sessions, requests, proposals, timezone, w
                     <span className="text-[13px]">{slot.time}</span>
                   </p>
                   <p className="mt-0.5 truncate text-xs text-ink-muted">
-                    <span className="mr-1.5 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand-strong">承認待ち</span>
+                    <span className="mr-1.5 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand-strong">
+                      承認待ち
+                    </span>
                     {request.coach_name} コーチ
                   </p>
                 </div>
@@ -116,7 +140,13 @@ export function UpcomingSessionList({ sessions, requests, proposals, timezone, w
                 </p>
                 <p className="mt-0.5 truncate text-xs text-ink-muted">{session.counterpart_name} コーチ</p>
               </div>
-              <Button type="button" size="sm" variant="ghost" className="shrink-0 text-ink-muted" onClick={() => onCancelSession(session)}>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="shrink-0 text-ink-muted"
+                onClick={() => onCancelSession(session)}
+              >
                 キャンセル
               </Button>
             </li>

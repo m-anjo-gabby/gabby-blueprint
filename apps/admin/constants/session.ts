@@ -1,6 +1,6 @@
 import type { useTranslations } from 'next-intl';
-import { SessionStatus, CompletionResult, CancelCategory } from '@gabby/types/session';
-import { buildSessionStatusBadge, SessionStatusBadgeLabels } from '@gabby/lib/session/sessionStatusBadge';
+import { buildSessionStatusBadge, type SessionStatusBadgeLabels } from '@gabby/lib/session/sessionStatusBadge';
+import { type CancelCategory, type CompletionResult, type SessionStatus } from '@gabby/types/session';
 
 const SLATE_BADGE = { className: 'bg-slate-100 text-slate-500 border-slate-200' };
 
@@ -18,12 +18,15 @@ export function getAdminSessionStatusBadge(
     completion_result?: CompletionResult | null;
     cancel_category?: CancelCategory | null;
   },
-  t: StatusT
+  t: StatusT,
 ): { label: string; className: string } {
   const labels: SessionStatusBadgeLabels = {
     scheduled: { label: t('scheduled'), className: 'bg-brand-50 text-brand-strong border-brand-100' },
     completedNormal: { label: t('completedNormal'), className: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-    completedEarlyEnded: { label: t('completedEarlyEnded'), className: 'bg-orange-50 text-orange-700 border-orange-100' },
+    completedEarlyEnded: {
+      label: t('completedEarlyEnded'),
+      className: 'bg-orange-50 text-orange-700 border-orange-100',
+    },
     completedNoShow: { label: t('completedNoShow'), className: 'bg-amber-50 text-amber-700 border-amber-100' },
     cancelledByStudent: { label: t('cancelledByStudent'), className: 'bg-rose-50 text-rose-700 border-rose-100' },
     cancelledByCoach: { label: t('cancelledByCoach'), className: 'bg-rose-50 text-rose-700 border-rose-100' },

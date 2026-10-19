@@ -23,7 +23,6 @@ CREATE TABLE public.com_m_coach_availability (
     day_of_week              smallint     NOT NULL,
     start_time               time without time zone NOT NULL,
     end_time                 time without time zone NOT NULL,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT chk_coach_availability_day CHECK (day_of_week >= 0 AND day_of_week <= 6),
@@ -36,19 +35,19 @@ COMMENT ON COLUMN public.com_m_coach_availability.coach_id IS 'コーチのユ�
 COMMENT ON COLUMN public.com_m_coach_availability.day_of_week IS '曜日 0:日 1:月 2:火 3:水 4:木 5:金 6:土（UTC基準）';
 COMMENT ON COLUMN public.com_m_coach_availability.start_time IS '対応可能開始時刻（UTC）';
 COMMENT ON COLUMN public.com_m_coach_availability.end_time IS '対応可能終了時刻（UTC。日の終わりは24:00:00）';
-COMMENT ON COLUMN public.com_m_coach_availability.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_coach_availability.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_coach_availability.update_date IS '更新日時';
 
-CREATE INDEX idx_coach_availability_coach ON public.com_m_coach_availability (coach_id, delete_flg);
+CREATE INDEX idx_coach_availability_coach ON public.com_m_coach_availability (coach_id);
 
-CREATE TRIGGER on_coach_availability_change_confirm AFTER INSERT OR UPDATE ON public.com_m_coach_availability FOR EACH ROW EXECUTE FUNCTION public.trg_coach_availability_confirmed();
+CREATE TRIGGER on_coach_availability_change_confirm AFTER INSERT OR DELETE OR UPDATE ON public.com_m_coach_availability FOR EACH ROW EXECUTE FUNCTION public.trg_coach_availability_confirmed();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_coach_availability FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_coach_availability ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can view active coach availability" ON public.com_m_coach_availability FOR SELECT TO authenticated
 USING (
-    delete_flg = '0'::text OR coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    true
 );
 
 CREATE POLICY "Coaches can manage their own availability" ON public.com_m_coach_availability FOR ALL TO authenticated

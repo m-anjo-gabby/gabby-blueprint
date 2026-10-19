@@ -1,5 +1,5 @@
 ---------------------------------------------
--- アドミンによるコーチのマッチング休止の設定RPC (2026-10-11 追加)
+-- アドミンによるコーチのマッチング休止の設定RPC
 -- 前提: table/com_m_coach_matching_suspension.sql
 ---------------------------------------------
 -- admin のユーザー管理 → コーチの「マッチング」ダイアログで使う。
@@ -17,7 +17,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-    IF COALESCE(public.get_jwt_user_type(), '') <> '0' THEN
+    IF NOT public.is_system_admin() THEN
         RAISE EXCEPTION 'NOT_AUTHORIZED: only admins can suspend coach matching';
     END IF;
 

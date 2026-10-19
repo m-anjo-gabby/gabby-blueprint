@@ -9,7 +9,7 @@
 -- @schema public.com_m_coach_specialty_assignment
 CREATE TABLE public.com_m_coach_specialty_assignment (
     coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    specialty_code           text         NOT NULL REFERENCES public.com_m_coach_specialty(specialty_code),
+    specialty_code           text         NOT NULL REFERENCES public.com_m_coach_specialty(specialty_code) ON DELETE RESTRICT,
     created_by               uuid         REFERENCES public.com_m_user(id) ON DELETE SET NULL,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT com_m_coach_specialty_assignment_pkey PRIMARY KEY (coach_id, specialty_code)

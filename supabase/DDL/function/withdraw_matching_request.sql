@@ -1,16 +1,16 @@
 ---------------------------------------------
--- 生徒によるマッチング申請の取り下げRPC (2026-10-09 追加)
+-- 生徒によるマッチング申請の取り下げRPC
 -- 前提: table/com_t_matching_request.sql, function/fn_assert_actor_or_admin.sql, function/fn_notify.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】
--- 従来は生徒が RLS のUPDATE（status 1→4）で直接取り消していたが、宛先のコーチに知らせる手段が無かった。
--- 取り下げを本関数に一本化し、承認待ちであることを確かめて取り下げ（status=4）にしたうえで、
+-- 宛先のコーチに知らせるため、取り下げは本関数に一本化する（生徒が RLS で直接更新しない）。
+-- 承認待ちであることを確かめて取り下げ（status=4）にしたうえで、
 -- コーチへアプリ内通知（MATCHING_WITHDRAWN）を送る。メールは送らない（通知メールの種別
 -- enqueue_notification_mail / NOTIFICATION_MAIL_TYPES に含めない）。
 -- 取り下げた枠は未マッチングに戻り、生徒は同じ枠を別のコーチ・時間で申請し直せる
 -- （uq_matching_request_active_slot は承認待ち・承認済みのみが対象）。
 --
--- 【回答期限 (2026-10-09追加)】
+-- 【回答期限】
 -- 回答期限（expires_at。申請から24時間）を過ぎた申請は EXPIRED で拒否する（期限切れの処理は expire_matching_requests.sql）。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.withdraw_matching_request(p_request_id uuid)

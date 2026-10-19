@@ -47,10 +47,8 @@ AS $$
 DECLARE
     _client_id UUID;
 BEGIN
-    _client_id := public.get_jwt_client_id();
-    IF _client_id IS NULL THEN
-        RAISE EXCEPTION 'Client ID not found in JWT.';
-    END IF;
+    -- モニターのロールを持つ利用者だけが、自分のクライアントの受講生を参照できる
+    _client_id := private.get_monitor_client_id();
 
     RETURN QUERY
     -- =============================================================
@@ -98,7 +96,7 @@ BEGIN
 END;
 $$;
 
--- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+-- 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
 ALTER FUNCTION public.get_monitor_user_list(DATE, DATE, BOOLEAN) OWNER TO postgres;
 REVOKE EXECUTE ON FUNCTION public.get_monitor_user_list(DATE, DATE, BOOLEAN) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.get_monitor_user_list(DATE, DATE, BOOLEAN) TO authenticated;

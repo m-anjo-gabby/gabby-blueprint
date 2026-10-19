@@ -1,23 +1,24 @@
 'use client';
 
+import { CalendarClock, GraduationCap, IdCard } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { GraduationCap, IdCard, CalendarClock } from 'lucide-react';
-import { CoachBrowseItem, SlotMatchStatus } from '@gabby/types/matching';
-import { DayOfWeek } from '@gabby/types/coachAvailability';
-import { CountryMaster } from '@gabby/types/country';
-import { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
-import { toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
-import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyTags';
-import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
-import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getCoachIntroVideoUrl } from '@gabby/lib/coachProfile/getCoachIntroVideoUrl';
-import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
+import { toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
 import { CoachProfileDialog } from '@gabby/lib/components/common/CoachProfileDialog';
+import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyTags';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
-import { toCoachRatingDisplay } from '@/constants/coachRating';
+import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
+import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
+import { type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { type CountryMaster } from '@gabby/types/country';
+import { type CoachBrowseItem, type SlotMatchStatus } from '@gabby/types/matching';
 import { Button } from '@/components/ui/button';
+import { toCoachRatingDisplay } from '@/constants/coachRating';
+import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
 import { cn } from '@/lib/utils';
 
 const VISIBLE_SLOT_COUNT = 3;
@@ -88,7 +89,13 @@ export function CoachCard({
         displayDay,
         displayStartTime: converted.start_time,
         displayEndTime: converted.end_time,
-        matches: slotMatchesFilter(displayDay, converted.start_time, converted.end_time, selectedDays, selectedTimeBuckets),
+        matches: slotMatchesFilter(
+          displayDay,
+          converted.start_time,
+          converted.end_time,
+          selectedDays,
+          selectedTimeBuckets,
+        ),
       };
     });
     list.sort((a, b) => {
@@ -106,12 +113,12 @@ export function CoachCard({
 
   const specialtyTags = useMemo(
     () => toCoachSpecialtyTags(coach.specialty_codes, specialties, 'ja'),
-    [coach.specialty_codes, specialties]
+    [coach.specialty_codes, specialties],
   );
 
   const country = useMemo(
     () => countries.find((c) => c.country_code === coach.country_code) ?? null,
-    [countries, coach.country_code]
+    [countries, coach.country_code],
   );
 
   return (
@@ -125,8 +132,11 @@ export function CoachCard({
       >
         <div className="w-11 h-11 rounded-control bg-brand-soft overflow-hidden flex items-center justify-center text-brand-500 shrink-0">
           {coach.icon_path ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={getProfileIconUrl(coach.icon_path) ?? ''} alt="" className="w-full h-full object-cover" />
+            <ExternalImage
+              src={getProfileIconUrl(coach.icon_path) ?? ''}
+              alt=""
+              className="w-full h-full object-cover"
+            />
           ) : (
             <GraduationCap size={20} />
           )}
@@ -137,8 +147,7 @@ export function CoachCard({
             {country && (
               <span className="flex items-center gap-1 min-w-0">
                 {country.icon_path && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <ExternalImage
                     src={getCountryFlagUrl(country.icon_path) ?? ''}
                     alt=""
                     className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
@@ -201,7 +210,7 @@ export function CoachCard({
                 'px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap',
                 hasActiveFilter && !slot.matches
                   ? 'bg-canvas text-ink-subtle border-line/70'
-                  : 'bg-brand-soft text-brand-strong border-brand-100'
+                  : 'bg-brand-soft text-brand-strong border-brand-100',
               )}
             >
               {DAY_OF_WEEK_LABEL_JA[slot.displayDay].slice(0, 1)} {slot.displayStartTime}

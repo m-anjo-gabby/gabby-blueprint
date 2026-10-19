@@ -1,13 +1,19 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { SubmitButton } from '../common/SubmitButton';
 import { AuthHeading, AuthLinkButton, AuthPage, AuthStatus, AuthStep, FormError } from './AuthLayout';
 import { EMPTY_NEW_PASSWORD, NewPasswordFields, validateNewPassword, type NewPasswordValue } from './NewPasswordFields';
-import type { AuthActionResult, FormAuthAction, InvitationCheckResult, InviteLabels, PasswordFieldLabels } from './types';
+import type {
+  AuthActionResult,
+  FormAuthAction,
+  InvitationCheckResult,
+  InviteLabels,
+  PasswordFieldLabels,
+} from './types';
 
 export interface InviteActions {
   verifyInvitation: (token: string) => Promise<InvitationCheckResult>;
@@ -82,7 +88,7 @@ function InviteSetupContent({ actions, labels, passwordLabels }: InviteSetupFlow
     try {
       const result = await actions.acceptInvitation(token, password.password);
       if (!result.success) {
-        setError(result.error || labels.unexpected);
+        setError(result.message || labels.unexpected);
         return;
       }
 
@@ -91,7 +97,7 @@ function InviteSetupContent({ actions, labels, passwordLabels }: InviteSetupFlow
       loginFormData.append('email', view.email);
       loginFormData.append('password', password.password);
       const loginResult = await actions.signIn(loginFormData);
-      if (loginResult?.error) setError(loginResult.error);
+      if (loginResult && !loginResult.success) setError(loginResult.message);
     } catch {
       setError(labels.unexpected);
     }
@@ -124,7 +130,10 @@ function InviteSetupContent({ actions, labels, passwordLabels }: InviteSetupFlow
 
         {view.status === 'form' && (
           <AuthStep key="form">
-            <AuthHeading title={labels.formTitle} description={labels.formDescription({ name: view.name, email: view.email })} />
+            <AuthHeading
+              title={labels.formTitle}
+              description={labels.formDescription({ name: view.name, email: view.email })}
+            />
             <form action={handleSubmit} className="space-y-6">
               <NewPasswordFields
                 labels={passwordLabels}
@@ -135,7 +144,11 @@ function InviteSetupContent({ actions, labels, passwordLabels }: InviteSetupFlow
                 }}
               />
               <FormError message={error} />
-              <SubmitButton label={labels.submit} loadingLabel={labels.submitting} trailingIcon={<ArrowRight aria-hidden />} />
+              <SubmitButton
+                label={labels.submit}
+                loadingLabel={labels.submitting}
+                trailingIcon={<ArrowRight aria-hidden />}
+              />
             </form>
           </AuthStep>
         )}

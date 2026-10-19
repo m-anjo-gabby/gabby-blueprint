@@ -10,13 +10,13 @@
 CREATE TABLE public.com_t_user_terms_agreement (
     agreement_id             uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    term_id                  uuid         NOT NULL REFERENCES public.com_m_terms(term_id),
+    term_id                  uuid         NOT NULL REFERENCES public.com_m_terms(term_id) ON DELETE RESTRICT,
     agreed_date              timestamp with time zone NOT NULL DEFAULT now(),
     ip_address               text,
     user_agent               text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
-    revision_id              uuid         REFERENCES public.com_m_terms_revision(revision_id),
+    revision_id              uuid         REFERENCES public.com_m_terms_revision(revision_id) ON DELETE RESTRICT,
     CONSTRAINT com_t_user_terms_agreement_user_id_term_id_key UNIQUE (user_id, term_id)
 );
 
@@ -34,15 +34,17 @@ CREATE INDEX idx_user_agreement_revision_id ON public.com_t_user_terms_agreement
 CREATE INDEX idx_user_agreement_term_id ON public.com_t_user_terms_agreement (term_id);
 CREATE INDEX idx_user_agreement_user_id ON public.com_t_user_terms_agreement (user_id);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_user_terms_agreement FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_user_terms_agreement ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users and Admins can insert agreement history" ON public.com_t_user_terms_agreement FOR INSERT TO authenticated
 WITH CHECK (
-    user_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    user_id = auth.uid() OR public.is_system_admin()
 );
 
 CREATE POLICY "Users and Admins can view agreement history" ON public.com_t_user_terms_agreement FOR SELECT TO authenticated
 USING (
-    user_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    user_id = auth.uid() OR public.is_system_admin()
 );
 -- @end-schema

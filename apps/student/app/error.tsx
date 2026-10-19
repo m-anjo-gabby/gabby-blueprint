@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Home, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Home, ShieldAlert } from 'lucide-react';
+import { useEffect } from 'react';
 import { clientLogger } from '@gabby/lib/logger/client';
+import { reloadTo } from '@gabby/lib/navigation/reloadTo';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -21,14 +22,13 @@ export default function Error({ error }: ErrorProps) {
 
   // シンプルにダッシュボードへのハードナビゲーション（ブラウザメモリクリア）を行う
   const handleBackToDashboard = () => {
-    window.location.href = '/dashboard';
+    reloadTo('/dashboard');
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-canvas px-4">
       {/* 404（NotFound）画面と完全に同一の外枠コンテナ（ガタつき防止） */}
       <div className="w-full max-w-md bg-white p-8 rounded-control shadow-xl shadow-line/50 border border-line/60 min-h-[380px] flex flex-col justify-center items-center text-center">
-        
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -42,12 +42,8 @@ export default function Error({ error }: ErrorProps) {
 
           {/* 見出しセクション */}
           <div className="mb-6">
-            <span className="text-xs font-bold text-brand bg-brand-50 px-2.5 py-1 rounded-full">
-              システムエラー
-            </span>
-            <h1 className="text-xl font-bold text-ink mt-3">
-              問題が発生しました
-            </h1>
+            <span className="text-xs font-bold text-brand bg-brand-50 px-2.5 py-1 rounded-full">システムエラー</span>
+            <h1 className="text-xl font-bold text-ink mt-3">問題が発生しました</h1>
             <p className="text-sm text-ink-muted mt-2 leading-relaxed max-w-sm">
               アプリケーションの処理中に予期せぬエラーが発生しました。
             </p>
@@ -62,7 +58,7 @@ export default function Error({ error }: ErrorProps) {
 
           {/* メイン遷移ボタン（一本化） */}
           <div className="w-full space-y-3">
-            <button 
+            <button
               onClick={handleBackToDashboard}
               className="w-full bg-brand hover:bg-brand-strong text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[48px] shadow-sm shadow-brand/10 hover:shadow-md hover:shadow-brand/20"
             >
@@ -75,7 +71,6 @@ export default function Error({ error }: ErrorProps) {
               上のボタンからダッシュボードへ戻ってください。
             </p>
           </div>
-
         </motion.div>
       </div>
     </div>

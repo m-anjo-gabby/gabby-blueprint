@@ -1,10 +1,14 @@
-import { CalendarPlus, Repeat, Shuffle } from 'lucide-react';
-import { CoachIncomingRequestItem } from '@gabby/types/coachInbox';
+import { CalendarPlus, Repeat, Shuffle, Sparkles } from 'lucide-react';
+import { type CoachIncomingRequestItem } from '@gabby/types/coachInbox';
 
 const KIND_META: Record<CoachIncomingRequestItem['kind'], { label: string; icon: typeof Repeat; className: string }> = {
   matching: { label: 'Matching Request', icon: Repeat, className: 'bg-brand-50 text-brand border-brand-200' },
   booking: { label: 'New Booking', icon: CalendarPlus, className: 'bg-sky-50 text-sky-600 border-sky-200' },
-  reschedule_proposal: { label: 'Reschedule Proposal', icon: Shuffle, className: 'bg-amber-50 text-amber-600 border-amber-200' },
+  reschedule_proposal: {
+    label: 'Reschedule Proposal',
+    icon: Shuffle,
+    className: 'bg-amber-50 text-amber-600 border-amber-200',
+  },
 };
 
 interface RequestKindTagProps {
@@ -24,6 +28,19 @@ export function RequestKindTag({ kind }: RequestKindTagProps) {
     >
       <Icon size={11} />
       {meta.label}
+    </span>
+  );
+}
+
+/**
+ * Webトライアルのプランの生徒からの申請に付ける目印（初回の体験のため、進め方を変えられるように）。
+ * 種類のタグと並べて表示する。
+ */
+export function WebTrialTag() {
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 bg-violet-50 text-violet-700 border-violet-200">
+      <Sparkles size={11} />
+      Web Trial
     </span>
   );
 }

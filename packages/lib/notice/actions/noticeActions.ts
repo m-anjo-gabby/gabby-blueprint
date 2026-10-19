@@ -1,10 +1,13 @@
-"use server";
+'use server';
 
-import { createServerClient } from "@gabby/lib/supabase/server";
-import { createLogger } from "@gabby/lib/logger";
-import { getLogContext } from "@gabby/lib/logger/context";
-import { NoticeItem } from "@gabby/types/notice";
+import { unstable_rethrow } from 'next/navigation';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
+import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
+import { type NoticeItem } from '@gabby/types/notice';
 
 const logger = createLogger('common');
 
@@ -14,32 +17,30 @@ const logger = createLogger('common');
  * - 既読状態 (is_read) を LEFT JOIN で付与
  * - RLS により target_type / user_type に応じた対象のみ返る（生徒/コーチ共通で利用可能）
  */
-export async function getNoticesAction(): Promise<{
-  success: boolean;
-  data: NoticeItem[];
-  error?: string;
-}> {
+export async function getNotices(): Promise<CoreResult<{ data: NoticeItem[] }, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, data: [], error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
       .from('com_m_notice')
-      .select(`
+      .select(
+        `
         *,
         read:com_t_notice_read(notice_id)
-      `)
+      `,
+      )
       .order('is_important', { ascending: false })
       .order('published_at', { ascending: false });
 
     if (error) {
-      logger.error("notice:get_all_failed", error.message, { ...ctx, err: error });
-      return { success: false, data: [], error: error.message };
+      logger.error('notice:get_all_failed', error.message, { ...ctx, err: error });
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
-    const notices: NoticeItem[] = (data || []).map((row: any) => ({
+    const notices: NoticeItem[] = (data || []).map((row) => ({
       ...row,
       attachments: Array.isArray(row.attachments) ? row.attachments : [],
       // read配列に要素があれば既読
@@ -48,15 +49,16 @@ export async function getNoticesAction(): Promise<{
 
     return { success: true, data: notices };
   } catch (err) {
-    logger.error("notice:get_all_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
-    return { success: false, data: [], error: 'Unexpected error' };
+    unstable_rethrow(err);
+    logger.error('notice:get_all_unexpected', getErrorMessage(err), { ...ctx, err });
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * 未読件数を取得（ヘッダーバッジ用）
  */
-export async function getUnreadNoticeCountAction(): Promise<number> {
+export async function getUnreadNoticeCount(): Promise<number> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -64,13 +66,11 @@ export async function getUnreadNoticeCountAction(): Promise<number> {
     if (!user) return 0;
 
     // 公開中お知らせの notice_id 一覧
-    const { data: allNotices, error: noticeError } = await supabase
-      .from('com_m_notice')
-      .select('notice_id');
+    const { data: allNotices, error: noticeError } = await supabase.from('com_m_notice').select('notice_id');
 
     if (noticeError || !allNotices) return 0;
 
-    const noticeIds = allNotices.map((n: any) => n.notice_id);
+    const noticeIds = allNotices.map((n) => n.notice_id);
     if (noticeIds.length === 0) return 0;
 
     // 既読済み notice_id
@@ -82,10 +82,14 @@ export async function getUnreadNoticeCountAction(): Promise<number> {
 
     if (readError) return 0;
 
-    const readIds = new Set((readData || []).map((r: any) => r.notice_id));
+    const readIds = new Set((readData || []).map((r) => r.notice_id));
     return noticeIds.filter((id: string) => !readIds.has(id)).length;
   } catch (err) {
-    logger.error("notice:unread_count_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('notice:unread_count_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return 0;
   }
 }
@@ -93,58 +97,51 @@ export async function getUnreadNoticeCountAction(): Promise<number> {
 /**
  * 指定のお知らせを既読にする（UPSERT）
  */
-export async function markNoticeAsReadAction(noticeId: string): Promise<{
-  success: boolean;
-  error?: string;
-}> {
+export async function markNoticeAsRead(noticeId: string): Promise<CoreResult<object, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    const { error } = await supabase
-      .from('com_t_notice_read')
-      .upsert(
-        {
-          notice_id: noticeId,
-          user_id: user.id,
-          read_at: new Date().toISOString(),
-          insert_date: new Date().toISOString(),
-          update_date: new Date().toISOString(),
-        },
-        { onConflict: 'notice_id,user_id', ignoreDuplicates: true }
-      );
+    const { error } = await supabase.from('com_t_notice_read').upsert(
+      {
+        notice_id: noticeId,
+        user_id: user.id,
+        read_at: new Date().toISOString(),
+        insert_date: new Date().toISOString(),
+        update_date: new Date().toISOString(),
+      },
+      { onConflict: 'notice_id,user_id', ignoreDuplicates: true },
+    );
 
     if (error) {
-      logger.error("notice:mark_read_failed", error.message, { ...ctx, err: error });
-      return { success: false, error: error.message };
+      logger.error('notice:mark_read_failed', error.message, { ...ctx, err: error });
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error("notice:mark_read_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
-    return { success: false, error: 'Unexpected error' };
+    unstable_rethrow(err);
+    logger.error('notice:mark_read_unexpected', getErrorMessage(err), { ...ctx, err });
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * 複数のお知らせをまとめて既読にする（ダイアログ表示後の一括既読化）
  */
-export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise<{
-  success: boolean;
-  error?: string;
-}> {
+export async function markNoticesAsReadBatch(noticeIds: string[]): Promise<CoreResult<object, BasicErrorCode>> {
   const ctx = await getLogContext();
   if (noticeIds.length === 0) return { success: true };
 
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const now = new Date().toISOString();
-    const rows = noticeIds.map(notice_id => ({
+    const rows = noticeIds.map((notice_id) => ({
       notice_id,
       user_id: user.id,
       read_at: now,
@@ -157,14 +154,18 @@ export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise
       .upsert(rows, { onConflict: 'notice_id,user_id', ignoreDuplicates: true });
 
     if (error) {
-      logger.error("notice:mark_read_batch_failed", error.message, { ...ctx, err: error });
-      return { success: false, error: error.message };
+      logger.error('notice:mark_read_batch_failed', error.message, { ...ctx, err: error });
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error("notice:mark_read_batch_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
-    return { success: false, error: 'Unexpected error' };
+    unstable_rethrow(err);
+    logger.error('notice:mark_read_batch_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -172,27 +173,29 @@ export async function markNoticesAsReadBatchAction(noticeIds: string[]): Promise
  * 行動ボタンを押したことを記録する（既読も兼ねる）。
  * 押した日時は最初の1回だけを残す（2回目以降は更新しない）。
  */
-export async function recordNoticeCtaClickAction(noticeId: string): Promise<{
-  success: boolean;
-  error?: string;
-}> {
+export async function recordNoticeCtaClick(noticeId: string): Promise<CoreResult<object, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const now = new Date().toISOString();
     // 未読なら既読の行を作る（押した日時も同時に入れる）
-    const { error: upsertError } = await supabase
-      .from('com_t_notice_read')
-      .upsert(
-        { notice_id: noticeId, user_id: user.id, read_at: now, cta_clicked_at: now, insert_date: now, update_date: now },
-        { onConflict: 'notice_id,user_id', ignoreDuplicates: true }
-      );
+    const { error: upsertError } = await supabase.from('com_t_notice_read').upsert(
+      {
+        notice_id: noticeId,
+        user_id: user.id,
+        read_at: now,
+        cta_clicked_at: now,
+        insert_date: now,
+        update_date: now,
+      },
+      { onConflict: 'notice_id,user_id', ignoreDuplicates: true },
+    );
     if (upsertError) {
-      logger.error("notice:cta_click_failed", upsertError.message, { ...ctx, err: upsertError, payload: { noticeId } });
-      return { success: false, error: upsertError.message };
+      logger.error('notice:cta_click_failed', upsertError.message, { ...ctx, err: upsertError, payload: { noticeId } });
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     // 既読済みでまだ押していなければ、押した日時を入れる
@@ -203,14 +206,19 @@ export async function recordNoticeCtaClickAction(noticeId: string): Promise<{
       .eq('user_id', user.id)
       .is('cta_clicked_at', null);
     if (updateError) {
-      logger.error("notice:cta_click_failed", updateError.message, { ...ctx, err: updateError, payload: { noticeId } });
-      return { success: false, error: updateError.message };
+      logger.error('notice:cta_click_failed', updateError.message, { ...ctx, err: updateError, payload: { noticeId } });
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error("notice:cta_click_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { noticeId } });
-    return { success: false, error: 'Unexpected error' };
+    unstable_rethrow(err);
+    logger.error('notice:cta_click_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { noticeId },
+    });
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -218,33 +226,30 @@ export async function recordNoticeCtaClickAction(noticeId: string): Promise<{
  * Supabase Storage (notices バケット) から添付ファイルの公開URLを取得
  * @param path Storageパス (例: notices/c7aaeab6.../file.pdf)
  */
-export async function getNoticeAttachmentUrlAction(
-  path: string
-): Promise<{ url: string | null; error?: string }> {
+export async function getNoticeAttachmentUrl(path: string): Promise<{ url: string | null }> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
 
     // Public バケット 'notices' から公開URLを取得
-    const { data } = supabase.storage
-      .from('notices')
-      .getPublicUrl(path);
+    const { data } = supabase.storage.from('notices').getPublicUrl(path);
 
     if (data?.publicUrl) {
       return { url: data.publicUrl };
     }
 
-    logger.error("notice:get_attachment_url_failed", 'Failed to generate public URL', {
+    logger.error('notice:get_attachment_url_failed', 'Failed to generate public URL', {
       ...ctx,
-      payload: { path }
+      payload: { path },
     });
-    return { url: null, error: 'Failed to generate public URL' };
+    return { url: null };
   } catch (err) {
-    logger.error("notice:get_attachment_url_unexpected", err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('notice:get_attachment_url_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
-      payload: { path }
+      payload: { path },
     });
-    return { url: null, error: 'Unexpected error' };
+    return { url: null };
   }
 }

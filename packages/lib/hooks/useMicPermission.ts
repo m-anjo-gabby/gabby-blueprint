@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { unlockAudio } from '../audio/core/audioRuntime';
-import { requestPlaybackSession, requestPlayAndRecordSession } from '../audio/core/audioSession';
+import { requestPlayAndRecordSession, requestPlaybackSession } from '../audio/core/audioSession';
 import { getSpeechRecognizer, type RecognitionHandle } from '../audio/core/recognizer';
-import { primeSpeechSynthesis } from '../speech/synthesis';
 import { clientLogger } from '../logger/client';
+import { primeSpeechSynthesis } from '../speech/synthesis';
 
 export type MicStatus = 'checking' | 'granted' | 'denied' | 'prompt';
 
@@ -72,7 +72,7 @@ export function useMicPermission(): UseMicPermissionReturn {
   const startMicTest = useCallback(() => {
     stopMicTest();
 
-    // 🚀 マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
+    // マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
     warmupAudioSession();
     requestPlayAndRecordSession();
 
@@ -88,22 +88,25 @@ export function useMicPermission(): UseMicPermissionReturn {
     setMicTestError(false);
     setIsTestingMic(true);
 
-    recognitionRef.current = recognizer.start({ lang: 'en-US' }, {
-      // 認識開始 = マイクが許可されている
-      onStart: () => setMicStatus('granted'),
-      onTranscript: (text) => {
-        setTestTranscript(text);
-        // 何か発話が検知できたら即座に成功判定
-        if (text.trim().length > 0) stopMicTest(true, false);
+    recognitionRef.current = recognizer.start(
+      { lang: 'en-US' },
+      {
+        // 認識開始 = マイクが許可されている
+        onStart: () => setMicStatus('granted'),
+        onTranscript: (text) => {
+          setTestTranscript(text);
+          // 何か発話が検知できたら即座に成功判定
+          if (text.trim().length > 0) stopMicTest(true, false);
+        },
+        onError: (code) => {
+          clientLogger.debug('speech:mic_test_failed', 'Mic test error', { payload: { code } });
+          if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'start-failed') {
+            setMicStatus('denied');
+          }
+          stopMicTest(false, true);
+        },
       },
-      onError: (code) => {
-        clientLogger.debug('speech:mic_test_failed', 'Mic test error', { payload: { code } });
-        if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'start-failed') {
-          setMicStatus('denied');
-        }
-        stopMicTest(false, true);
-      },
-    });
+    );
 
     testTimeoutRef.current = setTimeout(() => {
       stopMicTest(false, true);
@@ -168,17 +171,17 @@ export function useMicPermission(): UseMicPermissionReturn {
       // getUserMedia より前に録音再生モードへ切り替える（同期処理のため、タップの同期区間は崩れない）
       requestPlayAndRecordSession();
 
-      // 🚀 【最重要】iOS Safariの User Gesture Policy を完全にクリアするため、
+      // 【最重要】iOS Safariの User Gesture Policy を完全にクリアするため、
       // ユーザータップ同期コールスタック内（あらゆる await の前）で getUserMedia を実行する。
       const streamPromise = navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // 🚀 マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
+      // マイク起動と同じタップイベント同期コンテキストでオーディオセッションを強制活性化
       warmupAudioSession();
 
       const stream = await streamPromise;
       stream.getTracks().forEach((track) => track.stop());
       setMicStatus('granted');
-      // 🚀 本番への play-and-record 状態引き継ぎのため、ここでの playback への切り戻しは行わない
+      // 本番への play-and-record 状態引き継ぎのため、ここでの playback への切り戻しは行わない
       return true;
     } catch (err: unknown) {
       const name = err instanceof Error ? err.name : '';

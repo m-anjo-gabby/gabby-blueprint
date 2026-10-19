@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { Check, ExternalLink, Loader2, RotateCcw } from 'lucide-react';
+import { useState } from 'react';
+import type { DialogueAssignmentSessionView, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import type { DialogueAssignmentSessionView, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
 
-interface Props {
+interface DialogueSessionRowProps {
   assignmentId: string;
   session: DialogueAssignmentSessionView;
   onProgressChange: (input: UpdateDialogueSessionProgressInput) => Promise<void>;
@@ -18,7 +18,7 @@ interface Props {
   onSlidesOpen?: () => void;
 }
 
-export function DialogueSessionRow({ assignmentId, session, onProgressChange, onSlidesOpen }: Props) {
+export function DialogueSessionRow({ assignmentId, session, onProgressChange, onSlidesOpen }: DialogueSessionRowProps) {
   const [notesDraft, setNotesDraft] = useState(session.notes ?? '');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -124,7 +124,13 @@ export function DialogueSessionRow({ assignmentId, session, onProgressChange, on
           className="text-xs"
         />
         <div className="flex justify-end">
-          <Button type="button" size="sm" variant="outline" disabled={isSaving || !notesChanged} onClick={handleSaveNotes}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isSaving || !notesChanged}
+            onClick={handleSaveNotes}
+          >
             Save Note
           </Button>
         </div>

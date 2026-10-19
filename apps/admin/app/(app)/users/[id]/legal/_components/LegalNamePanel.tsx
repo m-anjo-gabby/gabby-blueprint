@@ -1,28 +1,32 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Save } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTranslations } from 'next-intl';
-import { Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { formatLegalName } from '@gabby/lib/userLegal/formatLegalName';
 import { LEGAL_NAME_MAX_LENGTH, type LegalName } from '@gabby/types/userLegal';
 import { saveUserLegalName } from '@/actions/adminUserLegalAction';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 
 type LegalT = ReturnType<typeof useTranslations<'users.legal'>>;
 
 function createLegalNameSchema(t: LegalT) {
-  const name = z.string().trim().max(LEGAL_NAME_MAX_LENGTH, t('errorTooLong', { max: LEGAL_NAME_MAX_LENGTH }));
+  const name = z
+    .string()
+    .trim()
+    .max(LEGAL_NAME_MAX_LENGTH, t('errorTooLong', { max: LEGAL_NAME_MAX_LENGTH }));
   return z
     .object({ last_name: name, first_name: name, last_name_latin: name, first_name_latin: name })
     .superRefine((v, ctx) => {
       const hasAny = Object.values(v).some(Boolean);
-      if (hasAny && !v.first_name) ctx.addIssue({ code: 'custom', message: t('errorFirstNameRequired'), path: ['first_name'] });
+      if (hasAny && !v.first_name)
+        ctx.addIssue({ code: 'custom', message: t('errorFirstNameRequired'), path: ['first_name'] });
       if (v.last_name_latin && !v.first_name_latin) {
         ctx.addIssue({ code: 'custom', message: t('errorFirstNameRequired'), path: ['first_name_latin'] });
       }
@@ -51,7 +55,7 @@ function toLegalName(v: Partial<LegalNameFormValues>): LegalName | null {
   };
 }
 
-interface Props {
+interface LegalNamePanelProps {
   userId: string;
   legalName: LegalName | null;
 }
@@ -61,7 +65,7 @@ interface Props {
  * 入力欄は日本語の順（姓 → 名）に並べ、書面での並べ方（日本語・英語）を下に表示して確認できるようにする。
  * すべて空欄で保存すると未登録に戻る（書面には画面の名前が載る）。
  */
-export function LegalNamePanel({ userId, legalName }: Props) {
+export function LegalNamePanel({ userId, legalName }: LegalNamePanelProps) {
   const t = useTranslations('users.legal');
   const tCommon = useTranslations('common');
   const { showToast } = useToast();
@@ -124,7 +128,12 @@ export function LegalNamePanel({ userId, legalName }: Props) {
         </dl>
 
         <div className="flex justify-end">
-          <Button type="submit" pending={form.formState.isSubmitting} icon={<Save size={14} />} disabled={!form.formState.isDirty}>
+          <Button
+            type="submit"
+            pending={form.formState.isSubmitting}
+            icon={<Save size={14} />}
+            disabled={!form.formState.isDirty}
+          >
             {tCommon('save')}
           </Button>
         </div>

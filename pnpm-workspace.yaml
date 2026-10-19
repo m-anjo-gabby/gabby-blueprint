@@ -2,3 +2,106 @@ packages:
   - 'apps/*'
   - 'packages/*'
   - 'testing'
+
+# 依存パッケージの版はここだけで決める（各 package.json は "catalog:" で参照する）。方針は docs/DEPENDENCIES.md
+catalog:
+  # フレームワーク（next / react は版を完全に固定し、一緒に上げる）
+
+  # サーバー・外部サービス
+  '@ai-sdk/google': ^4.0.87
+  '@eslint-community/eslint-plugin-eslint-comments': ^4.8.1
+
+  # フォーム・状態・ユーティリティ
+  '@hookform/resolvers': ^5.9.1
+  '@ianvs/prettier-plugin-sort-imports': ^4.7.1
+
+  # 開発ツール・テスト
+  '@playwright/test': ^1.63.0
+
+  # UI
+  '@radix-ui/react-alert-dialog': ^1.1.23
+  '@radix-ui/react-checkbox': ^1.3.11
+  '@radix-ui/react-dialog': ^1.1.23
+  '@radix-ui/react-dropdown-menu': ^2.1.24
+  '@radix-ui/react-label': ^2.1.15
+  '@radix-ui/react-popover': ^1.1.23
+  '@radix-ui/react-progress': ^1.1.16
+  '@radix-ui/react-scroll-area': ^1.2.18
+  '@radix-ui/react-select': ^2.3.7
+  '@radix-ui/react-slider': ^1.4.7
+  '@radix-ui/react-slot': ^1.3.3
+  '@radix-ui/react-switch': ^1.3.7
+  '@radix-ui/react-tabs': ^1.1.21
+  '@react-pdf/renderer': ^4.9.0
+  '@supabase/ssr': ^0.12.7
+  '@supabase/supabase-js': ^2.117.2
+  '@tailwindcss/postcss': ^4.3.3
+  '@tanstack/react-table': ^9.2.4
+
+  # 型定義（@types/node は実行環境の Node のメジャー版に合わせる）
+  '@types/jsonwebtoken': ^9.0.10
+  '@types/node': ^24.19.1
+  '@types/papaparse': ^5.5.2
+  '@types/react': ^19.3.0
+  '@types/react-dom': ^19.3.0
+  '@zoom/videosdk': ^2.5.0
+  ai: ^7.0.127
+  babel-plugin-react-compiler: 1.0.0
+  class-variance-authority: ^0.7.1
+  clsx: ^2.1.1
+  cmdk: ^1.1.1
+  cross-env: ^10.1.0
+  date-fns: ^4.4.0
+  dotenv: ^18.0.5
+  eslint: ^10.12.0
+  eslint-config-next: 16.3.8
+  fflate: ^0.8.3
+  framer-motion: ^14.0.0
+  jsonwebtoken: ^9.0.3
+  lucide-react: ^1.51.0
+  microsoft-cognitiveservices-speech-sdk: ^1.52.0
+  next: 16.3.8
+  next-intl: ^4.14.9
+  papaparse: ^5.7.0
+  pino: ^10.4.0
+  pino-pretty: ^13.1.3
+  postcss: ^8.5.28
+  prettier: ^3.9.9
+  react: 19.3.0
+  react-dom: 19.3.0
+  react-easy-crop: ^6.2.3
+  react-hook-form: ^7.89.0
+  react-markdown: ^10.1.0
+  react-resizable-panels: ^4.14.2
+  recharts: ^3.10.1
+  remark-gfm: ^4.0.1
+  resend: ^6.32.0
+  rimraf: ^6.1.3
+  server-only: ^0.0.1
+  tailwind-merge: ^3.7.0
+  tailwindcss: ^4.3.3
+  tailwindcss-animate: ^1.0.7
+  tsx: ^4.23.15
+  turbo: ^2.11.7
+  typescript: ~6.0.3
+  vaul: ^1.1.2
+  zod: ^4.6.5
+  zustand: ^5.0.15
+
+# インストール時のスクリプトを実行してよいパッケージ（pnpm 10 から既定で実行されない）。
+# 新しく「Ignored build scripts」と表示されたら、必要なものだけここに足す
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@swc/core'
+  - esbuild
+  - sharp
+  - unrs-resolver
+
+# peerDependencies の範囲外だが、動作を確認して使っている組み合わせ。対応版が出たら消す（docs/DEPENDENCIES.md）
+peerDependencyRules:
+  allowedVersions:
+    # eslint-config-next 16.3 が使うプラグインは ESLint 10 を範囲に含めていない（React の版を eslint.config.mjs で明示して動かす）
+    eslint-plugin-import>eslint: '10'
+    eslint-plugin-jsx-a11y>eslint: '10'
+    eslint-plugin-react-hooks>eslint: '10'
+    eslint-plugin-react>eslint: '10'

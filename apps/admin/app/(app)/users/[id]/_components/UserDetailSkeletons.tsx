@@ -3,9 +3,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CoachRatingSummarySkeleton } from '../ratings/_components/CoachRatingSummary';
 import { CoachRatingTableSkeleton } from '../ratings/_components/CoachRatingTable';
 import { BASIC_TAB_GRID, DetailSectionSkeleton } from './DetailSection';
+import { UserTabSkeletonSwitch } from './PathSkeletonSwitch';
 import { UserDetailHeaderSkeleton } from './UserDetailHeader';
 import { UserDetailTabsSkeleton } from './UserDetailTabs';
-import { UserTabSkeletonSwitch } from './PathSkeletonSwitch';
 
 /** 各タブの中身の骨組み（本番と同じ枠・並び）。表示中のタブのものを出す */
 export async function UserDetailTabSkeletons() {

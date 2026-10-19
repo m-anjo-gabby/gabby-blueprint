@@ -1,4 +1,4 @@
-import { ChatMessage } from '@gabby/types/chat';
+import { type ChatMessage } from '@gabby/types/chat';
 
 // Slackなどのグルーピング慣習に合わせ、同一送信者・同一カレンダー日・5分以内の連投は
 // 見出し（アイコン・名前・日時）を省略してひとつながりのメッセージ群として扱う。
@@ -8,9 +8,7 @@ const GROUPING_INTERVAL_MS = 5 * 60 * 1000;
 // ブラウザのローカルタイムゾーンに依存する toDateString() は使わず、指定タイムゾーンでの
 // 日付キー（YYYY-MM-DD）を算出して比較する。
 function dateKeyInTimeZone(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(
-    date
-  );
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
 }
 
 /**
@@ -20,7 +18,7 @@ function dateKeyInTimeZone(date: Date, timeZone: string): string {
 export function isContinuationMessage(
   current: ChatMessage,
   previous: ChatMessage | undefined,
-  timeZone: string
+  timeZone: string,
 ): boolean {
   if (!previous) return false;
   if (current.sender_user_id !== previous.sender_user_id) return false;

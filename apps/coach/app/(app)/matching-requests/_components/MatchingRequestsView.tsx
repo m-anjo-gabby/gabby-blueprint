@@ -1,13 +1,13 @@
 'use client';
 
-import { MatchingRequestCard } from '@/components/requests/MatchingRequestCard';
+import { type CoachIncomingRequestItem, type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { type IncomingMatchingRequestItem } from '@gabby/types/matching';
+import { type IncomingRescheduleProposalGroup } from '@gabby/types/session';
 import { BookingRequestCard } from '@/components/requests/BookingRequestCard';
+import { MatchingRequestCard } from '@/components/requests/MatchingRequestCard';
 import { RescheduleProposalRequestCard } from '@/components/requests/RescheduleProposalRequestCard';
-import { RequestHistoryTabs } from './RequestHistoryTabs';
 import { useCoachPendingRequests } from '@/hooks/useCoachPendingRequests';
-import { CoachIncomingRequestItem, IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
-import { IncomingMatchingRequestItem } from '@gabby/types/matching';
-import { IncomingRescheduleProposalGroup } from '@gabby/types/session';
+import { RequestHistoryTabs } from './RequestHistoryTabs';
 
 interface HistoryPage<T> {
   items: T[];
@@ -33,12 +33,28 @@ export function MatchingRequestsView({
   const renderPendingItem = (item: CoachIncomingRequestItem) => {
     switch (item.kind) {
       case 'matching':
-        return <MatchingRequestCard key={`matching-${item.data.request_id}`} request={item.data} onResolved={handleMatchingResolved} />;
+        return (
+          <MatchingRequestCard
+            key={`matching-${item.data.request_id}`}
+            request={item.data}
+            onResolved={handleMatchingResolved}
+          />
+        );
       case 'booking':
-        return <BookingRequestCard key={`booking-${item.data.request_id}`} request={item.data} onResolved={handleBookingResolved} />;
+        return (
+          <BookingRequestCard
+            key={`booking-${item.data.request_id}`}
+            request={item.data}
+            onResolved={handleBookingResolved}
+          />
+        );
       case 'reschedule_proposal':
         return (
-          <RescheduleProposalRequestCard key={`proposal-${item.data.session_id}`} group={item.data} onResolved={handleProposalResolved} />
+          <RescheduleProposalRequestCard
+            key={`proposal-${item.data.session_id}`}
+            group={item.data}
+            onResolved={handleProposalResolved}
+          />
         );
     }
   };

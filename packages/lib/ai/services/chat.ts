@@ -1,8 +1,8 @@
 // packages/lib/ai/services/chat.ts
 
 import { generateText, streamText, type ModelMessage } from 'ai';
-import { google, DEFAULT_CHAT_MODEL } from '../providers/google';
 import { buildHelpSystemPrompt } from '../prompts/help';
+import { DEFAULT_CHAT_MODEL, google } from '../providers/google';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';

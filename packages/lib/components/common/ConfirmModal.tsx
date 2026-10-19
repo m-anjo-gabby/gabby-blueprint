@@ -1,7 +1,8 @@
 // components/common/ConfirmModal.tsx
 'use client';
+
 import { motion } from 'framer-motion';
-import { Trash2, AlertTriangle, Info } from 'lucide-react';
+import { AlertTriangle, Info, Trash2 } from 'lucide-react';
 
 interface ConfirmModalProps {
   title: string;
@@ -25,9 +26,24 @@ export const ConfirmModal = ({
   cancelText = 'キャンセル',
 }: ConfirmModalProps) => {
   const themes = {
-    danger: { bg: 'bg-rose-50', text: 'text-rose-500', btn: 'bg-rose-500 hover:bg-rose-600 shadow-rose-100', icon: Trash2 },
-    warning: { bg: 'bg-amber-50', text: 'text-amber-500', btn: 'bg-amber-500 hover:bg-amber-600 shadow-amber-100', icon: AlertTriangle },
-    info: { bg: 'bg-brand-50', text: 'text-brand-500', btn: 'bg-brand-500 hover:bg-brand shadow-brand-100', icon: Info },
+    danger: {
+      bg: 'bg-rose-50',
+      text: 'text-rose-500',
+      btn: 'bg-rose-500 hover:bg-rose-600 shadow-rose-100',
+      icon: Trash2,
+    },
+    warning: {
+      bg: 'bg-amber-50',
+      text: 'text-amber-500',
+      btn: 'bg-amber-500 hover:bg-amber-600 shadow-amber-100',
+      icon: AlertTriangle,
+    },
+    info: {
+      bg: 'bg-brand-50',
+      text: 'text-brand-500',
+      btn: 'bg-brand-500 hover:bg-brand shadow-brand-100',
+      icon: Info,
+    },
   };
 
   const theme = themes[variant];
@@ -44,13 +60,15 @@ export const ConfirmModal = ({
       className="fixed inset-0 z-9999 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm pointer-events-auto"
       onClick={handleOverlayClick}
     >
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         className="bg-white rounded-[40px] p-8 w-full max-w-xs shadow-2xl space-y-6 text-center"
       >
-        <div className={`w-16 h-16 ${theme.bg} ${theme.text} rounded-full flex items-center justify-center mx-auto shadow-inner`}>
+        <div
+          className={`w-16 h-16 ${theme.bg} ${theme.text} rounded-full flex items-center justify-center mx-auto shadow-inner`}
+        >
           <Icon size={28} />
         </div>
 
@@ -60,10 +78,16 @@ export const ConfirmModal = ({
         </div>
 
         <div className="flex gap-3 pt-2">
-          <button onClick={onCancel} className="flex-1 h-12 text-[11px] font-black text-slate-400 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">
+          <button
+            onClick={onCancel}
+            className="flex-1 h-12 text-[11px] font-black text-slate-400 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all"
+          >
             {cancelText}
           </button>
-          <button onClick={onConfirm} className={`flex-1 h-12 text-[11px] font-black text-white ${theme.btn} rounded-2xl shadow-lg transition-all active:scale-95`}>
+          <button
+            onClick={onConfirm}
+            className={`flex-1 h-12 text-[11px] font-black text-white ${theme.btn} rounded-2xl shadow-lg transition-all active:scale-95`}
+          >
             {confirmText}
           </button>
         </div>

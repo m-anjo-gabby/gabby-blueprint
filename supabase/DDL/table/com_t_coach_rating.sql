@@ -21,9 +21,9 @@
 -- @schema public.com_t_coach_rating
 CREATE TABLE public.com_t_coach_rating (
     rating_id                uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id),
-    student_id               uuid         REFERENCES public.com_m_user(id),
-    ticket_id                uuid         REFERENCES public.com_t_user_session_ticket(ticket_id),
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    student_id               uuid         REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    ticket_id                uuid         REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE RESTRICT,
     coaching_score           numeric(2,1) NOT NULL,
     friendliness_score       numeric(2,1) NOT NULL,
     recommendation_score     numeric(2,1) NOT NULL,
@@ -60,11 +60,12 @@ CREATE UNIQUE INDEX uq_coach_rating_legacy_id ON public.com_t_coach_rating (lega
 CREATE UNIQUE INDEX uq_coach_rating_ticket_coach ON public.com_t_coach_rating (ticket_id, coach_id) WHERE ticket_id IS NOT NULL;
 
 CREATE TRIGGER trg_coach_rating_refresh_stats AFTER INSERT OR DELETE OR UPDATE ON public.com_t_coach_rating FOR EACH ROW EXECUTE FUNCTION public.trg_refresh_coach_rating_stats();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_coach_rating FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_t_coach_rating ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Students and admins can view coach ratings" ON public.com_t_coach_rating FOR SELECT TO authenticated
 USING (
-    student_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    student_id = auth.uid() OR public.is_system_admin()
 );
 -- @end-schema

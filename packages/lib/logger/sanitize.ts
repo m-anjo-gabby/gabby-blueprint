@@ -57,7 +57,8 @@ export function serializeError(value: unknown, depth = 0): SerializedError {
 
   const source = value as Record<string, unknown>;
   // ブラウザで整形済みのエラー（/api/client-log）は type を持つ
-  const type = value instanceof Error ? value.name : (pickString(source, 'name') ?? pickString(source, 'type') ?? 'Object');
+  const type =
+    value instanceof Error ? value.name : (pickString(source, 'name') ?? pickString(source, 'type') ?? 'Object');
   const status = typeof source.status === 'number' ? source.status : undefined;
   const stack = typeof source.stack === 'string' ? truncate(source.stack, MAX_STACK_LENGTH) : undefined;
 

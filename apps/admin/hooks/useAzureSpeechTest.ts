@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
+import * as SpeechSDK from 'microsoft-cognitiveservices-speech-sdk';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { clientLogger } from '@gabby/lib/logger/client';
 
 export function useAzureSpeechTest() {
@@ -13,7 +13,7 @@ export function useAzureSpeechTest() {
   const synthRef = useRef<SpeechSDK.SpeechSynthesizer | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);    // タイムアウト用
+  const timerRef = useRef<NodeJS.Timeout | null>(null); // タイムアウト用
   const intervalRef = useRef<NodeJS.Timeout | null>(null); // カウントダウン用
   const cleanupRef = useRef<(() => void) | null>(null);
 
@@ -32,11 +32,9 @@ export function useAzureSpeechTest() {
       synthRef.current.close();
       synthRef.current = null;
     }
-      
-    const config = SpeechSDK.SpeechConfig.fromSubscription(
-      process.env.AZURE_SPEECH_SERVICE_KEY!, "japaneast"
-    );
-    
+
+    const config = SpeechSDK.SpeechConfig.fromSubscription(process.env.AZURE_SPEECH_SERVICE_KEY!, 'japaneast');
+
     // 毎回新しいインスタンスを生成
     const synth = new SpeechSDK.SpeechSynthesizer(config, SpeechSDK.AudioConfig.fromDefaultSpeakerOutput());
     synthRef.current = synth;
@@ -46,12 +44,11 @@ export function useAzureSpeechTest() {
       </speak>`;
 
     setIsSpeaking(true);
-    
+
     // 終了コールバック内で ref を null にする
     synth.speakSsmlAsync(
-      ssml, 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      (result) => {
+      ssml,
+      () => {
         setIsSpeaking(false);
         synth.close();
         if (synthRef.current === synth) {
@@ -65,7 +62,7 @@ export function useAzureSpeechTest() {
         if (synthRef.current === synth) {
           synthRef.current = null;
         }
-      }
+      },
     );
   }, []);
 
@@ -76,89 +73,90 @@ export function useAzureSpeechTest() {
   }, []);
 
   // STT: 発音評価（録音: 評価とローカル保存機能）
-  const startAssessment = useCallback(async (text: string, granularity: SpeechSDK.PronunciationAssessmentGranularity) => {
-    // リセット処理
-    resetResult();
+  const startAssessment = useCallback(
+    async (text: string, granularity: SpeechSDK.PronunciationAssessmentGranularity) => {
+      // リセット処理
+      resetResult();
 
-    // マイク・録音準備
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-    mediaRecorderRef.current = recorder;
-    audioChunks.current = [];
-    recorder.ondataavailable = (e) => audioChunks.current.push(e.data);
-    recorder.onstop = () => {
-      const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
-      setRecordedAudioUrl(URL.createObjectURL(audioBlob));
-    };
-    
-    // Azure Speech設定
-    const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-      process.env.AZURE_SPEECH_SERVICE_KEY!, "japaneast"
-    );
-    speechConfig.speechRecognitionLanguage = "en-US";
-    const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-    const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+      // マイク・録音準備
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = recorder;
+      audioChunks.current = [];
+      recorder.ondataavailable = (e) => audioChunks.current.push(e.data);
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+        setRecordedAudioUrl(URL.createObjectURL(audioBlob));
+      };
 
-    // 参照テキストを設定
-    const pronunciationConfig = new SpeechSDK.PronunciationAssessmentConfig(
-      text, 
-      SpeechSDK.PronunciationAssessmentGradingSystem.HundredMark,
-      granularity,
-      true
-    );
-    pronunciationConfig.phonemeAlphabet = "IPA"; // 音素の表示形式 (IPA: 国際音声記号)
-    pronunciationConfig.applyTo(recognizer);
+      // Azure Speech設定
+      const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(process.env.AZURE_SPEECH_SERVICE_KEY!, 'japaneast');
+      speechConfig.speechRecognitionLanguage = 'en-US';
+      const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+      const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
 
-    // 終了処理を共通化 (二重実行防止)
-    let isFinished = false;
-    const cleanup = () => {
-      if (isFinished) return;
-      isFinished = true;
-      
-      if (timerRef.current) clearTimeout(timerRef.current);
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      
-      try {
-        recognizer.close();
-        recorder.stop();
-        stream.getTracks().forEach(t => t.stop());
-      } catch (e) {
-        clientLogger.debug('azureSpeechTest:cleanup_failed', 'Recorder cleanup failed', { err: e });
-      }
-      setIsRecording(false);
-      setTimeLeft(0);
-    };
-    cleanupRef.current = cleanup;
+      // 参照テキストを設定
+      const pronunciationConfig = new SpeechSDK.PronunciationAssessmentConfig(
+        text,
+        SpeechSDK.PronunciationAssessmentGradingSystem.HundredMark,
+        granularity,
+        true,
+      );
+      pronunciationConfig.phonemeAlphabet = 'IPA'; // 音素の表示形式 (IPA: 国際音声記号)
+      pronunciationConfig.applyTo(recognizer);
 
-    // 強制終了用タイマーIDを保持
-    timerRef.current = setTimeout(() => {
-      cleanup();
-    }, 7000);
+      // 終了処理を共通化 (二重実行防止)
+      let isFinished = false;
+      const cleanup = () => {
+        if (isFinished) return;
+        isFinished = true;
 
-    // カウントダウン開始
-    setTimeLeft(7);
-    intervalRef.current = setInterval(() => {
-      setTimeLeft((prev) => (prev > 1 ? prev - 1 : 0));
-    }, 1000);
+        if (timerRef.current) clearTimeout(timerRef.current);
+        if (intervalRef.current) clearInterval(intervalRef.current);
 
-    setIsRecording(true);
-    recorder.start();
-
-    // recognizeOnceAsync を使用
-    recognizer.recognizeOnceAsync(
-      (result) => {
-        if (result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
-          setRawResult(result);
-          setResult(SpeechSDK.PronunciationAssessmentResult.fromResult(result));
+        try {
+          recognizer.close();
+          recorder.stop();
+          stream.getTracks().forEach((t) => t.stop());
+        } catch (e) {
+          clientLogger.debug('azureSpeechTest:cleanup_failed', 'Recorder cleanup failed', { err: e });
         }
+        setIsRecording(false);
+        setTimeLeft(0);
+      };
+      cleanupRef.current = cleanup;
+
+      // 強制終了用タイマーIDを保持
+      timerRef.current = setTimeout(() => {
         cleanup();
-      },
-      (err) => {
-        clientLogger.error('azureSpeechTest:recognition_failed', 'Azure pronunciation assessment failed', { err });
-        cleanup();
-      }
-    );
-  }, [resetResult]);
+      }, 7000);
+
+      // カウントダウン開始
+      setTimeLeft(7);
+      intervalRef.current = setInterval(() => {
+        setTimeLeft((prev) => (prev > 1 ? prev - 1 : 0));
+      }, 1000);
+
+      setIsRecording(true);
+      recorder.start();
+
+      // recognizeOnceAsync を使用
+      recognizer.recognizeOnceAsync(
+        (result) => {
+          if (result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
+            setRawResult(result);
+            setResult(SpeechSDK.PronunciationAssessmentResult.fromResult(result));
+          }
+          cleanup();
+        },
+        (err) => {
+          clientLogger.error('azureSpeechTest:recognition_failed', 'Azure pronunciation assessment failed', { err });
+          cleanup();
+        },
+      );
+    },
+    [resetResult],
+  );
 
   useEffect(() => {
     return () => {
@@ -167,5 +165,16 @@ export function useAzureSpeechTest() {
     };
   }, []);
 
-  return { speak, startAssessment, stopAssessment, resetResult, isSpeaking, isRecording, result, rawResult, recordedAudioUrl, timeLeft };
+  return {
+    speak,
+    startAssessment,
+    stopAssessment,
+    resetResult,
+    isSpeaking,
+    isRecording,
+    result,
+    rawResult,
+    recordedAudioUrl,
+    timeLeft,
+  };
 }

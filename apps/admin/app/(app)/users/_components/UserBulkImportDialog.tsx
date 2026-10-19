@@ -1,64 +1,63 @@
 'use client';
 
-import { useState, useRef, DragEvent, ChangeEvent } from 'react';
-import Papa from 'papaparse';
+import { AlertCircle, CheckCircle2, Download, Loader2, RefreshCcw, Upload, UserPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Papa from 'papaparse';
+import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { Upload, AlertCircle, Loader2, CheckCircle2, UserPlus, RefreshCcw, Download } from 'lucide-react';
-import { RawCsvRow, BulkUser, BulkImportResponse } from '@gabby/types/user';
-import { bulkCreateUsers } from '@/actions/adminUserAction';
-import { getActiveContractsByClient, bulkAssignLicenses } from '@/actions/adminContractAction';
+import { type ClientOption } from '@gabby/types/client';
+import { type ContractDetail } from '@gabby/types/contract';
+import { USER_TYPES, type BulkImportSummary, type BulkUser, type RawCsvRow } from '@gabby/types/user';
 import { getClientsFilter } from '@/actions/adminClientAction'; // 追加
-import { useRouter } from 'next/navigation';
-import { ContractDetail } from '@gabby/types/contract';
-import { Badge } from '@/components/ui/badge';
+import { getActiveContractsByClient } from '@/actions/adminContractAction';
+import { bulkCreateUsers } from '@/actions/adminUserAction';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { ClientOption } from '@gabby/types/client';
 
 const MAX_BULK_COUNT = 30;
 
 export function UserBulkImportDialog() {
   const t = useTranslations('users.bulkImport');
   const tCommon = useTranslations('common');
-  const router = useRouter();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
-  
+
   // --- 自律取得のためのState ---
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
 
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [contracts, setContracts] = useState<ContractDetail[]>([]); // 有効な契約一覧
-  const [selectedContractId, setSelectedContractId] = useState<string>(""); // 選択された契約ID
+  const [selectedContractId, setSelectedContractId] = useState<string>(''); // 選択された契約ID
   const [isLoadingContracts, setIsLoadingContracts] = useState(false);
 
-  const [data, setData] = useState<(BulkUser & { isProcessed?: boolean; status?: 'success' | 'error'; mailStatus?: 'success' | 'error' })[]>([]);
+  const [data, setData] = useState<
+    (BulkUser & { isProcessed?: boolean; status?: 'success' | 'error'; mailStatus?: 'success' | 'error' })[]
+  >([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
-  const hasStudentsLoaded = data.length > 0 && data.some(user => user.user_type === '1');
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const selectedClient = clients.find(c => c.client_id === selectedClientId);
+  const selectedClient = clients.find((c) => c.client_id === selectedClientId);
 
   /**
    * ダイアログの開閉制御（onOpenChangeで使用）
    */
   const handleOpenChange = async (nextOpen: boolean) => {
     setOpen(nextOpen);
-    
+
     if (nextOpen) {
       // 1. 開くときは常に初期状態へ
       setData([]);
       setHasCompleted(false);
-      setSelectedClientId("");
-      setSelectedContractId("");
+      setSelectedClientId('');
+      setSelectedContractId('');
       setContracts([]);
 
       // 2. 顧客リストを取得（まだ持っていない場合のみ、または常に最新を取るなら毎回）
@@ -66,8 +65,8 @@ export function UserBulkImportDialog() {
       try {
         const res = await getClientsFilter();
         setClients(res);
-      } catch (error) {
-        showToast(t('toastClientFetchFailed'), "error");
+      } catch {
+        showToast(t('toastClientFetchFailed'), 'error');
       } finally {
         setIsLoadingClients(false);
       }
@@ -84,9 +83,9 @@ export function UserBulkImportDialog() {
    */
   const handleClientChange = async (clientId: string) => {
     setSelectedClientId(clientId);
-    setSelectedContractId("");
+    setSelectedContractId('');
     setData([]);
-    
+
     if (!clientId) {
       setContracts([]);
       return;
@@ -96,8 +95,8 @@ export function UserBulkImportDialog() {
     try {
       const activeContracts = await getActiveContractsByClient(clientId);
       setContracts(activeContracts);
-    } catch (error) {
-      showToast(t('toastContractFetchFailed'), "error");
+    } catch {
+      showToast(t('toastContractFetchFailed'), 'error');
     } finally {
       setIsLoadingContracts(false);
     }
@@ -105,7 +104,7 @@ export function UserBulkImportDialog() {
 
   const processFile = (file: File) => {
     if (!selectedClientId) {
-      showToast(t('toastSelectClientFirst'), "error");
+      showToast(t('toastSelectClientFirst'), 'error');
       return;
     }
 
@@ -114,7 +113,7 @@ export function UserBulkImportDialog() {
       skipEmptyLines: true,
       complete: (results) => {
         if (results.data.length > MAX_BULK_COUNT) {
-          showToast(t('toastMaxCount', { max: MAX_BULK_COUNT }), "error");
+          showToast(t('toastMaxCount', { max: MAX_BULK_COUNT }), 'error');
           return;
         }
 
@@ -129,12 +128,12 @@ export function UserBulkImportDialog() {
           return {
             email,
             user_name: userName,
-            user_type: '1',
+            user_type: USER_TYPES.STUDENT,
             client_id: selectedClientId,
             client_name: selectedClient?.client_name || '',
             isValid: !error,
             error: error || undefined,
-            isProcessed: false
+            isProcessed: false,
           };
         });
         setData(parsedData);
@@ -144,31 +143,28 @@ export function UserBulkImportDialog() {
   };
 
   const handleImport = async () => {
-    if (data.some(d => !d.isValid) || data.length === 0) return;
+    if (data.some((d) => !d.isValid) || data.length === 0) return;
 
     // 生徒(user_type === '1')が含まれる場合、ライセンス割当は必須とする
-    const hasStudent = data.some(user => user.user_type === '1');
+    const hasStudent = data.some((user) => user.user_type === '1');
     if (hasStudent && !selectedContractId) {
-      showToast(t('toastLicenseRequired'), "error");
+      showToast(t('toastLicenseRequired'), 'error');
       return;
     }
 
     setIsProcessing(true);
-    
+
     // ユーザー作成の結果を保持する変数
-    let userResult: BulkImportResponse | null = null;
+    let userResult: BulkImportSummary | null = null;
 
     try {
       // 1. ユーザー作成 (招待テーブルへの登録とメール送信)
       // selectedContractId を渡すことで、createUser 内で招待レコードにライセンス情報が紐付けられます
-      userResult = await bulkCreateUsers(data, selectedContractId);
-      
-      if (!userResult || !userResult.details) {
-        throw new Error("ユーザー登録のレスポンスが不正です");
-      }
-
-    } catch (error) {
-      showToast(t('toastProcessError'), "error");
+      const res = await bulkCreateUsers(data, selectedContractId);
+      if (!res.success) throw new Error(res.message);
+      userResult = res;
+    } catch {
+      showToast(t('toastProcessError'), 'error');
       if (!userResult) {
         setIsProcessing(false);
         return;
@@ -178,12 +174,14 @@ export function UserBulkImportDialog() {
     // 3. レポート作成
     if (userResult) {
       const reportData = data.map((item) => {
-        const detail = userResult!.details.find(d => d.email === item.email);
+        const detail = userResult!.details.find((d) => d.email === item.email);
         const isUserSuccess = detail?.status === 'success';
-        
+
         // ユーザー作成成功かつ、詳細メッセージ（エラーメッセージ）がなければメール送信成功とみなす
-        const mailStatus: "success" | "error" | undefined = isUserSuccess 
-          ? (detail?.message ? "error" : "success") 
+        const mailStatus: 'success' | 'error' | undefined = isUserSuccess
+          ? detail?.message
+            ? 'error'
+            : 'success'
           : undefined;
 
         return {
@@ -192,22 +190,22 @@ export function UserBulkImportDialog() {
           status: detail?.status,
           mailStatus,
           error: detail?.message || undefined,
-          isValid: isUserSuccess
+          isValid: isUserSuccess,
         };
       });
 
       setData(reportData);
       setHasCompleted(true);
     }
-    
+
     setIsProcessing(false);
   };
 
   const handleClose = () => {
     setOpen(false);
     setData([]);
-    setSelectedClientId("");
-    setSelectedContractId("");
+    setSelectedClientId('');
+    setSelectedContractId('');
     setHasCompleted(false);
     setContracts([]);
   };
@@ -218,10 +216,14 @@ export function UserBulkImportDialog() {
     if (file) processFile(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
-  const handleDragOver = (e: DragEvent) => { e.preventDefault(); if (selectedClientId) setIsDragging(true); };
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    if (selectedClientId) setIsDragging(true);
+  };
   const handleDragLeave = () => setIsDragging(false);
   const handleDrop = (e: DragEvent) => {
-    e.preventDefault(); setIsDragging(false);
+    e.preventDefault();
+    setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file) processFile(file);
   };
@@ -229,7 +231,10 @@ export function UserBulkImportDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2 border-dashed border-slate-300 hover:bg-slate-50 transition-colors font-bold">
+        <Button
+          variant="outline"
+          className="gap-2 border-dashed border-slate-300 hover:bg-slate-50 transition-colors font-bold"
+        >
           <UserPlus size={16} /> {t('button')}
         </Button>
       </DialogTrigger>
@@ -252,10 +257,7 @@ export function UserBulkImportDialog() {
                 )}
               </DialogTitle>
               <p className="text-xs text-slate-400 font-medium">
-                {hasCompleted
-                  ? t('resultSubtitle')
-                  : t('subtitle', { max: MAX_BULK_COUNT })
-                }
+                {hasCompleted ? t('resultSubtitle') : t('subtitle', { max: MAX_BULK_COUNT })}
               </p>
             </div>
 
@@ -279,12 +281,14 @@ export function UserBulkImportDialog() {
             {/* STEP 1: 顧客選択 */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">1</span>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                  1
+                </span>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('clientLabel')}</label>
               </div>
 
               <SearchableSelect
-                options={clients.map(c => ({ value: c.client_id, label: c.client_name }))}
+                options={clients.map((c) => ({ value: c.client_id, label: c.client_name }))}
                 value={selectedClientId}
                 onChange={handleClientChange}
                 placeholder={isLoadingClients ? tCommon('loading') : t('selectClientPlaceholder')}
@@ -297,29 +301,31 @@ export function UserBulkImportDialog() {
             {/* STEP 2: ライセンスプラン選択 */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className={cn(
-                  "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white transition-colors",
-                  contracts.length > 0 ? "bg-brand" : "bg-slate-300"
-                )}>
+                <span
+                  className={cn(
+                    'flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white transition-colors',
+                    contracts.length > 0 ? 'bg-brand' : 'bg-slate-300',
+                  )}
+                >
                   2
                 </span>
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  {t('licenseLabel')}
-                </label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('licenseLabel')}</label>
               </div>
-              
-              <Select 
-                value={selectedContractId} 
+
+              <Select
+                value={selectedContractId}
                 onValueChange={setSelectedContractId}
-                // 💡 生徒が含まれる場合は「割り当てない」を無効化するため、selectedClientId のみで判断
+                // 生徒が含まれる場合は「割り当てない」を無効化するため、selectedClientId のみで判断
                 // disabled={isProcessing || hasCompleted || !selectedClientId || isLoadingContracts || contracts.length === 0}
                 disabled={isProcessing || hasCompleted || !selectedClientId || isLoadingContracts}
               >
-                <SelectTrigger className={cn(
-                  "bg-white rounded-xl border-slate-200 h-11 transition-all",
-                  !selectedClientId && "opacity-50",
-                  selectedClientId && contracts.length === 0 && "border-orange-200 bg-orange-50/30"
-                )}>
+                <SelectTrigger
+                  className={cn(
+                    'bg-white rounded-xl border-slate-200 h-11 transition-all',
+                    !selectedClientId && 'opacity-50',
+                    selectedClientId && contracts.length === 0 && 'border-orange-200 bg-orange-50/30',
+                  )}
+                >
                   {isLoadingContracts ? (
                     <Loader2 size={16} className="animate-spin mx-auto text-slate-400" />
                   ) : selectedClientId && contracts.length === 0 ? (
@@ -334,17 +340,22 @@ export function UserBulkImportDialog() {
 
                 <SelectContent className="rounded-xl">
                   {contracts.length > 0 ? (
-                    contracts.map(c => (
+                    contracts.map((c) => (
                       <SelectItem key={c.contract_id} value={c.contract_id} className="text-xs">
-                        {t('planWithRemaining', { contract: c.contract_name, plan: c.plan_name, count: c.remaining_licenses })}
+                        {t('planWithRemaining', {
+                          contract: c.contract_name,
+                          plan: c.plan_name,
+                          count: c.remaining_licenses,
+                        })}
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="none" disabled>{t('noContracts')}</SelectItem>
+                    <SelectItem value="none" disabled>
+                      {t('noContracts')}
+                    </SelectItem>
                   )}
                 </SelectContent>
               </Select>
-
             </div>
           </div>
 
@@ -357,42 +368,59 @@ export function UserBulkImportDialog() {
               </div>
             ) : data.length === 0 ? (
               <div className="flex-1 flex flex-col gap-4">
-                <div 
-                  className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-2 gap-4 cursor-pointer transition-all duration-200 ${isDragging ? "border-brand-500 bg-brand-50/50 scale-[0.99]" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"}`}
-                  onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
+                <div
+                  className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-2 gap-4 cursor-pointer transition-all duration-200 ${isDragging ? 'border-brand-500 bg-brand-50/50 scale-[0.99]' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'}`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <div className="p-4 bg-slate-50 rounded-full text-slate-400 shadow-sm border border-slate-100">
-                    <Upload className={isDragging ? "animate-bounce text-brand-500" : ""} size={32} />
+                    <Upload className={isDragging ? 'animate-bounce text-brand-500' : ''} size={32} />
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-bold text-slate-700">{t('dropzoneTitle')}</p>
                     <p className="text-[11px] text-slate-400 mt-1 font-medium">{t('dropzoneHint')}</p>
                   </div>
-                  <input type="file" ref={fileInputRef} className="hidden" accept=".csv,.tsv" onChange={handleFileChange} />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".csv,.tsv"
+                    onChange={handleFileChange}
+                  />
                 </div>
               </div>
             ) : (
               <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1">{hasCompleted ? t('resultListTitle') : t('previewTitle')}</h3>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1">
+                  {hasCompleted ? t('resultListTitle') : t('previewTitle')}
+                </h3>
                 <div className="flex-1 overflow-auto border border-slate-200 rounded-xl bg-white shadow-sm">
                   <Table>
                     <TableHeader className="bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10">
                       <TableRow className="hover:bg-transparent border-slate-200">
-                        <TableHead className="w-32 text-[10px] uppercase font-bold text-center text-slate-500">{t('colStatus')}</TableHead>
-                        <TableHead className="w-48 text-[10px] uppercase font-bold text-slate-500">{t('colEmail')}</TableHead>
+                        <TableHead className="w-32 text-[10px] uppercase font-bold text-center text-slate-500">
+                          {t('colStatus')}
+                        </TableHead>
+                        <TableHead className="w-48 text-[10px] uppercase font-bold text-slate-500">
+                          {t('colEmail')}
+                        </TableHead>
                         <TableHead className="text-[10px] uppercase font-bold text-slate-500">{t('colName')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {data.map((row, i) => (
-                        <TableRow key={i} className={`hover:bg-slate-50/50 border-slate-100 ${!row.isValid ? "bg-rose-50/30" : ""}`}>
+                        <TableRow
+                          key={i}
+                          className={`hover:bg-slate-50/50 border-slate-100 ${!row.isValid ? 'bg-rose-50/30' : ''}`}
+                        >
                           <TableCell className="text-center py-3">
                             <div className="flex flex-col items-center gap-1">
                               {row.isProcessed ? (
                                 <>
-                                  <Badge 
-                                    variant="outline" 
+                                  <Badge
+                                    variant="outline"
                                     className={`text-[9px] h-4 px-1.5 font-bold border-transparent text-white ${
                                       row.status === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
                                     }`}
@@ -400,25 +428,38 @@ export function UserBulkImportDialog() {
                                     {row.status === 'success' ? t('created') : t('createFailed')}
                                   </Badge>
                                   {row.mailStatus === 'success' && (
-                                    <Badge variant="outline" className="bg-emerald-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold">
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-emerald-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold"
+                                    >
                                       {t('mailSent')}
                                     </Badge>
                                   )}
                                   {row.mailStatus === 'error' && (
-                                    <Badge variant="outline" className="bg-rose-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold">
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-rose-600 text-white border-transparent text-[9px] h-4 px-1.5 font-bold"
+                                    >
                                       {t('mailFailed')}
                                     </Badge>
                                   )}
                                 </>
+                              ) : row.isValid ? (
+                                <CheckCircle2 size={18} className="text-emerald-500" />
                               ) : (
-                                row.isValid ? <CheckCircle2 size={18} className="text-emerald-500" /> : <AlertCircle size={18} className="text-rose-500" />
+                                <AlertCircle size={18} className="text-rose-500" />
                               )}
                             </div>
                           </TableCell>
                           <TableCell className="text-xs font-bold text-slate-700">{row.email}</TableCell>
                           <TableCell className="text-xs">
                             <div className="font-bold text-slate-700">{row.user_name}</div>
-                            {row.error && <div className="text-[10px] text-rose-500 mt-1 font-bold flex items-center gap-1"><AlertCircle size={10} />{row.error}</div>}
+                            {row.error && (
+                              <div className="text-[10px] text-rose-500 mt-1 font-bold flex items-center gap-1">
+                                <AlertCircle size={10} />
+                                {row.error}
+                              </div>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -431,24 +472,50 @@ export function UserBulkImportDialog() {
         </div>
 
         <div className="bg-slate-50 p-6 flex justify-between items-center border-t border-slate-200">
-          <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-600 font-bold text-xs rounded-lg" 
-            onClick={() => { setData([]); setHasCompleted(false); setSelectedContractId(""); }} 
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-slate-400 hover:text-slate-600 font-bold text-xs rounded-lg"
+            onClick={() => {
+              setData([]);
+              setHasCompleted(false);
+              setSelectedContractId('');
+            }}
             disabled={isProcessing}
           >
-            {hasCompleted ? <><RefreshCcw size={14} className="mr-1.5" /> {t('loadAnother')}</> : t('reset')}
+            {hasCompleted ? (
+              <>
+                <RefreshCcw size={14} className="mr-1.5" /> {t('loadAnother')}
+              </>
+            ) : (
+              t('reset')
+            )}
           </Button>
 
           <div className="flex gap-3">
-            <Button variant="outline" size="sm" className="rounded-xl px-5 font-bold border-slate-200" onClick={handleClose} disabled={isProcessing}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl px-5 font-bold border-slate-200"
+              onClick={handleClose}
+              disabled={isProcessing}
+            >
               {hasCompleted ? tCommon('close') : tCommon('cancel')}
             </Button>
             {!hasCompleted && (
               <Button
-                size="sm" className="px-8 font-black text-xs rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200 transition-all active:scale-95"
+                size="sm"
+                className="px-8 font-black text-xs rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200 transition-all active:scale-95"
                 onClick={handleImport}
-                disabled={isProcessing || data.some(d => !d.isValid) || data.length === 0}
+                disabled={isProcessing || data.some((d) => !d.isValid) || data.length === 0}
               >
-                {isProcessing ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" /> {t('processing')}</> : t('start')}
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" /> {t('processing')}
+                  </>
+                ) : (
+                  t('start')
+                )}
               </Button>
             )}
           </div>

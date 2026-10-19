@@ -162,7 +162,7 @@
   判定 `apps/student/app/(app)/(shell)/dashboard/_lib/timezoneMismatch.ts`
 - 指標・教材種別のアイコンと分類色: `packages/lib/content/ui.ts`（`getTrainingMetricConfig` / `getContentTypeConfig`）
 - データ取得: `apps/student/app/(app)/(shell)/dashboard/_lib/fetchHomeData.ts`
-  （`getMyDialogueAssignments`, `getUserTrainingPerformanceAction`, `getMyTrainingLifetimeStats`, `getTimezoneList`, `getMyActivePlans`）。
+  （`getMyDialogueAssignments`, `getUserTrainingPerformance`, `getMyTrainingLifetimeStats`, `getTimezoneList`, `getMyActivePlans`）。
   ライブセッションの区画は `_components/LiveSessionSection.tsx`（`getMyUpcomingSessions`, `getMyLiveSessionOverview`, `getMyBookableTickets`,
   `getMyRescheduleProposalGroups`, `getMyBookingRequests`）を `page.tsx` で Suspense に包み、`HomeView` の差し込み口（`liveSection`）に渡す。
   グループセッションの区画は `_components/HomeEventSection.tsx`（`getHomeCalendarEvents`）を同じく Suspense に包み、`eventSection` に渡す。

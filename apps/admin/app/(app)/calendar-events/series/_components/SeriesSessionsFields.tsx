@@ -1,18 +1,18 @@
 'use client';
 
-import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
-import { useTranslations } from 'next-intl';
 import { Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import type { CalendarEventCoachOption, CalendarEventTargetType } from '@gabby/types/calendarEvent';
 import type { ClientOption } from '@gabby/types/client';
 import { Button } from '@/components/ui/button';
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarEventCoachPicker } from '../../_components/CalendarEventCoachPicker';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { nextSessionFrom, type SeriesSessionsValues } from '../_lib/seriesSessions';
+import { CalendarEventCoachPicker } from '../../_components/CalendarEventCoachPicker';
 
 const TARGET_TYPES: CalendarEventTargetType[] = ['ALL', 'CLIENT'];
 
@@ -149,7 +149,11 @@ export function SeriesSessionsFields({ coaches, clients }: SeriesSessionsFieldsP
 
       {/* 回ごとの設定 */}
       {fields.map((item, index) => (
-        <section key={item.id} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4" data-testid="series-session-row">
+        <section
+          key={item.id}
+          className="space-y-3 rounded-xl border border-slate-200 bg-white p-4"
+          data-testid="series-session-row"
+        >
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-700">{t('sessionNumber', { number: index + 1 })}</h3>
             {fields.length > 1 && (

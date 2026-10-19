@@ -33,11 +33,14 @@ SELECT
     ELSE 'active'
   END AS license_state,
   u.insert_date,            -- ソート等に使用する登録日時
-  -- 2026-09-30追加: アドミン管理用の契約名（CREATE OR REPLACE で列を足すため末尾に置く）
-  con.contract_name
+  -- アドミン管理用の契約名（CREATE OR REPLACE で列を足すため末尾に置く）
+  con.contract_name,
+  -- ユーザーの状態（com_m_user.status。1:有効 0:停止 9:退会済み）
+  u.status AS user_status
 FROM 
   public.com_m_user u
-  INNER JOIN auth.users au ON u.id = au.id
+  -- 退会済みのユーザーは認証のアカウントを消しているため、外部結合にして一覧に残す（email 等は NULL）
+  LEFT JOIN auth.users au ON u.id = au.id
   LEFT JOIN public.com_m_client c ON u.client_id = c.client_id
   LEFT JOIN LATERAL (
     SELECT array_agg(role_id) AS roles
@@ -79,7 +82,7 @@ SELECT
   NULL AS plan_name,
   i.mail_sent_at,
   i.last_mail_error,
-  -- 💡 フロントエンドが「招待状態」を識別するためのステータスを生成
+  -- フロントエンドが「招待状態」を識別するためのステータスを生成
   CASE 
     -- メール送信失敗を最優先で表示
     WHEN i.last_mail_error IS NOT NULL THEN 'mail_failed'
@@ -87,7 +90,8 @@ SELECT
     ELSE 'inviting'                                 -- 招待中（リンク有効期間内）
   END AS license_state,
   i.insert_date,               -- 招待日時を登録日時としてマージ
-  NULL AS contract_name
+  NULL AS contract_name,
+  NULL::smallint AS user_status
 FROM 
   public.com_t_invitation i
   LEFT JOIN public.com_m_client c ON i.client_id = c.client_id
@@ -97,7 +101,7 @@ WHERE
 
 COMMENT ON VIEW private.vw_user_list IS 'ユーザー管理用一覧ビュー (本登録＆招待中ユーザー統合版)';
 
--- 🔒 セキュリティ権限の再設定
+-- セキュリティ権限の再設定
 REVOKE ALL ON private.vw_user_list FROM anon, authenticated;
 GRANT USAGE ON SCHEMA private TO service_role;
 GRANT SELECT ON private.vw_user_list TO service_role;

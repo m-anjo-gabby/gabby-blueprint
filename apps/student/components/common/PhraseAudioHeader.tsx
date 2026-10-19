@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
 import { Languages, Loader2, Volume2 } from 'lucide-react';
+import React from 'react';
 import { cn } from '@/lib/utils';
 
 export type PhraseAudioTone = 'slate' | 'indigo' | 'emerald' | 'amber';
@@ -60,7 +60,7 @@ interface PhraseAudioHeaderProps {
  * QuestionCard / SprintResult で同一マークアップが色違いで重複していたため共通化。
  * タップ領域は視認性・誤タップ防止のため 32px（w-8 h-8）に統一。
  */
-export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
+export function PhraseAudioHeader({
   label,
   tone,
   onPlay,
@@ -70,15 +70,13 @@ export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
   isJaVisible = false,
   onToggleJa,
   className,
-}) => {
+}: PhraseAudioHeaderProps) {
   const styles = TONE_STYLES[tone];
 
   return (
     <div className={cn('flex items-center w-full mb-1', className)}>
       <div className={cn('flex items-center gap-x-1', styles.label)}>
-        <span className="text-xs font-bold whitespace-nowrap leading-none">
-          {label}
-        </span>
+        <span className="text-xs font-bold whitespace-nowrap leading-none">{label}</span>
         <button
           type="button"
           onClick={onPlay}
@@ -89,11 +87,7 @@ export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
             isLoading ? 'text-brand bg-brand-50' : cn(styles.idle, styles.hover),
           )}
         >
-          {isLoading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Volume2 size={16} strokeWidth={2.5} />
-          )}
+          {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Volume2 size={16} strokeWidth={2.5} />}
         </button>
         {jaText && onToggleJa && (
           <button
@@ -110,4 +104,4 @@ export const PhraseAudioHeader: React.FC<PhraseAudioHeaderProps> = ({
       </div>
     </div>
   );
-};
+}

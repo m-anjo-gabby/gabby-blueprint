@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
-import { getCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
-import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { NextResponse, type NextRequest } from 'next/server';
 import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfile';
-import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
-import { createServerClient } from '@gabby/lib/supabase/server';
-import { PayNoticeDocument } from '@/lib/pdf/PayNoticeDocument';
+import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { getCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import { fetchLegalName } from '@gabby/lib/userLegal/fetchLegalName';
 import { formatLegalName } from '@gabby/lib/userLegal/formatLegalName';
+import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
+import { PayNoticeDocument } from '@/lib/pdf/PayNoticeDocument';
 
 // このRoute Handlerはcookieベースの認証(createServerClient)に依存しているが、その呼び出しが
 // getCoachMonthlyReportCore内部に隠れているため、Next.jsの自動動的判定に検出されず
@@ -62,13 +62,13 @@ export async function GET(request: NextRequest) {
   // ("2026-09-13")ではなく同じ自然言語表記("September 13, 2026")にフォーマットする。
   const issueDateLabel = approval.approved_at
     ? new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(
-        new Date(approval.approved_at)
+        new Date(approval.approved_at),
       )
     : '';
 
   const [year, month] = result.report.report_month.split('-').map(Number);
   const periodLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
-    new Date(Date.UTC(year, month - 1, 1))
+    new Date(Date.UTC(year, month - 1, 1)),
   );
 
   // 書面には正式な氏名（英語の書面のため「名 姓」）を載せ、未登録の場合は画面の名前にする
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       lateCancelCount: result.report.late_cancel_count,
       noShowCount: result.report.no_show_count,
       totalEarnings,
-    })
+    }),
   );
 
   return new NextResponse(new Uint8Array(buffer), {

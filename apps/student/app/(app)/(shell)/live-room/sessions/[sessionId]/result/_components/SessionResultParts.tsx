@@ -14,7 +14,15 @@ export function SessionResultPageHeader() {
  * セクション見出し（アイコンバッジ+タイトル）。コーチ向け画面と視覚言語を揃えつつ、
  * 本画面は1カラムの画面のため、コーチ側のような横幅グリッドは使わず縦積みにする。
  */
-export function SectionHeading({ icon: Icon, iconClassName, title }: { icon: LucideIcon; iconClassName: string; title: string }) {
+export function SectionHeading({
+  icon: Icon,
+  iconClassName,
+  title,
+}: {
+  icon: LucideIcon;
+  iconClassName: string;
+  title: string;
+}) {
   return (
     <div className="flex items-center gap-2">
       <span className={`flex items-center justify-center w-7 h-7 rounded-control shrink-0 ${iconClassName}`}>

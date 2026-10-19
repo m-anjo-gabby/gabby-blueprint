@@ -1,22 +1,28 @@
 'use client';
 
-import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import Link from 'next/link';
 import { formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { withLiveSessionParam } from '@/lib/liveSession/context';
-import { QUESTION_TYPES } from '@gabby/types/sprint';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
+import { QUESTION_TYPES } from '@gabby/types/sprint';
+import { withLiveSessionParam } from '@/lib/liveSession/context';
 
 /** この行の表示に必要な最小限のフィールド。生徒概要／履歴一覧の`LessonSprintHistoryListItem`と
  * セッションハブ／セッション結果の`SessionSprintSummaryEntry`の両方がこの形を満たす。 */
 type LessonSprintHistoryRecord = Pick<
   LessonSprintHistoryListItem,
-  'lesson_sprint_id' | 'content_name' | 'content_name_en' | 'question_type' | 'difficulty_level' | 'average_score' | 'insert_date'
+  | 'lesson_sprint_id'
+  | 'content_name'
+  | 'content_name_en'
+  | 'question_type'
+  | 'difficulty_level'
+  | 'average_score'
+  | 'insert_date'
 >;
 
-interface Props {
+interface LessonSprintHistoryRowProps {
   studentId: string;
   record: LessonSprintHistoryRecord;
   /** この行から結果画面へ遷移した際、戻り先として引き継ぐ画面（概要カード／履歴一覧画面など呼び出し元ごとに異なる） */
@@ -30,12 +36,18 @@ interface Props {
  * Lesson Sprint実施履歴1件分の行。受講生概要カード（直近10件）・履歴一覧画面（全件）・
  * セッションハブ（Prep）・セッション結果画面の間で共有され、見た目の重複実装を避ける。
  */
-export function LessonSprintHistoryRow({ studentId, record, backHref, backLabel, liveSessionId = null }: Props) {
+export function LessonSprintHistoryRow({
+  studentId,
+  record,
+  backHref,
+  backLabel,
+  liveSessionId = null,
+}: LessonSprintHistoryRowProps) {
   const timezone = useTimezone();
   const typeLabel = QUESTION_TYPES[record.question_type as keyof typeof QUESTION_TYPES]?.label ?? record.question_type;
   const href = withLiveSessionParam(
     `/students/${studentId}/lesson-sprint/result/${record.lesson_sprint_id}?back=${encodeURIComponent(backHref)}&back_label=${encodeURIComponent(backLabel)}`,
-    liveSessionId
+    liveSessionId,
   );
 
   return (
@@ -46,7 +58,8 @@ export function LessonSprintHistoryRow({ studentId, record, backHref, backLabel,
       <div className="min-w-0">
         <p className="text-xs font-semibold text-slate-700 truncate">{resolveCoachContentName(record)}</p>
         <p className="text-[11px] text-slate-400">
-          {typeLabel} · {formatSprintLevelLabel(record.question_type, record.difficulty_level)} · {formatDateTimeEn(record.insert_date, timezone)}
+          {typeLabel} · {formatSprintLevelLabel(record.question_type, record.difficulty_level)} ·{' '}
+          {formatDateTimeEn(record.insert_date, timezone)}
         </p>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">

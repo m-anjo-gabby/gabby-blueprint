@@ -1,17 +1,17 @@
 'use client';
 
-import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { useState } from 'react';
 import { AvatarCropUploader } from '@gabby/lib/components/common/AvatarCropUploader';
 import { TimezoneSelector } from '@gabby/lib/components/common/TimezoneSelector';
-import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { uploadProfileIcon, removeProfileIcon, updateMyTimezone } from '@/actions/adminProfileAction';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { TimezoneMaster } from '@gabby/types/timezone';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { type TimezoneMaster } from '@gabby/types/timezone';
+import { removeProfileIcon, updateMyTimezone, uploadProfileIcon } from '@/actions/adminProfileAction';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface ProfileViewProps {
   userName: string;
@@ -22,7 +22,14 @@ interface ProfileViewProps {
   timezones: TimezoneMaster[];
 }
 
-export function ProfileView({ userName, clientName, userTypeLabel, initialIconPath, initialTimezone, timezones }: ProfileViewProps) {
+export function ProfileView({
+  userName,
+  clientName,
+  userTypeLabel,
+  initialIconPath,
+  initialTimezone,
+  timezones,
+}: ProfileViewProps) {
   const t = useTranslations('profile.view');
   const locale = useLocale();
   const [iconPath, setIconPath] = useState(initialIconPath);

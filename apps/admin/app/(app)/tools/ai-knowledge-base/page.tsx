@@ -15,13 +15,17 @@ export const metadata = {
  * AI Knowledge Base 管理ページ
  * ヘルプ記事等を登録すると、AIチャットのRAG検索対象になる（packages/lib/ai/retrieval）
  */
-export default async function AIKnowledgeBasePage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
+export default async function AiKnowledgeBasePage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   const [t, params] = await Promise.all([getTranslations('tools.aiKnowledgeBase.page'), searchParams]);
   const { rows, totalCount } = await getKnowledgeEntries(parseListParams(params, KNOWLEDGE_LIST_FILTERS));
 
   return (
     <div className="space-y-6">
-      <PageHeader title="AI Knowledge Base" description={t('subtitle')} actions={<KnowledgeEntryFormDialog mode="create" />} />
+      <PageHeader
+        title="AI Knowledge Base"
+        description={t('subtitle')}
+        actions={<KnowledgeEntryFormDialog mode="create" />}
+      />
       <KnowledgeEntryDataTable data={rows} totalCount={totalCount} pageCount={toPageCount(totalCount)} />
     </div>
   );

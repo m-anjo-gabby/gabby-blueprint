@@ -1,16 +1,16 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import { CalendarDays, ChevronRight, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
-import { ChevronRight, CalendarDays, type LucideIcon } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 import { getContentTypeConfig, getTrainingMetricConfig } from '@gabby/lib/content/ui';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
-import { UserTrainingPerformanceResponse } from '@/actions/performanceAction';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { type UserTrainingPerformanceResponse } from '@gabby/types/training';
 import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Skeleton } from '@/components/ui/skeleton';
 import { MonthSwitcher } from '../../_components/MonthSwitcher';
 import { StatTile } from '../../_components/StatTile';
 
@@ -80,11 +80,11 @@ interface TrainingPerformanceProps {
   targetMonth: string; // 形式: "YYYY-MM"
 }
 
-export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initialData, targetMonth }) => {
+export function TrainingPerformance({ initialData, targetMonth }: TrainingPerformanceProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const timezone = useTimezone();
 
-  // 🛠️ 月ナビゲーション（前月/翌月の年またぎ計算・当月判定・ペンディング状態）は
+  // 月ナビゲーション（前月/翌月の年またぎ計算・当月判定・ペンディング状態）は
   // 単語履歴・スプリント履歴画面と共通のためフック化
   const monthNavigator = useMonthNavigator({
     targetMonth,
@@ -101,7 +101,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     let totalAssessments = 0;
 
     // 単語ドリル履歴の集計
-    (initialData?.words || []).forEach(item => {
+    (initialData?.words || []).forEach((item) => {
       const dateStr = toIsoDateInZone(item.training_date, timezone);
       uniqueDays.add(dateStr);
       totalWords += item.word_count;
@@ -110,7 +110,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     });
 
     // スプリントセッション履歴の集計
-    (initialData?.sprint_sessions || []).forEach(item => {
+    (initialData?.sprint_sessions || []).forEach((item) => {
       if (item.insert_date) {
         const dateStr = toIsoDateInZone(item.insert_date, timezone);
         uniqueDays.add(dateStr);
@@ -121,7 +121,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     });
 
     // スプリントドリルサマリー履歴の集計
-    (initialData?.sprint_drills || []).forEach(item => {
+    (initialData?.sprint_drills || []).forEach((item) => {
       const dateStr = toIsoDateInZone(item.training_date, timezone);
       uniqueDays.add(dateStr);
       totalAssessments += item.assessment_count;
@@ -133,7 +133,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
       totalPhrases,
       sprintSessions,
       sprintAnswers,
-      totalAssessments
+      totalAssessments,
     };
   }, [initialData, timezone]);
 
@@ -158,20 +158,20 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
       return entry;
     };
 
-    (initialData?.words || []).forEach(item => {
+    (initialData?.words || []).forEach((item) => {
       const entry = getOrCreate(toIsoDateInZone(item.training_date, timezone));
       entry.wordCount += item.word_count;
       entry.phraseCount += item.phrase_count;
       entry.assessmentCount += item.assessment_count;
     });
-    (initialData?.sprint_sessions || []).forEach(item => {
+    (initialData?.sprint_sessions || []).forEach((item) => {
       if (!item.insert_date) return;
       const entry = getOrCreate(toIsoDateInZone(item.insert_date, timezone));
       entry.sprintSessionCount += 1;
       entry.sprintAnswerCount += item.total_answered;
       entry.assessmentCount += item.assessment_count || 0;
     });
-    (initialData?.sprint_drills || []).forEach(item => {
+    (initialData?.sprint_drills || []).forEach((item) => {
       const entry = getOrCreate(toIsoDateInZone(item.training_date, timezone));
       entry.assessmentCount += item.assessment_count;
     });
@@ -197,7 +197,6 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
     return days;
   }, [initialData, targetMonth, timezone]);
 
-
   // 曜日の列を揃えるため、1日の曜日ぶんだけ先頭に空セルを置く
   const [calendarYear, calendarMonth] = targetMonth.split('-').map(Number);
   const leadingBlankCount = new Date(calendarYear, calendarMonth - 1, 1).getDay();
@@ -216,7 +215,13 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
           <section>
             <ShellSectionTitle>{monthLabel}のまとめ</ShellSectionTitle>
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <StatTile label="トレーニング日数" value={shown(stats.activeDays)} unit="日" icon={CalendarDays} emphasis />
+              <StatTile
+                label="トレーニング日数"
+                value={shown(stats.activeDays)}
+                unit="日"
+                icon={CalendarDays}
+                emphasis
+              />
               <StatTile label="発話回数" value={shown(stats.totalAssessments)} unit="回" metric="speech" emphasis />
             </div>
           </section>
@@ -282,19 +287,38 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                         {day.dayNum}
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent align="center" collisionPadding={12} className="w-64 rounded-control border-line p-4 shadow-lg">
+                    <PopoverContent
+                      align="center"
+                      collisionPadding={12}
+                      className="w-64 rounded-control border-line p-4 shadow-lg"
+                    >
                       <p className="border-b border-line pb-2 text-sm font-bold text-ink">
                         {monthLabel}
                         {day.dayNum}日の実施内容
                       </p>
                       <dl className="mt-2 space-y-1.5 text-sm">
                         {(day.wordCount > 0 || day.phraseCount > 0) && (
-                          <DayDetailRow icon={WORD_BOOK.icon} iconColor={WORD_BOOK.theme.iconText} label="単語帳" value={`${day.wordCount}語 / ${day.phraseCount}フレーズ`} />
+                          <DayDetailRow
+                            icon={WORD_BOOK.icon}
+                            iconColor={WORD_BOOK.theme.iconText}
+                            label="単語帳"
+                            value={`${day.wordCount}語 / ${day.phraseCount}フレーズ`}
+                          />
                         )}
                         {day.sprintSessionCount > 0 && (
-                          <DayDetailRow icon={SPRINT.icon} iconColor={SPRINT.theme.iconText} label="スプリント" value={`${day.sprintSessionCount}回 / ${day.sprintAnswerCount}問`} />
+                          <DayDetailRow
+                            icon={SPRINT.icon}
+                            iconColor={SPRINT.theme.iconText}
+                            label="スプリント"
+                            value={`${day.sprintSessionCount}回 / ${day.sprintAnswerCount}問`}
+                          />
                         )}
-                        <DayDetailRow icon={SPEECH.icon} iconColor={SPEECH.theme.iconText} label="発話回数" value={`${day.assessmentCount}回`} />
+                        <DayDetailRow
+                          icon={SPEECH.icon}
+                          iconColor={SPEECH.theme.iconText}
+                          label="発話回数"
+                          value={`${day.assessmentCount}回`}
+                        />
                       </dl>
                     </PopoverContent>
                   </Popover>
@@ -305,7 +329,7 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
                   >
                     {day.dayNum}
                   </span>
-                )
+                ),
               )}
             </div>
           </div>
@@ -313,9 +337,19 @@ export const TrainingPerformance: React.FC<TrainingPerformanceProps> = ({ initia
       </div>
     </>
   );
-};
+}
 
-function DayDetailRow({ icon: Icon, iconColor, label, value }: { icon: LucideIcon; iconColor: string; label: string; value: string }) {
+function DayDetailRow({
+  icon: Icon,
+  iconColor,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  iconColor: string;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="flex items-center justify-between gap-2">
       <dt className="flex items-center gap-1.5 text-ink-muted">

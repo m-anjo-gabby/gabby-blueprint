@@ -1,5 +1,11 @@
-import { mailSubject, type MailBlock, type MailContent, type MailFooterLine, type MailLocale } from '../layout/document';
 import type { MailCategory } from '../dispatch/registry';
+import {
+  mailSubject,
+  type MailBlock,
+  type MailContent,
+  type MailFooterLine,
+  type MailLocale,
+} from '../layout/document';
 
 /*
  * 通知・リマインダーのメールの共通部分（宛名・配信理由と停止の案内のフッター・件名）。
@@ -45,11 +51,19 @@ const FOOTER_COPY = {
 } as const;
 
 /** フッター（配信理由・設定画面・ワンクリックの配信停止） */
-function notifyFooter(language: MailLocale, category: MailCategory, reason: string, links: NotifyMailLinks): MailFooterLine[] {
+function notifyFooter(
+  language: MailLocale,
+  category: MailCategory,
+  reason: string,
+  links: NotifyMailLinks,
+): MailFooterLine[] {
   const copy = FOOTER_COPY[language];
   const lines: MailFooterLine[] = [
     { text: reason },
-    { text: SETTINGS_COPY[category][language], ...(links.settingsUrl ? { link: { label: copy.settingsLink, href: links.settingsUrl } } : null) },
+    {
+      text: SETTINGS_COPY[category][language],
+      ...(links.settingsUrl ? { link: { label: copy.settingsLink, href: links.settingsUrl } } : null),
+    },
   ];
   if (links.unsubscribeUrl) {
     lines.push({ text: copy.unsubscribe, link: { label: copy.unsubscribeLink, href: links.unsubscribeUrl } });

@@ -17,8 +17,8 @@ CREATE TABLE public.com_t_session_dialogue_log (
     log_id                   uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     session_id               uuid         NOT NULL REFERENCES public.com_t_session(session_id) ON DELETE CASCADE,
     assignment_id            uuid         NOT NULL REFERENCES public.com_t_dialogue_assignment(assignment_id) ON DELETE CASCADE,
-    dialogue_session_id      uuid         NOT NULL REFERENCES public.com_m_dialogue_session(dialogue_session_id),
-    opened_by_coach_id       uuid         NOT NULL REFERENCES public.com_m_user(id),
+    dialogue_session_id      uuid         NOT NULL REFERENCES public.com_m_dialogue_session(dialogue_session_id) ON DELETE RESTRICT,
+    opened_by_coach_id       uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     insert_date              timestamp with time zone NOT NULL DEFAULT now()
 );
 
@@ -30,13 +30,14 @@ COMMENT ON COLUMN public.com_t_session_dialogue_log.dialogue_session_id IS '開�
 COMMENT ON COLUMN public.com_t_session_dialogue_log.opened_by_coach_id IS 'リンクを開いたコーチのユーザーID';
 COMMENT ON COLUMN public.com_t_session_dialogue_log.insert_date IS 'オープン日時（=登録日時。更新は行わないためupdate_dateは持たない）';
 
+CREATE INDEX idx_session_dialogue_log_assignment ON public.com_t_session_dialogue_log (assignment_id);
 CREATE INDEX idx_session_dialogue_log_session ON public.com_t_session_dialogue_log (session_id, insert_date);
 
 ALTER TABLE public.com_t_session_dialogue_log ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coaches can manage session dialogue logs they created" ON public.com_t_session_dialogue_log FOR ALL TO authenticated
 USING (
-    opened_by_coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    opened_by_coach_id = auth.uid() OR public.is_system_admin()
 )
 WITH CHECK (
     opened_by_coach_id = auth.uid() AND (EXISTS ( SELECT 1

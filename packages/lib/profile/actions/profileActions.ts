@@ -1,10 +1,12 @@
 'use server';
 
-import { createServerClient } from '../../supabase/server';
+import { unstable_rethrow } from 'next/navigation';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { type GetMyProfileResult } from '@gabby/types/profile';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { GetMyProfileResult } from '@gabby/types/profile';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 
@@ -39,7 +41,7 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
       return { success: false, errorCode: 'not_found' };
     }
 
-    const client = data.com_m_client as unknown as { client_name: string } | null;
+    const client = data.com_m_client;
 
     return {
       success: true,
@@ -47,7 +49,7 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
         id: data.id,
         user_id: data.user_id,
         user_name: data.user_name,
-        user_type: data.user_type,
+        user_type: data.user_type ?? '',
         icon_path: data.icon_path,
         client_id: data.client_id,
         client_name: client?.client_name ?? null,
@@ -55,7 +57,11 @@ export async function getMyProfileCore(): Promise<GetMyProfileResult> {
       },
     };
   } catch (err) {
-    logger.error('profile:get_my_profile_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('profile:get_my_profile_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

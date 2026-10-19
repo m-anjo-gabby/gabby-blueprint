@@ -9,8 +9,10 @@
 --
 -- 【名前】
 -- plan_name / plan_name_en は生徒・コーチに見せる商品名。contract_name はアドミンが契約を区別する
--- 管理名で、アドミン画面だけに出す（同じ顧客の中で一意）。RLS 上は顧客側のユーザー・担当コーチも
--- 行を参照できるため、contract_name に社外秘の情報を書かない。
+-- 管理名で、アドミン画面だけに出す（同じ顧客の中で一意）。
+-- RLS 上は顧客側のユーザー・担当コーチも行を参照できるため、authenticated の参照の権限は列単位にし、
+-- アドミンだけが使う contract_name・note を外している（アドミンは service_role で読む）。
+-- 列を足した時、生徒・コーチが読む列であれば authenticated への列の GRANT にも加える（加えないと読めない）。
 --
 -- 【参照できる範囲】
 -- 顧客側のユーザーは自分の顧客の契約、コーチは担当生徒のライセンスが紐づく契約を参照できる。
@@ -21,17 +23,17 @@
 -- @schema public.com_m_contract
 CREATE TABLE public.com_m_contract (
     contract_id              uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    client_id                uuid         NOT NULL REFERENCES public.com_m_client(client_id),
+    client_id                uuid         NOT NULL REFERENCES public.com_m_client(client_id) ON DELETE RESTRICT,
     plan_name                text         NOT NULL,
     max_licenses             integer      NOT NULL,
     start_date               timestamp with time zone NOT NULL,
     end_date                 timestamp with time zone NOT NULL,
-    status                   smallint     DEFAULT 1,
+    status                   smallint     NOT NULL DEFAULT 1,
     note                     text,
-    insert_date              timestamp with time zone DEFAULT now(),
-    update_date              timestamp with time zone DEFAULT now(),
+    insert_date              timestamp with time zone NOT NULL DEFAULT now(),
+    update_date              timestamp with time zone NOT NULL DEFAULT now(),
     contract_type            smallint     NOT NULL DEFAULT 1,
-    plan_id                  uuid         NOT NULL REFERENCES public.com_m_contract_plan(plan_id),
+    plan_id                  uuid         NOT NULL REFERENCES public.com_m_contract_plan(plan_id) ON DELETE RESTRICT,
     weekly_frequency         smallint,
     total_sessions           smallint,
     plan_name_en             text         NOT NULL,
@@ -39,6 +41,7 @@ CREATE TABLE public.com_m_contract (
     contract_name            text         NOT NULL,
     CONSTRAINT chk_contract_dialogue_requires_coach CHECK (NOT has_dialogue_practice OR contract_type = 2),
     CONSTRAINT chk_contract_live_fields CHECK (contract_type = 1 AND weekly_frequency IS NULL AND total_sessions IS NULL OR contract_type = 2 AND weekly_frequency >= 1 AND total_sessions IS NOT NULL),
+    CONSTRAINT chk_contract_status CHECK (status = ANY (ARRAY[0, 1, 9])),
     CONSTRAINT chk_contract_type CHECK (contract_type = ANY (ARRAY[1, 2]))
 );
 
@@ -62,7 +65,10 @@ COMMENT ON COLUMN public.com_m_contract.has_dialogue_practice IS 'ダイアロ�
 COMMENT ON COLUMN public.com_m_contract.contract_name IS '契約名（アドミン管理用。例: 顧客A 2026年度上期）。生徒・コーチには表示しない。顧客内で一意';
 
 CREATE INDEX idx_contract_client_id ON public.com_m_contract (client_id, status);
+CREATE INDEX idx_contract_plan ON public.com_m_contract (plan_id);
 CREATE UNIQUE INDEX uq_contract_client_contract_name ON public.com_m_contract (client_id, contract_name);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_contract FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_contract ENABLE ROW LEVEL SECURITY;
 
@@ -75,4 +81,9 @@ CREATE POLICY "Users can view their own client contracts" ON public.com_m_contra
 USING (
     client_id = public.get_jwt_client_id()
 );
+
+REVOKE ALL ON public.com_m_contract FROM anon;
+REVOKE ALL ON public.com_m_contract FROM authenticated;
+GRANT DELETE, INSERT, REFERENCES, TRIGGER, TRUNCATE, UPDATE ON public.com_m_contract TO authenticated;
+GRANT SELECT (contract_id, client_id, plan_name, max_licenses, start_date, end_date, status, insert_date, update_date, contract_type, plan_id, weekly_frequency, total_sessions, plan_name_en, has_dialogue_practice) ON public.com_m_contract TO authenticated;
 -- @end-schema

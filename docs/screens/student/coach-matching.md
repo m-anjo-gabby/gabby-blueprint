@@ -44,6 +44,10 @@
 - デモユーザー（ロール `demo_user`）のコーチは、本番検証・顧客向けプレゼン用のため、通常の生徒には
   表示されず、リクエストもできない（コーチIDを直接指定した送信も「この操作を行う権限がありません。」で拒否される）。
 - 生徒自身がデモユーザーの場合は、デモコーチを含む全コーチが対象になる。
+- 対象は選んでいる契約（チケット）ごとに決まる。プランが Webトライアル（`WEB_TRIAL`）の契約では、
+  「Webトライアル担当」（ロール `web_trial_coach`。アドミンのユーザー編集でコーチに付与する）のコーチだけが出る
+  （上の条件も満たす必要がある。担当のコーチがいない場合は「現在リクエスト可能なコーチがいません。」）。
+  担当のコーチは通常の契約の一覧にも出る。担当外のコーチへの申請（コーチIDを直接指定）は「この操作を行う権限がありません。」で拒否される。
 
 ## 表示要素・操作
 
@@ -126,5 +130,6 @@
   絞り込みの判定は `matchesCoachSpecialtyFilter`、表示は `toCoachSpecialtyTags` と共通部品 `CoachSpecialtyTags`（`packages/lib/coachSpecialty/`・`packages/lib/components/common/CoachSpecialtyTags.tsx`）
 - 関連アクション/RPC: `getMyLiveSessionTickets`, `getMySlotStatus`, `getCoachBrowseList`,
   `createMatchingRequest`, `cancelMatchingRequest`（`apps/student/actions/matchingAction.ts`）
-- 対象コーチの判定: `get_matchable_coach_ids()`（一覧・リクエスト送信時の両方で使用）。
-  検証: `testing/features/branches/feature-20260925-dev/demo-coach-matching-verify.ts`
+- 対象コーチの判定: `get_matchable_coach_ids(p_ticket_id)`（選んでいる契約のチケットごと。一覧・リクエスト送信時の両方で使用）。
+  検証: `testing/features/branches/feature-20260925-dev/demo-coach-matching-verify.ts`（デモ）、
+  `testing/features/branches/feature-20261016-dev/web-trial-coach-matching-check.ts`（Webトライアル）

@@ -1,17 +1,29 @@
 // packages/types/client.ts
+import type { ActionResult } from './action';
+import type { TableRow } from './db';
+
+// com_m_client.status
+export const CLIENT_STATUS = {
+  ACTIVE: 1,
+  ENDED: 9,
+} as const;
+export type ClientStatus = (typeof CLIENT_STATUS)[keyof typeof CLIENT_STATUS];
+
+/** com_m_client.client_type（0: 初期テナント 1:法人, 2:個人。値は DB の CHECK 制約に従う） */
+export type ClientType = TableRow<'com_m_client'>['client_type'];
 
 /**
  * ClientRecord: com_m_client テーブルの完全な定義 (Entity)
  */
-export type ClientRecord = {
+export interface ClientRecord {
   client_id: string;
   client_name: string;
-  client_type: number;   // 0: 初期テナント 1:法人, 2:個人
+  client_type: ClientType;
   industry_type: number; // 業界種別
-  delete_flg: string;
+  status: ClientStatus;
   insert_date: string;
   update_date: string;
-};
+}
 
 /**
  * Client: アプリケーション内で一般的に利用する顧客情報の最小単位
@@ -19,7 +31,7 @@ export type ClientRecord = {
 export interface Client {
   client_id: string;
   client_name: string;
-  client_type: number;
+  client_type: ClientType;
   industry_type: number;
 }
 
@@ -27,22 +39,22 @@ export interface Client {
  * ClientOption: フィルターやセレクトボックス選択肢用の軽量型
  * getClientsFilter の戻り値に対応
  */
-export type ClientOption = Pick<Client, 'client_id' | 'client_name'>;
+export type ClientOption = Pick<Client, 'client_id' | 'client_name'> & {
+  /** 取引終了の顧客は選択肢の名前に目印を付ける（getClientsFilter は取引中を先に並べる） */
+  status?: ClientStatus;
+};
 
 /**
  * ClientPayload: 登録・更新時の入力データ型
  */
 export interface ClientPayload {
   client_name: string;
-  client_type: number;
+  client_type: ClientType;
   industry_type: number;
+  status: ClientStatus;
 }
 
 /**
- * ClientResponse: サーバーアクションの共通戻り値型
+ * 顧客のアクションの結果。errorCode の in_use: 契約・ユーザー等の参照が残っていて物理削除できない
  */
-export interface ClientResponse {
-  success: boolean;
-  message?: string;
-  client?: ClientRecord;
-}
+export type ClientResponse = ActionResult<{ client?: ClientRecord }, 'in_use'>;

@@ -1,15 +1,15 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { cn } from '@/lib/utils';
-import { USER_TYPES } from '@gabby/types/user';
 import type { ClientOption } from '@gabby/types/client';
+import { USER_TYPES } from '@gabby/types/user';
 import type { NoticeReadStatusUser } from '@/actions/adminNoticeAction';
 import { ClientFilter } from '@/components/list/ClientFilter';
 import { DataTable } from '@/components/list/DataTable';
 import { ListSelectFilter } from '@/components/list/ListSelectFilter';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
+import { cn } from '@/lib/utils';
 import { NOTICE_READ_LIST_FILTERS } from '../_lib/list';
 import { createColumns } from './columns';
 
@@ -24,7 +24,15 @@ interface NoticeReadStatusTableProps {
   clients: ClientOption[];
 }
 
-export function NoticeReadStatusTable({ data, totalCount, pageCount, readCount, unreadCount, ctaClickCount, clients }: NoticeReadStatusTableProps) {
+export function NoticeReadStatusTable({
+  data,
+  totalCount,
+  pageCount,
+  readCount,
+  unreadCount,
+  ctaClickCount,
+  clients,
+}: NoticeReadStatusTableProps) {
   const t = useTranslations('notice.readsTable');
   const query = useListQuery(NOTICE_READ_LIST_FILTERS);
   const readRate = totalCount > 0 ? Math.round((readCount / totalCount) * 100) : 0;
@@ -55,8 +63,17 @@ export function NoticeReadStatusTable({ data, totalCount, pageCount, readCount, 
       </div>
 
       <div>
-        <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
-          <ClientFilter clients={clients} value={query.filters.clientId} onChange={(value) => query.setFilter('clientId', value)} />
+        <ListToolbar
+          query={query}
+          searchPlaceholder={t('searchPlaceholder')}
+          totalCount={totalCount}
+          pageCount={pageCount}
+        >
+          <ClientFilter
+            clients={clients}
+            value={query.filters.clientId}
+            onChange={(value) => query.setFilter('clientId', value)}
+          />
           <ListSelectFilter
             label={t('typeHeader')}
             allLabel={t('allTypes')}
@@ -66,7 +83,13 @@ export function NoticeReadStatusTable({ data, totalCount, pageCount, readCount, 
             className="w-32"
           />
         </ListToolbar>
-        <DataTable columns={createColumns(t, { hasCta })} data={data} getRowId={(row) => row.id} emptyMessage={t('noUsers')} pending={query.isPending} />
+        <DataTable
+          columns={createColumns(t, { hasCta })}
+          data={data}
+          getRowId={(row) => row.id}
+          emptyMessage={t('noUsers')}
+          pending={query.isPending}
+        />
       </div>
     </div>
   );
@@ -75,8 +98,17 @@ export function NoticeReadStatusTable({ data, totalCount, pageCount, readCount, 
 function SummaryTile({ label, tone, children }: { label: string; tone?: 'emerald'; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-      <p className={cn('text-[10px] font-black uppercase tracking-widest', tone === 'emerald' ? 'text-emerald-500' : 'text-slate-400')}>{label}</p>
-      <p className={cn('mt-1 text-2xl font-black', tone === 'emerald' ? 'text-emerald-600' : 'text-slate-800')}>{children}</p>
+      <p
+        className={cn(
+          'text-[10px] font-black uppercase tracking-widest',
+          tone === 'emerald' ? 'text-emerald-500' : 'text-slate-400',
+        )}
+      >
+        {label}
+      </p>
+      <p className={cn('mt-1 text-2xl font-black', tone === 'emerald' ? 'text-emerald-600' : 'text-slate-800')}>
+        {children}
+      </p>
     </div>
   );
 }

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
+import { useState } from 'react';
+import { NoticeHomeCard } from '@gabby/lib/components/notice/NoticeHomeCard';
 import { clientLogger } from '@gabby/lib/logger/client';
 import { NOTICE_LABELS_JA } from '@gabby/lib/notice/labels';
-import { NoticeHomeCard } from '@gabby/lib/components/notice/NoticeHomeCard';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import type { NoticeItem } from '@gabby/types/notice';
 
 interface HomeNoticeCardProps {

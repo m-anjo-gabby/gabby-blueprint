@@ -1,12 +1,13 @@
 // apps/admin/app/(app)/profile/page.tsx
 import { getTranslations } from 'next-intl/server';
 import { getMyProfile, getTimezoneList } from '@/actions/adminProfileAction';
-import { getUserTypeLabel } from '@gabby/types/user';
-import { ProfileView } from './_components/ProfileView';
 import { PageHeader } from '@/components/common/PageHeader';
+import { userTypeLabelKey } from '@/lib/userTypeLabel';
+import { ProfileView } from './_components/ProfileView';
 
 export default async function ProfilePage() {
   const t = await getTranslations('profile.page');
+  const tUserType = await getTranslations('common.userType');
   const [profile, timezones] = await Promise.all([getMyProfile(), getTimezoneList()]);
 
   if (!profile) {
@@ -25,7 +26,7 @@ export default async function ProfilePage() {
       <ProfileView
         userName={profile.user_name ?? t('unnamed')}
         clientName={profile.client_name}
-        userTypeLabel={getUserTypeLabel(profile.user_type)}
+        userTypeLabel={tUserType(userTypeLabelKey(profile.user_type))}
         initialIconPath={profile.icon_path}
         initialTimezone={profile.timezone}
         timezones={timezones}

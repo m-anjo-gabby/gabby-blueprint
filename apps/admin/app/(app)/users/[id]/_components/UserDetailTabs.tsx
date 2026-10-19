@@ -1,19 +1,19 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { getUserDetailPath, getUserDetailTabFromPath, type UserDetailTab } from '../_lib/tabs';
 
-interface Props {
+interface UserDetailTabsProps {
   userId: string;
   tabs: UserDetailTab[];
 }
 
 /** ユーザー詳細のタブ（各タブは子ルート。URL で直接開ける） */
-export function UserDetailTabs({ userId, tabs }: Props) {
+export function UserDetailTabs({ userId, tabs }: UserDetailTabsProps) {
   const t = useTranslations('users.detail.tabs');
   const active = getUserDetailTabFromPath(usePathname());
 
@@ -26,7 +26,7 @@ export function UserDetailTabs({ userId, tabs }: Props) {
           aria-current={tab === active ? 'page' : undefined}
           className={cn(
             'shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-bold transition-colors',
-            tab === active ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'
+            tab === active ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800',
           )}
         >
           {t(tab)}

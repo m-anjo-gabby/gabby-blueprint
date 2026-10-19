@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { Download, Eye, Loader2, Paperclip } from 'lucide-react';
+import { useState } from 'react';
 import type { NoticeAttachment } from '@gabby/types/notice';
-import { getNoticeAttachmentUrlAction } from '../../notice/actions/noticeActions';
-import { isPreviewableFile, forceDownloadFile } from '../../notice/download';
-import type { NoticeLabels } from '../../notice/labels';
 import { clientLogger } from '../../logger/client';
+import { getNoticeAttachmentUrl } from '../../notice/actions/noticeActions';
+import { forceDownloadFile, isPreviewableFile } from '../../notice/download';
+import type { NoticeLabels } from '../../notice/labels';
 import { cn } from '../../utils';
 
 function formatFileSize(bytes: number): string {
@@ -16,7 +16,10 @@ function formatFileSize(bytes: number): string {
 }
 
 /** 処理中の操作（ファイルごと・操作ごと） */
-type PendingAction = { attachmentId: string; kind: 'preview' | 'download' };
+interface PendingAction {
+  attachmentId: string;
+  kind: 'preview' | 'download';
+}
 
 const BUTTON_CLASS =
   'inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-bold transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0';
@@ -37,7 +40,7 @@ export function NoticeAttachmentList({ attachments, labels, preview = false }: N
   const handlePreview = async (att: NoticeAttachment) => {
     setPending({ attachmentId: att.id, kind: 'preview' });
     try {
-      const { url } = await getNoticeAttachmentUrlAction(att.path);
+      const { url } = await getNoticeAttachmentUrl(att.path);
       if (url) window.open(url, '_blank', 'noopener,noreferrer');
     } finally {
       setPending(null);
@@ -47,7 +50,7 @@ export function NoticeAttachmentList({ attachments, labels, preview = false }: N
   const handleDownload = async (att: NoticeAttachment) => {
     setPending({ attachmentId: att.id, kind: 'download' });
     try {
-      const { url } = await getNoticeAttachmentUrlAction(att.path);
+      const { url } = await getNoticeAttachmentUrl(att.path);
       if (url) await forceDownloadFile(url, att.name);
     } catch (err) {
       clientLogger.error('notice:download_attachment_failed', 'Attachment download failed', { err });
@@ -82,7 +85,10 @@ export function NoticeAttachmentList({ attachments, labels, preview = false }: N
                 aria-busy={isPending(att, 'preview') || undefined}
                 onClick={() => handlePreview(att)}
                 title={labels.previewHint}
-                className={cn(BUTTON_CLASS, 'border border-line bg-surface text-ink-soft hover:bg-brand-soft hover:text-brand')}
+                className={cn(
+                  BUTTON_CLASS,
+                  'border border-line bg-surface text-ink-soft hover:bg-brand-soft hover:text-brand',
+                )}
               >
                 {isPending(att, 'preview') ? <Loader2 className="animate-spin" aria-hidden /> : <Eye aria-hidden />}
                 {labels.preview}

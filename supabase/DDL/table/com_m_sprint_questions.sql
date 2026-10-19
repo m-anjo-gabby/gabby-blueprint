@@ -50,9 +50,12 @@ CREATE TABLE public.com_m_sprint_questions (
     last_tts_date            timestamp with time zone,
     legacy_question_id       bigint,
     legacy_group_id          integer,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
-    update_date              timestamp with time zone NOT NULL DEFAULT now()
+    update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT chk_sprint_questions_question_type CHECK (question_type = ANY (ARRAY['0'::text, '4'::text, '5'::text, '6'::text])),
+    CONSTRAINT chk_sprint_questions_sprint_type CHECK (sprint_type = ANY (ARRAY['0'::text, '1'::text])),
+    CONSTRAINT chk_sprint_questions_tts_ssml_mode CHECK ((statement_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])) AND (question_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])) AND (answer_sentence_yes_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])) AND (answer_sentence_no_tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text]))),
+    CONSTRAINT chk_sprint_questions_tts_status CHECK ((statement_tts_status = ANY (ARRAY[0, 1, 2, 9])) AND (question_tts_status = ANY (ARRAY[0, 1, 2, 9])) AND (answer_sentence_yes_tts_status = ANY (ARRAY[0, 1, 2, 9])) AND (answer_sentence_no_tts_status = ANY (ARRAY[0, 1, 2, 9])))
 );
 
 COMMENT ON TABLE public.com_m_sprint_questions IS 'スプリント問題（汎用・コーパス統合）マスタテーブル';
@@ -67,45 +70,46 @@ COMMENT ON COLUMN public.com_m_sprint_questions.statement_en IS 'ステートメ
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_ja IS 'ステートメント（親文・日本語訳）';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_voice IS 'ステートメント生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_ssml IS 'ステートメント用TTS SSMLテキスト';
-COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_ssml_mode IS 'ステートメント用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_ssml_mode IS 'ステートメント用TTS SSML生成モード（auto/manual）';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_adjustments IS 'ステートメント用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.statement_tts_status IS 'ステートメント用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_en IS 'クエスチョン（指示文/問い・英語）';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_ja IS 'クエスチョン（指示文/問い・日本語訳）';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_voice IS 'クエスチョン生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_ssml IS 'クエスチョン用TTS SSMLテキスト';
-COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_ssml_mode IS 'クエスチョン用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_ssml_mode IS 'クエスチョン用TTS SSML生成モード（auto/manual）';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_adjustments IS 'クエスチョン用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.question_tts_status IS 'クエスチョン用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_en IS '解答（YES/通常正解文・英語）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_ja IS '解答（YES/通常正解文・日本語訳）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_voice IS '解答（YES）生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_ssml IS '解答（YES）用TTS SSMLテキスト';
-COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_ssml_mode IS '解答（YES）用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_ssml_mode IS '解答（YES）用TTS SSML生成モード（auto/manual）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_adjustments IS '解答（YES）用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_yes_tts_status IS '解答（YES）用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_en IS '解答（NO/否定文・英語 ※Speed専用）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_ja IS '解答（NO/否定文・日本語訳 ※Speed専用）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_voice IS '解答（NO）生成音声Storageパス';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_ssml IS '解答（NO）用TTS SSMLテキスト';
-COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_ssml_mode IS '解答（NO）用TTS SSML生成モード (auto等)';
+COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_ssml_mode IS '解答（NO）用TTS SSML生成モード（auto/manual）';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_adjustments IS '解答（NO）用TTS調整パラメーター (JSONB)';
 COMMENT ON COLUMN public.com_m_sprint_questions.answer_sentence_no_tts_status IS '解答（NO）用TTS生成ステータス (0:未生成, 1:生成済, 2:要再生成, 9:エラー)';
 COMMENT ON COLUMN public.com_m_sprint_questions.last_tts_date IS '最終TTS音声生成日時';
 COMMENT ON COLUMN public.com_m_sprint_questions.legacy_question_id IS '移行元レガシー問題ID';
 COMMENT ON COLUMN public.com_m_sprint_questions.legacy_group_id IS '移行元レガシーグループID';
-COMMENT ON COLUMN public.com_m_sprint_questions.delete_flg IS '削除フラグ (''0'':有効, ''1'':削除済)';
 COMMENT ON COLUMN public.com_m_sprint_questions.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_sprint_questions.update_date IS '更新日時';
 
-CREATE INDEX idx_sprint_questions_content_level ON public.com_m_sprint_questions (content_id, question_type, difficulty_level) WHERE delete_flg = '0'::text;
-CREATE INDEX idx_sprint_questions_corpus_lookup ON public.com_m_sprint_questions (content_id, seq_no) WHERE delete_flg = '0'::text AND sprint_type = '1'::text;
-CREATE INDEX idx_sprint_questions_general_lookup ON public.com_m_sprint_questions (sprint_type, question_type, difficulty_level, group_id, seq_no) WHERE delete_flg = '0'::text;
+CREATE INDEX idx_sprint_questions_content_level ON public.com_m_sprint_questions (content_id, question_type, difficulty_level);
+CREATE INDEX idx_sprint_questions_corpus_lookup ON public.com_m_sprint_questions (content_id, seq_no) WHERE sprint_type = '1'::text;
+CREATE INDEX idx_sprint_questions_general_lookup ON public.com_m_sprint_questions (sprint_type, question_type, difficulty_level, group_id, seq_no);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_sprint_questions FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_sprint_questions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow select access for authenticated users" ON public.com_m_sprint_questions FOR SELECT TO authenticated
 USING (
-    delete_flg = '0'::text
+    true
 );
 -- @end-schema

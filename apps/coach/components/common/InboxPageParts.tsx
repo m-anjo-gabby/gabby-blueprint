@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { Bell } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader, PageSkeletonFrame } from './PageHeader';
 
@@ -25,7 +25,15 @@ function ItemCountBadge({ count }: { count: number | null }) {
 }
 
 /** 画面の外枠（見出し＋一覧の領域） */
-export function InboxPageLayout({ page, count, children }: { page: InboxPage; count: number | null; children: ReactNode }) {
+export function InboxPageLayout({
+  page,
+  count,
+  children,
+}: {
+  page: InboxPage;
+  count: number | null;
+  children: ReactNode;
+}) {
   const { title, description } = INBOX_PAGES[page];
   return (
     <div className="space-y-6 h-full flex flex-col">

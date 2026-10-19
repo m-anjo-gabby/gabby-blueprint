@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, CircleAlert, PauseCircle } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { CoachMatchingRequiredItem } from '@gabby/types/coachProfile';
+import Link from 'next/link';
+import { useState } from 'react';
 import { isCoachMatchable } from '@gabby/lib/coachProfile/matchingReadiness';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type CoachMatchingRequiredItem } from '@gabby/types/coachProfile';
 import { updateMyAcceptingStudents } from '@/actions/coachProfileAction';
+import { Switch } from '@/components/ui/switch';
 import { SAVE_NETWORK_ERROR_MESSAGE } from '@/constants/network';
 
 const ITEM_LABELS: Record<CoachMatchingRequiredItem, string> = {
@@ -21,7 +21,7 @@ const ITEM_LABELS: Record<CoachMatchingRequiredItem, string> = {
   availability: 'Weekly availability',
 };
 
-/** Where each missing item is filled in */
+/** 足りない項目を入力する場所 */
 function ItemHint({ item }: { item: CoachMatchingRequiredItem }) {
   if (item === 'availability') {
     return (
@@ -35,15 +35,15 @@ function ItemHint({ item }: { item: CoachMatchingRequiredItem }) {
 }
 
 interface MatchingStatusCardProps {
-  /** Missing required items, from the saved profile (null if the status could not be loaded) */
+  /** 保存したプロフィールで足りない必須の項目（状態を読み込めなかった場合は null） */
   missingItems: CoachMatchingRequiredItem[] | null;
   initialAcceptingStudents: boolean;
   isSuspended: boolean;
 }
 
 /**
- * Whether the coach appears in the students' coach search, with the reasons when not.
- * The "Accept new students" switch is saved immediately and reverted if saving fails.
+ * コーチが生徒のコーチ検索に出るかと、出ない場合の理由。
+ * 「新しい生徒を受け付ける」のスイッチはその場で保存し、保存に失敗したら元に戻す。
  */
 export function MatchingStatusCard({ missingItems, initialAcceptingStudents, isSuspended }: MatchingStatusCardProps) {
   const [acceptingStudents, setAcceptingStudents] = useState(initialAcceptingStudents);
@@ -53,7 +53,7 @@ export function MatchingStatusCard({ missingItems, initialAcceptingStudents, isS
   const handleChange = async (next: boolean) => {
     setAcceptingStudents(next);
     setIsSaving(true);
-    // A failed request (e.g. network error) throws instead of returning a result, so treat it as a failure too
+    // 通信の失敗（ネットワークのエラー等）は結果を返さず例外になるため、それも失敗として扱う
     const result = await updateMyAcceptingStudents(next)
       .catch((): { success: false; message: string } => ({ success: false, message: SAVE_NETWORK_ERROR_MESSAGE }))
       .finally(() => setIsSaving(false));
@@ -97,7 +97,12 @@ export function MatchingStatusCard({ missingItems, initialAcceptingStudents, isS
             Turn this off while you take a break. Your current students and scheduled sessions are not affected.
           </p>
         </div>
-        <Switch id="accepting-students" checked={acceptingStudents} disabled={isSaving} onCheckedChange={handleChange} />
+        <Switch
+          id="accepting-students"
+          checked={acceptingStudents}
+          disabled={isSaving}
+          onCheckedChange={handleChange}
+        />
       </div>
 
       {isSuspended && (

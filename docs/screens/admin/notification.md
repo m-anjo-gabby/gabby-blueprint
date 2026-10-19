@@ -43,3 +43,5 @@
   （`NOTIFICATION_TYPES`, `NOTIFICATION_MESSAGE_BUILDERS`。どの種別が実際に届くかは、各業務機能側の
   通知発行処理に依存する）。表示時は `packages/lib/notification/display.ts` の `getNotificationDisplay`
   （アイコン・バッジ色・文言。知らない種別は汎用の文言）を使う（student/coach/admin 共通）
+- 管理者宛ての通知: Webトライアルの申込（`TRIAL_APPLIED`。申込のたびに管理者全員へ。押すと [trial-applications.md](trial-applications.md) へ移る）。
+  管理者宛ての通知はメールを送らない

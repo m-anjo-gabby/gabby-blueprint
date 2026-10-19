@@ -1,5 +1,5 @@
 ---------------------------------------------
--- 月次コーチングレポート承認RPC (2026-09-13 追加)
+-- 月次コーチングレポート承認RPC
 -- 前提: table/com_t_coach_monthly_report_approval.sql, function/get_coach_monthly_sessions.sql,
 --       table/com_m_session_pay_rate.sql の作成が完了していること。
 ---------------------------------------------
@@ -14,14 +14,14 @@
 -- 取得できない（NULLになる）。そのため承認者IDはp_approved_byとして明示的に受け取る
 -- （adminContractAction.tsのperformed_by: resolvePerformedBy(ctx.userId)と同じ理由）。
 --
--- 【終了処理未実施セッションの承認ブロック (2026-09-13 追加)】
+-- 【終了処理未実施セッションの承認ブロック】
 -- 終了処理未実施(is_unresolved=true)のセッションが1件でも残っている月は、実績が確定して
 -- いない（completed/no_show等に確定していない）とみなし、承認自体を拒否する。
 -- 画面側（apps/admin ApprovalControlBar）でも同条件で承認ボタンを無効化しているが、
 -- 画面表示後にコーチ側の操作で状態が変わる競合を防ぐため、本RPC側でも同じ判定を行う
 -- （フロント側のチェックはUXのため、こちらが正の防御線）。
 --
--- 【支払通知書PDF向け単価スナップショット (2026-09-13 追加)】
+-- 【支払通知書PDF向け単価スナップショット】
 -- コーチ向け月次支払通知書(PDF)の支払額(単価×総セッション数)を、承認後の単価マスタ改定
 -- から保護するため、承認時点のcom_m_session_pay_rateの値をrate_amount/rate_currencyへ
 -- 固定保存する。単価マスタは管理者のみ参照可能（RLS）だが、本関数はSECURITY DEFINERの
@@ -44,7 +44,7 @@ DECLARE
     v_rate_amount numeric(10, 2);
     v_rate_currency text;
 BEGIN
-    IF public.get_jwt_user_type() <> '0' THEN
+    IF public.get_jwt_user_type() IS NOT NULL AND NOT public.is_system_admin() THEN
         RAISE EXCEPTION 'not authorized to approve this monthly report';
     END IF;
 
@@ -95,7 +95,7 @@ BEGIN
         p_coach_id,
         'COACH_REPORT_APPROVED',
         jsonb_build_object('report_month', v_month),
-        -- 対象の月を開く（月の指定が無いと今月が開くため。2026-10-06変更）
+        -- 対象の月を開く（月の指定が無いと今月が開くため）
         '/monthly-reports?month=' || to_char(v_month, 'YYYY-MM')
     );
 END;

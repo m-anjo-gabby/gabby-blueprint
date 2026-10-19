@@ -19,7 +19,7 @@
 ## 前提条件
 
 - 生徒: 有効なライブ付き契約のライセンスとチケット（`com_t_user_session_ticket`。`weekly_frequency` がコマ数）。開始前の次の契約でも申請できる。
-- コーチ: 有効なコーチプロフィール（`com_m_coach_profile.delete_flg = '0'`）で、アイコンとプロフィールの必須6項目（紹介ビデオは任意）と1件以上の空き時間がそろい（`fn_coach_matching_missing_items`）、本人が新規の生徒を受け付けていて（`accepting_students`）、アドミンが休止にしていない（`com_m_coach_matching_suspension`）。デモコーチ（`demo_user`）はデモの生徒にだけ対象になる（`get_matchable_coach_ids`）。テスト用のコーチは `testing/helpers/coach-matching-profile.ts` で必須項目を埋める。
+- コーチ: 有効なコーチ（`com_m_user.status = 1`）で、アイコンとプロフィールの必須6項目（紹介ビデオは任意）と1件以上の空き時間がそろい（`fn_coach_matching_missing_items`）、本人が新規の生徒を受け付けていて（`accepting_students`）、アドミンが休止にしていない（`com_m_coach_matching_suspension`）。デモコーチ（`demo_user`）はデモの生徒にだけ対象になる。プランが Webトライアル（`WEB_TRIAL`）のチケットでは「Webトライアル担当」（`web_trial_coach`）のコーチだけが対象（担当のコーチは通常のチケットでも対象）。判定はチケットごと（`get_matchable_coach_ids(p_ticket_id)`）。テスト用のコーチは `testing/helpers/coach-matching-profile.ts` で必須項目を埋める。
 - アカウント: 申請〜承認はデータを作るため、使い捨ての生徒・コーチを都度作る（[FIXTURES.md](../../../FIXTURES.md)「アカウントの種類と使い分け」）。固定アカウントは閲覧の確認だけに使う。
 
 ## 時刻の基準
@@ -76,6 +76,7 @@ status 値の意味: [_GLOSSARY.md](../_GLOSSARY.md#com_t_matching_requeststatus
 | 1 | ライブ付き契約の有効なチケットが無い生徒が画面を開く | 「この機能はライブセッション付きプランの方のみ…」のみ表示 | UI |
 | 2 | 通常の生徒がデモコーチへ申請（コーチIDを直接指定） | 「この操作を行う権限がありません。」（`not_eligible`） | RPC（UI導線なし） |
 | 2b | 通常の生徒が、一覧に出ないコーチ（必須項目の未設定・本人の受付OFF・アドミンの休止）へ申請（コーチIDを直接指定） | `not_eligible`。外れる前に届いていた回答待ちの申請は残り、承認・否認できる | RPC（UI導線なし。`testing/features/branches/feature-20261008-dev/coach-matching-visibility-check.ts` で一覧の出し分けと権限を確認） |
+| 2c | Webトライアルのチケットで、Webトライアル担当でないコーチへ申請（コーチIDを直接指定） | `not_eligible`（一覧にも出ない。他人のチケットIDを渡すと対象は0件） | RPC（UI導線なし。`testing/features/branches/feature-20261016-dev/web-trial-coach-matching-check.ts` で一覧の出し分けと他人のチケットを確認。画面の出し分けは `e2e/tests/matching/web-trial-coach-matching.spec.ts`） |
 | 3 | 他人のチケット、またはコマ数を超える `slot_no` で申請 | `not_eligible`（RLS でも他人のチケットへの登録は拒否） | RPC（UI導線なし） |
 | 4 | 申請した枠の初回の回（24時間以上先・契約開始以降）がコーチの空き時間（UTC）に収まらない | `invalid_input`（「希望時間がコーチの対応可能時間内に収まっているか…」） | RPC（UI導線なし） |
 | 5 | 契約期間内に申請した枠の回が無い（初回が契約終了より後） | `invalid_input` | RPC（UI導線なし） |
@@ -119,3 +120,4 @@ status 値の意味: [_GLOSSARY.md](../_GLOSSARY.md#com_t_matching_requeststatus
 | 中 | コーチのプロフィールの Student matching カード | 実装済み: `e2e/tests/matching/coach-visibility.spec.ts`（状態バッジ、受付スイッチの保存、未設定の項目の案内、休止中の注記〔メモは出さない〕）。残りは `e2e/tests/coach/profile-matching-card.spec.ts` で実装済み（未設定の項目の案内と空き時間の `/availability` へのリンク、Public Coach Profile の必須項目のバッジ「n / 6 required fields」は入力中の値で数え、カードは保存した内容で更新される、アイコンの削除がすぐ反映される、受付スイッチの保存に失敗〔通信の失敗を含む〕すると元に戻ってエラーが出る〔KJ-2026-1013-02〕） |
 | 中 | アドミンのマッチング対象の設定 | 実装済み: `e2e/tests/matching/coach-visibility.spec.ts`（休止と理由のメモの保存・解除、表示中／非表示の表示〔ja〕）。残りは `e2e/tests/admin/coach-matching-settings.spec.ts` で実装済み（未設定の項目・受付OFF のコーチと、すべてそろったデモコーチで内訳を確かめる。英語表示〔`openAdminContext` の `locale: "en"`〕で内訳・休止の文言と休止・解除の保存を確かめる） |
 | 中 | コーチの専門 | 実装済み: `e2e/tests/matching/coach-specialty.spec.ts`（アドミンのユーザー詳細「専門」で分野は4つまで・得意分野〔発音プロ〕は上限に数えない、コーチのプロフィールに参照のみで出る、生徒の絞り込みは分野が「または」・得意分野が「かつ」。画面仕様: docs/screens/admin/users.md, docs/screens/coach/profile.md, docs/screens/student/coach-matching.md） |
+| 高 | Webトライアルの生徒のコーチ検索 | 実装済み: `e2e/tests/matching/web-trial-coach-matching.spec.ts`（アドミンがユーザー編集で「Webトライアル担当」を付ける前は一覧が空・付けた後は担当のコーチだけが出る・担当のコーチは通常の生徒にも出る。コーチの申請一覧で、トライアルの生徒の申請にだけ "Web Trial" の目印が付く） |

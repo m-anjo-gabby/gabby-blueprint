@@ -1,7 +1,7 @@
 import { CalendarCheck, Download, TriangleAlert } from 'lucide-react';
-import { CoachMonthlyReport } from '@gabby/types/monthlyReport';
+import { type CoachMonthlyReport } from '@gabby/types/monthlyReport';
 
-/** timezoneName: the coach's timezone as its master display name (e.g. "Japan (Tokyo)") */
+/** timezoneName: コーチのタイムゾーンのマスタの表示名（例: "Japan (Tokyo)"） */
 export function SummaryCard({ report, timezoneName }: { report: CoachMonthlyReport; timezoneName: string }) {
   const isApproved = report.approval?.status === 2;
   const hasUnresolved = report.unresolved_count > 0;
@@ -29,7 +29,8 @@ export function SummaryCard({ report, timezoneName }: { report: CoachMonthlyRepo
           Total sessions: <span className="font-bold text-slate-800">{report.grand_total}</span>
           <span className="text-xs text-slate-400">
             {' '}
-            (Completed {report.completed_count} &middot; Late cancel {report.late_cancel_count} &middot; No-show {report.no_show_count})
+            (Completed {report.completed_count} &middot; Late cancel {report.late_cancel_count} &middot; No-show{' '}
+            {report.no_show_count})
           </span>
         </span>
 
@@ -47,8 +48,9 @@ export function SummaryCard({ report, timezoneName }: { report: CoachMonthlyRepo
       {hasUnresolved && (
         <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-amber-700">
           <TriangleAlert size={14} />
-          {report.unresolved_count} session{report.unresolved_count > 1 ? 's' : ''} still need to be finalized. Look for the amber cells
-          below and complete them — Gabby Academy can&apos;t approve this month until they&apos;re resolved.
+          {report.unresolved_count} session{report.unresolved_count > 1 ? 's' : ''} still need to be finalized. Look for
+          the amber cells below and complete them — Gabby Academy can&apos;t approve this month until they&apos;re
+          resolved.
         </p>
       )}
 

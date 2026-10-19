@@ -1,20 +1,30 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  ChevronRight,
+  FileAudio,
+  Loader2,
+  RefreshCw,
+  Volume2,
+  Zap,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Zap, CheckCircle2, AlertCircle, FileAudio, RefreshCw, Volume2, ChevronRight, ArrowLeft } from 'lucide-react';
-import { TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { useMemo, useState } from 'react';
+import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { AZURE_STYLES, AZURE_VOICES, AzureStyle, AzureVoice } from '@gabby/types/azure';
-import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
+import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 import { saveSprintAudio } from '@/actions/adminSprintAction';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SprintTTSBulkDialogProps {
   questions: SprintQuestion[];
@@ -25,13 +35,13 @@ interface SprintTTSBulkDialogProps {
 }
 
 const DEFAULT_PARAMS: TTSParameters = {
-  voice: "en-US-JennyNeural",
-  style: "friendly",
+  voice: 'en-US-JennyNeural',
+  style: 'friendly',
   rate: 1.0,
   pitch: 0,
 };
 
-const SAMPLE_TEXT = "This is a sample sentence for sprint audio settings.";
+const SAMPLE_TEXT = 'This is a sample sentence for sprint audio settings.';
 
 export function SprintTTSBulkDialog({ questions, type, level, onComplete, children }: SprintTTSBulkDialogProps) {
   const t = useTranslations('contents.editor.sprint.ttsBulkDialog');
@@ -44,15 +54,15 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
   const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'error'>('idle');
   const [, setResultCounts] = useState({ success: 0, error: 0 }); // 未使用の変数を名前なし、または状態保持用に残す
 
-  const { speak, isSpeaking, generateSSML } = usePlayAzureSpeech();
+  const { speak, isSpeaking, generateSsml } = usePlayAzureSpeech();
   const { showToast } = useToast();
 
-  // 💡 修正: 実行タスク（問題×セクション）のリストを _en スキーマのカラムの存在を元に作成
+  // 実行する作業（問題×セクション）の一覧を、英語の列（*_en）に値がある所から作る
   const allTasks = useMemo(() => {
     const tasks: { q: SprintQuestion; section: 'statement' | 'question' | 'answer_yes' | 'answer_no' }[] = [];
     const isSpeed = type === '0';
 
-    questions.forEach(q => {
+    questions.forEach((q) => {
       // 基本文 (Speed以外)
       if (!isSpeed && q.statement_en) tasks.push({ q, section: 'statement' });
       // 質問・指示
@@ -68,7 +78,7 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
 
   const filteredTasks = useMemo(() => {
     if (targetMode === 'all') return allTasks;
-    return allTasks.filter(task => {
+    return allTasks.filter((task) => {
       const prefix = task.section.startsWith('answer') ? `answer_sentence_${task.section.split('_')[1]}` : task.section;
       const statusKey = `${prefix}_tts_status` as keyof SprintQuestion;
       return task.q[statusKey] !== 1;
@@ -97,10 +107,10 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
 
     for (let i = 0; i < total; i++) {
       const task = filteredTasks[i];
-      setProgress(prev => ({ ...prev, current: i + 1 }));
+      setProgress((prev) => ({ ...prev, current: i + 1 }));
 
       try {
-        // 💡 修正: マッピング先を _en スキーマの英語テキストフィールドに変更
+        // 読み上げる文は英語の列（*_en）
         const textMap = {
           statement: task.q.statement_en,
           question: task.q.question_en,
@@ -108,8 +118,9 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
           answer_no: task.q.answer_sentence_no_en,
         };
         const text = textMap[task.section] || '';
-        const ssml = generateSSML(text, params);
-        const voiceKey = `${task.section === 'answer_yes' || task.section === 'answer_no' ? `answer_sentence_${task.section.split('_')[1]}` : task.section}_voice` as keyof SprintQuestion;
+        const ssml = generateSsml(text, params);
+        const voiceKey =
+          `${task.section === 'answer_yes' || task.section === 'answer_no' ? `answer_sentence_${task.section.split('_')[1]}` : task.section}_voice` as keyof SprintQuestion;
         const currentPath = task.q[voiceKey] as string | null;
 
         const res = await saveSprintAudio(
@@ -121,11 +132,12 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
           ssml,
           'auto',
           { settings: params, words: [] },
-          currentPath
+          currentPath,
         );
 
-        if (res.success) success++; else errorCount++;
-      } catch (e) {
+        if (res.success) success++;
+        else errorCount++;
+      } catch {
         errorCount++;
       }
     }
@@ -134,11 +146,14 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
     setIsProcessing(false);
     if (errorCount === 0) {
       setStatus('completed');
-      showToast(t('toastCompleted'), "success");
-      setTimeout(() => { setOpen(false); if (onComplete) onComplete(); }, 1500);
+      showToast(t('toastCompleted'), 'success');
+      setTimeout(() => {
+        setOpen(false);
+        if (onComplete) onComplete();
+      }, 1500);
     } else {
       setStatus('error');
-      showToast(t('toastPartialError', { count: errorCount }), "error");
+      showToast(t('toastPartialError', { count: errorCount }), 'error');
     }
   };
 
@@ -158,7 +173,11 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
             <>
               <div className="space-y-3">
                 <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 1: Scope</Label>
-                <Tabs value={targetMode} onValueChange={(v) => setTargetMode(v as any)} className="w-full">
+                <Tabs
+                  value={targetMode}
+                  onValueChange={(v) => setTargetMode(v === 'missing' ? 'missing' : 'all')}
+                  className="w-full"
+                >
                   <TabsList className="grid grid-cols-2 w-full bg-slate-100 p-1 h-11 border border-slate-200">
                     <TabsTrigger value="all" className="font-bold gap-2 text-xs">
                       <RefreshCw size={14} /> Re-generate All
@@ -168,34 +187,86 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
-                <p className="text-[10px] text-right font-bold text-slate-400">Target: <span className="text-brand">{filteredTasks.length}</span> audio segments</p>
+                <p className="text-[10px] text-right font-bold text-slate-400">
+                  Target: <span className="text-brand">{filteredTasks.length}</span> audio segments
+                </p>
               </div>
 
               <div className="space-y-5 pt-6 border-t border-dashed border-slate-200">
                 <div className="flex justify-between items-center">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step 2: Settings</Label>
-                  <Button pending={isSpeaking} icon={<Volume2 size={14} />} variant="ghost" size="sm" onClick={() => speak(SAMPLE_TEXT, params)} disabled={isSpeaking} className="h-8 text-[10px] font-bold text-brand gap-1.5 px-3 rounded-full border border-brand-100">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Step 2: Settings
+                  </Label>
+                  <Button
+                    pending={isSpeaking}
+                    icon={<Volume2 size={14} />}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => speak(SAMPLE_TEXT, params)}
+                    disabled={isSpeaking}
+                    className="h-8 text-[10px] font-bold text-brand gap-1.5 px-3 rounded-full border border-brand-100"
+                  >
                     TEST VOICE
                   </Button>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
-                  <Select value={params.voice} onValueChange={(v) => setParams(p => ({...p, voice: v as AzureVoice}))}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200 h-11 text-xs font-bold"><SelectValue /></SelectTrigger>
-                    <SelectContent>{AZURE_VOICES.map((v) => <SelectItem key={v.id} value={v.id}>{v.label}</SelectItem>)}</SelectContent>
+                  <Select
+                    value={params.voice}
+                    onValueChange={(v) => setParams((p) => ({ ...p, voice: v as AzureVoice }))}
+                  >
+                    <SelectTrigger className="bg-slate-50 border-slate-200 h-11 text-xs font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AZURE_VOICES.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
-                  <Select value={params.style} onValueChange={(v) => setParams(p => ({...p, style: v as AzureStyle}))}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200 h-11 text-xs font-bold"><SelectValue /></SelectTrigger>
-                    <SelectContent>{AZURE_STYLES.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}</SelectContent>
+                  <Select
+                    value={params.style}
+                    onValueChange={(v) => setParams((p) => ({ ...p, style: v as AzureStyle }))}
+                  >
+                    <SelectTrigger className="bg-slate-50 border-slate-200 h-11 text-xs font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AZURE_STYLES.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-6">
                   <div className="space-y-3">
-                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase"><span>Speed</span><span>{params.rate}x</span></div>
-                    <Slider value={[params.rate]} min={0.5} max={1.5} step={0.05} onValueChange={([v]) => setParams(p => ({...p, rate: v}))} />
+                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase">
+                      <span>Speed</span>
+                      <span>{params.rate}x</span>
+                    </div>
+                    <Slider
+                      value={[params.rate]}
+                      min={0.5}
+                      max={1.5}
+                      step={0.05}
+                      onValueChange={([v]) => setParams((p) => ({ ...p, rate: v }))}
+                    />
                   </div>
                   <div className="space-y-3">
-                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase"><span>Pitch</span><span>{params.pitch}%</span></div>
-                    <Slider value={[params.pitch]} min={-20} max={20} step={1} onValueChange={([v]) => setParams(p => ({...p, pitch: v}))} />
+                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase">
+                      <span>Pitch</span>
+                      <span>{params.pitch}%</span>
+                    </div>
+                    <Slider
+                      value={[params.pitch]}
+                      min={-20}
+                      max={20}
+                      step={1}
+                      onValueChange={([v]) => setParams((p) => ({ ...p, pitch: v }))}
+                    />
                   </div>
                 </div>
               </div>
@@ -208,7 +279,9 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
               <div className="w-full space-y-3 text-center px-4">
                 <div className="flex justify-between text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">
                   <span>{status === 'completed' ? 'SUCCESS' : status === 'error' ? 'ERROR' : 'PROCESSING'}</span>
-                  <span className="text-slate-900">{progress.current} / {progress.total}</span>
+                  <span className="text-slate-900">
+                    {progress.current} / {progress.total}
+                  </span>
                 </div>
                 <Progress value={(progress.current / progress.total) * 100} className="h-2.5 bg-slate-100" />
               </div>
@@ -217,17 +290,40 @@ export function SprintTTSBulkDialog({ questions, type, level, onComplete, childr
         </div>
 
         <DialogFooter className="p-4 bg-slate-50 border-t flex gap-2">
-          {status === 'idle' && (
-            !showConfirm ? (
-              <Button onClick={() => setShowConfirm(true)} disabled={filteredTasks.length === 0} className="w-full bg-brand hover:bg-brand-strong text-white font-black h-12 shadow-lg gap-2 rounded-full">NEXT STEP <ChevronRight size={18} /></Button>
+          {status === 'idle' &&
+            (!showConfirm ? (
+              <Button
+                onClick={() => setShowConfirm(true)}
+                disabled={filteredTasks.length === 0}
+                className="w-full bg-brand hover:bg-brand-strong text-white font-black h-12 shadow-lg gap-2 rounded-full"
+              >
+                NEXT STEP <ChevronRight size={18} />
+              </Button>
             ) : (
               <div className="flex gap-2 w-full">
-                <Button variant="ghost" onClick={() => setShowConfirm(false)} className="flex-1 font-bold h-12 rounded-full"><ArrowLeft size={16} /> Back</Button>
-                <Button onClick={handleBulkGenerate} className="flex-[2] bg-rose-600 hover:bg-rose-700 text-white font-black h-12 shadow-md gap-2 rounded-full"><Zap size={16} fill="currentColor" /> START</Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowConfirm(false)}
+                  className="flex-1 font-bold h-12 rounded-full"
+                >
+                  <ArrowLeft size={16} /> Back
+                </Button>
+                <Button
+                  onClick={handleBulkGenerate}
+                  className="flex-[2] bg-rose-600 hover:bg-rose-700 text-white font-black h-12 shadow-md gap-2 rounded-full"
+                >
+                  <Zap size={16} fill="currentColor" /> START
+                </Button>
               </div>
-            )
+            ))}
+          {status === 'error' && (
+            <Button
+              onClick={() => setStatus('idle')}
+              className="w-full bg-slate-800 font-bold h-12 text-white rounded-full"
+            >
+              RETRY
+            </Button>
           )}
-          {status === 'error' && <Button onClick={() => setStatus('idle')} className="w-full bg-slate-800 font-bold h-12 text-white rounded-full">RETRY</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

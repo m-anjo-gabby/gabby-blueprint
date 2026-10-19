@@ -1,19 +1,19 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, Info, Search, SearchX, X } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 import { FAVORITE_LIMIT } from '@/constants/favorites';
-import type { FavoriteKindDef } from './favoriteKinds';
-import { ALL_OPTION, getDownstreamFilterIds, resolveFavoriteFilters } from './favoriteFilters';
-import { FavoriteFilterChips, FavoriteFilterSelects, FavoriteFilterSheetButton } from './FavoriteFilterControls';
 import { replaceSearchParams } from '@/lib/replaceSearchParams';
+import { cn } from '@/lib/utils';
+import { FavoriteFilterChips, FavoriteFilterSelects, FavoriteFilterSheetButton } from './FavoriteFilterControls';
+import { ALL_OPTION, getDownstreamFilterIds, resolveFavoriteFilters } from './favoriteFilters';
+import type { FavoriteKindDef } from './favoriteKinds';
 
 /** 画面の見出し（読み込み中の FavoritesSkeleton と共有する） */
 export const FAVORITES_HEADER = { title: 'お気に入り', titleHidden: true } as const;
@@ -45,16 +45,18 @@ export function FavoriteKindSection<T>({ def, items, pills, otherKindLinks, onRe
 
   const selected = useMemo(
     () => Object.fromEntries(def.filters.map((f) => [f.id, searchParams.get(f.id)])),
-    [def, searchParams]
+    [def, searchParams],
   );
   const { filters, items: filteredByOptions } = useMemo(
     () => resolveFavoriteFilters(items, def.filters, selected),
-    [def, items, selected]
+    [def, items, selected],
   );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return q ? filteredByOptions.filter((item) => def.getSearchText(item).toLowerCase().includes(q)) : filteredByOptions;
+    return q
+      ? filteredByOptions.filter((item) => def.getSearchText(item).toLowerCase().includes(q))
+      : filteredByOptions;
   }, [def, filteredByOptions, query]);
 
   // 条件を変えたら表示件数を最初のページに戻す
@@ -90,7 +92,10 @@ export function FavoriteKindSection<T>({ def, items, pills, otherKindLinks, onRe
           <>
             <div className="flex gap-2">
               <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle" size={18} />
+                <Search
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle"
+                  size={18}
+                />
                 <Input
                   type="search"
                   placeholder={def.searchPlaceholder}
@@ -115,26 +120,43 @@ export function FavoriteKindSection<T>({ def, items, pills, otherKindLinks, onRe
       </ShellPageHeader>
 
       {items.length >= FAVORITE_LIMIT && (
-        <p role="status" className="mb-4 flex items-start gap-2 rounded-card border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
+        <p
+          role="status"
+          className="mb-4 flex items-start gap-2 rounded-card border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+        >
           <Info size={16} className="mt-0.5 shrink-0" />
           {`お気に入りの${def.noun}が上限（${FAVORITE_LIMIT.toLocaleString()}件）に達しています。新しく登録するには、不要なものを削除してください。`}
         </p>
       )}
 
       {items.length === 0 ? (
-        <EmptyState icon={<def.icon size={28} className="text-ink-subtle" />} title={`お気に入りの${def.noun}はまだありません`}>
+        <EmptyState
+          icon={<def.icon size={28} className="text-ink-subtle" />}
+          title={`お気に入りの${def.noun}はまだありません`}
+        >
           <p className="text-sm text-ink-muted">{def.emptyHint}</p>
           {def.emptyAction && (
-            <Button asChild variant="outline" className="mt-2 h-10 rounded-control border-line bg-surface text-sm font-semibold text-ink-soft shadow-none">
+            <Button
+              asChild
+              variant="outline"
+              className="mt-2 h-10 rounded-control border-line bg-surface text-sm font-semibold text-ink-soft shadow-none"
+            >
               <Link href={def.emptyAction.href}>{def.emptyAction.label}</Link>
             </Button>
           )}
           {otherKindLinks && <div className="mt-1 flex flex-wrap justify-center gap-1">{otherKindLinks}</div>}
         </EmptyState>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={<SearchX size={28} className="text-ink-subtle" />} title={`条件に合う${def.noun}が見つかりません`}>
+        <EmptyState
+          icon={<SearchX size={28} className="text-ink-subtle" />}
+          title={`条件に合う${def.noun}が見つかりません`}
+        >
           {isFiltering && (
-            <Button variant="ghost" onClick={clearAll} className="mt-1 h-10 rounded-control text-sm font-semibold text-brand hover:bg-brand-soft">
+            <Button
+              variant="ghost"
+              onClick={clearAll}
+              className="mt-1 h-10 rounded-control text-sm font-semibold text-brand hover:bg-brand-soft"
+            >
               <X size={16} className="mr-1" />
               条件をクリア
             </Button>

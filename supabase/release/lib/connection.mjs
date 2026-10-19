@@ -25,7 +25,11 @@ export async function api(token, method, pathname, body) {
   });
   const text = await res.text();
   let json;
-  try { json = text ? JSON.parse(text) : null; } catch { json = text; }
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = text;
+  }
   if (!res.ok) {
     const message = typeof json === 'object' && json?.message ? json.message : text;
     throw new Error(`HTTP ${res.status}: ${message}`);
@@ -40,7 +44,9 @@ export async function api(token, method, pathname, body) {
 export async function connect(envName, askToken) {
   const envPath = path.join(ENV_DIR, `.env.${envName}`);
   if (!existsSync(envPath)) {
-    throw new Error(`環境ファイルがありません: ${path.relative(REPO_ROOT, envPath)}（.env.example を参考に作成してください）`);
+    throw new Error(
+      `環境ファイルがありません: ${path.relative(REPO_ROOT, envPath)}（.env.example を参考に作成してください）`,
+    );
   }
   const envVars = parseEnv(readFileSync(envPath, 'utf8'));
   const ref = envVars.SUPABASE_PROJECT_REF;
@@ -49,7 +55,8 @@ export async function connect(envName, askToken) {
     throw new Error(`SUPABASE_URL (${envVars.SUPABASE_URL}) が SUPABASE_PROJECT_REF (${ref}) と一致しません。`);
   }
 
-  let token = envVars.SUPABASE_ACCESS_TOKEN;
+  // 環境ファイルが空欄の場合は環境変数（本番の一時トークン等。ファイルに書かずに渡す）、それも無ければ入力を求める
+  let token = envVars.SUPABASE_ACCESS_TOKEN || process.env.SUPABASE_ACCESS_TOKEN;
   if (!token) token = await askToken('SUPABASE_ACCESS_TOKEN を入力してください（入力内容は表示されません）: ');
   if (!token) throw new Error('アクセストークンが入力されませんでした。');
 
@@ -57,9 +64,11 @@ export async function connect(envName, askToken) {
     throw new Error(`プロジェクト情報の取得に失敗しました: ${e.message}`);
   });
   if (!project.name.includes(PROJECT_NAME_HINT[envName])) {
-    throw new Error(`--env=${envName} に対し、プロジェクト名が「${project.name}」です。環境ファイルの取り違えがないか確認してください。`);
+    throw new Error(
+      `--env=${envName} に対し、プロジェクト名が「${project.name}」です。環境ファイルの取り違えがないか確認してください。`,
+    );
   }
 
   const query = (sql) => api(token, 'POST', `/projects/${ref}/database/query`, { query: sql });
-  return { envVars, ref, project, query };
+  return { envVars, ref, token, project, query };
 }

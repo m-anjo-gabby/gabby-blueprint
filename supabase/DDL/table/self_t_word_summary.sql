@@ -6,7 +6,7 @@
 CREATE TABLE public.self_t_word_summary (
     summary_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE RESTRICT,
     training_date            date         NOT NULL DEFAULT CURRENT_DATE,
     word_count               integer      NOT NULL DEFAULT 1,
     phrase_count             integer      NOT NULL DEFAULT 0,
@@ -22,15 +22,11 @@ COMMENT ON COLUMN public.self_t_word_summary.phrase_count IS 'その日に学習
 COMMENT ON COLUMN public.self_t_word_summary.assessment_count IS 'その日に発話評価した回数';
 
 CREATE INDEX idx_daily_summary_perf ON public.self_t_word_summary (user_id, training_date DESC);
+CREATE INDEX idx_word_summary_content ON public.self_t_word_summary (content_id);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.self_t_word_summary FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.self_t_word_summary ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Managers can view client's word summaries" ON public.self_t_word_summary FOR SELECT TO authenticated
-USING (
-    (EXISTS ( SELECT 1
-       FROM public.com_m_user u
-      WHERE u.id = self_t_word_summary.user_id AND u.client_id = public.get_jwt_client_id()))
-);
 
 CREATE POLICY "Users can manage their own word summaries" ON public.self_t_word_summary FOR ALL TO authenticated
 USING (

@@ -1,31 +1,34 @@
 /**
  * 認証の共通処理（サーバー専用）
  *
- * 💡 このモジュールは 'use server' を付けない。付けると export した関数がすべて外部から直接呼べる
+ * このモジュールは 'use server' を付けない。付けると export した関数がすべて外部から直接呼べる
  * エンドポイントになり、ポータルごとの利用者チェック等を迂回されるため。
  * ブラウザから呼ぶ入口は、各アプリの *AuthAction.ts（createPortalAuthActions）だけにする。
  */
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
-import { createServerClient } from '../supabase/server';
-import { createAdminClient } from '../supabase/admin';
-import { User } from '@supabase/supabase-js';
-import { UserBase, USER_TYPES } from '@gabby/types/user';
+import { type User } from '@supabase/supabase-js';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { USER_TYPES } from '@gabby/types/user';
+import { issueInitialLicense, resolvePerformedBy } from '../license/issue';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
-import { issueInitialLicense, resolvePerformedBy } from '../license/issue';
 import { sendPasswordResetEmail } from '../mail/actions/sendAccountMail';
 import type { MailLanguage } from '../mail/layout/document';
-import { getPasswordStrengthErrorCode } from './validation';
+import { createAdminClient } from '../supabase/admin';
+import { createServerClient } from '../supabase/server';
+import { completeTrialRegistration, findTrialApplicationByInvitation } from '../trial/registration';
 import { AUTH_ERROR_MESSAGES_JA, formatAuthErrorMessage, type AuthErrorCode } from './errors';
 import { clearRecoveryMarker, hasValidRecoveryMarker, setRecoveryMarker } from './recovery';
+import { getPasswordStrengthErrorCode } from './validation';
 
-// 💡 共通認証モジュールとしてのロガーを生成
+// 共通認証モジュールとしてのロガーを生成
 const logger = createLogger('common');
 
 /**
  * 認証レスポンスの共通型
  */
-export type AuthResponse = {
+export interface AuthResponse {
   /** 日本語の既定文言（portalActions で各アプリの表示言語の文言に置き換える） */
   error?: string;
   /** エラー種別。文言の出し分けや、どの入力欄に出すかの判定に使う */
@@ -34,7 +37,7 @@ export type AuthResponse = {
   errorDetail?: string;
   success?: boolean;
   user?: User;
-};
+}
 
 /** エラー応答を組み立てる（既定の日本語文言を付けておく） */
 function authErrorResponse(code: AuthErrorCode, detail?: string): AuthResponse {
@@ -50,27 +53,23 @@ function authErrorFields(code: AuthErrorCode): { errorCode: AuthErrorCode; error
 }
 
 /**
- * 🔒 Supabaseからのエラーメッセージをエラー種別に振り分ける共通関数
+ * Supabaseからのエラーメッセージをエラー種別に振り分ける共通関数
  */
 function translateAuthError(message: string): AuthResponse {
   const lowerMsg = message.toLowerCase();
-  
+
   // 同一パスワードの再利用制限
   if (lowerMsg.includes('different from the old')) {
     return authErrorResponse('password_same_as_old');
   }
-  
+
   // 1. 漏洩検知（HIBP: Have I Been Pwned 等）
   if (lowerMsg.includes('leaked') || lowerMsg.includes('pwned') || lowerMsg.includes('compromised')) {
     return authErrorResponse('password_leaked');
   }
 
   // 2. 脆弱性・推測のしやすさ（Weak / Common / Guessable）
-  if (
-    lowerMsg.includes('common') || 
-    lowerMsg.includes('weak') || 
-    lowerMsg.includes('easy to guess')
-  ) {
+  if (lowerMsg.includes('common') || lowerMsg.includes('weak') || lowerMsg.includes('easy to guess')) {
     return authErrorResponse('password_weak');
   }
 
@@ -78,7 +77,7 @@ function translateAuthError(message: string): AuthResponse {
   if (lowerMsg.includes('session missing')) {
     return authErrorResponse('session_invalid');
   }
-  
+
   // 想定外のエラー時は、原因究明のために生のメッセージを付与して返却
   return authErrorResponse('password_update_failed', message);
 }
@@ -89,8 +88,8 @@ function translateAuthError(message: string): AuthResponse {
  * @param options.checkLicense - ライセンス検証を強制する場合に true
  */
 export async function signInCore(
-  formData: FormData, 
-  options: { checkLicense?: boolean } = { checkLicense: false }
+  formData: FormData,
+  options: { checkLicense?: boolean } = { checkLicense: false },
 ): Promise<AuthResponse> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
@@ -101,11 +100,9 @@ export async function signInCore(
 
   // 役割ごとに2つのクライアントを使い分ける
   const supabase = await createServerClient(); // ブラウザ・セッション管理（クッキー操作用）
-  const supabaseAdmin = createAdminClient();  // ロック制御用（SQLでanon権限を剥奪したRPCを叩く用）
+  const supabaseAdmin = createAdminClient(); // ロック制御用（SQLでanon権限を剥奪したRPCを叩く用）
 
-  // -------------------------------------------------------------
-  // 🔒 1. ログイン試行前のロックアウトチェック
-  // -------------------------------------------------------------
+  // 1. ログイン試行前のロックアウトチェック
   // セキュアなRPC（get_user_lock_status_by_email）経由で、
   // auth.usersのemailを元に com_m_user のロック状態を取得
   // SQL側でanon権限を剥奪したため、ここだけ supabaseAdmin を使用してセキュアに実行します
@@ -122,7 +119,6 @@ export async function signInCore(
   } | null;
 
   if (masterError) {
-    // 💡 console.error から共通ロガーへ統合
     logger.error('auth:master_fetch_failed', masterError.message, { err: masterError, payload: { email } });
   }
 
@@ -130,46 +126,42 @@ export async function signInCore(
   if (userMaster && userMaster.locked_until && new Date(userMaster.locked_until) > new Date()) {
     logger.warn('auth:login_blocked_lockedout', `Locked user attempted login: ${email}`, {
       userId: userMaster.id,
-      payload: { email, lockedUntil: userMaster.locked_until }
+      payload: { email, lockedUntil: userMaster.locked_until },
     });
     return authErrorResponse('account_locked');
   }
 
-  // -------------------------------------------------------------
   // 2. Supabase Authでサインイン試行
-  // -------------------------------------------------------------
   const { data, error: authError } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  // -------------------------------------------------------------
-  // 🔒 3. ログイン失敗時のハンドル（カウントアップ & ロック適用）
-  // -------------------------------------------------------------
+  // 3. ログイン失敗時のハンドル（カウントアップ & ロック適用）
   if (authError || !data.user) {
-    // 💡 エラーログをロガー経由で出力。機密情報（パスワード）を避けてエラーメッセージのみ追跡
+    // エラーログをロガー経由で出力。機密情報（パスワード）を避けてエラーメッセージのみ追跡
     logger.warn('auth:supabase_signin_failed', authError?.message || 'Invalid credentials', {
       err: authError,
-      payload: { email }
+      payload: { email },
     });
 
     // RPC経由でユーザーが特定できている場合のみ、失敗カウントの更新を行う
     if (userMaster) {
       // 管理者('0')は3回、それ以外（生徒等）は10回でロック
       const maxAttempts = userMaster.user_type === USER_TYPES.ADMIN ? 3 : 10;
-      
+
       // RLSを回避するため、SQL側のセキュアな関数(RPC)を呼び出してカウントアップさせる
       // カウントアップ処理もSQL側で service_role 専用にしたため、supabaseAdmin を使用して安全に実行します
       const { error: updateError } = await supabaseAdmin.rpc('increment_login_failed_count', {
         p_user_id: userMaster.id,
-        p_max_attempts: maxAttempts
+        p_max_attempts: maxAttempts,
       });
 
       if (updateError) {
         logger.error('auth:increment_counter_failed', updateError.message, {
           err: updateError,
           userId: userMaster.id,
-          payload: { email }
+          payload: { email },
         });
       }
 
@@ -178,7 +170,7 @@ export async function signInCore(
       if (nextFailedCount >= maxAttempts) {
         logger.warn('auth:account_lockedout', `Account has been locked out for 30 minutes: ${email}`, {
           userId: userMaster.id,
-          payload: { email, failedCount: nextFailedCount }
+          payload: { email, failedCount: nextFailedCount },
         });
         return authErrorResponse('account_locked_now');
       }
@@ -187,11 +179,9 @@ export async function signInCore(
     return authErrorResponse('invalid_credentials');
   }
 
-  // -------------------------------------------------------------
-  // 🔒 4. ログイン成功時のハンドル（失敗カウント・ロックのリセット）
-  // -------------------------------------------------------------
+  // 4. ログイン成功時のハンドル（失敗カウント・ロックのリセット）
   // 過去に失敗履歴がある、またはロック日時が残っている場合はクリーンにクリアする
-  // 💡 login_failed_count / locked_until は権限昇格防止のため authenticated ロールの
+  // login_failed_count / locked_until は権限昇格防止のため authenticated ロールの
   // 列単位UPDATE権限から除外している（com_m_user.sql参照）。セッションクライアント(supabase)
   // では更新できないため、ここは supabaseAdmin(service_role) 経由で実行する。
   if (userMaster && (userMaster.login_failed_count > 0 || userMaster.locked_until)) {
@@ -200,8 +190,8 @@ export async function signInCore(
       .update({
         login_failed_count: 0,
         locked_until: null,
-        update_date: new Date().toISOString()
-      } as Partial<UserBase>)
+        update_date: new Date().toISOString(),
+      })
       .eq('id', userMaster.id);
 
     if (resetError) {
@@ -213,9 +203,7 @@ export async function signInCore(
     }
   }
 
-  // -------------------------------------------------------------
   // 5. ライセンスチェックが必要な場合のガード
-  // -------------------------------------------------------------
   if (options.checkLicense) {
     const isLicensed = await checkLicense(data.user.id);
     if (!isLicensed) {
@@ -253,7 +241,7 @@ export async function signOutCore(): Promise<AuthResponse> {
  */
 export async function forgotPasswordCore(
   formData: FormData,
-  options: { mailLanguage: MailLanguage }
+  options: { mailLanguage: MailLanguage },
 ): Promise<AuthResponse> {
   const email = formData.get('email') as string;
 
@@ -262,19 +250,19 @@ export async function forgotPasswordCore(
   }
 
   try {
-    // 💡 改善: メール自体は独自で送るため、Supabase側からは「送信」ではなく「認証リンク（トークン）」のみを行政権限で発行させる
+    // メールは自前で送るため、Supabase には送信させず、認証リンク（トークン）だけを管理者権限で発行させる
     const supabaseAdmin = await createAdminClient();
-    
+
     const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email: email,
       options: {
-        // 💡 既存のリダイレクト設定をそのまま引き継ぐ（認証後のパスワード入力画面パス）
+        // 既存のリダイレクト設定をそのまま引き継ぐ（認証後のパスワード入力画面パス）
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/update-password`,
-      }
+      },
     });
 
-    // 💡 未登録のメールアドレスでも成功と同じ応答を返す（登録の有無を外部から判別させない）。
+    // 未登録のメールアドレスでも成功と同じ応答を返す（登録の有無を外部から判別させない）。
     // 失敗の内容はログにだけ残す。
     if (linkError) {
       logger.warn('auth:reset_email_link_generation_failed', linkError.message, { err: linkError, payload: { email } });
@@ -286,7 +274,7 @@ export async function forgotPasswordCore(
       return { success: true };
     }
 
-    // 💡 修正: Supabase内部の verify エンドポイントを経由すると、非PKCE時はセッションが
+    // Supabase 内部の verify エンドポイントを経由すると、非PKCE時はセッションが
     // フラグメント (#) で返りサーバーサイドの callback で取得できなくなるため、
     // 直接アプリのコールバック URL を生成してトークン (hashed_token) を渡します。
     const tokenHash = data.properties.hashed_token;
@@ -305,15 +293,20 @@ export async function forgotPasswordCore(
     }
 
     return { success: true };
-
   } catch (err) {
-    logger.error('auth:forgot_password_unexpected', err instanceof Error ? err.message : 'Unknown error', { err, payload: { email } });
+    unstable_rethrow(err);
+    logger.error('auth:forgot_password_unexpected', getErrorMessage(err), {
+      err,
+      payload: { email },
+    });
     return { success: true };
   }
 }
 
 /** 現在のセッションの session_id（JWTを検証した上で取得） */
-async function getCurrentSessionId(supabase: Awaited<ReturnType<typeof createServerClient>>): Promise<string | undefined> {
+async function getCurrentSessionId(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+): Promise<string | undefined> {
   const { data } = await supabase.auth.getClaims();
   const sessionId = data?.claims?.session_id;
   return typeof sessionId === 'string' ? sessionId : undefined;
@@ -321,7 +314,7 @@ async function getCurrentSessionId(supabase: Awaited<ReturnType<typeof createSer
 
 /**
  * 再設定リンク（recovery トークン）をサーバーで確認し、再設定用のセッションを確立する
- * 💡 メーラーの事前読み込みでトークンが消費されないよう、画面のボタン操作から呼ぶ（GETでは確認しない）
+ * メーラーの事前読み込みでトークンが消費されないよう、画面のボタン操作から呼ぶ（GETでは確認しない）
  */
 export async function verifyRecoveryCore(tokenHash: string): Promise<AuthResponse> {
   if (!tokenHash) return authErrorResponse('reset_link_required');
@@ -357,7 +350,7 @@ export async function hasRecoverySessionCore(): Promise<boolean> {
 export async function resetPasswordCore(formData: FormData): Promise<AuthResponse> {
   const password = formData.get('password') as string;
 
-  // 💡 共通の強度バリデーションを適用（8文字以上、英数混在）
+  // 共通の強度バリデーションを適用（8文字以上、英数混在）
   const validationError = getPasswordStrengthErrorCode(password);
   if (validationError) {
     return authErrorResponse(validationError);
@@ -365,7 +358,7 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
 
   const supabase = await createServerClient();
 
-  // 💡 再設定リンクを確認したセッションに限る。ログイン中の利用者がこの画面から
+  // 再設定リンクを確認したセッションに限る。ログイン中の利用者がこの画面から
   // 現在のパスワード確認（updatePasswordCore）を迂回して変更できないようにする。
   if (!(await hasValidRecoveryMarker(await getCurrentSessionId(supabase)))) {
     logger.warn('auth:reset_password_without_recovery', 'Password reset attempted without a verified recovery link');
@@ -376,7 +369,7 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
 
   if (error) {
     logger.error('auth:reset_password_submission_failed', error.message, { err: error });
-    // 💡 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
+    // 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
     return translateAuthError(error.message);
   }
 
@@ -386,18 +379,24 @@ export async function resetPasswordCore(formData: FormData): Promise<AuthRespons
   await clearRecoveryMarker();
   const { error: signOutError } = await supabase.auth.signOut({ scope: 'others' });
   if (signOutError) {
-    logger.error('auth:reset_password_signout_others_failed', signOutError.message, { err: signOutError, userId: updated.user?.id });
+    logger.error('auth:reset_password_signout_others_failed', signOutError.message, {
+      err: signOutError,
+      userId: updated.user?.id,
+    });
   }
 
   // 本人確認（再設定リンク）が済んだため、ログイン失敗の回数とロックを解除する
-  // 💡 login_failed_count / locked_until はセッションクライアントでは更新できないため service_role で行う
+  // login_failed_count / locked_until はセッションクライアントでは更新できないため service_role で行う
   if (updated.user?.id) {
     const { error: unlockError } = await createAdminClient()
       .from('com_m_user')
-      .update({ login_failed_count: 0, locked_until: null, update_date: new Date().toISOString() } as Partial<UserBase>)
+      .update({ login_failed_count: 0, locked_until: null, update_date: new Date().toISOString() })
       .eq('id', updated.user.id);
     if (unlockError) {
-      logger.error('auth:reset_password_unlock_failed', unlockError.message, { err: unlockError, userId: updated.user.id });
+      logger.error('auth:reset_password_unlock_failed', unlockError.message, {
+        err: unlockError,
+        userId: updated.user.id,
+      });
     }
   }
 
@@ -412,7 +411,7 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
   const currentPassword = formData.get('currentPassword') as string;
   const newPassword = formData.get('newPassword') as string;
 
-  // 💡 共通の強度バリデーションを適用（8文字以上、英数混在）
+  // 共通の強度バリデーションを適用（8文字以上、英数混在）
   const validationError = getPasswordStrengthErrorCode(newPassword);
   if (validationError) {
     return authErrorResponse(validationError);
@@ -420,10 +419,12 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
 
   const supabase = await createServerClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user || !user.email) return authErrorResponse('session_timeout');
 
-  // 💡 ログイン済みなのでログコンテキスト（IP、UAなど）を取得して紐付け
+  // ログイン済みなのでログコンテキスト（IP、UAなど）を取得して紐付け
   const ctx = await getLogContext();
 
   const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -440,8 +441,8 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
     return authErrorResponse('current_password_incorrect');
   }
 
-  const { error: updateError } = await supabase.auth.updateUser({ 
-    password: newPassword 
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
   });
 
   if (updateError) {
@@ -451,7 +452,7 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
       ...ctx,
       payload: { email: user.email },
     });
-    // 💡 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
+    // 共通のエラー翻訳ロジックを通すことで、古いパスワード制限や漏洩検知に対応
     return translateAuthError(updateError.message);
   }
 
@@ -460,17 +461,17 @@ export async function updatePasswordCore(formData: FormData): Promise<AuthRespon
 
 /**
  * ユーザーの有効なライセンスを確認する
- * @param userId 
+ * @param userId
  */
 export async function checkLicense(userId: string): Promise<boolean> {
   const supabase = await createServerClient();
-  
+
   const { data, error } = await supabase
     .from('com_t_user_license')
     .select('license_id')
     .eq('user_id', userId)
     .eq('status', 1)
-    .gte('end_date', new Date().toISOString()) // 💡 'now()'文字列ではなく実際のISO日時を渡す（他箇所の実装と統一）
+    .gte('end_date', new Date().toISOString()) // 'now()'文字列ではなく実際のISO日時を渡す（他箇所の実装と統一）
     .limit(1) // 現在有効なものと未来のものが複数ある場合を考慮し、1件でもあればOKとする
     .maybeSingle();
 
@@ -481,9 +482,7 @@ export async function checkLicense(userId: string): Promise<boolean> {
   return !!data && !error;
 }
 
-// =============================================================
 // 独自招待テーブル（com_t_invitation）
-// =============================================================
 
 /** 招待画面に返す情報（画面に必要な項目だけ。client_id・roles 等は返さない） */
 export interface InvitationSummary {
@@ -492,8 +491,7 @@ export interface InvitationSummary {
 }
 
 export type VerifyInvitationResponse =
-  | { valid: true; invitation: InvitationSummary }
-  | { valid: false; errorCode: AuthErrorCode; error: string };
+  { valid: true; invitation: InvitationSummary } | { valid: false; errorCode: AuthErrorCode; error: string };
 
 const INVITATION_COLUMNS = 'id, email, user_name, expires_at, user_type, client_id, contract_id, roles, invited_by';
 
@@ -523,7 +521,8 @@ export async function verifyInvitationCore(token: string): Promise<VerifyInvitat
     if (!result.invite) return { valid: false, ...authErrorFields(result.errorCode) };
     return { valid: true, invitation: { email: result.invite.email, userName: result.invite.user_name } };
   } catch (err) {
-    logger.error('auth:verify_invitation_unexpected', err instanceof Error ? err.message : 'Unknown error', { err });
+    unstable_rethrow(err);
+    logger.error('auth:verify_invitation_unexpected', getErrorMessage(err), { err });
     return { valid: false, ...authErrorFields('unexpected') };
   }
 }
@@ -557,13 +556,17 @@ export async function acceptInvitationCore(token: string, password: string): Pro
       user_metadata: {
         user_name: inviteRecord.user_name,
         user_type: inviteRecord.user_type,
-        client_id: inviteRecord.client_id, // 🚀 修正: ここで client_id をメタデータに渡すことで、トリガー側が初期テナントにフォールバックするのを防ぎます
-        roles: inviteRecord.roles // 招待時のロールをメタデータにも同期
-      }
+        client_id: inviteRecord.client_id, // メタデータに渡し、トリガーが既定の顧客を使わないようにする
+        roles: inviteRecord.roles, // 招待時のロールをメタデータにも同期
+      },
     });
 
     if (authError || !authData.user) {
-      logger.error('auth:accept_invite_signup_failed', authError?.message || 'User object null', { ...ctx, err: authError, payload: { email: inviteRecord.email } });
+      logger.error('auth:accept_invite_signup_failed', authError?.message || 'User object null', {
+        ...ctx,
+        err: authError,
+        payload: { email: inviteRecord.email },
+      });
       return authErrorResponse('account_create_failed', authError?.message);
     }
 
@@ -573,41 +576,58 @@ export async function acceptInvitationCore(token: string, password: string): Pro
     const { error: dbUserError } = await supabase
       .from('com_m_user')
       .update({
-        client_id: inviteRecord.client_id, // 🚀 修正: トリガーだけでなく、念のためここでも確定した client_id で上書き同期を保証します
+        client_id: inviteRecord.client_id, // トリガーの結果に関わらず、招待の顧客で上書きする
         user_name: inviteRecord.user_name,
         user_type: inviteRecord.user_type,
-        update_date: new Date().toISOString()
+        update_date: new Date().toISOString(),
       })
       .eq('id', newUserId);
 
     if (dbUserError) {
-      logger.error('auth:accept_invite_m_user_sync_failed', dbUserError.message, { ...ctx, err: dbUserError, userId: newUserId });
+      logger.error('auth:accept_invite_m_user_sync_failed', dbUserError.message, {
+        ...ctx,
+        err: dbUserError,
+        userId: newUserId,
+      });
       throw dbUserError;
     }
 
     // 4. 招待時に紐付けられていたロールを取得して一括挿入
     const targetRoles = (inviteRecord.roles as string[]) || [];
     if (targetRoles.length > 0) {
-      const { error: roleError } = await supabase
-        .from('com_t_user_role')
-        .insert(targetRoles.map((roleId: string) => ({
+      const { error: roleError } = await supabase.from('com_t_user_role').insert(
+        targetRoles.map((roleId: string) => ({
           user_id: newUserId,
-          role_id: roleId
-        })));
+          role_id: roleId,
+        })),
+      );
 
       if (roleError) {
-        logger.error('auth:accept_invite_roles_insert_failed', roleError.message, { ...ctx, err: roleError, userId: newUserId, payload: { roles: targetRoles } });
+        logger.error('auth:accept_invite_roles_insert_failed', roleError.message, {
+          ...ctx,
+          err: roleError,
+          userId: newUserId,
+          payload: { roles: targetRoles },
+        });
       }
     }
 
     // 5. 招待時に指定されたライセンスがあれば有効化（契約期間いっぱい。契約管理からの割当と同じく
-    //    履歴・ライブのチケットも作る。履歴の実行者は招待したアドミン）
-    if (inviteRecord.contract_id) {
-      const licenseResult = await issueInitialLicense(supabase, {
-        contractId: inviteRecord.contract_id,
-        userId: newUserId,
-        performedBy: resolvePerformedBy(inviteRecord.invited_by ?? undefined),
-      }, ctx);
+    //    履歴・ライブのチケットも作る。履歴の実行者は招待したアドミン）。
+    //    Webトライアルの申込からの招待は、本登録の月の契約で本登録の日から14日間のライセンスを発行する
+    const trialApplication = await findTrialApplicationByInvitation(supabase, inviteRecord.id, ctx);
+    if (trialApplication) {
+      await completeTrialRegistration(supabase, { application: trialApplication, userId: newUserId }, ctx);
+    } else if (inviteRecord.contract_id) {
+      const licenseResult = await issueInitialLicense(
+        supabase,
+        {
+          contractId: inviteRecord.contract_id,
+          userId: newUserId,
+          performedBy: resolvePerformedBy(inviteRecord.invited_by ?? undefined),
+        },
+        ctx,
+      );
       if (!licenseResult.success) {
         logger.error('auth:accept_invite_license_insert_failed', licenseResult.message, { ...ctx, userId: newUserId });
       }
@@ -618,23 +638,30 @@ export async function acceptInvitationCore(token: string, password: string): Pro
       .from('com_t_invitation')
       .update({
         accepted_at: new Date().toISOString(),
-        update_date: new Date().toISOString()
+        update_date: new Date().toISOString(),
       })
       .eq('id', inviteRecord.id);
 
     if (closeError) {
-      logger.error('auth:accept_invite_close_record_failed', closeError.message, { ...ctx, err: closeError, payload: { inviteId: inviteRecord.id } });
+      logger.error('auth:accept_invite_close_record_failed', closeError.message, {
+        ...ctx,
+        err: closeError,
+        payload: { inviteId: inviteRecord.id },
+      });
     }
 
     logger.info('auth:accept_invite_all_success', `User registration fully completed: ${inviteRecord.email}`, {
       ...ctx,
-      userId: newUserId
+      userId: newUserId,
     });
 
     return { success: true };
-
   } catch (err) {
-    logger.error('auth:accept_invite_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('auth:accept_invite_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return authErrorResponse('unexpected');
   }
 }

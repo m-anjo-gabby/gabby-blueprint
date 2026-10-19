@@ -38,6 +38,7 @@ COMMENT ON COLUMN public.student_m_training_lifetime_stats.update_date IS '更�
 COMMENT ON COLUMN public.student_m_training_lifetime_stats.first_training_date IS '初回トレーニング実施日（ユーザーのタイムゾーン基準のローカル日付。生徒ホームの「これまでの歩み」の開始日）';
 
 CREATE TRIGGER on_training_lifetime_stats_change AFTER INSERT OR UPDATE ON public.student_m_training_lifetime_stats FOR EACH ROW EXECUTE FUNCTION public.notify_training_milestone();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.student_m_training_lifetime_stats FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.student_m_training_lifetime_stats ENABLE ROW LEVEL SECURITY;
 

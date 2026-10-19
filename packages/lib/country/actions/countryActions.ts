@@ -1,9 +1,11 @@
 'use server';
 
-import { createServerClient } from '../../supabase/server';
+import { unstable_rethrow } from 'next/navigation';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { type GetCountryListResult } from '@gabby/types/country';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { GetCountryListResult } from '@gabby/types/country';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 
@@ -18,7 +20,7 @@ export async function getCountryListCore(): Promise<GetCountryListResult> {
     const { data, error } = await supabase
       .from('com_m_country')
       .select('*')
-      .eq('delete_flg', '0')
+      .eq('is_active', true)
       .order('sort_no', { ascending: true });
 
     if (error) {
@@ -28,7 +30,11 @@ export async function getCountryListCore(): Promise<GetCountryListResult> {
 
     return { success: true, countries: data ?? [] };
   } catch (err) {
-    logger.error('country:get_country_list_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('country:get_country_list_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

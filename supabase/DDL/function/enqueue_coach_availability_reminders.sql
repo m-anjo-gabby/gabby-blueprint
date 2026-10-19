@@ -1,5 +1,5 @@
 ---------------------------------------------
--- コーチの空き時間の見直し通知 (2026-10-06 追加)
+-- コーチの空き時間の見直し通知
 -- 前提: table/com_m_coach_profile.sql（availability_confirmed_at パッチ）, table/com_m_coach_availability.sql,
 --       table/com_t_notification.sql, function/fn_notify.sql の作成が完了していること。pg_cron が有効であること。
 ---------------------------------------------
@@ -16,9 +16,9 @@
 -- コーチには出さない。空き時間を保存する・「変更なしで確認」すると、確認日時を更新し、この通知を既読にする。
 --
 -- 【対象のコーチ】
--- 有効なコーチ（com_m_user.user_type = '2' かつ delete_flg = '0'、プロフィールが有効）。デモコーチ
+-- 有効なコーチ（com_m_user.user_type = '2' かつ status = 1）。デモコーチ
 -- （demo_user ロール）は除く（通常の生徒のマッチング対象外のため。get_matchable_coach_ids と同じ考え方）。
--- 新規の生徒の受付をOFFにしたコーチ・アドミンが休止にしたコーチも除く（空き時間はマッチングにだけ使うため。2026-10-11 追加）。
+-- 新規の生徒の受付をOFFにしたコーチ・アドミンが休止にしたコーチも除く（空き時間はマッチングにだけ使うため）。
 ---------------------------------------------
 
 -- 確認日時の更新と、見直しの通知の既読化（空き時間の保存・「変更なしで確認」の共通処理。内部処理専用）
@@ -41,7 +41,7 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.fn_mark_coach_availability_confirmed(uuid) FROM PUBLIC, anon, authenticated;
 
--- 空き時間の追加・変更・削除（論理削除）のたびに確認済みにする
+-- 空き時間の追加・変更・削除のたびに確認済みにする
 CREATE OR REPLACE FUNCTION public.trg_coach_availability_confirmed()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -49,14 +49,14 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-    PERFORM public.fn_mark_coach_availability_confirmed(NEW.coach_id);
+    PERFORM public.fn_mark_coach_availability_confirmed(COALESCE(NEW.coach_id, OLD.coach_id));
     RETURN NULL;
 END;
 $$;
 
 DROP TRIGGER IF EXISTS on_coach_availability_change_confirm ON public.com_m_coach_availability;
 CREATE TRIGGER on_coach_availability_change_confirm
-AFTER INSERT OR UPDATE ON public.com_m_coach_availability
+AFTER INSERT OR UPDATE OR DELETE ON public.com_m_coach_availability
 FOR EACH ROW EXECUTE FUNCTION public.trg_coach_availability_confirmed();
 
 -- 「変更なしで確認」（コーチ本人のみ）
@@ -100,10 +100,9 @@ BEGIN
             -- 確認日時が無い（本機能の追加前から登録している）場合は、空き時間の最終更新を確認日時とみなす
             COALESCE(p.availability_confirmed_at, MAX(a.update_date)) AS confirmed_at
         FROM public.com_m_coach_profile p
-        JOIN public.com_m_user u ON u.id = p.user_id AND u.user_type = '2' AND u.delete_flg = '0'
-        LEFT JOIN public.com_m_coach_availability a ON a.coach_id = p.user_id AND a.delete_flg = '0'
-        WHERE p.delete_flg = '0'
-          AND p.accepting_students
+        JOIN public.com_m_user u ON u.id = p.user_id AND u.user_type = '2' AND u.status = 1
+        LEFT JOIN public.com_m_coach_availability a ON a.coach_id = p.user_id
+        WHERE p.accepting_students
           AND NOT EXISTS (SELECT 1 FROM public.com_m_coach_matching_suspension s WHERE s.coach_id = p.user_id)
           AND NOT EXISTS (
               SELECT 1 FROM public.com_t_user_role r

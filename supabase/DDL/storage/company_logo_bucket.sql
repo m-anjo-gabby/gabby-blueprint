@@ -1,5 +1,5 @@
 ---------------------------------------------
--- DDL: Storage Bucket "company-logo" (会社情報マスタ用 ロゴ画像) (2026-09-13 追加)
+-- DDL: Storage Bucket "company-logo" (会社情報マスタ用 ロゴ画像)
 ---------------------------------------------
 -- 保存パス例: company-logo/logo-01.png
 -- 公開設定: Public バケット（getPublicUrl() で直接配信、コーチ向け月次支払通知書PDFの

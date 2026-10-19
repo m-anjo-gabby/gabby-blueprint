@@ -1,13 +1,19 @@
 'use client';
 
-import { useState } from 'react';
 import { CheckCircle2, ExternalLink, ListChecks } from 'lucide-react';
-import type { CalendarEventItem } from '@gabby/types/calendarEvent';
+import { useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { Button } from '@/components/ui/button';
-import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
-import { EventCoachLine, EventDetailLink, EventTiming, JoinedBadge, formatEventSlot } from '@/components/calendarEvent/EventMeta';
+import type { CalendarEventItem } from '@gabby/types/calendarEvent';
 import { joinCalendarEventSeries } from '@/actions/calendarEventAction';
+import {
+  EventCoachLine,
+  EventDetailLink,
+  EventTiming,
+  formatEventSlot,
+  JoinedBadge,
+} from '@/components/calendarEvent/EventMeta';
+import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getJoinableSessions } from '../_lib/groupBySeries';
 
@@ -35,7 +41,11 @@ export function SessionRow({ session, nowMs, timezone, onParticipationChanged, o
   return (
     <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-4" data-testid="group-session-row">
       {/* 日時・内容を押しても詳細を開く（「詳細」と同じ） */}
-      <button type="button" onClick={() => onOpenDetail(session.calendar_event_id)} className="group min-w-0 flex-1 text-left">
+      <button
+        type="button"
+        onClick={() => onOpenDetail(session.calendar_event_id)}
+        className="group min-w-0 flex-1 text-left"
+      >
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted tabular-nums">
           <span>
             {slot.date} {slot.time}
@@ -56,7 +66,13 @@ export function SessionRow({ session, nowMs, timezone, onParticipationChanged, o
           </Button>
         )}
         {session.rsvp_enabled && !isJoined && (
-          <Button type="button" size="sm" variant="outline" pending={isSubmitting} onClick={() => join(session.calendar_event_id)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            pending={isSubmitting}
+            onClick={() => join(session.calendar_event_id)}
+          >
             参加する
           </Button>
         )}
@@ -132,7 +148,9 @@ export function SeriesCard({
       <h2 className="text-base font-bold text-ink">{title}</h2>
       {description && (
         <div className="mt-1.5">
-          <p className={cn('text-sm text-ink-soft whitespace-pre-line', !expanded && DESCRIPTION_CLAMP)}>{description}</p>
+          <p className={cn('text-sm text-ink-soft whitespace-pre-line', !expanded && DESCRIPTION_CLAMP)}>
+            {description}
+          </p>
           {description.length > 120 && (
             <button
               type="button"

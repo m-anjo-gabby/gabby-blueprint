@@ -6,10 +6,11 @@ import {
   recordSessionCallLeaveCore,
   recordSessionChatMessageCore,
 } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
+import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
-import { LiveSessionRoomAccess, LiveSessionRoomErrorCode } from '@gabby/types/liveSessionRoom';
+import type { ActionResult } from '@gabby/types/action';
+import { type LiveSessionRoomAccess, type LiveSessionRoomErrorCode } from '@gabby/types/liveSessionRoom';
 
 const logger = createLogger('coach');
 const EARLY_JOIN_MINUTES = LIVE_SESSION_EARLY_JOIN_BEFORE_MS / 60000;
@@ -23,11 +24,11 @@ const LIVE_SESSION_ROOM_ERROR_MESSAGES_EN: Record<LiveSessionRoomErrorCode, stri
 };
 
 /**
- * Fetches this coach's access info (Zoom Video SDK signature, etc.) for the live session room of the given lesson session
+ * そのレッスンのセッションのライブセッションのルームに入るための、このコーチの情報（Zoom Video SDK の署名等）を取得する
  */
 export async function getLiveSessionRoomAccess(
-  sessionId: string
-): Promise<{ success: true; access: LiveSessionRoomAccess } | { success: false; message: string }> {
+  sessionId: string,
+): Promise<ActionResult<{ access: LiveSessionRoomAccess }>> {
   const result = await getCoachLiveSessionRoomAccessCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -38,8 +39,8 @@ export async function getLiveSessionRoomAccess(
 }
 
 /**
- * Records that this coach has joined the call for the given lesson session. Returns the
- * call_log_id to pass to recordCallLeave later.
+ * そのレッスンのセッションの通話に、このコーチが入ったことを記録する。
+ * 後で recordCallLeave に渡す call_log_id を返す。
  */
 export async function recordCallJoin(sessionId: string, zoomSessionId: string | null): Promise<string | null> {
   const result = await recordSessionCallJoinCore(sessionId, zoomSessionId);
@@ -52,15 +53,15 @@ export async function recordCallJoin(sessionId: string, zoomSessionId: string | 
 }
 
 /**
- * Records that this coach has left the call. Safe to call multiple times / from multiple exit paths.
+ * このコーチが通話を出たことを記録する。複数回・複数の退出の経路から呼んでもよい。
  */
 export async function recordCallLeave(callLogId: string): Promise<void> {
   await recordSessionCallLeaveCore(callLogId);
 }
 
 /**
- * Records a chat message this coach sent during the call into com_t_session_chat.
- * Only call this when chat-on-message fires with isSelf===true (calling it for both sides would double-save).
+ * 通話中にこのコーチが送ったチャットのメッセージを com_t_session_chat に記録する。
+ * chat-on-message が isSelf===true で届いた時だけ呼ぶ（両側で呼ぶと二重に保存される）。
  */
 export async function recordChatMessage(sessionId: string, message: string): Promise<void> {
   await recordSessionChatMessageCore(sessionId, message);

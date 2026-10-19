@@ -51,10 +51,7 @@ export function isUndeliverableAddress(email: string): boolean {
  * - sent: 同じ重複防止キーで既に送信済み（送信の成功後に結果を記録できなかった行の再確保）。SENT にする
  */
 export type SendFailureAction =
-  | { kind: 'retry' }
-  | { kind: 'defer'; delayMinutes: number }
-  | { kind: 'fail' }
-  | { kind: 'sent' };
+  { kind: 'retry' } | { kind: 'defer'; delayMinutes: number } | { kind: 'fail' } | { kind: 'sent' };
 
 export function classifySendError(code: string | null): SendFailureAction {
   switch (code) {

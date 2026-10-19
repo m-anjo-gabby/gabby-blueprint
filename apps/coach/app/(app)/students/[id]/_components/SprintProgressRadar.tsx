@@ -1,12 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { formatAcquiredSprintLevelLabel, isSprintLevelNotReached } from '@gabby/lib';
-import { SPRINT_LEVEL_NOT_REACHED, SPRINT_LEVEL_NOT_REACHED_HINT, SPRINT_LEVEL_NOT_REACHED_SHORT } from './sprintLevelLabels';
-import { QUESTION_TYPES } from '@gabby/types/sprint';
-import type { StudentSprintProgress } from '@gabby/types/coachStudent';
+import { useState } from 'react';
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -17,9 +12,18 @@ import {
   Tooltip,
   type BaseTickContentProps,
 } from 'recharts';
+import { formatAcquiredSprintLevelLabel, isSprintLevelNotReached } from '@gabby/lib';
+import type { StudentSprintProgress } from '@gabby/types/coachStudent';
+import { QUESTION_TYPES } from '@gabby/types/sprint';
+import { Button } from '@/components/ui/button';
+import {
+  SPRINT_LEVEL_NOT_REACHED,
+  SPRINT_LEVEL_NOT_REACHED_HINT,
+  SPRINT_LEVEL_NOT_REACHED_SHORT,
+} from './sprintLevelLabels';
 import { StageLevelDialog } from './StageLevelDialog';
 
-interface Props {
+interface SprintProgressRadarProps {
   studentId: string;
   progress: StudentSprintProgress;
 }
@@ -69,7 +73,7 @@ function AngleTick({ x, y, textAnchor, payload }: BaseTickContentProps) {
   );
 }
 
-export function SprintProgressRadar({ studentId, progress: initialProgress }: Props) {
+export function SprintProgressRadar({ studentId, progress: initialProgress }: SprintProgressRadarProps) {
   const [progress, setProgress] = useState(initialProgress);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const data = buildRadarData(progress);
@@ -127,7 +131,13 @@ export function SprintProgressRadar({ studentId, progress: initialProgress }: Pr
               <PolarGrid stroke="#e2e8f0" />
               <PolarAngleAxis dataKey="axisLabel" tick={AngleTick} />
               <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} tickCount={5} />
-              <Radar dataKey="percent" stroke="var(--color-brand-500)" fill="var(--color-brand-500)" fillOpacity={0.25} strokeWidth={2} />
+              <Radar
+                dataKey="percent"
+                stroke="var(--color-brand-500)"
+                fill="var(--color-brand-500)"
+                fillOpacity={0.25}
+                strokeWidth={2}
+              />
               <Tooltip content={<RadarTooltip />} isAnimationActive={false} />
             </RadarChart>
           </ResponsiveContainer>

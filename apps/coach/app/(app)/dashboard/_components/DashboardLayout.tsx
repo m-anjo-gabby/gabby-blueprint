@@ -1,11 +1,11 @@
-import type { ReactNode } from 'react';
 import { CalendarClock, Star } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Section } from '@/components/common/Section';
-import { DashboardHeaderSkeleton } from './DashboardHeader';
-import { AttentionStripSkeleton } from './AttentionStrip';
-import { TodaysSessionsPanelSkeleton } from './TodaysSessionsPanel';
-import { SessionTasksPanelSkeleton } from './SessionTasksPanel';
 import { MyRatingCardSkeleton } from '@/components/rating/MyRatingCard';
+import { AttentionStripSkeleton } from './AttentionStrip';
+import { DashboardHeaderSkeleton } from './DashboardHeader';
+import { SessionTasksPanelSkeleton } from './SessionTasksPanel';
+import { TodaysSessionsPanelSkeleton } from './TodaysSessionsPanel';
 
 interface DashboardLayoutProps {
   header: ReactNode;

@@ -1,8 +1,8 @@
 // packages/lib/assessment/native-speech.ts
-import { AnalysisResult, WordMatch } from '@gabby/types/speechAssessment';
-import { getScoreTier, ScoreTier } from './feedbackConfig';
-import { detectPhoneticConfusion, PhoneticConfusionRule } from './phoneticConfusions';
+import { type AnalysisResult, type WordMatch } from '@gabby/types/speechAssessment';
+import { getScoreTier, type ScoreTier } from './feedbackConfig';
 import { preprocessInputWords } from './inputNormalization';
+import { detectPhoneticConfusion, type PhoneticConfusionRule } from './phoneticConfusions';
 import { isArticle } from './wordClassification';
 
 // 重みの定義
@@ -21,13 +21,13 @@ const WEIGHTS = {
 // 判定結果に差が無い場面でのみ使う表現のバリエーションなので、ランダム選出で問題ない。
 const PRAISE_COMMENTS: Record<'excellent' | 'great', string[]> = {
   excellent: [
-    "非常に明瞭で正確な発音です。この高い基準を維持しましょう。",
-    "完璧なリズムと流暢さです。自信を持って活用してください。",
-    "素晴らしいパフォーマンスです。今の感覚をぜひ定着させましょう。",
+    '非常に明瞭で正確な発音です。この高い基準を維持しましょう。',
+    '完璧なリズムと流暢さです。自信を持って活用してください。',
+    '素晴らしいパフォーマンスです。今の感覚をぜひ定着させましょう。',
   ],
   great: [
-    "全体的にとても良い発音です。この調子で続けましょう。",
-    "自然なリズムで発音できています。自信を持って次に進みましょう。",
+    '全体的にとても良い発音です。この調子で続けましょう。',
+    '自然なリズムで発音できています。自信を持って次に進みましょう。',
   ],
 };
 
@@ -36,21 +36,21 @@ const PRAISE_COMMENTS: Record<'excellent' | 'great', string[]> = {
 // 詳細はissues側に譲ることを明示する。
 const PRAISE_WITH_MINOR_NOTE: Record<'excellent' | 'great', string[]> = {
   excellent: [
-    "全体的に非常に高いレベルの発話です。細かい点はアドバイス欄も確認してみましょう。",
-    "ほぼ完璧な仕上がりです。さらに磨きたい方はアドバイスもチェックしてみてください。",
+    '全体的に非常に高いレベルの発話です。細かい点はアドバイス欄も確認してみましょう。',
+    'ほぼ完璧な仕上がりです。さらに磨きたい方はアドバイスもチェックしてみてください。',
   ],
   great: [
-    "全体的にとても良い発音です。気になる点はアドバイス欄で確認できます。",
-    "自然な発音で伝わっています。さらに良くしたい部分はアドバイスを参考にしてください。",
+    '全体的にとても良い発音です。気になる点はアドバイス欄で確認できます。',
+    '自然な発音で伝わっています。さらに良くしたい部分はアドバイスを参考にしてください。',
   ],
 };
 
 // メインコメント(summary)で、事実の診断文の後に添える一言（good/fair/poor帯のみ使用）。
 // 「どう直すか」の具体策はissues側の役割なので、ここではモチベーション維持のための短い言葉に留める。
 const ENCOURAGEMENT_BY_TIER: Record<Exclude<ScoreTier, 'excellent' | 'great'>, string[]> = {
-  good: ["練習を重ねれば、さらに伝わりやすくなります。", "この調子で続けていきましょう。"],
-  fair: ["焦らず、繰り返し練習していきましょう。", "反復すれば必ず慣れてきます。"],
-  poor: ["諦めず、もう一度チャレンジしてみましょう。", "反復練習で必ず上達します。"],
+  good: ['練習を重ねれば、さらに伝わりやすくなります。', 'この調子で続けていきましょう。'],
+  fair: ['焦らず、繰り返し練習していきましょう。', '反復すれば必ず慣れてきます。'],
+  poor: ['諦めず、もう一度チャレンジしてみましょう。', '反復練習で必ず上達します。'],
 };
 
 function pickRandom<T>(items: T[]): T {
@@ -61,23 +61,27 @@ function pickRandom<T>(items: T[]): T {
  * 2つの文字列の類似度を計算 (Levenshtein距離ベース)
  */
 export function calculateSimilarity(str1: string, str2: string): number {
-  const s1 = str1.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").trim();
-  const s2 = str2.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").trim();
+  const s1 = str1
+    .toLowerCase()
+    .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '')
+    .trim();
+  const s2 = str2
+    .toLowerCase()
+    .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '')
+    .trim();
 
   if (s1 === s2) return 1.0;
   if (s1.length === 0 || s2.length === 0) return 0;
 
-  const track = Array(s2.length + 1).fill(null).map(() => Array(s1.length + 1).fill(null));
+  const track = Array(s2.length + 1)
+    .fill(null)
+    .map(() => Array(s1.length + 1).fill(null));
   for (let i = 0; i <= s1.length; i += 1) track[0][i] = i;
   for (let j = 0; j <= s2.length; j += 1) track[j][0] = j;
   for (let j = 1; j <= s2.length; j += 1) {
     for (let i = 1; i <= s1.length; i += 1) {
       const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
-      track[j][i] = Math.min(
-        track[j][i - 1] + 1,
-        track[j - 1][i] + 1,
-        track[j - 1][i - 1] + indicator
-      );
+      track[j][i] = Math.min(track[j][i - 1] + 1, track[j - 1][i] + 1, track[j - 1][i - 1] + indicator);
     }
   }
 
@@ -90,9 +94,9 @@ export function calculateSimilarity(str1: string, str2: string): number {
  * 単語レベルでのファジー判定 (内部用)
  */
 function checkFuzzy(target: string, input: string): boolean {
-  const t = target.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-  const i = input.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-  const threshold = t.length > 3 ? 0.70 : 0.85;
+  const t = target.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '');
+  const i = input.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '');
+  const threshold = t.length > 3 ? 0.7 : 0.85;
   return calculateSimilarity(t, i) >= threshold;
 }
 
@@ -102,7 +106,7 @@ function checkFuzzy(target: string, input: string): boolean {
  */
 function wordWeight(word: string, mainWords: string[]): number {
   if (isArticle(word)) return WEIGHTS.ARTICLE_MULTIPLIER;
-  const isMain = mainWords.some(mw => mw.toLowerCase() === word.toLowerCase());
+  const isMain = mainWords.some((mw) => mw.toLowerCase() === word.toLowerCase());
   return isMain ? WEIGHTS.MAIN_WORD_MULTIPLIER : 1.0;
 }
 
@@ -112,18 +116,21 @@ function wordWeight(word: string, mainWords: string[]): number {
 export function analyzePhrase(input: string, target: string, mainWords: string[] = []): AnalysisResult {
   // 口語短縮形の展開・フィラー除去・言い直しの統合を行ってからマッチングにかける
   const rawInputWords = preprocessInputWords(
-    input.toLowerCase().split(/\s+/).filter(w => w.length > 0)
+    input
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length > 0),
   );
-  const targetWords = target.split(/\s+/).filter(w => w.length > 0);
+  const targetWords = target.split(/\s+/).filter((w) => w.length > 0);
 
   // 【忖度用データ準備】隣接する単語を結合したリストを作成(元のインデックスを保持)
   const inputWordsWithCombined = [...rawInputWords];
   for (let i = 0; i < rawInputWords.length - 1; i++) {
-    inputWordsWithCombined.push(rawInputWords[i] + " " + rawInputWords[i+1]); 
+    inputWordsWithCombined.push(rawInputWords[i] + ' ' + rawInputWords[i + 1]);
   }
 
-  const matches: WordMatch[] = targetWords.map(tWord => {
-    const tLower = tWord.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+  const matches: WordMatch[] = targetWords.map((tWord) => {
+    const tLower = tWord.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '');
 
     // 1. 完全一致 (理想的な結果)
     if (rawInputWords.includes(tLower)) {
@@ -131,21 +138,21 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
     }
 
     // 2. 単語結合による一致 (filter + rate = filtrate などを救済)
-    const combinedMatch = inputWordsWithCombined.find(iWord => 
-      iWord.replace(/\s+/g, "") === tLower || checkFuzzy(tLower, iWord.replace(/\s+/g, ""))
+    const combinedMatch = inputWordsWithCombined.find(
+      (iWord) => iWord.replace(/\s+/g, '') === tLower || checkFuzzy(tLower, iWord.replace(/\s+/g, '')),
     );
-    if (combinedMatch && combinedMatch.includes(" ")) {
+    if (combinedMatch && combinedMatch.includes(' ')) {
       return { word: tWord, isMatch: true, isFuzzy: false, isCombined: true, heard: combinedMatch };
     }
 
     // 3. 単体ワードでのファジー一致 (L/Rなどの発音ミス)
-    const fuzzyMatch = rawInputWords.find(iWord => checkFuzzy(tLower, iWord));
+    const fuzzyMatch = rawInputWords.find((iWord) => checkFuzzy(tLower, iWord));
     if (fuzzyMatch) {
       return { word: tWord, isMatch: true, isFuzzy: true, isCombined: false, heard: fuzzyMatch };
     }
 
     // 4. 不一致 (heardを空文字にして型を合わせる)
-    return { word: tWord, isMatch: false, isFuzzy: false, isCombined: false, heard: "" };
+    return { word: tWord, isMatch: false, isFuzzy: false, isCombined: false, heard: '' };
   });
 
   // スコア算出
@@ -159,7 +166,7 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
 
     const weight = wordWeight(m.word, mainWords);
 
-    return acc + (wordScore * weight);
+    return acc + wordScore * weight;
   }, 0);
 
   // 最大スコア
@@ -182,7 +189,7 @@ export function analyzePhrase(input: string, target: string, mainWords: string[]
     summary,
     issues,
     // hasIssuesはUI側で使う可能性があるため付与
-    hasIssues: matches.some(m => m.isFuzzy || m.isCombined || !m.isMatch),
+    hasIssues: matches.some((m) => m.isFuzzy || m.isCombined || !m.isMatch),
   };
 }
 
@@ -216,7 +223,7 @@ interface IssueGroups {
  * 「L/Rや母音」のような音素の当て推量をせず、事実（何が何に聞こえたか）だけで根拠を示せるようにする。
  */
 function collectIssueGroups(matches: WordMatch[], mainWords: string[]): IssueGroups {
-  const isMain = (word: string) => mainWords.some(mw => mw.toLowerCase() === word.toLowerCase());
+  const isMain = (word: string) => mainWords.some((mw) => mw.toLowerCase() === word.toLowerCase());
 
   const groups: IssueGroups = {
     missingMainWords: [],
@@ -228,19 +235,30 @@ function collectIssueGroups(matches: WordMatch[], mainWords: string[]): IssueGro
     combinedWords: [],
   };
 
-  matches.forEach(m => {
+  matches.forEach((m) => {
     if (isArticle(m.word)) {
       if (!m.isMatch) groups.missingArticles.push(m.word);
-      else if (m.isFuzzy) groups.fuzzyArticles.push({ word: m.word, heard: m.heard, confusion: detectPhoneticConfusion(m.word, m.heard) });
+      else if (m.isFuzzy)
+        groups.fuzzyArticles.push({
+          word: m.word,
+          heard: m.heard,
+          confusion: detectPhoneticConfusion(m.word, m.heard),
+        });
       return;
     }
     if (isMain(m.word)) {
       if (!m.isMatch) groups.missingMainWords.push(m.word);
-      else if (m.isFuzzy) groups.fuzzyMainWords.push({ word: m.word, heard: m.heard, confusion: detectPhoneticConfusion(m.word, m.heard) });
+      else if (m.isFuzzy)
+        groups.fuzzyMainWords.push({
+          word: m.word,
+          heard: m.heard,
+          confusion: detectPhoneticConfusion(m.word, m.heard),
+        });
       return;
     }
     if (!m.isMatch) groups.missingWords.push(m.word);
-    else if (m.isFuzzy) groups.fuzzyWords.push({ word: m.word, heard: m.heard, confusion: detectPhoneticConfusion(m.word, m.heard) });
+    else if (m.isFuzzy)
+      groups.fuzzyWords.push({ word: m.word, heard: m.heard, confusion: detectPhoneticConfusion(m.word, m.heard) });
     else if (m.isCombined) groups.combinedWords.push({ word: m.word, heard: m.heard });
   });
 
@@ -251,15 +269,21 @@ function collectIssueGroups(matches: WordMatch[], mainWords: string[]): IssueGro
 function formatWords(words: string[], max = 2): string {
   const unique = Array.from(new Set(words));
   if (unique.length === 0) return '';
-  const shown = unique.slice(0, max).map(w => `「${w}」`).join('、');
+  const shown = unique
+    .slice(0, max)
+    .map((w) => `「${w}」`)
+    .join('、');
   return unique.length > max ? `${shown}など` : shown;
 }
 
 /** 「正解語→聞き取られた語」のペアを「「word」→「heard」」の形式に整形する */
 function formatWordPairs(pairs: WordEvidence[], max = 2): string {
-  const unique = Array.from(new Map(pairs.map(p => [`${p.word}:${p.heard}`, p])).values());
+  const unique = Array.from(new Map(pairs.map((p) => [`${p.word}:${p.heard}`, p])).values());
   if (unique.length === 0) return '';
-  const shown = unique.slice(0, max).map(p => `「${p.word}」→「${p.heard}」`).join('、');
+  const shown = unique
+    .slice(0, max)
+    .map((p) => `「${p.word}」→「${p.heard}」`)
+    .join('、');
   return unique.length > max ? `${shown}など` : shown;
 }
 
@@ -283,7 +307,8 @@ function formatConfusionNote(confusion?: PhoneticConfusionRule): string {
  * 優先順位付きで1点だけ取り上げ、スコア帯に応じた短い一言でモチベーションを支える。
  */
 function buildSummary(tier: ScoreTier, groups: IssueGroups): string {
-  const { missingMainWords, fuzzyMainWords, missingArticles, fuzzyArticles, missingWords, fuzzyWords, combinedWords } = groups;
+  const { missingMainWords, fuzzyMainWords, missingArticles, fuzzyArticles, missingWords, fuzzyWords, combinedWords } =
+    groups;
   const hasAnyIssue =
     missingMainWords.length > 0 ||
     fuzzyMainWords.length > 0 ||
@@ -312,7 +337,7 @@ function buildSummary(tier: ScoreTier, groups: IssueGroups): string {
   } else if (fuzzyWords.length > 0) {
     diagnosis = `「${fuzzyWords[0].word}」が「${fuzzyWords[0].heard}」のように聞こえました${formatConfusionNote(fuzzyWords[0].confusion)}。`;
   } else if (combinedWords.length > 0) {
-    diagnosis = `${formatWords(combinedWords.map(c => c.word))} は単語同士がつながって聞こえました。`;
+    diagnosis = `${formatWords(combinedWords.map((c) => c.word))} は単語同士がつながって聞こえました。`;
   }
 
   if (diagnosis) {
@@ -333,19 +358,26 @@ function buildSummary(tier: ScoreTier, groups: IssueGroups): string {
  * 最大2件までに絞って返す。
  */
 function buildIssues(groups: IssueGroups): string[] {
-  const { missingMainWords, fuzzyMainWords, missingArticles, fuzzyArticles, missingWords, fuzzyWords, combinedWords } = groups;
+  const { missingMainWords, fuzzyMainWords, missingArticles, fuzzyArticles, missingWords, fuzzyWords, combinedWords } =
+    groups;
   const issues: string[] = [];
 
   if (missingMainWords.length > 0) {
-    issues.push(`重要な単語の ${formatWords(missingMainWords)} は、口を大きく開けてゆっくり発音するところから練習してみましょう。`);
+    issues.push(
+      `重要な単語の ${formatWords(missingMainWords)} は、口を大きく開けてゆっくり発音するところから練習してみましょう。`,
+    );
   } else if (fuzzyMainWords.length > 0) {
     const tip = fuzzyMainWords[0].confusion?.tip ?? '一音ずつ区切って強調すると、さらに伝わりやすくなります。';
     issues.push(`重要な単語の ${formatWordPairs(fuzzyMainWords)} と認識されています。${tip}`);
   }
   if (missingArticles.length > 0) {
-    issues.push(`冠詞の ${formatWords(missingArticles)} が抜けています。ネイティブは前後の単語とつなげて弱く発音するため聞き取りにくくなりますが、意識してはっきり発音してみましょう。`);
+    issues.push(
+      `冠詞の ${formatWords(missingArticles)} が抜けています。ネイティブは前後の単語とつなげて弱く発音するため聞き取りにくくなりますが、意識してはっきり発音してみましょう。`,
+    );
   } else if (fuzzyArticles.length > 0) {
-    issues.push(`冠詞の ${formatWordPairs(fuzzyArticles)} と認識されています。"a"は「ア」というより弱く短い「ə」、"the"も弱く添えるように発音すると自然に聞き取られやすくなります。`);
+    issues.push(
+      `冠詞の ${formatWordPairs(fuzzyArticles)} と認識されています。"a"は「ア」というより弱く短い「ə」、"the"も弱く添えるように発音すると自然に聞き取られやすくなります。`,
+    );
   }
   if (missingWords.length > 0) {
     issues.push(`${formatWords(missingWords)} が認識されていません。息をしっかり出して、はっきり発音してみましょう。`);
@@ -359,7 +391,9 @@ function buildIssues(groups: IssueGroups): string[] {
     // ケース（例: filtrate → filter rate、six-membered → six member）。ターゲットは元々1語なので
     // 「区切って発音する」方向のアドバイスは矛盾する。単語内の音をなめらかに一続きに
     // つなげる（リンキング）方向で助言する。
-    issues.push(`${formatWordPairs(combinedWords)} のように2語に分かれて聞こえています。音を区切らず、なめらかに1語としてつなげて（リンキングを意識して）発音すると、さらに伝わりやすくなります。`);
+    issues.push(
+      `${formatWordPairs(combinedWords)} のように2語に分かれて聞こえています。音を区切らず、なめらかに1語としてつなげて（リンキングを意識して）発音すると、さらに伝わりやすくなります。`,
+    );
   }
 
   return issues.slice(0, 2);

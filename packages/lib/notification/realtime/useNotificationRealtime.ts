@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { createBrowserClient } from '@gabby/lib/supabase/client';
-import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
+import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
+import { createBrowserClient } from '@gabby/lib/supabase/client';
 
 /** 同じルームへの連続送信で一覧の再取得が続かないよう、まとめて1回にする待ち時間 */
 const CHAT_REFRESH_DEBOUNCE_MS = 800;
@@ -54,7 +54,7 @@ export function useNotificationRealtime(userId: string | null) {
           if (row?.notification_type === 'CHAT_NEW_MESSAGE' && row.is_read === false) {
             refreshChatRooms();
           }
-        }
+        },
       )
       .subscribe();
 

@@ -1,8 +1,8 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { defineConfig, devices } from "@playwright/test";
-import { loadTestEnv } from "./helpers/env.ts";
-import { ADMIN_BASE_URL, COACH_BASE_URL, E2E_ENV, STUDENT_BASE_URL, USES_LOCAL_SERVER } from "./e2e/support/targets.ts";
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { defineConfig, devices } from '@playwright/test';
+import { ADMIN_BASE_URL, COACH_BASE_URL, E2E_ENV, STUDENT_BASE_URL, USES_LOCAL_SERVER } from './e2e/support/targets.ts';
+import { loadTestEnv } from './helpers/env.ts';
 
 /**
  * E2E（Playwright）設定。規約は testing/e2e/CONVENTIONS.md を参照。
@@ -23,14 +23,14 @@ import { ADMIN_BASE_URL, COACH_BASE_URL, E2E_ENV, STUDENT_BASE_URL, USES_LOCAL_S
 loadTestEnv(E2E_ENV);
 
 const TESTING_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(TESTING_DIR, "..");
+const REPO_ROOT = path.resolve(TESTING_DIR, '..');
 const BASE_URL = STUDENT_BASE_URL;
-const ARTIFACTS_DIR = path.join(TESTING_DIR, "e2e/.artifacts");
-const ANDROID_ENABLED = process.env.E2E_ANDROID === "1";
+const ARTIFACTS_DIR = path.join(TESTING_DIR, 'e2e/.artifacts');
+const ANDROID_ENABLED = process.env.E2E_ANDROID === '1';
 
 export default defineConfig({
-  testDir: "./e2e/tests",
-  outputDir: path.join(ARTIFACTS_DIR, "results"),
+  testDir: './e2e/tests',
+  outputDir: path.join(ARTIFACTS_DIR, 'results'),
   // 固定アカウント・dev DB を共有するため直列実行を基本とする（CONVENTIONS 3章）
   workers: 1,
   fullyParallel: false,
@@ -39,55 +39,54 @@ export default defineConfig({
   retries: 0,
   timeout: 60_000,
   expect: { timeout: 10_000 },
-  reporter: [
-    ["line"],
-    ["html", { open: "never", outputFolder: path.join(ARTIFACTS_DIR, "report") }],
-  ],
+  reporter: [['line'], ['html', { open: 'never', outputFolder: path.join(ARTIFACTS_DIR, 'report') }]],
   use: {
     baseURL: BASE_URL,
     // dev:ssl は自己署名証明書のため
     ignoreHTTPSErrors: true,
-    locale: "ja-JP",
-    timezoneId: "Asia/Tokyo",
-    trace: "retain-on-failure",
-    screenshot: "only-on-failure",
-    video: "off",
+    locale: 'ja-JP',
+    timezoneId: 'Asia/Tokyo',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'off',
   },
-  webServer: !USES_LOCAL_SERVER ? undefined : [
-    { app: "student", url: BASE_URL },
-    { app: "admin", url: ADMIN_BASE_URL },
-    { app: "coach", url: COACH_BASE_URL },
-  ].map(({ app, url }) => ({
-    command: `pnpm --filter gabby-blueprint-${app} run dev:ssl`,
-    cwd: REPO_ROOT,
-    url: `${url}/login`,
-    ignoreHTTPSErrors: true,
-    reuseExistingServer: !process.env.CI,
-    // 初回コンパイルに時間がかかるため長めに取る
-    timeout: 180_000,
-    stdout: "ignore" as const,
-    stderr: "pipe" as const,
-  })),
+  webServer: !USES_LOCAL_SERVER
+    ? undefined
+    : [
+        { app: 'student', url: BASE_URL },
+        { app: 'admin', url: ADMIN_BASE_URL },
+        { app: 'coach', url: COACH_BASE_URL },
+      ].map(({ app, url }) => ({
+        command: `pnpm --filter gabby-blueprint-${app} run dev:ssl`,
+        cwd: REPO_ROOT,
+        url: `${url}/login`,
+        ignoreHTTPSErrors: true,
+        reuseExistingServer: !process.env.CI,
+        // 初回コンパイルに時間がかかるため長めに取る
+        timeout: 180_000,
+        stdout: 'ignore' as const,
+        stderr: 'pipe' as const,
+      })),
   projects: [
-    { name: "setup", testMatch: /.*\.setup\.ts/ },
+    { name: 'setup', testMatch: /.*\.setup\.ts/ },
     {
-      name: "desktop",
-      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
-      dependencies: ["setup"],
+      name: 'desktop',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+      dependencies: ['setup'],
     },
     {
       // WebKit での iPhone エミュレーション（Safari の近似であり実機Safariの代替ではない。FIXTURES.md 参照）
-      name: "mobile",
-      use: { ...devices["iPhone 15"] },
-      dependencies: ["setup"],
+      name: 'mobile',
+      use: { ...devices['iPhone 15'] },
+      dependencies: ['setup'],
     },
     // Chromium でのモバイル表示確認は実行時間を抑えるため指定時のみ（`e2e:android`）
     ...(ANDROID_ENABLED
       ? [
           {
-            name: "mobile-android",
-            use: { ...devices["Pixel 7"] },
-            dependencies: ["setup"],
+            name: 'mobile-android',
+            use: { ...devices['Pixel 7'] },
+            dependencies: ['setup'],
           },
         ]
       : []),

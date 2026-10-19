@@ -1,20 +1,20 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import { FileText } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
-import { TrainingReportContractRow } from '../../_components/TrainingReportContractRow';
 import { contractSummaryLabel } from '../../_components/TrainingReportCard';
+import { TrainingReportContractRow } from '../../_components/TrainingReportContractRow';
 
-interface Props {
+interface TrainingReportHistoryListProps {
   studentId: string;
   contracts: StudentLiveSessionContractSummary[];
   initialReports: ContractTrainingReport[];
 }
 
-export function TrainingReportHistoryList({ studentId, contracts, initialReports }: Props) {
+export function TrainingReportHistoryList({ studentId, contracts, initialReports }: TrainingReportHistoryListProps) {
   const timezone = useTimezone();
   const myId = useUserStore((state) => state.user?.id);
   const [reports, setReports] = useState<ContractTrainingReport[]>(initialReports);

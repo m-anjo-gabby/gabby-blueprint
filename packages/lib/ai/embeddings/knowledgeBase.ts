@@ -51,12 +51,13 @@ export async function upsertKnowledgeEntry(params: UpsertKnowledgeEntryParams): 
         title: params.title,
         body: params.body,
         metadata: params.metadata ?? {},
-        embedding,
+        // pgvector の列は文字列の表現（'[0.1,0.2,...]'）で渡す
+        embedding: JSON.stringify(embedding),
         embedding_model: EMBEDDING_MODEL,
         created_by: params.createdBy,
         update_date: new Date().toISOString(),
       },
-      { onConflict: 'knowledge_id' }
+      { onConflict: 'knowledge_id' },
     )
     .select('knowledge_id, source_type, title, body, metadata')
     .single<KnowledgeBaseRow>();
@@ -75,15 +76,12 @@ export async function upsertKnowledgeEntry(params: UpsertKnowledgeEntryParams): 
 }
 
 /**
- * ナレッジを論理削除する（delete_flg='1'）。
+ * ナレッジを削除する。
  */
 export async function deleteKnowledgeEntry(knowledgeId: string): Promise<void> {
   const supabase = createAdminClient();
 
-  const { error } = await supabase
-    .from(TABLE_NAME)
-    .update({ delete_flg: '1', update_date: new Date().toISOString() })
-    .eq('knowledge_id', knowledgeId);
+  const { error } = await supabase.from(TABLE_NAME).delete().eq('knowledge_id', knowledgeId);
 
   if (error) {
     throw new Error(`Failed to delete knowledge base entry: ${error.message}`);

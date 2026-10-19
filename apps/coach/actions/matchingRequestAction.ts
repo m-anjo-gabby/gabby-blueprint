@@ -1,15 +1,16 @@
 'use server';
 
-import {
-  approveMatchingRequestCore,
-  rejectMatchingRequestCore,
-  getMatchingRequestHistoryPageAsCoachCore,
-} from '@gabby/lib/matching/actions/matchingActions';
 import { getPendingIncomingRequestsForCoachCore } from '@gabby/lib/coachInbox/actions/coachInboxActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { IncomingMatchingRequestItem, MatchingRequestErrorCode } from '@gabby/types/matching';
-import { CoachIncomingRequestItem } from '@gabby/types/coachInbox';
+import {
+  approveMatchingRequestCore,
+  getMatchingRequestHistoryPageAsCoachCore,
+  rejectMatchingRequestCore,
+} from '@gabby/lib/matching/actions/matchingActions';
+import type { ActionResult } from '@gabby/types/action';
+import { type CoachIncomingRequestItem } from '@gabby/types/coachInbox';
+import { type IncomingMatchingRequestItem, type MatchingRequestErrorCode } from '@gabby/types/matching';
 
 const logger = createLogger('coach');
 
@@ -18,7 +19,8 @@ const MATCHING_ERROR_MESSAGES_EN: Record<MatchingRequestErrorCode, string> = {
   invalid_input: 'Please check the values you entered.',
   not_eligible: 'This request is no longer valid.',
   slot_already_requested: 'This slot has already been matched or has a pending request.',
-  schedule_conflict: 'This request overlaps with one of your existing schedules. Please reject it and coordinate an alternative time with the student individually.',
+  schedule_conflict:
+    'This request overlaps with one of your existing schedules. Please reject it and coordinate an alternative time with the student individually.',
   insufficient_bookable:
     'Too many lessons in this slot now clash with your other bookings or days off, so it can no longer be approved. Please reject it with a reason so the student can choose another time.',
   not_pending: 'This request is no longer pending. The student may have withdrawn it.',
@@ -29,12 +31,12 @@ const MATCHING_ERROR_MESSAGES_EN: Record<MatchingRequestErrorCode, string> = {
 };
 
 /**
- * Fetches all *pending* incoming requests addressed to the current coach — fixed-slot
- * matching requests, free-time session booking requests, and reschedule candidates a
- * student proposed when cancelling — merged into one list. Lightweight (status-filtered)
- * query intended for surfaces that render on every page load (Calendar's pending panel,
- * the sidebar badge, the dashboard). For the full request history, use
- * getMatchingRequestHistoryPage / getBookingRequestHistoryPage / getRescheduleProposalHistoryPage instead.
+ * ログイン中のコーチ宛ての「保留中」の依頼をすべて取得する。固定枠のマッチングの依頼・
+ * 空き時間へのセッションの予約の依頼・生徒がキャンセルの時に出した振替の候補を、
+ * 1つの一覧にまとめる。状態で絞った軽い取得で、毎回の表示で出す場所（カレンダーの保留の一覧・
+ * サイドバーのバッジ・ダッシュボード）向け。
+ * 依頼の履歴の全体は、
+ * getMatchingRequestHistoryPage / getBookingRequestHistoryPage / getRescheduleProposalHistoryPage を使う。
  */
 export async function getPendingIncomingRequestsForCoach(): Promise<CoachIncomingRequestItem[]> {
   const result = await getPendingIncomingRequestsForCoachCore();
@@ -47,13 +49,13 @@ export async function getPendingIncomingRequestsForCoach(): Promise<CoachIncomin
 }
 
 /**
- * Fetches one page of the coach's matching request history, ordered newest-first.
- * Pass the previous page's `nextCursor` to fetch the next page; a null `nextCursor`
- * in the result means there is no more history.
+ * コーチのマッチングの依頼の履歴を、新しい順に1ページ分取得する。
+ * 次のページは前のページの `nextCursor` を渡して取得する。結果の `nextCursor` が null なら、
+ * それより古い履歴は無い。
  */
 export async function getMatchingRequestHistoryPage(
   cursor: string | null,
-  limit: number
+  limit: number,
 ): Promise<{ items: IncomingMatchingRequestItem[]; nextCursor: string | null }> {
   const result = await getMatchingRequestHistoryPageAsCoachCore(cursor, limit);
   if (!result.success) {
@@ -65,12 +67,10 @@ export async function getMatchingRequestHistoryPage(
 }
 
 /**
- * Approves a matching request. This automatically creates the recurring
- * lesson schedule and generates all individual sessions for the license period.
+ * マッチングの依頼を承認する。毎週のレッスンの予定を作り、
+ * ライセンスの期間のセッションをすべて作る。
  */
-export async function approveMatchingRequest(
-  requestId: string
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function approveMatchingRequest(requestId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await approveMatchingRequestCore(requestId);
 
@@ -84,12 +84,9 @@ export async function approveMatchingRequest(
 }
 
 /**
- * Rejects a matching request with a required reason
+ * マッチングの依頼を断る（理由は必須）
  */
-export async function rejectMatchingRequest(
-  requestId: string,
-  reason: string
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function rejectMatchingRequest(requestId: string, reason: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await rejectMatchingRequestCore(requestId, reason);
 

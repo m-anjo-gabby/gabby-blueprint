@@ -1,4 +1,4 @@
-import { DayOfWeek } from './coachAvailability';
+import { type DayOfWeek } from './coachAvailability';
 import type { CoachRatingStats } from './coachRating';
 
 /**
@@ -13,10 +13,12 @@ export const MATCHING_REQUEST_STATUS = {
   APPROVED: 2,
   REJECTED: 3,
   CANCELLED: 4,
+  /** コーチ交代等によりアドミンが終了 */
+  ENDED: 5,
   /** 回答期限（申請から24時間。DBの matching_request_ttl()）切れ */
   EXPIRED: 6,
 } as const;
-export type MatchingRequestStatus = typeof MATCHING_REQUEST_STATUS[keyof typeof MATCHING_REQUEST_STATUS];
+export type MatchingRequestStatus = (typeof MATCHING_REQUEST_STATUS)[keyof typeof MATCHING_REQUEST_STATUS];
 
 /** com_t_matching_request の1レコード */
 export interface MatchingRequestRecord {
@@ -83,6 +85,8 @@ export interface IncomingMatchingRequestItem extends MatchingRequestRecord {
   /** 申請した契約（チケットのライセンス）の開始・終了日時。初回の予定日を契約期間内で求めるために使う */
   license_start_date: string | null;
   license_end_date: string | null;
+  /** 申請した契約のプランが Webトライアル（コーチの画面で目印を付ける） */
+  is_web_trial: boolean;
   /** 承認待ちの申請を今承認した場合に予約できる回数（承認待ち以外・取得できない場合はnull） */
   availability: MatchingSlotAvailability | null;
   /** requested_timezone の短い名前（com_m_timezone.short_name_en。コーチの画面は英語。マスタに無い場合は IANA 名） */
@@ -101,7 +105,7 @@ export interface CreateMatchingRequestInput {
   // 生徒の現地の曜日・時刻（基準のタイムゾーンはサーバー側で生徒のプロフィールから取る）
   day_of_week: DayOfWeek;
   start_time: string; // "HH:MM"
-  end_time: string;   // "HH:MM"
+  end_time: string; // "HH:MM"
 }
 
 /** 生徒が保有するライブセッションチケットの要約（マッチング画面での資格確認・枠数算定用） */
@@ -123,7 +127,7 @@ export interface LiveSessionContractSummary {
   /** 生徒に見せるプラン名（com_m_contract.plan_name。管理用の契約名 contract_name は使わない） */
   plan_name: string;
   start_date: string; // ライセンス開始日
-  end_date: string;   // ライセンス終了日
+  end_date: string; // ライセンス終了日
   /** status=1(有効)かつ現在日時が期間内であればtrue */
   is_current: boolean;
   /** status=1(有効)かつ終了日前であればtrue（開始前の契約も含む。有効なチケットの判定と同じ条件） */
@@ -164,12 +168,10 @@ export interface LiveSessionOverview {
 }
 
 export type GetMyLiveSessionOverviewResult =
-  | { success: true; overview: LiveSessionOverview }
-  | { success: false; errorCode: MatchingRequestErrorCode };
+  { success: true; overview: LiveSessionOverview } | { success: false; errorCode: MatchingRequestErrorCode };
 
 export type GetMyLiveSessionContractsResult =
-  | { success: true; contracts: LiveSessionContractSummary[] }
-  | { success: false; errorCode: MatchingRequestErrorCode };
+  { success: true; contracts: LiveSessionContractSummary[] } | { success: false; errorCode: MatchingRequestErrorCode };
 
 export type SlotMatchStatus = 'unmatched' | 'pending' | 'matched';
 
@@ -245,8 +247,7 @@ export interface BookableTicketSlot {
 }
 
 export type GetMyBookableTicketsResult =
-  | { success: true; slots: BookableTicketSlot[] }
-  | { success: false; errorCode: MatchingRequestErrorCode };
+  { success: true; slots: BookableTicketSlot[] } | { success: false; errorCode: MatchingRequestErrorCode };
 
 export type MatchingRequestErrorCode =
   | 'unauthorized'
@@ -265,21 +266,14 @@ export type MatchingRequestErrorCode =
   | 'unexpected_error';
 
 export type CreateMatchingRequestResult =
-  | { success: true; request: MatchingRequestRecord }
-  | { success: false; errorCode: MatchingRequestErrorCode };
+  { success: true; request: MatchingRequestRecord } | { success: false; errorCode: MatchingRequestErrorCode };
 
 export type GetMatchingSlotOptionsResult =
-  | { success: true; options: MatchingSlotOption[] }
-  | { success: false; errorCode: MatchingRequestErrorCode };
+  { success: true; options: MatchingSlotOption[] } | { success: false; errorCode: MatchingRequestErrorCode };
 
-export type WithdrawMatchingRequestResult =
-  | { success: true }
-  | { success: false; errorCode: MatchingRequestErrorCode };
+export type WithdrawMatchingRequestResult = { success: true } | { success: false; errorCode: MatchingRequestErrorCode };
 
 export type ApproveMatchingRequestResult =
-  | { success: true; scheduleId: string }
-  | { success: false; errorCode: MatchingRequestErrorCode };
+  { success: true; scheduleId: string } | { success: false; errorCode: MatchingRequestErrorCode };
 
-export type RejectMatchingRequestResult =
-  | { success: true }
-  | { success: false; errorCode: MatchingRequestErrorCode };
+export type RejectMatchingRequestResult = { success: true } | { success: false; errorCode: MatchingRequestErrorCode };

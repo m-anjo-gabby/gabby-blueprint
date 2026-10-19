@@ -1,9 +1,9 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { SubmitButton } from '../common/SubmitButton';
 import { AuthBackLink, AuthHeading, AuthLinkButton, AuthPage, AuthStatus, AuthStep, FormError } from './AuthLayout';
 import { EMPTY_NEW_PASSWORD, NewPasswordFields, validateNewPassword, type NewPasswordValue } from './NewPasswordFields';
@@ -118,10 +118,10 @@ function UpdatePasswordContent({ actions, labels, passwordLabels, homePath = '/d
 
     try {
       const result = await actions.resetPassword(formData);
-      if (result?.errorCode === 'reset_link_required') {
+      if (result && !result.success && result.errorCode === 'reset_link_required') {
         setViewStatus('invalid');
-      } else if (result?.error) {
-        setError(result.error);
+      } else if (result && !result.success) {
+        setError(result.message);
       } else {
         setViewStatus('success');
         // 完了表示を見せてからダッシュボードへ（戻るで再設定画面に戻らないよう replace。アンマウント時はタイマーを解除）

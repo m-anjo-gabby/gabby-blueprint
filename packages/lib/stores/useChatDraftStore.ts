@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { PendingChatAttachment } from '@gabby/types/chat';
+import { type PendingChatAttachment } from '@gabby/types/chat';
 
 export interface ChatDraft {
   text: string;

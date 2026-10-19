@@ -1,29 +1,33 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { RotateCcw, Users, X } from 'lucide-react';
-import { CoachCard, CoachSlotRelation } from './CoachCard';
+import { useRouter } from 'next/navigation';
+import { useMemo, useState, useTransition } from 'react';
+import { matchesCoachSpecialtyFilter } from '@gabby/lib/coachSpecialty/tags';
+import { convertWeeklyTimeZone, formatDateTimeByZone } from '@gabby/lib/date/date';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
+import { type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { type CountryMaster } from '@gabby/types/country';
+import {
+  type CoachBrowseItem,
+  type LiveSessionContractSummary,
+  type LiveSessionTicketSummary,
+  type SlotStatusItem,
+} from '@gabby/types/matching';
+import { withdrawMatchingRequest } from '@/actions/matchingAction';
+import { LiveContractSelect } from '@/components/session/LiveContractSelect';
+import { ShellSectionTitle } from '@/components/shell/ShellPage';
+import { Button } from '@/components/ui/button';
+import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
+import { cn } from '@/lib/utils';
+import { CoachCard, type CoachSlotRelation } from './CoachCard';
+import { CoachMatchingPageHeader } from './CoachMatchingSkeleton';
 import { CoachSearchFilters } from './CoachSearchFilters';
 import { RequestDialog } from './RequestDialog';
-import { withdrawMatchingRequest } from '@/actions/matchingAction';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { CoachBrowseItem, SlotStatusItem } from '@gabby/types/matching';
-import { DayOfWeek } from '@gabby/types/coachAvailability';
-import { CountryMaster } from '@gabby/types/country';
-import { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
-import { matchesCoachSpecialtyFilter } from '@gabby/lib/coachSpecialty/tags';
-import { LiveSessionContractSummary, LiveSessionTicketSummary } from '@gabby/types/matching';
-import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { convertWeeklyTimeZone, formatDateTimeByZone } from '@gabby/lib/date/date';
-import { ShellSectionTitle } from '@/components/shell/ShellPage';
-import { CoachMatchingPageHeader } from './CoachMatchingSkeleton';
-import { Button } from '@/components/ui/button';
-import { LiveContractSelect } from '@/components/session/LiveContractSelect';
-import { cn } from '@/lib/utils';
 
 interface CoachMatchingViewProps {
   ticket: LiveSessionTicketSummary;
@@ -45,12 +49,20 @@ function formatTimeRange(startTime: string, endTime: string): string {
   return `${startTime.slice(0, 5)} - ${endTime.slice(0, 5)}`;
 }
 
-export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, countries, specialties }: CoachMatchingViewProps) {
+export function CoachMatchingView({
+  ticket,
+  contracts,
+  initialSlots,
+  coaches,
+  countries,
+  specialties,
+}: CoachMatchingViewProps) {
   const studentTimezone = useTimezone();
   const router = useRouter();
   const [isSwitching, startSwitch] = useTransition();
   // 契約の切替はURLの ?contract= で行う（クエリだけの遷移では loading.tsx が出ないため、切替中は中身を薄くする）
-  const contractStartDate = contracts.find((c) => c.ticket_id === ticket.ticket_id)?.start_date ?? new Date().toISOString();
+  const contractStartDate =
+    contracts.find((c) => c.ticket_id === ticket.ticket_id)?.start_date ?? new Date().toISOString();
   const handleContractChange = (ticketId: string) => {
     startSwitch(() => router.replace(`/coach-matching?contract=${ticketId}`, { scroll: false }));
   };
@@ -90,7 +102,7 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
           display.start_time,
           display.end_time,
           selectedDays,
-          selectedTimeBuckets
+          selectedTimeBuckets,
         );
       }).length;
       return matchCount > 0 ? [{ coach, matchCount }] : [];
@@ -155,7 +167,7 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
     const ok = await showConfirm(
       'リクエストを取り下げますか？',
       `${slot.coach_name ?? 'コーチ'}へのリクエストを取り下げます。コーチに取り下げたことが通知されます。取り下げた後は、別のコーチや時間帯でリクエストし直せます。`,
-      { variant: 'danger', confirmText: '取り下げる', cancelText: 'やめる' }
+      { variant: 'danger', confirmText: '取り下げる', cancelText: 'やめる' },
     );
     if (!ok) return;
 
@@ -189,19 +201,29 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
 
       {contracts.length > 1 && (
         <div className="mb-5">
-          <LiveContractSelect contracts={contracts} selectedTicketId={ticket.ticket_id} onChange={handleContractChange} />
+          <LiveContractSelect
+            contracts={contracts}
+            selectedTicketId={ticket.ticket_id}
+            onChange={handleContractChange}
+          />
         </div>
       )}
 
       {/* 2. コンテンツエリア（スクロール） */}
-      <div className={cn('space-y-6 transition-opacity', isSwitching && 'pointer-events-none opacity-60')} aria-busy={isSwitching}>
+      <div
+        className={cn('space-y-6 transition-opacity', isSwitching && 'pointer-events-none opacity-60')}
+        aria-busy={isSwitching}
+      >
         <section>
           <ShellSectionTitle>セッション枠の状況</ShellSectionTitle>
           <div className="grid gap-3 sm:grid-cols-2">
             {slots.map((slot) => {
               const badge = STATUS_BADGE[slot.status];
               return (
-                <div key={slot.slot_no} className="bg-surface rounded-card border border-line/70 shadow-sm p-4 space-y-2">
+                <div
+                  key={slot.slot_no}
+                  className="bg-surface rounded-card border border-line/70 shadow-sm p-4 space-y-2"
+                >
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-ink-soft">{slot.slot_no}コマ目</p>
                     <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${badge.className}`}>
@@ -209,19 +231,23 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
                     </span>
                   </div>
 
-                  {slot.coach_name && slot.day_of_week !== null && slot.start_time && slot.end_time && (() => {
-                    const display = convertWeeklyTimeZone(
-                      { day_of_week: slot.day_of_week, start_time: slot.start_time, end_time: slot.end_time },
-                      slot.schedule_timezone || 'Asia/Tokyo',
-                      studentTimezone
-                    );
-                    return (
-                      <p className="text-xs text-ink-soft">
-                        {slot.coach_name} ・ {DAY_OF_WEEK_LABEL_JA[display.day_of_week as DayOfWeek]}{' '}
-                        {formatTimeRange(display.start_time, display.end_time)}
-                      </p>
-                    );
-                  })()}
+                  {slot.coach_name &&
+                    slot.day_of_week !== null &&
+                    slot.start_time &&
+                    slot.end_time &&
+                    (() => {
+                      const display = convertWeeklyTimeZone(
+                        { day_of_week: slot.day_of_week, start_time: slot.start_time, end_time: slot.end_time },
+                        slot.schedule_timezone || 'Asia/Tokyo',
+                        studentTimezone,
+                      );
+                      return (
+                        <p className="text-xs text-ink-soft">
+                          {slot.coach_name} ・ {DAY_OF_WEEK_LABEL_JA[display.day_of_week as DayOfWeek]}{' '}
+                          {formatTimeRange(display.start_time, display.end_time)}
+                        </p>
+                      );
+                    })()}
 
                   {slot.status === 'pending' && slot.expires_at && (
                     <p className="text-[11px] text-ink-muted">
@@ -287,7 +313,10 @@ export function CoachMatchingView({ ticket, contracts, initialSlots, coaches, co
 
               {/* 検索結果の件数。絞り込みの直後に置き、条件を変えたときの結果の増減が目に入るようにする */}
               {coaches.length > 0 && (
-                <p className="flex items-baseline justify-between gap-3 px-1 pt-1 text-xs text-ink-muted" aria-live="polite">
+                <p
+                  className="flex items-baseline justify-between gap-3 px-1 pt-1 text-xs text-ink-muted"
+                  aria-live="polite"
+                >
                   <span>{hasFilter ? '条件に合うコーチ' : 'リクエストできるコーチ'}</span>
                   <span className="shrink-0">
                     {hasFilter && <>全{coaches.length}人中 </>}

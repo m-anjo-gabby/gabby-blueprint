@@ -16,7 +16,10 @@ export function buildStudentInviteMail({ userName, inviteUrl, expiresDays }: Inv
       preheader: 'Gabby Blueprint へようこそ。パスワードを設定して利用を開始してください。',
       blocks: [
         { kind: 'paragraph', text: userName ? `${userName} 様` : '会員様', strong: true },
-        { kind: 'paragraph', text: 'Gabby Blueprint へようこそ！\nサポート窓口より、あなたのアカウントへの招待が届いています。' },
+        {
+          kind: 'paragraph',
+          text: 'Gabby Blueprint へようこそ！\nサポート窓口より、あなたのアカウントへの招待が届いています。',
+        },
         {
           kind: 'paragraph',
           text: 'まだ本登録手続きは完了していません。以下のボタンをクリックしてメールアドレスを認証し、パスワードの設定へお進みください。',

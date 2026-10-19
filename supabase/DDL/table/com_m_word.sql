@@ -14,7 +14,8 @@ CREATE TABLE public.com_m_word (
     status                   text         NOT NULL DEFAULT 'live'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
-    CONSTRAINT unique_content_word UNIQUE (content_id, word_en)
+    CONSTRAINT unique_content_word UNIQUE (content_id, word_en),
+    CONSTRAINT chk_word_status CHECK (status = ANY (ARRAY['live'::text, 'pending'::text]))
 );
 
 COMMENT ON TABLE public.com_m_word IS '単語マスタ';
@@ -28,6 +29,8 @@ COMMENT ON COLUMN public.com_m_word.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_word.update_date IS '更新日時';
 
 CREATE INDEX idx_com_m_word_content_status_freq ON public.com_m_word (content_id, status, frequency_rank);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_word FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_word ENABLE ROW LEVEL SECURITY;
 

@@ -7,10 +7,11 @@ import {
   recordSessionCallLeaveCore,
   recordSessionChatMessageCore,
 } from '@gabby/lib/liveSessionRoom/actions/liveSessionRoomActions';
+import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
-import { LiveSessionRoomAccess, LiveSessionRoomErrorCode } from '@gabby/types/liveSessionRoom';
+import type { ActionResult } from '@gabby/types/action';
+import { type LiveSessionRoomAccess, type LiveSessionRoomErrorCode } from '@gabby/types/liveSessionRoom';
 
 const logger = createLogger('student');
 const EARLY_JOIN_MINUTES = LIVE_SESSION_EARLY_JOIN_BEFORE_MS / 60000;
@@ -18,7 +19,8 @@ const EARLY_JOIN_MINUTES = LIVE_SESSION_EARLY_JOIN_BEFORE_MS / 60000;
 const LIVE_SESSION_ROOM_ERROR_MESSAGES_JA: Record<LiveSessionRoomErrorCode, string> = {
   unauthorized: 'セッションの有効期限が切れました。再度ログインしてください。',
   forbidden: 'この操作を行う権限がありません。',
-  not_eligible: 'この機能はライブセッション付きプランの方のみご利用いただけます。専属コーチのマッチングが完了しているかもご確認ください。',
+  not_eligible:
+    'この機能はライブセッション付きプランの方のみご利用いただけます。専属コーチのマッチングが完了しているかもご確認ください。',
   not_yet_available: `まだ入室できません。開始予定時刻の${EARLY_JOIN_MINUTES}分前から入室できます。`,
   unexpected_error: '予期しないエラーが発生しました。',
 };
@@ -27,8 +29,8 @@ const LIVE_SESSION_ROOM_ERROR_MESSAGES_JA: Record<LiveSessionRoomErrorCode, stri
  * ログイン中の生徒が、指定した個別セッションのライブセッションルームに入室するためのアクセス情報（Zoom Video SDK署名等）を取得する
  */
 export async function getMyLiveSessionRoomAccess(
-  sessionId: string
-): Promise<{ success: true; access: LiveSessionRoomAccess } | { success: false; message: string }> {
+  sessionId: string,
+): Promise<ActionResult<{ access: LiveSessionRoomAccess }>> {
   const result = await getStudentLiveSessionRoomAccessCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -43,8 +45,10 @@ export async function getMyLiveSessionRoomAccess(
  * まだ早い場合は入室できるようになる時刻を返し、画面側でその場に案内する。
  */
 export async function checkLiveSessionJoinable(
-  sessionId: string
-): Promise<{ status: 'joinable' } | { status: 'too_early'; availableAt: string } | { status: 'error'; message: string }> {
+  sessionId: string,
+): Promise<
+  { status: 'joinable' } | { status: 'too_early'; availableAt: string } | { status: 'error'; message: string }
+> {
   const result = await checkStudentLiveSessionJoinableCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();

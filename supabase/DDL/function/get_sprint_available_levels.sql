@@ -1,5 +1,5 @@
 ---------------------------------------------
--- スプリント教材の「問題が存在する種別×レベル」の一覧取得 (2026-10-02 追加)
+-- スプリント教材の「問題が存在する種別×レベル」の一覧取得
 ---------------------------------------------
 -- 【背景】
 -- コーパススプリントは特定のレベルにしか問題が無いことがあるため、生徒の自主トレの選択画面と
@@ -24,7 +24,6 @@ RETURNS TABLE (
     SELECT DISTINCT q.content_id, q.question_type, q.difficulty_level
     FROM public.com_m_sprint_questions q
     WHERE q.content_id = ANY(p_content_ids)
-      AND q.delete_flg = '0'
     ORDER BY q.content_id, q.question_type, q.difficulty_level;
 $$ LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public;
 

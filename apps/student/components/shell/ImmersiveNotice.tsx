@@ -17,7 +17,7 @@ const ACTION_CLASS = {
 export function noticeActionClass(variant: keyof typeof ACTION_CLASS = 'primary') {
   return cn(
     'flex h-12 w-full items-center justify-center gap-2 rounded-control text-sm font-bold transition-all active:scale-95',
-    ACTION_CLASS[variant]
+    ACTION_CLASS[variant],
   );
 }
 

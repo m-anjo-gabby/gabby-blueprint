@@ -1,19 +1,19 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useMemo, useState, useTransition } from 'react';
+import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
-import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { SessionListItem } from '@gabby/types/session';
-import { CalendarEventItem, withParticipation } from '@gabby/types/calendarEvent';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
 import type { CalendarItem } from '@gabby/types/calendarItem';
-import { BookableTicketSlot } from '@gabby/types/matching';
-import { SessionActionDialog, SessionActionTarget } from './SessionActionDialog';
-import { DayDetailDrawer } from './DayDetailDrawer';
+import { type BookableTicketSlot } from '@gabby/types/matching';
+import { type SessionListItem } from '@gabby/types/session';
 import { BookMakeupSessionDialog } from './BookMakeupSessionDialog';
 import { CalendarMonthCard } from './CalendarMonthCard';
+import { DayDetailDrawer } from './DayDetailDrawer';
+import { SessionActionDialog, type SessionActionTarget } from './SessionActionDialog';
 
 const EMPTY_SESSIONS: SessionListItem[] = [];
 const EMPTY_EVENTS: CalendarEventItem[] = [];
@@ -34,7 +34,12 @@ interface CalendarBoardProps {
  * 月のデータはサーバーで取得して渡す（ブラウザからの後追い取得はしない）。読み込み中も同じ大きさの日付の枠を描き、
  * 月の切り替えで高さが変わらないようにする（page.tsx で月ごとの Suspense の fallback と、loading.tsx で共有する）。
  */
-export function CalendarBoard({ month, initialSessions, initialEvents, bookableSlots: serverSlots }: CalendarBoardProps) {
+export function CalendarBoard({
+  month,
+  initialSessions,
+  initialEvents,
+  bookableSlots: serverSlots,
+}: CalendarBoardProps) {
   const timezone = useTimezone();
   const router = useRouter();
   const [, startRefresh] = useTransition();
@@ -75,10 +80,12 @@ export function CalendarBoard({ month, initialSessions, initialEvents, bookableS
   };
 
   const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) => {
-    setEvents((prev) => prev.map((e) => (e.calendar_event_id === calendarEventId ? withParticipation(e, isJoined) : e)));
+    setEvents((prev) =>
+      prev.map((e) => (e.calendar_event_id === calendarEventId ? withParticipation(e, isJoined) : e)),
+    );
   };
 
-  const selectedItems = selectedDate ? itemsByDate.get(selectedDate) ?? [] : [];
+  const selectedItems = selectedDate ? (itemsByDate.get(selectedDate) ?? []) : [];
 
   return (
     <div className="space-y-6">

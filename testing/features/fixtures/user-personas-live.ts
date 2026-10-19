@@ -8,21 +8,28 @@
  * セッションは「スケジュール×開始日時」で重複を判定するため、再実行すると不足分の作成と、
  * 前回以降に終了時刻を過ぎたセッションの完了だけが行われる。
  */
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { signInAsRole } from "../../helpers/auth.ts";
-import { toUtcAvailabilityRows, type LocalWeeklyRange } from "../../helpers/coach-availability.ts";
-import { toIsoDateInZone } from "@gabby/lib/date/date";
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { toIsoDateInZone } from '@gabby/lib/date/date';
+import { signInAsRole } from '../../helpers/auth.ts';
+import { toUtcAvailabilityRows, type LocalWeeklyRange } from '../../helpers/coach-availability.ts';
 
 /** タイムゾーン tz の暦日 date・時刻 time（'HH:MM:SS'）を UTC の Date にする */
 export function zonedToUtc(date: string, time: string, tz: string): Date {
-  const [h, m, s] = time.split(":").map(Number);
+  const [h, m, s] = time.split(':').map(Number);
   const naive = Date.parse(`${date}T00:00:00Z`) + ((h * 60 + m) * 60 + (s ?? 0)) * 1000;
   const offsetAt = (utcMs: number): number => {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
     }).formatToParts(new Date(utcMs));
     const get = (type: string): number => Number(parts.find((p) => p.type === type)?.value);
-    return Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second")) - utcMs;
+    return Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second')) - utcMs;
   };
   // 夏時間の切り替わりをまたぐ場合に備えて、求めた時刻のオフセットでもう一度補正する
   const first = naive - offsetAt(naive);
@@ -30,7 +37,8 @@ export function zonedToUtc(date: string, time: string, tz: string): Date {
 }
 
 const DAY_MS = 86_400_000;
-const addDays = (d: string, n: number): string => new Date(Date.parse(`${d}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
+const addDays = (d: string, n: number): string =>
+  new Date(Date.parse(`${d}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
 const dayOfWeek = (d: string): number => new Date(`${d}T00:00:00Z`).getUTCDay();
 
 export interface LiveCoach {
@@ -56,7 +64,7 @@ export interface LiveScheduleSeed {
   /** コーチ交代で終了した枠（スケジュールは terminated、リクエストは ended） */
   terminated: boolean;
   /** 生徒・コーチがキャンセルした回（コーチのローカル日付） */
-  cancellations?: { date: string; by: "student" | "coach"; reason: string }[];
+  cancellations?: { date: string; by: 'student' | 'coach'; reason: string }[];
 }
 
 export function createLiveKit(admin: SupabaseClient, password: string) {
@@ -71,26 +79,32 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
 
   /** 週次の対応可能時間帯（未登録のときだけ作る）。ranges はコーチの現地時刻で書き、UTC に換算して保存する */
   async function ensureAvailabilities(coachId: string, timeZone: string, ranges: LocalWeeklyRange[]): Promise<void> {
-    const { data: existing } = await admin.from("com_m_coach_availability").select("availability_id").eq("coach_id", coachId).limit(1);
+    const { data: existing } = await admin
+      .from('com_m_coach_availability')
+      .select('availability_id')
+      .eq('coach_id', coachId)
+      .limit(1);
     if (existing && existing.length > 0) return;
-    const { error } = await admin.from("com_m_coach_availability").insert(toUtcAvailabilityRows(coachId, ranges, timeZone));
+    const { error } = await admin
+      .from('com_m_coach_availability')
+      .insert(toUtcAvailabilityRows(coachId, ranges, timeZone));
     if (error) throw error;
   }
 
   /** 承認済み（または交代で終了した）マッチングリクエストと、成立したスケジュール */
   async function ensureSchedule(seed: LiveScheduleSeed): Promise<string> {
     const { data: existing } = await admin
-      .from("com_m_lesson_schedule")
-      .select("schedule_id")
-      .eq("ticket_id", seed.ticketId)
-      .eq("slot_no", seed.slotNo)
-      .eq("coach_id", seed.coach.id)
+      .from('com_m_lesson_schedule')
+      .select('schedule_id')
+      .eq('ticket_id', seed.ticketId)
+      .eq('slot_no', seed.slotNo)
+      .eq('coach_id', seed.coach.id)
       .maybeSingle();
     if (existing) return existing.schedule_id as string;
 
-    const respondedAt = zonedToUtc(addDays(seed.startDate, -7), "09:00:00", seed.coach.timezone).toISOString();
+    const respondedAt = zonedToUtc(addDays(seed.startDate, -7), '09:00:00', seed.coach.timezone).toISOString();
     const { data: request, error: reqErr } = await admin
-      .from("com_t_matching_request")
+      .from('com_t_matching_request')
       .insert({
         ticket_id: seed.ticketId,
         student_id: seed.studentId,
@@ -106,12 +120,12 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
         insert_date: respondedAt,
         update_date: respondedAt,
       })
-      .select("request_id")
+      .select('request_id')
       .single();
     if (reqErr) throw reqErr;
 
     const { data, error } = await admin
-      .from("com_m_lesson_schedule")
+      .from('com_m_lesson_schedule')
       .insert({
         ticket_id: seed.ticketId,
         student_id: seed.studentId,
@@ -129,7 +143,7 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
         insert_date: respondedAt,
         update_date: respondedAt,
       })
-      .select("schedule_id")
+      .select('schedule_id')
       .single();
     if (error) throw error;
     return data.schedule_id as string;
@@ -137,7 +151,10 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
 
   /** スケジュールの該当曜日ごとのセッション（不足分のみ）。戻り値は作成数 */
   async function ensureSessions(seed: LiveScheduleSeed, scheduleId: string): Promise<number> {
-    const { data: existing, error: exErr } = await admin.from("com_t_session").select("start_datetime").eq("schedule_id", scheduleId);
+    const { data: existing, error: exErr } = await admin
+      .from('com_t_session')
+      .select('start_datetime')
+      .eq('schedule_id', scheduleId);
     if (exErr) throw exErr;
     const have = new Set((existing ?? []).map((r) => new Date(r.start_datetime as string).getTime()));
 
@@ -145,9 +162,9 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
     // （コーチのタイムゾーン）のまま。投入後に生徒の時刻の基準へ直した環境（feature-20261004-dev/matching-schedule-reanchor.sql）でも、
     // 移動済みの回を「足りない」とみなして元の時刻で作り直さないようにする
     const { data: schedule, error: schErr } = await admin
-      .from("com_m_lesson_schedule")
-      .select("schedule_timezone, day_of_week, start_time, end_time, start_date, end_date")
-      .eq("schedule_id", scheduleId)
+      .from('com_m_lesson_schedule')
+      .select('schedule_timezone, day_of_week, start_time, end_time, start_date, end_date')
+      .eq('schedule_id', scheduleId)
       .single();
     if (schErr) throw schErr;
     const tz = schedule.schedule_timezone as string;
@@ -180,9 +197,9 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
           rows.push({
             ...base,
             status: 3,
-            cancel_category: cancel.by === "student" ? 1 : 2,
+            cancel_category: cancel.by === 'student' ? 1 : 2,
             ticket_refunded: true,
-            cancelled_by: cancel.by === "student" ? seed.studentId : seed.coach.id,
+            cancelled_by: cancel.by === 'student' ? seed.studentId : seed.coach.id,
             cancel_reason: cancel.reason,
             update_date: cancelledAt,
           });
@@ -193,7 +210,7 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
       cursor = addDays(cursor, 7);
     }
     if (rows.length > 0) {
-      const { error } = await admin.from("com_t_session").insert(rows);
+      const { error } = await admin.from('com_t_session').insert(rows);
       if (error) throw error;
     }
     return rows.length;
@@ -202,23 +219,23 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
   /** 終了時刻を過ぎた予定のセッションを、担当コーチのJWTで「通常完了」にする。戻り値は完了数 */
   async function completePastSessions(ticketId: string, coaches: LiveCoach[]): Promise<number> {
     const { data, error } = await admin
-      .from("com_t_session")
-      .select("session_id, coach_id")
-      .eq("ticket_id", ticketId)
-      .eq("status", 1)
-      .lt("end_datetime", new Date().toISOString())
-      .order("start_datetime");
+      .from('com_t_session')
+      .select('session_id, coach_id')
+      .eq('ticket_id', ticketId)
+      .eq('status', 1)
+      .lt('end_datetime', new Date().toISOString())
+      .order('start_datetime');
     if (error) throw error;
     for (const s of data ?? []) {
       const coach = coaches.find((c) => c.id === s.coach_id);
       if (!coach) throw new Error(`担当コーチが見つかりません: ${s.coach_id as string}`);
       const client = await coachClient(coach);
       // 通話の記録が無いため「外部のZoomで実施した実施完了」として記録する（理由が必須）
-      const { error: rpcErr } = await client.rpc("record_session_outcome", {
+      const { error: rpcErr } = await client.rpc('record_session_outcome', {
         p_session_id: s.session_id,
         p_outcome: 1,
         p_conducted_via: 2,
-        p_reason: "【QA固定】利用者ペルソナの受講実績",
+        p_reason: '【QA固定】利用者ペルソナの受講実績',
       });
       if (rpcErr) throw rpcErr;
     }
@@ -238,7 +255,12 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
   }): Promise<string | null> {
     let content: { content_id: string; content_name: string } | null = null;
     for (const name of params.contentNames) {
-      const { data } = await admin.from("com_m_contents").select("content_id, content_name").eq("content_type", 3).eq("content_name", name).eq("delete_flg", "0").maybeSingle();
+      const { data } = await admin
+        .from('com_m_contents')
+        .select('content_id, content_name')
+        .eq('content_type', 3)
+        .eq('content_name', name)
+        .maybeSingle();
       if (data) {
         content = data as { content_id: string; content_name: string };
         break;
@@ -247,30 +269,36 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
     if (!content) return null;
 
     const { data: existing } = await admin
-      .from("com_t_dialogue_assignment")
-      .select("assignment_id")
-      .eq("student_id", params.studentId)
-      .eq("content_id", content.content_id)
-      .eq("delete_flg", "0")
+      .from('com_t_dialogue_assignment')
+      .select('assignment_id')
+      .eq('student_id', params.studentId)
+      .eq('content_id', content.content_id)
+      .eq('status', 1)
       .maybeSingle();
     let assignmentId = existing?.assignment_id as string | undefined;
     if (!assignmentId) {
       const at = `${params.assignedDate}T01:00:00Z`;
       const { data, error } = await admin
-        .from("com_t_dialogue_assignment")
-        .insert({ student_id: params.studentId, content_id: content.content_id, assigned_by_coach_id: params.coachId, assigned_date: params.assignedDate, insert_date: at, update_date: at })
-        .select("assignment_id")
+        .from('com_t_dialogue_assignment')
+        .insert({
+          student_id: params.studentId,
+          content_id: content.content_id,
+          assigned_by_coach_id: params.coachId,
+          assigned_date: params.assignedDate,
+          insert_date: at,
+          update_date: at,
+        })
+        .select('assignment_id')
         .single();
       if (error) throw error;
       assignmentId = data.assignment_id as string;
     }
 
     const { data: sessions, error: sErr } = await admin
-      .from("com_m_dialogue_session")
-      .select("dialogue_session_id, session_no")
-      .eq("content_id", content.content_id)
-      .eq("delete_flg", "0")
-      .order("session_no");
+      .from('com_m_dialogue_session')
+      .select('dialogue_session_id, session_no')
+      .eq('content_id', content.content_id)
+      .order('session_no');
     if (sErr) throw sErr;
     const rows = (sessions ?? []).slice(0, params.completedDates.length).map((s, i) => ({
       assignment_id: assignmentId,
@@ -282,26 +310,42 @@ export function createLiveKit(admin: SupabaseClient, password: string) {
       update_date: `${params.completedDates[i]}T12:00:00Z`,
     }));
     if (rows.length > 0) {
-      const { error } = await admin.from("com_t_dialogue_session_progress").upsert(rows, { onConflict: "assignment_id,dialogue_session_id", ignoreDuplicates: true });
+      const { error } = await admin
+        .from('com_t_dialogue_session_progress')
+        .upsert(rows, { onConflict: 'assignment_id,dialogue_session_id', ignoreDuplicates: true });
       if (error) throw error;
     }
     return content.content_name;
   }
 
   /** 完了したセッションの開始日（コーチのローカル日付ではなくJST）を古い順に返す */
-  async function completedSessionDates(studentId: string, coachId: string, from: string, to: string): Promise<string[]> {
+  async function completedSessionDates(
+    studentId: string,
+    coachId: string,
+    from: string,
+    to: string,
+  ): Promise<string[]> {
     const { data, error } = await admin
-      .from("com_t_session")
-      .select("start_datetime")
-      .eq("student_id", studentId)
-      .eq("coach_id", coachId)
-      .eq("status", 2)
-      .gte("start_datetime", `${from}T00:00:00+09:00`)
-      .lte("start_datetime", `${to}T23:59:59+09:00`)
-      .order("start_datetime");
+      .from('com_t_session')
+      .select('start_datetime')
+      .eq('student_id', studentId)
+      .eq('coach_id', coachId)
+      .eq('status', 2)
+      .gte('start_datetime', `${from}T00:00:00+09:00`)
+      .lte('start_datetime', `${to}T23:59:59+09:00`)
+      .order('start_datetime');
     if (error) throw error;
-    return (data ?? []).map((r) => new Date(new Date(r.start_datetime as string).getTime() + 9 * 3_600_000).toISOString().slice(0, 10));
+    return (data ?? []).map((r) =>
+      new Date(new Date(r.start_datetime as string).getTime() + 9 * 3_600_000).toISOString().slice(0, 10),
+    );
   }
 
-  return { ensureAvailabilities, ensureSchedule, ensureSessions, completePastSessions, ensureDialogueAssignment, completedSessionDates };
+  return {
+    ensureAvailabilities,
+    ensureSchedule,
+    ensureSessions,
+    completePastSessions,
+    ensureDialogueAssignment,
+    completedSessionDates,
+  };
 }

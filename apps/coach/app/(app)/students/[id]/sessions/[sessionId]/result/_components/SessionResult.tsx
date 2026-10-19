@@ -1,24 +1,24 @@
 'use client';
 
-import Link from 'next/link';
 import { ArrowLeft, BookOpen, Info, LogIn, LogOut, MessageCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Section } from '@/components/common/Section';
-import { getSessionStatusBadge } from '@/constants/session';
+import Link from 'next/link';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { CONDUCTED_VIA, SESSION_STATUS, type SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
-import { HomeworkComposer } from './HomeworkComposer';
+import { Section } from '@/components/common/Section';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getSessionStatusBadge } from '@/constants/session';
 import { LessonSprintHistoryRow } from '../../../../_components/LessonSprintHistoryRow';
+import { HomeworkComposer } from './HomeworkComposer';
 
-interface Props {
+interface SessionResultProps {
   studentId: string;
   session: SessionResultSummary;
   homework: SessionHomeworkEntry | null;
 }
 
-export function SessionResult({ studentId, session, homework }: Props) {
+export function SessionResult({ studentId, session, homework }: SessionResultProps) {
   const timezone = useTimezone();
   const badge = getSessionStatusBadge(session);
 
@@ -42,15 +42,20 @@ export function SessionResult({ studentId, session, homework }: Props) {
               <CardTitle className="text-sm font-bold text-slate-800">Session Info</CardTitle>
             </CardHeader>
             <CardContent className="pt-2 space-y-3">
-              <span className={`inline-flex text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}>
+              <span
+                className={`inline-flex text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${badge.className}`}
+              >
                 {badge.label}
               </span>
               <p className="text-xs font-semibold text-slate-600">
-                {formatDateTimeEn(session.start_datetime, timezone)} – {formatDateTimeEn(session.end_datetime, timezone)}
+                {formatDateTimeEn(session.start_datetime, timezone)} –{' '}
+                {formatDateTimeEn(session.end_datetime, timezone)}
               </p>
               <p className="text-xs font-semibold text-slate-400">with {session.counterpart_name}</p>
               {session.conducted_via === CONDUCTED_VIA.EXTERNAL_ZOOM && (
-                <p className="text-xs font-semibold text-sky-700">Held on an external Zoom (the in-app call wasn’t used)</p>
+                <p className="text-xs font-semibold text-sky-700">
+                  Held on an external Zoom (the in-app call wasn’t used)
+                </p>
               )}
               {session.status_note && (
                 <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5">
@@ -72,13 +77,19 @@ export function SessionResult({ studentId, session, homework }: Props) {
                 <ul className="space-y-2">
                   {session.call_log.map((entry) => (
                     <li key={entry.call_log_id} className="flex items-start gap-2 text-xs">
-                      <span className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${entry.role === 'coach' ? 'bg-brand-50 text-brand' : 'bg-rose-50 text-rose-600'}`}>
+                      <span
+                        className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${entry.role === 'coach' ? 'bg-brand-50 text-brand' : 'bg-rose-50 text-rose-600'}`}
+                      >
                         {entry.left_at ? <LogOut size={11} /> : <LogIn size={11} />}
                       </span>
                       <span className="text-slate-600">
-                        <span className="font-bold capitalize">{entry.role}</span>{' '}
-                        joined {formatDateTimeEn(entry.joined_at, timezone)}
-                        {entry.left_at ? <> · left {formatDateTimeEn(entry.left_at, timezone)}</> : <> · still connected</>}
+                        <span className="font-bold capitalize">{entry.role}</span> joined{' '}
+                        {formatDateTimeEn(entry.joined_at, timezone)}
+                        {entry.left_at ? (
+                          <> · left {formatDateTimeEn(entry.left_at, timezone)}</>
+                        ) : (
+                          <> · still connected</>
+                        )}
                       </span>
                     </li>
                   ))}
@@ -130,12 +141,16 @@ export function SessionResult({ studentId, session, homework }: Props) {
             </CardHeader>
             <CardContent className="pt-2">
               {session.dialogue_log.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No Dialogue Practice material was opened in this session.</p>
+                <p className="text-xs text-slate-400 italic">
+                  No Dialogue Practice material was opened in this session.
+                </p>
               ) : (
                 <ul className="space-y-2">
                   {session.dialogue_log.map((entry) => (
                     <li key={entry.log_id} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5">
-                      <p className="text-[10px] font-bold text-slate-400">{formatDateTimeEn(entry.insert_date, timezone)}</p>
+                      <p className="text-[10px] font-bold text-slate-400">
+                        {formatDateTimeEn(entry.insert_date, timezone)}
+                      </p>
                       <p className="text-xs text-slate-700 font-semibold mt-0.5">
                         {entry.content_name} · Session {entry.session_no}
                       </p>
@@ -159,7 +174,10 @@ export function SessionResult({ studentId, session, homework }: Props) {
             ) : (
               <ul className="space-y-2">
                 {session.chat_log.map((entry) => (
-                  <li key={entry.chat_id} className={`text-xs ${entry.sender_role === 'coach' ? 'text-right' : 'text-left'}`}>
+                  <li
+                    key={entry.chat_id}
+                    className={`text-xs ${entry.sender_role === 'coach' ? 'text-right' : 'text-left'}`}
+                  >
                     <p className="font-bold text-slate-400 text-[10px] capitalize">{entry.sender_role}</p>
                     <p
                       className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg whitespace-pre-wrap wrap-break-word ${

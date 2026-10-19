@@ -1,6 +1,6 @@
 import { LayoutGrid } from 'lucide-react';
-import { LIBRALY_TABS, type ContentItem } from '@gabby/types/content';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import { LIBRALY_TABS, type ContentItem } from '@gabby/types/content';
 import type { PillTabItem } from '@/components/shell/PillTabs';
 
 /**

@@ -1,14 +1,10 @@
-import Link from 'next/link';
 import { ChevronLeft, VideoOff } from 'lucide-react';
+import Link from 'next/link';
 import { getMyLiveSessionRoomAccess } from '@/actions/videoSessionAction';
 import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
 import { LiveSessionRoomView } from './_components/LiveSessionRoomView';
 
-export default async function LiveSessionRoomPage({
-  params,
-}: {
-  params: Promise<{ sessionId: string }>;
-}) {
+export default async function LiveSessionRoomPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
   const result = await getMyLiveSessionRoomAccess(sessionId);
 

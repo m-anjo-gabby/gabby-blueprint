@@ -1,18 +1,34 @@
 'use server';
 
-import { createAdminClient } from "@gabby/lib/supabase/admin";
-import { QUESTION_TYPES, SprintQuestion, SprintQuestionType } from "@gabby/types/sprint";
+import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
+import { unstable_rethrow } from 'next/navigation';
+import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import type { ActionResult, BasicErrorCode, CoreResult } from '@gabby/types/action';
+import type { TableInsert, TableUpdate } from '@gabby/types/db';
+import { QUESTION_TYPES, type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
+import type { TTSAdjustmentData } from '@gabby/types/word';
+import { ADMIN_OR_CONTENT_MANAGER, requireAdminRole } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
+
+/** スプリントの問題の登録・更新の入力（登録日時・更新日時はこちらで入れる） */
+export type SprintQuestionInput = Omit<TableInsert<'com_m_sprint_questions'>, 'insert_date' | 'update_date'>;
 
 /**
  * 種別とレベルを指定してスプリント問題一覧を取得
  */
-export async function getSprintQuestionsByFilter(contentId: string, type: SprintQuestionType, level: number) {
+export async function getSprintQuestionsByFilter(
+  contentId: string,
+  type: SprintQuestionType,
+  level: number,
+): Promise<CoreResult<{ data: SprintQuestion[] }, BasicErrorCode>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -23,111 +39,137 @@ export async function getSprintQuestionsByFilter(contentId: string, type: Sprint
       .eq('content_id', contentId)
       .eq('question_type', type)
       .eq('difficulty_level', level)
-      .eq('delete_flg', '0')
       .order('group_id', { ascending: true })
       .order('seq_no', { ascending: true });
 
     if (error) throw error;
-    return data as SprintQuestion[];
-  } catch (err: any) {
-    logger.error('sprint:get_questions_failed', err.message, { ...ctx, err, payload: { contentId, type, level } });
-    return [];
-  }
-}
-
-/**
- * スプリント問題の登録・更新
- */
-export async function upsertSprintQuestion(payload: Partial<SprintQuestion>) {
-  const ctx = await getLogContext();
-  try {
-    const supabase = await createAdminClient();
-    const isEdit = !!payload.question_id;
-
-    const { insert_date, ...cleanPayload } = payload;
-    const dataToSave = {
-      ...cleanPayload,
-      update_date: new Date().toISOString(),
-    };
-
-    let error;
-    if (isEdit) {
-      const { error: updateError } = await supabase
-        .from('com_m_sprint_questions')
-        .update(dataToSave)
-        .eq('question_id', payload.question_id!);
-      error = updateError;
-    } else {
-      const { error: insertError } = await supabase
-        .from('com_m_sprint_questions')
-        .insert([{ ...dataToSave, insert_date: new Date().toISOString() }]);
-      error = insertError;
-    }
-
-    if (error) throw error;
-
-    logger.info('sprint:upsert_success', `Question ${isEdit ? 'updated' : 'created'}`, { ...ctx });
-    return { success: true };
-  } catch (err: any) {
-    logger.error('sprint:upsert_failed', err.message, { ...ctx, err, payload });
-    return { success: false, message: err.message };
+    return { success: true, data: data as SprintQuestion[] };
+  } catch (err) {
+    unstable_rethrow(err);
+    logger.error('sprint:get_questions_failed', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { contentId, type, level },
+    });
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * スプリント問題の複数一括登録・更新
  */
-export async function bulkUpsertSprintQuestions(questions: Partial<SprintQuestion>[]) {
+export async function bulkUpsertSprintQuestions(questions: SprintQuestionInput[]): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
     const now = new Date().toISOString();
 
-    const dataToSave = questions.map(q => {
-      const { insert_date, ...rest } = q;
-      return {
-        ...rest,
-        update_date: now,
-        ...(q.question_id ? {} : { insert_date: now }),
-        delete_flg: '0'
-      };
-    });
+    const dataToSave = questions.map((q) => ({
+      ...q,
+      update_date: now,
+      ...(q.question_id ? {} : { insert_date: now }),
+    }));
 
     // Supabaseのupsertを使用（question_idが既にあれば更新、なければ挿入）
-    const { error } = await supabase
-      .from('com_m_sprint_questions')
-      .upsert(dataToSave, { 
-        onConflict: 'question_id' 
-      });
+    const { error } = await supabase.from('com_m_sprint_questions').upsert(dataToSave, {
+      onConflict: 'question_id',
+    });
 
     if (error) throw error;
 
     logger.info('sprint:bulk_upsert_success', `${questions.length} questions processed`, { ...ctx });
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
-  } catch (err: any) {
-    logger.error('sprint:bulk_upsert_failed', err.message, { ...ctx, err, payload: questions });
-    return { success: false, message: err.message };
+  } catch (err) {
+    unstable_rethrow(err);
+    logger.error('sprint:bulk_upsert_failed', getErrorMessage(err), { ...ctx, err, payload: questions });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
 /**
- * スプリント問題の論理削除
+ * スプリント問題の削除（検証・誤登録の片付け用。お気に入りも一緒に消える。
+ * 回答の履歴（JSON）は問題IDだけを持つため残り、画面では「削除された問題」と表示する）
  */
-export async function deleteSprintQuestion(questionId: string) {
+export async function deleteSprintQuestion(questionId: string): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
-    const { error } = await supabase
+    const { data: deleted, error } = await supabase
       .from('com_m_sprint_questions')
-      .update({ delete_flg: '1', update_date: new Date().toISOString() })
-      .eq('question_id', questionId);
+      .delete()
+      .eq('question_id', questionId)
+      .select(SPRINT_VOICE_SELECT)
+      .maybeSingle();
 
     if (error) throw error;
+
+    // 音声ファイルの削除は問題の削除の後に行い、失敗しても削除は取り消さない（エラーのログで気付けるようにする）
+    if (deleted) await removeSprintVoiceFiles(supabase, [deleted], ctx, { questionId });
     return { success: true };
-  } catch (err: any) {
-    logger.error('sprint:delete_failed', err.message, { ...ctx, err, payload: { questionId } });
-    return { success: false, message: err.message };
+  } catch (err) {
+    unstable_rethrow(err);
+    logger.error('sprint:delete_failed', getErrorMessage(err), { ...ctx, err, payload: { questionId } });
+    return { success: false, message: t('common.errors.unexpected') };
+  }
+}
+
+/** 問題の音声ファイルのパスを持つ列（Storage の audio バケット内のパス） */
+const SPRINT_VOICE_COLUMNS = [
+  'statement_voice',
+  'question_voice',
+  'answer_sentence_yes_voice',
+  'answer_sentence_no_voice',
+] as const;
+type SprintVoiceRow = Record<(typeof SPRINT_VOICE_COLUMNS)[number], string | null>;
+/** select に渡す形（Supabase の型が項目を読み取れるよう、連結せずに文字列で持つ。上の配列と同じ並び） */
+const SPRINT_VOICE_SELECT = 'statement_voice, question_voice, answer_sentence_yes_voice, answer_sentence_no_voice';
+
+/** 一度に照合・削除するパスの数（PostgREST の URL の長さと Storage の一括削除の上限に収める） */
+const VOICE_REMOVE_CHUNK = 50;
+
+/**
+ * 削除した問題の音声ファイルを Storage から消す。他の問題がまだ同じパスを使っている場合は消さない。
+ * 問題の削除の後に呼び、失敗しても例外にせず、エラーのログ（sprint:delete_audio_failed）だけを残す
+ * （問題の削除は取り消さない）。
+ */
+async function removeSprintVoiceFiles(
+  supabase: Awaited<ReturnType<typeof createAdminClient>>,
+  rows: SprintVoiceRow[],
+  ctx: Awaited<ReturnType<typeof getLogContext>>,
+  payload: Record<string, unknown>,
+) {
+  const paths = [
+    ...new Set(rows.flatMap((row) => SPRINT_VOICE_COLUMNS.map((col) => row[col])).filter((p): p is string => !!p)),
+  ];
+  for (let i = 0; i < paths.length; i += VOICE_REMOVE_CHUNK) {
+    const chunk = paths.slice(i, i + VOICE_REMOVE_CHUNK);
+    try {
+      const list = chunk.map((p) => `"${p.replace(/"/g, '\\"')}"`).join(',');
+      const { data: sharing, error: sharingError } = await supabase
+        .from('com_m_sprint_questions')
+        .select(SPRINT_VOICE_SELECT)
+        .or(SPRINT_VOICE_COLUMNS.map((col) => `${col}.in.(${list})`).join(','));
+      if (sharingError) throw sharingError;
+      const inUse = new Set((sharing ?? []).flatMap((r) => SPRINT_VOICE_COLUMNS.map((col) => r[col])));
+      await removeStorageFiles(
+        supabase,
+        'audio',
+        chunk.filter((p) => !inUse.has(p)),
+        { event: 'sprint:delete_audio_failed', ctx, payload },
+      );
+    } catch (err) {
+      unstable_rethrow(err);
+      logger.error('sprint:delete_audio_failed', getErrorMessage(err), {
+        ...ctx,
+        err,
+        payload: { ...payload, paths: chunk },
+      });
+    }
   }
 }
 
@@ -142,9 +184,11 @@ export async function saveSprintAudio(
   level: number,
   ssml: string,
   mode: 'auto' | 'manual',
-  adjustmentData: any,
-  currentPath?: string | null
-) {
+  adjustmentData: TTSAdjustmentData,
+  currentPath?: string | null,
+): Promise<ActionResult<{ path: string }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
@@ -156,23 +200,24 @@ export async function saveSprintAudio(
     const typeMap: Record<string, string> = { '0': 'speed', '4': 'structure', '5': 'builders', '6': 'mastery' };
     const typeDir = typeMap[type] || 'unknown';
     const levelDir = `level${level}`;
-    
-    const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[-:T.Z]/g, '')
+      .slice(0, 14);
     const fileName = `${questionId}-${section}-${timestamp}.mp3`;
     const filePath = `sprints/${contentId}/${typeDir}/${levelDir}/${fileName}`;
 
     // 3. Storage アップロード
-    const { error: uploadError } = await supabase.storage
-      .from('audio')
-      .upload(filePath, audioBuffer, {
-        contentType: 'audio/mpeg',
-        upsert: false
-      });
+    const { error: uploadError } = await supabase.storage.from('audio').upload(filePath, audioBuffer, {
+      contentType: 'audio/mpeg',
+      upsert: false,
+    });
 
     if (uploadError) throw uploadError;
 
     // 4. DB 更新用カラムのマッピング
-    const updates: any = {
+    const updates: TableUpdate<'com_m_sprint_questions'> = {
       update_date: new Date().toISOString(),
     };
 
@@ -218,9 +263,10 @@ export async function saveSprintAudio(
     }
 
     return { success: true, path: filePath };
-  } catch (err: any) {
-    logger.error('sprint:save_audio_failed', err.message, { ...ctx, err, payload: { questionId, section } });
-    return { success: false, message: err.message };
+  } catch (err) {
+    unstable_rethrow(err);
+    logger.error('sprint:save_audio_failed', getErrorMessage(err), { ...ctx, err, payload: { questionId, section } });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -234,16 +280,18 @@ export async function moveSprintQuestionsLevel(
   contentId: string,
   type: SprintQuestionType,
   questionIds: string[],
-  toLevel: number
-) {
+  toLevel: number,
+): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const meta = QUESTION_TYPES[type];
     if (!meta || !Number.isInteger(toLevel) || toLevel < meta.minLevel || toLevel > meta.maxLevel) {
-      return { success: false, message: 'Invalid level' };
+      return { success: false, message: t('contents.errors.invalidLevel') };
     }
     if (questionIds.length === 0) {
-      return { success: false, message: 'No questions selected' };
+      return { success: false, message: t('contents.errors.noQuestionsSelected') };
     }
 
     const supabase = await createAdminClient();
@@ -253,16 +301,15 @@ export async function moveSprintQuestionsLevel(
       .select('question_id, difficulty_level, seq_no')
       .in('question_id', questionIds)
       .eq('content_id', contentId)
-      .eq('question_type', type)
-      .eq('delete_flg', '0');
+      .eq('question_type', type);
 
     if (fetchError) throw fetchError;
     const fromLevels = new Set((sources ?? []).map((q) => q.difficulty_level));
     if (!sources || sources.length !== questionIds.length || fromLevels.size !== 1) {
-      return { success: false, message: 'Questions not found' };
+      return { success: false, message: t('contents.errors.questionsNotFound') };
     }
     if (fromLevels.has(toLevel)) {
-      return { success: false, message: 'Same level' };
+      return { success: false, message: t('contents.errors.sameLevel') };
     }
 
     const now = new Date().toISOString();
@@ -274,7 +321,6 @@ export async function moveSprintQuestionsLevel(
         .eq('content_id', contentId)
         .eq('question_type', type)
         .eq('difficulty_level', toLevel)
-        .eq('delete_flg', '0')
         .order('seq_no', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -303,23 +349,37 @@ export async function moveSprintQuestionsLevel(
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    logger.error('sprint:move_level_failed', message, { ...ctx, payload: { contentId, type, questionIds, toLevel } });
-    return { success: false, message };
+    unstable_rethrow(err);
+    logger.error('sprint:move_level_failed', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { contentId, type, questionIds, toLevel },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
 /**
  * 同一グループの基本文を一括更新
  */
-export async function updateGroupStatement(groupId: string, statementEn: string, statementJa: string | null) {
+export async function updateGroupStatement(
+  groupId: string,
+  statementEn: string,
+  statementJa: string | null,
+): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
+  const t = await getTranslations();
+  const ctx = await getLogContext();
   const supabase = await createAdminClient();
   const { error } = await supabase
     .from('com_m_sprint_questions')
     .update({ statement_en: statementEn, statement_ja: statementJa, update_date: new Date().toISOString() })
     .eq('group_id', groupId);
-  
-  if (error) return { success: false, message: error.message };
+
+  if (error) {
+    logger.error('sprint:update_group_statement_failed', error.message, { ...ctx, err: error, payload: { groupId } });
+    return { success: false, message: t('common.errors.unexpected') };
+  }
   return { success: true };
 }
 
@@ -330,47 +390,68 @@ export async function bulkImportSprintQuestions(
   contentId: string,
   type: SprintQuestionType,
   level: number,
-  questions: Partial<SprintQuestion>[]
-) {
+  questions: Omit<SprintQuestionInput, 'content_id' | 'question_type' | 'difficulty_level'>[],
+): Promise<ActionResult> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = await createAdminClient();
     const now = new Date().toISOString();
 
     // 1. 既存の該当する問題種別・レベルの問題を削除 (洗い替え)
-    const { error: deleteError } = await supabase
+    const { data: deletedRows, error: deleteError } = await supabase
       .from('com_m_sprint_questions')
       .delete()
       .eq('content_id', contentId)
       .eq('question_type', type)
-      .eq('difficulty_level', level);
+      .eq('difficulty_level', level)
+      .select(SPRINT_VOICE_SELECT);
 
     if (deleteError) throw deleteError;
+    // 消した問題の音声ファイルは、新しい行の登録の後に消す（取り込むデータが同じパスを持つ場合は残す）。
+    // 登録に失敗しても消した問題は戻らないため、成否にかかわらず消す
+    const removeDeletedVoices = () =>
+      removeSprintVoiceFiles(supabase, deletedRows ?? [], ctx, {
+        contentId,
+        type,
+        level,
+      });
 
     // 2. 新しいデータを挿入
-    const dataToInsert = questions.map((q, idx) => ({
+    const dataToInsert = questions.map((q) => ({
       ...q,
       content_id: contentId,
       question_type: type,
       difficulty_level: level,
       insert_date: now,
       update_date: now,
-      delete_flg: '0'
     }));
 
     if (dataToInsert.length > 0) {
-      const { error: insertError } = await supabase
-        .from('com_m_sprint_questions')
-        .insert(dataToInsert);
+      const { error: insertError } = await supabase.from('com_m_sprint_questions').insert(dataToInsert);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        await removeDeletedVoices();
+        throw insertError;
+      }
     }
+    await removeDeletedVoices();
 
-    logger.info('sprint:bulk_import_success', `Imported ${questions.length} questions for content ${contentId}, type ${type}, level ${level}`, { ...ctx });
+    logger.info(
+      'sprint:bulk_import_success',
+      `Imported ${questions.length} questions for content ${contentId}, type ${type}, level ${level}`,
+      { ...ctx },
+    );
     revalidatePath('/contents/[id]', 'layout');
     return { success: true };
-  } catch (err: any) {
-    logger.error('sprint:bulk_import_failed', err.message, { ...ctx, err, payload: { contentId, type, level, count: questions.length } });
-    return { success: false, message: err.message };
+  } catch (err) {
+    unstable_rethrow(err);
+    logger.error('sprint:bulk_import_failed', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { contentId, type, level, count: questions.length },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

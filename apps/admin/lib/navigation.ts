@@ -1,17 +1,40 @@
 // apps/admin/lib/navigation.ts
 import {
-  LayoutDashboard, Building2, FileSignature, Users, BookOpen,
-  Speech, ShieldCheck, Wrench, BookOpenText, Bell, MessageCircle, Globe, Bot, Library, LucideIcon, CalendarDays, CalendarRange, Video, DollarSign,
-  Settings, LifeBuoy, FileChartColumn, Landmark,
+  Bell,
+  BookOpen,
+  BookOpenText,
+  Bot,
+  Building2,
+  CalendarDays,
+  CalendarRange,
+  DollarSign,
+  FileChartColumn,
+  FileSignature,
+  Globe,
+  Landmark,
+  LayoutDashboard,
+  Library,
+  LifeBuoy,
+  MessageCircle,
+  Settings,
+  ShieldCheck,
+  Speech,
+  UserPlus,
+  Users,
+  Video,
+  Wrench,
+  type LucideIcon,
 } from 'lucide-react';
+import type { Messages } from 'next-intl';
 
-// ============================================================
 // 型定義
-// ============================================================
+
+/** メニューの表示名の翻訳キー（messages の nav） */
+export type NavLabelKey = keyof Messages['nav'];
 
 export interface NavLeaf {
   type?: 'leaf';
-  label: string;
+  label: NavLabelKey;
   href: string;
   icon: LucideIcon;
   requiredRoles: readonly string[];
@@ -19,7 +42,7 @@ export interface NavLeaf {
 
 export interface NavGroup {
   type: 'group';
-  label: string;
+  label: NavLabelKey;
   icon: LucideIcon;
   requiredRoles: readonly string[]; // グループ自体を表示する最低権限（子の union）
   children: readonly NavLeaf[];
@@ -29,9 +52,7 @@ export interface NavGroup {
 
 export type NavItem = NavLeaf | NavGroup;
 
-// ============================================================
 // ナビゲーション定義
-// ============================================================
 
 // label は "nav" 名前空間の翻訳キー（next-intl の useTranslations('nav') で解決する）
 export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
@@ -57,6 +78,12 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
     label: 'users',
     href: '/users',
     icon: Users,
+    requiredRoles: ['admin'],
+  },
+  {
+    label: 'trialApplications',
+    href: '/trial-applications',
+    icon: UserPlus,
     requiredRoles: ['admin'],
   },
   {
@@ -176,19 +203,21 @@ export const ADMIN_NAV_CONFIG: readonly NavItem[] = [
   },
 ] as const;
 
-// ============================================================
 // ユーティリティ
-// ============================================================
 
 /** 全リーフアイテムをフラットに取得 */
 export function getAllLeafItems(config: readonly NavItem[]): NavLeaf[] {
-  return config.flatMap((item) =>
-    item.type === 'group' ? [...item.children] : [item]
-  );
+  return config.flatMap((item) => (item.type === 'group' ? [...item.children] : [item]));
 }
 
 /**
- * 特定のパスに対して権限があるか判定する共通ロジック
+ * メニューに無いが、どのロールでも開ける画面。/api は各 Route Handler がロールを確かめる（lib/adminAuth.ts）
+ */
+const SHARED_PATH_PREFIXES = ['/profile', '/notification', '/api/'] as const;
+
+/**
+ * 特定のパスに対して権限があるか判定する共通ロジック。メニューにも上の一覧にも無いパスは、システム管理者だけにする
+ * （画面を足した時にメニューへの登録を忘れても、限られたロールに開かないようにする）
  */
 export function canAccessPath(pathname: string, userRoles: string[]): boolean {
   if (userRoles.includes('admin')) return true;
@@ -196,7 +225,8 @@ export function canAccessPath(pathname: string, userRoles: string[]): boolean {
   const leaves = getAllLeafItems(ADMIN_NAV_CONFIG);
   const config = leaves.find((item) => pathname.startsWith(item.href));
 
-  if (!config || config.requiredRoles.length === 0) return true;
+  if (!config) return SHARED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  if (config.requiredRoles.length === 0) return true;
 
   return config.requiredRoles.some((role) => userRoles.includes(role));
 }

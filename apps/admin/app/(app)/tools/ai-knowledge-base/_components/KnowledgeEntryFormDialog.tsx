@@ -1,20 +1,20 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Edit, Loader2, PlusCircle, Sparkles } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert } from '@/components/ui/alert';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { saveKnowledgeEntryAction, type KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
-import { PlusCircle, Edit, Sparkles, Loader2 } from 'lucide-react';
+import { saveKnowledgeEntry, type KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { getKnowledgeSourceTypeOptions } from '../_lib/knowledgeSourceTypes';
 
 type FormT = ReturnType<typeof useTranslations<'tools.aiKnowledgeBase.formDialog'>>;
@@ -35,11 +35,7 @@ interface KnowledgeEntryFormDialogProps {
   onSuccess?: () => void;
 }
 
-export function KnowledgeEntryFormDialog({
-  mode = 'create',
-  initialData,
-  onSuccess,
-}: KnowledgeEntryFormDialogProps) {
+export function KnowledgeEntryFormDialog({ mode = 'create', initialData, onSuccess }: KnowledgeEntryFormDialogProps) {
   const t = useTranslations('tools.aiKnowledgeBase.formDialog');
   const tSourceTypes = useTranslations('tools.aiKnowledgeBase.sourceTypes');
   const sourceTypeOptions = useMemo(() => getKnowledgeSourceTypeOptions(tSourceTypes), [tSourceTypes]);
@@ -64,7 +60,7 @@ export function KnowledgeEntryFormDialog({
   const onSubmit = async (values: EntryFormValues) => {
     setServerError(null);
     try {
-      const result = await saveKnowledgeEntryAction({
+      const result = await saveKnowledgeEntry({
         knowledgeId: mode === 'edit' ? initialData?.knowledge_id : undefined,
         sourceType: values.sourceType,
         title: values.title,
@@ -121,7 +117,9 @@ export function KnowledgeEntryFormDialog({
                 name="sourceType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('typeLabel')}</FormLabel>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {t('typeLabel')}
+                    </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="rounded-xl border-slate-200">
@@ -130,7 +128,9 @@ export function KnowledgeEntryFormDialog({
                       </FormControl>
                       <SelectContent>
                         {sourceTypeOptions.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -144,9 +144,15 @@ export function KnowledgeEntryFormDialog({
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('titleLabel')}</FormLabel>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {t('titleLabel')}
+                    </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder={t('titlePlaceholder')} className="rounded-xl border-slate-200 font-bold" />
+                      <Input
+                        {...field}
+                        placeholder={t('titlePlaceholder')}
+                        className="rounded-xl border-slate-200 font-bold"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -159,7 +165,9 @@ export function KnowledgeEntryFormDialog({
               name="body"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('bodyLabel')}</FormLabel>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {t('bodyLabel')}
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
@@ -172,11 +180,13 @@ export function KnowledgeEntryFormDialog({
               )}
             />
 
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              {t('embeddingHint')}
-            </p>
+            <p className="text-[11px] text-slate-400 leading-relaxed">{t('embeddingHint')}</p>
 
-            {serverError && <Alert variant="destructive" className="text-xs py-2">{serverError}</Alert>}
+            {serverError && (
+              <Alert variant="destructive" className="text-xs py-2">
+                {serverError}
+              </Alert>
+            )}
 
             <div className="pt-4 mt-2 border-t border-slate-100">
               <Button

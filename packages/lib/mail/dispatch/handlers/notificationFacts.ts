@@ -16,7 +16,11 @@ function minutesOf(time: string): number {
 
 async function readSession(admin: SupabaseClient, sessionId: string | null): Promise<ScheduleTime | null> {
   if (!sessionId) return null;
-  const { data, error } = await admin.from('com_t_session').select('start_datetime, end_datetime').eq('session_id', sessionId).maybeSingle();
+  const { data, error } = await admin
+    .from('com_t_session')
+    .select('start_datetime, end_datetime')
+    .eq('session_id', sessionId)
+    .maybeSingle();
   if (error) throw new Error(`session_fetch_failed: ${error.message}`);
   return data ? { startIso: data.start_datetime, endIso: data.end_datetime } : null;
 }
@@ -62,7 +66,10 @@ export async function loadNotificationFacts({
     case 'SESSION_CANCELLED_BY_STUDENT':
     case 'SESSION_BOOKED_BY_STUDENT':
     case 'SESSION_BOOKING_APPROVED':
-      return { session: (await readSession(admin, readText(payload, 'session_id'))) ?? fromPayload(payload, 'session_start_datetime') };
+      return {
+        session:
+          (await readSession(admin, readText(payload, 'session_id'))) ?? fromPayload(payload, 'session_start_datetime'),
+      };
 
     case 'SESSION_RESCHEDULE_PROPOSED':
     case 'SESSION_RESCHEDULE_PROPOSED_BY_STUDENT': {
@@ -77,7 +84,11 @@ export async function loadNotificationFacts({
         .order('proposed_start_datetime', { ascending: true });
       if (error) throw new Error(`proposal_fetch_failed: ${error.message}`);
       const proposals = data ?? [];
-      const expires = proposals.map((p) => p.expires_at).filter((v): v is string => !!v).sort()[0] ?? null;
+      const expires =
+        proposals
+          .map((p) => p.expires_at)
+          .filter((v): v is string => !!v)
+          .sort()[0] ?? null;
       return {
         session,
         proposals: proposals.map((p) => ({ startIso: p.proposed_start_datetime, endIso: p.proposed_end_datetime })),
@@ -88,14 +99,20 @@ export async function loadNotificationFacts({
     case 'SESSION_BOOKING_REQUESTED': {
       const proposal = await readProposal(admin, readText(payload, 'request_id'));
       return proposal
-        ? { session: { startIso: proposal.proposed_start_datetime, endIso: proposal.proposed_end_datetime }, message: proposal.reason }
+        ? {
+            session: { startIso: proposal.proposed_start_datetime, endIso: proposal.proposed_end_datetime },
+            message: proposal.reason,
+          }
         : { session: fromPayload(payload, 'requested_start_datetime') };
     }
 
     case 'SESSION_BOOKING_REJECTED': {
       const proposal = await readProposal(admin, readText(payload, 'proposal_id'));
       return proposal
-        ? { session: { startIso: proposal.proposed_start_datetime, endIso: proposal.proposed_end_datetime }, reason: proposal.reject_reason }
+        ? {
+            session: { startIso: proposal.proposed_start_datetime, endIso: proposal.proposed_end_datetime },
+            reason: proposal.reject_reason,
+          }
         : { session: fromPayload(payload, 'requested_start_datetime'), reason: readText(payload, 'reject_reason') };
     }
 
@@ -124,7 +141,9 @@ export async function loadNotificationFacts({
       if (!requestId) return {};
       const { data: request, error } = await admin
         .from('com_t_matching_request')
-        .select('requested_day_of_week, requested_start_time, requested_end_time, requested_timezone, reject_reason, expires_at')
+        .select(
+          'requested_day_of_week, requested_start_time, requested_end_time, requested_timezone, reject_reason, expires_at',
+        )
         .eq('request_id', requestId)
         .maybeSingle();
       if (error) throw new Error(`matching_request_fetch_failed: ${error.message}`);
@@ -134,11 +153,14 @@ export async function loadNotificationFacts({
         request.requested_start_time,
         request.requested_timezone,
         timeZone,
-        new Date(nowMs)
+        new Date(nowMs),
       );
       const durationMinutes = minutesOf(request.requested_end_time) - minutesOf(request.requested_start_time);
       return {
-        weekly: { startIso: instant.toISOString(), endIso: new Date(instant.getTime() + durationMinutes * 60000).toISOString() },
+        weekly: {
+          startIso: instant.toISOString(),
+          endIso: new Date(instant.getTime() + durationMinutes * 60000).toISOString(),
+        },
         reason: type === 'MATCHING_REJECTED' ? request.reject_reason : null,
         respondByIso: type === 'MATCHING_REQUESTED' ? request.expires_at : null,
       };

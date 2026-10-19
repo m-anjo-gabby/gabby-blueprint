@@ -1,5 +1,12 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import {
+  type CoachIncomingRequestErrorCode,
+  type CoachIncomingRequestItem,
+  type GetIncomingRequestsForCoachResult,
+} from '@gabby/types/coachInbox';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { getPendingIncomingRequestsAsCoachCore } from '../../matching/actions/matchingActions';
@@ -7,7 +14,6 @@ import {
   getPendingIncomingBookingRequestsForCoachCore,
   getPendingIncomingRescheduleProposalGroupsForCoachCore,
 } from '../../session/actions/sessionActions';
-import { CoachIncomingRequestErrorCode, CoachIncomingRequestItem, GetIncomingRequestsForCoachResult } from '@gabby/types/coachInbox';
 
 const logger = createLogger('common');
 
@@ -31,9 +37,12 @@ export async function getPendingIncomingRequestsForCoachCore(): Promise<GetIncom
       getPendingIncomingRescheduleProposalGroupsForCoachCore(),
     ]);
 
-    if (!matchingResult.success) return { success: false, errorCode: matchingResult.errorCode as CoachIncomingRequestErrorCode };
-    if (!bookingResult.success) return { success: false, errorCode: bookingResult.errorCode as CoachIncomingRequestErrorCode };
-    if (!proposalResult.success) return { success: false, errorCode: proposalResult.errorCode as CoachIncomingRequestErrorCode };
+    if (!matchingResult.success)
+      return { success: false, errorCode: matchingResult.errorCode as CoachIncomingRequestErrorCode };
+    if (!bookingResult.success)
+      return { success: false, errorCode: bookingResult.errorCode as CoachIncomingRequestErrorCode };
+    if (!proposalResult.success)
+      return { success: false, errorCode: proposalResult.errorCode as CoachIncomingRequestErrorCode };
 
     const items: CoachIncomingRequestItem[] = [
       ...matchingResult.requests.map((data): CoachIncomingRequestItem => ({ kind: 'matching', data })),
@@ -45,7 +54,8 @@ export async function getPendingIncomingRequestsForCoachCore(): Promise<GetIncom
 
     return { success: true, requests: items };
   } catch (err) {
-    logger.error('coachInbox:get_pending_incoming_requests_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coachInbox:get_pending_incoming_requests_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

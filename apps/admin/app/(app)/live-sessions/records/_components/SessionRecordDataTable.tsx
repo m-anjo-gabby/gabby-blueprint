@@ -1,17 +1,17 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import type { AdminCoachSummary, AdminOutcomeTarget, AdminSessionRecord } from '@gabby/types/adminLiveSession';
 import { DataTable } from '@/components/list/DataTable';
 import { ListSelectFilter } from '@/components/list/ListSelectFilter';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
-import { CorrectOutcomeDialog } from '../../_components/dialogs/CorrectOutcomeDialog';
 import { SESSION_RECORD_LIST_FILTERS, SESSION_RECORD_RESULT_VALUES, SESSION_RECORD_VIA_VALUES } from '../_lib/list';
+import { CorrectOutcomeDialog } from '../../_components/dialogs/CorrectOutcomeDialog';
 import { createColumns } from './columns';
 
-interface Props {
+interface SessionRecordDataTableProps {
   data: AdminSessionRecord[];
   totalCount: number;
   pageCount: number;
@@ -20,7 +20,7 @@ interface Props {
   months: string[];
 }
 
-export function SessionRecordDataTable({ data, totalCount, pageCount, coaches, months }: Props) {
+export function SessionRecordDataTable({ data, totalCount, pageCount, coaches, months }: SessionRecordDataTableProps) {
   const t = useTranslations('liveSessions.records');
   const tStatus = useTranslations('liveSessions.status');
   const query = useListQuery(SESSION_RECORD_LIST_FILTERS);
@@ -40,7 +40,12 @@ export function SessionRecordDataTable({ data, totalCount, pageCount, coaches, m
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      >
         <ListSelectFilter
           label={t('reviewFilter')}
           allLabel={t('reviewAll')}

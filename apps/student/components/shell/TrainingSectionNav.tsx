@@ -33,7 +33,7 @@ export function TrainingSectionNav() {
                     'relative flex h-11 items-center text-sm font-semibold transition-colors',
                     isActive
                       ? 'text-brand-strong after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand'
-                      : 'text-ink-muted hover:text-ink'
+                      : 'text-ink-muted hover:text-ink',
                   )}
                 >
                   {label}

@@ -1,15 +1,15 @@
 'use client';
 
+import { Check, Loader2, X } from 'lucide-react';
 import { useState } from 'react';
-import { Loader2, Check, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { RESCHEDULE_PROPOSAL_STATUS, type IncomingRescheduleProposalGroup } from '@gabby/types/session';
 import { acceptRescheduleProposal, declineRescheduleProposals } from '@/actions/sessionAction';
-import { IncomingRescheduleProposalGroup, RESCHEDULE_PROPOSAL_STATUS } from '@gabby/types/session';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { RequestKindTag } from './RequestKindTag';
 
@@ -48,7 +48,7 @@ export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }
           ? { ...c, status: RESCHEDULE_PROPOSAL_STATUS.ACCEPTED }
           : c.status === RESCHEDULE_PROPOSAL_STATUS.PENDING
             ? { ...c, status: RESCHEDULE_PROPOSAL_STATUS.DECLINED }
-            : c
+            : c,
       );
       onResolved(group.session_id, { candidates: resolvedCandidates });
       showToast('Booked the selected time.', 'success');
@@ -61,7 +61,7 @@ export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }
     const ok = await showConfirm(
       'Decline all proposed times?',
       `This will decline all ${pendingCandidates.length} time${pendingCandidates.length > 1 ? 's' : ''} ${group.student_name} proposed. They'll need to propose new times.`,
-      { variant: 'danger', confirmText: 'Decline all', cancelText: 'Cancel' }
+      { variant: 'danger', confirmText: 'Decline all', cancelText: 'Cancel' },
     );
     if (!ok) return;
 
@@ -73,7 +73,7 @@ export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }
         return;
       }
       const resolvedCandidates = group.candidates.map((c) =>
-        c.status === RESCHEDULE_PROPOSAL_STATUS.PENDING ? { ...c, status: RESCHEDULE_PROPOSAL_STATUS.DECLINED } : c
+        c.status === RESCHEDULE_PROPOSAL_STATUS.PENDING ? { ...c, status: RESCHEDULE_PROPOSAL_STATUS.DECLINED } : c,
       );
       onResolved(group.session_id, { candidates: resolvedCandidates });
       showToast('Declined the proposed times.', 'success');
@@ -118,7 +118,7 @@ export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }
                   key={candidate.proposal_id}
                   className={cn(
                     'flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors',
-                    isSelected ? 'bg-brand-50 border-brand-300' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
+                    isSelected ? 'bg-brand-50 border-brand-300' : 'bg-slate-50 border-slate-100 hover:bg-slate-100',
                   )}
                   onMouseEnter={() => onDateHover?.(toIsoDateInZone(candidate.proposed_start_datetime, timezone))}
                   onMouseLeave={() => onDateHover?.(null)}
@@ -131,7 +131,9 @@ export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }
                     disabled={isBusy}
                     onChange={() => setSelectedProposalId(candidate.proposal_id)}
                   />
-                  <span className="text-xs font-semibold text-slate-700">{formatDateTimeEn(candidate.proposed_start_datetime, timezone)}</span>
+                  <span className="text-xs font-semibold text-slate-700">
+                    {formatDateTimeEn(candidate.proposed_start_datetime, timezone)}
+                  </span>
                 </label>
               );
             })}
@@ -166,7 +168,9 @@ export function RescheduleProposalRequestCard({ group, onResolved, onDateHover }
           Booked {formatDateTimeEn(acceptedCandidate.proposed_start_datetime, timezone)}
         </p>
       ) : (
-        <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">All candidates were declined</p>
+        <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+          All candidates were declined
+        </p>
       )}
     </article>
   );

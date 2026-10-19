@@ -4,7 +4,11 @@ import { createContext, useContext } from 'react';
 import type { CommonShellData } from '@gabby/lib/shell/shellDataTypes';
 import type { ShellNavContext as ShellNavContextValue } from '@/constants/navigation';
 
-const DEFAULT_NAV_CONTEXT: ShellNavContextValue = { hasLiveSession: false, hasLiveSessionContract: false, isMonitor: false };
+const DEFAULT_NAV_CONTEXT: ShellNavContextValue = {
+  hasLiveSession: false,
+  hasLiveSessionContract: false,
+  isMonitor: false,
+};
 
 const ShellNavReactContext = createContext<ShellNavContextValue>(DEFAULT_NAV_CONTEXT);
 const ShellDataReactContext = createContext<Promise<CommonShellData> | null>(null);

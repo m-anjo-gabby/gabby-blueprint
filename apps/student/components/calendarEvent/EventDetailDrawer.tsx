@@ -19,12 +19,20 @@ interface EventDetailDrawerProps {
  * イベントの詳細をボトムシートで開く（ホームのカード・グループセッションの一覧から使う）。
  * 中身はカレンダーの日の詳細と同じ CalendarEventCard（説明・アナウンス・参加登録/取消・お使いのカレンダーに追加）。
  */
-export function EventDetailDrawer({ event, timezone, onClose, onParticipationChanged, showSeriesLink }: EventDetailDrawerProps) {
+export function EventDetailDrawer({
+  event,
+  timezone,
+  onClose,
+  onParticipationChanged,
+  showSeriesLink,
+}: EventDetailDrawerProps) {
   return (
     <Drawer open={event !== null} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="mx-auto max-h-[85vh] max-w-2xl">
         <DrawerHeader className="flex flex-row items-center justify-between gap-2 text-left">
-          <DrawerTitle className="text-base font-bold text-ink">{event ? formatEventSlot(event, timezone).date : ''}</DrawerTitle>
+          <DrawerTitle className="text-base font-bold text-ink">
+            {event ? formatEventSlot(event, timezone).date : ''}
+          </DrawerTitle>
           <DrawerCloseButton />
         </DrawerHeader>
         <div className="overflow-y-auto px-4 pb-6">

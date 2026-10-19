@@ -1,8 +1,8 @@
 'use client';
 
-import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { PillTabs, type PillTabItem } from '@/components/shell/PillTabs';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
+import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export type GroupSessionsTab = 'upcoming' | 'past';
@@ -18,7 +18,13 @@ export function parseGroupSessionsTab(value: string | null): GroupSessionsTab {
 }
 
 /** 画面の見出しとタブ（画面と骨組みで共有する）。入口がホームとイベントの詳細の2つあるため、戻るは履歴を使う */
-export function GroupSessionsHeader({ tab, onTabChange }: { tab: GroupSessionsTab; onTabChange: (tab: GroupSessionsTab) => void }) {
+export function GroupSessionsHeader({
+  tab,
+  onTabChange,
+}: {
+  tab: GroupSessionsTab;
+  onTabChange: (tab: GroupSessionsTab) => void;
+}) {
   return (
     <ShellPageHeader
       title="グループセッション"

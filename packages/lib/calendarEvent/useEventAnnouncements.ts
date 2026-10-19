@@ -11,7 +11,7 @@ import type { CalendarEventItem, CalendarEventMessageItem } from '@gabby/types/c
  */
 export function useEventAnnouncements(
   event: Pick<CalendarEventItem, 'calendar_event_id' | 'is_joined' | 'messages'>,
-  fetchMessages: (calendarEventId: string) => Promise<CalendarEventMessageItem[]>
+  fetchMessages: (calendarEventId: string) => Promise<CalendarEventMessageItem[]>,
 ): CalendarEventMessageItem[] {
   const [fetched, setFetched] = useState<{ key: string; messages: CalendarEventMessageItem[] } | null>(null);
   const needsFetch = event.messages == null;

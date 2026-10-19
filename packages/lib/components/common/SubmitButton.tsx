@@ -1,9 +1,9 @@
 // packages/lib/components/common/SubmitButton.tsx
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
-import { Loader2 } from 'lucide-react';
 
 interface SubmitButtonProps {
   label: string;
@@ -44,9 +44,7 @@ export function SubmitButton({
       disabled={isPending}
       aria-busy={isPending || undefined}
       className={`w-full min-h-12 px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 [&_svg]:size-4 [&_svg]:shrink-0 ${
-        isPending
-          ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-          : 'bg-brand hover:bg-brand-strong text-white'
+        isPending ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-brand hover:bg-brand-strong text-white'
       } ${className}`}
     >
       {isPending ? <Loader2 className="animate-spin" aria-hidden /> : icon}

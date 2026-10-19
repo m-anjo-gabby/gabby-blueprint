@@ -12,12 +12,16 @@ export const STUDENT_SESSION_ACTION_LABELS: SessionActionDialogLabels = {
     policyNote: (isWithin12Hours) =>
       isWithin12Hours
         ? { text: '開始12時間を切っているため、この回の予約枠は返還されません（再予約できません）。', tone: 'warning' }
-        : { text: 'この回の予約枠が返還され、担当コーチへ改めて予約をリクエストできるようになります。', tone: 'success' },
+        : {
+            text: 'この回の予約枠が返還され、担当コーチへ改めて予約をリクエストできるようになります。',
+            tone: 'success',
+          },
     reasonLabel: '理由（任意）',
     reasonPlaceholder: 'e.g. I’m not feeling well.',
     proposedSlotsLabel: '振替候補を提案する（任意、最大3件）',
     addSlotButton: '候補を追加',
-    noSlotsHint: '候補を提案しなくてもキャンセルできます。提案する場合、コーチの対応可能時間に関わらず、ご希望の時間を自由に選べます。',
+    noSlotsHint:
+      '候補を提案しなくてもキャンセルできます。提案する場合、コーチの対応可能時間に関わらず、ご希望の時間を自由に選べます。',
     timePlaceholder: '時刻',
     removeSlotLabel: '削除',
     checkingText: '確認中…',
@@ -29,7 +33,9 @@ export const STUDENT_SESSION_ACTION_LABELS: SessionActionDialogLabels = {
     backButton: '戻る',
     submitButton: 'キャンセルする',
     successToast: (hasProposals) =>
-      hasProposals ? 'セッションをキャンセルしました。提案した候補をコーチへ送信しました。' : 'セッションをキャンセルしました',
+      hasProposals
+        ? 'セッションをキャンセルしました。提案した候補をコーチへ送信しました。'
+        : 'セッションをキャンセルしました',
     counterpartTimeLabel: 'コーチの現地時間',
     counterpartTimeCaution: 'コーチにとって深夜早朝の時間帯です',
   },

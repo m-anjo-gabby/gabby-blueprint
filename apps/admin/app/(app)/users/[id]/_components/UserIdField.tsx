@@ -1,9 +1,9 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { Copy } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { Button } from '@/components/ui/button';
 
 /** ユーザーID（UUID）の表示とコピー（問い合わせ・調査で使う） */
 export function UserIdField({ userId }: { userId: string }) {

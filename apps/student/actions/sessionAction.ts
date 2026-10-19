@@ -1,28 +1,29 @@
 'use server';
 
-import {
-  getMySessionsCore,
-  getMyUpcomingSessionsCore,
-  getMyPastSessionsCore,
-  cancelSessionCore,
-  createSessionBookingRequestCore,
-  withdrawSessionBookingRequestCore,
-  getMyBookingRequestsCore,
-  checkSessionConflictCore,
-  getSessionResultSummaryCore,
-  getMyRescheduleProposalGroupsCore,
-  acceptRescheduleProposalCore,
-  declineRescheduleProposalsCore,
-} from '@gabby/lib/session/actions/sessionActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
-  MyBookingRequestItem,
-  MyRescheduleProposalGroup,
+  acceptRescheduleProposalCore,
+  cancelSessionCore,
+  checkSessionConflictCore,
+  createSessionBookingRequestCore,
+  declineRescheduleProposalsCore,
+  getMyBookingRequestsCore,
+  getMyPastSessionsCore,
+  getMyRescheduleProposalGroupsCore,
+  getMySessionsCore,
+  getMyUpcomingSessionsCore,
+  getSessionResultSummaryCore,
+  withdrawSessionBookingRequestCore,
+} from '@gabby/lib/session/actions/sessionActions';
+import type { ActionResult } from '@gabby/types/action';
+import {
   PROPOSED_BY_ROLE,
-  SessionActionErrorCode,
-  SessionListItem,
-  SessionResultSummary,
+  type MyBookingRequestItem,
+  type MyRescheduleProposalGroup,
+  type SessionActionErrorCode,
+  type SessionListItem,
+  type SessionResultSummary,
 } from '@gabby/types/session';
 
 const logger = createLogger('student');
@@ -86,13 +87,16 @@ export async function getMyPastSessions(ticketId?: string, limit?: number): Prom
 export async function cancelSession(
   sessionId: string,
   reason?: string,
-  proposedSlots?: { start_datetime: string; end_datetime: string }[]
-): Promise<{ success: true } | { success: false; message: string }> {
+  proposedSlots?: { start_datetime: string; end_datetime: string }[],
+): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await cancelSessionCore(sessionId, reason, proposedSlots);
 
   if (!result.success) {
-    logger.error('student:cancel_session_failed', result.errorCode, { ...ctx, payload: { sessionId, reason, proposedSlots } });
+    logger.error('student:cancel_session_failed', result.errorCode, {
+      ...ctx,
+      payload: { sessionId, reason, proposedSlots },
+    });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -109,13 +113,16 @@ export async function checkSessionConflict(
   studentId: string,
   startIso: string,
   endIso: string,
-  excludeSessionId?: string
-): Promise<{ success: true; coachConflict: boolean; studentConflict: boolean } | { success: false; message: string }> {
+  excludeSessionId?: string,
+): Promise<ActionResult<{ coachConflict: boolean; studentConflict: boolean }>> {
   const ctx = await getLogContext();
   const result = await checkSessionConflictCore(coachId, studentId, startIso, endIso, excludeSessionId);
 
   if (!result.success) {
-    logger.error('student:check_session_conflict_failed', result.errorCode, { ...ctx, payload: { coachId, studentId, startIso, endIso, excludeSessionId } });
+    logger.error('student:check_session_conflict_failed', result.errorCode, {
+      ...ctx,
+      payload: { coachId, studentId, startIso, endIso, excludeSessionId },
+    });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -130,13 +137,16 @@ export async function createSessionBookingRequest(
   scheduleId: string,
   startIso: string,
   endIso: string,
-  reason?: string
-): Promise<{ success: true; requestId: string } | { success: false; message: string }> {
+  reason?: string,
+): Promise<ActionResult<{ requestId: string }>> {
   const ctx = await getLogContext();
   const result = await createSessionBookingRequestCore(scheduleId, startIso, endIso, reason);
 
   if (!result.success) {
-    logger.error('student:create_booking_request_failed', result.errorCode, { ...ctx, payload: { scheduleId, startIso, endIso } });
+    logger.error('student:create_booking_request_failed', result.errorCode, {
+      ...ctx,
+      payload: { scheduleId, startIso, endIso },
+    });
     return { success: false, message: SESSION_ERROR_MESSAGES_JA[result.errorCode] };
   }
 
@@ -147,9 +157,7 @@ export async function createSessionBookingRequest(
 /**
  * コーチの応答を待たずに、自分の予約リクエスト（pending中）を取り下げる
  */
-export async function withdrawSessionBookingRequest(
-  requestId: string
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function withdrawSessionBookingRequest(requestId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await withdrawSessionBookingRequestCore(requestId);
 
@@ -205,9 +213,7 @@ export async function getMyProposedRescheduleGroups(): Promise<MyReschedulePropo
 /**
  * コーチ提案の振替候補を承諾する
  */
-export async function acceptRescheduleProposal(
-  proposalId: string
-): Promise<{ success: true; newSessionId: string } | { success: false; message: string }> {
+export async function acceptRescheduleProposal(proposalId: string): Promise<ActionResult<{ newSessionId: string }>> {
   const ctx = await getLogContext();
   const result = await acceptRescheduleProposalCore(proposalId);
 
@@ -223,9 +229,7 @@ export async function acceptRescheduleProposal(
 /**
  * コーチ提案の振替候補を、同一セッション(キャンセル)単位でまとめて却下する
  */
-export async function declineRescheduleProposals(
-  sessionId: string
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function declineRescheduleProposals(sessionId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await declineRescheduleProposalsCore(sessionId);
 
@@ -243,8 +247,8 @@ export async function declineRescheduleProposals(
  * （RLSにより本人が関わるセッションのみ取得可能）
  */
 export async function getSessionResultSummary(
-  sessionId: string
-): Promise<{ success: true; session: SessionResultSummary } | { success: false; message: string }> {
+  sessionId: string,
+): Promise<ActionResult<{ session: SessionResultSummary }>> {
   const result = await getSessionResultSummaryCore(sessionId);
   if (!result.success) {
     const ctx = await getLogContext();

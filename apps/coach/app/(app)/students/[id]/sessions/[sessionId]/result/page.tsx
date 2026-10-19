@@ -3,13 +3,12 @@ import { getSessionResultSummary } from '@/actions/sessionAction';
 import { getSessionHomework } from '@/actions/sessionHomeworkAction';
 import { SessionResult } from './_components/SessionResult';
 
-export default async function SessionResultPage({
-  params,
-}: {
-  params: Promise<{ id: string; sessionId: string }>;
-}) {
+export default async function SessionResultPage({ params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const { id, sessionId } = await params;
-  const [sessionResult, homework] = await Promise.all([getSessionResultSummary(sessionId), getSessionHomework(sessionId)]);
+  const [sessionResult, homework] = await Promise.all([
+    getSessionResultSummary(sessionId),
+    getSessionHomework(sessionId),
+  ]);
 
   if (!sessionResult.success) {
     notFound();

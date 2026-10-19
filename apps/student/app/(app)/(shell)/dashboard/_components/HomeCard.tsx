@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 interface HomeCardProps {
@@ -63,7 +63,10 @@ export function ProgressBar({ percent, tone = 'brand' }: { percent: number; tone
   const { track, bar } = PROGRESS_TONES[tone];
   return (
     <div className={cn('w-full overflow-hidden rounded-full', track)}>
-      <div className={cn('h-full rounded-full transition-[width] duration-700', bar)} style={{ width: `${clamped}%` }} />
+      <div
+        className={cn('h-full rounded-full transition-[width] duration-700', bar)}
+        style={{ width: `${clamped}%` }}
+      />
     </div>
   );
 }

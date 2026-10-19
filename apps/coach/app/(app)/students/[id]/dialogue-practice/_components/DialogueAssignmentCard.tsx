@@ -1,23 +1,26 @@
 'use client';
 
+import { ChevronDown, ChevronUp, Loader2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Loader2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
-import type { DialogueAssignmentSummary, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
+import {
+  DIALOGUE_CATEGORIES,
+  type DialogueAssignmentSummary,
+  type UpdateDialogueSessionProgressInput,
+} from '@gabby/types/dialogue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { DialogueSessionRow } from './DialogueSessionRow';
 
-interface Props {
+interface DialogueAssignmentCardProps {
   assignment: DialogueAssignmentSummary;
   onUnassign: () => Promise<void>;
   onProgressChange: (input: UpdateDialogueSessionProgressInput) => Promise<void>;
 }
 
-export function DialogueAssignmentCard({ assignment, onUnassign, onProgressChange }: Props) {
+export function DialogueAssignmentCard({ assignment, onUnassign, onProgressChange }: DialogueAssignmentCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isUnassigning, setIsUnassigning] = useState(false);
   const { showConfirm } = useConfirm();
@@ -30,7 +33,7 @@ export function DialogueAssignmentCard({ assignment, onUnassign, onProgressChang
     const ok = await showConfirm(
       'Unassign this set?',
       `This removes "${assignment.content_name}" from this student. This cannot be undone.`,
-      { variant: 'danger', confirmText: 'Unassign', cancelText: 'Cancel' }
+      { variant: 'danger', confirmText: 'Unassign', cancelText: 'Cancel' },
     );
     if (!ok) return;
     setIsUnassigning(true);
@@ -42,13 +45,19 @@ export function DialogueAssignmentCard({ assignment, onUnassign, onProgressChang
   };
 
   const progressPercent =
-    assignment.total_session_count > 0 ? (assignment.completed_session_count / assignment.total_session_count) * 100 : 0;
+    assignment.total_session_count > 0
+      ? (assignment.completed_session_count / assignment.total_session_count) * 100
+      : 0;
 
   return (
     <Card className="rounded-2xl border-slate-200 shadow-sm">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-3">
-          <button type="button" onClick={() => setIsExpanded((v) => !v)} className="flex items-start gap-2 text-left min-w-0">
+          <button
+            type="button"
+            onClick={() => setIsExpanded((v) => !v)}
+            className="flex items-start gap-2 text-left min-w-0"
+          >
             {isExpanded ? (
               <ChevronUp size={16} className="mt-0.5 text-slate-400 shrink-0" />
             ) : (
@@ -61,7 +70,9 @@ export function DialogueAssignmentCard({ assignment, onUnassign, onProgressChang
                   {DIALOGUE_CATEGORIES[assignment.category_id].label}
                 </Badge>
                 {assignment.is_set_completed && (
-                  <Badge className="text-[10px] px-1.5 py-0 shrink-0 bg-emerald-600 hover:bg-emerald-600">Completed</Badge>
+                  <Badge className="text-[10px] px-1.5 py-0 shrink-0 bg-emerald-600 hover:bg-emerald-600">
+                    Completed
+                  </Badge>
                 )}
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">Assigned {assignment.assigned_date}</p>

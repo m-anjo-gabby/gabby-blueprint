@@ -32,20 +32,20 @@
 -- @schema public.com_t_matching_request
 CREATE TABLE public.com_t_matching_request (
     request_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    ticket_id                uuid         NOT NULL REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE CASCADE,
-    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id),
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id),
+    ticket_id                uuid         NOT NULL REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE RESTRICT,
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     slot_no                  smallint     NOT NULL,
     requested_day_of_week    smallint     NOT NULL,
     requested_start_time     time without time zone NOT NULL,
     requested_end_time       time without time zone NOT NULL,
     status                   smallint     NOT NULL DEFAULT 1,
     reject_reason            text,
-    responded_by             uuid         REFERENCES public.com_m_user(id),
+    responded_by             uuid         REFERENCES public.com_m_user(id) ON DELETE SET NULL,
     responded_at             timestamp with time zone,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
-    requested_timezone       text         NOT NULL REFERENCES public.com_m_timezone(timezone),
+    requested_timezone       text         NOT NULL REFERENCES public.com_m_timezone(timezone) ON DELETE RESTRICT,
     requested_bookable_sessions smallint,
     expires_at               timestamp with time zone,
     CONSTRAINT chk_matching_request_day CHECK (requested_day_of_week >= 0 AND requested_day_of_week <= 6),
@@ -82,12 +82,13 @@ CREATE UNIQUE INDEX uq_matching_request_active_slot ON public.com_t_matching_req
 
 CREATE TRIGGER trg_matching_request_after_insert AFTER INSERT ON public.com_t_matching_request FOR EACH ROW EXECUTE FUNCTION public.trg_matching_request_after_insert();
 CREATE TRIGGER trg_matching_request_before_insert BEFORE INSERT ON public.com_t_matching_request FOR EACH ROW EXECUTE FUNCTION public.trg_matching_request_before_insert();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_matching_request FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_t_matching_request ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Involved users can view matching requests" ON public.com_t_matching_request FOR SELECT TO authenticated
 USING (
-    student_id = auth.uid() OR coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    student_id = auth.uid() OR coach_id = auth.uid() OR public.is_system_admin()
 );
 
 CREATE POLICY "Students can create their own matching requests" ON public.com_t_matching_request FOR INSERT TO authenticated

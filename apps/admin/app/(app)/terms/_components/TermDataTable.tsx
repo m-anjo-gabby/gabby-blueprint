@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import type { TermListItem } from '@gabby/types/term';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import type { TermListItem } from '@gabby/types/term';
 import { deleteTerm } from '@/actions/adminTermAction';
 import { DataTable } from '@/components/list/DataTable';
+import { boldChunks, DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
-import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
 import { createColumns } from './columns';
 
 interface TermDataTableProps {
@@ -45,7 +45,12 @@ export function TermDataTable({ data, totalCount, pageCount }: TermDataTableProp
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount} />
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      />
       <DataTable
         columns={createColumns(t, { termTypeLabel, onDelete: setDeleting })}
         data={data}
@@ -59,7 +64,9 @@ export function TermDataTable({ data, totalCount, pageCount }: TermDataTableProp
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
         title={t('deleteDialogTitle')}
-        description={(term) => t.rich('deleteDialogBody', { termType: termTypeLabel(term), version: term.version_name, bold: boldChunks })}
+        description={(term) =>
+          t.rich('deleteDialogBody', { termType: termTypeLabel(term), version: term.version_name, bold: boldChunks })
+        }
         confirmLabel={t('deleteConfirm')}
       />
     </div>

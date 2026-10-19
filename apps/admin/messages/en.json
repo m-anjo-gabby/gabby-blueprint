@@ -7,6 +7,7 @@
     "back": "Back",
     "save": "Save",
     "loading": "Loading...",
+    "reload": "Reload",
     "systemError": "A system error occurred.",
     "networkError": "A network error occurred",
     "guestFallback": "Guest",
@@ -55,7 +56,33 @@
     },
     "monthLabel": "{month} {year}",
     "prevMonth": "Previous month",
-    "nextMonth": "Next month"
+    "nextMonth": "Next month",
+    "errors": {
+      "unexpected": "An unexpected error occurred.",
+      "sessionExpired": "Your session has expired. Please sign in again.",
+      "fileRequired": "No file selected.",
+      "uploadFailed": "Upload failed.",
+      "saveFailed": "Failed to save.",
+      "deleteFailed": "Failed to delete.",
+      "invalidInput": "Please check your input.",
+      "loadFailed": "Could not load this section. Please reload."
+    },
+    "results": {
+      "registered": "Registered.",
+      "deleted": "Deleted.",
+      "saved": "Saved.",
+      "audioUpdated": "Audio updated."
+    },
+    "fallback": {
+      "contract": "Unknown contract",
+      "plan": "Unknown plan"
+    },
+    "userType": {
+      "admin": "Admin",
+      "student": "Student",
+      "coach": "Coach",
+      "unknown": "Unknown"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -63,6 +90,7 @@
     "contracts": "Contracts",
     "liveSessions": "Live Sessions",
     "users": "Users",
+    "trialApplications": "Web trial applications",
     "terms": "Terms",
     "timezones": "Timezones",
     "contents": "Contents",
@@ -226,7 +254,9 @@
       "actions": "Actions",
       "searchPlaceholder": "Enter search term...",
       "noData": "No data found.",
-      "allUserTypes": "All types"
+      "allUserTypes": "All types",
+      "statusWithdrawn": "Withdrawn",
+      "statusSuspended": "Suspended"
     },
     "detail": {
       "backToList": "Back to users",
@@ -251,7 +281,36 @@
         "userId": "User ID",
         "copyId": "Copy user ID",
         "lastSignIn": "Last sign-in",
-        "neverSignedIn": "Never signed in"
+        "neverSignedIn": "Never signed in",
+        "accountActionsTitle": "Account actions"
+      },
+      "account": {
+        "activeNote": "Active. Suspending blocks sign-in (data is kept and the account can be resumed).",
+        "suspendedNote": "Suspended. The user cannot sign in.",
+        "withdrawnNote": "Withdrawn. Personal data has been erased; only session and learning records remain as \"Deleted user\".",
+        "suspend": "Suspend",
+        "resume": "Resume",
+        "suspendConfirmTitle": "Suspend this user?",
+        "suspendConfirmBody": "The user will no longer be able to sign in. Licenses and schedules are kept (stop the license or cancel sessions separately if needed).",
+        "toastSuspended": "User suspended",
+        "toastResumed": "User resumed",
+        "toastWithdrawn": "Withdrawal completed",
+        "toastFailed": "The operation failed",
+        "withdrawTitle": "Withdraw (erase personal data)",
+        "withdrawDescription": "Handles a deletion request under the Terms of Use. This cannot be undone.",
+        "withdraw": "Withdraw",
+        "withdrawConfirmTitle": "Withdraw this user? (cannot be undone)",
+        "withdrawConfirmLead": "This erases the user's personal data and deletes the sign-in account.",
+        "withdrawErased": "Erased: name, email, legal name, profile image, coach profile, favorites, notifications, mail records, homework, coach notes",
+        "withdrawKept": "Kept (as \"Deleted user\"): sessions, tickets, licenses, ratings, training reports, learning records, chat messages",
+        "withdrawPrecondition": "If the user has an active license, upcoming sessions, pending requests or an active schedule, stop or cancel them first.",
+        "withdrawInputLabel": "To confirm, type the user's display name",
+        "withdrawErrors": {
+          "active_license": "The user has an active license. Stop the license first",
+          "scheduled_session": "The user has upcoming sessions. Cancel them first",
+          "active_matching": "The user has a pending request or an active schedule. End it first",
+          "name_mismatch": "The display name does not match"
+        }
       }
     },
     "form": {
@@ -507,6 +566,32 @@
       "sourceLegacy": "Migrated",
       "sourceInitial": "Initial",
       "unknownStudent": "(Unknown)"
+    },
+    "errors": {
+      "reasonRequired": "A reason is required.",
+      "adminInfoFailed": "Failed to load your admin information. Please sign in again and retry.",
+      "userNotFound": "The user was not found.",
+      "impersonateRoleOnly": "Only student and coach accounts can be impersonated.",
+      "authUserNotFound": "The user's authentication record was not found.",
+      "auditLogFailed": "Failed to record the audit log.",
+      "loginLinkFailed": "Failed to issue the login link.",
+      "portalUrlMissing": "The portal URL is not configured.",
+      "invalidLevel": "The level is invalid.",
+      "levelUpdateFailed": "Failed to update the level.",
+      "invalidStage": "The stage is invalid.",
+      "sameStage": "The selected stage is the same as the current one.",
+      "stageUpdateFailed": "Failed to update the stage.",
+      "levelManagedFailed": "Failed to change the level management setting.",
+      "emailExists": "This email address is already registered.",
+      "emailInviting": "This email address has a pending invitation. Please resend the invitation email.",
+      "createDataFailed": "Failed to create the data.",
+      "inviteMailFailed": "Failed to send the invitation email.",
+      "createAccountFailed": "Failed to create the account.",
+      "invitationNotFound": "The invitation was not found, or registration is already complete.",
+      "resendFailed": "Failed to resend the email.",
+      "authUpdateFailed": "Failed to update the authentication record.",
+      "userUpdateFailed": "Failed to update the user.",
+      "createInvitationFailed": "Failed to create the invitation."
     }
   },
   "paymentSettings": {
@@ -518,7 +603,12 @@
     "rateAmountLabel": "Rate",
     "currencyCodeLabel": "Currency code",
     "saveRate": "Save rate",
-    "toastRateUpdated": "Session pay rate updated"
+    "toastRateUpdated": "Session pay rate updated",
+    "errors": {
+      "invalidRate": "The rate must be a number of 0 or more.",
+      "currencyRequired": "Enter a currency code.",
+      "rateUpdateFailed": "Failed to update the session rate."
+    }
   },
   "notification": {
     "title": "Notifications",
@@ -564,6 +654,14 @@
       "submitLabel": "Update password",
       "submitLoadingLabel": "Updating...",
       "backToDashboard": "Back to dashboard"
+    },
+    "errors": {
+      "fileTooLarge": "Files must be 5 MB or smaller.",
+      "invalidImageType": "Only PNG, JPEG, or WebP images can be uploaded.",
+      "iconUploadFailed": "Failed to upload the image.",
+      "profileUpdateFailed": "Failed to update the profile.",
+      "timezoneUnavailable": "The selected time zone is not available.",
+      "timezoneUpdateFailed": "Failed to update the time zone."
     }
   },
   "clients": {
@@ -583,7 +681,8 @@
       "industryNotSet": "Not set",
       "registeredDateHeader": "Registered",
       "searchPlaceholder": "Search by client name...",
-      "noData": "No client data found."
+      "noData": "No client data found.",
+      "endedBadge": "Ended"
     },
     "form": {
       "createButton": "Add client",
@@ -614,7 +713,40 @@
       "toastCreated": "Client registered",
       "toastUpdated": "Client updated",
       "toastGenericFailed": "The operation failed",
-      "toastSystemError": "A system error occurred"
+      "toastSystemError": "A system error occurred",
+      "statusLabel": "Status",
+      "statusActive": "Active",
+      "statusEnded": "Ended"
+    },
+    "purge": {
+      "title": "Delete client (with all related data)",
+      "description": "Deletes a test, demo or mistakenly created client together with its users, contracts and records. This cannot be undone.",
+      "button": "Delete client",
+      "confirmTitle": "Delete this client and all its data? (cannot be undone)",
+      "confirmLead": "The following data will be deleted.",
+      "confirmNote": "To end business with a real client, set its status to \"Ended\" instead of deleting it.",
+      "inputLabel": "To confirm, type the client name",
+      "toastPurged": "Client deleted",
+      "counts": {
+        "students": "Students",
+        "coaches": "Coaches",
+        "invitations": "Pending invitations",
+        "contracts": "Contracts",
+        "licenses": "Licenses",
+        "sessions": "Sessions",
+        "trainings": "Learning records",
+        "chat_messages": "Chat messages",
+        "notices": "Notices",
+        "calendar_events": "Events"
+      },
+      "errors": {
+        "protected_client": "This client (initial tenant / Web trial) cannot be deleted",
+        "has_admin": "An administrator belongs to this client, so it cannot be deleted",
+        "linked_to_other_client": "It has sessions or assignments with users of other clients, so it cannot be deleted",
+        "client_not_found": "Client not found",
+        "name_mismatch": "The client name does not match",
+        "unexpected": "Failed to delete"
+      }
     }
   },
   "timezones": {
@@ -630,12 +762,14 @@
       "currentTimeHeader": "Current Local Time",
       "actionsHeader": "Actions",
       "deleteDialogTitle": "Delete Timezone",
-      "deleteDialogBody": "Are you sure you want to delete \"<bold>{name}</bold>\"? This will not affect users who already have this timezone set, but it will no longer appear as an option.",
+      "deleteDialogBody": "Are you sure you want to delete \"<bold>{name}</bold>\"? This cannot be undone. A timezone in use cannot be deleted; turn off \"Active\" instead.",
       "deleteConfirm": "Delete",
       "searchPlaceholder": "Search by timezone name or display name...",
       "noData": "No timezone data found.",
       "toastDeleted": "Timezone deleted",
-      "toastDeleteFailed": "Failed to delete"
+      "toastDeleteFailed": "Failed to delete",
+      "inactiveBadge": "Inactive",
+      "toastInUse": "This timezone is in use and cannot be deleted. Turn off \"Active\" instead"
     },
     "form": {
       "createButton": "Add timezone",
@@ -675,7 +809,10 @@
       "toastCreated": "Timezone registered",
       "toastUpdated": "Timezone updated",
       "toastGenericFailed": "The operation failed",
-      "toastSystemError": "A system error occurred"
+      "toastSystemError": "A system error occurred",
+      "isActiveLabel": "Active",
+      "isActiveOn": "Shown in the timezone options",
+      "isActiveOff": "Inactive. Not shown in the options (users who already use it keep it)"
     }
   },
   "terms": {
@@ -997,6 +1134,11 @@
       "recordButton": "Record",
       "correctButton": "Correct",
       "noData": "No matching records"
+    },
+    "errors": {
+      "slotTaken": "This slot already has a request or a match.",
+      "usedUpBeforeCoachChange": "This slot cannot be matched because the contract's sessions were used up before the coach change.",
+      "noBookableSessions": "This coach has no bookable sessions in the selected time slot within the contract period (all of them overlap other schedules)."
     }
   },
   "monthlyReports": {
@@ -1054,6 +1196,12 @@
     },
     "invoiceButton": {
       "button": "Invoice PDF"
+    },
+    "errors": {
+      "fetchFailed": "Failed to load the report.",
+      "unfinishedSessions": "Cannot approve because some sessions have not been ended. End those sessions first.",
+      "approveFailed": "Failed to approve.",
+      "unapproveFailed": "Failed to cancel the approval."
     }
   },
   "notice": {
@@ -1201,6 +1349,17 @@
       "ctaClicked": "Clicked button",
       "ctaRateOfRead": "{rate}% of read",
       "ctaClickedAtHeader": "Button clicked at (JST)"
+    },
+    "errors": {
+      "invalidDisplayMode": "The display mode is invalid.",
+      "coachHomeNotAllowed": "\"Home card\" is not available for coach notices.",
+      "ctaBothRequired": "Enter both the label and the link for the action button.",
+      "ctaLabelTooLong": "The action button label must be {max} characters or fewer.",
+      "ctaUrlInvalid": "The action button link must be an in-app path starting with \"/\" or a URL starting with \"https://\".",
+      "invalidPublishStart": "Enter a valid publish start date and time.",
+      "imageRequired": "No image selected.",
+      "imageType": "Choose a PNG, JPEG, or WebP image.",
+      "imageTooLarge": "Choose an image of 2 MB or less."
     }
   },
   "calendarEvents": {
@@ -1281,7 +1440,8 @@
       "allTypes": "All types",
       "allStatuses": "All statuses",
       "toastDeleted": "Calendar event deleted.",
-      "toastDeleteFailed": "Failed to delete the calendar event."
+      "toastDeleteFailed": "Failed to delete the calendar event.",
+      "toastDeleteHeld": "Events that have already taken place cannot be deleted. Unpublish it instead to keep the attendance records"
     },
     "formDialog": {
       "createButton": "Add event",
@@ -1416,6 +1576,10 @@
         "clientRequired": "Please select a client"
       },
       "searchPlaceholder": "Search by series name..."
+    },
+    "errors": {
+      "invalidStartDatetime": "The start date and time is invalid.",
+      "titleAndBodyRequired": "Title and body are required."
     }
   },
   "chat": {
@@ -1535,6 +1699,21 @@
       "toastDeleteFailed": "Failed to delete the message",
       "deleteTooltip": "Delete",
       "yesterdayLabel": "Yesterday"
+    },
+    "errors": {
+      "unauthorized": "Your session has expired. Please sign in again.",
+      "forbidden": "You don't have permission to do this.",
+      "not_found": "The item was not found.",
+      "invalid_input": "Please check your input.",
+      "two_users_required": "Please select two different users.",
+      "room_name_required": "Please enter a room name.",
+      "participants_required": "Please select at least two participants.",
+      "invalid_members": "A room cannot be created with this combination of participants.",
+      "min_participants": "This group room cannot have fewer participants.",
+      "already_member": "This user is already a participant.",
+      "not_member": "This user is not a participant in this room.",
+      "not_group_room": "Participants can only be managed in group rooms.",
+      "unexpected_error": "An unexpected error occurred."
     }
   },
   "contracts": {
@@ -1701,10 +1880,12 @@
         "searchPlaceholder": "Search by plan name or code...",
         "noData": "No plan data found.",
         "deleteDialogTitle": "Delete Plan",
-        "deleteDialogBody": "Are you sure you want to delete plan \"<bold>{name}</bold>\"? This will not affect contracts already created with this plan (it will simply no longer appear as an option).",
+        "deleteDialogBody": "Are you sure you want to delete \"<bold>{name}</bold>\"? This cannot be undone. A plan used by contracts cannot be deleted; turn off \"On sale\" instead.",
         "deleteConfirm": "Delete",
         "toastDeleted": "Plan deleted",
-        "toastDeleteFailed": "Failed to delete"
+        "toastDeleteFailed": "Failed to delete",
+        "inactiveBadge": "Discontinued",
+        "toastInUse": "This plan is used by contracts and cannot be deleted. Turn off \"On sale\" instead"
       },
       "formDialog": {
         "createButton": "Add plan",
@@ -1750,8 +1931,32 @@
         "toastCreated": "Plan registered",
         "toastUpdated": "Plan updated",
         "toastGenericFailed": "The operation failed",
-        "toastSystemError": "A system error occurred"
+        "toastSystemError": "A system error occurred",
+        "isActiveLabel": "On sale",
+        "isActiveOn": "Shown in the plan options when creating a contract",
+        "isActiveOff": "Discontinued. Not shown in the options (existing contracts are not affected)"
       }
+    },
+    "errors": {
+      "overlapLicense": "This user already has an overlapping license \"{contractName}\" ({start} – {end}), so it cannot be assigned.",
+      "duplicateContractName": "This client already has a contract with the same name. Please enter a different contract name.",
+      "planNotFound": "The selected plan was not found.",
+      "licenseCheckFailed": "Failed to check the existing licenses.",
+      "maxBelowAssigned": "{count} licenses are already assigned, so the limit cannot be set below that.",
+      "licenseOutsidePeriod": "Existing license periods fall outside the new contract period, so the period cannot be changed (adjust those licenses first).",
+      "contractCheckFailed": "Failed to check the contract.",
+      "hasLicenses": "This contract cannot be deleted because licenses are assigned.",
+      "hasLicenseHistory": "This contract cannot be deleted because licenses have been issued under it.",
+      "contractNotFound": "The contract was not found.",
+      "licenseWithinContract": "The license period must be within the contract period.",
+      "assignmentCheckFailed": "Failed to check the current assignments.",
+      "limitReached": "Cannot add more because the limit has been reached.",
+      "concurrentAssign": "Another operation registered a license at the same time, so it cannot be assigned for this period. Check the latest state and try again.",
+      "licenseNotFound": "The license was not found.",
+      "startAfterEnd": "The start date must be on or before the end date.",
+      "concurrentUpdate": "Another operation registered or changed a license at the same time, so this period cannot be set. Check the latest state and try again.",
+      "allUsersOverlap": "All selected users already have an overlapping license, so none can be assigned.",
+      "concurrentBulkAssign": "Another operation registered a license at the same time, so the bulk assignment failed. Review the selected users and try again."
     }
   },
   "tools": {
@@ -1882,7 +2087,10 @@
         "errors": {
           "wordRequired": "English word is required",
           "posRequired": "Please select a part of speech",
-          "jaRequired": "Japanese translation is required"
+          "jaRequired": "Japanese translation is required",
+          "syllablesRequired": "Syllables are required",
+          "stressVowelRequired": "Stressed vowel spelling is required",
+          "cvIdRequired": "Please select a Color Vowel"
         }
       },
       "bulkImportDialog": {
@@ -1944,6 +2152,14 @@
         "confirmBody": "This will generate <bold>{count}</bold> audio files. Existing audio will be overwritten.",
         "errorDialogTitle": "Processing Complete (with errors)",
         "errorDialogBody": "Bulk generation is complete, but some entries had errors."
+      },
+      "errors": {
+        "invalidEntry": "The data contains an invalid entry: {word} ({partOfSpeech})"
+      }
+    },
+    "ttsDesigner": {
+      "results": {
+        "assetSaved": "Asset saved."
       }
     }
   },
@@ -1967,7 +2183,8 @@
         "word": "Edit Words",
         "sprint": "Edit Questions",
         "dialogue": "Edit Sessions"
-      }
+      },
+      "unpublishedBadge": "Unpublished"
     },
     "formDialog": {
       "createButton": "Add New",
@@ -2023,7 +2240,10 @@
         "sprintThemeRequired": "Please enter a theme for the Corpus Sprint",
         "sprintSupportRequired": "Please enable at least one question type",
         "dialogueCategoryRequired": "Please select a set category"
-      }
+      },
+      "statusLabel": "Visibility",
+      "statusPublished": "Published",
+      "statusUnpublished": "Unpublished"
     },
     "accessDialog": {
       "toastFetchFailed": "Failed to fetch data",
@@ -2225,6 +2445,7 @@
           "errorWordEnEmpty": "Word (word_en) is empty.",
           "errorWordJaEmpty": "Japanese translation (word_ja) is empty.",
           "errorRankInvalid": "Rank contains a non-numeric value: \"{value}\"",
+          "errorPhraseTypeInvalid": "Phrase type must be 1 to 5: \"{value}\"",
           "toastImported": "Processed {count} words",
           "toastSaveFailed": "An error occurred while saving",
           "toastSystemError": "A system error occurred",
@@ -2338,7 +2559,8 @@
           "deleteDialogTitle": "Delete this session?",
           "deleteDialogHint": "This action cannot be undone.",
           "cancelButton": "Cancel",
-          "deleteConfirmButton": "Delete"
+          "deleteConfirmButton": "Delete",
+          "deleteInUse": "This session has progress or dialogue records and cannot be deleted"
         },
         "sessionFormDialog": {
           "createButton": "Add Session",
@@ -2361,6 +2583,14 @@
           }
         }
       }
+    },
+    "errors": {
+      "sessionNoInUse": "This session number is already in use.",
+      "duplicateSeqNo": "The display order (Seq No) is duplicated.",
+      "invalidLevel": "The destination level is invalid.",
+      "noQuestionsSelected": "No questions are selected.",
+      "questionsNotFound": "The selected questions were not found.",
+      "sameLevel": "The destination is the same as the current level."
     }
   },
   "companyProfiles": {
@@ -2395,7 +2625,6 @@
     "toastUpdated": "Company information updated",
     "toastLogoUpdated": "Logo image updated",
     "errors": {
-      "forbidden": "You do not have permission to perform this action.",
       "invalidCompany": "Invalid legal entity.",
       "required": "Company name (English) and address are required.",
       "updateFailed": "Failed to update company information.",
@@ -2433,5 +2662,32 @@
     },
     "pdfButton": "PDF",
     "downloadFailed": "Failed to create the report. Please try again later."
+  },
+  "trialApplications": {
+    "page": {
+      "title": "Web trial applications",
+      "subtitle": "Review web trial applications and whether applicants have completed registration (password set)"
+    },
+    "dataTable": {
+      "searchPlaceholder": "Search by name, romaji, or email",
+      "appliedAtHeader": "Applied at",
+      "applyCount": "Application #{count}",
+      "nameHeader": "Name",
+      "occupationHeader": "Occupation",
+      "referralHeader": "Referral",
+      "allOccupations": "All occupations",
+      "locationHeader": "Country, city / time zone",
+      "messageHeader": "Message",
+      "statusHeader": "Status",
+      "allStatuses": "All statuses",
+      "status": {
+        "invited": "Invited",
+        "registered": "Registered",
+        "expired": "Expired"
+      },
+      "acceptedAt": "Registered {date}",
+      "expiresAt": "Expires {date}",
+      "noData": "No applications"
+    }
   }
 }

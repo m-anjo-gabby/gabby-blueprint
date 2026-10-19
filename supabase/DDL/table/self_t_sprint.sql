@@ -11,7 +11,7 @@ CREATE TABLE public.self_t_sprint (
     self_sprint_id           uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
     sprint_type              text         NOT NULL,
-    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE RESTRICT,
     question_type            text         NOT NULL,
     answer_type              text         NOT NULL,
     difficulty_level         smallint     NOT NULL,
@@ -21,6 +21,7 @@ CREATE TABLE public.self_t_sprint (
     answered_history         jsonb        NOT NULL DEFAULT '[]'::jsonb,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT chk_self_sprint_types CHECK ((sprint_type = ANY (ARRAY['0'::text, '1'::text])) AND (question_type = ANY (ARRAY['0'::text, '4'::text, '5'::text, '6'::text])) AND (answer_type = ANY (ARRAY['0'::text, '1'::text]))),
     CONSTRAINT self_t_sprint_answered_history_is_array CHECK (jsonb_typeof(answered_history) = 'array'::text)
 );
 
@@ -44,15 +45,9 @@ CREATE INDEX idx_self_t_sprint_user_insert_date ON public.self_t_sprint (user_id
 CREATE INDEX idx_self_t_sprint_user_type ON public.self_t_sprint (user_id, question_type, difficulty_level);
 
 CREATE TRIGGER on_sprint_session_insert AFTER INSERT ON public.self_t_sprint FOR EACH ROW EXECUTE FUNCTION public.sync_sprint_session_lifetime_stats();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.self_t_sprint FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.self_t_sprint ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Managers can view client's sprint scores" ON public.self_t_sprint FOR SELECT TO authenticated
-USING (
-    (EXISTS ( SELECT 1
-       FROM public.com_m_user u
-      WHERE u.id = self_t_sprint.user_id AND u.client_id = public.get_jwt_client_id()))
-);
 
 CREATE POLICY "Users can manage their own sprint scores" ON public.self_t_sprint FOR ALL TO authenticated
 USING (

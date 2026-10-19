@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { getCoachSpecialtySettings } from '@/actions/adminCoachSpecialtyAction';
-import { requireUserForTab } from '../_lib/userDetail';
 import { DetailSection } from '../_components/DetailSection';
+import { requireUserForTab } from '../_lib/userDetail';
 import { CoachSpecialtyPanel } from './_components/CoachSpecialtyPanel';
 
 /** コーチの専門タブ（生徒のコーチ選択・コーチのプロフィールに表示。設定はアドミンのみ） */

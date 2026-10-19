@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface RpcCheck {
   /** 確認対象のRPC(SECURITY DEFINER関数)名 */
@@ -7,11 +7,11 @@ export interface RpcCheck {
   dummyArgs: Record<string, unknown>;
 }
 
-const UNDEFINED_FUNCTION = "42883"; // Postgres: undefined_function
+const UNDEFINED_FUNCTION = '42883'; // Postgres: undefined_function
 // PostgRESTがRPCをスキーマキャッシュ上で解決できない場合に返すコード。関数が本当に
 // 存在しない場合、PostgRESTはPostgresにクエリを投げる前にこの時点で弾くため、
-// 実際には42883よりもこちらが返ってくるケースが多い（KJ-2026-0912-01参照）。
-const POSTGREST_FUNCTION_NOT_FOUND = "PGRST202";
+// 実際には42883よりもこちらが返ってくるケースが多い。
+const POSTGREST_FUNCTION_NOT_FOUND = 'PGRST202';
 
 function isFunctionNotFoundError(code: string | undefined): boolean {
   return code === UNDEFINED_FUNCTION || code === POSTGREST_FUNCTION_NOT_FOUND;
@@ -36,7 +36,7 @@ export async function assertReleaseApplied(adminClient: SupabaseClient, checks: 
   if (missing.length > 0) {
     throw new Error(
       `以下のRPCが対象環境に未反映です。supabase/release/ 配下の最新リリーススクリプトの適用状況を確認してください:\n` +
-        missing.map((name) => `  - ${name}`).join("\n")
+        missing.map((name) => `  - ${name}`).join('\n'),
     );
   }
 }
@@ -59,7 +59,7 @@ export async function assertRpcRemoved(adminClient: SupabaseClient, checks: RpcC
   if (stillPresent.length > 0) {
     throw new Error(
       `以下のRPCが対象環境にまだ残っています。廃止のためのリリーススクリプト(DROP FUNCTION)の適用状況を確認してください:\n` +
-        stillPresent.map((name) => `  - ${name}`).join("\n")
+        stillPresent.map((name) => `  - ${name}`).join('\n'),
     );
   }
 }

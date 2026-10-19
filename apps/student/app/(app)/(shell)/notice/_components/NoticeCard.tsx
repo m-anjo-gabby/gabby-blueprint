@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, Paperclip } from 'lucide-react';
-
-import { cn } from '@/lib/utils';
+import { useCallback, useState } from 'react';
 import { NoticeDetail } from '@gabby/lib/components/notice/NoticeDetail';
-import { NOTICE_LABELS_JA } from '@gabby/lib/notice/labels';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatZonedDateJapanese } from '@gabby/lib/date/date';
-import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { NOTICE_LABELS_JA } from '@gabby/lib/notice/labels';
+import { NOTICE_IMPORTANT_BADGE, NOTICE_TYPES, type NoticeItem, type NoticeType } from '@gabby/types/notice';
+import { cn } from '@/lib/utils';
 
 interface NoticeCardProps {
   notice: NoticeItem;
@@ -30,7 +29,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
     if (onToggle) {
       onToggle(notice.notice_id, notice.is_read);
     } else {
-      setLocalIsOpen(prev => {
+      setLocalIsOpen((prev) => {
         const next = !prev;
         if (next && !notice.is_read) {
           onRead?.(notice.notice_id);
@@ -45,9 +44,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
       id={`notice-${notice.notice_id}`}
       className={cn(
         'bg-white rounded-card border shadow-sm overflow-hidden transition-all',
-        !notice.is_read
-          ? 'border-brand-200 shadow-brand-100/60'
-          : 'border-line/70'
+        !notice.is_read ? 'border-brand-200 shadow-brand-100/60' : 'border-line/70',
       )}
     >
       {/* ─── カードヘッダー（クリックでアコーディオン） ──── */}
@@ -71,7 +68,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             <span
               className={cn(
                 'text-[11px] font-bold px-1.5 py-0.5 rounded-md border',
-                NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
+                NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass,
               )}
             >
               {NOTICE_TYPES[notice.notice_type as NoticeType]?.label ?? notice.notice_type}
@@ -80,7 +77,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
               <span
                 className={cn(
                   'text-[11px] font-bold px-1.5 py-0.5 rounded-md border',
-                  NOTICE_IMPORTANT_BADGE.badgeClass
+                  NOTICE_IMPORTANT_BADGE.badgeClass,
                 )}
               >
                 {NOTICE_IMPORTANT_BADGE.label}
@@ -95,12 +92,12 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
           </div>
 
           {/* タイトル */}
-          <p className={cn(
-            'text-sm leading-snug truncate',
-            notice.is_read
-              ? 'font-bold text-ink-soft'
-              : 'font-bold text-ink'
-          )}>
+          <p
+            className={cn(
+              'text-sm leading-snug truncate',
+              notice.is_read ? 'font-bold text-ink-soft' : 'font-bold text-ink',
+            )}
+          >
             {notice.title}
           </p>
 

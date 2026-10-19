@@ -10,8 +10,12 @@
 export const HOMEWORK_ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024;
 
 export const HOMEWORK_ATTACHMENT_ALLOWED_MIME_TYPES = [
-  'image/png', 'image/jpeg', 'image/webp', 'image/gif',
-  'application/pdf', 'text/plain',
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'text/plain',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.ms-excel',
@@ -47,8 +51,7 @@ export type HomeworkAttachmentErrorCode =
   | 'unexpected_error';
 
 export type UploadHomeworkAttachmentResult =
-  | { success: true; attachment: PendingHomeworkAttachment }
-  | { success: false; errorCode: HomeworkAttachmentErrorCode };
+  { success: true; attachment: PendingHomeworkAttachment } | { success: false; errorCode: HomeworkAttachmentErrorCode };
 
 export interface SessionHomeworkComment {
   comment_id: string;
@@ -72,25 +75,20 @@ export interface SessionHomeworkEntry {
   comments: SessionHomeworkComment[];
 }
 
-export type SessionHomeworkErrorCode = 'unauthorized' | 'forbidden' | 'invalid_input' | 'not_found' | 'already_exists' | 'unexpected_error';
+export type SessionHomeworkErrorCode =
+  'unauthorized' | 'forbidden' | 'invalid_input' | 'not_found' | 'already_exists' | 'unexpected_error';
 
 export type GetSessionHomeworkResult =
-  | { success: true; homework: SessionHomeworkEntry | null }
-  | { success: false; errorCode: SessionHomeworkErrorCode };
+  { success: true; homework: SessionHomeworkEntry | null } | { success: false; errorCode: SessionHomeworkErrorCode };
 
 export type GetRecentSessionHomeworkResult =
-  | { success: true; entries: SessionHomeworkEntry[] }
-  | { success: false; errorCode: SessionHomeworkErrorCode };
+  { success: true; entries: SessionHomeworkEntry[] } | { success: false; errorCode: SessionHomeworkErrorCode };
 
 export type CreateSessionHomeworkResult =
-  | { success: true; entry: SessionHomeworkEntry }
-  | { success: false; errorCode: SessionHomeworkErrorCode };
+  { success: true; entry: SessionHomeworkEntry } | { success: false; errorCode: SessionHomeworkErrorCode };
 
 export type AddHomeworkCommentResult =
-  | { success: true; comment: SessionHomeworkComment }
-  | { success: false; errorCode: SessionHomeworkErrorCode };
+  { success: true; comment: SessionHomeworkComment } | { success: false; errorCode: SessionHomeworkErrorCode };
 
 /** 「今回は宿題なし」の設定（set_session_homework_not_needed RPC）の結果 */
-export type SetHomeworkNotNeededResult =
-  | { success: true }
-  | { success: false; errorCode: SessionHomeworkErrorCode };
+export type SetHomeworkNotNeededResult = { success: true } | { success: false; errorCode: SessionHomeworkErrorCode };

@@ -1,12 +1,12 @@
 'use client';
 
+import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ChevronLeft } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { Skeleton } from '@/components/ui/skeleton';
 
-interface Props {
+interface ImmersiveHeaderProps {
   /** 生徒名。null は読み込み中（アバターと名前を骨組みにする。loading.tsx の骨組みで使う） */
   studentName: string | null;
   studentIconPath: string | null;
@@ -25,7 +25,14 @@ interface Props {
  * UIを内包しているため対象外（詳細はSessionHub.tsx/LessonSprintResult.tsxのコメント参照）。
  * 他画面への導線は「戻る」のみに絞り、生徒コンテキストと画面名を常時可視化することに専念する。
  */
-export function ImmersiveHeader({ studentName, studentIconPath, title, info, backHref, backLabel }: Props) {
+export function ImmersiveHeader({
+  studentName,
+  studentIconPath,
+  title,
+  info,
+  backHref,
+  backLabel,
+}: ImmersiveHeaderProps) {
   return (
     <header className="shrink-0 border-b border-slate-200/80 bg-white/90 backdrop-blur-sm px-4 md:px-6 py-3">
       <div className="max-w-7xl mx-auto flex items-center gap-3">

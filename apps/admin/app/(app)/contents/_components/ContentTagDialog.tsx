@@ -1,90 +1,83 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback } from 'react'
-import { useTranslations } from 'next-intl'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tag as TagIcon, Plus, X, Loader2, ArrowLeft, CheckCircle2, Hash } from 'lucide-react'
-import { getTagAssignmentData, assignTag, removeTag } from '@/actions/adminContentAction'
-import { useToast } from '@gabby/lib/hooks/useToast'
-import { Content, ContentTagSummary } from '@gabby/types/content'
+import { ArrowLeft, CheckCircle2, Hash, Loader2, Plus, Tag as TagIcon, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useCallback, useEffect, useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type Content, type ContentTagSummary } from '@gabby/types/content';
+import { assignTag, getTagAssignmentData, removeTag } from '@/actions/adminContentAction';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface Props {
-  content: Content
+interface ContentTagDialogProps {
+  content: Content;
 }
 
-export function ContentTagDialog({ content }: Props) {
-  const t = useTranslations('contents.tagDialog')
-  const [open, setOpen] = useState(false)
-  const [isAddMode, setIsAddMode] = useState(false)
-  const [loading, setLoading] = useState(false)
-  
+export function ContentTagDialog({ content }: ContentTagDialogProps) {
+  const t = useTranslations('contents.tagDialog');
+  const [open, setOpen] = useState(false);
+  const [isAddMode, setIsAddMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   // 割当済みタグと、まだ割り当てていないマスタに登録されているタグ
-  const [assignedTags, setAssignedTags] = useState<ContentTagSummary[]>(content.tags || [])
-  const [unassignedTags, setUnassignedTags] = useState<ContentTagSummary[]>([])
-  
-  const { showToast } = useToast()
+  const [assignedTags, setAssignedTags] = useState<ContentTagSummary[]>(content.tags || []);
+  const [unassignedTags, setUnassignedTags] = useState<ContentTagSummary[]>([]);
+
+  const { showToast } = useToast();
 
   const loadData = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const data = await getTagAssignmentData(content.content_id)
-      setAssignedTags(data.assignedTags)
-      setUnassignedTags(data.unassignedTags)
-    } catch (error) {
-      showToast(t('toastFetchFailed'), 'error')
+      const data = await getTagAssignmentData(content.content_id);
+      setAssignedTags(data.assignedTags);
+      setUnassignedTags(data.unassignedTags);
+    } catch {
+      showToast(t('toastFetchFailed'), 'error');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [content.content_id, showToast, t])
+  }, [content.content_id, showToast, t]);
 
   useEffect(() => {
     if (open) {
-      loadData()
-      setIsAddMode(false)
+      loadData();
+      setIsAddMode(false);
     }
-  }, [open, loadData])
+  }, [open, loadData]);
 
   // タグ割当実行
   const handleAdd = async (tagId: string) => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await assignTag(content.content_id, tagId)
+      const res = await assignTag(content.content_id, tagId);
       if (res.success) {
-        await loadData() // 一覧を再読込
-        showToast(t('toastAdded'), 'success')
+        await loadData(); // 一覧を再読込
+        showToast(t('toastAdded'), 'success');
       }
     } catch {
-      showToast(t('toastAddFailed'), 'error')
+      showToast(t('toastAddFailed'), 'error');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // タグ解除実行
   const handleRemove = async (tagId: string) => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await removeTag(content.content_id, tagId)
+      const res = await removeTag(content.content_id, tagId);
       if (res.success) {
-        await loadData()
-        showToast(t('toastRemoved'), 'success')
+        await loadData();
+        showToast(t('toastRemoved'), 'success');
       }
     } catch {
-      showToast(t('toastRemoveFailed'), 'error')
+      showToast(t('toastRemoveFailed'), 'error');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -94,9 +87,9 @@ export function ContentTagDialog({ content }: Props) {
             {/* 既にタグがある場合はバッジを表示し、最後に + アイコンを表示 */}
             <div className="flex flex-wrap gap-1">
               {assignedTags.map((tag) => (
-                <Badge 
-                  key={tag.tag_id} 
-                  variant="secondary" 
+                <Badge
+                  key={tag.tag_id}
+                  variant="secondary"
                   className="bg-slate-100 text-slate-600 border-slate-200 text-[10px] font-bold px-1.5 h-5 shadow-sm"
                 >
                   {tag.tag_name}
@@ -122,11 +115,7 @@ export function ContentTagDialog({ content }: Props) {
             <TagIcon size={10} className="mr-1.5" />
             <span className="font-bold mr-1.5">{t('unsetLabel')}</span>
             {/* プラスアイコン */}
-            <Plus 
-              size={12} 
-              strokeWidth={3} 
-              className="text-brand-400 group-hover/btn:text-brand transition-colors" 
-            />
+            <Plus size={12} strokeWidth={3} className="text-brand-400 group-hover/btn:text-brand transition-colors" />
           </Button>
         )}
       </DialogTrigger>
@@ -141,14 +130,16 @@ export function ContentTagDialog({ content }: Props) {
 
         <div className="p-6 bg-white min-h-[400px]">
           {loading && assignedTags.length === 0 ? (
-            <div className="flex justify-center p-12"><Loader2 className="animate-spin text-brand-500" /></div>
+            <div className="flex justify-center p-12">
+              <Loader2 className="animate-spin text-brand-500" />
+            </div>
           ) : isAddMode ? (
             /* --- 追加モード：マスタから選択 --- */
             <div className="space-y-4">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsAddMode(false)} 
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsAddMode(false)}
                 className="h-8 text-slate-500 hover:text-brand p-0 font-bold"
               >
                 <ArrowLeft size={16} className="mr-1" /> {t('backButton')}
@@ -159,24 +150,26 @@ export function ContentTagDialog({ content }: Props) {
                   /* 全タグ割当済み、またはマスタが空の場合のエンプティステート */
                   <div className="text-center py-20 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                     <CheckCircle2 className="mx-auto text-emerald-400 mb-2" size={32} />
-                    <p className="text-sm text-slate-500 font-bold px-4">
-                      {t('emptyUnassignedTitle')}
-                    </p>
+                    <p className="text-sm text-slate-500 font-bold px-4">{t('emptyUnassignedTitle')}</p>
                     <p className="text-[10px] text-slate-400 mt-1 px-6 leading-relaxed">
-                      {t('emptyUnassignedBody1')}<br />
+                      {t('emptyUnassignedBody1')}
+                      <br />
                       {t('emptyUnassignedBody2')}
                     </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-2">
-                    {unassignedTags.map(tag => (
+                    {unassignedTags.map((tag) => (
                       <div
                         key={tag.tag_id}
                         className="flex items-center justify-between p-3 border rounded-xl hover:border-brand-200 transition-colors bg-slate-50/50 group"
                       >
                         <div>
                           <p className="text-sm font-bold text-slate-800">{tag.tag_name}</p>
-                          <Badge variant="outline" className="text-[9px] uppercase tracking-wider text-slate-400 p-0 border-none h-auto italic">
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] uppercase tracking-wider text-slate-400 p-0 border-none h-auto italic"
+                          >
                             {tag.tag_type}
                           </Badge>
                         </div>
@@ -199,7 +192,11 @@ export function ContentTagDialog({ content }: Props) {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Current Tags</p>
-                <Button size="sm" onClick={() => setIsAddMode(true)} className="bg-slate-900 hover:bg-slate-800 text-white gap-1.5 rounded-lg shadow-md transition-all active:scale-95 h-8">
+                <Button
+                  size="sm"
+                  onClick={() => setIsAddMode(true)}
+                  className="bg-slate-900 hover:bg-slate-800 text-white gap-1.5 rounded-lg shadow-md transition-all active:scale-95 h-8"
+                >
                   <Plus size={14} /> {t('addTagButton')}
                 </Button>
               </div>
@@ -212,10 +209,13 @@ export function ContentTagDialog({ content }: Props) {
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {assignedTags.map(tag => (
-                      <div key={tag.tag_id} className="flex items-center gap-1.5 pl-3 pr-1 py-1 bg-brand-50 text-brand-strong rounded-full border border-brand-100 group transition-all">
+                    {assignedTags.map((tag) => (
+                      <div
+                        key={tag.tag_id}
+                        className="flex items-center gap-1.5 pl-3 pr-1 py-1 bg-brand-50 text-brand-strong rounded-full border border-brand-100 group transition-all"
+                      >
                         <span className="text-xs font-bold">{tag.tag_name}</span>
-                        <button 
+                        <button
                           onClick={() => handleRemove(tag.tag_id)}
                           disabled={loading}
                           className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-brand-200 text-brand-400 hover:text-brand-strong transition-colors"
@@ -232,9 +232,9 @@ export function ContentTagDialog({ content }: Props) {
         </div>
 
         <DialogFooter className="p-4 bg-slate-50 border-t flex justify-center">
-           <p className="text-[10px] text-slate-400 font-medium italic">{t('footerHint')}</p>
+          <p className="text-[10px] text-slate-400 font-medium italic">{t('footerHint')}</p>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

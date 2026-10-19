@@ -1,5 +1,5 @@
-import { getGroupSessionList } from '@/actions/calendarEventAction';
 import { createRenderId } from '@gabby/lib/navigation/renderId';
+import { getGroupSessionList } from '@/actions/calendarEventAction';
 import { GroupSessionsView } from './_components/GroupSessionsView';
 
 /**

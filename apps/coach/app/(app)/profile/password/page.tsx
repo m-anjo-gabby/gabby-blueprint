@@ -1,12 +1,10 @@
 // apps/coach/app/(app)/profile/password/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { updatePassword } from '@/actions/coachAuthAction';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
-import { SubmitButton } from '@gabby/lib/components/common/SubmitButton';
+import { useState } from 'react';
 import { FormError } from '@gabby/lib/components/auth/AuthLayout';
 import {
   EMPTY_NEW_PASSWORD,
@@ -14,13 +12,15 @@ import {
   validateNewPassword,
   type NewPasswordValue,
 } from '@gabby/lib/components/auth/NewPasswordFields';
+import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
+import { SubmitButton } from '@gabby/lib/components/common/SubmitButton';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { updatePassword } from '@/actions/coachAuthAction';
 import { AUTH_LABELS } from '@/constants/auth';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 
 /**
- * Password change page (coach portal)
- * Lets the signed-in coach update their own password.
+ * パスワードの変更の画面（コーチのポータル）
+ * サインイン中のコーチが自分のパスワードを変える。
  */
 export default function PasswordChangePage() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -44,12 +44,12 @@ export default function PasswordChangePage() {
 
     const result = await updatePassword(formData);
 
-    if (result?.error) {
+    if (!result.success) {
       if (result.errorCode === 'current_password_incorrect') {
-        setCurrentPasswordError(result.error);
+        setCurrentPasswordError(result.message);
         setCurrentPassword('');
       } else {
-        setNewPasswordError(result.error);
+        setNewPasswordError(result.message);
       }
       showToast('Failed to update password.', 'error');
     } else {
@@ -73,9 +73,7 @@ export default function PasswordChangePage() {
               onChange={(e) => setCurrentPassword(e.target.value)}
               required
             />
-            {currentPasswordError && (
-              <p className="text-[11px] text-rose-600 font-bold ml-1">{currentPasswordError}</p>
-            )}
+            {currentPasswordError && <p className="text-[11px] text-rose-600 font-bold ml-1">{currentPasswordError}</p>}
           </div>
 
           <NewPasswordFields

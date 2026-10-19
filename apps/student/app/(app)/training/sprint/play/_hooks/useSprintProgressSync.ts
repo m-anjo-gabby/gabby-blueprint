@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import { SprintQuestionType } from '@gabby/types/sprint';
 import { usePeriodicSync } from '@gabby/lib/hooks/usePeriodicSync';
+import { type SprintQuestionType } from '@gabby/types/sprint';
 import { reportSprintProgress } from '@/actions/sprintAction';
 import { useSprintStore } from '@/stores/useSprintStore';
 
@@ -30,7 +30,7 @@ export function useSprintProgressSync(contentId: string | null, questionType: st
         contentIdRef.current,
         questionCount,
         assessmentCount,
-        (questionTypeRef.current || '0') as SprintQuestionType
+        (questionTypeRef.current || '0') as SprintQuestionType,
       );
     }
   }, []);

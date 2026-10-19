@@ -14,14 +14,31 @@ function weekdayIndex(date: Date, timeZone: string): number {
 }
 
 /** 件名に付ける日時（タイムゾーンは本文に載せるため省く）。例: ja「10月8日(木) 19:00」/ en「Thu, Oct 8, 7:00 PM」 */
-export function formatShortSchedule({ startIso, timeZone, language }: { startIso: string; timeZone: string; language: MailLocale }): string {
+export function formatShortSchedule({
+  startIso,
+  timeZone,
+  language,
+}: {
+  startIso: string;
+  timeZone: string;
+  language: MailLocale;
+}): string {
   const start = new Date(startIso);
   if (language === 'ja') {
-    const date = new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(start);
+    const date = new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(
+      start,
+    );
     const time = new Intl.DateTimeFormat('ja-JP', { timeZone, hour: '2-digit', minute: '2-digit' }).format(start);
     return `${date} ${time}`;
   }
-  return new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(start);
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(start);
 }
 
 /**

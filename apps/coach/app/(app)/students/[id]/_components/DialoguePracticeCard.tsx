@@ -1,21 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
 import { MessagesSquare, Plus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import Link from 'next/link';
+import { useState } from 'react';
+import {
+  DIALOGUE_CATEGORIES,
+  type DialogueAssignmentSummary,
+  type DialogueContentSummary,
+} from '@gabby/types/dialogue';
 import { logSessionDialogueOpen } from '@/actions/dialogueAction';
-import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
-import type { DialogueAssignmentSummary, DialogueContentSummary } from '@gabby/types/dialogue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import { useDialoguePracticeAssignments } from '../_hooks/useDialoguePracticeAssignments';
-import { AssignDialogueDialog } from './AssignDialogueDialog';
 import { DialogueSessionRow } from '../dialogue-practice/_components/DialogueSessionRow';
+import { AssignDialogueDialog } from './AssignDialogueDialog';
 
-interface Props {
+interface DialoguePracticeCardProps {
   studentId: string;
   assignments: DialogueAssignmentSummary[];
   availableContents: DialogueContentSummary[];
@@ -34,12 +37,12 @@ export function DialoguePracticeCard({
   availableContents,
   manageHref,
   liveSessionId,
-}: Props) {
+}: DialoguePracticeCardProps) {
   const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const { assignments, assignedContentIds, handleAssigned, handleProgressChange } = useDialoguePracticeAssignments(
     studentId,
-    initialAssignments
+    initialAssignments,
   );
 
   // 概要パネルは対応中のセットに絞って表示する（完了済みはManageページで確認する運用）
@@ -64,7 +67,10 @@ export function DialoguePracticeCard({
             Assign
           </Button>
           {manageHref && (
-            <Link href={manageHref} className="text-[11px] font-bold text-brand hover:text-brand-strong transition-colors">
+            <Link
+              href={manageHref}
+              className="text-[11px] font-bold text-brand hover:text-brand-strong transition-colors"
+            >
               Manage
             </Link>
           )}
@@ -128,7 +134,8 @@ export function DialoguePracticeCard({
               <DialogHeader>
                 <DialogTitle>{selectedAssignment.content_name}</DialogTitle>
                 <DialogDescription>
-                  {selectedAssignment.completed_session_count}/{selectedAssignment.total_session_count} sessions completed
+                  {selectedAssignment.completed_session_count}/{selectedAssignment.total_session_count} sessions
+                  completed
                 </DialogDescription>
               </DialogHeader>
               <div className="-mt-2">

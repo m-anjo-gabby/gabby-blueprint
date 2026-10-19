@@ -1,0 +1,11 @@
+# Prettier で整形するのは JS/TS のコード・CSS・admin の翻訳の JSON（package.json の format の対象）。docs/CODING.md「書式」
+# 生成物
+packages/types/database.ts
+**/.next/
+**/.turbo/
+**/.vercel/
+**/next-env.d.ts
+**/playwright-report/
+**/test-results/
+testing/e2e/.artifacts/
+testing/results/

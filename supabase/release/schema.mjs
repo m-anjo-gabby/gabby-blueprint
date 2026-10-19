@@ -6,7 +6,7 @@
 // 運用手順は supabase/DDL/README.md を参照。
 //
 // 使い方（リポジトリ直下で実行。DBへは読み取りのみ）:
-//   node supabase/release/schema.mjs --env=dev --check                 正本と実DBの差分を確認
+//   node supabase/release/schema.mjs --env=dev --check                 正本と実DBの差分・SECURITY DEFINER の関数の決まりを確認
 //   node supabase/release/schema.mjs --env=dev --write                 全ての正本のマーカー内を実DBの内容で書き直す
 //   node supabase/release/schema.mjs --env=dev --write com_t_session   指定テーブルのみ書き直す
 //   node supabase/release/schema.mjs --env=dev --print com_t_session   生成結果を表示（ファイルは変更しない）
@@ -18,17 +18,22 @@
 
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-
-import { ENVS, REPO_ROOT, connect } from './lib/connection.mjs';
+import { connect, ENVS, REPO_ROOT } from './lib/connection.mjs';
+import { askSecret } from './lib/prompt.mjs';
 
 const TABLE_DIR = path.join(REPO_ROOT, 'supabase/DDL/table');
 const SCHEMAS = ['public', 'ops'];
 // 生成の対象外（手書きの正本）。ops.release_history は run.mjs が実行時に読み込んで作るため冪等な手書きのままにする
 const HAND_WRITTEN = ['ops.release_history'];
 const MARKER_RE = /^-- @schema ([a-z_]+\.[a-z0-9_]+)\r?\n[\s\S]*?^-- @end-schema$/gm;
-// Supabase が新しいテーブルに既定で付ける権限。これと違う場合だけ GRANT/REVOKE を出力する
+// 新しいテーブルに既定で付く権限。これと違う場合だけ GRANT/REVOKE を出力する
+// （authenticated は Supabase の既定の全権限。anon は書き込みの権限を既定の権限から外しているため参照だけ。
+//  リリース 20261016 の「未ログイン（anon）のテーブルへの書き込み権限を外す」）
 const API_ROLES = ['anon', 'authenticated'];
-const ALL_PRIVILEGES = 'DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE';
+const DEFAULT_PRIVILEGES = {
+  anon: 'SELECT',
+  authenticated: 'DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE',
+};
 
 function fail(message) {
   console.error(`\n[中止] ${message}`);
@@ -126,7 +131,10 @@ const PRIV = { a: 'INSERT', r: 'SELECT', w: 'UPDATE', d: 'DELETE', D: 'TRUNCATE'
 function privilegesOf(acl, role) {
   const item = (acl ?? []).find((a) => a.startsWith(`${role}=`));
   if (!item) return [];
-  return [...item.slice(role.length + 1).split('/')[0]].map((ch) => PRIV[ch]).filter(Boolean).sort();
+  return [...item.slice(role.length + 1).split('/')[0]]
+    .map((ch) => PRIV[ch])
+    .filter(Boolean)
+    .sort();
 }
 
 /** Postgres が付ける既定の制約名なら、列定義の中に書いても同じ名前で再現できる */
@@ -151,10 +159,14 @@ function renderTable(table) {
   for (const k of constraints) {
     if (k.type !== 'c' && k.type !== 'x' && isDefaultName(table, k)) {
       const col = k.columns[0];
-      const text = k.type === 'p' && k.columns.length === 1 ? 'PRIMARY KEY'
-        : k.type === 'u' ? 'UNIQUE'
-          : k.type === 'f' ? k.def.replace(/^FOREIGN KEY \([^)]*\) /, '')
-            : null;
+      const text =
+        k.type === 'p' && k.columns.length === 1
+          ? 'PRIMARY KEY'
+          : k.type === 'u'
+            ? 'UNIQUE'
+            : k.type === 'f'
+              ? k.def.replace(/^FOREIGN KEY \([^)]*\) /, '')
+              : null;
       if (text) {
         inline.set(col, [...(inline.get(col) ?? []), text]);
         continue;
@@ -184,7 +196,8 @@ function renderTable(table) {
   const comments = [];
   if (table.comment != null) comments.push(`COMMENT ON TABLE ${table.name} IS ${quoteLiteral(table.comment)};`);
   for (const c of columns) {
-    if (c.comment != null) comments.push(`COMMENT ON COLUMN ${table.name}.${quoteIdent(c.name)} IS ${quoteLiteral(c.comment)};`);
+    if (c.comment != null)
+      comments.push(`COMMENT ON COLUMN ${table.name}.${quoteIdent(c.name)} IS ${quoteLiteral(c.comment)};`);
   }
   if (comments.length > 0) out.push('', ...comments);
 
@@ -218,15 +231,18 @@ function renderTable(table) {
 }
 
 function indent(expr) {
-  return expr.split('\n').map((l) => `    ${l.trimEnd()}`).join('\n');
+  return expr
+    .split('\n')
+    .map((l) => `    ${l.trimEnd()}`)
+    .join('\n');
 }
 
-/** anon / authenticated の権限が Supabase の既定（全権限）と違う場合だけ出力する */
+/** anon / authenticated の権限が既定（DEFAULT_PRIVILEGES）と違う場合だけ出力する */
 function renderGrants(table) {
   const out = [];
   for (const role of API_ROLES) {
     const privs = privilegesOf(table.acl, role);
-    if (privs.join(',') === ALL_PRIVILEGES) continue;
+    if (privs.join(',') === DEFAULT_PRIVILEGES[role]) continue;
     out.push(`REVOKE ALL ON ${table.name} FROM ${role};`);
     if (privs.length > 0) out.push(`GRANT ${privs.join(', ')} ON ${table.name} TO ${role};`);
   }
@@ -248,18 +264,20 @@ function renderBlock(table) {
 // 正本ファイルの読み書き
 // ---------------------------------------------------------------------------
 function readCanonicalFiles() {
-  return readdirSync(TABLE_DIR).filter((f) => f.endsWith('.sql')).map((f) => {
-    const file = path.join(TABLE_DIR, f);
-    const text = readFileSync(file, 'utf8');
-    const blocks = [...text.matchAll(MARKER_RE)].map((m) => ({ table: m[1], text: m[0].replace(/\r\n/g, '\n') }));
-    return { file, name: f, text, blocks };
-  });
+  return readdirSync(TABLE_DIR)
+    .filter((f) => f.endsWith('.sql'))
+    .map((f) => {
+      const file = path.join(TABLE_DIR, f);
+      const text = readFileSync(file, 'utf8');
+      const blocks = [...text.matchAll(MARKER_RE)].map((m) => ({ table: m[1], text: m[0].replace(/\r\n/g, '\n') }));
+      return { file, name: f, text, blocks };
+    });
 }
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  // 環境ファイルのトークンが空欄（.env.prod の推奨設定）の場合は、環境変数 SUPABASE_ACCESS_TOKEN を使う（読み取りのみのため入力は求めない）
-  const { project, query } = await connect(opts.env, async () => process.env.SUPABASE_ACCESS_TOKEN ?? '').catch((e) => fail(e.message));
+  // 環境ファイルのトークンが空欄（.env.prod の推奨設定）の場合は、環境変数 SUPABASE_ACCESS_TOKEN、それも無ければ入力を求める
+  const { project, query } = await connect(opts.env, askSecret).catch((e) => fail(e.message));
   const catalog = await loadCatalog(query).catch((e) => fail(`カタログの取得に失敗しました: ${e.message}`));
   console.log(`\n接続先: ${project.name}（${catalog.size} テーブル）`);
 
@@ -275,7 +293,8 @@ async function main() {
   const covered = new Set(files.flatMap((f) => f.blocks.map((b) => b.table)));
   const targets = new Set(opts.tables.length > 0 ? opts.tables : covered);
   for (const name of targets) {
-    if (!covered.has(name)) fail(`マーカー（-- @schema ${name}）のある正本ファイルがありません。先にファイルにマーカーを書いてください。`);
+    if (!covered.has(name))
+      fail(`マーカー（-- @schema ${name}）のある正本ファイルがありません。先にファイルにマーカーを書いてください。`);
   }
 
   const diffs = [];
@@ -302,7 +321,11 @@ async function main() {
     missing.forEach((m) => console.log(`  ${m}`));
   }
   if (opts.mode === 'write') {
-    console.log(diffs.length === 0 ? '\n変更はありません。' : `\n${diffs.length} テーブルを書き直しました: ${diffs.map((d) => d.table).join(', ')}`);
+    console.log(
+      diffs.length === 0
+        ? '\n変更はありません。'
+        : `\n${diffs.length} テーブルを書き直しました: ${diffs.map((d) => d.table).join(', ')}`,
+    );
   } else {
     if (diffs.length > 0) {
       console.log('\n正本と実DBで内容が違うテーブル:');
@@ -312,10 +335,38 @@ async function main() {
       }
     }
     const uncovered = [...catalog.keys()].filter((name) => !covered.has(name) && !HAND_WRITTEN.includes(name));
-    if (uncovered.length > 0) console.log(`\n正本（マーカー）の無いテーブル: ${uncovered.length} 件\n  ${uncovered.join('\n  ')}`);
+    if (uncovered.length > 0)
+      console.log(`\n正本（マーカー）の無いテーブル: ${uncovered.length} 件\n  ${uncovered.join('\n  ')}`);
     console.log(diffs.length === 0 && missing.length === 0 ? '\n正本と実DBは一致しています。' : '');
-    if (diffs.length > 0 || missing.length > 0) process.exitCode = 1;
+    const unsafe = await findUnsafeDefinerFunctions(query).catch((e) => fail(`関数の確認に失敗しました: ${e.message}`));
+    if (unsafe.length > 0) {
+      console.log('\nSECURITY DEFINER の決まりに合わない関数（supabase/DDL/README.md「関数の権限」）:');
+      unsafe.forEach((u) => console.log(`  ${u}`));
+    }
+    if (diffs.length > 0 || missing.length > 0 || unsafe.length > 0) process.exitCode = 1;
   }
+}
+
+/**
+ * 実DBの SECURITY DEFINER の関数のうち、search_path を固定していないもの・anon が実行できるもの（トリガー以外）を返す。
+ * 正本のファイルの書き方は単体テスト（testing/unit/ddl-function-security.test.ts）で見ており、こちらは実DBの状態を見る。
+ */
+async function findUnsafeDefinerFunctions(query) {
+  const rows = await query(`
+    SELECT n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS signature,
+           coalesce(array_to_string(p.proconfig, ','), '') LIKE '%search_path=%' AS has_search_path,
+           p.prorettype = 'trigger'::regtype AS is_trigger,
+           has_function_privilege('anon', p.oid, 'EXECUTE') AS anon_can_execute
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE p.prosecdef AND n.nspname IN (${[...SCHEMAS, 'private'].map((s) => `'${s}'`).join(', ')})
+    ORDER BY 1`);
+  return rows.flatMap((r) => {
+    const problems = [];
+    if (!r.has_search_path) problems.push('search_path を固定していない');
+    if (r.anon_can_execute && !r.is_trigger) problems.push('anon が実行できる');
+    return problems.length > 0 ? [`${r.signature}: ${problems.join('・')}`] : [];
+  });
 }
 
 /** 正本側にだけある行を「-」、実DB側にだけある行を「+」で表示する（行単位の簡易な差分） */

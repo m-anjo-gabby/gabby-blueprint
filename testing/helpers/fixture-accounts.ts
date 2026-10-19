@@ -3,19 +3,19 @@
  * 状態ペルソナ（features/fixtures/seed-fixed-accounts.ts）と利用者ペルソナ（seed-user-personas.ts）から使う。
  * service_role のクライアントで基盤データ（顧客・ユーザー・契約・ライセンス・アクセス権）だけを作る。
  */
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Term } from "./fixture-terms.ts";
-import { toUtcAvailabilityRows } from "./coach-availability.ts";
-import { fillCoachMatchingProfile } from "./coach-matching-profile.ts";
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { toUtcAvailabilityRows } from './coach-availability.ts';
+import { fillCoachMatchingProfile } from './coach-matching-profile.ts';
+import type { Term } from './fixture-terms.ts';
 
-export type PlanCode = "BLUEPRINT_ONLY" | "LIVE_WEEKLY1_3M" | "LIVE_WEEKLY2_3M";
+export type PlanCode = 'BLUEPRINT_ONLY' | 'LIVE_WEEKLY1_3M' | 'LIVE_WEEKLY2_3M';
 
 /** com_m_client.client_type（1:法人, 2:個人） */
 export type ClientType = 1 | 2;
 
 export interface EnsureUserParams {
   email: string;
-  userType: "0" | "1" | "2";
+  userType: '0' | '1' | '2';
   userName: string;
   clientId: string | null;
   timezone?: string;
@@ -29,9 +29,17 @@ export interface LicensePeriod {
 
 export function createFixtureKit(admin: SupabaseClient, password: string) {
   async function ensureClient(name: string, clientType: ClientType = 1): Promise<string> {
-    const { data: existing } = await admin.from("com_m_client").select("client_id").eq("client_name", name).maybeSingle();
+    const { data: existing } = await admin
+      .from('com_m_client')
+      .select('client_id')
+      .eq('client_name', name)
+      .maybeSingle();
     if (existing) return existing.client_id as string;
-    const { data, error } = await admin.from("com_m_client").insert({ client_name: name, client_type: clientType, industry_type: 1 }).select("client_id").single();
+    const { data, error } = await admin
+      .from('com_m_client')
+      .insert({ client_name: name, client_type: clientType, industry_type: 1 })
+      .select('client_id')
+      .single();
     if (error) throw error;
     return data.client_id as string;
   }
@@ -55,17 +63,27 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
       userId = data.user.id;
     }
     const { error } = await admin
-      .from("com_m_user")
-      .update({ client_id: params.clientId, user_type: params.userType, user_name: params.userName, ...(params.timezone ? { timezone: params.timezone } : {}) })
-      .eq("id", userId);
+      .from('com_m_user')
+      .update({
+        client_id: params.clientId,
+        user_type: params.userType,
+        user_name: params.userName,
+        ...(params.timezone ? { timezone: params.timezone } : {}),
+      })
+      .eq('id', userId);
     if (error) throw error;
     return userId;
   }
 
   async function ensureRole(userId: string, roleId: string): Promise<void> {
-    const { data } = await admin.from("com_t_user_role").select("role_id").eq("user_id", userId).eq("role_id", roleId).maybeSingle();
+    const { data } = await admin
+      .from('com_t_user_role')
+      .select('role_id')
+      .eq('user_id', userId)
+      .eq('role_id', roleId)
+      .maybeSingle();
     if (data) return;
-    const { error } = await admin.from("com_t_user_role").insert({ user_id: userId, role_id: roleId });
+    const { error } = await admin.from('com_t_user_role').insert({ user_id: userId, role_id: roleId });
     if (error) throw error;
   }
 
@@ -75,32 +93,60 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
    * countryCode は com_m_country.country_code。
    */
   async function ensureCoachProfile(coachId: string, countryCode: string): Promise<void> {
-    const { data } = await admin.from("com_m_coach_profile").select("user_id").eq("user_id", coachId).maybeSingle();
+    const { data } = await admin.from('com_m_coach_profile').select('user_id').eq('user_id', coachId).maybeSingle();
     if (!data) {
-      const { error } = await admin.from("com_m_coach_profile").insert({ user_id: coachId, coach_since: new Date().toISOString().slice(0, 8) + "01" });
+      const { error } = await admin
+        .from('com_m_coach_profile')
+        .insert({ user_id: coachId, coach_since: new Date().toISOString().slice(0, 8) + '01' });
       if (error) throw error;
     }
     await fillCoachMatchingProfile(admin, coachId, { countryCode });
   }
 
   /** 週次の対応可能時間帯（未登録のときだけ作る）。days/start/end はコーチの現地時刻で書き、UTC に換算して保存する */
-  async function ensureCoachAvailability(coachId: string, timeZone: string, days: number[], start: string, end: string): Promise<void> {
-    const { data: existing } = await admin.from("com_m_coach_availability").select("availability_id").eq("coach_id", coachId).limit(1);
+  async function ensureCoachAvailability(
+    coachId: string,
+    timeZone: string,
+    days: number[],
+    start: string,
+    end: string,
+  ): Promise<void> {
+    const { data: existing } = await admin
+      .from('com_m_coach_availability')
+      .select('availability_id')
+      .eq('coach_id', coachId)
+      .limit(1);
     if (existing && existing.length > 0) return;
-    const { error } = await admin.from("com_m_coach_availability").insert(toUtcAvailabilityRows(coachId, [{ days, start, end }], timeZone));
+    const { error } = await admin
+      .from('com_m_coach_availability')
+      .insert(toUtcAvailabilityRows(coachId, [{ days, start, end }], timeZone));
     if (error) throw error;
   }
 
   /** タームごとの契約（noteで識別して冪等にする） */
-  async function ensureContract(clientId: string, planCode: PlanCode, term: Term, maxLicenses: number): Promise<string> {
+  async function ensureContract(
+    clientId: string,
+    planCode: PlanCode,
+    term: Term,
+    maxLicenses: number,
+  ): Promise<string> {
     const note = `【QA固定】${planCode} ${term.label}`;
-    const { data: existing } = await admin.from("com_m_contract").select("contract_id").eq("client_id", clientId).eq("note", note).maybeSingle();
+    const { data: existing } = await admin
+      .from('com_m_contract')
+      .select('contract_id')
+      .eq('client_id', clientId)
+      .eq('note', note)
+      .maybeSingle();
     if (existing) return existing.contract_id as string;
 
-    const { data: plan, error: planErr } = await admin.from("com_m_contract_plan").select("*").eq("plan_code", planCode).single();
+    const { data: plan, error: planErr } = await admin
+      .from('com_m_contract_plan')
+      .select('*')
+      .eq('plan_code', planCode)
+      .single();
     if (planErr) throw planErr;
     const { data, error } = await admin
-      .from("com_m_contract")
+      .from('com_m_contract')
       .insert({
         client_id: clientId,
         plan_id: plan.plan_id,
@@ -117,7 +163,7 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
         status: 1,
         note,
       })
-      .select("contract_id")
+      .select('contract_id')
       .single();
     if (error) throw error;
     return data.contract_id as string;
@@ -127,18 +173,28 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
    * 契約に対するユーザーのライセンス（契約×ユーザーで冪等）。期間は既定で契約のターム全体。
    * 戻り値: 作成/既存のlicense_id。期間の重なる別の有効ライセンスがある場合はundefined（スキップ）。
    */
-  async function ensureLicense(userId: string, contractId: string, period: LicensePeriod, status: 0 | 1): Promise<string | undefined> {
-    const { data: existing } = await admin.from("com_t_user_license").select("license_id").eq("user_id", userId).eq("contract_id", contractId).maybeSingle();
+  async function ensureLicense(
+    userId: string,
+    contractId: string,
+    period: LicensePeriod,
+    status: 0 | 1,
+  ): Promise<string | undefined> {
+    const { data: existing } = await admin
+      .from('com_t_user_license')
+      .select('license_id')
+      .eq('user_id', userId)
+      .eq('contract_id', contractId)
+      .maybeSingle();
     if (existing) return existing.license_id as string;
 
     if (status === 1) {
       const { data: overlap } = await admin
-        .from("com_t_user_license")
-        .select("license_id, start_date, end_date")
-        .eq("user_id", userId)
-        .eq("status", 1)
-        .lte("start_date", period.endIso)
-        .gte("end_date", period.startIso)
+        .from('com_t_user_license')
+        .select('license_id, start_date, end_date')
+        .eq('user_id', userId)
+        .eq('status', 1)
+        .lte('start_date', period.endIso)
+        .gte('end_date', period.startIso)
         .limit(1);
       if (overlap && overlap.length > 0) {
         console.log(`  ⚠ ${period.label}と期間の重なる有効ライセンスが既にあるためスキップ:`, overlap[0]);
@@ -147,24 +203,51 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
     }
 
     const { data, error } = await admin
-      .from("com_t_user_license")
-      .insert({ contract_id: contractId, user_id: userId, status, start_date: period.startIso, end_date: period.endIso, note: "【QA固定】" })
-      .select("license_id")
+      .from('com_t_user_license')
+      .insert({
+        contract_id: contractId,
+        user_id: userId,
+        status,
+        start_date: period.startIso,
+        end_date: period.endIso,
+        note: '【QA固定】',
+      })
+      .select('license_id')
       .single();
     if (error) throw error;
     return data.license_id as string;
   }
 
   /** ライブ契約のライセンスに対するセッションチケット（ライセンスごとに1件。回数はプランから取る） */
-  async function ensureSessionTicket(licenseId: string, contractId: string, userId: string, planCode: PlanCode): Promise<string> {
-    const { data: existing } = await admin.from("com_t_user_session_ticket").select("ticket_id").eq("license_id", licenseId).maybeSingle();
+  async function ensureSessionTicket(
+    licenseId: string,
+    contractId: string,
+    userId: string,
+    planCode: PlanCode,
+  ): Promise<string> {
+    const { data: existing } = await admin
+      .from('com_t_user_session_ticket')
+      .select('ticket_id')
+      .eq('license_id', licenseId)
+      .maybeSingle();
     if (existing) return existing.ticket_id as string;
-    const { data: plan, error: planErr } = await admin.from("com_m_contract_plan").select("weekly_frequency, total_sessions").eq("plan_code", planCode).single();
+    const { data: plan, error: planErr } = await admin
+      .from('com_m_contract_plan')
+      .select('weekly_frequency, total_sessions')
+      .eq('plan_code', planCode)
+      .single();
     if (planErr) throw planErr;
     const { data, error } = await admin
-      .from("com_t_user_session_ticket")
-      .insert({ license_id: licenseId, contract_id: contractId, user_id: userId, weekly_frequency: plan.weekly_frequency, total_sessions: plan.total_sessions, used_sessions: 0 })
-      .select("ticket_id")
+      .from('com_t_user_session_ticket')
+      .insert({
+        license_id: licenseId,
+        contract_id: contractId,
+        user_id: userId,
+        weekly_frequency: plan.weekly_frequency,
+        total_sessions: plan.total_sessions,
+        used_sessions: 0,
+      })
+      .select('ticket_id')
       .single();
     if (error) throw error;
     return data.ticket_id as string;
@@ -172,9 +255,16 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
 
   /** 顧客に限定公開(1)教材のアクセス権（com_m_contents_access）を付与する（付与済みなら何もしない） */
   async function ensureContentAccess(clientId: string, contentId: string, notes: string): Promise<void> {
-    const { data: access } = await admin.from("com_m_contents_access").select("access_id").eq("client_id", clientId).eq("content_id", contentId).eq("delete_flg", "0").maybeSingle();
+    const { data: access } = await admin
+      .from('com_m_contents_access')
+      .select('access_id')
+      .eq('client_id', clientId)
+      .eq('content_id', contentId)
+      .maybeSingle();
     if (access) return;
-    const { error } = await admin.from("com_m_contents_access").insert({ client_id: clientId, content_id: contentId, notes });
+    const { error } = await admin
+      .from('com_m_contents_access')
+      .insert({ client_id: clientId, content_id: contentId, notes });
     if (error) throw error;
   }
 
@@ -182,15 +272,18 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
    * 汎用スプリント（教材設定 metadata.sprint.sprint_type='0'、例: Gabby NLT）の content_id 一覧。
    * 限定公開(1)のものは指定の顧客にアクセス権を付与する。環境に汎用スプリントが無ければ空配列。
    */
-  async function ensureGenericSprintAccess(clientId: string, notes: string): Promise<{ contentId: string; contentName: string }[]> {
+  async function ensureGenericSprintAccess(
+    clientId: string,
+    notes: string,
+  ): Promise<{ contentId: string; contentName: string }[]> {
     const { data, error } = await admin
-      .from("com_m_contents")
-      .select("content_id, content_name, content_scope")
-      .eq("content_type", 2)
-      .eq("delete_flg", "0")
-      .in("content_scope", [0, 1])
-      .eq("metadata->sprint->>sprint_type", "0")
-      .order("content_name");
+      .from('com_m_contents')
+      .select('content_id, content_name, content_scope')
+      .eq('content_type', 2)
+      .eq('status', 1)
+      .in('content_scope', [0, 1])
+      .eq('metadata->sprint->>sprint_type', '0')
+      .order('content_name');
     if (error) throw error;
     const result: { contentId: string; contentName: string }[] = [];
     for (const content of data ?? []) {
@@ -203,11 +296,11 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
   /** 公開中の最新の必須規約（種別ごと）に同意済みにする。手動でログインしたときに同意画面を挟まないため */
   async function ensureLatestTermsAgreed(userId: string): Promise<void> {
     const { data: terms, error } = await admin
-      .from("com_m_terms")
-      .select("term_id, term_type, published_date")
-      .eq("is_required", true)
-      .lte("published_date", new Date().toISOString())
-      .order("published_date", { ascending: false });
+      .from('com_m_terms')
+      .select('term_id, term_type, published_date')
+      .eq('is_required', true)
+      .lte('published_date', new Date().toISOString())
+      .order('published_date', { ascending: false });
     if (error) throw error;
     const latestByType = new Map<string, string>();
     for (const t of terms ?? []) {
@@ -215,7 +308,9 @@ export function createFixtureKit(admin: SupabaseClient, password: string) {
     }
     const rows = [...latestByType.values()].map((termId) => ({ user_id: userId, term_id: termId }));
     if (rows.length === 0) return;
-    const { error: upsertErr } = await admin.from("com_t_user_terms_agreement").upsert(rows, { onConflict: "user_id,term_id", ignoreDuplicates: true });
+    const { error: upsertErr } = await admin
+      .from('com_t_user_terms_agreement')
+      .upsert(rows, { onConflict: 'user_id,term_id', ignoreDuplicates: true });
     if (upsertErr) throw upsertErr;
   }
 

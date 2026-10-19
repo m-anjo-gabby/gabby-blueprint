@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { GraduationCap } from 'lucide-react';
+import { useState } from 'react';
+import type { AssignedStudentSummary } from '@gabby/types/coachStudent';
 import { Button } from '@/components/ui/button';
 import { StudentCard } from './StudentCard';
-import type { AssignedStudentSummary } from '@gabby/types/coachStudent';
 
-interface Props {
+interface StudentListViewProps {
   students: AssignedStudentSummary[];
 }
 
@@ -22,7 +22,7 @@ function StudentGrid({ students }: { students: AssignedStudentSummary[] }) {
   );
 }
 
-export function StudentListView({ students }: Props) {
+export function StudentListView({ students }: StudentListViewProps) {
   const [showAllPast, setShowAllPast] = useState(false);
 
   if (students.length === 0) {
@@ -30,7 +30,9 @@ export function StudentListView({ students }: Props) {
       <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-slate-200">
         <GraduationCap size={28} className="text-slate-300 mb-3" />
         <p className="text-sm font-bold text-slate-500">No students assigned yet</p>
-        <p className="text-[11px] text-slate-400 mt-1.5">Students will appear here once a matching request is approved.</p>
+        <p className="text-[11px] text-slate-400 mt-1.5">
+          Students will appear here once a matching request is approved.
+        </p>
       </div>
     );
   }
@@ -42,7 +44,9 @@ export function StudentListView({ students }: Props) {
   return (
     <div className="space-y-8">
       <section className="space-y-3">
-        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Active Students ({activeStudents.length})</h2>
+        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+          Active Students ({activeStudents.length})
+        </h2>
         {activeStudents.length > 0 ? (
           <StudentGrid students={activeStudents} />
         ) : (
@@ -54,7 +58,9 @@ export function StudentListView({ students }: Props) {
 
       {pastStudents.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Past Students ({pastStudents.length})</h2>
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+            Past Students ({pastStudents.length})
+          </h2>
           <StudentGrid students={visiblePastStudents} />
           {!showAllPast && pastStudents.length > PAST_STUDENTS_INITIAL_COUNT && (
             <Button type="button" variant="outline" className="w-full" onClick={() => setShowAllPast(true)}>

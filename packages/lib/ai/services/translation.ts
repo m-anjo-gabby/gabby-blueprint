@@ -2,8 +2,8 @@
 
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { google, DEFAULT_TRANSLATION_MODEL } from '../providers/google';
-import { TRANSLATION_SYSTEM_PROMPT, buildTranslationPrompt } from '../prompts/translation';
+import { buildTranslationPrompt, TRANSLATION_SYSTEM_PROMPT } from '../prompts/translation';
+import { DEFAULT_TRANSLATION_MODEL, google } from '../providers/google';
 
 const translationResultSchema = z.object({
   translation: z.string(),

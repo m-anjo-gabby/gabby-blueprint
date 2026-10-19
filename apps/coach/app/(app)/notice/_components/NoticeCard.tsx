@@ -1,16 +1,15 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, Paperclip } from 'lucide-react';
-
-import { cn } from '@/lib/utils';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { formatDateEn } from '@gabby/lib/date/dateEn';
-import { NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
+import { useCallback, useState } from 'react';
 import { NoticeDetail } from '@gabby/lib/components/notice/NoticeDetail';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { NOTICE_LABELS_EN } from '@gabby/lib/notice/labels';
-import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
+import { NOTICE_IMPORTANT_BADGE, NOTICE_TYPES, type NoticeItem, type NoticeType } from '@gabby/types/notice';
+import { NOTICE_IMPORTANT_LABEL_EN, NOTICE_TYPE_LABEL_EN } from '@/constants/notice';
+import { cn } from '@/lib/utils';
 
 interface NoticeCardProps {
   notice: NoticeItem;
@@ -31,7 +30,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
     if (onToggle) {
       onToggle(notice.notice_id, notice.is_read);
     } else {
-      setLocalIsOpen(prev => {
+      setLocalIsOpen((prev) => {
         const next = !prev;
         if (next && !notice.is_read) {
           onRead?.(notice.notice_id);
@@ -46,16 +45,16 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
       id={`notice-${notice.notice_id}`}
       className={cn(
         'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all',
-        !notice.is_read ? 'border-brand-200' : 'border-slate-200'
+        !notice.is_read ? 'border-brand-200' : 'border-slate-200',
       )}
     >
-      {/* ─── Card header (click to expand) ──── */}
+      {/* カードの見出し（押すと開く） */}
       <button
         onClick={handleToggle}
         className="w-full text-left flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors"
         aria-expanded={isOpen}
       >
-        {/* Unread indicator */}
+        {/* 未読の印 */}
         <div className="mt-1 shrink-0">
           {!notice.is_read ? (
             <span className="inline-block w-2 h-2 rounded-full bg-brand-500" />
@@ -65,12 +64,12 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         </div>
 
         <div className="flex-1 min-w-0">
-          {/* Badges */}
+          {/* バッジ */}
           <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
             <span
               className={cn(
                 'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
-                NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
+                NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass,
               )}
             >
               {NOTICE_TYPE_LABEL_EN[notice.notice_type as NoticeType] ?? notice.notice_type}
@@ -79,7 +78,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
               <span
                 className={cn(
                   'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
-                  NOTICE_IMPORTANT_BADGE.badgeClass
+                  NOTICE_IMPORTANT_BADGE.badgeClass,
                 )}
               >
                 {NOTICE_IMPORTANT_LABEL_EN}
@@ -93,21 +92,21 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             )}
           </div>
 
-          {/* Title */}
-          <p className={cn(
-            'text-sm leading-snug truncate',
-            notice.is_read ? 'font-bold text-slate-600' : 'font-black text-slate-900'
-          )}>
+          {/* タイトル */}
+          <p
+            className={cn(
+              'text-sm leading-snug truncate',
+              notice.is_read ? 'font-bold text-slate-600' : 'font-black text-slate-900',
+            )}
+          >
             {notice.title}
           </p>
 
-          {/* Published date */}
-          <p className="text-[11px] text-slate-400 mt-1 font-bold">
-            {formatDateEn(notice.published_at, timezone)}
-          </p>
+          {/* 公開日 */}
+          <p className="text-[11px] text-slate-400 mt-1 font-bold">{formatDateEn(notice.published_at, timezone)}</p>
         </div>
 
-        {/* Expand icon */}
+        {/* 開閉のアイコン */}
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -117,7 +116,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         </motion.div>
       </button>
 
-      {/* ─── Accordion body ──────────────────────────── */}
+      {/* 開いた時の本文 */}
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div

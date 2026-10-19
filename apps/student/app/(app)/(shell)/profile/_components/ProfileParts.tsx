@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { ChevronRight, KeyRound, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { ProfileSection } from './ProfileSection';
 
@@ -23,7 +23,15 @@ export function PasswordPageHeader() {
 }
 
 /** アカウント情報の1行（ラベルと値）。値は読み込み中なら骨組みを渡す */
-export function AccountInfoRow({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: React.ReactNode }) {
+export function AccountInfoRow({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: LucideIcon;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex items-center justify-between gap-4 py-3 border-b border-line/50">
       <dt className="text-xs font-bold text-ink-subtle flex items-center gap-1.5 shrink-0">

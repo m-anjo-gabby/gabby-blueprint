@@ -37,6 +37,7 @@ COMMENT ON COLUMN public.com_t_session_homework.homework_text IS '宿題本文�
 COMMENT ON COLUMN public.com_t_session_homework.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_t_session_homework.student_viewed_at IS '生徒が宿題を最後に開いた日時（生徒のセッション結果画面を開いた時刻。未閲覧はNULL）';
 
+CREATE INDEX idx_session_homework_coach ON public.com_t_session_homework (coach_id);
 CREATE INDEX idx_session_homework_session ON public.com_t_session_homework (session_id, insert_date DESC);
 CREATE INDEX idx_session_homework_student ON public.com_t_session_homework (student_id, insert_date DESC);
 
@@ -46,7 +47,7 @@ ALTER TABLE public.com_t_session_homework ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coach and student can view session homework" ON public.com_t_session_homework FOR SELECT TO authenticated
 USING (
-    coach_id = auth.uid() OR student_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    coach_id = auth.uid() OR student_id = auth.uid() OR public.is_system_admin()
 );
 
 CREATE POLICY "Coaches can post homework for their own sessions" ON public.com_t_session_homework FOR INSERT TO authenticated

@@ -1,4 +1,4 @@
-import { ChatMessage } from '@gabby/types/chat';
+import { type ChatMessage } from '@gabby/types/chat';
 
 /**
  * ルーム一覧のプレビュー表示文言（アプリごとに日本語/英語で注入する）

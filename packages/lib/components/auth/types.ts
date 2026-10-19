@@ -1,4 +1,6 @@
-import type { AuthErrorCode } from '../../auth/errors';
+import type { AuthActionResult, AuthErrorCode } from '../../auth/errors';
+
+export type { AuthActionResult };
 
 /**
  * 認証画面（ログイン・パスワード忘れ・再設定・招待）の文言
@@ -86,14 +88,8 @@ export interface AuthLabels {
   passwordFields: PasswordFieldLabels;
 }
 
-/** 認証アクションの戻り値（各アプリの *AuthAction.ts） */
-export interface AuthActionResult {
-  success?: boolean;
-  error?: string;
-  errorCode?: AuthErrorCode;
-}
-
-export type FormAuthAction = (formData: FormData) => Promise<AuthActionResult | undefined | void>;
+/** フォームから呼ぶ認証のアクション（ログインは成功するとリダイレクトするため、結果を返さない場合がある） */
+export type FormAuthAction = (formData: FormData) => Promise<AuthActionResult | void>;
 
 /** 招待トークンの確認結果（画面に必要な項目だけ） */
 export type InvitationCheckResult =

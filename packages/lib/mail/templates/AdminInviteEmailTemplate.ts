@@ -17,7 +17,8 @@ const LANGS: MailLocale[] = ['ja', 'en'];
 const COPY = {
   ja: {
     greeting: (name: string) => (name ? `${name} 様` : '管理者様'),
-    intro: 'Gabby Blueprint 管理画面（Admin Console）への招待が届いています。運営メンバーとして、テナント・ユーザー・契約情報などの管理業務にご利用いただけます。',
+    intro:
+      'Gabby Blueprint 管理画面（Admin Console）への招待が届いています。運営メンバーとして、テナント・ユーザー・契約情報などの管理業務にご利用いただけます。',
     action: '本登録はまだ完了していません。以下のボタンから、管理画面へのログインに使うパスワードを設定してください。',
     button: '管理画面のパスワードを設定する',
     fallback: '※ボタンがクリックできない場合は、以下のURLをブラウザのアドレスバーに貼り付けてください。',
@@ -28,14 +29,17 @@ const COPY = {
   },
   en: {
     greeting: (name: string) => (name ? `Dear ${name},` : 'Dear Administrator,'),
-    intro: "You've been invited to the Gabby Blueprint Admin Console, where operations staff manage tenants, users and contracts.",
-    action: 'Your registration is not complete yet. Please use the button below to set the password you will use to sign in to the admin console.',
+    intro:
+      "You've been invited to the Gabby Blueprint Admin Console, where operations staff manage tenants, users and contracts.",
+    action:
+      'Your registration is not complete yet. Please use the button below to set the password you will use to sign in to the admin console.',
     button: 'Set your admin password',
     fallback: "If the button doesn't work, copy and paste the following URL into your browser's address bar.",
     expiryTitle: 'Link expiration',
     expiry: (days: number) =>
       `This invitation link expires ${days} day${days === 1 ? '' : 's'} after this email was sent. If it has expired, please ask an existing administrator to send a new one.`,
-    caution: "This account has administrator privileges. If you weren't expecting this invitation, please discard this email and contact us.",
+    caution:
+      "This account has administrator privileges. If you weren't expecting this invitation, please discard this email and contact us.",
   },
 } as const;
 
@@ -64,7 +68,11 @@ export function buildAdminInviteMail({ userName, inviteUrl, expiresDays }: Admin
         },
         {
           kind: 'notice',
-          items: LANGS.map((lang) => ({ title: COPY[lang].expiryTitle, text: COPY[lang].expiry(expiresDays), sub: COPY[lang].caution })),
+          items: LANGS.map((lang) => ({
+            title: COPY[lang].expiryTitle,
+            text: COPY[lang].expiry(expiresDays),
+            sub: COPY[lang].caution,
+          })),
         },
       ],
       footer: supportFooter(LANGS),

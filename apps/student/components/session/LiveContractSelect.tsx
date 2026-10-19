@@ -1,12 +1,17 @@
 'use client';
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { LiveSessionContractSummary } from '@gabby/types/matching';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 /** 契約の日付（例: 2026/10/1） */
 export function formatContractDate(iso: string, timezone: string): string {
-  return new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: timezone }).format(new Date(iso));
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    timeZone: timezone,
+  }).format(new Date(iso));
 }
 
 /** 契約期間（例: 2026/10/1〜2026/12/31） */
@@ -38,7 +43,10 @@ export function LiveContractSelect({ contracts, selectedTicketId, onChange }: Li
 
   return (
     <Select value={selectedTicketId} onValueChange={onChange}>
-      <SelectTrigger className="h-10 w-full rounded-control border-line bg-surface text-sm sm:w-80" aria-label="表示する契約">
+      <SelectTrigger
+        className="h-10 w-full rounded-control border-line bg-surface text-sm sm:w-80"
+        aria-label="表示する契約"
+      >
         {/* 選択肢はポータル内にあり開くまで描画されないため、選択中の表示は明示的に渡す */}
         <SelectValue>{selected ? formatContractLabel(selected, timezone) : null}</SelectValue>
       </SelectTrigger>

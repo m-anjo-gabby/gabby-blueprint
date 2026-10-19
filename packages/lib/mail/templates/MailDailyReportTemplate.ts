@@ -1,5 +1,5 @@
-import { mailSubject, type MailBlock, type MailContent } from '../layout/document';
 import type { MailConfigCheck } from '../dispatch/policy';
+import { mailSubject, type MailBlock, type MailContent } from '../layout/document';
 
 /**
  * 運営向けのメール配信の日次の要約（送信の件数・送信失敗・不達・迷惑メールの報告・送信待ちの滞留・設定の状況）。
@@ -41,14 +41,21 @@ export interface MailDailyReportProps {
 export const MAIL_DAILY_REPORT_ITEM_LIMIT = 20;
 
 /** 要確認の件数（送信失敗・到達状況の問題・滞留・設定の不備） */
-export function countMailDailyReportIssues({ failed, deliveryProblems, overdueCount, config }: MailDailyReportProps): number {
+export function countMailDailyReportIssues({
+  failed,
+  deliveryProblems,
+  overdueCount,
+  config,
+}: MailDailyReportProps): number {
   return failed.length + deliveryProblems.length + overdueCount + config.filter((check) => !check.ok).length;
 }
 
 function dailyReportSubject(total: number): string {
   return mailSubject(
     'bilingual',
-    total > 0 ? `メール配信の要確認 ${total}件 / Email delivery issues: ${total}` : 'メール配信の日次報告 異常なし / Daily email report: no issues'
+    total > 0
+      ? `メール配信の要確認 ${total}件 / Email delivery issues: ${total}`
+      : 'メール配信の日次報告 異常なし / Daily email report: no issues',
   );
 }
 
@@ -60,9 +67,15 @@ function itemsBlocks(title: string, items: MailDailyReportItem[]): MailBlock[] {
     { kind: 'title', text: `${title}（${items.length}）` },
     {
       kind: 'notice',
-      items: shown.map((item) => ({ title: `${item.at}  ${item.label}`, text: item.recipient, ...(item.detail ? { sub: item.detail } : null) })),
+      items: shown.map((item) => ({
+        title: `${item.at}  ${item.label}`,
+        text: item.recipient,
+        ...(item.detail ? { sub: item.detail } : null),
+      })),
     },
-    ...(rest > 0 ? [{ kind: 'paragraph' as const, text: `ほか ${rest}件 / and ${rest} more`, small: true, muted: true }] : []),
+    ...(rest > 0
+      ? [{ kind: 'paragraph' as const, text: `ほか ${rest}件 / and ${rest} more`, small: true, muted: true }]
+      : []),
   ];
 }
 
@@ -116,13 +129,19 @@ export function buildMailDailyReport(props: MailDailyReportProps): MailContent {
   }
   blocks.push(
     { kind: 'title', text: '設定の状況 / Configuration' },
-    { kind: 'details', rows: config.map((check) => ({ label: check.label, value: check.ok ? check.value : `要確認 / Check: ${check.value}` })) },
+    {
+      kind: 'details',
+      rows: config.map((check) => ({
+        label: check.label,
+        value: check.ok ? check.value : `要確認 / Check: ${check.value}`,
+      })),
+    },
     {
       kind: 'paragraph',
       text: '詳細は DB の com_t_mail_outbox（送信待ち）・com_t_mail_event（到達状況）を確認してください。\nSee com_t_mail_outbox and com_t_mail_event for details.',
       small: true,
       muted: true,
-    }
+    },
   );
 
   return {

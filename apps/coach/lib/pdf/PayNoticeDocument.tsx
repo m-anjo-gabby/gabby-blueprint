@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer';
+import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
 // コーチ名・会社住所等に日本語が含まれる場合の文字化け対策。Helvetica等の標準14フォントは
 // 日本語グリフを持たないため、Noto Sans JP(静的ウェイト、Latin/日本語の両方をカバー)を
@@ -24,7 +24,7 @@ export interface PayNoticeData {
   companyAddress: string;
   logoSrc: string | null; // ローカルファイルパス、またはURL（Supabase Storageの公開URL等）
   contractorName: string;
-  periodLabel: string; // e.g. "September 2026"
+  periodLabel: string; // 例: "September 2026"
   issueDateLabel: string; // e.g. "2026-09-13"（アドミンの承認日）
   currencyCode: string;
   totalSessions: number;
@@ -54,7 +54,13 @@ const styles = StyleSheet.create({
   table: { marginBottom: 16 },
   tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#cccccc', paddingVertical: 6 },
   tableRowLast: { flexDirection: 'row', paddingVertical: 6 },
-  tableHeaderRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#666666', paddingBottom: 6, marginBottom: 2 },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#666666',
+    paddingBottom: 6,
+    marginBottom: 2,
+  },
   tableHeaderCellLabel: { flex: 2, color: '#000000' },
   tableCellLabel: { flex: 2, color: '#666666' },
   tableCellValue: { flex: 1, textAlign: 'right', color: '#000000' },

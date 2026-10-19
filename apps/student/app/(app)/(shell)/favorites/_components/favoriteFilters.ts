@@ -47,7 +47,7 @@ export interface ResolvedFilter {
 export function resolveFavoriteFilters<T>(
   items: readonly T[],
   defs: readonly FavoriteFilterDef<T>[],
-  selected: Readonly<Record<string, string | null | undefined>>
+  selected: Readonly<Record<string, string | null | undefined>>,
 ): { filters: ResolvedFilter[]; items: T[] } {
   let pool = [...items];
   const filters: ResolvedFilter[] = [];
@@ -66,7 +66,7 @@ export function resolveFavoriteFilters<T>(
     if (optionById.size < 2) continue;
 
     const options = Array.from(optionById.values()).sort(
-      (a, b) => a.order - b.order || a.label.localeCompare(b.label, 'ja')
+      (a, b) => a.order - b.order || a.label.localeCompare(b.label, 'ja'),
     );
     const requested = selected[def.id];
     const value = requested && optionById.has(requested) ? requested : ALL_OPTION;

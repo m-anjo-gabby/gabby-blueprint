@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
+import { ConfirmContainer } from '@gabby/lib/components/common/ConfirmContainer';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 /**
@@ -8,11 +8,7 @@ import { getAuthUser } from '@gabby/lib/supabase/authUser';
  * 別タブで開けるようにするための独立したルートグループ。
  * 認証ガードのみ (app) レイアウトと同様に踏襲する。
  */
-export default async function CallLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function CallLayout({ children }: { children: React.ReactNode }) {
   const user = await getAuthUser();
 
   if (!user) {
@@ -21,9 +17,7 @@ export default async function CallLayout({
 
   return (
     <>
-      <div className="h-dvh w-full overflow-hidden bg-slate-50">
-        {children}
-      </div>
+      <div className="h-dvh w-full overflow-hidden bg-slate-50">{children}</div>
       <ConfirmContainer />
     </>
   );

@@ -1,19 +1,19 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { CheckCircle2, CircleAlert, Save } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useState, useTransition } from 'react';
+import { isCoachMatchable } from '@gabby/lib/coachProfile/matchingReadiness';
+import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type CoachMatchingStatus } from '@gabby/types/coachProfile';
+import { setCoachMatchingSuspension } from '@/actions/adminCoachMatchingAction';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { isCoachMatchable } from '@gabby/lib/coachProfile/matchingReadiness';
-import { CoachMatchingStatus } from '@gabby/types/coachProfile';
-import { setCoachMatchingSuspension } from '@/actions/adminCoachMatchingAction';
 
-interface Props {
+interface CoachMatchingPanelProps {
   coachId: string;
   status: CoachMatchingStatus;
 }
@@ -22,7 +22,7 @@ interface Props {
  * コーチのマッチング対象（アドミンのみ）。生徒の「専属コーチを探す」に出るかどうかの内訳
  * （必須項目・コーチ本人の受付）を表示し、アドミンによる休止（理由のメモ付き）を設定する。
  */
-export function CoachMatchingPanel({ coachId, status }: Props) {
+export function CoachMatchingPanel({ coachId, status }: CoachMatchingPanelProps) {
   const t = useTranslations('users.matching');
   const tCommon = useTranslations('common');
   const { showToast } = useToast();
@@ -34,7 +34,9 @@ export function CoachMatchingPanel({ coachId, status }: Props) {
   const handleSave = () => {
     startSave(async () => {
       // 通信の失敗等は戻り値ではなく例外になる（そのままでは画面全体のエラー表示になる）ため、失敗として扱う
-      const result = await setCoachMatchingSuspension(coachId, suspended, suspended ? note.trim() || null : null).catch(() => null);
+      const result = await setCoachMatchingSuspension(coachId, suspended, suspended ? note.trim() || null : null).catch(
+        () => null,
+      );
       if (!result) {
         showToast(tCommon('networkError'), 'error');
         return;
@@ -100,7 +102,9 @@ export function CoachMatchingPanel({ coachId, status }: Props) {
           <Switch id="matching-suspend" checked={suspended} onCheckedChange={setSuspended} />
         </div>
         {status.isSuspended && status.suspendedAt && (
-          <p className="text-xs text-slate-500">{t('suspendedSince', { date: formatDateTimeByZone(status.suspendedAt) })}</p>
+          <p className="text-xs text-slate-500">
+            {t('suspendedSince', { date: formatDateTimeByZone(status.suspendedAt) })}
+          </p>
         )}
         {suspended && (
           <div className="space-y-1.5">

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createServerClient } from '@gabby/lib/supabase/server';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { createLogger } from '@gabby/lib/logger';
 import {
+  encodeImpersonationCookie,
   IMPERSONATION_COOKIE_NAME,
   IMPERSONATION_TTL_MINUTES,
-  encodeImpersonationCookie,
 } from '@gabby/lib/impersonation';
+import { createLogger } from '@gabby/lib/logger';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { createServerClient } from '@gabby/lib/supabase/server';
 
 const logger = createLogger('coach');
 
@@ -33,7 +33,10 @@ export async function GET(request: Request) {
   });
 
   if (verifyError) {
-    logger.error('impersonation:verify_failed', verifyError.message, { err: verifyError, payload: { impersonationId } });
+    logger.error('impersonation:verify_failed', verifyError.message, {
+      err: verifyError,
+      payload: { impersonationId },
+    });
     return NextResponse.redirect(`${origin}/login?error=impersonation`);
   }
 
@@ -52,7 +55,11 @@ export async function GET(request: Request) {
     .single();
 
   if (logError || !logRow?.admin_id) {
-    logger.error('impersonation:audit_log_update_failed', logError?.message || 'Log row not found or already redeemed', { err: logError, payload: { impersonationId } });
+    logger.error(
+      'impersonation:audit_log_update_failed',
+      logError?.message || 'Log row not found or already redeemed',
+      { err: logError, payload: { impersonationId } },
+    );
     return NextResponse.redirect(`${origin}/login?error=impersonation`);
   }
 
@@ -70,7 +77,7 @@ export async function GET(request: Request) {
       sameSite: 'lax',
       path: '/',
       maxAge: IMPERSONATION_TTL_MINUTES * 60,
-    }
+    },
   );
 
   return response;

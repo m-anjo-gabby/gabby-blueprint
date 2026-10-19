@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, ChevronRight, History } from 'lucide-react';
-import { getCalendarEventPhase, withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { useNow } from '@gabby/lib/hooks/useNow';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
 import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
+import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { getCalendarEventPhase, withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
 import { EventDetailDrawer } from '@/components/calendarEvent/EventDetailDrawer';
 import { EventCoachLine, EventSeriesLabel, formatEventSlot } from '@/components/calendarEvent/EventMeta';
 import { scrollIntoContainer } from '@/lib/scroll';
@@ -24,7 +24,15 @@ interface GroupSessionsViewProps {
   renderId: string;
 }
 
-function EmptyState({ icon: Icon, title, description }: { icon: typeof CalendarDays; title: string; description: string }) {
+function EmptyState({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: typeof CalendarDays;
+  title: string;
+  description: string;
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="mb-4 flex size-14 items-center justify-center rounded-card border border-line bg-surface text-ink-subtle">
@@ -37,9 +45,23 @@ function EmptyState({ icon: Icon, title, description }: { icon: typeof CalendarD
 }
 
 /** 参加登録した過去の回（日時・シリーズ名・内容・担当コーチ。押すと詳細。右端のシェブロンで押せることを示す） */
-function PastSessions({ sessions, timezone, onOpenDetail }: { sessions: CalendarEventItem[]; timezone: string; onOpenDetail: (id: string) => void }) {
+function PastSessions({
+  sessions,
+  timezone,
+  onOpenDetail,
+}: {
+  sessions: CalendarEventItem[];
+  timezone: string;
+  onOpenDetail: (id: string) => void;
+}) {
   if (sessions.length === 0) {
-    return <EmptyState icon={History} title="参加登録した過去のセッションはありません" description="直近半年に参加登録したセッションが、ここに表示されます。" />;
+    return (
+      <EmptyState
+        icon={History}
+        title="参加登録した過去のセッションはありません"
+        description="直近半年に参加登録したセッションが、ここに表示されます。"
+      />
+    );
   }
   return (
     <section aria-label="過去のセッション" className={SERIES_CARD_CLASS}>
@@ -61,7 +83,11 @@ function PastSessions({ sessions, timezone, onOpenDetail }: { sessions: Calendar
                   <p className="text-sm font-semibold text-ink group-hover:text-brand-strong">{session.title}</p>
                   <EventCoachLine event={session} className="mt-0.5" />
                 </div>
-                <ChevronRight size={16} aria-hidden className="shrink-0 text-ink-subtle transition-colors group-hover:text-brand-strong" />
+                <ChevronRight
+                  size={16}
+                  aria-hidden
+                  className="shrink-0 text-ink-subtle transition-colors group-hover:text-brand-strong"
+                />
               </button>
             </li>
           );
@@ -92,16 +118,19 @@ export function GroupSessionsView({ upcoming: serverUpcoming, past: serverPast, 
   useRefreshOnRestoredRender(renderId);
 
   // 表示中に終了した回は外す（現在時刻の確定前はサーバーの判定のまま出す）
-  const visibleUpcoming = nowMs === null ? upcoming : upcoming.filter((e) => getCalendarEventPhase(e, nowMs) !== 'ended');
+  const visibleUpcoming =
+    nowMs === null ? upcoming : upcoming.filter((e) => getCalendarEventPhase(e, nowMs) !== 'ended');
   const { groups, singles } = groupBySeries(visibleUpcoming);
   const detailEvent = [...upcoming, ...past].find((e) => e.calendar_event_id === detailId) ?? null;
 
   const updateJoined = (ids: Set<string>, isJoined: boolean) => {
-    const apply = (list: CalendarEventItem[]) => list.map((e) => (ids.has(e.calendar_event_id) ? withParticipation(e, isJoined) : e));
+    const apply = (list: CalendarEventItem[]) =>
+      list.map((e) => (ids.has(e.calendar_event_id) ? withParticipation(e, isJoined) : e));
     setUpcoming(apply);
     setPast(apply);
   };
-  const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) => updateJoined(new Set([calendarEventId]), isJoined);
+  const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) =>
+    updateJoined(new Set([calendarEventId]), isJoined);
 
   const handleTabChange = (next: GroupSessionsTab) => {
     router.replace(next === 'past' ? `${pathname}?tab=past` : pathname, { scroll: false });
@@ -125,7 +154,11 @@ export function GroupSessionsView({ upcoming: serverUpcoming, past: serverPast, 
       {tab === 'past' ? (
         <PastSessions sessions={past} timezone={timezone} onOpenDetail={setDetailId} />
       ) : groups.length === 0 && singles.length === 0 ? (
-        <EmptyState icon={CalendarDays} title="開催予定のグループセッションはありません" description="次回の開催は、決まり次第ここでお知らせします。" />
+        <EmptyState
+          icon={CalendarDays}
+          title="開催予定のグループセッションはありません"
+          description="次回の開催は、決まり次第ここでお知らせします。"
+        />
       ) : (
         <div className="space-y-4">
           {groups.map(({ series, sessions }) => (

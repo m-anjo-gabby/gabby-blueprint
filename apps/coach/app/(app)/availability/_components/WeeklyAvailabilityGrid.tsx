@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import { cn } from '@/lib/utils';
-import { DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
+import { useCallback, useEffect, useEffectEvent, useRef } from 'react';
+import { DAYS_OF_WEEK, type DayOfWeek } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
+import { cn } from '@/lib/utils';
 
-/** Grid granularity: one cell = 30 minutes, covering a full day (48 cells). */
+/** グリッドの細かさ: 1マス = 30分で、1日分（48マス）。 */
 export const SLOTS_PER_DAY = 48;
 
 export function slotKey(day: DayOfWeek, slotIndex: number): string {
@@ -27,28 +27,31 @@ interface WeeklyAvailabilityGridProps {
 }
 
 /**
- * Calendly-style weekly availability grid: columns are days of week, rows are 30-minute
- * blocks. Click-drag paints (or clears) a run of cells; the caller merges cells into
- * contiguous time ranges on save.
+ * Calendly のような毎週の空き時間のグリッド。列は曜日、行は30分の
+ * 区切り。押したままなぞるとマスを塗る（または消す）。保存の時に呼び出し側がマスを
+ * 続いた時間の範囲にまとめる。
  */
 export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: WeeklyAvailabilityGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
   const paintValueRef = useRef(true);
 
-  useEffect(() => {
+  // 初めて表示した時だけ、選んでいる時間帯（無ければ 08:00）の位置までスクロールする
+  const scrollToSelection = useEffectEvent(() => {
     const rowHeight = 22;
     let firstSelected = SLOTS_PER_DAY;
     for (const key of selection) {
       const slotIndex = Number(key.split('-')[1]);
       if (slotIndex < firstSelected) firstSelected = slotIndex;
     }
-    const targetSlot = firstSelected < SLOTS_PER_DAY ? firstSelected : 16; // default: 08:00
+    const targetSlot = firstSelected < SLOTS_PER_DAY ? firstSelected : 16; // 既定: 08:00
     const container = scrollRef.current;
     if (container) {
       container.scrollTop = Math.max(0, targetSlot * rowHeight - rowHeight * 2);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    scrollToSelection();
   }, []);
 
   const paintCell = useCallback(
@@ -61,7 +64,7 @@ export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: Weekly
       else next.delete(key);
       onChange(next);
     },
-    [selection, onChange]
+    [selection, onChange],
   );
 
   const handlePointerDown = (day: DayOfWeek, slotIndex: number) => {
@@ -110,7 +113,7 @@ export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: Weekly
               <div
                 className={cn(
                   'h-[22px] pr-2 text-right text-[10px] text-slate-400 font-medium leading-[22px]',
-                  isHour ? 'border-t border-slate-200' : 'border-t border-slate-100'
+                  isHour ? 'border-t border-slate-200' : 'border-t border-slate-100',
                 )}
               >
                 {isHour ? slotIndexToLabel(slotIndex) : ''}
@@ -133,7 +136,7 @@ export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: Weekly
                     className={cn(
                       'h-[22px] border-l border-slate-100 transition-colors disabled:cursor-not-allowed',
                       isHour ? 'border-t border-t-slate-200' : 'border-t border-t-slate-100',
-                      isSelected ? 'bg-brand-500 hover:bg-brand' : 'bg-white hover:bg-brand-50'
+                      isSelected ? 'bg-brand-500 hover:bg-brand' : 'bg-white hover:bg-brand-50',
                     )}
                   />
                 );

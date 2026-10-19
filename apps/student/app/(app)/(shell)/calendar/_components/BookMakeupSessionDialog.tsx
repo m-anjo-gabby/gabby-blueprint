@@ -1,33 +1,33 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { useEffect, useEffectEvent, useMemo, useState } from 'react';
+import { CounterpartLocalTime } from '@gabby/lib/components/common/CounterpartLocalTime';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import {
-  generateLessonStartTimeOptions,
   convertWeeklyTimeZone,
   formatDateTimeByZone,
+  generateLessonStartTimeOptions,
   isAtLeastHoursFromNow,
   MIN_SESSION_BOOKING_LEAD_HOURS,
 } from '@gabby/lib/date/date';
-import { CounterpartLocalTime } from '@gabby/lib/components/common/CounterpartLocalTime';
-import { createSessionBookingRequest, checkSessionConflict } from '@/actions/sessionAction';
-import { BookableTicketSlot } from '@gabby/types/matching';
-import { SESSION_BOOKING_REQUEST_STATUS, MyBookingRequestItem } from '@gabby/types/session';
-import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { DayOfWeek } from '@gabby/types/coachAvailability';
+import { type BookableTicketSlot } from '@gabby/types/matching';
+import { SESSION_BOOKING_REQUEST_STATUS, type MyBookingRequestItem } from '@gabby/types/session';
+import { checkSessionConflict, createSessionBookingRequest } from '@/actions/sessionAction';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 
 // セッション枠は30分単位のため、時刻選択もこの粒度に揃える。担当コーチの対応可能時間に
 // 縛られず自由に選べるようにするため、一日全体(00:00-23:59)を対象にする
@@ -59,7 +59,13 @@ function timeStrToMs(time: string): number {
  * 選ばせる（コマの担当コーチは com_m_lesson_schedule.coach_id で既に確定している）。
  * 日時は担当コーチの対応可能時間に縛られず自由に選べるが、必ずコーチの承認を経て確定する。
  */
-export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onRequested }: BookMakeupSessionDialogProps) {
+export function BookMakeupSessionDialog({
+  open,
+  slots,
+  initialDate,
+  onClose,
+  onRequested,
+}: BookMakeupSessionDialogProps) {
   const currentUserId = useUserStore((state) => state.user?.id);
   const studentTimezone = useTimezone();
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(slots[0]?.schedule_id ?? null);
@@ -71,15 +77,16 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
+  // 開いた時だけ入力を空に戻す（開いている間に親の値が変わっても入力中の内容を戻さない）
+  const resetInputs = useEffectEvent(() => {
+    setSelectedScheduleId(slots[0]?.schedule_id ?? null);
+    setNewDate(initialDate || tomorrowIsoDate());
+    setNewStartTime(null);
+    setReason('');
+    setConflictMessage(null);
+  });
   useEffect(() => {
-    if (open) {
-      setSelectedScheduleId(slots[0]?.schedule_id ?? null);
-      setNewDate(initialDate || tomorrowIsoDate());
-      setNewStartTime(null);
-      setReason('');
-      setConflictMessage(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (open) resetInputs();
   }, [open]);
 
   const selectedSlot = slots.find((s) => s.schedule_id === selectedScheduleId) ?? null;
@@ -98,25 +105,29 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
     // サーバー側(create_session_booking_request)の「開始24時間以上先」ルールのソフトチェック。
     // 最終的な整合性は常にRPC側で担保するため、ここでは参考表示のみ。
     if (!isAtLeastHoursFromNow(start, MIN_SESSION_BOOKING_LEAD_HOURS)) {
-      setConflictMessage(`開始${MIN_SESSION_BOOKING_LEAD_HOURS}時間以内の予約はできません。翌日以降の日時を選択してください。`);
+      setConflictMessage(
+        `開始${MIN_SESSION_BOOKING_LEAD_HOURS}時間以内の予約はできません。翌日以降の日時を選択してください。`,
+      );
       return;
     }
 
     let cancelled = false;
     setIsChecking(true);
     const end = new Date(start.getTime() + duration);
-    checkSessionConflict(selectedSlot.coach_id, currentUserId, start.toISOString(), end.toISOString()).then((result) => {
-      if (cancelled) return;
-      setIsChecking(false);
-      if (!result.success) return;
-      setConflictMessage(
-        result.coachConflict
-          ? 'コーチが同じ時間帯に別のセッションの予定があります。'
-          : result.studentConflict
-            ? 'ご自身が同じ時間帯に別のセッションの予定があります。'
-            : null
-      );
-    });
+    checkSessionConflict(selectedSlot.coach_id, currentUserId, start.toISOString(), end.toISOString()).then(
+      (result) => {
+        if (cancelled) return;
+        setIsChecking(false);
+        if (!result.success) return;
+        setConflictMessage(
+          result.coachConflict
+            ? 'コーチが同じ時間帯に別のセッションの予定があります。'
+            : result.studentConflict
+              ? 'ご自身が同じ時間帯に別のセッションの予定があります。'
+              : null,
+        );
+      },
+    );
     return () => {
       cancelled = true;
     };
@@ -128,7 +139,12 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
     try {
       const start = new Date(`${newDate}T${newStartTime}:00`);
       const end = new Date(start.getTime() + duration);
-      const result = await createSessionBookingRequest(selectedSlot.schedule_id, start.toISOString(), end.toISOString(), reason);
+      const result = await createSessionBookingRequest(
+        selectedSlot.schedule_id,
+        start.toISOString(),
+        end.toISOString(),
+        reason,
+      );
       if (!result.success) {
         showToast(result.message, 'error');
         return;
@@ -183,7 +199,8 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
                   const weekly = convertWeeklyTimeZone(s, s.schedule_timezone, studentTimezone);
                   return (
                     <option key={s.schedule_id} value={s.schedule_id}>
-                      {s.coach_name}コーチ（毎週{DAY_OF_WEEK_LABEL_JA[weekly.day_of_week as DayOfWeek]} {weekly.start_time}〜／残り{s.shortfall}回分）
+                      {s.coach_name}コーチ（毎週{DAY_OF_WEEK_LABEL_JA[weekly.day_of_week as DayOfWeek]}{' '}
+                      {weekly.start_time}〜／残り{s.shortfall}回分）
                     </option>
                   );
                 })}
@@ -244,7 +261,12 @@ export function BookMakeupSessionDialog({ open, slots, initialDate, onClose, onR
           <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             戻る
           </Button>
-          <Button pending={isSubmitting} type="button" onClick={handleSubmit} disabled={isSubmitting || !selectedSlot || !newStartTime || !!conflictMessage}>
+          <Button
+            pending={isSubmitting}
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !selectedSlot || !newStartTime || !!conflictMessage}
+          >
             リクエストする
           </Button>
         </DialogFooter>

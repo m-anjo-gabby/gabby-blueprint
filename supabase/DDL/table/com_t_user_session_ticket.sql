@@ -18,9 +18,9 @@
 -- @schema public.com_t_user_session_ticket
 CREATE TABLE public.com_t_user_session_ticket (
     ticket_id                uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    license_id               uuid         NOT NULL UNIQUE REFERENCES public.com_t_user_license(license_id) ON DELETE CASCADE,
-    contract_id              uuid         NOT NULL REFERENCES public.com_m_contract(contract_id),
-    user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id),
+    license_id               uuid         NOT NULL UNIQUE REFERENCES public.com_t_user_license(license_id) ON DELETE RESTRICT,
+    contract_id              uuid         NOT NULL REFERENCES public.com_m_contract(contract_id) ON DELETE RESTRICT,
+    user_id                  uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     weekly_frequency         smallint     NOT NULL,
     total_sessions           smallint     NOT NULL,
     used_sessions            smallint     NOT NULL DEFAULT 0,
@@ -44,6 +44,8 @@ COMMENT ON COLUMN public.com_t_user_session_ticket.update_date IS '更新日時'
 CREATE INDEX idx_session_ticket_contract ON public.com_t_user_session_ticket (contract_id);
 CREATE INDEX idx_session_ticket_user ON public.com_t_user_session_ticket (user_id);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_user_session_ticket FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_user_session_ticket ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coaches can view session tickets of their students" ON public.com_t_user_session_ticket FOR SELECT TO authenticated
@@ -53,10 +55,8 @@ USING (
       WHERE r.student_id = com_t_user_session_ticket.user_id AND r.coach_id = auth.uid()))
 );
 
-CREATE POLICY "Users can view relevant session tickets" ON public.com_t_user_session_ticket FOR SELECT TO authenticated
+CREATE POLICY "Users can view their own session tickets" ON public.com_t_user_session_ticket FOR SELECT TO authenticated
 USING (
-    user_id = auth.uid() OR (contract_id IN ( SELECT com_m_contract.contract_id
-       FROM public.com_m_contract
-      WHERE com_m_contract.client_id = public.get_jwt_client_id()))
+    user_id = auth.uid()
 );
 -- @end-schema

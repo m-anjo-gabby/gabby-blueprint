@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { ArrowRight, CalendarClock, SquareArrowOutUpRight } from 'lucide-react';
+import Link from 'next/link';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { StudentSessionHistoryItem } from '@gabby/types/coachStudent';
 
-interface Props {
+interface TodaysLessonPanelProps {
   studentId: string;
   /**
    * 次に実施可能な(status=scheduled かつ終了予定時刻が未来の)セッション。存在しなければnull。
@@ -20,7 +20,7 @@ interface Props {
  * 要約表示していたが、すぐ下のLive Sessions/Live Sprintカードに同じ情報の一覧が既にあるため
  * 重複を廃止した（このパネルの役目は「次のセッションを開く」ことだけに絞る）。
  */
-export function TodaysLessonPanel({ studentId, upcomingSession }: Props) {
+export function TodaysLessonPanel({ studentId, upcomingSession }: TodaysLessonPanelProps) {
   const timezone = useTimezone();
 
   return (

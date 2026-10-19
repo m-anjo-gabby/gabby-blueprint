@@ -43,7 +43,7 @@ ALTER TABLE public.com_m_terms_revision ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can insert terms revisions" ON public.com_m_terms_revision FOR INSERT TO authenticated
 WITH CHECK (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 );
 
 CREATE POLICY "Terms revisions are viewable by everyone" ON public.com_m_terms_revision FOR SELECT TO public

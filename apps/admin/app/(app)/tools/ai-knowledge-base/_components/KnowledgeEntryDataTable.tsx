@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { deleteKnowledgeEntryAction, type KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
+import { deleteKnowledgeEntry, type KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
 import { DataTable } from '@/components/list/DataTable';
-import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
+import { boldChunks, DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
 import { ListSelectFilter } from '@/components/list/ListSelectFilter';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
@@ -30,7 +30,7 @@ export function KnowledgeEntryDataTable({ data, totalCount, pageCount }: Knowled
 
   const handleDelete = (entry: KnowledgeEntry) => {
     startDelete(async () => {
-      const result = await deleteKnowledgeEntryAction(entry.knowledge_id);
+      const result = await deleteKnowledgeEntry(entry.knowledge_id);
       if (result.success) {
         showToast(t('toastDeleted'), 'success');
       } else {
@@ -41,7 +41,12 @@ export function KnowledgeEntryDataTable({ data, totalCount, pageCount }: Knowled
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      >
         <ListSelectFilter
           label={t('typeHeader')}
           allLabel={t('allTypes')}

@@ -1,5 +1,5 @@
 ---------------------------------------------
--- purge_mail_history: メールの送信履歴・到達状況の保管期限 (2026-10-06 追加)
+-- purge_mail_history: メールの送信履歴・到達状況の保管期限
 ---------------------------------------------
 -- 前提: table/com_t_mail_outbox.sql, table/com_t_mail_event.sql の作成が完了していること。
 -- 送信待ち（com_t_mail_outbox）の送り終えた行（SENT / SKIPPED / FAILED）と、到達状況の出来事（com_t_mail_event）のうち、

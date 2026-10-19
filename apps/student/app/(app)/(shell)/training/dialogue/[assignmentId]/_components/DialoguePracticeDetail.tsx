@@ -1,16 +1,15 @@
+import { DIALOGUE_CATEGORIES, type DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
-import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import { DialoguePageHeader } from '../../_components/DialogueSkeleton';
 import { DialogueSessionRow } from './DialogueSessionRow';
 
-interface Props {
+interface DialoguePracticeDetailProps {
   assignment: DialogueAssignmentSummary;
 }
 
 // 生徒用：割当済みダイアログ教材の進捗確認・教材アクセス専用画面（読み取り専用）
-export function DialoguePracticeDetail({ assignment }: Props) {
+export function DialoguePracticeDetail({ assignment }: DialoguePracticeDetailProps) {
   const progressPercent =
     assignment.total_session_count > 0
       ? (assignment.completed_session_count / assignment.total_session_count) * 100

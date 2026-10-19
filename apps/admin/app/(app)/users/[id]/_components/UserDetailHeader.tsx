@@ -1,10 +1,10 @@
-import { useTranslations } from 'next-intl';
 import { Building2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type { UserRecord } from '@gabby/types/user';
 import { BackLink, PageHeader } from '@/components/common/PageHeader';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { UserRecord } from '@gabby/types/user';
-import { UserStatusBadge, UserTypeBadge } from '../../_components/UserBadges';
 import { ImpersonateButton } from '../../_components/ImpersonateButton';
+import { UserStatusBadge, UserTypeBadge } from '../../_components/UserBadges';
 import { canImpersonateUser } from '../../_lib/userSchema';
 
 export const USER_LIST_PATH = '/users';

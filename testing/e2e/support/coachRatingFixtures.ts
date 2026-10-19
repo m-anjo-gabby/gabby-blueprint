@@ -1,10 +1,10 @@
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   createDisposableCoach,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantLiveLicense,
   type AuthFixture,
-} from "./authFixtures.ts";
+} from './authFixtures.ts';
 
 /**
  * コーチ評価のE2E用の使い捨てデータ（仕様書: e2e/specs/rating/coach-rating.md）。
@@ -36,7 +36,13 @@ export interface RatingStudent {
 export async function createRatingCoach(f: AuthFixture, password: string): Promise<RatingCoach> {
   const coachEmail = `${f.tag}-coach@${DISPOSABLE_EMAIL_DOMAIN}`;
   const coachName = `E2E Coach ${f.tag}`;
-  const coachId = await createDisposableCoach(f, { email: coachEmail, password, userName: coachName, timezone: "Asia/Tokyo", availability: [] });
+  const coachId = await createDisposableCoach(f, {
+    email: coachEmail,
+    password,
+    userName: coachName,
+    timezone: 'Asia/Tokyo',
+    availability: [],
+  });
   return { coachId, coachName, coachEmail };
 }
 
@@ -50,28 +56,32 @@ export async function addRatingStudent(
   f: AuthFixture,
   coach: RatingCoach,
   password: string,
-  params: { key: string; slotNo: number; endInDays: number; completed: number; scheduled: number; weeklySlots?: 1 | 2 }
+  params: { key: string; slotNo: number; endInDays: number; completed: number; scheduled: number; weeklySlots?: 1 | 2 },
 ): Promise<RatingStudent> {
   const { admin } = f;
   const weeklySlots = params.weeklySlots ?? 1;
   const studentEmail = `${f.tag}-${params.key}@${DISPOSABLE_EMAIL_DOMAIN}`;
   const studentName = `E2E生徒${params.key.toUpperCase()} ${f.tag}`;
   const studentId = await createDisposableStudent(f, { email: studentEmail, password, userName: studentName });
-  await admin.from("com_m_user").update({ timezone: "Asia/Tokyo" }).eq("id", studentId);
+  await admin.from('com_m_user').update({ timezone: 'Asia/Tokyo' }).eq('id', studentId);
 
   const now = Date.now();
   const end = new Date(now + params.endInDays * DAY_MS);
   const start = new Date(end.getTime() - 90 * DAY_MS);
-  const planCode = weeklySlots === 2 ? "LIVE_WEEKLY2_3M" : "LIVE_WEEKLY1_3M";
+  const planCode = weeklySlots === 2 ? 'LIVE_WEEKLY2_3M' : 'LIVE_WEEKLY1_3M';
   const { ticketId } = await grantLiveLicense(f, studentId, { planCode, label: params.key, start, end });
 
-  const { data: ticket } = await admin.from("com_t_user_session_ticket").select("total_sessions").eq("ticket_id", ticketId).single();
+  const { data: ticket } = await admin
+    .from('com_t_user_session_ticket')
+    .select('total_sessions')
+    .eq('ticket_id', ticketId)
+    .single();
   const isoDate = (d: Date) => d.toISOString().slice(0, 10);
-  const hour = String(9 + params.slotNo).padStart(2, "0");
+  const hour = String(9 + params.slotNo).padStart(2, '0');
 
   for (let slot = 0; slot < weeklySlots; slot++) {
     const { data: schedule, error: scheduleError } = await admin
-      .from("com_m_lesson_schedule")
+      .from('com_m_lesson_schedule')
       .insert({
         ticket_id: ticketId,
         student_id: studentId,
@@ -80,21 +90,34 @@ export async function addRatingStudent(
         day_of_week: slot === 0 ? 5 : 1,
         start_time: `${hour}:00:00`,
         end_time: `${hour}:25:00`,
-        schedule_timezone: "Asia/Tokyo",
+        schedule_timezone: 'Asia/Tokyo',
         target_sessions: ticket!.total_sessions / weeklySlots,
         status: 1,
         start_date: isoDate(start),
         end_date: isoDate(end),
       })
-      .select("schedule_id")
+      .select('schedule_id')
       .single();
     if (scheduleError || !schedule) throw new Error(`担当枠の作成に失敗しました: ${scheduleError?.message}`);
 
-    const base = { schedule_id: schedule.schedule_id, ticket_id: ticketId, student_id: studentId, coach_id: coach.coachId };
+    const base = {
+      schedule_id: schedule.schedule_id,
+      ticket_id: ticketId,
+      student_id: studentId,
+      coach_id: coach.coachId,
+    };
     const at = (days: number) => now + (days + slot * 3) * DAY_MS + params.slotNo * 60 * MINUTE_MS;
     const rows = [
-      ...Array.from({ length: params.completed }, (_, i) => ({ start: at(-7 * (i + 1)), status: 2, completion_result: 1 })),
-      ...Array.from({ length: params.scheduled }, (_, i) => ({ start: at(3 + 7 * i), status: 1, completion_result: null })),
+      ...Array.from({ length: params.completed }, (_, i) => ({
+        start: at(-7 * (i + 1)),
+        status: 2,
+        completion_result: 1,
+      })),
+      ...Array.from({ length: params.scheduled }, (_, i) => ({
+        start: at(3 + 7 * i),
+        status: 1,
+        completion_result: null,
+      })),
     ].map((s) => ({
       ...base,
       start_datetime: new Date(s.start).toISOString(),
@@ -103,7 +126,7 @@ export async function addRatingStudent(
       completion_result: s.completion_result,
     }));
     if (rows.length > 0) {
-      const { error } = await admin.from("com_t_session").insert(rows);
+      const { error } = await admin.from('com_t_session').insert(rows);
       if (error) throw new Error(`セッションの作成に失敗しました: ${error.message}`);
     }
   }
@@ -115,9 +138,9 @@ export async function insertCoachRating(
   f: AuthFixture,
   coach: RatingCoach,
   student: RatingStudent,
-  scores: { coaching: number; friendliness: number; recommendation: number }
+  scores: { coaching: number; friendliness: number; recommendation: number },
 ): Promise<void> {
-  const { error } = await f.admin.from("com_t_coach_rating").insert({
+  const { error } = await f.admin.from('com_t_coach_rating').insert({
     coach_id: coach.coachId,
     student_id: student.studentId,
     ticket_id: student.ticketId,

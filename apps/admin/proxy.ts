@@ -1,15 +1,15 @@
 // apps/admin/proxy.ts
 import { type NextRequest } from 'next/server';
+import { createRequestLogger } from '@gabby/lib/logger';
 import {
   createSupabaseProxy,
+  isDefaultPublicRoute,
+  logPageView,
+  redirectAfterLogin,
   redirectAndClearSession,
   redirectTo,
   redirectToLogin,
-  redirectAfterLogin,
-  isDefaultPublicRoute,
-  logPageView,
 } from '@gabby/lib/proxy-base';
-import { createRequestLogger } from '@gabby/lib/logger';
 import { USER_TYPES } from '@gabby/types/user';
 import { canAccessPath } from './lib/navigation';
 
@@ -45,7 +45,7 @@ export async function proxy(req: NextRequest) {
     logger.warn('proxy:admin_access_blocked', `Non-admin session detected in admin app (User ID: ${user.id})`, {
       userId: user.id,
       path: pathname,
-      payload: { userType }
+      payload: { userType },
     });
 
     return redirectAndClearSession(req, loginPath);
@@ -63,7 +63,7 @@ export async function proxy(req: NextRequest) {
       logger.warn('proxy:role_access_denied', `Role-based access denied (User ID: ${user.id})`, {
         userId: user.id,
         path: pathname,
-        payload: { roles }
+        payload: { roles },
       });
       return redirectTo(req, dashboardPath);
     }

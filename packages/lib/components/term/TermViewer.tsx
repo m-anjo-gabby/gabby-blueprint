@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import React from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import * as ScrollArea from "@radix-ui/react-scroll-area";
-import { cn } from "@gabby/lib/utils"; // パスは環境に合わせて調整してください
+import * as ScrollArea from '@radix-ui/react-scroll-area';
+import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { cn } from '@gabby/lib/utils'; // パスは環境に合わせて調整してください
 
 interface TermViewerProps {
   content: string;
@@ -16,12 +16,12 @@ interface TermViewerProps {
   contentClassName?: string;
 }
 
-export function TermViewer({ 
-  content, 
-  onScrollEnd, 
+export function TermViewer({
+  content,
+  onScrollEnd,
   isLoading = false,
   containerClassName,
-  contentClassName
+  contentClassName,
 }: TermViewerProps) {
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (!onScrollEnd) return;
@@ -37,18 +37,21 @@ export function TermViewer({
   return (
     <ScrollArea.Root className="flex-1 w-full min-w-0 overflow-hidden flex flex-col bg-transparent">
       <ScrollArea.Viewport
-        className={cn("h-full w-full overflow-y-auto overscroll-contain", containerClassName)}
+        className={cn('h-full w-full overflow-y-auto overscroll-contain', containerClassName)}
         onScroll={handleScroll}
       >
-        <div className={cn("px-8 py-10 w-full max-w-full min-w-0 break-words", contentClassName)}>
+        <div className={cn('px-8 py-10 w-full max-w-full min-w-0 break-words', contentClassName)}>
           {content ? (
             <article className="prose prose-sm prose-a:text-brand sm:prose-base max-w-none break-words [word-break:break-word]">
-              <ReactMarkdown 
+              <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
                   // H1 (#) の見た目を強制上書き
                   h1: ({ node, ...props }) => (
-                    <h1 {...props} className="!text-xl sm:!text-2xl !font-black !tracking-tight !text-slate-900 !mt-2 !mb-6" />
+                    <h1
+                      {...props}
+                      className="!text-xl sm:!text-2xl !font-black !tracking-tight !text-slate-900 !mt-2 !mb-6"
+                    />
                   ),
                   // H3 (###) の見た目を強制上書き
                   h3: ({ node, ...props }) => (
@@ -57,7 +60,7 @@ export function TermViewer({
                   // 段落 (<p>) の改行制御を強制上書き
                   p: ({ node, ...props }) => (
                     <p {...props} className="!whitespace-pre-wrap !leading-relaxed !text-slate-600 !my-4" />
-                  )
+                  ),
                 }}
               >
                 {content}
@@ -67,7 +70,7 @@ export function TermViewer({
             <div className="flex flex-col items-center justify-center py-32 gap-4 text-slate-400">
               <div className="w-8 h-8 animate-spin border-2 border-brand-500 border-t-transparent rounded-full" />
               <p className="text-xs font-bold tracking-widest uppercase animate-pulse">
-                {isLoading ? "Fetching Document Content..." : "No Content Available"}
+                {isLoading ? 'Fetching Document Content...' : 'No Content Available'}
               </p>
             </div>
           )}

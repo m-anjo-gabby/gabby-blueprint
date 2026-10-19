@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getLessonSprintResult, getAvailableSprintContents } from '@/actions/lessonSprintAction';
+import { getAvailableSprintContents, getLessonSprintResult } from '@/actions/lessonSprintAction';
 import { getStudentOverview } from '@/actions/studentAction';
 import { LessonSprintResult } from './_components/LessonSprintResult';
 
