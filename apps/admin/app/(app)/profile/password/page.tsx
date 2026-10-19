@@ -47,13 +47,13 @@ export default function PasswordChangePage() {
 
     const result = await updatePassword(formData);
 
-    if (result?.error) {
-      // result.error は表示言語に合わせた文言。どの入力欄に出すかは errorCode で判定する
+    if (!result.success) {
+      // result.message は表示言語に合わせた文言。どの入力欄に出すかは errorCode で判定する
       if (result.errorCode === 'current_password_incorrect') {
-        setCurrentPasswordError(result.error);
+        setCurrentPasswordError(result.message);
         setCurrentPassword('');
       } else {
-        setNewPasswordError(result.error);
+        setNewPasswordError(result.message);
       }
       showToast(t('toastUpdateFailed'), 'error');
     } else {

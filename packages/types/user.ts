@@ -155,8 +155,8 @@ export interface BulkImportResultDetail {
   message?: string | null;
 }
 
-export interface BulkImportResponse {
-  success: boolean;
+/** ユーザーの一括登録の結果（行ごとの成否は details。アクションは ActionResult<BulkImportSummary> で返す） */
+export interface BulkImportSummary {
   total: number;
   successCount: number;
   errorCount: number;

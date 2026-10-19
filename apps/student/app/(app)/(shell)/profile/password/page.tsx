@@ -48,13 +48,13 @@ export default function PasswordChangePage() {
 
     const result = await updatePassword(formData);
 
-    if (result?.error) {
+    if (!result.success) {
       if (result.errorCode === 'current_password_incorrect') {
-        setCurrentPasswordError(result.error);
+        setCurrentPasswordError(result.message);
         setCurrentPassword(''); // 問題箇所のみクリア
       } else {
         // 漏洩パスワード・現在と同じパスワード等のサーバー側の判定
-        setNewPasswordError(result.error);
+        setNewPasswordError(result.message);
       }
       showToast('パスワードの更新に失敗しました。', 'error');
     } else {

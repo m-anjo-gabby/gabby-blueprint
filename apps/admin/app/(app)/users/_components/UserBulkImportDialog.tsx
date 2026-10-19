@@ -7,7 +7,7 @@ import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { type ClientOption } from '@gabby/types/client';
 import { type ContractDetail } from '@gabby/types/contract';
-import { USER_TYPES, type BulkImportResponse, type BulkUser, type RawCsvRow } from '@gabby/types/user';
+import { USER_TYPES, type BulkImportSummary, type BulkUser, type RawCsvRow } from '@gabby/types/user';
 import { getClientsFilter } from '@/actions/adminClientAction'; // 追加
 import { getActiveContractsByClient } from '@/actions/adminContractAction';
 import { bulkCreateUsers } from '@/actions/adminUserAction';
@@ -155,16 +155,14 @@ export function UserBulkImportDialog() {
     setIsProcessing(true);
 
     // ユーザー作成の結果を保持する変数
-    let userResult: BulkImportResponse | null = null;
+    let userResult: BulkImportSummary | null = null;
 
     try {
       // 1. ユーザー作成 (招待テーブルへの登録とメール送信)
       // selectedContractId を渡すことで、createUser 内で招待レコードにライセンス情報が紐付けられます
-      userResult = await bulkCreateUsers(data, selectedContractId);
-
-      if (!userResult || !userResult.details) {
-        throw new Error('ユーザー登録のレスポンスが不正です');
-      }
+      const res = await bulkCreateUsers(data, selectedContractId);
+      if (!res.success) throw new Error(res.message);
+      userResult = res;
     } catch {
       showToast(t('toastProcessError'), 'error');
       if (!userResult) {

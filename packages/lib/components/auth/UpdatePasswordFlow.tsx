@@ -118,10 +118,10 @@ function UpdatePasswordContent({ actions, labels, passwordLabels, homePath = '/d
 
     try {
       const result = await actions.resetPassword(formData);
-      if (result?.errorCode === 'reset_link_required') {
+      if (result && !result.success && result.errorCode === 'reset_link_required') {
         setViewStatus('invalid');
-      } else if (result?.error) {
-        setError(result.error);
+      } else if (result && !result.success) {
+        setError(result.message);
       } else {
         setViewStatus('success');
         // 完了表示を見せてからダッシュボードへ（戻るで再設定画面に戻らないよう replace。アンマウント時はタイマーを解除）

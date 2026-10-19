@@ -44,12 +44,12 @@ export default function PasswordChangePage() {
 
     const result = await updatePassword(formData);
 
-    if (result?.error) {
+    if (!result.success) {
       if (result.errorCode === 'current_password_incorrect') {
-        setCurrentPasswordError(result.error);
+        setCurrentPasswordError(result.message);
         setCurrentPassword('');
       } else {
-        setNewPasswordError(result.error);
+        setNewPasswordError(result.message);
       }
       showToast('Failed to update password.', 'error');
     } else {

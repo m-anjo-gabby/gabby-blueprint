@@ -20,8 +20,8 @@ import { exactPattern, ilikeAny } from '@gabby/lib/supabase/ilike';
 import type { ActionResult } from '@gabby/types/action';
 import {
   isUserType,
-  type BulkImportResponse,
   type BulkImportResultDetail,
+  type BulkImportSummary,
   type BulkUser,
   type CreateUserPayload,
   type CreateUserResponse,
@@ -631,7 +631,10 @@ export async function updateUser(id: string, payload: CreateUserPayload & { role
 /**
  * ユーザー一括登録アクション
  */
-export async function bulkCreateUsers(users: BulkUser[], contract_id?: string): Promise<BulkImportResponse> {
+export async function bulkCreateUsers(
+  users: BulkUser[],
+  contract_id?: string,
+): Promise<ActionResult<BulkImportSummary>> {
   await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const t = await getTranslations();
   const ctx = await getLogContext();

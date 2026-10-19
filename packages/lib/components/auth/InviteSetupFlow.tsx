@@ -88,7 +88,7 @@ function InviteSetupContent({ actions, labels, passwordLabels }: InviteSetupFlow
     try {
       const result = await actions.acceptInvitation(token, password.password);
       if (!result.success) {
-        setError(result.error || labels.unexpected);
+        setError(result.message || labels.unexpected);
         return;
       }
 
@@ -97,7 +97,7 @@ function InviteSetupContent({ actions, labels, passwordLabels }: InviteSetupFlow
       loginFormData.append('email', view.email);
       loginFormData.append('password', password.password);
       const loginResult = await actions.signIn(loginFormData);
-      if (loginResult?.error) setError(loginResult.error);
+      if (loginResult && !loginResult.success) setError(loginResult.message);
     } catch {
       setError(labels.unexpected);
     }

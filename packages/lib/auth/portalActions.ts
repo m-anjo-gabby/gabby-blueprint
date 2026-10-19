@@ -2,6 +2,7 @@ import type { User } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import type { ActionFailure } from '@gabby/types/action';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
 import type { MailLanguage } from '../mail/layout/document';
@@ -21,6 +22,7 @@ import {
 import {
   AUTH_ERROR_MESSAGES_JA,
   formatAuthErrorMessage,
+  type AuthActionResult,
   type AuthErrorCode,
   type AuthErrorMessageResolver,
 } from './errors';
@@ -82,12 +84,19 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
     };
   }
 
-  /** 共通処理の結果に含まれるエラー文言を、このアプリの表示言語の文言に置き換える */
-  async function localize(result: AuthResponse): Promise<AuthResponse> {
-    return result.errorCode ? { ...result, ...(await errorResponse(result.errorCode, result.errorDetail)) } : result;
+  /** 画面に返す失敗（表示言語の文言と、文言の出し分け・入力欄の判定に使う errorCode） */
+  async function failure(code: AuthErrorCode, detail?: string): Promise<ActionFailure<AuthErrorCode>> {
+    const { error } = await errorResponse(code, detail);
+    return { success: false, message: error ?? '', errorCode: code };
   }
 
-  async function signIn(formData: FormData) {
+  /** 共通処理の結果を、表示言語の文言の ActionResult にする */
+  async function toResult(result: AuthResponse): Promise<AuthActionResult> {
+    return result.errorCode ? failure(result.errorCode, result.errorDetail) : { success: true };
+  }
+
+  /** 成功するとダッシュボード（または戻り先）へリダイレクトするため、返すのは失敗だけ */
+  async function signIn(formData: FormData): Promise<ActionFailure<AuthErrorCode>> {
     const email = formData.get('email') as string;
     const ctx = await getLogContext();
 
@@ -100,8 +109,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
           ...ctx,
           payload: { email },
         });
-        const { error, errorCode } = await localize(result);
-        return { error, errorCode };
+        return failure(result.errorCode ?? 'unexpected', result.errorDetail);
       }
 
       const guard = config.guardUser(user);
@@ -116,8 +124,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
         );
         // リダイレクトループを防ぐため、不許可ユーザーのセッションは即座に破棄する
         await signOutCore();
-        const { error, errorCode } = await errorResponse('portal_forbidden');
-        return { error, errorCode };
+        return failure('portal_forbidden');
       }
 
       logger.info(`auth:${config.appName}_login_success`, `User logged in (User ID: ${user.id})`, {
@@ -136,7 +143,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
         err: error,
         payload: { email },
       });
-      return errorResponse('unexpected');
+      return failure('unexpected');
     }
   }
 
@@ -165,7 +172,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
     }
   }
 
-  async function forgotPassword(formData: FormData) {
+  async function forgotPassword(formData: FormData): Promise<AuthActionResult> {
     const email = formData.get('email') as string;
     const ctx = await getLogContext();
 
@@ -181,7 +188,7 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
         logger.info(`auth:${config.appName}_forgot_password_sent`, `Reset email sent to: ${email}`, ctx);
       }
 
-      return localize(result);
+      return toResult(result);
     } catch (error) {
       if (isRedirectError(error)) {
         throw error;
@@ -191,11 +198,11 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
         err: error,
         payload: { email },
       });
-      return errorResponse('unexpected');
+      return failure('unexpected');
     }
   }
 
-  async function resetPassword(formData: FormData) {
+  async function resetPassword(formData: FormData): Promise<AuthActionResult> {
     const ctx = await getLogContext();
 
     try {
@@ -212,18 +219,17 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
       }
 
       logger.error(`auth:${config.appName}_reset_password_failed`, result.error || 'Failed to reset password', ctx);
-      const { error, errorCode } = await localize(result);
-      return { error, errorCode };
+      return toResult(result);
     } catch (error) {
       if (isRedirectError(error)) {
         throw error;
       }
       logger.error(`auth:${config.appName}_reset_password_unexpected`, getErrorMessage(error), { ...ctx, err: error });
-      return errorResponse('unexpected');
+      return failure('unexpected');
     }
   }
 
-  async function updatePassword(formData: FormData) {
+  async function updatePassword(formData: FormData): Promise<AuthActionResult> {
     const ctx = await getLogContext();
 
     try {
@@ -239,19 +245,19 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
         );
       }
 
-      return localize(result);
+      return toResult(result);
     } catch (error) {
       if (isRedirectError(error)) {
         throw error;
       }
       logger.error(`auth:${config.appName}_update_password_unexpected`, getErrorMessage(error), { ...ctx, err: error });
-      return errorResponse('unexpected');
+      return failure('unexpected');
     }
   }
 
   /** 再設定リンクを確認し、再設定用のセッションを確立する（再設定画面のボタン操作から呼ぶ） */
-  async function verifyRecovery(tokenHash: string): Promise<AuthResponse> {
-    return localize(await verifyRecoveryCore(tokenHash));
+  async function verifyRecovery(tokenHash: string): Promise<AuthActionResult> {
+    return toResult(await verifyRecoveryCore(tokenHash));
   }
 
   /** 再設定リンクの確認が済んだセッションか（再設定画面を再読み込みした場合の判定） */
@@ -266,9 +272,8 @@ export function createPortalAuthActions(config: PortalAuthConfig) {
     return { valid: false, error: error ?? '', errorCode: errorCode ?? result.errorCode };
   }
 
-  async function acceptInvitation(token: string, password: string): Promise<AuthResponse> {
-    const { success, error, errorCode } = await localize(await acceptInvitationCore(token, password));
-    return { success, error, errorCode };
+  async function acceptInvitation(token: string, password: string): Promise<AuthActionResult> {
+    return toResult(await acceptInvitationCore(token, password));
   }
 
   return {

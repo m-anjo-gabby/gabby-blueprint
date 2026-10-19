@@ -33,7 +33,7 @@ export function ForgotPasswordForm({ action, labels }: ForgotPasswordFormProps) 
   const handleSubmit = async (formData: FormData) => {
     setError(null);
     const result = await action(formData);
-    if (result?.error) setError(result.error);
+    if (result && !result.success) setError(result.message);
     else setSent(true);
   };
 

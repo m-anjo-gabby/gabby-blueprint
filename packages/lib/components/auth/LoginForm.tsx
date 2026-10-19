@@ -39,8 +39,8 @@ export function LoginForm({ action, labels, badge }: LoginFormProps) {
     const result = await action(formData);
 
     // 成功時はサーバー側でリダイレクトするため、戻ってくるのは失敗時のみ
-    if (result?.error) {
-      setError(result.error);
+    if (result && !result.success) {
+      setError(result.message);
       setPassword(''); // 認証失敗時はパスワードのみを空にする
     }
   };

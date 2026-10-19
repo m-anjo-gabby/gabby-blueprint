@@ -1,3 +1,5 @@
+import type { ActionResult } from '@gabby/types/action';
+
 /**
  * 認証系アクション（ログイン・パスワード再設定・変更）のエラー種別
  *
@@ -36,6 +38,9 @@ export const AUTH_ERROR_CODES = [
 ] as const;
 
 export type AuthErrorCode = (typeof AUTH_ERROR_CODES)[number];
+
+/** 画面から呼ぶ認証のアクション（各アプリの *AuthAction.ts）の結果。失敗の message はアプリの表示言語の文言 */
+export type AuthActionResult = ActionResult<object, AuthErrorCode>;
 
 /**
  * 日本語の既定文言（student と、文言を持たないアプリのフォールバック）
