@@ -1,7 +1,7 @@
 'use client';
 
-import { format } from 'date-fns';
 import { Calendar, Download, FileAudio, Headphones, Loader2, Trash2 } from 'lucide-react';
+import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import type { TTSAssetListItem } from '@/actions/adminTTSAction';
 import type { ListColumnDef } from '@/components/list/listTable';
 import { Button } from '@/components/ui/button';
@@ -94,7 +94,7 @@ export function createColumns({
       cell: ({ row }) => (
         <div className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
           <Calendar size={12} className="opacity-30" />
-          {format(new Date(row.original.created_at), 'MM/dd HH:mm')}
+          {formatDateTimeByZone(row.original.created_at, 'UTC', false)}
         </div>
       ),
     },

@@ -16,6 +16,8 @@ export const PERSONAS = {
   dailyLearner: { email: 'qa-p-student-01@gabby-qa-test.example' },
   /** 利用者ペルソナ P03（アプリのみ・土日だけ学習。連続日数が途切れる） */
   weekendLearner: { email: 'qa-p-student-03@gabby-qa-test.example' },
+  /** 利用者ペルソナ P10（お気に入りが多く、レベルが上がったため問題種別ごとに複数のレベルの問題がある）。お気に入りの一覧・絞り込みの確認に使う */
+  favoriteCollector: { email: 'qa-p-student-10@gabby-qa-test.example' },
 } as const;
 
 export type PersonaKey = keyof typeof PERSONAS;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import type { ClientRecord } from '@gabby/types/client';
 import { DataTable } from '@/components/list/DataTable';
 import { ListToolbar } from '@/components/list/ListToolbar';
@@ -15,7 +15,6 @@ interface ClientDataTableProps {
 
 export function ClientDataTable({ data, totalCount, pageCount }: ClientDataTableProps) {
   const t = useTranslations('clients.table');
-  const locale = useLocale();
   const query = useListQuery();
 
   return (
@@ -27,7 +26,7 @@ export function ClientDataTable({ data, totalCount, pageCount }: ClientDataTable
         pageCount={pageCount}
       />
       <DataTable
-        columns={createColumns(t, locale)}
+        columns={createColumns(t)}
         data={data}
         getRowId={(row) => row.client_id}
         emptyMessage={t('noData')}

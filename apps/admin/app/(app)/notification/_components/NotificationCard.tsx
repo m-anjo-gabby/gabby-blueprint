@@ -1,7 +1,8 @@
 'use client';
 
 import { Bell } from 'lucide-react';
-import { formatZonedDateJapanese } from '@gabby/lib/date/date';
+import { useLocale } from 'next-intl';
+import { formatZonedDate, formatZonedDateJapanese } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getNotificationDisplay } from '@gabby/lib/notification/display';
 import { type NotificationItem } from '@gabby/types/notification';
@@ -14,8 +15,9 @@ interface NotificationCardProps {
 
 export function NotificationCard({ notification, onOpen }: NotificationCardProps) {
   const timezone = useTimezone();
+  const locale = useLocale() === 'en' ? 'en' : 'ja';
 
-  const display = getNotificationDisplay(notification, 'ja');
+  const display = getNotificationDisplay(notification, locale);
   const Icon = display.icon ?? Bell;
 
   return (
@@ -58,7 +60,9 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
           </p>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">{display.body}</p>
           <p className="text-[10px] text-slate-400 mt-2 font-bold">
-            {formatZonedDateJapanese(notification.occurred_at, timezone)}
+            {locale === 'en'
+              ? formatZonedDate(notification.occurred_at, timezone)
+              : formatZonedDateJapanese(notification.occurred_at, timezone)}
           </p>
         </div>
       </button>

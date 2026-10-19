@@ -342,7 +342,7 @@ export async function getCoachesForMatching(): Promise<AdminCoachSummary[]> {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('com_m_user')
-      .select('id, user_name')
+      .select('id, user_name, timezone')
       .eq('user_type', USER_TYPES.COACH)
       .order('user_name');
 
@@ -351,7 +351,7 @@ export async function getCoachesForMatching(): Promise<AdminCoachSummary[]> {
       return [];
     }
 
-    return (data ?? []).map((c) => ({ id: c.id, user_name: c.user_name ?? '(Unknown)' }));
+    return (data ?? []).map((c) => ({ id: c.id, user_name: c.user_name ?? '(Unknown)', timezone: c.timezone }));
   } catch (err) {
     unstable_rethrow(err);
     logger.error('liveSession:get_coaches_unexpected', getErrorMessage(err), {

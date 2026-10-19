@@ -5,7 +5,6 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { ChatAvatar } from '@gabby/lib/components/chat/ChatAvatar';
 import { ChatTimeline } from '@gabby/lib/components/chat/ChatTimeline';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { CHAT_ROOM_TYPES, type ChatMessage, type ChatRoom, type ChatRoomMemberSummary } from '@gabby/types/chat';
 import { USER_TYPES } from '@gabby/types/user';
@@ -23,6 +22,8 @@ interface AdminChatRoomProps {
   viewerUserId: string;
   myLastReadAt: string | null;
   counterpartLastReadAt: string | null;
+  /** 閲覧者のタイムゾーン。ストアの値はハイドレーションの後に入るため、サーバーで取得して渡す（docs/UI.md「日時の表示」） */
+  viewerTimezone: string;
 }
 
 /**
@@ -73,16 +74,21 @@ export function AdminChatRoom(props: AdminChatRoomProps) {
   );
 }
 
-function ChatRoomDetails({ roomId, room, members, canManage }: AdminChatRoomProps & { canManage: boolean }) {
+function ChatRoomDetails({
+  roomId,
+  room,
+  members,
+  viewerTimezone,
+  canManage,
+}: AdminChatRoomProps & { canManage: boolean }) {
   const t = useTranslations('chat.roomDetails');
   const tCommon = useTranslations('chat.common');
   const locale = useLocale();
-  const timeZone = useTimezone();
   const router = useRouter();
   const isGroup = room.room_type === CHAT_ROOM_TYPES.GROUP;
   const createdAt = new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'ja-JP', {
     dateStyle: 'medium',
-    timeZone,
+    timeZone: viewerTimezone,
   }).format(new Date(room.created_at));
 
   return (

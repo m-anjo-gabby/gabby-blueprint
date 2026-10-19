@@ -17,7 +17,9 @@ import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
  * お気に入り（仕様: e2e/specs/favorites/student-favorites.md）
  *
  * - 登録・解除を伴うもの: 使い捨てのアプリのみ契約の生徒（desktop のみ）。お気に入りの行はユーザーの削除で消える。
- * - 種別の切り替えと URL: 固定アカウントの生徒01（閲覧のみ。dev でフレーズ・スプリント問題のお気に入りが入っている）。
+ * - 種別の切り替え・絞り込み・ページ送り: 利用者ペルソナ P10（閲覧のみ。投入スクリプトがフレーズを50件超・汎用スプリントの問題を
+ *   お気に入りに入れ、レベルが上がったため問題種別ごとに複数のレベルがある。件数は再投入で増えるため、値ではなく選択肢の件数と
+ *   一覧の件数が合うことで確かめる。testing/FIXTURES.md）。
  * - WebKit はハイドレーション前の操作が無視されるため、画面内の操作は反映を確かめてから進む（KJ-2026-0928-02）。
  */
 
@@ -44,6 +46,13 @@ async function trailingCount(locator: Locator): Promise<number> {
   return Number(match[1]);
 }
 
+/** 絞り込みの選択肢の件数（表示名が数字で終わるレベル等と連結しないよう、末尾の件数の要素から読む） */
+async function optionCount(option: Locator): Promise<number> {
+  const text = ((await option.locator('span').last().textContent()) ?? '').trim();
+  if (!/^\d+$/.test(text)) throw new Error(`件数が読めません: ${text}`);
+  return Number(text);
+}
+
 /**
  * 絞り込みの項目で、先頭（「すべて」）の次の選択肢を選び、その選択肢の件数を返す。
  * PC はセレクト、mobile は「絞り込み」シートのチップで選ぶ。
@@ -53,7 +62,7 @@ async function chooseFirstOption(page: Page, isMobile: boolean, label: string): 
     const sheet = page.getByRole('dialog', { name: '絞り込み' });
     await clickUntilVisible(page.getByRole('button', { name: /^絞り込み/ }), sheet);
     const option = sheet.getByRole('region', { name: label }).getByRole('button').nth(1);
-    const count = await trailingCount(option);
+    const count = await optionCount(option);
     await option.click();
     await expect(option).toHaveAttribute('aria-pressed', 'true');
     await sheet.getByRole('button', { name: /件を表示$/ }).click();
@@ -62,7 +71,7 @@ async function chooseFirstOption(page: Page, isMobile: boolean, label: string): 
   }
   const option = page.getByRole('option').nth(1);
   await clickUntilVisible(page.getByRole('combobox', { name: label }), option);
-  const count = await trailingCount(option);
+  const count = await optionCount(option);
   await option.click();
   await expect(option).toBeHidden();
   return count;
@@ -386,8 +395,8 @@ test.describe('使い捨ての生徒（お気に入りの上限）', () => {
   });
 });
 
-test.describe('固定アカウントの生徒（閲覧のみ）', () => {
-  test.use({ storageState: storageStatePath('liveStudent') });
+test.describe('お気に入りの多い利用者ペルソナ（閲覧のみ）', () => {
+  test.use({ storageState: storageStatePath('favoriteCollector') });
 
   test('種別の指定が無ければフレーズを開き、切り替えは URL の kind に残る。kind=contents は教材一覧のお気に入りへ転送される', async ({
     page,
@@ -417,9 +426,10 @@ test.describe('固定アカウントの生徒（閲覧のみ）', () => {
     });
   });
 
-  // 件数・選択肢は固定アカウントのデータに依存させず、選んだ選択肢の件数と一覧の件数が合うことで確かめる
-  // （コーパスでレベルが出ないことは、dev にレベル分けの無いコーパスが無いため単体テスト unit/favorite-filters.test.ts で確かめる）
-  test('スプリント問題の絞り込みは教材→問題種別→レベルの順に連動し、条件は URL に残り、前の条件を外すと後ろも外れる', async ({
+  // 件数・選択肢はペルソナのデータに依存させず、選んだ選択肢の件数と一覧の件数が合うことで確かめる。
+  // P10 のスプリント問題は汎用スプリント1教材だけのため、教材の絞り込みは出ない（選択肢が1つ以下の絞り込みは出さない）。
+  // 教材を含む連動・コーパスでレベルが出ないことは単体テスト unit/favorite-filters.test.ts で確かめる
+  test('スプリント問題の絞り込みは問題種別→レベルの順に連動し、条件は URL に残り、前の条件を外すと後ろも外れる', async ({
     page,
     isMobile,
   }) => {
@@ -429,20 +439,16 @@ test.describe('固定アカウントの生徒（閲覧のみ）', () => {
     const total = await trailingCount(pill);
     await expect(favoriteCards(page)).toHaveCount(Math.min(total, 50));
 
-    await test.step('レベルは問題種別を選ぶまで出ない', async () => {
-      await expectFilterShown(page, isMobile, '教材', true);
+    await test.step('教材が1つなら教材の絞り込みは出ず、レベルは問題種別を選ぶまで出ない', async () => {
+      await expectFilterShown(page, isMobile, '教材', false);
+      await expectFilterShown(page, isMobile, '問題種別', true);
       await expectFilterShown(page, isMobile, 'レベル', false);
     });
 
-    await test.step('教材 → 問題種別 → レベルの順に選ぶと、URL に載り、一覧が選択肢の件数になる', async () => {
-      const byContent = await chooseFirstOption(page, isMobile, '教材');
-      await expect(page).toHaveURL(/[?&]content=/);
-      await expect(favoriteCards(page)).toHaveCount(byContent);
-
+    await test.step('問題種別 → レベルの順に選ぶと、URL に載り、一覧が選択肢の件数になる', async () => {
       const byType = await chooseFirstOption(page, isMobile, '問題種別');
       await expect(page).toHaveURL(/[?&]type=/);
       await expect(favoriteCards(page)).toHaveCount(byType);
-      expect(byType).toBeLessThanOrEqual(byContent);
 
       const byLevel = await chooseFirstOption(page, isMobile, 'レベル');
       await expect(page).toHaveURL(/[?&]level=/);
@@ -450,21 +456,21 @@ test.describe('固定アカウントの生徒（閲覧のみ）', () => {
       expect(byLevel).toBeLessThanOrEqual(byType);
 
       await page.reload();
-      await expect(page).toHaveURL(/content=.*type=.*level=|level=.*type=.*content=/);
+      await expect(page).toHaveURL(/type=.*level=|level=.*type=/);
       await expect(favoriteCards(page)).toHaveCount(byLevel);
     });
 
-    await test.step('教材の条件を外すと、問題種別・レベルの条件も外れる', async () => {
+    await test.step('問題種別の条件を外すと、レベルの条件も外れる', async () => {
       if (isMobile) {
-        await expect(page.getByRole('button', { name: /の条件を外す$/ })).toHaveCount(3);
+        await expect(page.getByRole('button', { name: /の条件を外す$/ })).toHaveCount(2);
         await page.waitForLoadState('networkidle');
-        await page.getByRole('button', { name: /^教材「.+」の条件を外す$/ }).click();
+        await page.getByRole('button', { name: /^問題種別「.+」の条件を外す$/ }).click();
       } else {
-        const allOption = page.getByRole('option', { name: 'すべての教材' });
-        await clickUntilVisible(page.getByRole('combobox', { name: '教材' }), allOption);
+        const allOption = page.getByRole('option', { name: 'すべての問題種別' });
+        await clickUntilVisible(page.getByRole('combobox', { name: '問題種別' }), allOption);
         await allOption.click();
       }
-      await expect(page).not.toHaveURL(/[?&](content|type|level)=/);
+      await expect(page).not.toHaveURL(/[?&](type|level)=/);
       await expect(favoriteCards(page)).toHaveCount(Math.min(total, 50));
     });
   });
@@ -477,8 +483,8 @@ test.describe('固定アカウントの生徒（閲覧のみ）', () => {
     const total = await trailingCount(kindPill(page, 'スプリント問題'));
     await expect(favoriteCards(page)).toHaveCount(Math.min(total, 50));
 
-    await chooseFirstOption(page, isMobile, '教材');
-    await expect(page).toHaveURL(/[?&]content=/);
+    await chooseFirstOption(page, isMobile, '問題種別');
+    await expect(page).toHaveURL(/[?&]type=/);
     const search = page.getByRole('searchbox', { name: '問題を検索' });
     await search.fill('zzzz-e2e-no-match');
     await expect(page.getByText('条件に合う問題が見つかりません')).toBeVisible();
@@ -486,14 +492,14 @@ test.describe('固定アカウントの生徒（閲覧のみ）', () => {
 
     await page.getByRole('button', { name: '条件をクリア' }).click();
     await expect(search).toHaveValue('');
-    await expect(page).not.toHaveURL(/[?&]content=/);
+    await expect(page).not.toHaveURL(/[?&]type=/);
     await expect(favoriteCards(page)).toHaveCount(Math.min(total, 50));
   });
 
   test('50件を超える種別は50件ずつ表示し、「さらに表示」で続きを出す', async ({ page }) => {
     await page.goto('/favorites');
     const total = await trailingCount(kindPill(page, 'フレーズ'));
-    expect(total, '固定アカウントのフレーズのお気に入りが50件を超えていること（FIXTURES.md）').toBeGreaterThan(50);
+    expect(total, 'P10 のフレーズのお気に入りが50件を超えていること（FIXTURES.md）').toBeGreaterThan(50);
     await expect(favoriteCards(page)).toHaveCount(50);
 
     const more = page.getByRole('button', { name: `さらに表示（残り${total - 50}件）` });

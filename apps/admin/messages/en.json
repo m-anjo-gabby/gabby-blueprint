@@ -614,7 +614,15 @@
     "title": "Notifications",
     "subtitle": "A list of notifications received from the system.",
     "itemsLabel": "Items",
-    "empty": "There are no notifications right now"
+    "empty": "There are no notifications right now",
+    "dropdown": {
+      "bellLabel": "Notifications",
+      "title": "Notifications",
+      "unreadBadge": "{count} unread",
+      "markAllRead": "Mark all as read",
+      "empty": "No notifications",
+      "viewAll": "View all →"
+    }
   },
   "profile": {
     "page": {

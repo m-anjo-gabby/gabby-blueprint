@@ -614,7 +614,15 @@
     "title": "通知",
     "subtitle": "システムから届いた通知の一覧です。",
     "itemsLabel": "件",
-    "empty": "現在通知はありません"
+    "empty": "現在通知はありません",
+    "dropdown": {
+      "bellLabel": "通知",
+      "title": "通知",
+      "unreadBadge": "{count} 未読",
+      "markAllRead": "すべて既読にする",
+      "empty": "通知はありません",
+      "viewAll": "すべて見る →"
+    }
   },
   "profile": {
     "page": {

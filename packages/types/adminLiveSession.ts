@@ -60,6 +60,8 @@ export interface AdminContractSummary extends StudentLiveSessionContractSummary 
 export interface AdminCoachSummary {
   id: string;
   user_name: string;
+  /** コーチの IANA タイムゾーン名（月次レポートの月はコーチの暦で区切る） */
+  timezone: string;
 }
 
 export type GetClientStudentsResult =

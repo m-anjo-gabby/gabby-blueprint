@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { BellOff, BellRing } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -27,6 +28,8 @@ export function NotificationDropdown() {
   const user = useUserStore((state) => state.user);
   const timezone = user?.timezone || 'Asia/Tokyo';
   const router = useRouter();
+  const t = useTranslations('notification.dropdown');
+  const locale = useLocale() === 'en' ? 'en' : 'ja';
 
   useNotificationRealtime(user?.id ?? null);
 
@@ -41,7 +44,7 @@ export function NotificationDropdown() {
       <DropdownMenuTrigger asChild>
         <button
           id="notification-bell-button"
-          aria-label="通知"
+          aria-label={t('bellLabel')}
           className="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-100 active:scale-90 transition-all outline-none"
         >
           <BellRing size={18} className="text-slate-500" />
@@ -74,10 +77,10 @@ export function NotificationDropdown() {
           <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-50">
             <div className="flex items-center gap-2">
               <BellRing size={14} className="text-slate-500" />
-              <span className="text-xs font-black text-slate-800 tracking-tight">通知</span>
+              <span className="text-xs font-black text-slate-800 tracking-tight">{t('title')}</span>
               {unreadCount > 0 && (
                 <span className="text-[9px] font-black text-rose-500 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-full">
-                  {unreadCount} 未読
+                  {t('unreadBadge', { count: unreadCount })}
                 </span>
               )}
             </div>
@@ -86,7 +89,7 @@ export function NotificationDropdown() {
                 onClick={() => markAllAsRead()}
                 className="text-[10px] font-bold text-slate-400 hover:text-brand transition-colors"
               >
-                すべて既読にする
+                {t('markAllRead')}
               </button>
             )}
           </div>
@@ -103,12 +106,12 @@ export function NotificationDropdown() {
                 <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-3">
                   <BellOff size={18} />
                 </div>
-                <p className="text-xs font-bold text-slate-400">通知はありません</p>
+                <p className="text-xs font-bold text-slate-400">{t('empty')}</p>
               </div>
             ) : (
               <div className="p-2 space-y-1">
                 {previewNotifications.map((notification) => {
-                  const display = getNotificationDisplay(notification, 'ja');
+                  const display = getNotificationDisplay(notification, locale);
                   const Icon = display.icon ?? BellRing;
 
                   return (
@@ -169,7 +172,7 @@ export function NotificationDropdown() {
                 href="/notification"
                 className="flex items-center justify-center w-full h-10 !bg-brand hover:!bg-brand-strong !text-white focus:!text-white focus:!bg-brand-strong data-[highlighted]:!bg-brand-strong data-[highlighted]:!text-white rounded-xl text-[11px] font-black uppercase tracking-wider shadow-sm transition-all outline-none cursor-pointer"
               >
-                すべて見る →
+                {t('viewAll')}
               </Link>
             </DropdownMenuItem>
           </div>

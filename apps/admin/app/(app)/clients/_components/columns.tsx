@@ -2,6 +2,7 @@
 'use client';
 
 import type { useTranslations } from 'next-intl';
+import { formatZonedDate } from '@gabby/lib/date/date';
 import { CLIENT_STATUS, type ClientRecord } from '@gabby/types/client';
 import { InactiveBadge } from '@/components/common/InactiveBadge';
 import type { ListColumnDef } from '@/components/list/listTable';
@@ -10,7 +11,7 @@ import { ClientFormDialog } from './ClientFormDialog';
 
 type TableT = ReturnType<typeof useTranslations<'clients.table'>>;
 
-export function createColumns(t: TableT, locale: string): ListColumnDef<ClientRecord>[] {
+export function createColumns(t: TableT): ListColumnDef<ClientRecord>[] {
   return [
     {
       accessorKey: 'client_name',
@@ -50,12 +51,10 @@ export function createColumns(t: TableT, locale: string): ListColumnDef<ClientRe
     {
       accessorKey: 'insert_date',
       header: t('registeredDateHeader'),
-      cell: ({ row }) => {
-        const date = new Date(row.getValue('insert_date'));
-        return (
-          <span className="text-xs text-slate-500">{date.toLocaleDateString(locale === 'en' ? 'en-US' : 'ja-JP')}</span>
-        );
-      },
+      // サーバー（UTC）とブラウザで日付が変わらないよう、運営の基準の JST に固定する
+      cell: ({ row }) => (
+        <span className="text-xs text-slate-500">{formatZonedDate(row.original.insert_date, 'Asia/Tokyo')}</span>
+      ),
     },
     {
       id: 'actions',

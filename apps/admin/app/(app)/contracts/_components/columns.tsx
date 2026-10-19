@@ -1,10 +1,9 @@
 // src/app/(app)/admin/contracts/_components/columns.tsx
 'use client';
 
-import { format, isAfter, isBefore, startOfDay } from 'date-fns';
-import { enUS, ja } from 'date-fns/locale';
 import { Eye, Pencil } from 'lucide-react';
 import type { useTranslations } from 'next-intl';
+import { formatZonedDate, toIsoDateInZone } from '@gabby/lib/date/date';
 import { type ContractDetail } from '@gabby/types/contract';
 import type { ListColumnDef } from '@/components/list/listTable';
 import { Badge } from '@/components/ui/badge';
@@ -14,8 +13,12 @@ import { DeleteContractDialog } from './DeleteContractDialog';
 
 type TableT = ReturnType<typeof useTranslations<'contracts.table'>>;
 
-export function createColumns(t: TableT, locale: string): ListColumnDef<ContractDetail>[] {
-  const dateLocale = locale === 'en' ? enUS : ja;
+// 契約期間は JST の 0:00〜23:59:59 で保存しているため、JST の暦の日付で表示・判定する。
+// タイムゾーンを固定しないと、サーバー（UTC）とブラウザで日付がずれてハイドレーションが一致しない
+const CONTRACT_TIMEZONE = 'Asia/Tokyo';
+const toContractDate = (value: string) => toIsoDateInZone(value, CONTRACT_TIMEZONE);
+
+export function createColumns(t: TableT): ListColumnDef<ContractDetail>[] {
   return [
     {
       id: 'client_name',
@@ -56,13 +59,8 @@ export function createColumns(t: TableT, locale: string): ListColumnDef<Contract
       header: t('licenseUsageHeader'),
       cell: ({ row }) => {
         const contract = row.original;
-        // "YYYY-MM-DD"（JSTの日付文字列）をそのままnew Date()に渡すとUTC 00:00として解釈され、
-        // 日本時間との9時間のズレにより日付判定が1日早くズレるため startOfDay で正規化する
-        const end = startOfDay(new Date(contract.end_date));
-        const now = startOfDay(new Date());
-
         // 契約終了フラグ（終了日を過ぎている場合は操作不可）
-        const isExpired = isBefore(end, now);
+        const isExpired = toContractDate(contract.end_date) < toContractDate(new Date().toISOString());
 
         const max = contract.max_licenses;
         // 無効化されたライセンスも「消化済み」として扱い続ける（枠は戻らない）ため、
@@ -124,16 +122,12 @@ export function createColumns(t: TableT, locale: string): ListColumnDef<Contract
       id: 'period',
       header: t('periodHeader'),
       cell: ({ row }) => {
-        const start = new Date(row.original.start_date);
-        const end = new Date(row.original.end_date);
+        const start = formatZonedDate(row.original.start_date, CONTRACT_TIMEZONE);
+        const end = formatZonedDate(row.original.end_date, CONTRACT_TIMEZONE);
         return (
           <div className="text-[11px] leading-tight space-y-0.5">
-            <div className="text-slate-400">
-              {t('startLabel', { date: format(start, 'yyyy/MM/dd', { locale: dateLocale }) })}
-            </div>
-            <div className="text-slate-700 font-bold">
-              {t('endLabel', { date: format(end, 'yyyy/MM/dd', { locale: dateLocale }) })}
-            </div>
+            <div className="text-slate-400">{t('startLabel', { date: start })}</div>
+            <div className="text-slate-700 font-bold">{t('endLabel', { date: end })}</div>
           </div>
         );
       },
@@ -143,12 +137,10 @@ export function createColumns(t: TableT, locale: string): ListColumnDef<Contract
       header: t('statusHeader'),
       cell: ({ row }) => {
         const status = row.getValue('status') as number;
-        // "YYYY-MM-DD"（JSTの日付文字列）をそのままnew Date()に渡すとUTC 00:00として解釈され、
-        // 日本時間との9時間のズレにより「本日が開始日」でも開始待ち判定になってしまうため
-        // startOfDay で正規化してから比較する
-        const start = startOfDay(new Date(row.original.start_date));
-        const end = startOfDay(new Date(row.original.end_date));
-        const now = startOfDay(new Date()); // 時刻を除外して日付のみで比較
+        // YYYY-MM-DD の文字列のため、文字列の大小で日付の前後を比べられる
+        const start = toContractDate(row.original.start_date);
+        const end = toContractDate(row.original.end_date);
+        const today = toContractDate(new Date().toISOString());
 
         /**
          * 判定ロジックの優先順位:
@@ -163,7 +155,7 @@ export function createColumns(t: TableT, locale: string): ListColumnDef<Contract
             </Badge>
           );
 
-        if (isBefore(end, now)) {
+        if (end < today) {
           return (
             <Badge variant="secondary" className="bg-slate-200 text-slate-500">
               {t('statusEnded')}
@@ -171,7 +163,7 @@ export function createColumns(t: TableT, locale: string): ListColumnDef<Contract
           );
         }
 
-        if (isAfter(start, now)) {
+        if (start > today) {
           return (
             <Badge variant="outline" className="text-blue-500 border-blue-200 bg-blue-50">
               {t('statusUpcoming')}

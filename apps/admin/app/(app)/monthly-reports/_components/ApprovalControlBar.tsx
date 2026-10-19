@@ -1,9 +1,10 @@
 'use client';
 
 import { CalendarCheck, CalendarX, TriangleAlert } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { type MonthlyReportApproval } from '@gabby/types/monthlyReport';
 import { approveMonthlyReport, revokeMonthlyReportApproval } from '@/actions/adminMonthlyReportAction';
@@ -44,7 +45,6 @@ export function ApprovalControlBar({
 }) {
   const t = useTranslations('monthlyReports.approvalBar');
   const tCommon = useTranslations('common');
-  const locale = useLocale();
   const router = useRouter();
   const { showToast } = useToast();
   const [isPending, setIsPending] = useState(false);
@@ -85,7 +85,8 @@ export function ApprovalControlBar({
             {approval?.approved_at && (
               <span className="font-normal text-emerald-600">
                 {t('approvedAtFormatted', {
-                  datetime: new Date(approval.approved_at).toLocaleString(locale === 'en' ? 'en-US' : 'ja-JP'),
+                  // サーバー（UTC）とブラウザで食い違わないよう、admin の他の日時と同じく JST に固定する
+                  datetime: formatDateTimeByZone(approval.approved_at, 'Asia/Tokyo', false),
                 })}
               </span>
             )}

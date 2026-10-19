@@ -1,4 +1,5 @@
 import { CalendarCheck, Download, TriangleAlert } from 'lucide-react';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { type CoachMonthlyReport } from '@gabby/types/monthlyReport';
 
 /** timezoneName: コーチのタイムゾーンのマスタの表示名（例: "Japan (Tokyo)"） */
@@ -15,7 +16,7 @@ export function SummaryCard({ report, timezoneName }: { report: CoachMonthlyRepo
             Approved
             {report.approval?.approved_at && (
               <span className="font-normal text-emerald-600">
-                on {new Date(report.approval.approved_at).toLocaleDateString('en-US')}
+                on {formatDateEn(report.approval.approved_at, report.coach_timezone)}
               </span>
             )}
           </span>
