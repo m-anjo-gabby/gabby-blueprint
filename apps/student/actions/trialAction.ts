@@ -3,6 +3,7 @@
 import { getLogContext } from '@gabby/lib/logger/context';
 import { verifyTurnstileToken } from '@gabby/lib/security/turnstile';
 import { submitTrialApplication } from '@gabby/lib/trial/apply';
+import { isTrialApplicationEnabled } from '@gabby/lib/trial/availability';
 import {
   toTrialApplicationInput,
   trialApplicationSchema,
@@ -19,6 +20,11 @@ export async function submitTrial(
   values: TrialApplicationFormValues,
   turnstileToken: string,
 ): Promise<SubmitTrialResult> {
+  // 画面を通さずにアクションを直接呼ばれても、受付を止めている環境では受け付けない
+  if (!isTrialApplicationEnabled()) {
+    return { success: false, error: '現在、お申し込みを受け付けていません。' };
+  }
+
   const ctx = await getLogContext();
 
   if (!(await verifyTurnstileToken(turnstileToken, ctx))) {

@@ -39,9 +39,15 @@
 --   - NEXT_PUBLIC_TURNSTILE_SITE_KEY / TURNSTILE_SECRET_KEY … staging は Cloudflare のテスト用の固定値（設定不要）。
 --     prod は Cloudflare の Turnstile で blueprint.gabbyacademy.com 用に作ったサイトキー・秘密鍵を値ファイルに書く
 --     （未設定のままでは --apply が止まる。秘密鍵が無いと申込を受け付けない）
+--   - TRIAL_APPLICATION_ENABLED … 申込の受付の有無（staging: true / prod: false。manifest の固定値で、値の設定は不要）。
+--     本番は Webトライアルを試験運用（アプリのみの契約）の間は受け付けず、/trial・/trial/complete は 404 になる。
+--     staging の検証中（feature/20261019-dev）に追加したため、staging にはこのブランチのマージ後に --apply してデプロイし直す
+--     （反映しないと staging の /trial も 404 になる）
 --
 -- 【リリース後の作業】
---   コーポレートサイトのトライアル申込のリンク先を https://blueprint.gabbyacademy.com/trial に変える（制作会社に依頼）。
+--   本番で受付を始めるまでは無い。受付を始めるときは、scripts/vercel-env/manifest.mjs の TRIAL_APPLICATION_ENABLED の
+--   prod を true に変えて `pnpm vercel-env --env=prod --apply` → student をデプロイし、同じ時期にコーポレートサイトの
+--   トライアル申込のリンク先を https://blueprint.gabbyacademy.com/trial に変える（制作会社に依頼）。
 --
 -- 【実行方法】
 --   supabase/release/README.md の手順に従い run.mjs で適用してください。

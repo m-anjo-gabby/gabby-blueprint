@@ -213,6 +213,17 @@ export const MANIFEST = [
     validate: 'email-list',
     value: { default: OPTIONAL, prod: LOCAL },
   },
+  // ---------------------------------------------------------------- Webトライアル
+  {
+    key: 'TRIAL_APPLICATION_ENABLED',
+    apps: ['student'],
+    group: 'Webトライアル',
+    description:
+      'Webトライアルの申込（/trial）を受け付けるか（true / false）。false・未設定なら /trial・/trial/complete は 404、申込のアクションも受け付けない。本番は試験運用の間 false',
+    validate: ['true', 'false'],
+    value: { default: 'true', prod: 'false' },
+    note: '本番で受付を始めるときは prod を true に変えて --apply し、デプロイし直す（コーポレートサイトのリンクの差し替えと同じ時期に）',
+  },
   // ---------------------------------------------------------------- Cloudflare Turnstile（CAPTCHA）
   {
     key: 'NEXT_PUBLIC_TURNSTILE_SITE_KEY',

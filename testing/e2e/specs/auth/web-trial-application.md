@@ -20,6 +20,7 @@
   リリーススクリプト `20261016` のセクション2〜4が適用済みであること。
 - 使い捨ての顧客には所属させられないため、テストは**この申込で作った行だけ**を後始末で消す（申込・招待・通知・ユーザーとそのライセンス/チケット/履歴、
   テスト中にできた月の契約）。
+- student の `TRIAL_APPLICATION_ENABLED=true`（dev・staging・手元の `.env.local`）。`false`・未設定では `/trial` が 404 になり、テストは流せない（本番は試験運用の間 `false`）。
 - CAPTCHA は dev・staging では Cloudflare のテスト用の鍵（常に通る）。トークンはウィジェットの表示から数秒遅れて入るため、
   隠し項目 `cf-turnstile-response` に値が入ってから送信する（`e2e/CONVENTIONS.md` 9章）。
 - 宛先は Resend のテスト用アドレス `delivered+<tag>@resend.dev`（実際に送る）。`RESEND_TEST_READ_API_KEY` があれば届いた招待メールのリンクを使い、
