@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, Edit, MessageSquare, Plus, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
+import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
@@ -74,44 +74,6 @@ export function SprintQuestionFormDialog({
   const isMastery = type === '6';
   const questionLabel = isCueType ? t('cueLabel') : 'Question';
 
-  // ダイアログが開くたびにフォームをリセット
-  useEffect(() => {
-    if (open) {
-      form.reset({
-        group_id: initialData?.group_id || initialGroupId || (isSpeed ? '' : crypto.randomUUID()),
-        items: initialData
-          ? [
-              {
-                question_id: initialData.question_id,
-                seq_no: String(initialData.seq_no),
-                statement_en: initialData.statement_en || '',
-                statement_ja: initialData.statement_ja || '',
-                question_en: initialData.question_en,
-                question_ja: initialData.question_ja || '',
-                answer_sentence_yes_en: initialData.answer_sentence_yes_en,
-                answer_sentence_yes_ja: initialData.answer_sentence_yes_ja || '',
-                answer_sentence_no_en: initialData.answer_sentence_no_en || '',
-                answer_sentence_no_ja: initialData.answer_sentence_no_ja || '',
-              },
-            ]
-          : [
-              {
-                seq_no: '1',
-                statement_en: initialStatement || '',
-                statement_ja: initialStatementJa || '',
-                question_en: '',
-                question_ja: '',
-                answer_sentence_yes_en: '',
-                answer_sentence_yes_ja: '',
-                answer_sentence_no_en: '',
-                answer_sentence_no_ja: '',
-              },
-            ],
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 開いた時・初期値が変わった時だけ入れ直す（それ以外の値の変化で入力中の内容を上書きしない）
-  }, [open, initialData, initialGroupId, initialStatement, initialStatementJa, isSpeed]);
-
   const form = useForm<FormValues>({
     resolver: zodResolver(sprintSchema),
     defaultValues: {
@@ -146,6 +108,45 @@ export function SprintQuestionFormDialog({
           ],
     },
   });
+
+  const groupId = useWatch({ control: form.control, name: 'group_id' });
+
+  // 開いた時・初期値が変わった時だけ入れ直す（それ以外の値の変化で入力中の内容を上書きしない。form は useForm が同じものを返す）
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        group_id: initialData?.group_id || initialGroupId || (isSpeed ? '' : crypto.randomUUID()),
+        items: initialData
+          ? [
+              {
+                question_id: initialData.question_id,
+                seq_no: String(initialData.seq_no),
+                statement_en: initialData.statement_en || '',
+                statement_ja: initialData.statement_ja || '',
+                question_en: initialData.question_en,
+                question_ja: initialData.question_ja || '',
+                answer_sentence_yes_en: initialData.answer_sentence_yes_en,
+                answer_sentence_yes_ja: initialData.answer_sentence_yes_ja || '',
+                answer_sentence_no_en: initialData.answer_sentence_no_en || '',
+                answer_sentence_no_ja: initialData.answer_sentence_no_ja || '',
+              },
+            ]
+          : [
+              {
+                seq_no: '1',
+                statement_en: initialStatement || '',
+                statement_ja: initialStatementJa || '',
+                question_en: '',
+                question_ja: '',
+                answer_sentence_yes_en: '',
+                answer_sentence_yes_ja: '',
+                answer_sentence_no_en: '',
+                answer_sentence_no_ja: '',
+              },
+            ],
+      });
+    }
+  }, [open, form, initialData, initialGroupId, initialStatement, initialStatementJa, isSpeed]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -213,7 +214,7 @@ export function SprintQuestionFormDialog({
                   <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">
                     Current Group ID
                   </span>
-                  <code className="text-brand-400 text-xs font-mono">{form.watch('group_id')}</code>
+                  <code className="text-brand-400 text-xs font-mono">{groupId}</code>
                 </div>
                 {isMastery && (
                   <div className="flex-1 border-l border-slate-700 pl-4">

@@ -170,17 +170,19 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
   // 完了ダイアログ表示中、数秒後に自動で結果画面へ遷移する
   useAutoRedirectCountdown(!!resultId, handleGoToResult);
 
-  const handleTimeUp = useCallback(() => {
-    const state = useLessonSprintStore.getState().session;
-    if (!state.isActive) return;
-    const current = state.questions[state.currentIndex];
-    const alreadyCommitted = current && state.sessionResults.some((r) => r.questionId === current.question_id);
-    if (current && !alreadyCommitted) {
-      commitScoreResult(current.question_id, DEFAULT_LESSON_SPRINT_SCORE);
-    }
-    void handleSave(pausedSecondsRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSave は毎回の描画で作り直されるため含めない（時間切れの判定に使う状態はストアから直接読む）
-  }, [commitScoreResult]);
+  const handleTimeUp = useCallback(
+    (pausedSeconds: number) => {
+      const state = useLessonSprintStore.getState().session;
+      if (!state.isActive) return;
+      const current = state.questions[state.currentIndex];
+      const alreadyCommitted = current && state.sessionResults.some((r) => r.questionId === current.question_id);
+      if (current && !alreadyCommitted) {
+        commitScoreResult(current.question_id, DEFAULT_LESSON_SPRINT_SCORE);
+      }
+      void handleSave(pausedSeconds);
+    },
+    [commitScoreResult, handleSave],
+  );
 
   const { secondsLeft, isPaused, togglePause, pausedSecondsRef } = useLessonSprintCountdown(
     config.timeLimitSec,

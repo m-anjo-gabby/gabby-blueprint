@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { CounterpartLocalTime } from '@gabby/lib/components/common/CounterpartLocalTime';
 import {
   convertWeeklyTimeZone,
@@ -77,15 +77,16 @@ export function BookMakeupSessionDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
+  // 開いた時だけ入力を空に戻す（開いている間に親の値が変わっても入力中の内容を戻さない）
+  const resetInputs = useEffectEvent(() => {
+    setSelectedScheduleId(slots[0]?.schedule_id ?? null);
+    setNewDate(initialDate || tomorrowIsoDate());
+    setNewStartTime(null);
+    setReason('');
+    setConflictMessage(null);
+  });
   useEffect(() => {
-    if (open) {
-      setSelectedScheduleId(slots[0]?.schedule_id ?? null);
-      setNewDate(initialDate || tomorrowIsoDate());
-      setNewStartTime(null);
-      setReason('');
-      setConflictMessage(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 開いた時だけ入力を空に戻す
+    if (open) resetInputs();
   }, [open]);
 
   const selectedSlot = slots.find((s) => s.schedule_id === selectedScheduleId) ?? null;

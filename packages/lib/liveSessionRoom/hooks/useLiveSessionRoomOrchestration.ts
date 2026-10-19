@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { LIVE_SESSION_END_AFTER_MS, LIVE_SESSION_WARNING_AFTER_MS } from '../constants';
 
 interface ChatMessageLike {
@@ -94,6 +94,8 @@ export function useLiveSessionRoomOrchestration({
     }
   }, [chatMessages, sessionId, recordChatMessage]);
 
+  // 時間制限のタイマーは開始できるようになった時に1回だけ掛ける（コールバックの参照の変化では掛け直さない）
+  const fireTimeLimitReached = useEffectEvent(() => onTimeLimitReached());
   useEffect(() => {
     if (!canStartTimer || sessionTimersStarted.current) return;
     sessionTimersStarted.current = true;
@@ -103,9 +105,8 @@ export function useLiveSessionRoomOrchestration({
     }, LIVE_SESSION_WARNING_AFTER_MS);
 
     endTimeoutRef.current = setTimeout(() => {
-      onTimeLimitReached();
+      fireTimeLimitReached();
     }, LIVE_SESSION_END_AFTER_MS);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 時間制限のタイマーは開始できるようになった時に1回だけ掛ける（コールバックの参照の変化では掛け直さない）
   }, [canStartTimer]);
 
   useEffect(() => {

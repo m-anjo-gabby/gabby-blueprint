@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { CalendarClock, ListPlus, Loader2, RefreshCcw, UserPlus, Users, Video } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { pickTimezoneName } from '@gabby/lib/date/timezone';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import type {
@@ -114,27 +114,26 @@ export function LiveSessionManagementView({ clients, coaches }: LiveSessionManag
   const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
   const [matchSlotNo, setMatchSlotNo] = useState(1);
 
-  // 顧客が変わったら生徒・以降の選択状態をリセットして再取得
-  useEffect(() => {
+  // 顧客が変わったら生徒・以降の選択状態をリセットして再取得（きっかけは顧客の変化だけ。showToast・t は再取得で参照が変わるため effect の依存にしない）
+  const onClientChange = useEffectEvent((clientId: string) => {
     setSelectedStudentId('');
     setContracts([]);
     setSelectedTicketId('');
     setSlots([]);
     setSessions([]);
-    if (!selectedClientId) {
+    if (!clientId) {
       setStudents([]);
       return;
     }
     setIsLoadingStudents(true);
-    getClientStudents(selectedClientId).then((result) => {
+    getClientStudents(clientId).then((result) => {
       setStudents(result.success ? result.students : []);
       if (!result.success) showToast(t('toastStudentsFetchFailed'), 'error');
       setIsLoadingStudents(false);
     });
-    // showToast/tはrevalidatePath後のルート再フェッチで参照が変わりうるため依存から除外する
-    // （selectedClientId自体が変わっていないのに顧客選択後の状態がリセットされる不具合を防ぐ。
-    // 他の2つのuseEffectと同じくトリガーは対象IDの変化のみとする）
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 対象の顧客が変わった時だけ読み直す（showToast・t は再取得で参照が変わり、選択がリセットされるため。上のコメント）
+  });
+  useEffect(() => {
+    onClientChange(selectedClientId);
   }, [selectedClientId]);
 
   // 生徒が変わったら契約・以降の選択状態をリセットして再取得
@@ -166,15 +165,17 @@ export function LiveSessionManagementView({ clients, coaches }: LiveSessionManag
     setIsLoadingDetail(false);
   };
 
-  // 契約(チケット)が変わったらスケジュール・セッションを再取得
-  useEffect(() => {
-    if (!selectedTicketId) {
+  // 契約（チケット）が変わったらスケジュール・セッションを再取得（きっかけはチケットの変化だけ）
+  const onTicketChange = useEffectEvent((ticketId: string) => {
+    if (!ticketId) {
       setSlots([]);
       setSessions([]);
       return;
     }
-    loadTicketDetail(selectedTicketId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 対象のチケットが変わった時だけ読み直す（上と同じ理由）
+    loadTicketDetail(ticketId);
+  });
+  useEffect(() => {
+    onTicketChange(selectedTicketId);
   }, [selectedTicketId]);
 
   const handleReleaseSlot = async (scheduleId: string) => {

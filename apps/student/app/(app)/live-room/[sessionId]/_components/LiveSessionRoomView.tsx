@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
@@ -96,11 +96,12 @@ export function LiveSessionRoomView({ access }: LiveSessionRoomViewProps) {
     recordChatMessage,
   });
 
+  // プレビューは条件がそろった時に1回だけ始める（preview の参照の変化で始め直さない。二重の開始は previewRequested で防ぐ）
+  const startPreview = useEffectEvent((canvas: HTMLCanvasElement) => preview.startPreview(canvas));
   useEffect(() => {
     if (phase !== 'preview' || previewRequested.current || !previewCanvasRef.current) return;
     previewRequested.current = true;
-    preview.startPreview(previewCanvasRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- プレビューは条件がそろった時に1回だけ始める（preview の参照の変化で始め直さない。二重の開始は previewRequested で防ぐ）
+    startPreview(previewCanvasRef.current);
   }, [phase]);
 
   useEffect(() => {
@@ -124,24 +125,28 @@ export function LiveSessionRoomView({ access }: LiveSessionRoomViewProps) {
   }, [isJoined, trackSelf]);
 
   // コーチ側が（制限時間到達 or 手動操作で）通話を終了させた場合、専用の終了画面へ遷移する
-  useEffect(() => {
-    if (!wasEndedByHost || phase !== 'in-call') return;
+  // コーチが終了した時に1回だけ退室の処理をする（関数の参照の変化では動かさない）
+  const leaveEndedByHost = useEffectEvent(() => {
     clearSessionTimers();
     untrackSelf();
     recordLeaveIfNeeded();
     setPhase('ended');
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- コーチが終了した時に1回だけ退室の処理をする（関数の参照の変化では動かさない）
+  });
+  useEffect(() => {
+    if (!wasEndedByHost || phase !== 'in-call') return;
+    leaveEndedByHost();
   }, [wasEndedByHost, phase]);
 
+  // 退室の後片付けは画面を離れる時だけ行う（関数の参照が変わっても途中で退室しない）
+  const cleanupOnLeave = useEffectEvent(() => {
+    preview.stopPreview();
+    clearSessionTimers();
+    untrackSelf();
+    recordLeaveIfNeeded();
+    leave();
+  });
   useEffect(() => {
-    return () => {
-      preview.stopPreview();
-      clearSessionTimers();
-      untrackSelf();
-      recordLeaveIfNeeded();
-      leave();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 退室の後片付けは画面を離れる時だけ行う（関数の参照が変わっても途中で退室しない）
+    return () => cleanupOnLeave();
   }, []);
 
   const handleStartCall = async () => {

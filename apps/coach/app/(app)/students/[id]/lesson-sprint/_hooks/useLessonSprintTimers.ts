@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
 /**
  * Lesson Sprint専用：制限時間のカウントダウン＋一時停止/再開を管理する。
@@ -9,7 +9,12 @@ import { useEffect, useRef, useState } from 'react';
  * 一時停止中は interval 自体は動かし続けたまま、コールバック内で
  * デクリメントをスキップするガード方式にすることで再生成コストを避ける。
  */
-export function useLessonSprintCountdown(timeLimitSec: number, onTimeUp: () => void, started: boolean = true) {
+export function useLessonSprintCountdown(
+  timeLimitSec: number,
+  /** 時間切れの時に、一時停止していた合計秒数を渡して呼ぶ */
+  onTimeUp: (pausedSeconds: number) => void,
+  started: boolean = true,
+) {
   const [secondsLeft, setSecondsLeft] = useState<number>(timeLimitSec || 60);
   const [isPaused, setIsPaused] = useState<boolean>(false);
 
@@ -21,9 +26,8 @@ export function useLessonSprintCountdown(timeLimitSec: number, onTimeUp: () => v
   const isPausedRef = useRef<boolean>(false);
   const pauseStartedAtRef = useRef<number | null>(null);
   const totalPausedMsRef = useRef<number>(0);
-  // 保存時に読み取る、一時停止していた合計秒数。resume() のたびに更新される安定した ref。
-  // 呼び出し側はコールバック内で pausedSecondsRef.current を読むだけでよく、
-  // フック呼び出し順序（宣言前参照）を気にせず安全に使える。
+  // 保存時に読み取る、一時停止していた合計秒数。resume() のたびに更新される。
+  // 時間切れでは onTimeUp の引数で渡し、ほかの保存（途中で終える等）では呼び出し側がこの ref を読む。
   const pausedSecondsRef = useRef<number>(0);
 
   // 開始前インストラクション画面の間はタイマーを進行させないためのガード。
@@ -46,11 +50,13 @@ export function useLessonSprintCountdown(timeLimitSec: number, onTimeUp: () => v
     return () => clearInterval(interval);
   }, []);
 
+  // 時間切れは残り時間が0になった時だけ知らせる（呼び出し側のコールバックの参照が変わっても、0秒の間に二重に呼ばない）
+  const fireTimeUp = useEffectEvent(onTimeUp);
   useEffect(() => {
     if (secondsLeft <= 0) {
-      onTimeUp();
+      fireTimeUp(pausedSecondsRef.current);
     }
-  }, [secondsLeft, onTimeUp]);
+  }, [secondsLeft]);
 
   const pause = () => {
     if (isPausedRef.current) return;

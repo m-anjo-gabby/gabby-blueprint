@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronLeft, Loader2, Square } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { extractContentWords, getFeedbackConfig, getSprintTitle, resolveSprintHasLevel } from '@gabby/lib';
 import { waitFor } from '@gabby/lib/audio/core/flow';
 import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
@@ -473,9 +473,10 @@ export function SprintDrillPlayer({
     onExit: () => onExit?.(),
   });
 
-  // タイムライン1：問題カード変更検知
-  useEffect(() => {
-    if (!currentQuestion || !isStarted || exitLoading) return;
+  // タイムライン1：問題カード変更検知。問題の切り替え等の時だけ流れを始める（毎秒変わる state などで始め直さない。
+  // recoveries: 中断からの復旧で問題を再生し直す）。始めた場合だけ true を返し、effect が後片付けを登録する
+  const startQuestionFlow = useEffectEvent((): boolean => {
+    if (!currentQuestion || !isStarted || exitLoading) return false;
 
     stopAllAudio();
     const signal = beginFlow();
@@ -499,12 +500,13 @@ export function SprintDrillPlayer({
     };
 
     runQuestionFlow();
-
+    return true;
+  });
+  useEffect(() => {
+    if (!startQuestionFlow()) return;
     return () => {
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
     };
-    // 依存関係を厳密に制限。毎秒変わる state などによる再トリガーを防ぐ（recoveries: 中断からの復旧で問題を再生し直す）
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 問題の切り替え等の時だけ流れを始める（毎秒変わる値で始め直さない。上のコメント）
   }, [currentIndex, currentQuestion?.question_id, isStarted, exitLoading, recoveries]);
 
   // ⏸ iOS の中断（画面が隠れた・通話等）では、流れ・発話は useSpeakingPlayer が止めるため、表示（フェーズ・録音中・自動再生のタイマー）を戻す
@@ -512,7 +514,9 @@ export function SprintDrillPlayer({
     if (interruptions > 0) stopAllAudio();
   }, [interruptions, stopAllAudio]);
 
-  useEffect(() => {
+  // タイムライン2：解答の自動再生。表示・評価・録音の状態が変わった時だけ判定する（タイマーの副作用から切り離す）。
+  // タイマーのクリアは stopAllAudio や handleToggleAutoPlay で管理するため、ここでは後片付けをしない
+  const runAnswerTimeline = useEffectEvent(() => {
     // カードが切り替わった場合は、直前の評価結果の記録をクリア
     if (currentIndex !== prevIndexRef.current) {
       prevIndexRef.current = currentIndex;
@@ -552,13 +556,9 @@ export function SprintDrillPlayer({
     };
 
     runAnswerFlow();
-
-    return () => {
-      // タイムライン2の再トリガーによる不要なタイマー消失を防ぐため、ここでの自動クリアは行いません。
-      // タイマーのクリアは stopAllAudio や handleToggleAutoPlay で適切に管理されています。
-    };
-    // 依存をインデックス、オープン状態、評価結果、および録音状態に絞り、タイマー副作用から切り離し
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 表示・評価・録音の状態が変わった時だけ自動再生を判定する（上のコメント）
+  });
+  useEffect(() => {
+    runAnswerTimeline();
   }, [isRevealed, currentIndex, analysis, isRecording]);
 
   // フルスクリーン固定およびiOSオーディオセッション固定化

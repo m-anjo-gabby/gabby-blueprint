@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef } from 'react';
 import { DAYS_OF_WEEK, type DayOfWeek } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
 import { cn } from '@/lib/utils';
@@ -36,7 +36,8 @@ export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: Weekly
   const draggingRef = useRef(false);
   const paintValueRef = useRef(true);
 
-  useEffect(() => {
+  // 初めて表示した時だけ、選んでいる時間帯（無ければ 08:00）の位置までスクロールする
+  const scrollToSelection = useEffectEvent(() => {
     const rowHeight = 22;
     let firstSelected = SLOTS_PER_DAY;
     for (const key of selection) {
@@ -48,7 +49,9 @@ export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: Weekly
     if (container) {
       container.scrollTop = Math.max(0, targetSlot * rowHeight - rowHeight * 2);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 初めて表示した時だけ、今の時間帯の位置までスクロールする
+  });
+  useEffect(() => {
+    scrollToSelection();
   }, []);
 
   const paintCell = useCallback(

@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, Edit, MessagesSquare, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -76,11 +76,10 @@ export function DialogueSessionFormDialog({
     defaultValues: buildDefaults(initialData, nextSessionNo),
   });
 
+  // 開いた時だけ初期値を入れ直す（開いている間に親の値が変わっても入力中の内容を上書きしない）
+  const resetToInitial = useEffectEvent(() => form.reset(buildDefaults(initialData, nextSessionNo)));
   useEffect(() => {
-    if (open) {
-      form.reset(buildDefaults(initialData, nextSessionNo));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 開いた時だけ初期値を入れ直す（開いている間に親の値が変わっても入力中の内容を上書きしない）
+    if (open) resetToInitial();
   }, [open]);
 
   const { isSubmitting } = form.formState;

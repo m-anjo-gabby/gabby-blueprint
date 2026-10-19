@@ -2,7 +2,7 @@
 
 import { ArrowDown, ChevronLeft, Loader2, Paperclip, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
 import { CHAT_ROOM_TYPES, type ChatMessage, type ChatRoom, type ChatRoomMemberSummary } from '@gabby/types/chat';
 import { deleteChatMessage, getChatMessageById, getChatMessages } from '../../chat/actions/messageActions';
 import { formatMessageHeaderTime, isContinuationMessage } from '../../chat/messageGrouping';
@@ -149,7 +149,8 @@ export function ChatTimeline({
     return () => setActiveRoom(null);
   }, [roomId, setActiveRoom]);
 
-  useEffect(() => {
+  // 初めて表示した時だけ既読にし、読む位置へ寄せる（ルームを切り替えると部品ごと作り直される）
+  const alignOnMount = useEffectEvent(() => {
     markLatestAsRead();
     // 未読がある場合は「ここから未読」の位置から読めるようにする。無ければ最新へ
     if (unreadDividerRef.current) {
@@ -163,8 +164,9 @@ export function ChatTimeline({
     } else {
       bottomRef.current?.scrollIntoView({ block: 'end' });
     }
-    // 初回マウント時のみ実行（ルーム切り替え時は親コンポーネントごと再マウントされる）
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 初めて表示した時だけ最新の位置へ寄せる（ルームを切り替えると部品ごと作り直される。上のコメント）
+  });
+  useEffect(() => {
+    alignOnMount();
   }, []);
 
   // タブを裏から戻したときに、裏にいる間に届いたメッセージを既読にする

@@ -2,7 +2,7 @@
 
 import { ArrowRight, BookOpen, ChevronLeft, Loader2, Lock, Timer } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import {
   formatSprintLevelLabel,
   getSprintTitle,
@@ -95,8 +95,8 @@ export function LessonSprintSetup({
   };
 
   // 教材切り替え時（初回表示を含む）、選択中の種別が選べなければ最初に選べる種別へ、
-  // レベルに問題が無ければ問題のあるレベルへリセットする
-  useEffect(() => {
+  // レベルに問題が無ければ問題のあるレベルへリセットする（きっかけは教材の変化だけ。選択の変更そのもので直し続けない）
+  const fitSelectionToContent = useEffectEvent(() => {
     if (!selectedContent) return;
     if (!isTypeSupported(questionType)) {
       const firstSupported = sortedTypes.find((t) => isTypeSupported(t.value));
@@ -108,7 +108,9 @@ export function LessonSprintSetup({
     } else if (hasLevel && !isSprintLevelAvailable(availableLevels, questionType, Number(level))) {
       setLevel(String(pickSprintLevel(questionType, { hasLevel, availableLevels, preferred: Number(level) })));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 教材が変わった時だけ、選べるレベルに合わせて選択を直す（選択の変更そのもので直し続けない）
+  });
+  useEffect(() => {
+    fitSelectionToContent();
   }, [contentId]);
 
   const levelItems = useMemo(() => {

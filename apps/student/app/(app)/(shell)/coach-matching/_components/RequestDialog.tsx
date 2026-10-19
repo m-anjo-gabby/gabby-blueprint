@@ -1,7 +1,7 @@
 'use client';
 
 import { CalendarClock, ChevronDown, Clock, TriangleAlert } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import {
   convertWeeklyTimeZone,
   formatZonedDate,
@@ -78,11 +78,13 @@ export function RequestDialog({
   const [showBreakdown, setShowBreakdown] = useState(false);
   const { showToast } = useToast();
 
-  // ダイアログを開くたび（＝coachが変わるたび）に前回の選択をリセットする
-  useEffect(() => {
+  // ダイアログを開くたび（＝コーチが変わるたび）に前回の選択をリセットする（枠の一覧の参照の変化では戻さない）
+  const resetSelection = useEffectEvent(() => {
     setSelectedCell(null);
     setSelectedSlotNo(unmatchedSlots[0]?.slot_no ?? null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- コーチが変わった時（＝ダイアログを開くたび）だけ選択を戻す（枠の一覧の参照の変化では戻さない）
+  });
+  useEffect(() => {
+    resetSelection();
   }, [coach?.user_id]);
 
   // コーチの対応可能時間ブロック（UTC）を、25分セッションの開始候補（30分刻み）に展開し、

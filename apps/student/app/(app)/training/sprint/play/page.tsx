@@ -2,7 +2,7 @@
 
 import { AlertCircle, BookOpen, Volume2 } from 'lucide-react';
 import Link from 'next/link';
-import { use, useEffect } from 'react';
+import { use, useEffect, useEffectEvent } from 'react';
 import { unlockAudio } from '@gabby/lib/audio/core/audioRuntime';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { primeSpeechSynthesis } from '@gabby/lib/speech/synthesis';
@@ -48,8 +48,8 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
   } = useSprintStore();
   const { showToast } = useToast();
 
-  // 初期値のサーバー・DB連動フェッチ（競合解消のコアロジック）
-  useEffect(() => {
+  // 初期値のサーバー・DB連動フェッチ（競合解消のコアロジック）。URL の値が変わった時だけ設定を読み直す（読み込み中の状態の変化では読み直さない）
+  const loadConfigAndView = useEffectEvent(() => {
     const initializeConfigAndView = async () => {
       // プレイヤーから「戻ってきた」場合はストアのセッション状態が最優先
       // 体系化された session オブジェクトの有無でクリーンに判定
@@ -151,7 +151,9 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
     };
 
     initializeConfigAndView();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- URL の値が変わった時だけ設定を読み直す（読み込み中の状態の変化では読み直さない）
+  });
+  useEffect(() => {
+    loadConfigAndView();
   }, [resolvedParams, contentId]);
 
   // ⚙ セッション開始ハンドラー

@@ -15,7 +15,7 @@ import {
   Timer,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import {
   extractContentWords,
   getFeedbackConfig,
@@ -607,8 +607,9 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
   // ────────────── 副作用 (Effects) ──────────────
   // 制限時間カウントダウン・タイムアップ後の結果画面自動遷移は useSprintCountdown / useAutoRedirectCountdown へ集約済み
 
-  // インデックス（問題ID）変更時にフローを最初から走らせる
-  useEffect(() => {
+  // インデックス（問題ID）変更時にフローを最初から走らせる。毎秒変わる state（secondsLeft 等）では始め直さない
+  // （recoveries: 中断からの復旧でやり直す）
+  const startSprintFlow = useEffectEvent(() => {
     if (!currentQuestion || secondsLeft <= 0 || showTimeUpOverlay || isSaving || exitLoading) return;
 
     stopAllAudio();
@@ -624,9 +625,9 @@ export function SprintTimePlayer({ questions = [], onExit }: SprintTimePlayerPro
       if (!(await waitFor(initialDelay, signal))) return;
       await runSprintFlow(currentQuestion, signal);
     })();
-
-    // 毎秒変わるステートによる再トリガーを避けるため、問題IDを基準に限定（recoveries: 中断からの復旧でやり直す）
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 問題が変わった時だけ流れを始める（毎秒変わる値で始め直さない。上のコメント）
+  });
+  useEffect(() => {
+    startSprintFlow();
   }, [currentIndex, currentQuestion?.question_id, showTimeUpOverlay, isSaving, exitLoading, recoveries]);
 
   // ⏸ iOS の中断（画面が隠れた・通話等）では、流れ・発話は useSpeakingPlayer が止めるため、表示（フェーズ・録音中）を戻す

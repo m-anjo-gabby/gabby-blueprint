@@ -22,7 +22,7 @@ import {
   VideoOff,
   X,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useLiveSessionEndSignal } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionEndSignal';
@@ -109,12 +109,17 @@ export function LiveSessionRoom({ access }: LiveSessionRoomProps) {
   });
 
   useEffect(() => {
+    let cancelled = false;
     if (!('locks' in navigator)) {
-      setLockStatus('granted');
-      return;
+      // Web Locks の無いブラウザでは、ほかのタブの確認をせずに進める（ロックを取れた時と同じく、コールバックの中で更新する）
+      void Promise.resolve().then(() => {
+        if (!cancelled) setLockStatus('granted');
+      });
+      return () => {
+        cancelled = true;
+      };
     }
 
-    let cancelled = false;
     navigator.locks.request(COACH_LIVE_SESSION_LOCK_NAME, { mode: 'exclusive', ifAvailable: true }, (lock) => {
       if (!lock) {
         if (!cancelled) setLockStatus('denied');
@@ -134,14 +139,15 @@ export function LiveSessionRoom({ access }: LiveSessionRoomProps) {
     };
   }, [lockRetryToken]);
 
+  // プレビューは条件がそろった時に1回だけ始める（preview の参照の変化で始め直さない。二重の開始は previewRequested で防ぐ）
+  const startPreview = useEffectEvent((canvas: HTMLCanvasElement) => preview.startPreview(canvas));
   useEffect(() => {
     // lockStatusが'checking'の間はプレビュー画面自体がマウントされずcanvasが存在しないため、
     // 'granted'に変わって実際にプレビューJSXがマウントされたタイミングでも再実行されるようdepsに含める
     if (lockStatus !== 'granted' || phase !== 'preview' || previewRequested.current || !previewCanvasRef.current)
       return;
     previewRequested.current = true;
-    preview.startPreview(previewCanvasRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- プレビューは条件がそろった時に1回だけ始める（preview の参照の変化で始め直さない。二重の開始は previewRequested で防ぐ）
+    startPreview(previewCanvasRef.current);
   }, [phase, lockStatus]);
 
   useEffect(() => {
@@ -161,15 +167,16 @@ export function LiveSessionRoom({ access }: LiveSessionRoomProps) {
     trackSelf('coach');
   }, [isJoined, trackSelf]);
 
+  // 退室の後片付けは画面を離れる時だけ行う（関数の参照が変わっても途中で退室しない）
+  const cleanupOnLeave = useEffectEvent(() => {
+    preview.stopPreview();
+    clearSessionTimers();
+    untrackSelf();
+    recordLeaveIfNeeded();
+    leave();
+  });
   useEffect(() => {
-    return () => {
-      preview.stopPreview();
-      clearSessionTimers();
-      untrackSelf();
-      recordLeaveIfNeeded();
-      leave();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 退室の後片付けは画面を離れる時だけ行う（関数の参照が変わっても途中で退室しない）
+    return () => cleanupOnLeave();
   }, []);
 
   const handleStartCall = async () => {

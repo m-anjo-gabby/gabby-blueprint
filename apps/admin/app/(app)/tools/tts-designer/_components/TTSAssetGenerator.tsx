@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, Copy, Loader2, Mic2, MousePointer2, Play, RotateCcw, Save, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useState } from 'react';
 import { buildSsml } from '@gabby/lib/azure/ssml';
 import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
 import { useToast } from '@gabby/lib/hooks/useToast';
@@ -61,8 +61,9 @@ export function TTSAssetGenerator() {
     showToast('All fields cleared', 'info');
   };
 
-  // --- 原文入力時に単語リストと初期SSMLをセットアップ ---
-  useEffect(() => {
+  // 原文が変わった時だけ、単語の一覧と初めの SSML を作り直す（声・速さの変更は下の effect が SSML に反映する。
+  // ここで作り直すと単語ごとの調整が消えるため、params・ssmlMode は effect のきっかけにしない）
+  const setupFromPhrase = useEffectEvent((phraseEn: string) => {
     if (ssmlMode === 'manual') return;
 
     const words: WordAdjustment[] = phraseEn
@@ -87,8 +88,9 @@ export function TTSAssetGenerator() {
     } else {
       setSsml('');
     }
-    // 原文が変わった時だけ作り直す（声・速さの変更は下の effect が SSML に反映する。ここで作り直すと単語ごとの調整が消える）
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 原文が変わった時だけ SSML を作り直す（声・速さの変更は下の effect が反映する）
+  });
+  useEffect(() => {
+    setupFromPhrase(phraseEn);
   }, [phraseEn, generateSsml]);
 
   const rebuildSsml = useCallback(
