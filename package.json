@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "catalog:",
+    "@ianvs/prettier-plugin-sort-imports": "catalog:",
     "eslint": "catalog:",
     "eslint-config-next": "catalog:",
     "prettier": "catalog:",

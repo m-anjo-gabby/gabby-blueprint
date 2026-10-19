@@ -25,6 +25,7 @@
 ## 2. 書式
 
 - Prettier に任せ、手で揃えない。設定は `singleQuote: true` / `printWidth: 120`（ほかは Prettier の既定。セミコロンあり、インデント2、末尾のカンマあり）。
+- import の並び順も Prettier（`@ianvs/prettier-plugin-sort-imports`）が決める。Node の組み込み → 外部のパッケージ → `@gabby/` → `@/` → 相対パスの順で、グループの間に空行を入れない。副作用だけの import（CSS・`server-only` 等）は動かさないため、読み込む順が意味を持つ場合はその位置に置く。
 - 対象は JS/TS のコード（`**/*.{ts,tsx,js,mjs,cjs}`）。Markdown・JSON・CSS は対象外。生成物（`packages/types/database.ts` 等）は `.prettierignore` で外している。
 - VSCode は保存時に整形する（`.vscode/settings.json`）。まとめて整形する場合は `pnpm format`。
 - 書式だけの一括変更は単独のコミットにし、`.git-blame-ignore-revs` に足す（手元は `git config blame.ignoreRevsFile .git-blame-ignore-revs`。`docs/SETUP.md`）。
