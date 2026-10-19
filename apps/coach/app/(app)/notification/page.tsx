@@ -14,8 +14,8 @@ export default function NotificationPage() {
   const { notifications, isLoading, fetchNotifications, markAsRead } = useNotificationStore();
   const router = useRouter();
 
-  // Always fetch the latest data on mount, and show the skeleton until that fetch completes
-  // (never flash a stale list left in the store, or an empty state before the first fetch)
+  // 開くたびに最新を取得し、取得が終わるまで骨組みを出す
+  // （ストアに残った古い一覧や、最初の取得の前の「0件」を一瞬も出さない）
   const isReady = useFetchOnMount(fetchNotifications, isLoading);
 
   const handleOpen = useCallback(

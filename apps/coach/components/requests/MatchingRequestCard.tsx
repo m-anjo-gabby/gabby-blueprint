@@ -67,8 +67,8 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
 
-  // Requests expire 24 hours after they are sent. A pending request past its deadline is treated as expired
-  // even before the every-minute expiry job updates its status.
+  // 依頼は送ってから24時間で期限が切れる。期限を過ぎた保留中の依頼は、毎分の期限切れの処理が
+  // 状態を更新する前でも、期限切れとして扱う。
   const isExpired =
     request.status === MATCHING_REQUEST_STATUS.EXPIRED ||
     (request.status === MATCHING_REQUEST_STATUS.PENDING &&
@@ -77,8 +77,8 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
   const badge = STATUS_BADGE[isExpired ? MATCHING_REQUEST_STATUS.EXPIRED : request.status];
   const isPending = request.status === MATCHING_REQUEST_STATUS.PENDING && !isExpired;
 
-  // How many lessons would be booked if approved now. Lessons that clash with the coach's other bookings or days off
-  // are skipped and left for the student and coach to arrange individually. Below the required number, approval is blocked.
+  // 今承認すると何回のレッスンが予約されるか。コーチのほかの予約・休みと重なるレッスンは
+  // 飛ばし、生徒とコーチが個別に調整する。必要な回数に届かなければ、承認できない。
   const availability = isPending ? request.availability : null;
   const breakdown = availability ? getMatchingUnbookedBreakdown(availability) : null;
   const canApprove = !availability || availability.is_acceptable;
@@ -87,8 +87,8 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
     request.requested_bookable_sessions !== null &&
     availability.bookable_sessions < request.requested_bookable_sessions;
 
-  // The requested day/time is the student's local time (requested_timezone) and stays fixed for the whole
-  // contract. Shown here in the coach's timezone, using the offset of the next occurrence.
+  // 依頼の曜日・時刻は生徒の手元の時刻（requested_timezone）で、契約の間ずっと変わらない。
+  // ここでは次の回の UTC からのずれを使って、コーチのタイムゾーンで出す。
   const coachSlot = useMemo(
     () =>
       convertWeeklyTimeZone(
@@ -111,10 +111,10 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
   const studentSlotLabel = `${DAY_OF_WEEK_LABEL_EN[request.requested_day_of_week as DayOfWeek]} ${formatTimeRange(request.requested_start_time, request.requested_end_time)}`;
   const coachSlotLabel = `${DAY_OF_WEEK_LABEL_EN[coachSlot.day_of_week as DayOfWeek]} ${formatTimeRange(coachSlot.start_time, coachSlot.end_time)}`;
 
-  // First live session date: nearest occurrence of the requested day/time that is at least
-  // 24 real hours from now (not just "tomorrow" by calendar date, to stay correct across timezones)
-  // and within the student's contract period (a renewal contract may start in the future).
-  // Only meaningful while pending — once approved, the actual date is fixed in com_t_session.
+  // 最初のライブセッションの日: 依頼の曜日・時刻のうち、今から実時間で24時間以上先で
+  // （暦の「明日」ではなく。タイムゾーンをまたいでも正しくするため）、
+  // 生徒の契約の期間内（更新の契約は先に始まることがある）の、一番近い回。
+  // 意味があるのは保留中の間だけ。承認した後は、実際の日が com_t_session に決まる。
   const firstSession = useMemo(() => {
     if (!isPending) return null;
     const notBefore = request.license_start_date ? new Date(request.license_start_date) : undefined;
@@ -138,8 +138,8 @@ export function MatchingRequestCard({ request, onResolved, onDateHover }: Matchi
     timezone,
   ]);
 
-  // Daylight saving time (the coach's or the student's) can move the lesson in the coach's local time during
-  // the contract. List each change after the first session so the coach can check it still works for them.
+  // 夏時間（コーチ・生徒のどちらか）で、契約の間にコーチの手元の時刻でのレッスンの時刻が
+  // 動くことがある。最初のセッションの後の変更を並べ、コーチが続けて都合がつくかを確かめられるようにする。
   const laterTimeChanges = useMemo(() => {
     if (!firstSession || !request.license_end_date) return [];
     return getWeeklyTimeChanges(

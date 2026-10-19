@@ -32,8 +32,8 @@ const LESSON_SPRINT_ERROR_MESSAGES_EN: Record<CoachStudentErrorCode, string> = {
 };
 
 /**
- * Fetches the list of sprint contents a coach can pick from when starting a Lesson Sprint
- * for the given student (only contents published to the student's tenant)
+ * レッスンスプリントを始める時にコーチが選べるスプリントの教材の一覧を取得する
+ * （生徒の顧客に公開されている教材だけ）
  */
 export async function getAvailableSprintContents(studentId: string): Promise<LessonSprintContentSummary[]> {
   const result = await getAvailableSprintContentsCore(studentId);
@@ -46,7 +46,7 @@ export async function getAvailableSprintContents(studentId: string): Promise<Les
 }
 
 /**
- * Fetches a sampled set of sprint questions for the given content/type/level
+ * 教材・種別・レベルを指定して、スプリントの問題を抜き出して取得する
  */
 export async function getLessonSprintQuestions(
   contentId: string,
@@ -63,7 +63,7 @@ export async function getLessonSprintQuestions(
 }
 
 /**
- * Saves a completed Lesson Sprint session's results
+ * 終わったレッスンスプリントの結果を保存する
  */
 export async function createLessonSprintResult(
   input: CreateLessonSprintResultInput,
@@ -78,7 +78,7 @@ export async function createLessonSprintResult(
 }
 
 /**
- * Fetches this coach's Lesson Sprint history with the given student
+ * このコーチとその生徒のレッスンスプリントの履歴を取得する
  */
 export async function getLessonSprintHistory(studentId: string): Promise<LessonSprintHistoryListItem[]> {
   const result = await getLessonSprintHistoryCore(studentId);
@@ -91,9 +91,9 @@ export async function getLessonSprintHistory(studentId: string): Promise<LessonS
 }
 
 /**
- * Fetches one page of this coach's Lesson Sprint history with the given student,
- * ordered newest-first. Pass the previous page's `nextCursor` to fetch the next page;
- * a null `nextCursor` means there are no more pages.
+ * このコーチとその生徒のレッスンスプリントの履歴を、新しい順に1ページ分取得する。
+ * 次のページは前のページの `nextCursor` を渡して取得する。
+ * `nextCursor` が null なら、次のページは無い。
  */
 export async function getLessonSprintHistoryPage(
   studentId: string,
@@ -110,7 +110,7 @@ export async function getLessonSprintHistoryPage(
 }
 
 /**
- * Fetches one Lesson Sprint result with its questions reconstructed in play order
+ * レッスンスプリントの結果を1件、出題した順に組み立て直した問題とともに取得する
  */
 export async function getLessonSprintResult(
   lessonSprintId: string,
@@ -125,7 +125,7 @@ export async function getLessonSprintResult(
 }
 
 /**
- * Updates the session note on a completed Lesson Sprint result
+ * 終わったレッスンスプリントの結果のセッションのメモを更新する
  */
 export async function updateLessonSprintSessionNote(
   lessonSprintId: string,

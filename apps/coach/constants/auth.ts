@@ -1,7 +1,7 @@
 import type { AuthErrorCode } from '@gabby/lib/auth/errors';
 import type { AuthLabels } from '@gabby/lib/components/auth/types';
 
-/** Messages for sign-in / password reset / password change / invitation errors (coach portal) */
+/** サインイン・パスワードの再設定・パスワードの変更・招待のエラーの文言（コーチのポータル） */
 export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   missing_credentials: 'Please enter your email address and password.',
   account_locked: 'Your account is temporarily locked. Please try again later.',
@@ -27,7 +27,7 @@ export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   unexpected: 'An unexpected error occurred. Please try again later.',
 };
 
-/** Labels for the sign-in, forgot password, reset password and invitation screens */
+/** サインイン・パスワードを忘れた・パスワードの再設定・招待の画面の文言 */
 export const AUTH_LABELS: AuthLabels = {
   login: {
     subtitle: 'Sign in with your coach account',

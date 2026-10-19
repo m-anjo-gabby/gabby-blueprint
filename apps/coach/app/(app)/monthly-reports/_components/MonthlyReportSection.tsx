@@ -5,8 +5,8 @@ import { SummaryCard } from './SummaryCard';
 import { MonthlyReportGrid } from './MonthlyReportGrid';
 
 /**
- * Monthly report body (summary + grid).
- * page.tsx wraps it in a <Suspense> keyed by month so a skeleton shows while switching months.
+ * 月次のレポートの本体（要約と表）。
+ * page.tsx が月ごとに key を変えた <Suspense> で包み、月の切り替え中に骨組みを出す。
  */
 export async function MonthlyReportSection({ yearMonth }: { yearMonth: string }) {
   const [result, timezoneNames] = await Promise.all([getMyMonthlyReport(yearMonth), getTimezoneNameMap()]);

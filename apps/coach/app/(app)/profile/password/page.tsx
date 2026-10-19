@@ -19,8 +19,8 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 /**
- * Password change page (coach portal)
- * Lets the signed-in coach update their own password.
+ * パスワードの変更の画面（コーチのポータル）
+ * サインイン中のコーチが自分のパスワードを変える。
  */
 export default function PasswordChangePage() {
   const [currentPassword, setCurrentPassword] = useState('');

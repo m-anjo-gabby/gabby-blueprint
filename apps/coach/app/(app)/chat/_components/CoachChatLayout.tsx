@@ -5,7 +5,7 @@ import { ChatSplitLayout } from '@gabby/lib/components/chat/ChatSplitLayout';
 import { ChatRoomListPane } from '@gabby/lib/components/chat/ChatRoomListPane';
 import { CHAT_LABELS, CHAT_SPLIT_BREAKPOINT } from '@/constants/chat';
 
-/** Chat 2-pane frame: room list on the left, the selected room (children) on the right */
+/** チャットの2ペインの枠。左にルームの一覧、右に選んだルーム（children） */
 export function CoachChatLayout({ children }: { children: React.ReactNode }) {
   return (
     <ChatSplitLayout

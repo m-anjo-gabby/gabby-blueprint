@@ -205,7 +205,7 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile overlay (toggled from the header hamburger button) */}
+      {/* モバイルの覆い（ヘッダーのハンバーガーのボタンで開閉する） */}
       {isOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden" onClick={closeMobileSidebar} />
       )}
@@ -219,7 +219,7 @@ export function Sidebar() {
         ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}
       `}
       >
-        {/* Top bar: close button on mobile only */}
+        {/* 上部: 閉じるボタン（モバイルだけ） */}
         <div className="h-16 px-4 border-b border-slate-100 shrink-0 flex items-center lg:hidden">
           <button
             onClick={closeMobileSidebar}
@@ -259,7 +259,7 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* Footer: persistent desktop collapse toggle */}
+        {/* 下部: PC の折りたたみの切り替え（常に出す） */}
         <div className="hidden lg:flex items-center justify-center h-12 border-t border-slate-100 shrink-0">
           <button
             onClick={toggleCollapse}

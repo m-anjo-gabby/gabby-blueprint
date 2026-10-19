@@ -22,9 +22,9 @@ import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, type NoticeType } from '@gabby/ty
 import { getNotificationDisplay } from '@gabby/lib/notification/display';
 import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
 
-// Combines Notices (admin-broadcast announcements) and Notifications (system-triggered
-// personal events) behind a single bell. Data sources stay separate; only the entry
-// point and tab switching are unified.
+// お知らせ（アドミンが全体に出す連絡）と通知（システムが出す個人の出来事）を
+// 1つのベルにまとめる。データの取得元は別々のままで、入口と
+// タブの切り替えだけをまとめる。
 type CenterTab = 'notice' | 'notification';
 
 const UnreadDot = () => <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 mt-1" />;
@@ -83,9 +83,9 @@ export function NotificationCenterDropdown() {
     markBatchAsRead(unreadIds);
   };
 
-  // Prioritize whichever tab has unread items each time the panel is opened
-  // (only decided at the open transition, so a realtime update while browsing
-  // never yanks the tab out from under the user).
+  // パネルを開くたびに、未読のあるタブを先に出す
+  // （開いた時だけ決めるため、見ている間に Realtime の更新が来ても
+  // タブが勝手に切り替わらない）。
   const handleOpenChange = (open: boolean) => {
     if (!open) return;
     if (noticeUnreadCount > 0 && notificationUnreadCount === 0) {
@@ -98,7 +98,7 @@ export function NotificationCenterDropdown() {
   return (
     <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
-        {/* Bell icon trigger with combined (notice + notification) unread badge */}
+        {/* ベルのアイコンのボタンと、お知らせと通知を合わせた未読のバッジ */}
         <button
           id="notification-center-bell-button"
           aria-label="Notification Center"
@@ -132,7 +132,7 @@ export function NotificationCenterDropdown() {
           transition={{ duration: 0.15, ease: 'easeOut' }}
         >
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as CenterTab)}>
-            {/* ─── Header ──────────────────────────────────── */}
+            {/* 見出し */}
             <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-slate-50">
               <Bell size={14} className="text-slate-500 shrink-0" />
               <span className="text-xs font-black text-slate-800 tracking-tight shrink-0">Notification Center</span>
@@ -154,7 +154,7 @@ export function NotificationCenterDropdown() {
               </TabsList>
             </div>
 
-            {/* ─── Notices tab ─────────────────────────────── */}
+            {/* お知らせのタブ */}
             <TabsContent value="notice" className="m-0">
               {noticeUnreadCount > 0 && (
                 <div className="flex justify-end px-4 pt-2 pb-1">
@@ -247,7 +247,7 @@ export function NotificationCenterDropdown() {
               </div>
             </TabsContent>
 
-            {/* ─── Notifications tab ───────────────────────── */}
+            {/* 通知のタブ */}
             <TabsContent value="notification" className="m-0">
               {notificationUnreadCount > 0 && (
                 <div className="flex justify-end px-4 pt-2 pb-1">
@@ -339,7 +339,7 @@ export function NotificationCenterDropdown() {
             </TabsContent>
           </Tabs>
 
-          {/* ─── Footer (destination follows the active tab) ── */}
+          {/* 下部（移動先は開いているタブに合わせる） */}
           <div className="px-4 pb-4 pt-2 border-t border-slate-50">
             <DropdownMenuItem asChild className="p-0 border-none outline-none">
               <Link

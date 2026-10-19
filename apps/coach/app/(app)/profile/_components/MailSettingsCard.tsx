@@ -9,8 +9,8 @@ import { updateMyMailSetting } from '@/actions/mailSettingAction';
 import { SAVE_NETWORK_ERROR_MESSAGE } from '@/constants/network';
 
 /**
- * Email notification settings (one switch per category that has at least one email type).
- * Each change is saved immediately and reverted if saving fails.
+ * メールの通知の設定（メールの種類が1つ以上ある分類ごとに1つのスイッチ）。
+ * 変更はその場で保存し、保存に失敗したら元に戻す。
  */
 export function MailSettingsCard({ initialSettings }: { initialSettings: MailSettings | null }) {
   const [settings, setSettings] = useState<MailSettings | null>(initialSettings);
@@ -22,7 +22,7 @@ export function MailSettingsCard({ initialSettings }: { initialSettings: MailSet
   const handleChange = async (category: MailCategory, enabled: boolean) => {
     setSettings((prev) => ({ ...prev, [category]: enabled }));
     setSavingCategory(category);
-    // A failed request (e.g. network error) throws instead of returning a result, so treat it as a failure too
+    // 通信の失敗（ネットワークのエラー等）は結果を返さず例外になるため、それも失敗として扱う
     const result = await updateMyMailSetting(category, enabled)
       .catch((): { success: false; message: string } => ({ success: false, message: SAVE_NETWORK_ERROR_MESSAGE }))
       .finally(() => setSavingCategory(null));

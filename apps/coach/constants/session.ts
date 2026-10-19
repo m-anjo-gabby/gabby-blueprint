@@ -56,7 +56,7 @@ const ACTION_NEEDED_BADGE: SessionStatusBadge = {
   dotClassName: 'bg-red-500',
 };
 
-/** English session status label + badge classes for the Coach portal. */
+/** コーチのポータルの英語のセッションの状態のラベルとバッジの色。 */
 export function getSessionStatusBadge(session: {
   status: SessionStatus;
   completion_result?: CompletionResult | null;

@@ -31,12 +31,12 @@ const MATCHING_ERROR_MESSAGES_EN: Record<MatchingRequestErrorCode, string> = {
 };
 
 /**
- * Fetches all *pending* incoming requests addressed to the current coach — fixed-slot
- * matching requests, free-time session booking requests, and reschedule candidates a
- * student proposed when cancelling — merged into one list. Lightweight (status-filtered)
- * query intended for surfaces that render on every page load (Calendar's pending panel,
- * the sidebar badge, the dashboard). For the full request history, use
- * getMatchingRequestHistoryPage / getBookingRequestHistoryPage / getRescheduleProposalHistoryPage instead.
+ * ログイン中のコーチ宛ての「保留中」の依頼をすべて取得する。固定枠のマッチングの依頼・
+ * 空き時間へのセッションの予約の依頼・生徒がキャンセルの時に出した振替の候補を、
+ * 1つの一覧にまとめる。状態で絞った軽い取得で、毎回の表示で出す場所（カレンダーの保留の一覧・
+ * サイドバーのバッジ・ダッシュボード）向け。
+ * 依頼の履歴の全体は、
+ * getMatchingRequestHistoryPage / getBookingRequestHistoryPage / getRescheduleProposalHistoryPage を使う。
  */
 export async function getPendingIncomingRequestsForCoach(): Promise<CoachIncomingRequestItem[]> {
   const result = await getPendingIncomingRequestsForCoachCore();
@@ -49,9 +49,9 @@ export async function getPendingIncomingRequestsForCoach(): Promise<CoachIncomin
 }
 
 /**
- * Fetches one page of the coach's matching request history, ordered newest-first.
- * Pass the previous page's `nextCursor` to fetch the next page; a null `nextCursor`
- * in the result means there is no more history.
+ * コーチのマッチングの依頼の履歴を、新しい順に1ページ分取得する。
+ * 次のページは前のページの `nextCursor` を渡して取得する。結果の `nextCursor` が null なら、
+ * それより古い履歴は無い。
  */
 export async function getMatchingRequestHistoryPage(
   cursor: string | null,
@@ -67,8 +67,8 @@ export async function getMatchingRequestHistoryPage(
 }
 
 /**
- * Approves a matching request. This automatically creates the recurring
- * lesson schedule and generates all individual sessions for the license period.
+ * マッチングの依頼を承認する。毎週のレッスンの予定を作り、
+ * ライセンスの期間のセッションをすべて作る。
  */
 export async function approveMatchingRequest(requestId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
@@ -84,7 +84,7 @@ export async function approveMatchingRequest(requestId: string): Promise<ActionR
 }
 
 /**
- * Rejects a matching request with a required reason
+ * マッチングの依頼を断る（理由は必須）
  */
 export async function rejectMatchingRequest(requestId: string, reason: string): Promise<ActionResult> {
   const ctx = await getLogContext();

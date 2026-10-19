@@ -65,7 +65,7 @@ interface PublicProfileFormProps {
   form: CoachProfileFormValues;
   onFieldChange: <K extends keyof CoachProfileFormValues>(field: K, value: CoachProfileFormValues[K]) => void;
   coachSinceLabel: string | null;
-  /** Specialties set by admins (read-only) */
+  /** アドミンが設定した専門（見るだけ） */
   specialties: CoachSpecialtyTag[];
   introVideoUrl: string | null;
   introVideoPath: string | null;
@@ -73,7 +73,7 @@ interface PublicProfileFormProps {
   onRemoveIntroVideo: () => Promise<void>;
   onSave: () => void;
   isSaving: boolean;
-  /** Required fields filled in this card (everything except the introduction video) */
+  /** このカードで入力する必須の項目（紹介動画を除くすべて） */
   formProgress: CoachProfileFormProgress;
 }
 

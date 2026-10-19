@@ -33,7 +33,7 @@ function TitledCardSkeleton({ title, icon, rows = 2 }: { title: string; icon?: R
   );
 }
 
-// ---------- Session Hub ----------
+// セッションハブ
 
 /** セッションハブの Dialogue Practice カードの骨組み（page.tsx の Suspense の fallback と共有） */
 export function HubDialoguePracticeSkeleton() {
@@ -129,7 +129,7 @@ export function SessionHubSkeleton({ studentId }: { studentId: string }) {
   );
 }
 
-// ---------- Live Sprint（Setup） ----------
+// Live Sprint（準備）
 
 /** Live Sprint の準備画面の骨組み（没入表示の中央のカード。見出し行と教材の選択肢を骨組み） */
 export function LessonSprintSetupSkeleton() {
@@ -159,7 +159,7 @@ export function LessonSprintSetupSkeleton() {
   );
 }
 
-// ---------- Live Sprint Result ----------
+// Live Sprint の結果
 
 /** Live Sprint Result の本文（Summary と設問の2列）の骨組み */
 function LessonSprintResultBody() {
@@ -215,7 +215,7 @@ export function LessonSprintResultSkeleton({ studentId, sessionId }: { studentId
   );
 }
 
-// ---------- Session Result ----------
+// セッションの結果
 
 /** Session Result の骨組み（戻るリンク・見出し・区分・カードの見出しは本物） */
 export function SessionResultSkeleton({ studentId }: { studentId: string }) {

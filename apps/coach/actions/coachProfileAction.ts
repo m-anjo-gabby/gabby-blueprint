@@ -76,7 +76,7 @@ const TIMEZONE_ERROR_MESSAGES_EN: Record<UpdateTimezoneErrorCode, string> = {
 };
 
 /**
- * Fetches the current coach's own profile information
+ * ログイン中のコーチのプロフィールを取得する
  */
 export async function getMyProfile(): Promise<MyProfile | null> {
   const result = await getMyProfileCore();
@@ -89,7 +89,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
 }
 
 /**
- * Uploads a new profile icon image
+ * プロフィールのアイコンの画像をアップロードする
  */
 export async function uploadProfileIcon(formData: FormData): Promise<ActionResult<{ iconPath: string }>> {
   const ctx = await getLogContext();
@@ -105,7 +105,7 @@ export async function uploadProfileIcon(formData: FormData): Promise<ActionResul
 }
 
 /**
- * Removes the current profile icon image
+ * プロフィールのアイコンの画像を削除する
  */
 export async function removeProfileIcon(): Promise<ActionResult> {
   const ctx = await getLogContext();
@@ -121,7 +121,7 @@ export async function removeProfileIcon(): Promise<ActionResult> {
 }
 
 /**
- * Fetches the selectable timezone list
+ * 選べるタイムゾーンの一覧を取得する
  */
 export async function getTimezoneList(): Promise<TimezoneMaster[]> {
   const result = await getTimezoneListCore();
@@ -134,7 +134,7 @@ export async function getTimezoneList(): Promise<TimezoneMaster[]> {
 }
 
 /**
- * Updates the current coach's own timezone
+ * ログイン中のコーチのタイムゾーンを更新する
  */
 export async function updateMyTimezone(timezone: string): Promise<ActionResult<{ timezone: string }>> {
   const ctx = await getLogContext();
@@ -150,7 +150,7 @@ export async function updateMyTimezone(timezone: string): Promise<ActionResult<{
 }
 
 /**
- * Fetches the current coach's specialties (set by admins only; read-only for coaches)
+ * ログイン中のコーチの専門を取得する（アドミンだけが設定し、コーチは見るだけ）
  */
 export async function getMyCoachSpecialties(): Promise<CoachSpecialtyTag[]> {
   const user = await getAuthUser();
@@ -169,7 +169,7 @@ export async function getMyCoachSpecialties(): Promise<CoachSpecialtyTag[]> {
 }
 
 /**
- * Fetches the selectable country (nationality) list
+ * 選べる国（国籍）の一覧を取得する
  */
 export async function getCountryList(): Promise<CountryMaster[]> {
   const result = await getCountryListCore();
@@ -182,7 +182,7 @@ export async function getCountryList(): Promise<CountryMaster[]> {
 }
 
 /**
- * Fetches the current coach's own public profile (visible to students)
+ * ログイン中のコーチの公開プロフィール（生徒に見えるもの）を取得する
  */
 export async function getMyCoachProfile(): Promise<CoachProfileRecord | null> {
   const result = await getMyCoachProfileCore();
@@ -195,7 +195,7 @@ export async function getMyCoachProfile(): Promise<CoachProfileRecord | null> {
 }
 
 /**
- * Updates the current coach's own public profile
+ * ログイン中のコーチの公開プロフィールを更新する
  */
 export async function updateMyCoachProfile(
   values: CoachProfileFormValues,
@@ -213,7 +213,7 @@ export async function updateMyCoachProfile(
 }
 
 /**
- * Fetches whether the current coach appears in the students' coach search (missing items, accepting, paused by admins)
+ * ログイン中のコーチが生徒のコーチ検索に出るかを取得する（足りない項目・受付の可否・アドミンによる停止）
  */
 export async function getMyCoachMatchingStatus(): Promise<CoachMatchingStatus | null> {
   const user = await getAuthUser();
@@ -229,7 +229,7 @@ export async function getMyCoachMatchingStatus(): Promise<CoachMatchingStatus | 
 }
 
 /**
- * Turns accepting new students on or off for the current coach
+ * ログイン中のコーチの新しい生徒の受付を切り替える
  */
 export async function updateMyAcceptingStudents(
   acceptingStudents: boolean,
@@ -242,7 +242,7 @@ export async function updateMyAcceptingStudents(
 }
 
 /**
- * Updates the current coach's live session video call URL (Zoom)
+ * ログイン中のコーチのライブセッションのビデオ通話の URL（Zoom）を更新する
  */
 export async function updateMyCoachZoomSettings(
   values: CoachZoomSettingsFormValues,
@@ -260,7 +260,7 @@ export async function updateMyCoachZoomSettings(
 }
 
 /**
- * Uploads a new coach introduction video
+ * コーチの紹介動画をアップロードする
  */
 export async function uploadCoachIntroVideo(formData: FormData): Promise<ActionResult<{ introVideoPath: string }>> {
   const ctx = await getLogContext();
@@ -276,7 +276,7 @@ export async function uploadCoachIntroVideo(formData: FormData): Promise<ActionR
 }
 
 /**
- * Removes the current coach introduction video
+ * コーチの紹介動画を削除する
  */
 export async function removeCoachIntroVideo(): Promise<ActionResult> {
   const ctx = await getLogContext();

@@ -1,7 +1,7 @@
 import { CalendarCheck, Download, TriangleAlert } from 'lucide-react';
 import { type CoachMonthlyReport } from '@gabby/types/monthlyReport';
 
-/** timezoneName: the coach's timezone as its master display name (e.g. "Japan (Tokyo)") */
+/** timezoneName: コーチのタイムゾーンのマスタの表示名（例: "Japan (Tokyo)"） */
 export function SummaryCard({ report, timezoneName }: { report: CoachMonthlyReport; timezoneName: string }) {
   const isApproved = report.approval?.status === 2;
   const hasUnresolved = report.unresolved_count > 0;

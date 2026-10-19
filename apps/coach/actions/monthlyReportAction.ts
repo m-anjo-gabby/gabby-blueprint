@@ -18,7 +18,7 @@ const MONTHLY_REPORT_ERROR_MESSAGES_EN: Record<MonthlyReportErrorCode, string> =
 };
 
 /**
- * Fetches the current coach's own monthly coaching report (defaults handled by caller: pass "YYYY-MM").
+ * ログイン中のコーチの月次のレポートを取得する（月の既定は呼び出し側で決め、"YYYY-MM" を渡す）。
  */
 export async function getMyMonthlyReport(reportMonth: string): Promise<ActionResult<{ report: CoachMonthlyReport }>> {
   const ctx = await getLogContext();

@@ -16,8 +16,8 @@ export default function NoticePage() {
   const { notices, isLoading, fetchNotices, markAsRead } = useNoticeStore();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => (focusId ? new Set([focusId]) : new Set()));
 
-  // Always fetch the latest data on mount, and show the skeleton until that fetch completes
-  // (never flash a stale list left in the store, or an empty state before the first fetch)
+  // 開くたびに最新を取得し、取得が終わるまで骨組みを出す
+  // （ストアに残った古い一覧や、最初の取得の前の「0件」を一瞬も出さない）
   const isReady = useFetchOnMount(fetchNotices, isLoading);
 
   const handleToggleNotice = useCallback(
@@ -39,7 +39,7 @@ export default function NoticePage() {
     [markAsRead],
   );
 
-  // Scroll to the focused card if a `focus` query param is present
+  // クエリに `focus` があれば、そのカードまでスクロールする
   const scrolledRef = useRef(false);
   useEffect(() => {
     if (!focusId || !isReady || scrolledRef.current) return;

@@ -37,7 +37,7 @@ export function Header() {
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
-      {/* Left: hamburger (mobile only) + logo */}
+      {/* 左: ハンバーガー（モバイルだけ）とロゴ */}
       <div className="flex items-center gap-3">
         <button
           onClick={toggleMobileSidebar}
@@ -59,7 +59,7 @@ export function Header() {
         </Link>
       </div>
 
-      {/* Right: notification center (notices + notifications) + account dropdown */}
+      {/* 右: 通知のまとめ（お知らせと通知）とアカウントのメニュー */}
       <div className="flex items-center gap-2">
         <NotificationCenterDropdown />
         <DropdownMenu>
@@ -80,7 +80,7 @@ export function Header() {
           </DropdownMenuTrigger>
 
           <DropdownMenuContent className="w-56 p-2 rounded-2xl shadow-xl border-slate-100" align="end">
-            {/* Profile summary */}
+            {/* プロフィールの要約 */}
             <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-400 overflow-hidden shrink-0">
                 {profileIconUrl ? (

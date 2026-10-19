@@ -42,13 +42,13 @@ interface ProfileViewProps {
   timezones: TimezoneMaster[];
   initialCoachProfile: CoachProfileRecord | null;
   countries: CountryMaster[];
-  /** Email notification settings (null if they could not be loaded) */
+  /** メールの通知の設定（読み込めなかった場合は null） */
   mailSettings: MailSettings | null;
-  /** Own rating summary (null if no ratings yet) */
+  /** 自分の評価の要約（評価がまだ無ければ null） */
   ratingStats: CoachRatingStats | null;
-  /** Specialties set by admins (read-only here) */
+  /** アドミンが設定した専門（ここでは見るだけ） */
   specialties: CoachSpecialtyTag[];
-  /** Whether the coach appears in the students' coach search (null if it could not be loaded) */
+  /** コーチが生徒のコーチ検索に出るか（読み込めなかった場合は null） */
   matchingStatus: CoachMatchingStatus | null;
 }
 

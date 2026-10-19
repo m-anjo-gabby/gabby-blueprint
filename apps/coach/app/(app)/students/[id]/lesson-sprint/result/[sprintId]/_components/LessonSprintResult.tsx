@@ -104,9 +104,9 @@ export function LessonSprintResult({
         </div>
       )}
 
-      {/* ────────────── Main content: two-pane layout. On lg+, each pane scrolls independently within a fixed-height row. ────────────── */}
+      {/* 本文: 2ペイン。lg 以上では、高さを固定した行の中で各ペインが別々にスクロールする。 */}
       <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-6 lg:flex-1 lg:min-h-0 lg:items-stretch">
-        {/* Left pane: overview, session notes, next action (rarely needs to scroll, but scrolls internally if it ever overflows) */}
+        {/* 左ペイン: 概要・セッションのメモ・次の行動（スクロールはほぼ要らないが、あふれた場合は中でスクロールする） */}
         <div className="flex flex-col gap-4 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider">Summary</h2>
@@ -173,7 +173,7 @@ export function LessonSprintResult({
           )}
         </div>
 
-        {/* Right pane: scrollable answer history */}
+        {/* 右ペイン: スクロールする解答の履歴 */}
         <div className="min-w-0 flex flex-col gap-3 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
           <div className="flex items-center justify-between px-1 shrink-0">
             <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider">Answer History</h2>

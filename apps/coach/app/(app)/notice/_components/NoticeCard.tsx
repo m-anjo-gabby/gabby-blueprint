@@ -49,13 +49,13 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         !notice.is_read ? 'border-brand-200' : 'border-slate-200',
       )}
     >
-      {/* ─── Card header (click to expand) ──── */}
+      {/* カードの見出し（押すと開く） */}
       <button
         onClick={handleToggle}
         className="w-full text-left flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors"
         aria-expanded={isOpen}
       >
-        {/* Unread indicator */}
+        {/* 未読の印 */}
         <div className="mt-1 shrink-0">
           {!notice.is_read ? (
             <span className="inline-block w-2 h-2 rounded-full bg-brand-500" />
@@ -65,7 +65,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         </div>
 
         <div className="flex-1 min-w-0">
-          {/* Badges */}
+          {/* バッジ */}
           <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
             <span
               className={cn(
@@ -93,7 +93,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             )}
           </div>
 
-          {/* Title */}
+          {/* タイトル */}
           <p
             className={cn(
               'text-sm leading-snug truncate',
@@ -103,11 +103,11 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
             {notice.title}
           </p>
 
-          {/* Published date */}
+          {/* 公開日 */}
           <p className="text-[11px] text-slate-400 mt-1 font-bold">{formatDateEn(notice.published_at, timezone)}</p>
         </div>
 
-        {/* Expand icon */}
+        {/* 開閉のアイコン */}
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -117,7 +117,7 @@ export function NoticeCard({ notice, isOpen: propsIsOpen, onToggle, defaultOpen 
         </motion.div>
       </button>
 
-      {/* ─── Accordion body ──────────────────────────── */}
+      {/* 開いた時の本文 */}
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div

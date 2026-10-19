@@ -30,8 +30,8 @@ const DIALOGUE_ERROR_MESSAGES_EN: Record<CoachStudentErrorCode, string> = {
 };
 
 /**
- * Fetches the list of Dialogue Practice sets a coach can assign to the given student
- * (only sets published to the student's tenant)
+ * コーチがその生徒に割り当てられるダイアログ練習のセットの一覧を取得する
+ * （生徒の顧客に公開されているセットだけ）
  */
 export async function getAvailableDialogueContents(studentId: string): Promise<DialogueContentSummary[]> {
   const result = await getAvailableDialogueContentsCore(studentId);
@@ -44,7 +44,7 @@ export async function getAvailableDialogueContents(studentId: string): Promise<D
 }
 
 /**
- * Assigns a Dialogue Practice set to a student
+ * ダイアログ練習のセットを生徒に割り当てる
  */
 export async function assignDialogueContent(
   studentId: string,
@@ -60,7 +60,7 @@ export async function assignDialogueContent(
 }
 
 /**
- * Unassigns a previously assigned Dialogue Practice set
+ * 割り当てたダイアログ練習のセットを外す
  */
 export async function unassignDialogueContent(assignmentId: string): Promise<ActionResult> {
   const result = await unassignDialogueContentCore(assignmentId);
@@ -76,7 +76,7 @@ export async function unassignDialogueContent(assignmentId: string): Promise<Act
 }
 
 /**
- * Fetches a student's assigned Dialogue Practice sets, with per-session progress
+ * 生徒に割り当てたダイアログ練習のセットを、セッションごとの進み具合とともに取得する
  */
 export async function getStudentDialogueAssignments(studentId: string): Promise<DialogueAssignmentSummary[]> {
   const result = await getStudentDialogueAssignmentsCore(studentId);
@@ -89,7 +89,7 @@ export async function getStudentDialogueAssignments(studentId: string): Promise<
 }
 
 /**
- * Updates a Dialogue Practice session's completion state and coach notes
+ * ダイアログ練習のセッションの完了の状態とコーチのメモを更新する
  */
 export async function updateDialogueSessionProgress(input: UpdateDialogueSessionProgressInput): Promise<ActionResult> {
   const result = await updateDialogueSessionProgressCore(input);
@@ -102,8 +102,8 @@ export async function updateDialogueSessionProgress(input: UpdateDialogueSession
 }
 
 /**
- * Records that a coach opened a Dialogue Practice material's material link during a live session.
- * Best-effort logging only — callers should not block the material link on this.
+ * ライブセッション中にコーチがダイアログ練習の教材のリンクを開いたことを記録する。
+ * 記録は残せたら残す程度で、呼び出し側は教材のリンクを開くのをこれで止めない。
  */
 export async function logSessionDialogueOpen(input: LogSessionDialogueOpenInput): Promise<ActionResult> {
   const result = await logSessionDialogueOpenCore(input);

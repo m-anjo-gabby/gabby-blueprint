@@ -18,7 +18,7 @@ import { WeeklyAvailabilityGrid, SLOTS_PER_DAY, slotKey, slotIndexToLabel } from
 
 interface AvailabilityViewProps {
   initialSlots: CoachAvailabilitySlot[];
-  /** When the coach last reviewed their availability (null if never) */
+  /** コーチが空き時間を最後に確認した日時（未確認なら null） */
   initialConfirmedAt: string | null;
   timezones: TimezoneMaster[];
 }
@@ -44,7 +44,7 @@ function timeToSlotIndexEnd(time: string): number {
   return Math.ceil(minutes / 30);
 }
 
-/** Moves every grid cell by offsetMinutes (wrapping around the week). Converts between UTC and local cells. */
+/** グリッドのすべてのマスを offsetMinutes だけずらす（週をまたいで回り込む）。UTC と手元の時刻のマスを変換する。 */
 function shiftSelection(selection: Set<string>, offsetMinutes: number): Set<string> {
   const shifted = new Set<string>();
   for (const key of selection) {
@@ -56,8 +56,8 @@ function shiftSelection(selection: Set<string>, offsetMinutes: number): Set<stri
 }
 
 /**
- * Expands stored ranges (UTC) onto the local 30-minute grid, rounding outward so no time is lost.
- * offsetMinutes is the coach's current UTC offset (local = UTC + offset).
+ * 保存した範囲（UTC）を手元の30分のグリッドに広げる。時間を失わないよう外側へ丸める。
+ * offsetMinutes はコーチの今の UTC からのずれ（手元 = UTC + offset）。
  */
 function expandSlotsToSelection(slots: CoachAvailabilitySlot[], offsetMinutes: number): Set<string> {
   const utc = new Set<string>();
@@ -102,8 +102,8 @@ function rangeKey(day: DayOfWeek, start: string, end: string): string {
 }
 
 /**
- * Finds the next UTC offset change (daylight saving time) within the given number of days.
- * Returns the first day with the new offset and how many minutes local times shift, or null.
+ * 指定の日数の中で、次に UTC からのずれが変わる日（夏時間）を探す。
+ * 新しいずれの最初の日と、手元の時刻が何分動くかを返す。無ければ null。
  */
 function findUpcomingOffsetChange(timezone: string, withinDays: number): { date: Date; shiftMinutes: number } | null {
   const now = Date.now();
@@ -118,8 +118,8 @@ function findUpcomingOffsetChange(timezone: string, withinDays: number): { date:
 
 export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }: AvailabilityViewProps) {
   const timezone = useTimezone();
-  // Availability is stored in UTC so students always see the same times. The grid shows it in the coach's
-  // local time using today's offset, so the displayed times shift by an hour when daylight saving time changes.
+  // 空き時間は、生徒にいつも同じ時刻で見えるよう UTC で保存する。グリッドはコーチの
+  // 手元の時刻で今日のずれを使って出すため、夏時間が変わると表示の時刻が1時間動く。
   const offsetMinutes = useMemo(() => getUtcOffsetMinutes(timezone), [timezone]);
   const upcomingOffsetChange = useMemo(() => findUpcomingOffsetChange(timezone, REVIEW_INTERVAL_DAYS), [timezone]);
   const [slots, setSlots] = useState<CoachAvailabilitySlot[]>(initialSlots);
@@ -168,7 +168,7 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
       end: s.end_time.slice(0, 5),
     }));
     const oldKeyToId = new Map(oldTuples.map((t) => [rangeKey(t.day, t.start, t.end), t.availability_id]));
-    // Save in UTC: move the local cells back by the offset, then merge per UTC day
+    // UTC で保存する: 手元のマスをずれの分だけ戻し、UTC の日ごとにまとめる
     const utcRanges = mergeSelectionToRanges(shiftSelection(selection, -offsetMinutes));
     const newKeySet = new Set(utcRanges.map((r) => rangeKey(r.day, r.start_time, r.end_time)));
 
@@ -206,7 +206,7 @@ export function AvailabilityView({ initialSlots, initialConfirmedAt, timezones }
       const updatedSelection = expandSlotsToSelection(updatedSlots, offsetMinutes);
       setSelection(updatedSelection);
       setOriginalSelection(updatedSelection);
-      // Saving any change also marks the availability as reviewed (DB trigger)
+      // 変更を保存すると、確認済みにもなる（DB のトリガー）
       if (deletedIds.size > 0 || addedSlots.length > 0) setConfirmedAt(new Date().toISOString());
 
       if (failedCount === 0) {

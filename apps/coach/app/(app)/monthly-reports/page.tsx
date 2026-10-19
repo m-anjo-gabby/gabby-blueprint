@@ -18,7 +18,7 @@ export default async function MonthlyReportsPage({ searchParams }: { searchParam
 
       <MonthSelector currentMonth={yearMonth} />
 
-      {/* Query changes don't trigger loading.tsx, so re-key per month to show the skeleton while switching */}
+      {/* クエリの変更では loading.tsx が出ないため、月ごとに key を変えて切り替え中に骨組みを出す */}
       <Suspense key={yearMonth} fallback={<MonthlyReportTableSkeleton />}>
         <MonthlyReportSection yearMonth={yearMonth} />
       </Suspense>

@@ -14,7 +14,7 @@ import { MonthSelector } from '@/app/(app)/monthly-reports/_components/MonthSele
  * 見出し・タブ・区分の見出しは本物を描き（page.tsx と共有）、本文は本番と同じ幅・並びの骨組みにする。
  */
 
-// ---------- Weekly Availability ----------
+// 毎週の空き時間
 
 export function AvailabilityPageHeader() {
   return (
@@ -51,7 +51,7 @@ export function AvailabilitySkeleton() {
   );
 }
 
-// ---------- Requests ----------
+// 依頼
 
 export function RequestsPageHeader() {
   return (
@@ -84,7 +84,7 @@ export function RequestsSkeleton() {
   );
 }
 
-// ---------- Monthly Report ----------
+// 月次のレポート
 
 export function MonthlyReportsPageHeader() {
   return (
@@ -116,7 +116,7 @@ export function MonthlyReportsSkeleton() {
   );
 }
 
-// ---------- Profile ----------
+// プロフィール
 
 export function ProfilePageHeader() {
   return (
@@ -135,12 +135,12 @@ export function ProfileSkeleton() {
       <div className="max-w-330">
         <div aria-hidden className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
           <div className="space-y-6">
-            {/* Student matching */}
+            {/* 生徒のマッチング */}
             <Skeleton className="h-32 w-full rounded-2xl" />
             <Skeleton className="h-40 w-full rounded-2xl" />
-            {/* My Rating */}
+            {/* 自分の評価 */}
             <MyRatingCardSkeleton />
-            {/* Email notifications */}
+            {/* メールの通知 */}
             <Skeleton className="h-36 w-full rounded-2xl" />
             <Skeleton className="h-120 w-full rounded-2xl" />
           </div>
@@ -151,7 +151,7 @@ export function ProfileSkeleton() {
   );
 }
 
-// ---------- Change Password ----------
+// パスワードの変更
 
 export function PasswordSkeleton() {
   return (

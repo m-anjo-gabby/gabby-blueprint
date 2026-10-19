@@ -5,8 +5,8 @@ import { USER_TYPES } from '@gabby/types/user';
 import { AUTH_ERROR_MESSAGES } from '@/constants/auth';
 
 /**
- * Coach portal authentication actions
- * After sign-in, verifies that user_type is coach ('2')
+ * コーチのポータルの認証のアクション
+ * サインインの後、user_type がコーチ（'2'）であることを確かめる
  */
 const {
   signIn,
@@ -21,7 +21,7 @@ const {
 } = createPortalAuthActions({
   appName: 'coach',
   messages: (code) => AUTH_ERROR_MESSAGES[code],
-  // Password reset emails are sent in English
+  // パスワード再設定のメールは英語で送る
   resetMailLanguage: 'en',
   guardUser: (user) => (user.app_metadata?.user_type === USER_TYPES.COACH ? { ok: true } : { ok: false }),
 });

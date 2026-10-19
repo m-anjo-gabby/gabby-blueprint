@@ -12,7 +12,7 @@ import { TodaysLessonPanel } from './TodaysLessonPanel';
 
 interface StudentOverviewHeaderProps {
   profile: StudentOverviewProfile;
-  /** The student's timezone as its master display name (e.g. "Japan (Tokyo)") */
+  /** 生徒のタイムゾーンのマスタの表示名（例: "Japan (Tokyo)"） */
   timezoneName: string;
   upcomingSession: StudentSessionHistoryItem | null;
 }

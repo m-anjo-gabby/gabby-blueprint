@@ -17,7 +17,7 @@ const logger = createLogger('coach');
 const CALENDAR_EVENT_ERROR_MESSAGE = 'Something went wrong. Please try again in a moment.';
 
 /**
- * Get published calendar events (group sessions, maintenance notices, etc.) for the logged-in coach's calendar.
+ * ログイン中のコーチのカレンダーに出す、公開中のイベント（グループセッション・メンテナンスのお知らせ等）を取得する。
  */
 export async function getMyCalendarEvents(startIso: string, endIso: string): Promise<CalendarEventItem[]> {
   const result = await getPublishedCalendarEventsCore(startIso, endIso);
@@ -30,7 +30,7 @@ export async function getMyCalendarEvents(startIso: string, endIso: string): Pro
 }
 
 /**
- * Join a calendar event (e.g. a group session) that has RSVP enabled.
+ * 参加の受付があるイベント（グループセッション等）に参加する。
  */
 export async function joinCalendarEvent(calendarEventId: string): Promise<ActionResult> {
   const result = await joinCalendarEventCore(calendarEventId);
@@ -43,7 +43,7 @@ export async function joinCalendarEvent(calendarEventId: string): Promise<Action
 }
 
 /**
- * Cancel participation in a calendar event.
+ * イベントへの参加を取り消す。
  */
 export async function cancelCalendarEventParticipation(calendarEventId: string): Promise<ActionResult> {
   const result = await cancelCalendarEventParticipationCore(calendarEventId);
@@ -56,7 +56,7 @@ export async function cancelCalendarEventParticipation(calendarEventId: string):
 }
 
 /**
- * Get announcements for a calendar event the coach is a participant of, or assigned to.
+ * コーチが参加者・担当者になっているイベントの連絡を取得する。
  */
 export async function getCalendarEventMessages(calendarEventId: string): Promise<CalendarEventMessageItem[]> {
   const result = await getCalendarEventMessagesCore(calendarEventId);
@@ -69,7 +69,7 @@ export async function getCalendarEventMessages(calendarEventId: string): Promise
 }
 
 /**
- * Get the public URL for an announcement attachment.
+ * 連絡の添付ファイルの公開 URL を取得する。
  */
 export async function getCalendarEventMessageAttachmentUrl(path: string): Promise<{ url: string | null }> {
   return getCalendarEventMessageAttachmentUrlCore(path);

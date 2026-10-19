@@ -24,7 +24,7 @@ export interface PayNoticeData {
   companyAddress: string;
   logoSrc: string | null; // ローカルファイルパス、またはURL（Supabase Storageの公開URL等）
   contractorName: string;
-  periodLabel: string; // e.g. "September 2026"
+  periodLabel: string; // 例: "September 2026"
   issueDateLabel: string; // e.g. "2026-09-13"（アドミンの承認日）
   currencyCode: string;
   totalSessions: number;

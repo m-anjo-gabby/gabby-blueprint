@@ -1,6 +1,6 @@
 import type { SessionActionDialogLabels } from '@gabby/lib/components/common/SessionActionDialog';
 
-/** English labels for the shared session cancel dialog (Coach portal). */
+/** 共通のセッションのキャンセルのダイアログの英語の文言（コーチのポータル）。 */
 export const COACH_SESSION_ACTION_LABELS: SessionActionDialogLabels = {
   cancel: {
     title: 'Cancel Session',

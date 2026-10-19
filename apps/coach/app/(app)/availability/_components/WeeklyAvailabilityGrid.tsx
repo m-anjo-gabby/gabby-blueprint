@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { type DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
 
-/** Grid granularity: one cell = 30 minutes, covering a full day (48 cells). */
+/** グリッドの細かさ: 1マス = 30分で、1日分（48マス）。 */
 export const SLOTS_PER_DAY = 48;
 
 export function slotKey(day: DayOfWeek, slotIndex: number): string {
@@ -27,9 +27,9 @@ interface WeeklyAvailabilityGridProps {
 }
 
 /**
- * Calendly-style weekly availability grid: columns are days of week, rows are 30-minute
- * blocks. Click-drag paints (or clears) a run of cells; the caller merges cells into
- * contiguous time ranges on save.
+ * Calendly のような毎週の空き時間のグリッド。列は曜日、行は30分の
+ * 区切り。押したままなぞるとマスを塗る（または消す）。保存の時に呼び出し側がマスを
+ * 続いた時間の範囲にまとめる。
  */
 export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: WeeklyAvailabilityGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -43,7 +43,7 @@ export function WeeklyAvailabilityGrid({ selection, onChange, disabled }: Weekly
       const slotIndex = Number(key.split('-')[1]);
       if (slotIndex < firstSelected) firstSelected = slotIndex;
     }
-    const targetSlot = firstSelected < SLOTS_PER_DAY ? firstSelected : 16; // default: 08:00
+    const targetSlot = firstSelected < SLOTS_PER_DAY ? firstSelected : 16; // 既定: 08:00
     const container = scrollRef.current;
     if (container) {
       container.scrollTop = Math.max(0, targetSlot * rowHeight - rowHeight * 2);
