@@ -2,3 +2,5 @@
 # 手元: git config blame.ignoreRevsFile .git-blame-ignore-revs（GitHub の blame は自動で読む）
 # Prettier で JS/TS のコードを一括整形する
 433da62bceda502b04732ae52c3e75b31f804dae
+# import の一括の並び替え（@ianvs/prettier-plugin-sort-imports）
+0dae33a022d062481e9f319bcc69c66cce8820f0
