@@ -8,9 +8,10 @@ import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { ChatTimeline } from '@gabby/lib/components/chat/ChatTimeline';
 import { ChatAvatar } from '@gabby/lib/components/chat/ChatAvatar';
 import { CHAT_ROOM_TYPES, type ChatMessage, type ChatRoom, type ChatRoomMemberSummary } from '@gabby/types/chat';
-import { getUserTypeLabel, USER_TYPES } from '@gabby/types/user';
+import { USER_TYPES } from '@gabby/types/user';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { GroupParticipantsManager } from './GroupParticipantsManager';
+import { UserTypeLabel } from '@/components/common/UserTypeLabel';
 
 interface AdminChatRoomProps {
   roomId: string;
@@ -105,7 +106,7 @@ function ChatRoomDetails({ roomId, room, members, canManage }: AdminChatRoomProp
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-ink">{member.user_name || tCommon('unnamed')}</p>
                   <p className="truncate text-[11px] text-ink-subtle">
-                    {getUserTypeLabel(member.user_type)}
+                    <UserTypeLabel type={member.user_type} />
                     {member.client_name ? ` · ${member.client_name}` : ''}
                   </p>
                 </div>

@@ -9,12 +9,13 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { ChatAvatar } from '@gabby/lib/components/chat/ChatAvatar';
-import { getUserTypeLabel, USER_TYPES, type UserType } from '@gabby/types/user';
+import { USER_TYPES, type UserType } from '@gabby/types/user';
 import { type ChatRoomMemberSummary, type ChatTargetUser } from '@gabby/types/chat';
 import { type ClientOption } from '@gabby/types/client';
 import { getChatRoomTargetUsers, addChatRoomMember, removeChatRoomMember } from '@gabby/lib/chat/actions/roomActions';
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { UserTypeLabel } from '@/components/common/UserTypeLabel';
 
 const SELECTABLE_USER_TYPES: UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
 const MIN_GROUP_ROOM_MEMBERS = 2;
@@ -142,7 +143,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{member.user_name || tCommon('unnamed')}</p>
                 <p className="truncate text-[11px] text-ink-subtle">
-                  {getUserTypeLabel(member.user_type)}
+                  <UserTypeLabel type={member.user_type} />
                   {member.client_name ? ` · ${member.client_name}` : ''}
                 </p>
               </div>
@@ -179,7 +180,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
             <TabsList className="grid w-full grid-cols-3">
               {SELECTABLE_USER_TYPES.map((type) => (
                 <TabsTrigger key={type} value={type} disabled={isLoadingCandidates}>
-                  {getUserTypeLabel(type)}
+                  <UserTypeLabel type={type} />
                 </TabsTrigger>
               ))}
             </TabsList>

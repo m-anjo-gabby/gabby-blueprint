@@ -15,5 +15,6 @@ Cookie（`NEXT_LOCALE`）でロケールを切り替える（URL プレフィッ
 - 翻訳文言は `apps/admin/messages/{ja,en}.json` に、機能・画面単位の名前空間（`common` / `nav` / `login` / `dashboard` / `users` 等、`app/(app)/<dir>` のディレクトリ名に対応）で追加する。新規画面を対応させる際は同じ命名規則を踏襲する。
 - Client Component では `useTranslations()` / `useLocale()`、Server Component・サーバーアクションでは `next-intl/server` の `getTranslations()` / `getLocale()` を使用する。キーは型で検査される（`i18n/messages.d.ts`。ja.json が正で、en.json とのキーの一致は単体テストで確かめる）ため、キーを文字列の連結で組み立てず、対応表（`Record<…, MessageKey>`）等で型の付いたキーを渡す。
 - Zodバリデーションメッセージ等、コンポーネント外（モジュールスコープ）で定義していたスキーマは `createXxxSchema(t)` のようなファクトリ関数に変換し、コンポーネント内で生成する（例: `clients/_components/ClientFormDialog.tsx`。React Compiler が `t` の変わらない間は使い回すため、`useMemo` で包まなくてよい）。
-- DBから取得する動的な文字列（例: `com_m_role.role_name` などロール表示名、`USER_TYPE_MAP`/`getUserTypeLabel` 等 `packages/types` 由来の列挙ラベル）は翻訳カタログの対象外（`packages/types` は coach/student からも参照されるため変更しない）。
+- DBから取得する動的な文字列（例: `com_m_role.role_name` などロール表示名）は翻訳カタログの対象外。
+- `packages/types` の区分の表示名（`getUserTypeLabel` 等）は日本語の固定の文言（coach/student と共有）のため、admin では使わず翻訳の文言で出す。利用者の区分は `common.userType`（`components/common/UserTypeLabel.tsx` の `UserTypeLabel` / `useUserTypeLabel`、サーバーは `lib/userTypeLabel.ts` の `userTypeLabelKey`）。
 - `apps/admin` 以外（`coach`/`student`）は本ルールの対象外。将来的に展開する場合は改めて計画する。

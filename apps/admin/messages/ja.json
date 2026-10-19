@@ -76,6 +76,12 @@
     "fallback": {
       "contract": "不明な契約",
       "plan": "不明なプラン"
+    },
+    "userType": {
+      "admin": "管理者",
+      "student": "生徒",
+      "coach": "コーチ",
+      "unknown": "不明"
     }
   },
   "nav": {

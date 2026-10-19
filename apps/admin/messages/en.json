@@ -76,6 +76,12 @@
     "fallback": {
       "contract": "Unknown contract",
       "plan": "Unknown plan"
+    },
+    "userType": {
+      "admin": "Admin",
+      "student": "Student",
+      "coach": "Coach",
+      "unknown": "Unknown"
     }
   },
   "nav": {

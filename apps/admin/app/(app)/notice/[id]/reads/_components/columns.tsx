@@ -4,9 +4,10 @@ import type { useTranslations } from 'next-intl';
 import type { ListColumnDef } from '@/components/list/listTable';
 import { Building2, CheckCircle2, CircleDashed } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getUserTypeLabel, USER_TYPES } from '@gabby/types/user';
+import { USER_TYPES } from '@gabby/types/user';
 import { formatToJstDateTime } from '@gabby/lib/date/date';
 import type { NoticeReadStatusUser } from '@/actions/adminNoticeAction';
+import { UserTypeLabel } from '@/components/common/UserTypeLabel';
 
 type TableT = ReturnType<typeof useTranslations<'notice.readsTable'>>;
 
@@ -42,7 +43,7 @@ export function createColumns(t: TableT, { hasCta }: { hasCta: boolean }): ListC
               : 'text-slate-500 border-slate-100 bg-slate-50',
           )}
         >
-          {getUserTypeLabel(row.original.user_type)}
+          <UserTypeLabel type={row.original.user_type} />
         </span>
       ),
     },

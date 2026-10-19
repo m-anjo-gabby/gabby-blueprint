@@ -4,9 +4,10 @@ import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { USER_TYPES, type UserType, getUserTypeLabel } from '@gabby/types/user';
+import { USER_TYPES, type UserType } from '@gabby/types/user';
 import { type ChatTargetUser } from '@gabby/types/chat';
 import { type ClientOption } from '@gabby/types/client';
+import { UserTypeLabel } from '@/components/common/UserTypeLabel';
 
 const SELECTABLE_USER_TYPES: UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
 
@@ -58,7 +59,7 @@ export function ParticipantPicker({ label, users, clients, value, onChange, disa
         <TabsList className="grid grid-cols-3 w-full">
           {SELECTABLE_USER_TYPES.map((t) => (
             <TabsTrigger key={t} value={t} disabled={disabled}>
-              {getUserTypeLabel(t)}
+              <UserTypeLabel type={t} />
             </TabsTrigger>
           ))}
         </TabsList>

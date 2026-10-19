@@ -9,9 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
-import { getUserTypeLabel, USER_TYPES, type RoleDefinition } from '@gabby/types/user';
+import { USER_TYPES, type RoleDefinition } from '@gabby/types/user';
 import type { ClientOption } from '@gabby/types/client';
 import type { UserBaseValues } from '../_lib/userSchema';
+import { UserTypeLabel, useUserTypeLabel } from '@/components/common/UserTypeLabel';
 
 export const USER_FIELD_LABEL_CLASS = 'text-xs font-bold text-slate-600';
 const INPUT_CLASS = 'h-11 rounded-xl border-slate-200';
@@ -48,6 +49,7 @@ export function UserBasicFields({
 }: UserBasicFieldsProps) {
   const t = useTranslations('users.form');
   const tCommon = useTranslations('common');
+  const userTypeLabel = useUserTypeLabel();
   const form = useFormContext<UserBaseValues>();
   const userType = useWatch({ control: form.control, name: 'user_type' });
   const availableRoles = filterRolesByUserType(roles, userType);
@@ -134,7 +136,7 @@ export function UserBasicFields({
             <FormItem>
               <FormLabel className={USER_FIELD_LABEL_CLASS}>{t('userTypeLabel')}</FormLabel>
               {readOnly ? (
-                renderValue(getUserTypeLabel(field.value))
+                renderValue(userTypeLabel(field.value))
               ) : (
                 <Select
                   onValueChange={(value) => {
@@ -156,9 +158,15 @@ export function UserBasicFields({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={USER_TYPES.STUDENT}>{getUserTypeLabel(USER_TYPES.STUDENT)}</SelectItem>
-                    <SelectItem value={USER_TYPES.ADMIN}>{getUserTypeLabel(USER_TYPES.ADMIN)}</SelectItem>
-                    <SelectItem value={USER_TYPES.COACH}>{getUserTypeLabel(USER_TYPES.COACH)}</SelectItem>
+                    <SelectItem value={USER_TYPES.STUDENT}>
+                      <UserTypeLabel type={USER_TYPES.STUDENT} />
+                    </SelectItem>
+                    <SelectItem value={USER_TYPES.ADMIN}>
+                      <UserTypeLabel type={USER_TYPES.ADMIN} />
+                    </SelectItem>
+                    <SelectItem value={USER_TYPES.COACH}>
+                      <UserTypeLabel type={USER_TYPES.COACH} />
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               )}
