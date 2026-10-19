@@ -64,6 +64,14 @@ pnpm --filter gabby-blueprint-student add <パッケージ> --save-catalog   # c
 | pnpm | 10 | 12 | Vercel が pnpm 11 以降に未対応（§2）。対応が公表されたら上げる |
 | @types/node | 24 | 26 | 実行環境の Node のメジャー版に合わせる方針（§1）。Node を上げる時に一緒に上げる |
 
+### 据え置いている版（メジャー版の中）
+
+同じメジャー版の中でも、不具合のため上げずにいるものです。Dependabot の `ignore` にも書いています。直ったら行と `ignore` を消します。
+
+| パッケージ | 現在 | 据え置く理由・上げる条件 |
+|---|---|---|
+| next / eslint-config-next | 16.1.6 | 16.3.8 で、表示中の画面（student のホーム）への先読み（segment prefetch）の応答が、データを返した後も閉じずに残る（関数の上限時間まで開いたまま。E2E の `networkidle` が時間切れになる）。16.1.6 では起きない。16.3 系には先読みを繰り返す不具合（vercel/next.js#99988。16.5.0-canary.8 で修正）もある。上げる前に、本番ビルド（`next start`）でホームを開き、先読みの応答が閉じることを確かめる |
+
 ### peerDependencies の範囲外で使っている組み合わせ
 
 `pnpm-workspace.yaml` の `peerDependencyRules` に、動作を確かめて使っている組み合わせを書いています。対応版が出たら行を消します。

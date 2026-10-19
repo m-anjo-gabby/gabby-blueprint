@@ -20,6 +20,13 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
+      # 16.3 の先読みの不具合で 16.1 に据え置いている（docs/DEPENDENCIES.md「据え置いている版」）
+      - dependency-name: next
+        update-types:
+          - version-update:semver-minor
+      - dependency-name: eslint-config-next
+        update-types:
+          - version-update:semver-minor
 
   - package-ecosystem: github-actions
     directory: /

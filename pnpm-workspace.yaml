@@ -54,13 +54,13 @@ catalog:
   date-fns: ^4.4.0
   dotenv: ^18.0.5
   eslint: ^10.12.0
-  eslint-config-next: 16.3.8
+  eslint-config-next: 16.1.6
   fflate: ^0.8.3
   framer-motion: ^14.0.0
   jsonwebtoken: ^9.0.3
   lucide-react: ^1.51.0
   microsoft-cognitiveservices-speech-sdk: ^1.52.0
-  next: 16.3.8
+  next: 16.1.6
   next-intl: ^4.14.9
   papaparse: ^5.7.0
   pino: ^10.4.0
@@ -100,7 +100,7 @@ onlyBuiltDependencies:
 # peerDependencies の範囲外だが、動作を確認して使っている組み合わせ。対応版が出たら消す（docs/DEPENDENCIES.md）
 peerDependencyRules:
   allowedVersions:
-    # eslint-config-next 16.3 が使うプラグインは ESLint 10 を範囲に含めていない（React の版を eslint.config.mjs で明示して動かす）
+    # eslint-config-next 16 が使うプラグインは ESLint 10 を範囲に含めていない（React の版を eslint.config.mjs で明示して動かす）
     eslint-plugin-import>eslint: '10'
     eslint-plugin-jsx-a11y>eslint: '10'
     eslint-plugin-react-hooks>eslint: '10'
