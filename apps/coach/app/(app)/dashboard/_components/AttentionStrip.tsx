@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Bell, ChevronRight, MessageCircle, UserPlus, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
-import { Skeleton } from '@/components/ui/skeleton';
-import { UserPlus, MessageCircle, Bell, ChevronRight, type LucideIcon } from 'lucide-react';
+import { useEffect } from 'react';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface AttentionStripProps {
   pendingRequestCount: number;

@@ -6,8 +6,8 @@ import { ListSelectFilter } from '@/components/list/ListSelectFilter';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
 import { CALENDAR_EVENT_LIST_FILTERS } from '../_lib/list';
-import { CalendarEventTable } from './CalendarEventTable';
 import type { CalendarEventFormOptions } from './CalendarEventFormDialog';
+import { CalendarEventTable } from './CalendarEventTable';
 
 const EVENT_TYPE_OPTIONS = Object.entries(CALENDAR_EVENT_TYPES).map(([value, { label }]) => ({ value, label }));
 

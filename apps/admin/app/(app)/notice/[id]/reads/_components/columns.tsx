@@ -1,13 +1,13 @@
 'use client';
 
-import type { useTranslations } from 'next-intl';
-import type { ListColumnDef } from '@/components/list/listTable';
 import { Building2, CheckCircle2, CircleDashed } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { USER_TYPES } from '@gabby/types/user';
+import type { useTranslations } from 'next-intl';
 import { formatToJstDateTime } from '@gabby/lib/date/date';
+import { USER_TYPES } from '@gabby/types/user';
 import type { NoticeReadStatusUser } from '@/actions/adminNoticeAction';
 import { UserTypeLabel } from '@/components/common/UserTypeLabel';
+import type { ListColumnDef } from '@/components/list/listTable';
+import { cn } from '@/lib/utils';
 
 type TableT = ReturnType<typeof useTranslations<'notice.readsTable'>>;
 

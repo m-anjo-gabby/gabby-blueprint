@@ -1,21 +1,23 @@
 'use client';
 
+import { ArrowLeft, ArrowRight, Timer, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Zap, Timer } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@/components/ui/card';
-import { tokenizeWordsWithPunctuation, formatSprintLevelLabel, resolveCoachContentName } from '@gabby/lib';
+import { formatSprintLevelLabel, resolveCoachContentName, tokenizeWordsWithPunctuation } from '@gabby/lib';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { ImmersiveShell } from '@/components/common/ImmersiveShell';
+import {
+  LESSON_SPRINT_SCORE_META,
+  type LessonSprintContentSummary,
+  type LessonSprintRecord,
+} from '@gabby/types/lessonSprint';
+import { QUESTION_TYPES, type SprintQuestion } from '@gabby/types/sprint';
 import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
-import { isLiveSessionContext, buildLiveSessionHubHref, withLiveSessionParam } from '@/lib/liveSession/context';
-import { QUESTION_TYPES } from '@gabby/types/sprint';
-import { LESSON_SPRINT_SCORE_META } from '@gabby/types/lessonSprint';
-import type { LessonSprintRecord, LessonSprintContentSummary } from '@gabby/types/lessonSprint';
-import type { SprintQuestion } from '@gabby/types/sprint';
-import { SessionNoteCard } from './SessionNoteCard';
+import { ImmersiveShell } from '@/components/common/ImmersiveShell';
+import { Card, CardContent } from '@/components/ui/card';
+import { buildLiveSessionHubHref, isLiveSessionContext, withLiveSessionParam } from '@/lib/liveSession/context';
+import { cn } from '@/lib/utils';
 import { RepeatSprintButton } from './RepeatSprintButton';
+import { SessionNoteCard } from './SessionNoteCard';
 
 interface LessonSprintResultProps {
   studentId: string;

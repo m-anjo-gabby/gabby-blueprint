@@ -1,8 +1,8 @@
 'use server';
 
+import { getTranslations } from 'next-intl/server';
 import { createPortalAuthActions } from '@gabby/lib/auth/portalActions';
 import { USER_TYPES } from '@gabby/types/user';
-import { getTranslations } from 'next-intl/server';
 
 /**
  * 管理者ポータルの認証アクション一式

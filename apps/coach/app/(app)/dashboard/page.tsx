@@ -1,13 +1,13 @@
 import { Suspense } from 'react';
 import { getMyProfile } from '@/actions/coachProfileAction';
+import { getMyCoachRatingStats } from '@/actions/coachRatingAction';
 import { getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
+import { MyRatingCard, MyRatingCardSkeleton } from '@/components/rating/MyRatingCard';
+import { AttentionStrip } from './_components/AttentionStrip';
 import { DashboardHeader } from './_components/DashboardHeader';
 import { DashboardLayout } from './_components/DashboardLayout';
-import { AttentionStrip } from './_components/AttentionStrip';
-import { TodaysSessionsPanel, TodaysSessionsPanelSkeleton } from './_components/TodaysSessionsPanel';
 import { SessionTasksPanel, SessionTasksPanelSkeleton } from './_components/SessionTasksPanel';
-import { MyRatingCard, MyRatingCardSkeleton } from '@/components/rating/MyRatingCard';
-import { getMyCoachRatingStats } from '@/actions/coachRatingAction';
+import { TodaysSessionsPanel, TodaysSessionsPanelSkeleton } from './_components/TodaysSessionsPanel';
 
 function getGreeting(timeZone: string): string {
   const hour = Number(

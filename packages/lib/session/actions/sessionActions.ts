@@ -1,51 +1,50 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '../../supabase/server';
-import { createLogger } from '../../logger';
-import { getLogContext } from '../../logger/context';
-import { groupRescheduleProposals } from '../rescheduleProposalUtils';
-import { readSprintHistory } from '../../sprint/answeredHistory';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
 import {
+  PROPOSED_BY_ROLE,
+  RESCHEDULE_PROPOSAL_STATUS,
+  SESSION_BOOKING_REQUEST_STATUS,
+  SESSION_STATUS,
   type AcceptRescheduleProposalResult,
   type ApproveSessionBookingRequestResult,
+  type CancelCategory,
   type CancelSessionResult,
   type CheckSessionConflictResult,
+  type CompletionResult,
+  type ConductedVia,
   type CreateSessionBookingRequestResult,
   type DeclineRescheduleProposalResult,
   type GetMyRescheduleProposalsResult,
+  type GetSessionOutcomeEvidenceResult,
   type GetSessionResultSummaryResult,
   type IncomingRescheduleProposalGroup,
+  type MyBookingRequestItem,
   type MyRescheduleProposalGroup,
-  PROPOSED_BY_ROLE,
   type ProposedByRole,
   type ProposedSlotInput,
-  RESCHEDULE_PROPOSAL_STATUS,
-  type RespondSessionBookingRequestResult,
   type RecordSessionOutcomeResult,
-  type GetSessionOutcomeEvidenceResult,
-  type SessionOutcome,
-  type ConductedVia,
-  SESSION_BOOKING_REQUEST_STATUS,
-  SESSION_STATUS,
+  type RespondSessionBookingRequestResult,
   type SessionActionErrorCode,
   type SessionBookingRequest,
-  type MyBookingRequestItem,
   type SessionCallLogEntry,
   type SessionChatMessageEntry,
   type SessionDialogueLogEntry,
   type SessionListItem,
+  type SessionOutcome,
   type SessionRescheduleProposal,
   type SessionRescheduleProposalGroup,
   type SessionSprintSummaryEntry,
   type SessionStatus,
-  type CompletionResult,
-  type CancelCategory,
 } from '@gabby/types/session';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createLogger } from '../../logger';
+import { getLogContext } from '../../logger/context';
+import { readSprintHistory } from '../../sprint/answeredHistory';
+import { createServerClient } from '../../supabase/server';
+import { groupRescheduleProposals } from '../rescheduleProposalUtils';
 
 const logger = createLogger('common');
 

@@ -1,6 +1,6 @@
-import { CONDUCTED_VIA, SESSION_OUTCOME } from '@gabby/types/session';
 import type { SessionOutcomeFieldsLabels } from '@gabby/lib/components/common/SessionOutcomeFields';
 import type { OutcomeReasonKind } from '@gabby/lib/session/outcome';
+import { CONDUCTED_VIA, SESSION_OUTCOME } from '@gabby/types/session';
 
 /** 共通のセッションの結果の入力欄の英語の文言（コーチのポータルのセッションの終了のダイアログ）。 */
 export const COACH_SESSION_OUTCOME_LABELS: SessionOutcomeFieldsLabels = {

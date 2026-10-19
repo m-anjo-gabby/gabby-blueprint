@@ -1,9 +1,9 @@
 import {
-  SESSION_STATUS,
-  SESSION_OUTCOME,
   CANCEL_CATEGORY,
   CONDUCTED_VIA,
   isConductedOutcome,
+  SESSION_OUTCOME,
+  SESSION_STATUS,
   type CancelCategory,
   type CompletionResult,
   type ConductedVia,

@@ -1,18 +1,18 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { BookOpenCheck, Bot, Loader2, Send, Trash2, User } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Send, Loader2, Bot, User, Trash2, BookOpenCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@gabby/lib/hooks/useToast';
+import { useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '@gabby/lib/ai';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { clientLogger } from '@gabby/lib/logger/client';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 
 interface KnowledgeSourceRef {
   title: string;

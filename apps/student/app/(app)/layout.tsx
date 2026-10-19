@@ -1,19 +1,19 @@
 // app/(app)/layout.tsx
 import { redirect } from 'next/navigation';
 import { UserStoreInitializer } from '@gabby/lib/auth/UserStoreInitializer';
-import { ToastContainer } from '@gabby/lib/components/common/ToastContainer';
 import { ConfirmContainer } from '@gabby/lib/components/common/ConfirmContainer';
-import { TermsAgreementModal } from '@/components/common/TermsAgreementModal';
-import { checkPendingAgreements } from '@/actions/termAction';
-import { NavigationScrollReset } from '@/components/common/NavigationScrollReset';
-import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
-import { AudioDiagnosticsReporter } from '@/components/common/AudioDiagnosticsReporter';
-import { PopupHost } from '@/components/popups/PopupHost';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
-import { ShellNavProvider } from '@/components/shell/ShellNavContext';
+import { ToastContainer } from '@gabby/lib/components/common/ToastContainer';
 import { loadCommonShellData } from '@gabby/lib/shell/loadCommonShellData';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { checkPendingAgreements } from '@/actions/termAction';
+import { AudioDiagnosticsReporter } from '@/components/common/AudioDiagnosticsReporter';
+import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
+import { NavigationScrollReset } from '@/components/common/NavigationScrollReset';
+import { TermsAgreementModal } from '@/components/common/TermsAgreementModal';
+import { PopupHost } from '@/components/popups/PopupHost';
+import { ShellNavProvider } from '@/components/shell/ShellNavContext';
 import type { ShellNavContext } from '@/constants/navigation';
+import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
 
 /**
  * 生徒用 統合アプリケーションレイアウト

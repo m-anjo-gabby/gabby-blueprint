@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   CheckCircle2,
@@ -23,16 +22,17 @@ import {
   VideoOff,
   X,
 } from 'lucide-react';
-import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
-import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
+import { useEffect, useRef, useState } from 'react';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
+import { useLiveSessionEndSignal } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionEndSignal';
 import { useLiveSessionPresence } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionPresence';
 import { useLiveSessionRoomOrchestration } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionRoomOrchestration';
-import { useLiveSessionEndSignal } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionEndSignal';
-import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { UserAvatar } from '@/components/common/UserAvatar';
-import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
+import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
+import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
+import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 interface LiveSessionRoomProps {
   access: LiveSessionRoomAccess;

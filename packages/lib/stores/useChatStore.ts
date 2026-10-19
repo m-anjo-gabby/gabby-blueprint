@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { getChatRooms } from '@gabby/lib/chat/actions/roomActions';
 import { markAsRead } from '@gabby/lib/chat/actions/messageActions';
+import { getChatRooms } from '@gabby/lib/chat/actions/roomActions';
 import { type ChatMessage, type ChatRoomListItem } from '@gabby/types/chat';
 
 interface ChatState {

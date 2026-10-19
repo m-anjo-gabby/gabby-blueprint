@@ -1,13 +1,13 @@
-import { test, expect } from '../../support/studentApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableContract,
   createInvitation,
+  DISPOSABLE_EMAIL_DOMAIN,
   trackUserByEmail,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
+import { expect, test } from '../../support/studentApp.ts';
 
 /**
  * 招待からの本登録（仕様: e2e/specs/auth/password-reset-and-invite.md、画面: docs/screens/common/invite.md）

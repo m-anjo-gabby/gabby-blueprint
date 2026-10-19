@@ -1,10 +1,7 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '../../supabase/server';
-import { createLogger } from '../../logger';
-import { getLogContext } from '../../logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import {
   COACH_MATCHING_REQUIRED_ITEMS,
@@ -12,7 +9,9 @@ import {
   type GetCoachMatchingStatusResult,
   type UpdateMyAcceptingStudentsResult,
 } from '@gabby/types/coachProfile';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createLogger } from '../../logger';
+import { getLogContext } from '../../logger/context';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 

@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import type { TermListItem } from '@gabby/types/term';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import type { TermListItem } from '@gabby/types/term';
 import { deleteTerm } from '@/actions/adminTermAction';
 import { DataTable } from '@/components/list/DataTable';
+import { boldChunks, DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
-import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
 import { createColumns } from './columns';
 
 interface TermDataTableProps {

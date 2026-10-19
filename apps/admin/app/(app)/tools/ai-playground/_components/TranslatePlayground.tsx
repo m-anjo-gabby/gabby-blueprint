@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Languages, Loader2, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Card } from '@/components/ui/card';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { clientLogger } from '@gabby/lib/logger/client';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 
 interface TranslateResult {
   translation: string;

@@ -1,8 +1,8 @@
 import 'server-only';
+import type { CoreResult } from '@gabby/types/action';
 import { getChatRooms } from '../chat/actions/roomActions';
 import { getNoticesCached } from '../notice/getNoticesCached';
 import { getNotifications } from '../notification/actions/notificationActions';
-import type { CoreResult } from '@gabby/types/action';
 import type { CommonShellData, CommonShellDataOptions } from './shellDataTypes';
 
 const valueOf = <T>(result: PromiseSettledResult<CoreResult<{ data: T }> | null>): T | null =>

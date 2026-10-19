@@ -1,40 +1,40 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { ChevronRight, Star, Ticket, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, Star, Ticket, Users } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { LiveContractSelect, formatContractDate, formatContractPeriod } from '@/components/session/LiveContractSelect';
-import { CountBadge, ShellSectionTitle } from '@/components/shell/ShellPage';
-import { LiveRoomPageHeader } from './LiveRoomSkeleton';
-import { useToast } from '@gabby/lib/hooks/useToast';
+import { useState, useTransition } from 'react';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { withdrawSessionBookingRequest } from '@/actions/sessionAction';
-import {
-  type MyBookingRequestItem,
-  type MyRescheduleProposalGroup,
-  type SessionListItem,
-  SESSION_RESULT_STATUSES,
-  isSelfInitiatedCancel,
-} from '@gabby/types/session';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import type { PendingCoachRating } from '@gabby/types/coachRating';
 import {
   type BookableTicketSlot,
   type LiveSessionContractSummary,
   type LiveSessionOverview,
   type NextContractMatching,
 } from '@gabby/types/matching';
-import type { PendingCoachRating } from '@gabby/types/coachRating';
-import { SessionActionDialog, type SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
+import {
+  isSelfInitiatedCancel,
+  SESSION_RESULT_STATUSES,
+  type MyBookingRequestItem,
+  type MyRescheduleProposalGroup,
+  type SessionListItem,
+} from '@gabby/types/session';
+import { withdrawSessionBookingRequest } from '@/actions/sessionAction';
+import { formatContractDate, formatContractPeriod, LiveContractSelect } from '@/components/session/LiveContractSelect';
+import { CountBadge, ShellSectionTitle } from '@/components/shell/ShellPage';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { BookMakeupSessionDialog } from '../../calendar/_components/BookMakeupSessionDialog';
-import { RescheduleProposalCard } from './RescheduleProposalCard';
-import { NextSessionPanel } from './NextSessionPanel';
-import { ContractOverviewCard } from './ContractOverviewCard';
-import { UpcomingSessionList } from './UpcomingSessionList';
-import { SessionHistoryList } from './SessionHistoryList';
+import { SessionActionDialog, type SessionActionTarget } from '../../calendar/_components/SessionActionDialog';
 import { CoachRatingDialog } from './CoachRatingDialog';
+import { ContractOverviewCard } from './ContractOverviewCard';
+import { LiveRoomPageHeader } from './LiveRoomSkeleton';
+import { NextSessionPanel } from './NextSessionPanel';
 import { PreviousSessionLink, type PreviousSessionSummary } from './PreviousSessionLink';
+import { RescheduleProposalCard } from './RescheduleProposalCard';
+import { SessionHistoryList } from './SessionHistoryList';
+import { UpcomingSessionList } from './UpcomingSessionList';
 
 // 履歴に出すのは、結果画面へ進める実施済みと、生徒・コーチ本人起因のキャンセルのみ
 // （ライセンス無効化・コーチ交代等の運用都合のキャンセルは表示しない。isSelfInitiatedCancel参照）

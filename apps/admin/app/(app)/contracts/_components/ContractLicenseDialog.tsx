@@ -1,7 +1,12 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { startOfDay } from 'date-fns';
+import { AlertCircle, ArrowLeft, Ban, CheckCircle2, Loader2, UserPlus, Users } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useCallback, useMemo, useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type ContractDetail, type LicenseUserItem } from '@gabby/types/contract';
+import { assignLicenseToUser, getLicenseAssignmentUsers, invalidateUserLicense } from '@/actions/adminContractAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,15 +18,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, UserPlus, Ban, Loader2, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { getLicenseAssignmentUsers, assignLicenseToUser, invalidateUserLicense } from '@/actions/adminContractAction';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { type LicenseUserItem, type ContractDetail } from '@gabby/types/contract';
-import { startOfDay } from 'date-fns';
 
 interface ContractLicenseDialogProps {
   contract: ContractDetail;

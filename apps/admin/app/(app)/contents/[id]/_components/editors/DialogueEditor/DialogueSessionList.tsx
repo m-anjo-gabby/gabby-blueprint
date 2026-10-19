@@ -1,12 +1,10 @@
 'use client';
 
+import { AlertCircle, ExternalLink, Layout, StickyNote, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import { ExternalLink, Trash2, AlertCircle, Layout, StickyNote } from 'lucide-react';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { type DialogueSession } from '@gabby/types/dialogue';
 import { deleteDialogueSession } from '@/actions/adminDialogueAction';
-import { useToast } from '@gabby/lib/hooks/useToast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +16,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { DialogueSessionFormDialog } from './DialogueSessionFormDialog';
 
 interface DialogueSessionListProps {

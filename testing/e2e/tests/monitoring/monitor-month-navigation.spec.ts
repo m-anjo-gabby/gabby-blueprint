@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
-import { test, expect } from '../../support/studentApp.ts';
-import { storageStatePath } from '../../support/personas.ts';
 import { clickUntilVisible } from '../../support/hydration.ts';
+import { storageStatePath } from '../../support/personas.ts';
+import { expect, test } from '../../support/studentApp.ts';
 
 /**
  * モニターの月の移動（仕様: e2e/specs/monitoring/student-monitor-dashboard.md フロー5・異常系 #3）

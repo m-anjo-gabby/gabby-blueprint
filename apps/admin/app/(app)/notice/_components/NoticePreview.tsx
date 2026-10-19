@@ -1,9 +1,18 @@
 'use client';
 
-import * as React from 'react';
-import { useTranslations } from 'next-intl';
 import { Monitor, Smartphone, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
+import * as React from 'react';
+import { NoticeDetail } from '@gabby/lib/components/notice/NoticeDetail';
+import { NoticeHomeCard } from '@gabby/lib/components/notice/NoticeHomeCard';
+import { NoticeMeta } from '@gabby/lib/components/notice/NoticeMeta';
+import {
+  NOTICE_POPUP_CLASSES,
+  NoticePopupContent,
+  noticePopupTitleClass,
+  type NoticePopupVariant,
+} from '@gabby/lib/components/notice/NoticePopup';
+import { NOTICE_LABELS_EN, NOTICE_LABELS_JA, type NoticeLabels } from '@gabby/lib/notice/labels';
 import type {
   NoticeAttachment,
   NoticeDisplayMode,
@@ -11,16 +20,7 @@ import type {
   NoticeTargetType,
   NoticeType,
 } from '@gabby/types/notice';
-import { NOTICE_LABELS_EN, NOTICE_LABELS_JA, type NoticeLabels } from '@gabby/lib/notice/labels';
-import {
-  NOTICE_POPUP_CLASSES,
-  NoticePopupContent,
-  noticePopupTitleClass,
-  type NoticePopupVariant,
-} from '@gabby/lib/components/notice/NoticePopup';
-import { NoticeHomeCard } from '@gabby/lib/components/notice/NoticeHomeCard';
-import { NoticeDetail } from '@gabby/lib/components/notice/NoticeDetail';
-import { NoticeMeta } from '@gabby/lib/components/notice/NoticeMeta';
+import { cn } from '@/lib/utils';
 
 /** プレビューに渡す編集中の内容（保存前の値） */
 export interface NoticePreviewDraft {

@@ -2,11 +2,11 @@
 
 import { motion } from 'framer-motion';
 import { Bell } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
-import { type NotificationItem } from '@gabby/types/notification';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getNotificationDisplay } from '@gabby/lib/notification/display';
+import { type NotificationItem } from '@gabby/types/notification';
+import { cn } from '@/lib/utils';
 
 interface NotificationCardProps {
   notification: NotificationItem;

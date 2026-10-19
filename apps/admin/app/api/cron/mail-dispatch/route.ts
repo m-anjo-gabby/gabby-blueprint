@@ -1,10 +1,10 @@
-import { unstable_rethrow } from 'next/navigation';
 import { timingSafeEqual } from 'node:crypto';
+import { unstable_rethrow } from 'next/navigation';
 import { NextResponse, type NextRequest } from 'next/server';
-import { dispatchMail } from '@gabby/lib/mail/dispatch/dispatchMail';
-import { sendMailDailyReport } from '@gabby/lib/mail/dispatch/dailyReport';
 import { createLogger } from '@gabby/lib/logger';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { sendMailDailyReport } from '@gabby/lib/mail/dispatch/dailyReport';
+import { dispatchMail } from '@gabby/lib/mail/dispatch/dispatchMail';
 
 const logger = createLogger('mail');
 

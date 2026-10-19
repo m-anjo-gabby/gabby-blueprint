@@ -1,24 +1,24 @@
 'use client';
 
+import { ChevronDown, Lock, LogOut, Menu, User as UserIcon, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Menu, X, LogOut, User as UserIcon, Lock, ChevronDown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { signOut } from '@/actions/adminAuthAction';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
-import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { signOut } from '@/actions/adminAuthAction';
-import { NotificationDropdown } from './NotificationDropdown';
 import { LocaleSwitcher } from './LocaleSwitcher';
-import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { NotificationDropdown } from './NotificationDropdown';
 
 export function Header() {
   const t = useTranslations('common');

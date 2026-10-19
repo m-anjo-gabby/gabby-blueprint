@@ -1,14 +1,14 @@
-import { getMyDialogueAssignments } from '@/actions/dialogueAction';
-import { getTimezoneList } from '@/actions/studentProfileAction';
+import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
+import type { ResumeContentResponse } from '@gabby/types/training';
 import { getLatestResumeContent } from '@/actions/contentAction';
 import { getMyActivePlans, type MyPlan } from '@/actions/dashboardAction';
+import { getMyDialogueAssignments } from '@/actions/dialogueAction';
 import {
   getMyTrainingLifetimeStats,
   getUserTrainingPerformance,
   type TrainingLifetimeStats,
 } from '@/actions/performanceAction';
-import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
-import type { ResumeContentResponse } from '@gabby/types/training';
+import { getTimezoneList } from '@/actions/studentProfileAction';
 import { collectActivities, getMonthKeysCoveringThisWeek, type TrainingActivity } from './weeklyActivity';
 
 export interface HomeData {

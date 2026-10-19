@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { Ban, PlayCircle, UserX } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { USER_STATUS, type UserRecord } from '@gabby/types/user';
 import { setUserSuspended, withdrawUser } from '@/actions/adminDataDeletionAction';
-import { Button } from '@/components/ui/button';
 import { DangerZone } from '@/components/common/DangerZone';
 import { TypedConfirmDialog } from '@/components/common/TypedConfirmDialog';
 import { DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
+import { Button } from '@/components/ui/button';
 
 /**
  * ユーザーの停止・再開と、退会（個人情報の消去。DangerZone）。本登録済みの生徒・コーチだけに出す。

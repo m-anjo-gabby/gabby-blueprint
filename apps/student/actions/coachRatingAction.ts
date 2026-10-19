@@ -1,8 +1,8 @@
 'use server';
 
 import { getMyPendingCoachRatingsCore, submitCoachRatingCore } from '@gabby/lib/coachRating/actions/coachRatingActions';
-import type { CoachRatingErrorCode, PendingCoachRating, SubmitCoachRatingInput } from '@gabby/types/coachRating';
 import type { ActionResult } from '@gabby/types/action';
+import type { CoachRatingErrorCode, PendingCoachRating, SubmitCoachRatingInput } from '@gabby/types/coachRating';
 
 const COACH_RATING_ERROR_MESSAGES_JA: Record<CoachRatingErrorCode, string> = {
   unauthorized: 'セッションの有効期限が切れました。再度ログインしてください。',

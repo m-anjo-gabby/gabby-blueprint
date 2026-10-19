@@ -1,17 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { GraduationCap, Send } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { useState, useTransition } from 'react';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 import { StarRatingInput } from '@gabby/lib/components/common/StarRating';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
@@ -21,8 +12,17 @@ import {
   type PendingCoachRating,
 } from '@gabby/types/coachRating';
 import { submitCoachRating } from '@/actions/coachRatingAction';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { COACH_RATING_ITEMS, ratingOptionLabel } from '@/constants/coachRating';
-import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 type Scores = Record<CoachRatingItem, number | null>;
 const EMPTY_SCORES: Scores = { coaching: null, friendliness: null, recommendation: null };

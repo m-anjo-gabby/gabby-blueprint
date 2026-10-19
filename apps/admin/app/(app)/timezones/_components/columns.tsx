@@ -1,13 +1,13 @@
 'use client';
 
-import type { ListColumnDef } from '@/components/list/listTable';
-import type { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { InactiveBadge } from '@/components/common/InactiveBadge';
+import type { useTranslations } from 'next-intl';
 import type { TimezoneMaster } from '@gabby/types/timezone';
-import { TimezoneFormDialog } from './TimezoneFormDialog';
+import { InactiveBadge } from '@/components/common/InactiveBadge';
+import type { ListColumnDef } from '@/components/list/listTable';
+import { Button } from '@/components/ui/button';
 import { CurrentTimeCell } from './CurrentTimeCell';
+import { TimezoneFormDialog } from './TimezoneFormDialog';
 
 type TableT = ReturnType<typeof useTranslations<'timezones.table'>>;
 

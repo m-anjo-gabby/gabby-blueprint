@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import type { MonitorSprintHistoryResponse, MonitorUser } from '@/actions/monitorAction';
+import { useMemo, useState } from 'react';
+import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
 import { clientLogger } from '@gabby/lib/logger/client';
+import type { MonitorSprintHistoryResponse, MonitorUser } from '@/actions/monitorAction';
 import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { cn } from '@/lib/utils';
 import { HistoryEmpty, HistoryMetric } from '../../training/_components/HistoryParts';
@@ -11,7 +12,6 @@ import { MonitorFilterBar } from './MonitorFilterBar';
 import { MONITOR_DAYS_PER_PAGE, MonitorDayCard, MonitorDayRow, MonitorPager, MonitorUserName } from './MonitorParts';
 import { downloadCsv, getMonitorAccountIds, toDayLabel, type MonitorQuery } from './monitorQuery';
 import { useMonitorNavigation } from './useMonitorNavigation';
-import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
 
 /** 受講生・教材・種別（スプリント／ドリル）ごとに1日分を集約した行 */
 interface SprintDayItem {

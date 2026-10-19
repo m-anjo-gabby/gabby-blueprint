@@ -1,8 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
   BadgeCheck,
@@ -17,24 +14,27 @@ import {
   Video,
   Zap,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Section } from '@/components/common/Section';
-import { ImmersiveShell } from '@/components/common/ImmersiveShell';
-import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
-import { withLiveSessionParam } from '@/lib/liveSession/context';
-import { getSessionStatusBadge } from '@/constants/session';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { EndSessionDialog } from '@/components/session/EndSessionDialog';
-import { useLiveSessionEndSignal } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionEndSignal';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
+import { useLiveSessionEndSignal } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionEndSignal';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import {
-  SESSION_STATUS,
   isConductedOutcome,
+  SESSION_STATUS,
   type SessionOutcome,
   type SessionResultSummary,
 } from '@gabby/types/session';
+import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
+import { ImmersiveShell } from '@/components/common/ImmersiveShell';
+import { Section } from '@/components/common/Section';
+import { EndSessionDialog } from '@/components/session/EndSessionDialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getSessionStatusBadge } from '@/constants/session';
+import { withLiveSessionParam } from '@/lib/liveSession/context';
 
 interface SessionHubProps {
   studentId: string;

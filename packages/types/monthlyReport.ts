@@ -1,4 +1,4 @@
-import { type SessionStatus, type CompletionResult, type CancelCategory } from './session';
+import { type CancelCategory, type CompletionResult, type SessionStatus } from './session';
 
 /**
  * ----------------------------------------------

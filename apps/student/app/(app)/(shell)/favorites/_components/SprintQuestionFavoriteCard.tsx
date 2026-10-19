@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import type { FavoriteSprintQuestionItem } from '@gabby/types/sprint';
+import { useState } from 'react';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import type { FavoriteSprintQuestionItem } from '@gabby/types/sprint';
 import { SprintPhraseBlock, type SprintPhraseVariant } from '@/components/training/sprint-result/SprintPhraseBlock';
 import { cn } from '@/lib/utils';
 import { useFavoriteAudio } from './FavoriteAudioProvider';

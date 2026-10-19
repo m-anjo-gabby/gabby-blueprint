@@ -1,5 +1,5 @@
-import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
+import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const SESSION_SKELETON_COUNT = 4;

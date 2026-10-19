@@ -1,10 +1,10 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { getPasswordStrengthErrorCode, validatePasswordStrength } from '@gabby/lib/auth/validation';
 import { formatRatingValue, roundRatingToHalf } from '@gabby/lib/coachRating/format';
 import { formatDateEn, formatDateTimeEn, formatMonthYearEn } from '@gabby/lib/date/dateEn';
-import { formatLegalName } from '@gabby/lib/userLegal/formatLegalName';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
-import { getPasswordStrengthErrorCode, validatePasswordStrength } from '@gabby/lib/auth/validation';
+import { formatLegalName } from '@gabby/lib/userLegal/formatLegalName';
 
 /** 表示用の文字の組み立て（コーチの評価・英語の日付・本人の氏名）と、パスワードの強さ・エラーのメッセージの取り出し */
 

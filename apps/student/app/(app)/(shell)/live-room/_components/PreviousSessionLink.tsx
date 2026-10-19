@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { ChevronRight, History } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { formatSessionSlot } from '@/lib/sessionFormat';
+import Link from 'next/link';
 import { type SessionListItem } from '@gabby/types/session';
+import { formatSessionSlot } from '@/lib/sessionFormat';
+import { cn } from '@/lib/utils';
 
 /** 前回セッションの宿題の状況（未登録／登録あり。登録ありは本文の1行目を添える） */
 export type PreviousHomeworkStatus = { kind: 'none' } | { kind: 'text'; preview: string };

@@ -22,9 +22,9 @@
  *   一覧のみ
  *     ⑦ お知らせ: 見出し画像＋行動ボタン → ポップアップ・ホームには出ず、お知らせ一覧で開くと画像とボタン
  */
-import { deflateSync, crc32 } from 'node:zlib';
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { crc32, deflateSync } from 'node:zlib';
 import { clearPopupNotices, loadPopupFixture, markOtherNoticesRead } from '../../../e2e/support/popupFixtures.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

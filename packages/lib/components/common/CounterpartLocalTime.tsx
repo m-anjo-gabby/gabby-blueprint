@@ -1,9 +1,9 @@
 'use client';
 
+import { Moon, Sun, Sunrise, Sunset } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { Sunrise, Sun, Sunset, Moon } from 'lucide-react';
-import { cn } from '../../utils';
 import { getHourInZone, getTimeOfDayCategory, isInconsiderateHour, type TimeOfDayCategory } from '../../date/date';
+import { cn } from '../../utils';
 
 const TIME_OF_DAY_ICONS: Record<TimeOfDayCategory, ComponentType<{ size?: number; className?: string }>> = {
   morning: Sunrise,

@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
-import type { ListColumnDef } from '@/components/list/listTable';
-import type { useTranslations } from 'next-intl';
 import { Edit, FileText, ShieldCheck, Trash2 } from 'lucide-react';
+import type { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import type { TermListItem } from '@gabby/types/term';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { TermListItem } from '@gabby/types/term';
 
 type TableT = ReturnType<typeof useTranslations<'terms.table'>>;
 

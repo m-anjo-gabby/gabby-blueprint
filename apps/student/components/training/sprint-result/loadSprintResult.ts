@@ -1,7 +1,7 @@
-import { getSprintResult, type SprintHistoryItem } from '@/actions/sprintAction';
-import { getFavoriteSprintQuestionIds } from '@/actions/sprintFavoriteAction';
 import { getSprintTitle } from '@gabby/lib';
 import { readSprintHistory } from '@gabby/lib/sprint/answeredHistory';
+import { getSprintResult, type SprintHistoryItem } from '@/actions/sprintAction';
+import { getFavoriteSprintQuestionIds } from '@/actions/sprintFavoriteAction';
 import type { SprintResultData } from './types';
 
 /**

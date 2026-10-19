@@ -1,8 +1,8 @@
 'use client';
 
 import { CalendarPlus } from 'lucide-react';
-import type { CalendarEventItem } from '@gabby/types/calendarEvent';
 import { buildGoogleCalendarUrl, downloadIcsFile } from '@gabby/lib/calendarEvent/addToCalendar';
+import type { CalendarEventItem } from '@gabby/types/calendarEvent';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,

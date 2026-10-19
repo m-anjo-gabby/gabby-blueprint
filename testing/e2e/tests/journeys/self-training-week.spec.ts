@@ -1,16 +1,16 @@
 import type { Page } from '@playwright/test';
-import { test, expect, loginAsNewStudent } from '../../support/studentApp.ts';
-import { storageStatePath, type PersonaKey } from '../../support/personas.ts';
-import { clickUntilVisible } from '../../support/hydration.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantAppLicense,
   prepareWordContent,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
+import { clickUntilVisible } from '../../support/hydration.ts';
+import { storageStatePath, type PersonaKey } from '../../support/personas.ts';
+import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 
 /**
  * 自主トレーニングの継続（ジャーニー: e2e/journeys/self-training-week.md）

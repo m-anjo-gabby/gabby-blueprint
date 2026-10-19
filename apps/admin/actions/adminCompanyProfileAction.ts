@@ -1,20 +1,20 @@
 'use server';
 
-import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
-import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { revalidatePath } from 'next/cache';
+import { COMPANY_PROFILE_SELECT } from '@gabby/lib/companyProfile/fetchCompanyProfile';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { COMPANY_PROFILE_SELECT } from '@gabby/lib/companyProfile/fetchCompanyProfile';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import type { ActionResult } from '@gabby/types/action';
 import {
   COMPANY_CODE_ORDER,
   COMPANY_LOGO_BUCKET,
+  isCompanyCode,
   type CompanyCode,
   type CompanyProfile,
-  isCompanyCode,
 } from '@gabby/types/companyProfile';
-import type { ActionResult } from '@gabby/types/action';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 

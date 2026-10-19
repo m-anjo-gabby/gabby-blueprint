@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { getSessionPayRate } from '@/actions/adminPaymentSettingsAction';
-import { PaymentSettingsForm } from './_components/PaymentSettingsForm';
 import { PageHeader } from '@/components/common/PageHeader';
+import { PaymentSettingsForm } from './_components/PaymentSettingsForm';
 
 export default async function PaymentSettingsPage() {
   const t = await getTranslations('paymentSettings');

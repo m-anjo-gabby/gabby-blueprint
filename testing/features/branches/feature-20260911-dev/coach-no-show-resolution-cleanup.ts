@@ -13,8 +13,8 @@
  * 使い方:
  *   pnpm exec tsx testing/features/branches/feature-20260911-dev/coach-no-show-resolution-cleanup.ts --env=dev --tag=noshow01
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { createAdminClient } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

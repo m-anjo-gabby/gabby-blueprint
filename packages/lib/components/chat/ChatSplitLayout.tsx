@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
-import Link from 'next/link';
 import { MessageCircle, MessageCircleOff } from 'lucide-react';
+import Link from 'next/link';
 import { useSelectedLayoutSegment } from 'next/navigation';
-import { useUserStore } from '../../stores/useUserStore';
-import { useChatStore } from '../../stores/useChatStore';
-import { useChatRoomsRealtime } from '../../chat/realtime/useChatRoomsRealtime';
+import { useEffect } from 'react';
 import { CHAT_BASE_PATH } from '../../chat/links';
+import { useChatRoomsRealtime } from '../../chat/realtime/useChatRoomsRealtime';
+import { useChatStore } from '../../stores/useChatStore';
+import { useUserStore } from '../../stores/useUserStore';
 import { cn } from '../../utils';
 import {
   CHAT_SPLIT_CLASSES,

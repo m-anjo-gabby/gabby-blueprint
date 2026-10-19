@@ -1,5 +1,5 @@
-import type { RecognitionCallbacks, RecognitionHandle, RecognitionStartOptions, SpeechRecognizerEngine } from './types';
 import { clientLogger } from '../../../logger/client';
+import type { RecognitionCallbacks, RecognitionHandle, RecognitionStartOptions, SpeechRecognizerEngine } from './types';
 
 type SpeechRecognitionConstructor = new () => SpeechRecognition;
 

@@ -1,19 +1,19 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
 import { Check, CheckCircle2, ChevronRight, Copy, Download, ExternalLink, Megaphone, Paperclip, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { useState } from 'react';
+import { useEventAnnouncements } from '@gabby/lib/calendarEvent/useEventAnnouncements';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useNow } from '@gabby/lib/hooks/useNow';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { useEventAnnouncements } from '@gabby/lib/calendarEvent/useEventAnnouncements';
-import { type CalendarEventItem, CALENDAR_EVENT_TYPES, getCalendarEventPhase } from '@gabby/types/calendarEvent';
-import { getCalendarEventMessages, getCalendarEventMessageAttachmentUrl } from '@/actions/calendarEventAction';
+import { CALENDAR_EVENT_TYPES, getCalendarEventPhase, type CalendarEventItem } from '@gabby/types/calendarEvent';
+import { getCalendarEventMessageAttachmentUrl, getCalendarEventMessages } from '@/actions/calendarEventAction';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { AddToCalendarMenu } from './AddToCalendarMenu';
-import { useEventParticipation } from './useEventParticipation';
 import { EventCoachLine, EventSeriesLabel } from './EventMeta';
+import { useEventParticipation } from './useEventParticipation';
 
 function formatAttachmentSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

@@ -1,37 +1,37 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getCoachIntroVideoUrl } from '@gabby/lib/coachProfile/getCoachIntroVideoUrl';
+import { getCoachMatchingMissingItems } from '@gabby/lib/coachProfile/matchingReadiness';
 import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
-import {
-  uploadProfileIcon,
-  removeProfileIcon,
-  updateMyTimezone,
-  updateMyCoachProfile,
-  uploadCoachIntroVideo,
-  removeCoachIntroVideo,
-} from '@/actions/coachProfileAction';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { type TimezoneMaster } from '@gabby/types/timezone';
-import { type CountryMaster } from '@gabby/types/country';
+import type { MailSettings } from '@gabby/lib/mail/settingsActions';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import {
   type CoachMatchingStatus,
   type CoachProfileFormValues,
   type CoachProfileRecord,
 } from '@gabby/types/coachProfile';
-import { getCoachMatchingMissingItems } from '@gabby/lib/coachProfile/matchingReadiness';
-import { getCoachProfileFormProgress } from '../_lib/profileCompleteness';
-import { MatchingStatusCard } from './MatchingStatusCard';
-import { AccountSummaryCard } from './AccountSummaryCard';
-import { PublicProfileForm } from './PublicProfileForm';
-import { LivePreviewPanel } from './LivePreviewPanel';
-import { MailSettingsCard } from './MailSettingsCard';
-import type { MailSettings } from '@gabby/lib/mail/settingsActions';
 import type { CoachRatingStats } from '@gabby/types/coachRating';
 import type { CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { type CountryMaster } from '@gabby/types/country';
+import { type TimezoneMaster } from '@gabby/types/timezone';
+import {
+  removeCoachIntroVideo,
+  removeProfileIcon,
+  updateMyCoachProfile,
+  updateMyTimezone,
+  uploadCoachIntroVideo,
+  uploadProfileIcon,
+} from '@/actions/coachProfileAction';
 import { MyRatingCard, toCoachRatingDisplay } from '@/components/rating/MyRatingCard';
+import { getCoachProfileFormProgress } from '../_lib/profileCompleteness';
+import { AccountSummaryCard } from './AccountSummaryCard';
+import { LivePreviewPanel } from './LivePreviewPanel';
+import { MailSettingsCard } from './MailSettingsCard';
+import { MatchingStatusCard } from './MatchingStatusCard';
+import { PublicProfileForm } from './PublicProfileForm';
 
 interface ProfileViewProps {
   userName: string;

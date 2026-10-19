@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
 import { type CoachIncomingRequestItem } from '@gabby/types/coachInbox';
+import { getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
 
 interface RequestsState {
   requests: CoachIncomingRequestItem[];

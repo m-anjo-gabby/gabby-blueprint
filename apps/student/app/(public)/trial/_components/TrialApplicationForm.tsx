@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm, useWatch, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, ExternalLink } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useForm, useWatch, type Control } from 'react-hook-form';
 import { PRIVACY_POLICY_URL } from '@gabby/lib/contact';
 import {
   TRIAL_FIELD_LIMITS,

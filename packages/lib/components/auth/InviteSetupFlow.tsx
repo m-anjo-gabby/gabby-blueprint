@@ -1,9 +1,9 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { SubmitButton } from '../common/SubmitButton';
 import { AuthHeading, AuthLinkButton, AuthPage, AuthStatus, AuthStep, FormError } from './AuthLayout';
 import { EMPTY_NEW_PASSWORD, NewPasswordFields, validateNewPassword, type NewPasswordValue } from './NewPasswordFields';

@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   BookOpen,
@@ -13,17 +12,18 @@ import {
   MessageCircle,
   MessageSquareText,
 } from 'lucide-react';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useEffect, useState } from 'react';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
+import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
-import { SectionHeading, SessionResultPageHeader } from './SessionResultParts';
-import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
 import type { SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkAttachment, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
-import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { SectionHeading, SessionResultPageHeader } from './SessionResultParts';
 
 interface StudentSessionResultProps {
   session: SessionResultSummary;

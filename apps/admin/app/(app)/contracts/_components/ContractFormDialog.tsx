@@ -1,24 +1,24 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { addMonths, format } from 'date-fns';
+import { AlertCircle, CheckCircle2, Edit, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCallback, useMemo, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { z } from 'zod';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { createContract, updateContract, getContractPlans } from '@/actions/adminContractAction';
-import { getClientsFilter } from '@/actions/adminClientAction';
-import { AlertCircle, PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
-import { Alert } from '@/components/ui/alert';
 import { type ContractDetail, type ContractPlan } from '@gabby/types/contract';
+import { getClientsFilter } from '@/actions/adminClientAction';
+import { createContract, getContractPlans, updateContract } from '@/actions/adminContractAction';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 // --- スキーマ定義 ---
 // 契約タイプ（コーチ有無）はプラン選択に完全に従属する構造的な属性のため、契約側の

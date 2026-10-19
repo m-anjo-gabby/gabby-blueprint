@@ -1,10 +1,10 @@
 'use client';
 
-import { GraduationCap, Award, Clock, Briefcase, MessageSquare } from 'lucide-react';
+import { Award, Briefcase, Clock, GraduationCap, MessageSquare } from 'lucide-react';
 import { type CoachProfileCardData, type CoachProfileCardLabels } from '@gabby/types/coachProfile';
-import { StarRatingDisplay } from './StarRating';
 import { CoachSpecialtyTags } from './CoachSpecialtyTags';
 import { ExternalImage } from './ExternalImage';
+import { StarRatingDisplay } from './StarRating';
 
 export interface CoachProfileCardProps {
   data: CoachProfileCardData;

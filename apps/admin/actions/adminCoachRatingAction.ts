@@ -1,13 +1,12 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import type { CoachRatingSource } from '@gabby/types/coachRating';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 

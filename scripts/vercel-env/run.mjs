@@ -19,14 +19,13 @@
 //   --prune              定義に無い変数（管理対象外）も削除する
 //   --force              --pull で既存の値ファイルを上書きする
 
+import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
-import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import { APPS, ENVIRONMENTS, VERCEL_TEAM_ID } from './environments.mjs';
-import { MANIFEST, LOCAL, UNSET, SYSTEM_KEY_PATTERN } from './manifest.mjs';
 import {
   buildAppEnvFile,
   buildExampleFile,
@@ -40,6 +39,7 @@ import {
   specFor,
   validateValue,
 } from './lib.mjs';
+import { LOCAL, MANIFEST, SYSTEM_KEY_PATTERN, UNSET } from './manifest.mjs';
 
 const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TOOL_DIR, '../..');

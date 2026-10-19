@@ -1,8 +1,8 @@
 'use client';
 
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserClient } from '../../supabase/client';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 
 type LiveSessionRole = 'coach' | 'student';
 

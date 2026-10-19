@@ -1,8 +1,8 @@
 'use client';
 
 import { create } from 'zustand';
-import { type TrainingWord } from '@gabby/types/word';
 import { type AnalysisResult, type FeedbackConfig } from '@gabby/types/speechAssessment';
+import { type TrainingWord } from '@gabby/types/word';
 
 // 表示状態（フリップ、フィードバック等）をリセットするための共通オブジェクト
 const UI_RESET_STATE = {

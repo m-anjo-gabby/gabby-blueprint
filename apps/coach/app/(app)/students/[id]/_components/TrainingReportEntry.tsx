@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
 import { ChevronDown, ChevronRight, Lock, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { TRAINING_REPORT_STATUS, type ContractTrainingReport } from '@gabby/types/coachStudent';
+import { finalizeContractTrainingReport, saveContractTrainingReportDraft } from '@/actions/studentAction';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { saveContractTrainingReportDraft, finalizeContractTrainingReport } from '@/actions/studentAction';
-import { TRAINING_REPORT_STATUS, type ContractTrainingReport } from '@gabby/types/coachStudent';
 
 interface TrainingReportEntryProps {
   studentId: string;

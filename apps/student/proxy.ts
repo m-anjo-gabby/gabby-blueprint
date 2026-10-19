@@ -1,22 +1,22 @@
 import { type NextRequest } from 'next/server';
 import {
+  decodeImpersonationCookie,
+  IMPERSONATION_COOKIE_NAME,
+  IMPERSONATION_REQUEST_HEADER_ADMIN_ID,
+  IMPERSONATION_REQUEST_HEADER_ID,
+  isImpersonationExpired,
+} from '@gabby/lib/impersonation';
+import { createRequestLogger } from '@gabby/lib/logger';
+import {
   createSupabaseProxy,
+  isDefaultPublicRoute,
+  logPageView,
+  redirectAfterLogin,
   redirectAndClearSession,
   redirectTo,
   redirectToLogin,
-  redirectAfterLogin,
-  isDefaultPublicRoute,
-  logPageView,
 } from '@gabby/lib/proxy-base';
-import { createRequestLogger } from '@gabby/lib/logger';
 import { USER_TYPES } from '@gabby/types/user';
-import {
-  IMPERSONATION_COOKIE_NAME,
-  IMPERSONATION_REQUEST_HEADER_ID,
-  IMPERSONATION_REQUEST_HEADER_ADMIN_ID,
-  decodeImpersonationCookie,
-  isImpersonationExpired,
-} from '@gabby/lib/impersonation';
 
 // ディレクトリ構成に基づいた、生徒がアクセス可能な有効な画面ルートのホワイトリスト
 const VALID_STUDENT_ROUTES = [

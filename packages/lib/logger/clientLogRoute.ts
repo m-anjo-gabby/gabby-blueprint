@@ -1,8 +1,8 @@
 import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { z } from 'zod';
-import { createLogger, extractIpFromRequest, type LogService } from './index';
 import { getLogContext } from './context';
+import { createLogger, extractIpFromRequest, type LogService } from './index';
 
 /**
  * ブラウザのログ（packages/lib/logger/client.ts）の受け口。各アプリの app/api/client-log/route.ts で使う。

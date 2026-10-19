@@ -13,15 +13,15 @@ import {
   type TrialApplicationInput,
   type TrialApplicationKind,
 } from '@gabby/types/trialApplication';
-import { createAdminClient } from '../supabase/admin';
-import { createLogger, type LogContext } from '../logger';
 import { REPORTING_TIMEZONE } from '../date/reporting';
+import { createLogger, type LogContext } from '../logger';
 import { INVITATION_EXPIRES_DAYS, sendAccountMail } from '../mail/actions/sendAccountMail';
 import {
   buildTrialAlreadyRegisteredMail,
   buildTrialApplicationNotifyMail,
   buildTrialInviteMail,
 } from '../mail/templates/TrialEmailTemplates';
+import { createAdminClient } from '../supabase/admin';
 
 const logger = createLogger('common');
 

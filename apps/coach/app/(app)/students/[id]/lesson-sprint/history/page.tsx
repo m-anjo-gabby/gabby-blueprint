@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
-import { getStudentOverview } from '@/actions/studentAction';
 import { getLessonSprintHistoryPage } from '@/actions/lessonSprintAction';
-import { LessonSprintHistoryList } from './_components/LessonSprintHistoryList';
+import { getStudentOverview } from '@/actions/studentAction';
 import { StudentChildPageHeader } from '../../../_components/StudentsSkeletons';
+import { LessonSprintHistoryList } from './_components/LessonSprintHistoryList';
 
 const HISTORY_PAGE_SIZE = 20;
 

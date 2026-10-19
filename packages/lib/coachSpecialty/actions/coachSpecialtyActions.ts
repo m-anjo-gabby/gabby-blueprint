@@ -1,12 +1,11 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '../../supabase/server';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { type GetCoachSpecialtyListResult } from '@gabby/types/coachSpecialty';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { type GetCoachSpecialtyListResult } from '@gabby/types/coachSpecialty';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 

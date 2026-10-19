@@ -7,10 +7,10 @@
  *
  * 事前にtarget-sessions-adjustment-seed.tsを同じ--tagで実行しておくこと。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient, signInAsRole } from '../../../helpers/auth.ts';
-import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient, signInAsRole } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

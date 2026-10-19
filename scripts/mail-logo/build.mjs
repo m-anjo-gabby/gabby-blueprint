@@ -7,8 +7,8 @@
  * - 周りに白い余白を付け、表示サイズ（MAIL_LOGO_WIDTH × MAIL_LOGO_HEIGHT）の2倍で書き出す（高解像度の画面向け）
  * - 減色して容量を抑える（メールを開くたびに読み込まれるため）
  */
-import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 

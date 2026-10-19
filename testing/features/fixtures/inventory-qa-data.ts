@@ -6,8 +6,8 @@
  * 使い方:
  *   pnpm exec tsx testing/features/fixtures/inventory-qa-data.ts --env=staging
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 import { createAdminClient } from '../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

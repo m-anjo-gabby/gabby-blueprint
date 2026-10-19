@@ -1,14 +1,14 @@
-import { test, expect } from '../../support/studentApp.ts';
 import { openAdminContext, openDialogBy } from '../../support/adminApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableContract,
   createDisposableStudent,
   createInvitation,
+  DISPOSABLE_EMAIL_DOMAIN,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
+import { expect, test } from '../../support/studentApp.ts';
 
 /**
  * アドミンのユーザーの新規登録（招待・即時作成）で、使われているメールアドレスを弾く（画面: docs/screens/admin/users.md）。

@@ -1,9 +1,9 @@
 'use client';
 
-import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
-import { RouteSkeleton } from '@/components/shell/RouteLoading';
-import { Skeleton } from '@/components/ui/skeleton';
 import type { DayOfWeek } from '@gabby/types/coachAvailability';
+import { RouteSkeleton } from '@/components/shell/RouteLoading';
+import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
+import { Skeleton } from '@/components/ui/skeleton';
 import { CoachSearchFilters } from './CoachSearchFilters';
 
 const SLOT_SKELETON_COUNT = 2;

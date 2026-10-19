@@ -1,9 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { test, expect } from '../../support/studentApp.ts';
 import { createAdminClient } from '../../../helpers/auth.ts';
 import { newTag } from '../../support/authFixtures.ts';
 import { clickUntilVisible } from '../../support/hydration.ts';
 import { extractAppLinkPath, resendReadApiKey, resendTestAddress, waitForEmail } from '../../support/resendInbox.ts';
+import { expect, test } from '../../support/studentApp.ts';
 
 /**
  * Webトライアルの申込（公開画面 /trial）から本登録まで。

@@ -1,18 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { test, expect, agreeToPendingTerms } from '../../support/studentApp.ts';
+import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { QA_ADMIN_EMAIL } from '../../support/adminApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableCoach,
   createDisposableStudent,
   deleteFixtureChatRooms,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantLiveLicense,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
-import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
-import { QA_ADMIN_EMAIL } from '../../support/adminApp.ts';
 import { getPersonaPassword } from '../../support/personas.ts';
+import { agreeToPendingTerms, expect, test } from '../../support/studentApp.ts';
 
 /**
  * 承認待ちのマッチング申請への導線（画面: docs/screens/student/coach-matching.md・docs/screens/student/live-room/hub.md）。

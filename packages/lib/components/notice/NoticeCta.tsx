@@ -1,13 +1,13 @@
 'use client';
 
-import type { MouseEvent } from 'react';
-import Link from 'next/link';
 import { ChevronRight, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import type { MouseEvent } from 'react';
 import type { NoticeItem } from '@gabby/types/notice';
-import { useNoticeStore } from '../../stores/useNoticeStore';
-import { isExternalNoticeCtaUrl } from '../../notice/links';
-import type { NoticeLabels } from '../../notice/labels';
 import { clientLogger } from '../../logger/client';
+import type { NoticeLabels } from '../../notice/labels';
+import { isExternalNoticeCtaUrl } from '../../notice/links';
+import { useNoticeStore } from '../../stores/useNoticeStore';
 import { cn } from '../../utils';
 import { ExternalImage } from '../common/ExternalImage';
 

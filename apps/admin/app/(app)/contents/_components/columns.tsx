@@ -1,17 +1,17 @@
 'use client';
 
-import Link from 'next/link';
-import type { ListColumnDef } from '@/components/list/listTable';
-import type { useTranslations } from 'next-intl';
 import { ArrowRight, Building2, Globe, Lock, Pencil, Plus } from 'lucide-react';
+import type { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import { CONTENT_SCOPES, CONTENT_STATUS, CONTENT_TYPES, type Content, type ContentType } from '@gabby/types/content';
+import { InactiveBadge } from '@/components/common/InactiveBadge';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { type Content, type ContentType, CONTENT_STATUS, CONTENT_TYPES, CONTENT_SCOPES } from '@gabby/types/content';
-import { InactiveBadge } from '@/components/common/InactiveBadge';
-import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import { ContentAccessDialog } from './ContentAccessDialog';
 import { ContentFormDialog } from './ContentFormDialog';
 import { ContentTagDialog } from './ContentTagDialog';
-import { ContentAccessDialog } from './ContentAccessDialog';
 
 type TableT = ReturnType<typeof useTranslations<'contents.dataTable'>>;
 

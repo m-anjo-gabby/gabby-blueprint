@@ -1,52 +1,52 @@
 // apps/admin/app/(app)/notice/_components/NoticeEditor.tsx
 'use client';
 
-import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import {
-  Save,
+  Building2,
+  ChevronLeft,
   Eye,
   FileEdit,
+  FileText,
+  ImagePlus,
   Loader2,
-  ChevronLeft,
   Paperclip,
+  RotateCcw,
+  Save,
   Trash2,
   Upload,
-  Building2,
-  FileText,
   X,
-  RotateCcw,
-  ImagePlus,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import * as React from 'react';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { NoticePreview } from './NoticePreview';
+import { getNoticeImageUrl, isValidNoticeCtaUrl } from '@gabby/lib/notice/links';
+import { type ClientOption } from '@gabby/types/client';
 import {
   NOTICE_CTA_LABEL_MAX,
   NOTICE_DISPLAY_MODES,
   NOTICE_TYPES,
   type NoticeAttachment,
-  type NoticeType,
-  type NoticeTargetType,
   type NoticeDisplayMode,
+  type NoticeTargetType,
+  type NoticeType,
 } from '@gabby/types/notice';
-import { getNoticeImageUrl, isValidNoticeCtaUrl } from '@gabby/lib/notice/links';
-import { type ClientOption } from '@gabby/types/client';
 import {
   createNotice,
+  deleteNoticeFile,
   updateNotice,
   uploadNoticeFile,
   uploadNoticeImage,
-  deleteNoticeFile,
   type NoticeFormData,
 } from '@/actions/adminNoticeAction';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { toNoticeInputDate } from '../_lib/dates';
-import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { NoticePreview } from './NoticePreview';
 
 interface PendingAttachment {
   id: string;

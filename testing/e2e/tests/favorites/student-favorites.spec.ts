@@ -1,17 +1,17 @@
 import type { Locator, Page } from '@playwright/test';
-import { test, expect, loginAsNewStudent } from '../../support/studentApp.ts';
-import { storageStatePath } from '../../support/personas.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantAppLicense,
   prepareContent,
   prepareWordContent,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
 import { clickUntilVisible } from '../../support/hydration.ts';
+import { storageStatePath } from '../../support/personas.ts';
+import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 
 /**
  * お気に入り（仕様: e2e/specs/favorites/student-favorites.md）

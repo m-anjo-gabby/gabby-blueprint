@@ -1,22 +1,22 @@
 'use client';
 
 import {
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  startOfToday,
   eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isBefore,
   isSameMonth,
   isToday,
-  isBefore,
-  format,
+  startOfMonth,
+  startOfToday,
+  startOfWeek,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
-import { type CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
+import { getCalendarItemKey, type CalendarItem } from '@gabby/types/calendarItem';
 import { getSessionStatusBadge } from '@/constants/session';
+import { cn } from '@/lib/utils';
 
 const WEEKDAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
 const MAX_VISIBLE_CHIPS = 2;

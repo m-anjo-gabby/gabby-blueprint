@@ -1,13 +1,17 @@
 'use client';
 
+import { MessagesSquare, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Plus, MessagesSquare } from 'lucide-react';
+import {
+  DIALOGUE_CATEGORIES,
+  type DialogueAssignmentSummary,
+  type DialogueCategory,
+  type DialogueContentSummary,
+} from '@gabby/types/dialogue';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
-import type { DialogueAssignmentSummary, DialogueCategory, DialogueContentSummary } from '@gabby/types/dialogue';
-import { useDialoguePracticeAssignments } from '../../_hooks/useDialoguePracticeAssignments';
 import { AssignDialogueDialog } from '../../_components/AssignDialogueDialog';
+import { useDialoguePracticeAssignments } from '../../_hooks/useDialoguePracticeAssignments';
 import { DialogueAssignmentCard } from './DialogueAssignmentCard';
 
 interface DialoguePracticeManagerProps {

@@ -1,14 +1,14 @@
 import { UserX } from 'lucide-react';
 import {
+  getCoachBrowseList,
+  getCoachSpecialtyList,
+  getCountryList,
   getMyLiveSessionTickets,
   getMySlotStatus,
-  getCoachBrowseList,
-  getCountryList,
-  getCoachSpecialtyList,
 } from '@/actions/matchingAction';
 import { getMyLiveSessionContractsCached, pickLiveSessionContract } from '@/lib/liveSessionContracts';
-import { CoachMatchingView } from './_components/CoachMatchingView';
 import { CoachMatchingPageHeader } from './_components/CoachMatchingSkeleton';
+import { CoachMatchingView } from './_components/CoachMatchingView';
 
 export default async function CoachMatchingPage({ searchParams }: { searchParams: Promise<{ contract?: string }> }) {
   const { contract: requestedTicketId } = await searchParams;

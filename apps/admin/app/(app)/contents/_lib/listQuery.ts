@@ -1,4 +1,5 @@
 import { unstable_rethrow } from 'next/navigation';
+
 /**
  * 教材一覧（/contents）の検索・絞り込み・ページ条件（クエリ文字列）を、
  * エディタ画面から一覧へ戻る際に復元するための保存領域。

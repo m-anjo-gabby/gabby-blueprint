@@ -1,7 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { AlertCircle, ShieldAlert, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type ContractDetail } from '@gabby/types/contract';
+import { deleteContract, purgeContractWithHistory } from '@/actions/adminContractAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,11 +20,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Trash2, AlertCircle, ShieldAlert } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { deleteContract, purgeContractWithHistory } from '@/actions/adminContractAction';
-import { type ContractDetail } from '@gabby/types/contract';
 
 interface DeleteContractDialogProps {
   contract: ContractDetail;

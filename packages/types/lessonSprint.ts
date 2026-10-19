@@ -1,3 +1,5 @@
+import { type CoachStudentErrorCode } from './coachStudent';
+import { type ContentMetadata } from './content';
 import {
   type SprintAnswerType,
   type SprintAvailableLevels,
@@ -5,8 +7,6 @@ import {
   type SprintQuestionType,
   type SprintType,
 } from './sprint';
-import { type CoachStudentErrorCode } from './coachStudent';
-import { type ContentMetadata } from './content';
 
 /**
  * コーチ向け Lesson Sprint の問題1件あたりの実施履歴。

@@ -1,12 +1,12 @@
 'use client';
 
-import type { ListColumnDef } from '@/components/list/listTable';
-import type { useTranslations } from 'next-intl';
 import { Library, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import type { useTranslations } from 'next-intl';
+import type { KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { KnowledgeEntry } from '@/actions/aiKnowledgeBaseAction';
+import { cn } from '@/lib/utils';
 import type { KnowledgeSourceTypeOption } from '../_lib/knowledgeSourceTypes';
 import { KnowledgeEntryFormDialog } from './KnowledgeEntryFormDialog';
 

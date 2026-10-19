@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, devices } from '@playwright/test';
-import { loadTestEnv } from './helpers/env.ts';
 import { ADMIN_BASE_URL, COACH_BASE_URL, E2E_ENV, STUDENT_BASE_URL, USES_LOCAL_SERVER } from './e2e/support/targets.ts';
+import { loadTestEnv } from './helpers/env.ts';
 
 /**
  * E2E（Playwright）設定。規約は testing/e2e/CONVENTIONS.md を参照。

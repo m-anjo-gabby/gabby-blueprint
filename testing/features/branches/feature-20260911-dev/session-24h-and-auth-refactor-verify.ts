@@ -7,10 +7,10 @@
  * 使い方:
  *   QA_LIVE_SESSION_TEST_PASSWORD='***' pnpm exec tsx testing/features/branches/feature-20260911-dev/session-24h-and-auth-refactor-verify.ts --env=dev --tag=authrefactor01
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient, signInAsRole } from '../../../helpers/auth.ts';
-import { writeResultLog } from '../../../helpers/results.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient, signInAsRole } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { writeResultLog } from '../../../helpers/results.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

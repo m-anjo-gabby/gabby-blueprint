@@ -1,13 +1,11 @@
 // apps/admin/app/(app)/profile/password/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { updatePassword } from '@/actions/adminAuthAction';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
-import { SubmitButton } from '@gabby/lib/components/common/SubmitButton';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { FormError } from '@gabby/lib/components/auth/AuthLayout';
 import {
   EMPTY_NEW_PASSWORD,
@@ -15,9 +13,11 @@ import {
   validateNewPassword,
   type NewPasswordValue,
 } from '@gabby/lib/components/auth/NewPasswordFields';
+import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
+import { SubmitButton } from '@gabby/lib/components/common/SubmitButton';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { updatePassword } from '@/actions/adminAuthAction';
 import { usePasswordFieldLabels } from '@/components/auth/useAuthLabels';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 
 /**
  * パスワード変更ページ（管理者ポータル）

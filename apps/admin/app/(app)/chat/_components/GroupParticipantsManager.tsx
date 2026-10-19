@@ -1,21 +1,21 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { useChatErrorMessage } from './useChatErrorMessage';
 import { Loader2, Trash2, UserPlus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useTranslations } from 'next-intl';
+import { useMemo, useState } from 'react';
+import { addChatRoomMember, getChatRoomTargetUsers, removeChatRoomMember } from '@gabby/lib/chat/actions/roomActions';
 import { ChatAvatar } from '@gabby/lib/components/chat/ChatAvatar';
-import { USER_TYPES, type UserType } from '@gabby/types/user';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { type ChatRoomMemberSummary, type ChatTargetUser } from '@gabby/types/chat';
 import { type ClientOption } from '@gabby/types/client';
-import { getChatRoomTargetUsers, addChatRoomMember, removeChatRoomMember } from '@gabby/lib/chat/actions/roomActions';
+import { USER_TYPES, type UserType } from '@gabby/types/user';
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { UserTypeLabel } from '@/components/common/UserTypeLabel';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useChatErrorMessage } from './useChatErrorMessage';
 
 const SELECTABLE_USER_TYPES: UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
 const MIN_GROUP_ROOM_MEMBERS = 2;

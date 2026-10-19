@@ -1,9 +1,9 @@
 // apps/admin/app/(app)/profile/page.tsx
 import { getTranslations } from 'next-intl/server';
 import { getMyProfile, getTimezoneList } from '@/actions/adminProfileAction';
+import { PageHeader } from '@/components/common/PageHeader';
 import { userTypeLabelKey } from '@/lib/userTypeLabel';
 import { ProfileView } from './_components/ProfileView';
-import { PageHeader } from '@/components/common/PageHeader';
 
 export default async function ProfilePage() {
   const t = await getTranslations('profile.page');

@@ -12,8 +12,8 @@
  *   QA_LIVE_SESSION_TEST_PASSWORD='***' pnpm exec tsx testing/features/branches/feature-20260925-dev/demo-coach-matching-verify.ts --env=dev
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { assertReleaseApplied } from '../../../helpers/preflight.ts';
 import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 

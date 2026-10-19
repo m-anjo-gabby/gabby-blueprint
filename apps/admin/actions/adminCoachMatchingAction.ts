@@ -1,15 +1,14 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { z } from 'zod';
-import { createServerClient } from '@gabby/lib/supabase/server';
+import { getCoachMatchingStatusCore } from '@gabby/lib/coachProfile/actions/coachMatchingStatusActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { getCoachMatchingStatusCore } from '@gabby/lib/coachProfile/actions/coachMatchingStatusActions';
-import { type CoachMatchingStatus } from '@gabby/types/coachProfile';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createServerClient } from '@gabby/lib/supabase/server';
+import { type CoachMatchingStatus } from '@gabby/types/coachProfile';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 

@@ -1,4 +1,4 @@
-import type { NotificationType, NotificationText } from './notification';
+import type { NotificationText, NotificationType } from './notification';
 
 /**
  * 通知の英語の表示テキスト（コーチ向け。コーチアプリの通知センターと、コーチ宛ての通知メールで共有する）。

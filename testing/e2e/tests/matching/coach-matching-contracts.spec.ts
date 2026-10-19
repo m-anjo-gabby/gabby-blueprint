@@ -1,13 +1,13 @@
 import type { Page } from '@playwright/test';
-import { test, expect, agreeToPendingTerms } from '../../support/studentApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantLiveLicense,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
+import { agreeToPendingTerms, expect, test } from '../../support/studentApp.ts';
 
 /**
  * 専属コーチを探す: 現在の契約と次の契約（継続用）を両方持つ生徒は、契約を切り替えて契約ごとに申請できる

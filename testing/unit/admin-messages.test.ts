@@ -1,6 +1,6 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
 
 /**
  * admin の翻訳カタログ（apps/admin/messages/{ja,en}.json）のキーが一致していること。

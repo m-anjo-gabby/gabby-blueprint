@@ -1,8 +1,8 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { BookOpenText } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 import { type CVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
 import { CVEntryList } from './CVEntryList';
 

@@ -1,7 +1,7 @@
 'use client';
 
+import { Film, Loader2, Trash2, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { Film, Trash2, Loader2, Upload } from 'lucide-react';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 
 export interface VideoUploaderLabels {

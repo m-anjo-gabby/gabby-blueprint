@@ -1,8 +1,8 @@
 import { unstable_rethrow } from 'next/navigation';
 import { NextResponse } from 'next/server';
-import { checkAdminRoleForRoute, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
 import { getAzureSpeechToken } from '@gabby/lib/azure/server';
 import { createLogger } from '@gabby/lib/logger';
+import { ADMIN_OR_CONTENT_MANAGER, checkAdminRoleForRoute } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 

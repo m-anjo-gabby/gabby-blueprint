@@ -1,19 +1,7 @@
 'use client';
 
+import { CalendarClock, Check, TriangleAlert, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Check, X, CalendarClock, TriangleAlert } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import {
   convertWeeklyTimeZone,
   getFirstLiveSessionOccurrence,
@@ -22,15 +10,27 @@ import {
   toIsoDateInZone,
 } from '@gabby/lib/date/date';
 import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
-import {
-  type IncomingMatchingRequestItem,
-  MATCHING_REQUEST_STATUS,
-  getMatchingUnbookedBreakdown,
-} from '@gabby/types/matching';
-import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { type DayOfWeek } from '@gabby/types/coachAvailability';
+import {
+  getMatchingUnbookedBreakdown,
+  MATCHING_REQUEST_STATUS,
+  type IncomingMatchingRequestItem,
+} from '@gabby/types/matching';
+import { approveMatchingRequest, rejectMatchingRequest } from '@/actions/matchingRequestAction';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
 import { RequestKindTag, WebTrialTag } from './RequestKindTag';
 
 const STATUS_BADGE: Record<number, { label: string; className: string }> = {

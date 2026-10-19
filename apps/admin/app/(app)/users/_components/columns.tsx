@@ -1,17 +1,17 @@
 'use client';
 
-import Link from 'next/link';
-import type { ListColumnDef } from '@/components/list/listTable';
-import type { useTranslations } from 'next-intl';
 import { Building2, Pencil } from 'lucide-react';
+import type { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { USER_TYPES, type UserRecord } from '@gabby/types/user';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { Button } from '@/components/ui/button';
-import { type UserRecord, USER_TYPES } from '@gabby/types/user';
-import { LicenseFormDialog } from './LicenseFormDialog';
-import { ImpersonateButton } from './ImpersonateButton';
-import { LicenseSummary } from './LicenseSummary';
-import { UserStatusBadge, UserTypeBadge } from './UserBadges';
 import { canImpersonateUser, isRegisteredUser } from '../_lib/userSchema';
 import { getUserDetailPath } from '../[id]/_lib/tabs';
+import { ImpersonateButton } from './ImpersonateButton';
+import { LicenseFormDialog } from './LicenseFormDialog';
+import { LicenseSummary } from './LicenseSummary';
+import { UserStatusBadge, UserTypeBadge } from './UserBadges';
 
 type TableT = ReturnType<typeof useTranslations<'users.table'>>;
 

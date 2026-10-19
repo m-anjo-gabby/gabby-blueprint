@@ -1,41 +1,40 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
+  ArrowRight,
+  ChartSpline,
+  CheckCircle2,
   ChevronLeft,
-  Timer,
+  ClipboardCheck,
+  Info,
+  Loader2,
+  Megaphone,
   Pause,
   Play,
   StickyNote,
-  Loader2,
-  Megaphone,
-  ArrowRight,
-  Info,
-  CheckCircle2,
-  ClipboardCheck,
-  ChartSpline,
+  Timer,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  tokenizeWordsWithPunctuation,
   getSprintTitle,
   resolveSprintHasLevel,
-  SPRINT_NOTES_EN,
   SPRINT_NOTE_FOOTER_EN,
+  SPRINT_NOTES_EN,
   SPRINT_THEMES_EN,
+  tokenizeWordsWithPunctuation,
 } from '@gabby/lib';
-import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
-import { useLessonSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useLessonSprintTimers';
+import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { DEFAULT_LESSON_SPRINT_SCORE, type LessonSprintHistoryItem } from '@gabby/types/lessonSprint';
 import { createLessonSprintResult } from '@/actions/lessonSprintAction';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
+import { useAutoRedirectCountdown, useLessonSprintCountdown } from '../_hooks/useLessonSprintTimers';
 import { ScoreButtons } from './ScoreButtons';
-import { WordHighlightAnswer } from './WordHighlightAnswer';
 import { SprintThemeDialog } from './SprintThemeDialog';
-import type { LessonSprintHistoryItem } from '@gabby/types/lessonSprint';
-import { DEFAULT_LESSON_SPRINT_SCORE } from '@gabby/types/lessonSprint';
+import { WordHighlightAnswer } from './WordHighlightAnswer';
 
 interface LessonSprintPlayerProps {
   studentId: string;

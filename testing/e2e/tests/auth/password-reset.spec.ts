@@ -1,16 +1,16 @@
-import { test, expect } from '../../support/studentApp.ts';
 import { signInAsRole } from '../../../helpers/auth.ts';
-import { storageStatePath } from '../../support/personas.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   generateRecoveryLinkPath,
   grantAppLicense,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
+import { storageStatePath } from '../../support/personas.ts';
 import { extractAppLinkPath, resendReadApiKey, resendTestAddress, waitForEmail } from '../../support/resendInbox.ts';
+import { expect, test } from '../../support/studentApp.ts';
 
 /**
  * パスワード再設定（仕様: e2e/specs/auth/password-reset-and-invite.md、画面: docs/screens/common/password-reset.md）

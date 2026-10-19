@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
+import { useMemo } from 'react';
 import type { AuthLabels, PasswordFieldLabels } from '@gabby/lib/components/auth/types';
 
 /** 新しいパスワード欄の文言（再設定・招待・プロフィールのパスワード変更で共通） */

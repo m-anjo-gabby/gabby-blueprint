@@ -1,7 +1,7 @@
-import { defineConfig, globalIgnores } from 'eslint/config';
+import eslintComments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 import nextVitals from 'eslint-config-next/core-web-vitals';
 import nextTs from 'eslint-config-next/typescript';
-import eslintComments from '@eslint-community/eslint-plugin-eslint-comments/configs';
+import { defineConfig, globalIgnores } from 'eslint/config';
 
 const eslintConfig = defineConfig([
   ...nextVitals,

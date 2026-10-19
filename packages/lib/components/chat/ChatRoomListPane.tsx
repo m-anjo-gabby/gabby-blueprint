@@ -1,19 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { MessageCircle, Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSelectedLayoutSegment } from 'next/navigation';
-import { MessageCircle, Search, X } from 'lucide-react';
-import { useUserStore } from '../../stores/useUserStore';
-import { useTimezone } from '../../hooks/useTimezone';
+import { useEffect, useMemo, useState } from 'react';
+import { CHAT_ROOM_TYPES, type ChatRoomListItem } from '@gabby/types/chat';
 import { getChatMessagePreviewText } from '../../chat/formatChatPreview';
 import { formatMessageHeaderTime } from '../../chat/messageGrouping';
 import { getChatRoomCounterpart, getChatRoomTitle, matchesChatRoomQuery } from '../../chat/roomDisplay';
+import { useTimezone } from '../../hooks/useTimezone';
+import { useUserStore } from '../../stores/useUserStore';
 import { cn } from '../../utils';
-import { CHAT_ROOM_TYPES, type ChatRoomListItem } from '@gabby/types/chat';
-import { getHeaderTimeLabels, useChatUi } from './ChatUiContext';
 import { Skeleton } from '../common/Skeleton';
 import { ChatAvatar } from './ChatAvatar';
+import { getHeaderTimeLabels, useChatUi } from './ChatUiContext';
 
 type ReadFilter = 'all' | 'unread';
 

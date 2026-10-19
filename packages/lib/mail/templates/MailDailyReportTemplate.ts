@@ -1,5 +1,5 @@
-import { mailSubject, type MailBlock, type MailContent } from '../layout/document';
 import type { MailConfigCheck } from '../dispatch/policy';
+import { mailSubject, type MailBlock, type MailContent } from '../layout/document';
 
 /**
  * 運営向けのメール配信の日次の要約（送信の件数・送信失敗・不達・迷惑メールの報告・送信待ちの滞留・設定の状況）。

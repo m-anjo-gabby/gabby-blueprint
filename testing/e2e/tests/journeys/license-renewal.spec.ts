@@ -1,14 +1,14 @@
 import type { Page } from '@playwright/test';
-import { test, expect, loginAsNewStudent } from '../../support/studentApp.ts';
 import { confirmAndSubmit, openAdminContext, openDialogBy } from '../../support/adminApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableContract,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
+import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 
 /**
  * 既存顧客の契約継続（アプリのみ契約）（ジャーニー: e2e/journeys/license-renewal.md）

@@ -1,5 +1,5 @@
-import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import { computeStage } from '@gabby/lib/sprint/stageProgression';
+import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import type { SprintLevelSnapshot, TrainingReportData } from '@gabby/types/trainingReport';
 
 // 顧客との契約主体が日本法人のため、レポートの日付は日本時間で表示する

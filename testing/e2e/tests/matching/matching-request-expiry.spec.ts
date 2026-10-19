@@ -1,16 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { test, expect, agreeToPendingTerms } from '../../support/studentApp.ts';
+import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableCoach,
   createDisposableStudent,
   deleteFixtureChatRooms,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantLiveLicense,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
-import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { agreeToPendingTerms, expect, test } from '../../support/studentApp.ts';
 
 /**
  * 専属コーチのマッチング申請の回答期限（申請から24時間。DB の matching_request_ttl()）

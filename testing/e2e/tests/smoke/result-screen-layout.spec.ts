@@ -1,6 +1,6 @@
 import { storageStatePath } from '../../support/personas.ts';
-import { expect, mainNav, navTab, test } from '../../support/studentApp.ts';
 import { openSprintResultFromHistory, previousMonthInJst } from '../../support/sprintHistory.ts';
+import { expect, mainNav, navTab, test } from '../../support/studentApp.ts';
 
 /**
  * スモーク: 結果画面のレイアウト出し分け（docs/screens/student/training/sprint-result.md、

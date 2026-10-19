@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createServerClient } from '@gabby/lib/supabase/server';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { createLogger } from '@gabby/lib/logger';
 import {
+  encodeImpersonationCookie,
   IMPERSONATION_COOKIE_NAME,
   IMPERSONATION_TTL_MINUTES,
-  encodeImpersonationCookie,
 } from '@gabby/lib/impersonation';
+import { createLogger } from '@gabby/lib/logger';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { createServerClient } from '@gabby/lib/supabase/server';
 
 const logger = createLogger('student');
 

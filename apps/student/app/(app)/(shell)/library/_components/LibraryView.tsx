@@ -1,28 +1,26 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, X, BookOpen, Star } from 'lucide-react';
-import { ShellPageHeader, CountBadge } from '@/components/shell/ShellPage';
 import { AnimatePresence, motion } from 'framer-motion';
-
+import { BookOpen, Search, Star, X } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
+import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
+import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { getTrainingPath } from '@gabby/lib/navigation/student-path';
+import type { ContentItem } from '@gabby/types/content';
+// Actions & Hooks
+import { toggleContentFavorite } from '@/actions/contentAction';
 // Components
 import { ContentCard } from '@/components/common/ContentCard';
 import { PillTabs } from '@/components/shell/PillTabs';
-import { Input } from '@/components/ui/input';
+import { CountBadge, ShellPageHeader } from '@/components/shell/ShellPage';
 import { Button } from '@/components/ui/button';
-import { FavoriteOnlyToggle } from './FavoriteOnlyToggle';
-
-// Actions & Hooks
-import { toggleContentFavorite } from '@/actions/contentAction';
+import { Input } from '@/components/ui/input';
 import { FAVORITE_TOGGLE_NETWORK_ERROR } from '@/constants/favorites';
-import type { ContentItem } from '@gabby/types/content';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
-import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
-import { getTrainingPath } from '@gabby/lib/navigation/student-path';
 import { replaceSearchParams } from '@/lib/replaceSearchParams';
 import { buildTypeTabs } from '../_lib/typeTabs';
+import { FavoriteOnlyToggle } from './FavoriteOnlyToggle';
 
 /** 種別タブと件数の行（読み込み中の LibrarySkeleton と共有する） */
 export const LIBRARY_FILTER_ROW_CLASS = 'flex items-center gap-3';

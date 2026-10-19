@@ -1,18 +1,18 @@
-import { getTranslations } from 'next-intl/server';
 import { Pencil } from 'lucide-react';
-import { getRoles } from '@/actions/adminUserAction';
-import { getClientsFilter } from '@/actions/adminClientAction';
-import { Button } from '@/components/ui/button';
+import { getTranslations } from 'next-intl/server';
 import { formatToJstDateTime } from '@gabby/lib/date/date';
 import { USER_TYPES } from '@gabby/types/user';
+import { getClientsFilter } from '@/actions/adminClientAction';
+import { getRoles } from '@/actions/adminUserAction';
+import { Button } from '@/components/ui/button';
 import { LicenseFormDialog } from '../_components/LicenseFormDialog';
 import { LicenseSummary } from '../_components/LicenseSummary';
 import { canManageAccount, isRegisteredUser } from '../_lib/userSchema';
-import { requireUserForTab } from './_lib/userDetail';
 import { BASIC_TAB_GRID, DetailSection } from './_components/DetailSection';
+import { UserAccountActions } from './_components/UserAccountActions';
 import { UserBasicInfoForm } from './_components/UserBasicInfoForm';
 import { UserIdField } from './_components/UserIdField';
-import { UserAccountActions } from './_components/UserAccountActions';
+import { requireUserForTab } from './_lib/userDetail';
 
 /** ユーザー詳細の基本情報タブ（基本情報の編集・ライセンス・アカウント） */
 export default async function UserBasicTabPage({ params }: { params: Promise<{ id: string }> }) {

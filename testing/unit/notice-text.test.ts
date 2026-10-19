@@ -1,7 +1,7 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toNoticePlainText } from '@gabby/lib/notice/plainText';
+import { test } from 'node:test';
 import { getNoticeImageUrl, isExternalNoticeCtaUrl, isValidNoticeCtaUrl } from '@gabby/lib/notice/links';
+import { toNoticePlainText } from '@gabby/lib/notice/plainText';
 
 /**
  * お知らせの本文（Markdown）の一覧・通知用の平文と、画像・ボタンのリンク。

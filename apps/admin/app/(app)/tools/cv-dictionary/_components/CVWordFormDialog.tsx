@@ -1,20 +1,20 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CheckCircle2, Edit, Languages, PlusCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { PART_OF_SPEECH_MAP, PART_OF_SPEECH_OPTIONS, type PartOfSpeechType } from '@gabby/types/colorVowel';
+import { upsertCVDictionaryEntry, type CVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { upsertCVDictionaryEntry, type CVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
-import { PlusCircle, CheckCircle2, Edit, Languages } from 'lucide-react';
-import { Alert } from '@/components/ui/alert';
-import { PART_OF_SPEECH_OPTIONS, PART_OF_SPEECH_MAP, type PartOfSpeechType } from '@gabby/types/colorVowel';
 
 // バリデーションスキーマ
 

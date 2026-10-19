@@ -1,19 +1,19 @@
 'use client';
 
-import { useId, useState } from 'react';
-import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { useId, useState } from 'react';
+import { useHydrated } from '@gabby/lib/hooks/useHydrated';
+import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
+import { SESSION_STATUS, type SessionListItem } from '@gabby/types/session';
+import { CoachAvatar } from '@/components/session/CoachAvatar';
+import { ShellSectionTitle } from '@/components/shell/ShellPage';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { CoachAvatar } from '@/components/session/CoachAvatar';
-import { ShellSectionTitle } from '@/components/shell/ShellPage';
-import { formatSessionSlot } from '@/lib/sessionFormat';
-import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
-import { useHydrated } from '@gabby/lib/hooks/useHydrated';
-import { SESSION_STATUS, type SessionListItem } from '@gabby/types/session';
 import { getSessionStatusBadge } from '@/constants/session';
+import { formatSessionSlot } from '@/lib/sessionFormat';
+import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 10;
 

@@ -1,18 +1,18 @@
 'use client';
 
-import { GraduationCap, Briefcase, MessageSquare, Sparkles } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Briefcase, GraduationCap, MessageSquare, Sparkles } from 'lucide-react';
+import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyTags';
 import { VideoUploader } from '@gabby/lib/components/common/VideoUploader';
 import { type CoachProfileFormValues } from '@gabby/types/coachProfile';
 import { type CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
-import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyTags';
 import { type CountryMaster } from '@gabby/types/country';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { CoachProfileFormProgress } from '../_lib/profileCompleteness';
 import { ProfileFieldGroup } from './ProfileFieldGroup';
 import { ProfileTextAreaField } from './ProfileTextAreaField';
-import type { CoachProfileFormProgress } from '../_lib/profileCompleteness';
 
 /**
  * 自由記述の項目グループ定義。同じ形（見出しアイコン + テキストエリアの並び）の項目を

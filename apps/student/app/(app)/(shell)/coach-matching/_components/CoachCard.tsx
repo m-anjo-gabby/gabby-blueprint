@@ -1,25 +1,25 @@
 'use client';
 
+import { CalendarClock, GraduationCap, IdCard } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { GraduationCap, IdCard, CalendarClock } from 'lucide-react';
-import { type CoachBrowseItem, type SlotMatchStatus } from '@gabby/types/matching';
-import { type DayOfWeek } from '@gabby/types/coachAvailability';
-import { type CountryMaster } from '@gabby/types/country';
-import { type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
-import { toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
-import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyTags';
-import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
-import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getCoachIntroVideoUrl } from '@gabby/lib/coachProfile/getCoachIntroVideoUrl';
-import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
+import { toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
 import { CoachProfileDialog } from '@gabby/lib/components/common/CoachProfileDialog';
-import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
-import { toCoachRatingDisplay } from '@/constants/coachRating';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyTags';
 import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
+import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
+import { convertWeeklyTimeZone } from '@gabby/lib/date/date';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
+import { type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { type CountryMaster } from '@gabby/types/country';
+import { type CoachBrowseItem, type SlotMatchStatus } from '@gabby/types/matching';
+import { Button } from '@/components/ui/button';
+import { toCoachRatingDisplay } from '@/constants/coachRating';
+import { DAY_OF_WEEK_LABEL_JA, slotMatchesFilter } from '@/constants/matching';
+import { cn } from '@/lib/utils';
 
 const VISIBLE_SLOT_COUNT = 3;
 

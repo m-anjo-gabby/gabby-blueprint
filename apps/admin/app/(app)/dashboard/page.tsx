@@ -1,10 +1,10 @@
-import { canAccessPath } from '@/lib/navigation';
-import { getDashboardSummary, type DashboardModuleKey } from '@/actions/adminDashboardAction';
-import { DASHBOARD_MODULE_CONFIG, DASHBOARD_MODULE_ORDER } from './_components/moduleConfig';
-import { DashboardHeader } from './_components/DashboardHeader';
-import { ModuleSummaryGrid } from './_components/ModuleSummaryGrid';
-import { ModuleCard } from './_components/ModuleCard';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { getDashboardSummary, type DashboardModuleKey } from '@/actions/adminDashboardAction';
+import { canAccessPath } from '@/lib/navigation';
+import { DashboardHeader } from './_components/DashboardHeader';
+import { ModuleCard } from './_components/ModuleCard';
+import { DASHBOARD_MODULE_CONFIG, DASHBOARD_MODULE_ORDER } from './_components/moduleConfig';
+import { ModuleSummaryGrid } from './_components/ModuleSummaryGrid';
 
 export default async function Page() {
   const user = await getAuthUser();

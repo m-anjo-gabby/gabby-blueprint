@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
 import { SubmitButton } from '../common/SubmitButton';
 import {
   AuthBackLink,

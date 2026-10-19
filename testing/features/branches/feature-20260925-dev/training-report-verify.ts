@@ -16,10 +16,10 @@
  *   --keep          … 検証後もデータを残す（PDFの目視確認用。後で --cleanup-only で削除する）
  *   --cleanup-only  … 検証せず、指定タグのデータを削除する
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
-import { assertReleaseApplied } from '../../../helpers/preflight.ts';
 import { addDays } from '../../../helpers/dates.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { assertReleaseApplied } from '../../../helpers/preflight.ts';
 import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 
 const env = resolveTestEnvFromArgs();

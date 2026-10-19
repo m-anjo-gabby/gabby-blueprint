@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { openAdminContext, openDialogBy } from '../../support/adminApp.ts';
 import {
   cleanupAuthFixture,
   createAuthFixture,
@@ -8,7 +9,6 @@ import {
   grantAppLicense,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
-import { openAdminContext, openDialogBy } from '../../support/adminApp.ts';
 import { openCoachContext } from '../../support/coachApp.ts';
 import { clickUntilVisible } from '../../support/hydration.ts';
 import { jstDateOf } from '../../support/liveRoomView.ts';

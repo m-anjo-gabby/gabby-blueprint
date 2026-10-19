@@ -15,11 +15,11 @@
  * 使い捨ての顧客・生徒を作り、最後に一括削除で消す（認証のアカウント・削除の記録もこのスクリプトが消す。データは残らない）。
  */
 import { randomUUID } from 'node:crypto';
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { WEB_TRIAL_CLIENT_ID } from '../../../../packages/types/trialApplication.ts';
 import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { createFixtureKit } from '../../../helpers/fixture-accounts.ts';
 import { termOf } from '../../../helpers/fixture-terms.ts';
-import { WEB_TRIAL_CLIENT_ID } from '../../../../packages/types/trialApplication.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

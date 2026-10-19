@@ -6,8 +6,8 @@
  */
 import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
-import { createLogger, type LogContext } from '../logger';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createLogger, type LogContext } from '../logger';
 
 const logger = createLogger('common');
 

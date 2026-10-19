@@ -6,11 +6,11 @@
  *   上書きは「DB の実際の形」を書く場所で、画面の都合の型（表示用に組み立てた型等）は書かない。
  * - 行の型は TableRow<'com_t_session'> 等で参照する（画面ごとに行の型を手で書き直さない）。
  */
-import type { Database as GeneratedDatabase, Json } from './database';
 import type { CalendarEventMessageAttachment, CalendarEventType } from './calendarEvent';
-import type { AdminCoachRatingsRpcResult } from './coachRating';
 import type { DayOfWeek } from './coachAvailability';
+import type { AdminCoachRatingsRpcResult } from './coachRating';
 import type { ContentMetadata } from './content';
+import type { Database as GeneratedDatabase, Json } from './database';
 import type { PurgeClientResult, WithdrawUserResult } from './dataDeletion';
 import type { MonitorSprintDrillHistoryRow, MonitorSprintHistoryRow, MonitorWordHistoryRow } from './monitor';
 import type { NoticeAttachment } from './notice';

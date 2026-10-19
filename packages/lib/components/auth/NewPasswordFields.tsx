@@ -1,9 +1,9 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import { PasswordInput } from '../common/PasswordInput';
+import type { ReactNode } from 'react';
 import { getPasswordStrengthErrorCode } from '../../auth/validation';
+import { PasswordInput } from '../common/PasswordInput';
 import type { PasswordFieldLabels } from './types';
 
 export interface NewPasswordValue {

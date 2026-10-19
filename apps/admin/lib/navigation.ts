@@ -1,31 +1,31 @@
 // apps/admin/lib/navigation.ts
-import type { Messages } from 'next-intl';
 import {
-  LayoutDashboard,
-  Building2,
-  FileSignature,
-  Users,
-  BookOpen,
-  Speech,
-  ShieldCheck,
-  Wrench,
-  BookOpenText,
   Bell,
-  MessageCircle,
-  Globe,
+  BookOpen,
+  BookOpenText,
   Bot,
-  Library,
-  type LucideIcon,
+  Building2,
   CalendarDays,
   CalendarRange,
-  Video,
   DollarSign,
-  Settings,
-  LifeBuoy,
   FileChartColumn,
+  FileSignature,
+  Globe,
   Landmark,
+  LayoutDashboard,
+  Library,
+  LifeBuoy,
+  MessageCircle,
+  Settings,
+  ShieldCheck,
+  Speech,
   UserPlus,
+  Users,
+  Video,
+  Wrench,
+  type LucideIcon,
 } from 'lucide-react';
+import type { Messages } from 'next-intl';
 
 // 型定義
 

@@ -1,5 +1,4 @@
 import type { Page } from '@playwright/test';
-import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 import {
   cleanupAuthFixture,
   createAuthFixture,
@@ -14,6 +13,7 @@ import {
   signOutLivePair,
   type LivePair,
 } from '../../support/liveSessionFixtures.ts';
+import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 
 /**
  * ライブセッションの宿題（機能: e2e/specs/homework/session-homework.md 手順2〜6）。

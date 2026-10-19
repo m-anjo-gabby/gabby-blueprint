@@ -1,7 +1,7 @@
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   createDisposableCoach,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantLiveLicense,
   type AuthFixture,
 } from './authFixtures.ts';

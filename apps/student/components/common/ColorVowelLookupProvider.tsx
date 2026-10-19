@@ -1,15 +1,15 @@
 // apps\student\components\common\ColorVowelLookupProvider.tsx
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
+import { Search } from 'lucide-react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search } from 'lucide-react';
-import { lookupColorVowelDictionary } from '@/actions/colorVowelAction';
-import type { ColorVowelDicResult } from '@gabby/types/colorVowel';
-import { cn } from '@/lib/utils';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { clientLogger } from '@gabby/lib/logger/client';
+import type { ColorVowelDicResult } from '@gabby/types/colorVowel';
+import { lookupColorVowelDictionary } from '@/actions/colorVowelAction';
+import { cn } from '@/lib/utils';
 import {
   ColorVowelDictionarySheet,
   type DictionaryAudioType,

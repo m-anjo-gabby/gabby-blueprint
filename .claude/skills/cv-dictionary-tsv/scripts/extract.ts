@@ -12,7 +12,7 @@
  * 機械的には除外せず note = capitalized_mid_sentence で worklist に残し、生成時に判定する。
  * 判定で固有名詞とした語は skipped.tsv から固有名詞リスト（ledger.ts sync で追記）に蓄積し、次回から機械的に除外する。
  */
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DEFAULT_PROPER_NOUNS_PATH } from './ledgerLib';
 

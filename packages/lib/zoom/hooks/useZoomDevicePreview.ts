@@ -3,11 +3,11 @@
 // NOTE: ZoomVideo.createLocalAudioTrack/createLocalVideoTrackは、client.join()前に
 // マイク/カメラをプレビューするための専用API（@zoom/videosdk 2.5.0の型定義で確認済み）。
 // セッションのclientインスタンスとは独立して動作する。
+import type { LocalAudioTrack, LocalVideoTrack } from '@zoom/videosdk';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { clientLogger } from '../../logger/client';
 import { ensureZoomClientInitialized } from '../client';
 import { describeZoomError } from '../errors';
-import { clientLogger } from '../../logger/client';
-import type { LocalAudioTrack, LocalVideoTrack } from '@zoom/videosdk';
 
 const VOLUME_POLL_INTERVAL_MS = 200;
 // LocalAudioTrack.getCurrentVolume()の戻り値スケールはSDKの型定義に明記されていない。

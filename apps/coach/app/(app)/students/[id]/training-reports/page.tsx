@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation';
 import {
-  getStudentOverview,
-  getStudentLiveSessionContracts,
   getContractTrainingReports,
+  getStudentLiveSessionContracts,
+  getStudentOverview,
 } from '@/actions/studentAction';
-import { TrainingReportHistoryList } from './_components/TrainingReportHistoryList';
 import { StudentChildPageHeader } from '../../_components/StudentsSkeletons';
+import { TrainingReportHistoryList } from './_components/TrainingReportHistoryList';
 
 export default async function TrainingReportHistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

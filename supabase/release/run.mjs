@@ -26,8 +26,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
-
-import { ENVS, RELEASE_DIR, REPO_ROOT, connect } from './lib/connection.mjs';
+import { connect, ENVS, RELEASE_DIR, REPO_ROOT } from './lib/connection.mjs';
 import { askSecret } from './lib/prompt.mjs';
 import { fetchHistory, lit, sectionState, sha256, splitSections } from './lib/releaseFile.mjs';
 

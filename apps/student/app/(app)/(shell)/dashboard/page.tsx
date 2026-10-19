@@ -1,14 +1,14 @@
 import { Suspense } from 'react';
-import { HomeView } from './_components/HomeView';
-import { LiveSessionSection } from './_components/LiveSessionSection';
-import { LiveSessionCardSkeleton } from './_components/LiveSessionCard';
-import { HomeEventSection } from './_components/HomeEventSection';
-import { HomeEventCardSkeleton } from './_components/HomeEventCard';
-import { HomeNoticeCard } from './_components/HomeNoticeCard';
-import { fetchHomeData } from './_lib/fetchHomeData';
-import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
 import { createRenderId } from '@gabby/lib/navigation/renderId';
 import { getNoticesCached } from '@gabby/lib/notice/getNoticesCached';
+import { getMyLiveSessionContractsCached } from '@/lib/liveSessionContracts';
+import { HomeEventCardSkeleton } from './_components/HomeEventCard';
+import { HomeEventSection } from './_components/HomeEventSection';
+import { HomeNoticeCard } from './_components/HomeNoticeCard';
+import { HomeView } from './_components/HomeView';
+import { LiveSessionCardSkeleton } from './_components/LiveSessionCard';
+import { LiveSessionSection } from './_components/LiveSessionSection';
+import { fetchHomeData } from './_lib/fetchHomeData';
 
 /**
  * ホーム（ダッシュボード）

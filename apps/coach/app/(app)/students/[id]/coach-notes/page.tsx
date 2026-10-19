@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
-import { getStudentOverview, getStudentNotes } from '@/actions/studentAction';
-import { CoachNotesHistoryList } from './_components/CoachNotesHistoryList';
+import { getStudentNotes, getStudentOverview } from '@/actions/studentAction';
 import { StudentChildPageHeader } from '../../_components/StudentsSkeletons';
+import { CoachNotesHistoryList } from './_components/CoachNotesHistoryList';
 
 export default async function CoachNotesHistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

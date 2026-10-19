@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 /** 基本情報タブの並び（左: 基本情報 / 右: ライセンス・アカウント）。骨組みと共有する */
 export const BASIC_TAB_GRID = 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]';

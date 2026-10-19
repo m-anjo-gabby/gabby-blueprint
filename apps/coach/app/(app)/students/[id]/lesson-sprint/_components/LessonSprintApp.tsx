@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LessonSprintSetup } from './LessonSprintSetup';
-import { LessonSprintPlayer } from './LessonSprintPlayer';
+import { useState } from 'react';
+import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
+import type { LessonSprintContentSummary, LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
+import type { SprintQuestion } from '@gabby/types/sprint';
 import { ImmersiveShell } from '@/components/common/ImmersiveShell';
 import { withLiveSessionParam } from '@/lib/liveSession/context';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
-import type { LessonSprintContentSummary, LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
-import type { SprintQuestion } from '@gabby/types/sprint';
-import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
+import { LessonSprintPlayer } from './LessonSprintPlayer';
+import { LessonSprintSetup } from './LessonSprintSetup';
 
 interface LessonSprintAppProps {
   studentId: string;

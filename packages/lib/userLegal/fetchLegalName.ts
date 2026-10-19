@@ -1,6 +1,6 @@
 import 'server-only';
-import { createAdminClient } from '../supabase/admin';
 import type { LegalName } from '@gabby/types/userLegal';
+import { createAdminClient } from '../supabase/admin';
 
 export const LEGAL_NAME_SELECT = 'last_name, first_name, last_name_latin, first_name_latin';
 

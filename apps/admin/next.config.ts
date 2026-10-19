@@ -1,6 +1,6 @@
 import type { NextConfig } from 'next';
-import { FRAME_DENY_HEADERS } from '../../packages/lib/security/frameHeaders';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { FRAME_DENY_HEADERS } from '../../packages/lib/security/frameHeaders';
 
 const nextConfig: NextConfig = {
   /* モノレポ内の共通パッケージ（packages/*）を導入した際、

@@ -1,6 +1,4 @@
 import type { Page } from '@playwright/test';
-import { test, expect, mainNav, navTab } from '../../support/studentApp.ts';
-import { PERSONAS, getPersonaPassword, storageStatePath } from '../../support/personas.ts';
 import {
   cleanupChatFixture,
   createChatFixture,
@@ -8,7 +6,9 @@ import {
   sendAsCoach,
   type ChatE2EFixture,
 } from '../../support/chatFixtures.ts';
+import { getPersonaPassword, PERSONAS, storageStatePath } from '../../support/personas.ts';
 import { watchRealtime } from '../../support/realtime.ts';
+import { expect, mainNav, navTab, test } from '../../support/studentApp.ts';
 
 /**
  * チャット（生徒アプリ）の2ペイン・既読・下書き・添付・直接リンクの回帰テスト。

@@ -1,15 +1,15 @@
 'use client';
 
 import { usePathname, useSearchParams } from 'next/navigation';
-import { RouteLoading } from '@/components/common/RouteLoading';
 import { PageSkeletonFrame } from '@/components/common/PageHeader';
-import { StudentOverviewSkeleton } from '../[id]/_components/OverviewSkeletons';
+import { RouteLoading } from '@/components/common/RouteLoading';
 import {
   LessonSprintResultSkeleton,
   LessonSprintSetupSkeleton,
   SessionHubSkeleton,
   SessionResultSkeleton,
 } from '../[id]/_components/LiveSessionSkeletons';
+import { StudentOverviewSkeleton } from '../[id]/_components/OverviewSkeletons';
 import {
   StudentChildListSkeleton,
   StudentChildPageHeader,

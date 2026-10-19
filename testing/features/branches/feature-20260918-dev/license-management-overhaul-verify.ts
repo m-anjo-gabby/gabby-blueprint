@@ -10,8 +10,8 @@
  * 排他制約はauth.uid()に依存しないテーブル制約のため、service_role直接操作で
  * dev/staging適用後の実際のDB挙動をそのまま再現できる（実サインインJWTは不要）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { createAdminClient } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 
 const env = resolveTestEnvFromArgs();

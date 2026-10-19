@@ -15,19 +15,19 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { CV_IMPORT_REQUIRED_HEADERS, CV_IMPORT_OPTIONAL_HEADERS } from '../../../../apps/admin/lib/cvDictionaryImport';
+import { CV_IMPORT_OPTIONAL_HEADERS, CV_IMPORT_REQUIRED_HEADERS } from '../../../../apps/admin/lib/cvDictionaryImport';
 import {
+  classifyQuestion,
   DEFAULT_LEDGER_PATH,
   DEFAULT_PROPER_NOUNS_PATH,
+  ledgerKey,
+  nextLedgerId,
+  readLedger,
   readTsvRecords,
+  today,
+  writeLedger,
   writeProperNouns,
   type LedgerRow,
-  readLedger,
-  writeLedger,
-  ledgerKey,
-  classifyQuestion,
-  nextLedgerId,
-  today,
 } from './ledgerLib';
 
 const [command, ...args] = process.argv.slice(2);

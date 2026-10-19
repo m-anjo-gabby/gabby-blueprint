@@ -1,9 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { signInAsRole, signOutRole } from '../../helpers/auth.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   createDisposableCoach,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantLiveLicense,
   type AuthFixture,
 } from './authFixtures.ts';

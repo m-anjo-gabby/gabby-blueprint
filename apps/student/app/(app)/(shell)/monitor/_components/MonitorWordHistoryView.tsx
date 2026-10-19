@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
 import { clientLogger } from '@gabby/lib/logger/client';
+import type { MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
 import { cn } from '@/lib/utils';
 import { HistoryEmpty, HistoryMetric } from '../../training/_components/HistoryParts';
 import { MonitorFilterBar } from './MonitorFilterBar';

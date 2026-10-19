@@ -1,9 +1,9 @@
 'use client';
 
-import { useId, type InputHTMLAttributes, type ReactNode } from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound, Loader2, Mail } from 'lucide-react';
+import Link from 'next/link';
+import { useId, type InputHTMLAttributes, type ReactNode } from 'react';
 
 /**
  * 認証画面（ログイン・パスワード忘れ・再設定・招待）の共通レイアウト部品

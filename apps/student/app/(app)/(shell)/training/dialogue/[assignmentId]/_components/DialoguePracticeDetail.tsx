@@ -1,7 +1,6 @@
+import { DIALOGUE_CATEGORIES, type DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
-import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import { DialoguePageHeader } from '../../_components/DialogueSkeleton';
 import { DialogueSessionRow } from './DialogueSessionRow';
 

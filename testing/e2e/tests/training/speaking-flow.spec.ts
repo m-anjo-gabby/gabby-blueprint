@@ -1,14 +1,14 @@
 import type { Page } from '@playwright/test';
-import { test, expect, loginAsNewStudent } from '../../support/studentApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantAppLicense,
   prepareWordContent,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
+import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 import { USES_LOCAL_SERVER } from '../../support/targets.ts';
 
 /**

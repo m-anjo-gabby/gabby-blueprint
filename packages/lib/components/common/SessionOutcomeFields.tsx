@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { cn } from '../../utils';
 import {
   CONDUCTED_VIA,
-  SESSION_OUTCOME,
   isConductedOutcome,
+  SESSION_OUTCOME,
   type ConductedVia,
   type SessionOutcome,
   type SessionOutcomeEvidence,
 } from '@gabby/types/session';
 import { defaultConductedVia } from '../../session/outcome';
+import { cn } from '../../utils';
 
 /**
  * ライブセッションの実施結果の入力欄（結果・実施方法・入退室ログの根拠・理由）。コーチの End Session

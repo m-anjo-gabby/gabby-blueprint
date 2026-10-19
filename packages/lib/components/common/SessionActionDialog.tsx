@@ -1,16 +1,16 @@
 'use client';
 
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { Loader2, Plus, X as XIcon } from 'lucide-react';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { focusDialogContent } from './dialogFocus';
-import { Loader2, Plus, X as XIcon } from 'lucide-react';
-import { cn } from '../../utils';
+import { CANCEL_CATEGORY, SESSION_STATUS, type ProposedSlotInput, type SessionListItem } from '@gabby/types/session';
+import { generateLessonStartTimeOptions, isAtLeastHoursFromNow, MIN_SESSION_BOOKING_LEAD_HOURS } from '../../date/date';
 import { useToast } from '../../hooks/useToast';
 import { useUserStore } from '../../stores/useUserStore';
-import { generateLessonStartTimeOptions, isAtLeastHoursFromNow, MIN_SESSION_BOOKING_LEAD_HOURS } from '../../date/date';
+import { cn } from '../../utils';
 import { CounterpartLocalTime } from './CounterpartLocalTime';
-import { SESSION_STATUS, CANCEL_CATEGORY, type SessionListItem, type ProposedSlotInput } from '@gabby/types/session';
+import { focusDialogContent } from './dialogFocus';
 
 /**
  * ----------------------------------------------

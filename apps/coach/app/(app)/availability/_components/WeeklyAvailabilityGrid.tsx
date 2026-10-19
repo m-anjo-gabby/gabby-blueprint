@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import { cn } from '@/lib/utils';
-import { type DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
+import { useCallback, useEffect, useRef } from 'react';
+import { DAYS_OF_WEEK, type DayOfWeek } from '@gabby/types/coachAvailability';
 import { DAY_OF_WEEK_SHORT_LABEL_EN } from '@/constants/availability';
+import { cn } from '@/lib/utils';
 
 /** グリッドの細かさ: 1マス = 30分で、1日分（48マス）。 */
 export const SLOTS_PER_DAY = 48;

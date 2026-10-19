@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
+import { clientLogger } from '@gabby/lib/logger/client';
 import type { SprintQuestion } from '@gabby/types/sprint';
 import { scrollIntoContainer } from '@/lib/scroll';
 import type { SprintResultScore } from './types';
-import { clientLogger } from '@gabby/lib/logger/client';
 
 /**
  * 進行中の再生アクション種別。'all' 実施中は他の再生操作を無効化し、

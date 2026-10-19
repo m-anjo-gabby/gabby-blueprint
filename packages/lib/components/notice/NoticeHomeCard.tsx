@@ -1,15 +1,15 @@
 'use client';
 
-import type { MouseEvent } from 'react';
-import Link from 'next/link';
 import { ChevronRight, X } from 'lucide-react';
+import Link from 'next/link';
+import type { MouseEvent } from 'react';
 import type { NoticeItem } from '@gabby/types/notice';
 import { useHydrated } from '../../hooks/useHydrated';
-import { toNoticePlainText } from '../../notice/plainText';
-import { getNoticeImageUrl } from '../../notice/links';
 import type { NoticeLabels } from '../../notice/labels';
-import { NoticeMeta } from './NoticeMeta';
+import { getNoticeImageUrl } from '../../notice/links';
+import { toNoticePlainText } from '../../notice/plainText';
 import { NoticeCtaLink, NoticeImage } from './NoticeCta';
+import { NoticeMeta } from './NoticeMeta';
 
 interface NoticeHomeCardProps {
   notice: NoticeItem;

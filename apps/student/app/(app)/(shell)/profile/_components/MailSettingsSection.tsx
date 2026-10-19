@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { ACTIVE_MAIL_CATEGORIES, MAIL_CATEGORIES, type MailCategory } from '@gabby/lib/mail/dispatch/registry';
 import type { MailSettings } from '@gabby/lib/mail/settingsActions';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { Switch } from '@/components/ui/switch';
-import { Skeleton } from '@/components/ui/skeleton';
 import { updateMyMailSetting } from '@/actions/mailSettingAction';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { SAVE_NETWORK_ERROR_MESSAGE } from '@/constants/network';
 import { ProfileSection } from './ProfileSection';
 

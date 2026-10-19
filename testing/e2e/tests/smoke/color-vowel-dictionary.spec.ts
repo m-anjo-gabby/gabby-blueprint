@@ -1,6 +1,6 @@
 import { storageStatePath } from '../../support/personas.ts';
-import { expect, test } from '../../support/studentApp.ts';
 import { openSprintResultFromHistory } from '../../support/sprintHistory.ts';
+import { expect, test } from '../../support/studentApp.ts';
 
 /**
  * スモーク: Color Vowel 辞書のシート（docs/screens/student/training/sprint-result.md「辞書シートの表示」）。

@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
 import { Languages, Loader2, Volume2 } from 'lucide-react';
+import React from 'react';
 import { cn } from '@/lib/utils';
 
 export type PhraseAudioTone = 'slate' | 'indigo' | 'emerald' | 'amber';

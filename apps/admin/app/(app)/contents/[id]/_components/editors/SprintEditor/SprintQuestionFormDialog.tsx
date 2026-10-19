@@ -1,20 +1,20 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { CheckCircle2, Edit, MessageSquare, Plus, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useEffect, useMemo, useState } from 'react';
+import { useFieldArray, useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
+import { bulkUpsertSprintQuestions } from '@/actions/adminSprintAction';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { bulkUpsertSprintQuestions } from '@/actions/adminSprintAction';
-import { PlusCircle, Edit, MessageSquare, Sparkles, CheckCircle2, Trash2, Plus } from 'lucide-react';
-import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 // 英語の列（*_en）を入力の検証の対象にする

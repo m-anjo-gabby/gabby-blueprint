@@ -1,20 +1,19 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '../../supabase/server';
-import { createLogger } from '../../logger';
-import { getLogContext } from '../../logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import {
+  getCalendarEventPhase,
+  sortCalendarEventMessages,
   type CalendarEventCoachOption,
   type CalendarEventItem,
   type CalendarEventMessageItem,
-  getCalendarEventPhase,
-  sortCalendarEventMessages,
 } from '@gabby/types/calendarEvent';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createLogger } from '../../logger';
+import { getLogContext } from '../../logger/context';
 import { createAdminClient } from '../../supabase/admin';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 

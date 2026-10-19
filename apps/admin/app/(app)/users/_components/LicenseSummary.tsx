@@ -1,7 +1,7 @@
-import { useTranslations } from 'next-intl';
 import { Calendar, ShieldAlert } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 import type { UserRecord } from '@gabby/types/user';
+import { cn } from '@/lib/utils';
 
 type LicenseUser = Pick<
   UserRecord,

@@ -1,10 +1,11 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import {
   type AddHomeworkCommentResult,
   type CreateSessionHomeworkResult,
@@ -16,8 +17,6 @@ import {
   type SessionHomeworkEntry,
   type SetHomeworkNotNeededResult,
 } from '@gabby/types/sessionHomework';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 

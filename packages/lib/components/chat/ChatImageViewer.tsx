@@ -1,10 +1,10 @@
 'use client';
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { focusDialogContent } from '../common/dialogFocus';
 import { ExternalLink, X } from 'lucide-react';
-import { useChatUi } from './ChatUiContext';
+import { focusDialogContent } from '../common/dialogFocus';
 import { ExternalImage } from '../common/ExternalImage';
+import { useChatUi } from './ChatUiContext';
 
 interface ChatImageViewerProps {
   url: string;

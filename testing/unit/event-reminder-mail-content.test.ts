@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { renderMail } from '@gabby/lib/mail/render';
 import { buildEventReminderMail } from '@gabby/lib/mail/templates/EventReminderEmailTemplate';
 import { buildLiveSessionReminderMail } from '@gabby/lib/mail/templates/LiveSessionReminderEmailTemplate';

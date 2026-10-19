@@ -1,10 +1,10 @@
 // apps/admin/app/(app)/notice/[id]/edit/page.tsx
 import { getTranslations } from 'next-intl/server';
-import { getNoticeById } from '@/actions/adminNoticeAction';
-import { getClientsFilter } from '@/actions/adminClientAction';
-import { NoticeEditor } from '../../_components/NoticeEditor';
-import { unstable_rethrow, notFound } from 'next/navigation';
+import { notFound, unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
+import { getClientsFilter } from '@/actions/adminClientAction';
+import { getNoticeById } from '@/actions/adminNoticeAction';
+import { NoticeEditor } from '../../_components/NoticeEditor';
 
 const logger = createLogger('admin');
 

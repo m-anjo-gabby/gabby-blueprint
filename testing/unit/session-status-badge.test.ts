@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { buildSessionStatusBadge, type SessionStatusBadgeLabels } from '@gabby/lib/session/sessionStatusBadge';
 import { CANCEL_CATEGORY, COMPLETION_RESULT, SESSION_STATUS } from '@gabby/types/session';
 

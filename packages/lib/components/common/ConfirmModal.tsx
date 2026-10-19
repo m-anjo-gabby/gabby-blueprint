@@ -1,7 +1,8 @@
 // components/common/ConfirmModal.tsx
 'use client';
+
 import { motion } from 'framer-motion';
-import { Trash2, AlertTriangle, Info } from 'lucide-react';
+import { AlertTriangle, Info, Trash2 } from 'lucide-react';
 
 interface ConfirmModalProps {
   title: string;

@@ -1,25 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, BellOff } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { formatZonedDate } from '@gabby/lib/date/date';
+import { getNotificationDisplay } from '@gabby/lib/notification/display';
+import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
+import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { NOTICE_IMPORTANT_BADGE, NOTICE_TYPES, type NoticeType } from '@gabby/types/notice';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
-import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
-import { formatZonedDate } from '@gabby/lib/date/date';
-import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, type NoticeType } from '@gabby/types/notice';
-import { getNotificationDisplay } from '@gabby/lib/notification/display';
 
 // お知らせ(告知)と通知(個人イベント)を1つの通知センターに統合したベル。
 // データソースは別ストアのまま、UIの入口とタブ切替のみ統合する。

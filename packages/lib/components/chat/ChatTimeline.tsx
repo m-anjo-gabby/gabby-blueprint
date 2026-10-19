@@ -1,24 +1,24 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { ArrowDown, ChevronLeft, Loader2, Paperclip, Trash2 } from 'lucide-react';
-import { useChatStore } from '../../stores/useChatStore';
-import { useTimezone } from '../../hooks/useTimezone';
-import { useConfirm } from '../../hooks/useConfirm';
-import { useToast } from '../../hooks/useToast';
-import { useChatRealtimeMessages } from '../../chat/realtime/useChatRealtimeMessages';
-import { useChatReadReceipt } from '../../chat/realtime/useChatReadReceipt';
+import Link from 'next/link';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { CHAT_ROOM_TYPES, type ChatMessage, type ChatRoom, type ChatRoomMemberSummary } from '@gabby/types/chat';
 import { deleteChatMessage, getChatMessageById, getChatMessages } from '../../chat/actions/messageActions';
 import { formatMessageHeaderTime, isContinuationMessage } from '../../chat/messageGrouping';
+import { useChatReadReceipt } from '../../chat/realtime/useChatReadReceipt';
+import { useChatRealtimeMessages } from '../../chat/realtime/useChatRealtimeMessages';
 import { getChatRoomCounterpart, getChatRoomTitle } from '../../chat/roomDisplay';
+import { useConfirm } from '../../hooks/useConfirm';
+import { useTimezone } from '../../hooks/useTimezone';
+import { useToast } from '../../hooks/useToast';
+import { useChatStore } from '../../stores/useChatStore';
 import { cn } from '../../utils';
-import { CHAT_ROOM_TYPES, type ChatMessage, type ChatRoom, type ChatRoomMemberSummary } from '@gabby/types/chat';
-import { CHAT_SPLIT_CLASSES, getHeaderTimeLabels, useChatUi } from './ChatUiContext';
 import { ChatAvatar } from './ChatAvatar';
 import { ChatComposer } from './ChatComposer';
-import { useChatAttachmentUpload } from './useChatAttachmentUpload';
 import { ChatMessageContent } from './ChatMessageContent';
+import { CHAT_SPLIT_CLASSES, getHeaderTimeLabels, useChatUi } from './ChatUiContext';
+import { useChatAttachmentUpload } from './useChatAttachmentUpload';
 
 interface ChatTimelineProps {
   roomId: string;

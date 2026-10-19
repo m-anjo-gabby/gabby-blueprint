@@ -1,7 +1,7 @@
 'use client';
 
-import { useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useTransition } from 'react';
 import { parseListParams } from '@/lib/list';
 
 export interface ListQuery<K extends string = never> {

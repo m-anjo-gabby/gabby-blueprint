@@ -1,5 +1,5 @@
-import { test as setup, expect } from '@playwright/test';
-import { PERSONAS, getPersonaPassword, storageStatePath, type PersonaKey } from '../support/personas.ts';
+import { expect, test as setup } from '@playwright/test';
+import { getPersonaPassword, PERSONAS, storageStatePath, type PersonaKey } from '../support/personas.ts';
 import { agreeToPendingTerms } from '../support/studentApp.ts';
 
 /**

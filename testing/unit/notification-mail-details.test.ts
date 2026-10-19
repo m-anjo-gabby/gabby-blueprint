@@ -1,10 +1,10 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderMail } from '@gabby/lib/mail/render';
-import { buildNotificationMail } from '@gabby/lib/mail/templates/NotificationEmailTemplate';
-import { buildNotificationDetails, type NotificationMailFacts } from '@gabby/lib/mail/templates/notificationDetails';
-import { formatWeeklySlot } from '@gabby/lib/mail/templates/scheduleFormat';
+import { test } from 'node:test';
 import { getFirstLiveSessionOccurrence } from '@gabby/lib/date/date';
+import { renderMail } from '@gabby/lib/mail/render';
+import { buildNotificationDetails, type NotificationMailFacts } from '@gabby/lib/mail/templates/notificationDetails';
+import { buildNotificationMail } from '@gabby/lib/mail/templates/NotificationEmailTemplate';
+import { formatWeeklySlot } from '@gabby/lib/mail/templates/scheduleFormat';
 import { NOTIFICATION_MESSAGE_BUILDERS, type NotificationType } from '@gabby/types/notification';
 import { NOTIFICATION_MESSAGE_BUILDERS_EN } from '@gabby/types/notificationEn';
 

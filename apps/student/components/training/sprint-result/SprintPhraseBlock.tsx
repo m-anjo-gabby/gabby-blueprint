@@ -1,8 +1,8 @@
 'use client';
 
-import { cn } from '@/lib/utils';
 import { LookupText } from '@/components/common/LookupText';
 import { PhraseAudioHeader, type PhraseAudioTone } from '@/components/common/PhraseAudioHeader';
+import { cn } from '@/lib/utils';
 
 const PHRASE_STYLES = {
   statement: { tone: 'slate', box: 'border-line', text: 'text-sm font-bold text-ink-soft leading-relaxed' },

@@ -1,7 +1,7 @@
+import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../../liveSessionRoom/constants';
 import type { MailBlock, MailContent, MailLocale } from '../layout/document';
 import { buildNotifyMail, type NotifyMailLinks } from './notifyMail';
 import { reminderSubject, type ReminderLead } from './reminder';
-import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../../liveSessionRoom/constants';
 
 /** 入室できるのは開始の何分前からか（通話画面の判定と同じ値） */
 const EARLY_JOIN_MINUTES = LIVE_SESSION_EARLY_JOIN_BEFORE_MS / 60000;

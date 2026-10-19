@@ -1,7 +1,7 @@
 'use client';
 
+import { DEFAULT_LESSON_SPRINT_SCORE, LESSON_SPRINT_SCORE_META } from '@gabby/types/lessonSprint';
 import { cn } from '@/lib/utils';
-import { LESSON_SPRINT_SCORE_META, DEFAULT_LESSON_SPRINT_SCORE } from '@gabby/types/lessonSprint';
 
 interface ScoreButtonsProps {
   onScore: (score: number) => void;

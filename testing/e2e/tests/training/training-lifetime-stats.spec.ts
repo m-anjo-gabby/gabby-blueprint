@@ -1,16 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { test, expect, loginAsNewStudent } from '../../support/studentApp.ts';
 import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantAppLicense,
   prepareContent,
   prepareWordContent,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
+import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 
 /**
  * 自主トレーニングの通算値・連続日数・達成の通知（仕様: e2e/specs/training/training-stats.md 異常系 #1〜#6・#8）

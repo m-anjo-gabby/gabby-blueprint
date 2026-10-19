@@ -1,21 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-import { useChatErrorMessage } from './useChatErrorMessage';
 import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { createChatRoom, getChatRoomTargetUsers } from '@gabby/lib/chat/actions/roomActions';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { CHAT_ROOM_TYPES, type ChatRoomType, type ChatTargetUser } from '@gabby/types/chat';
 import { type ClientOption } from '@gabby/types/client';
-import { getChatRoomTargetUsers, createChatRoom } from '@gabby/lib/chat/actions/roomActions';
 import { getClientsFilter } from '@/actions/adminClientAction';
-import { ParticipantPicker, type ParticipantSelection, EMPTY_PARTICIPANT_SELECTION } from './ParticipantPicker';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GroupParticipantsPicker } from './GroupParticipantsPicker';
+import { EMPTY_PARTICIPANT_SELECTION, ParticipantPicker, type ParticipantSelection } from './ParticipantPicker';
+import { useChatErrorMessage } from './useChatErrorMessage';
 
 interface CreateChatRoomDialogProps {
   onCreated: () => void;

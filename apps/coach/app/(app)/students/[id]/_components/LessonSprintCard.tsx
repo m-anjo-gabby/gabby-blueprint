@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { Zap } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LessonSprintHistoryRow } from './LessonSprintHistoryRow';
 
 interface LessonSprintCardProps {

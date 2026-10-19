@@ -1,10 +1,10 @@
-import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { getCVDictionaryByWord, getCVDictionaryWords } from '@/actions/adminCVDictionaryAction';
-import { CVWordList } from './_components/CVWordList';
-import { CVEntryPane } from './_components/CVEntryPane';
 import { BookOpenText } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
+import { getCVDictionaryByWord, getCVDictionaryWords } from '@/actions/adminCVDictionaryAction';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { CVEntryPane } from './_components/CVEntryPane';
+import { CVWordList } from './_components/CVWordList';
 
 // メタデータ
 

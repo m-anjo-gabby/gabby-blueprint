@@ -1,14 +1,16 @@
 import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { USER_STATUS, USER_TYPES } from '@gabby/types/user';
-import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
-import { MailSendError, sendCore } from '../core';
 import { getPortalBaseUrl } from '../../navigation/portalUrl';
+import { createAdminClient } from '../../supabase/admin';
+import { MailSendError, sendCore } from '../core';
 import { buildUnsubscribeUrl, getUnsubscribeSecret, unsubscribeHeaders } from '../unsubscribe/token';
-import { MAIL_TYPES, type MailCategory, type MailType } from './registry';
-import type { MailHandlerRegistry, MailLinks, MailOutboxRow, MailRecipient } from './types';
+import { groupSessionReminderHandler } from './handlers/groupSessionReminder';
+import { liveSessionReminderHandler } from './handlers/liveSessionReminder';
+import { notificationHandler } from './handlers/notification';
 import {
   classifySendError,
   isAllowedRecipient,
@@ -19,10 +21,8 @@ import {
   resolveRecipientLanguage,
   type MailDispatchMode,
 } from './policy';
-import { groupSessionReminderHandler } from './handlers/groupSessionReminder';
-import { notificationHandler } from './handlers/notification';
-import { liveSessionReminderHandler } from './handlers/liveSessionReminder';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { MAIL_TYPES, type MailCategory, type MailType } from './registry';
+import type { MailHandlerRegistry, MailLinks, MailOutboxRow, MailRecipient } from './types';
 
 const logger = createLogger('mail');
 

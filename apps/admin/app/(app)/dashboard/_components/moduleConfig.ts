@@ -1,5 +1,5 @@
 // apps/admin/app/(app)/dashboard/_components/moduleConfig.ts
-import { Building2, FileSignature, Users, BookOpen, Bell, type LucideIcon } from 'lucide-react';
+import { Bell, BookOpen, Building2, FileSignature, Users, type LucideIcon } from 'lucide-react';
 import type { DashboardModuleKey } from '@/actions/adminDashboardAction';
 
 interface ModuleConfigEntry {

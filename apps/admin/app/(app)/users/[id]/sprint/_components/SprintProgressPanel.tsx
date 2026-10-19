@@ -1,23 +1,23 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { DetailSection } from '../../_components/DetailSection';
 import { TriangleAlert } from 'lucide-react';
-import {
-  updateStudentSprintLevel,
-  setStudentSprintStage,
-  setStudentSprintLevelManaged,
-} from '@/actions/adminStudentProgressAction';
-import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
-import { MAX_STAGE, type StageLevels } from '@gabby/types/stageProgression';
+import { useTranslations } from 'next-intl';
+import { useMemo, useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { getStageGaps, getStageGoals } from '@gabby/lib/sprint/stageProgression';
 import { formatAcquiredSprintLevelLabel } from '@gabby/lib/sprint/utils';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
+import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
+import { MAX_STAGE, type StageLevels } from '@gabby/types/stageProgression';
+import {
+  setStudentSprintLevelManaged,
+  setStudentSprintStage,
+  updateStudentSprintLevel,
+} from '@/actions/adminStudentProgressAction';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { DetailSection } from '../../_components/DetailSection';
 
 interface SprintProgressPanelProps {
   userId: string;

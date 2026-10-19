@@ -1,12 +1,12 @@
-import Link from 'next/link';
 import { ArrowLeft, BadgeCheck, BadgeX } from 'lucide-react';
-import { UserAvatar } from '@/components/common/UserAvatar';
+import Link from 'next/link';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import type {
   StudentContractSessionSummary,
   StudentOverviewProfile,
   StudentSessionHistoryItem,
 } from '@gabby/types/coachStudent';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { SprintProgressRadar } from './SprintProgressRadar';
 import { TodaysLessonPanel } from './TodaysLessonPanel';
 

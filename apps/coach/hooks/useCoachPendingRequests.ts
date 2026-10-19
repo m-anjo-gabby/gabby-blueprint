@@ -1,18 +1,18 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRequestsStore } from '@/stores/useRequestsStore';
 import {
+  isPendingCoachIncomingRequest,
   type CoachIncomingRequestItem,
   type IncomingSessionBookingRequestItem,
-  isPendingCoachIncomingRequest,
 } from '@gabby/types/coachInbox';
-import { type IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS } from '@gabby/types/matching';
+import { MATCHING_REQUEST_STATUS, type IncomingMatchingRequestItem } from '@gabby/types/matching';
 import {
-  type IncomingRescheduleProposalGroup,
   RESCHEDULE_PROPOSAL_STATUS,
   SESSION_BOOKING_REQUEST_STATUS,
+  type IncomingRescheduleProposalGroup,
 } from '@gabby/types/session';
+import { useRequestsStore } from '@/stores/useRequestsStore';
 
 export interface UseCoachPendingRequestsResult {
   pending: CoachIncomingRequestItem[];

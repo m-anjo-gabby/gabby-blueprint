@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { renderMail } from '@gabby/lib/mail/render';
 import { buildNotificationMail } from '@gabby/lib/mail/templates/NotificationEmailTemplate';
 import { NOTIFICATION_MESSAGE_BUILDERS } from '@gabby/types/notification';

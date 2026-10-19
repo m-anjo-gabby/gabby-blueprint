@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { focusDialogContent } from '@gabby/lib/components/common/dialogFocus';
 import * as Tabs from '@radix-ui/react-tabs';
 import { motion } from 'framer-motion';
-import { Loader2, CheckCircle2, X, FileText, ShieldCheck } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { agreeToTerms } from '@/actions/termAction';
+import { CheckCircle2, FileText, Loader2, ShieldCheck, X } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { focusDialogContent } from '@gabby/lib/components/common/dialogFocus';
 import { TermViewer } from '@gabby/lib/components/term/TermViewer';
 import type { TermDocument } from '@gabby/types/term';
+import { agreeToTerms } from '@/actions/termAction';
+import { cn } from '@/lib/utils';
 
 interface TermsAgreementModalProps {
   userId: string;

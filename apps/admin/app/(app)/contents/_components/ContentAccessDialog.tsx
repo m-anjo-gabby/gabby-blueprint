@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { AlertCircle, ArrowLeft, Building2, Loader2, Plus, ShieldCheck, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, X, Loader2, ArrowLeft, Building2, ShieldCheck, AlertCircle } from 'lucide-react';
-import { getContentAccessData, assignAccess, removeAccess } from '@/actions/adminContentAction';
+import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { type Content, type ContentAccessSummary } from '@gabby/types/content';
+import { assignAccess, getContentAccessData, removeAccess } from '@/actions/adminContentAction';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ContentAccessDialogProps {
   content: Content;

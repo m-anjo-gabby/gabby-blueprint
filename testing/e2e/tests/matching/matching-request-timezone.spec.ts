@@ -1,16 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { test, expect, agreeToPendingTerms } from '../../support/studentApp.ts';
+import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableCoach,
   createDisposableStudent,
   deleteFixtureChatRooms,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantLiveLicense,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
-import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { agreeToPendingTerms, expect, test } from '../../support/studentApp.ts';
 
 /**
  * 専属コーチのマッチングは、生徒が選んだ時刻（申請時の生徒のタイムゾーン）で全回を予約する

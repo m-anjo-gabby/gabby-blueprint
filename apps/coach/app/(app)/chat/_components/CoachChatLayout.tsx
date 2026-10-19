@@ -1,8 +1,8 @@
 'use client';
 
-import { useMyChatRooms } from '@gabby/lib/components/chat/useMyChatRooms';
-import { ChatSplitLayout } from '@gabby/lib/components/chat/ChatSplitLayout';
 import { ChatRoomListPane } from '@gabby/lib/components/chat/ChatRoomListPane';
+import { ChatSplitLayout } from '@gabby/lib/components/chat/ChatSplitLayout';
+import { useMyChatRooms } from '@gabby/lib/components/chat/useMyChatRooms';
 import { CHAT_LABELS, CHAT_SPLIT_BREAKPOINT } from '@/constants/chat';
 
 /** チャットの2ペインの枠。左にルームの一覧、右に選んだルーム（children） */

@@ -14,8 +14,8 @@
  *   QA_LIVE_SESSION_TEST_PASSWORD='***' pnpm exec tsx testing/features/branches/feature-20261001-dev/matching-license-boundary-verify.ts --env=dev --tag=mlb01
  *   検証後はタグで作成したデータを削除する（--keep 指定時は残す）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 
 const env = resolveTestEnvFromArgs();

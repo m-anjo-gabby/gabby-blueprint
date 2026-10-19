@@ -1,16 +1,15 @@
 'use server';
 
-import { unstable_rethrow } from 'next/navigation';
-
-import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { revalidatePath } from 'next/cache';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
-import { USER_STATUS } from '@gabby/types/user';
-import type { DeletedStoragePaths, PurgeClientCounts } from '@gabby/types/dataDeletion';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import type { DeletedStoragePaths, PurgeClientCounts } from '@gabby/types/dataDeletion';
+import { USER_STATUS } from '@gabby/types/user';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 
 // 停止・退会・顧客単位の一括削除（規約は docs/DATA-DELETION.md）。
 // 退会・一括削除は戻せないため、システム管理者（admin ロール）だけが実行でき、対象の名前の入力で確認する。

@@ -1,8 +1,8 @@
 'use client';
 
 import { Trash2, Volume2 } from 'lucide-react';
-import type { FavoritePhraseItem } from '@gabby/types/word';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import type { FavoritePhraseItem } from '@gabby/types/word';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useFavoriteAudio } from './FavoriteAudioProvider';

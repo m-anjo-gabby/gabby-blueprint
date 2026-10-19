@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Calendar, ChevronDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import React, { useMemo, useState } from 'react';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { type WordSummaryHistoryItem } from '@/actions/wordAction';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
+import { cn } from '@/lib/utils';
+import { HistoryDayListSkeleton, HistoryEmpty, HistoryMetric } from '../../../_components/HistoryParts';
 import { MonthSwitcher } from '../../../_components/MonthSwitcher';
 import { StatTile } from '../../../_components/StatTile';
-import { HistoryDayListSkeleton, HistoryEmpty, HistoryMetric } from '../../../_components/HistoryParts';
 
 interface WordHistoryViewProps {
   /** 月の履歴。null は読み込み中（loading.tsx）で、見出し・月切替は本物のまま数値と一覧を骨組みにする */

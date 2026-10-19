@@ -1,8 +1,5 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
   ArrowRight,
   CheckCircle2,
@@ -23,18 +20,21 @@ import {
   Video,
   VideoOff,
 } from 'lucide-react';
-import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
-import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useLiveSessionPresence } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionPresence';
 import { useLiveSessionRoomOrchestration } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionRoomOrchestration';
-import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
+import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
+import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
 import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
 import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
-import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
-import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 interface LiveSessionRoomViewProps {
   access: LiveSessionRoomAccess;

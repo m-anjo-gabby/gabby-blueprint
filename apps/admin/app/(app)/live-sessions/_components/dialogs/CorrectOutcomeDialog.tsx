@@ -1,36 +1,36 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
+import { useEffect, useState, useTransition } from 'react';
 import {
   SessionOutcomeFields,
   useSessionOutcomeDraft,
   type SessionOutcomeFieldsLabels,
 } from '@gabby/lib/components/common/SessionOutcomeFields';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { toSessionOutcome } from '@gabby/lib/session/outcome';
+import type { AdminOutcomeTarget, AdminSessionOutcomeHistoryEntry } from '@gabby/types/adminLiveSession';
 import {
   CONDUCTED_VIA,
+  isConductedOutcome,
   SESSION_OUTCOME,
   SESSION_STATUS,
-  isConductedOutcome,
   type SessionOutcome,
 } from '@gabby/types/session';
-import type { AdminOutcomeTarget, AdminSessionOutcomeHistoryEntry } from '@gabby/types/adminLiveSession';
 import {
   correctSessionOutcomeAsAdmin,
   getSessionOutcomeEvidenceAsAdmin,
   getSessionOutcomeHistory,
 } from '@/actions/adminLiveSessionAction';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { formatSessionDateTime } from './formatSessionDateTime';
 
 /** 実施結果（SESSION_OUTCOME）の翻訳キー（liveSessions.outcome.outcomes.*） */

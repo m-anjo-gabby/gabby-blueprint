@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { BellOff } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
+import { BellOff } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFetchOnMount } from '@gabby/lib/hooks/useFetchOnMount';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { scrollIntoContainer } from '@/lib/scroll';
 import { NoticeCard } from './_components/NoticeCard';
 import { NoticeListSkeleton, NoticePageHeader } from './_components/NoticeSkeleton';

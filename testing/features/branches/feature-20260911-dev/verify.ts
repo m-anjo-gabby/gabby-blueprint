@@ -6,8 +6,8 @@
  * 使い方:
  *   pnpm exec tsx testing/features/branches/feature-20260911-dev/verify.ts --env=dev --tag=auto0912
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { createAdminClient } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { writeResultLog } from '../../../helpers/results.ts';
 
 const env = resolveTestEnvFromArgs();

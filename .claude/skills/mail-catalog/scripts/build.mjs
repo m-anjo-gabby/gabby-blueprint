@@ -4,9 +4,9 @@
 //   node .claude/skills/mail-catalog/scripts/build.mjs --mails=<書き出したフォルダ> --out=<出力HTML> --branch=<ブランチ名> [--date=YYYY-MM-DD]
 // - GROUPS に無いサンプルが書き出されていたらエラーにする（新しいメールの載せ漏れを防ぐ）。
 // - Playwright は testing/ の依存を使う。
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { resolve, join, dirname } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const args = process.argv.slice(2);

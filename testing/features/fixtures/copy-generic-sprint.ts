@@ -12,9 +12,9 @@
  * 使い方:
  *   pnpm exec tsx features/fixtures/copy-generic-sprint.ts --from=dev --to=staging [--dry-run]
  */
-import { loadTestEnv, type TestEnv } from '../../helpers/env.ts';
-import { createAdminClient } from '../../helpers/auth.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient } from '../../helpers/auth.ts';
+import { loadTestEnv, type TestEnv } from '../../helpers/env.ts';
 
 const AUDIO_BUCKET = 'audio';
 const VOICE_COLUMNS = [

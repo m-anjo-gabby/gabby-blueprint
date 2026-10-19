@@ -1,12 +1,10 @@
 // apps/coach/app/(app)/profile/password/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { updatePassword } from '@/actions/coachAuthAction';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
-import { SubmitButton } from '@gabby/lib/components/common/SubmitButton';
+import { useState } from 'react';
 import { FormError } from '@gabby/lib/components/auth/AuthLayout';
 import {
   EMPTY_NEW_PASSWORD,
@@ -14,9 +12,11 @@ import {
   validateNewPassword,
   type NewPasswordValue,
 } from '@gabby/lib/components/auth/NewPasswordFields';
+import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
+import { SubmitButton } from '@gabby/lib/components/common/SubmitButton';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { updatePassword } from '@/actions/coachAuthAction';
 import { AUTH_LABELS } from '@/constants/auth';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 
 /**
  * パスワードの変更の画面（コーチのポータル）

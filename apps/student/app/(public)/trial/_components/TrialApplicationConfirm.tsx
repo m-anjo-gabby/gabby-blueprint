@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useState, useTransition, type ReactNode } from 'react';
 import { ArrowLeft, Send } from 'lucide-react';
+import { useRef, useState, useTransition, type ReactNode } from 'react';
 import {
   formatTrialApplicantName,
   formatTrialApplicantNameLatin,

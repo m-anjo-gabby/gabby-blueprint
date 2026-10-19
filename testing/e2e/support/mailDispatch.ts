@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import dotenv from 'dotenv';
 import { request, type APIResponse } from '@playwright/test';
+import dotenv from 'dotenv';
 import { ADMIN_BASE_URL, E2E_ENV } from './targets.ts';
 
 /**

@@ -1,19 +1,19 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, Info, Search, SearchX, X } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 import { FAVORITE_LIMIT } from '@/constants/favorites';
-import type { FavoriteKindDef } from './favoriteKinds';
-import { ALL_OPTION, getDownstreamFilterIds, resolveFavoriteFilters } from './favoriteFilters';
-import { FavoriteFilterChips, FavoriteFilterSelects, FavoriteFilterSheetButton } from './FavoriteFilterControls';
 import { replaceSearchParams } from '@/lib/replaceSearchParams';
+import { cn } from '@/lib/utils';
+import { FavoriteFilterChips, FavoriteFilterSelects, FavoriteFilterSheetButton } from './FavoriteFilterControls';
+import { ALL_OPTION, getDownstreamFilterIds, resolveFavoriteFilters } from './favoriteFilters';
+import type { FavoriteKindDef } from './favoriteKinds';
 
 /** 画面の見出し（読み込み中の FavoritesSkeleton と共有する） */
 export const FAVORITES_HEADER = { title: 'お気に入り', titleHidden: true } as const;

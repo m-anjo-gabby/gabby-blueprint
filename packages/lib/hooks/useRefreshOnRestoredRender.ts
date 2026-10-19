@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 
 // 表示したことのあるサーバー描画のID（タブ内で共有）
 const seenRenderIds = new Set<string>();

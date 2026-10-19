@@ -1,30 +1,29 @@
 'use client';
 
-import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
-import { SPRINT_FLOW_TIMING, type SprintQuestion } from '@gabby/types/sprint';
+import { ChevronLeft, Loader2, Square } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { extractContentWords, getFeedbackConfig, getSprintTitle, resolveSprintHasLevel } from '@gabby/lib';
+import { waitFor } from '@gabby/lib/audio/core/flow';
+import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
+import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
+import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
+import { useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackFlow';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { clientLogger } from '@gabby/lib/logger/client';
+import { getSprintQuestionPrompts } from '@gabby/lib/sprint/prompts';
 import { type AnalysisResult } from '@gabby/types/speechAssessment';
+import { SPRINT_FLOW_TIMING, type SprintQuestion } from '@gabby/types/sprint';
+import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
+import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
+import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
+import { useSprintStore } from '@/stores/useSprintStore';
+import { useSprintProgressSync } from '../_hooks/useSprintProgressSync';
+import { ExitProcessingOverlay } from './ExitProcessingOverlay';
 import { QuestionCard } from './QuestionCard';
 import { SprintDrillPlayerControls } from './SprintDrillPlayerControls';
 import { SprintFeedback } from './SprintFeedback';
-import { ExitProcessingOverlay } from './ExitProcessingOverlay';
-import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
-import { ChevronLeft, Square, Loader2 } from 'lucide-react';
-
-import { useSprintStore } from '@/stores/useSprintStore';
-import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
-import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
-import { waitFor } from '@gabby/lib/audio/core/flow';
-import { getSprintQuestionPrompts } from '@gabby/lib/sprint/prompts';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
-import { getFeedbackConfig, getSprintTitle, resolveSprintHasLevel, extractContentWords } from '@gabby/lib';
-import { clientLogger } from '@gabby/lib/logger/client';
-import { useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackFlow';
-import { useSprintProgressSync } from '../_hooks/useSprintProgressSync';
-import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
-import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
-import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
 
 interface SprintDrillPlayerProps {
   questions: SprintQuestion[];

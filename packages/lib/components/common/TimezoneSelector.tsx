@@ -1,7 +1,7 @@
 'use client';
 
+import { Clock, Globe, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Globe, Loader2, Clock } from 'lucide-react';
 import { type TimezoneMaster } from '@gabby/types/timezone';
 import { formatUtcOffset } from '../../date/timezone';
 

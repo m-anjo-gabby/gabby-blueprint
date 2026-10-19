@@ -1,7 +1,7 @@
 'use client';
 
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import Script from 'next/script';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 
 /*
  * Cloudflare Turnstile（CAPTCHA）のウィジェット。Cloudflare の公式スクリプトを読み込み、明示的に描画する。

@@ -10,12 +10,12 @@
  * 使い方:
  *   QA_LIVE_SESSION_TEST_PASSWORD='***' pnpm exec tsx testing/features/branches/feature-20260918-dev/monitor-target-period-verify.ts --env=staging --tag=stg0924
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { currentTermIndex, monthRange, termOf } from '../../../helpers/fixture-terms.ts';
 import { assertReleaseApplied, assertRpcRemoved } from '../../../helpers/preflight.ts';
 import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
-import { currentTermIndex, monthRange, termOf } from '../../../helpers/fixture-terms.ts';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

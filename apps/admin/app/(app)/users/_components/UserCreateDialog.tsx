@@ -1,22 +1,22 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle, CheckCircle2, Mail, PlusCircle, ShieldCheck } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch, type SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useTranslations } from 'next-intl';
-import { AlertCircle, CheckCircle2, Mail, PlusCircle, ShieldCheck } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import type { ClientOption } from '@gabby/types/client';
+import type { ContractDetail } from '@gabby/types/contract';
+import { USER_TYPES, type CreateUserResponse, type RoleDefinition } from '@gabby/types/user';
+import { getClientsFilter } from '@/actions/adminClientAction';
+import { getActiveContractsByClient } from '@/actions/adminContractAction';
+import { createUser, createUserDirect, getRoles } from '@/actions/adminUserAction';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { createUser, createUserDirect, getRoles } from '@/actions/adminUserAction';
-import { getActiveContractsByClient } from '@/actions/adminContractAction';
-import { getClientsFilter } from '@/actions/adminClientAction';
-import { USER_TYPES, type CreateUserResponse, type RoleDefinition } from '@gabby/types/user';
-import type { ClientOption } from '@gabby/types/client';
-import type { ContractDetail } from '@gabby/types/contract';
 import { createUserCreateSchema, type UserCreateValues } from '../_lib/userSchema';
 import { USER_FIELD_LABEL_CLASS, UserBasicFields } from './UserBasicFields';
 

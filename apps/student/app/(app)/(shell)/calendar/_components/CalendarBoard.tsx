@@ -1,19 +1,19 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useMemo, useState, useTransition } from 'react';
+import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
-import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { type SessionListItem } from '@gabby/types/session';
-import { type CalendarEventItem, withParticipation } from '@gabby/types/calendarEvent';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
 import type { CalendarItem } from '@gabby/types/calendarItem';
 import { type BookableTicketSlot } from '@gabby/types/matching';
-import { SessionActionDialog, type SessionActionTarget } from './SessionActionDialog';
-import { DayDetailDrawer } from './DayDetailDrawer';
+import { type SessionListItem } from '@gabby/types/session';
 import { BookMakeupSessionDialog } from './BookMakeupSessionDialog';
 import { CalendarMonthCard } from './CalendarMonthCard';
+import { DayDetailDrawer } from './DayDetailDrawer';
+import { SessionActionDialog, type SessionActionTarget } from './SessionActionDialog';
 
 const EMPTY_SESSIONS: SessionListItem[] = [];
 const EMPTY_EVENTS: CalendarEventItem[] = [];

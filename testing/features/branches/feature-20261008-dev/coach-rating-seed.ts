@@ -19,12 +19,12 @@
  *
  * 後始末は coach-rating-cleanup.ts を同じ --env / --tag で実行する。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
-import { assertReleaseApplied } from '../../../helpers/preflight.ts';
-import { addDays } from '../../../helpers/dates.ts';
-import { createFixtureKit } from '../../../helpers/fixture-accounts.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { addDays } from '../../../helpers/dates.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { createFixtureKit } from '../../../helpers/fixture-accounts.ts';
+import { assertReleaseApplied } from '../../../helpers/preflight.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

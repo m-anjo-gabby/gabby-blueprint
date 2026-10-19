@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { getChatMessageById } from '@gabby/lib/chat/actions/messageActions';
 import { createBrowserClient } from '@gabby/lib/supabase/client';
 import { type ChatMessage } from '@gabby/types/chat';
-import { getChatMessageById } from '@gabby/lib/chat/actions/messageActions';
 
 /**
  * 指定ルームの新着メッセージ（INSERT）をRealtime購読する。

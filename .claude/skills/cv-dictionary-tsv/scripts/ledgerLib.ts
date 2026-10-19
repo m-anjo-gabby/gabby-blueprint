@@ -2,8 +2,8 @@
  * 要確認台帳（docs/cv-dictionary/review-ledger.tsv）の読み書き。validate.ts / ledger.ts で共通使用する。
  * コンテンツチームがExcelで開けるよう、UTF-8（BOM付き）のTSVで保存する。
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { type CVImportEntry, toCVEntryKey } from '../../../../apps/admin/lib/cvDictionaryImport';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { toCVEntryKey, type CVImportEntry } from '../../../../apps/admin/lib/cvDictionaryImport';
 
 export const DEFAULT_LEDGER_PATH = 'docs/cv-dictionary/review-ledger.tsv';
 

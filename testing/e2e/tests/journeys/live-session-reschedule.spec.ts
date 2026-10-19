@@ -8,19 +8,19 @@ import {
 import { confirmModal, openCoachContext } from '../../support/coachApp.ts';
 import { clickUntilVisible } from '../../support/hydration.ts';
 import {
+  liveRoomBreakdown as breakdown,
+  fillSlot,
+  jstSlot,
+  nextSessionSection,
+  openLiveRoom,
+  studentSlotText,
+} from '../../support/liveRoomView.ts';
+import {
   approveMatchingRequest,
   createPendingMatchingRequest,
   signOutLivePair,
   type LivePair,
 } from '../../support/liveSessionFixtures.ts';
-import {
-  fillSlot,
-  jstSlot,
-  liveRoomBreakdown as breakdown,
-  nextSessionSection,
-  openLiveRoom,
-  studentSlotText,
-} from '../../support/liveRoomView.ts';
 import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 
 /**

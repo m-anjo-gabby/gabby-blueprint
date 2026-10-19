@@ -1,8 +1,8 @@
 'use client';
 
+import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ChevronLeft } from 'lucide-react';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { Skeleton } from '@/components/ui/skeleton';
 

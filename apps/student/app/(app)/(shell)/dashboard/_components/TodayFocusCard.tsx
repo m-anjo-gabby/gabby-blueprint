@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
 import { getResumePath } from '@gabby/lib/navigation/student-path';
 import type { TodayFocus } from '../_lib/todayFocus';

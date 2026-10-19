@@ -1,10 +1,10 @@
 'use client';
 
+import { ChevronDown, ChevronLeft } from 'lucide-react';
 import React from 'react';
-import { ChevronLeft, ChevronDown } from 'lucide-react';
-import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { getCefrStyle } from '@gabby/lib/content/ui';
 import { cn } from '@/lib/utils';
+import { useWordDrillStore } from '@/stores/useWordDrillStore';
 
 interface WordHeaderProps {
   onBack: () => void;

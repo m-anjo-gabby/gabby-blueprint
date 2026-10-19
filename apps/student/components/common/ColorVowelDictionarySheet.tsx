@@ -1,9 +1,12 @@
 // apps\student\components\common\ColorVowelDictionarySheet.tsx
 'use client';
 
-import * as React from 'react';
-import Image from 'next/image';
 import { BookA, Loader2, SearchX, TriangleAlert, Volume2 } from 'lucide-react';
+import Image from 'next/image';
+import * as React from 'react';
+import { ipaToPhonemes, type Phoneme } from '@gabby/lib/colorVowel/phonemes';
+import { getColorVowelBorderColor, getPartOfSpeechLabel, type ColorVowelDicResult } from '@gabby/types/colorVowel';
+import { Button } from '@/components/ui/button';
 import {
   Drawer,
   DrawerCloseButton,
@@ -12,10 +15,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { type ColorVowelDicResult, getPartOfSpeechLabel, getColorVowelBorderColor } from '@gabby/types/colorVowel';
-import { ipaToPhonemes, type Phoneme } from '@gabby/lib/colorVowel/phonemes';
 import { cn } from '@/lib/utils';
 
 export type DictionaryLookupStatus = 'loading' | 'done' | 'error';

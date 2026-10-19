@@ -5,7 +5,7 @@
 // - catalog の項目はどこかで使われている
 // 方針は docs/DEPENDENCIES.md。
 
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 

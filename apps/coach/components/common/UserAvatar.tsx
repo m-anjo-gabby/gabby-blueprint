@@ -1,6 +1,6 @@
 import { User as UserIcon } from 'lucide-react';
-import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 
 interface UserAvatarProps {
   userName: string;

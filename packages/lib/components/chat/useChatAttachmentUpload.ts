@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useToast } from '../../hooks/useToast';
-import { uploadChatAttachment } from '../../chat/actions/attachmentActions';
-import { useChatDraftStore } from '../../stores/useChatDraftStore';
 import { CHAT_ATTACHMENT_MAX_SIZE } from '@gabby/types/chat';
+import { uploadChatAttachment } from '../../chat/actions/attachmentActions';
+import { useToast } from '../../hooks/useToast';
+import { useChatDraftStore } from '../../stores/useChatDraftStore';
 import type { ChatLabels } from './ChatUiContext';
 
 /**

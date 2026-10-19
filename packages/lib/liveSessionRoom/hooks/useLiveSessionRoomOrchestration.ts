@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LIVE_SESSION_WARNING_AFTER_MS, LIVE_SESSION_END_AFTER_MS } from '../constants';
+import { LIVE_SESSION_END_AFTER_MS, LIVE_SESSION_WARNING_AFTER_MS } from '../constants';
 
 interface ChatMessageLike {
   isSelf: boolean;

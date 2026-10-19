@@ -1,10 +1,10 @@
 import {
-  SESSION_STATUS,
-  COMPLETION_RESULT,
   CANCEL_CATEGORY,
-  type SessionStatus,
-  type CompletionResult,
+  COMPLETION_RESULT,
+  SESSION_STATUS,
   type CancelCategory,
+  type CompletionResult,
+  type SessionStatus,
 } from '@gabby/types/session';
 
 export interface SessionStatusBadgeStyle {

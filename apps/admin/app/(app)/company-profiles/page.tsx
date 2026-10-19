@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { getCompanyProfiles } from '@/actions/adminCompanyProfileAction';
-import { CompanyProfileCard } from './_components/CompanyProfileCard';
 import { PageHeader } from '@/components/common/PageHeader';
+import { CompanyProfileCard } from './_components/CompanyProfileCard';
 
 export default async function CompanyProfilesPage() {
   const [t, profiles] = await Promise.all([getTranslations('companyProfiles'), getCompanyProfiles()]);

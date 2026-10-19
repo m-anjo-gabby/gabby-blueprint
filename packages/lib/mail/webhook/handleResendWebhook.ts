@@ -1,10 +1,10 @@
 import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
-import { createAdminClient } from '../../supabase/admin';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { createLogger } from '../../logger';
+import { createAdminClient } from '../../supabase/admin';
 import { verifyResendWebhook } from '../core';
 import { mailEnvironmentTag, toMailEventRecord, type MailWebhookEvent } from './mailEvent';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('mail');
 

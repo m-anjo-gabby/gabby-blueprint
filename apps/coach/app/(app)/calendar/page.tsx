@@ -1,12 +1,12 @@
 import { Suspense } from 'react';
-import { CalendarWorkspace } from './_components/CalendarWorkspace';
+import { isMonthParam } from '@gabby/lib/calendar/monthGridRange';
+import { toIsoMonthInZone } from '@gabby/lib/date/date';
+import { getMyProfile } from '@/actions/coachProfileAction';
+import { getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
 import { CalendarBoard } from './_components/CalendarBoard';
 import { CalendarMonthSection } from './_components/CalendarMonthSection';
 import { CalendarPageHeader } from './_components/CalendarSkeleton';
-import { getPendingIncomingRequestsForCoach } from '@/actions/matchingRequestAction';
-import { getMyProfile } from '@/actions/coachProfileAction';
-import { toIsoMonthInZone } from '@gabby/lib/date/date';
-import { isMonthParam } from '@gabby/lib/calendar/monthGridRange';
+import { CalendarWorkspace } from './_components/CalendarWorkspace';
 
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const [{ month: requestedMonth }, requests, profile] = await Promise.all([

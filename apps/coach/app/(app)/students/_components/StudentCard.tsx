@@ -1,12 +1,12 @@
 'use client';
 
+import { BadgeCheck, BadgeX, CalendarClock, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { ChevronRight, BadgeCheck, BadgeX, CalendarClock } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { UserAvatar } from '@/components/common/UserAvatar';
 import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { AssignedStudentSummary } from '@gabby/types/coachStudent';
+import { UserAvatar } from '@/components/common/UserAvatar';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface StudentCardProps {
   student: AssignedStudentSummary;

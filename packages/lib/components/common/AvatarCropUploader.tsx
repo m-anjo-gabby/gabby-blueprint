@@ -1,11 +1,11 @@
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
+import { Camera, Loader2, Trash2, User, X } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import Cropper, { type Area, type Point } from 'react-easy-crop';
-import { User, Camera, Trash2, Loader2, X } from 'lucide-react';
-import { getCroppedImageBlob } from '../../profile/cropImage';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { getCroppedImageBlob } from '../../profile/cropImage';
 import { ExternalImage } from './ExternalImage';
 
 export interface AvatarCropUploaderLabels {

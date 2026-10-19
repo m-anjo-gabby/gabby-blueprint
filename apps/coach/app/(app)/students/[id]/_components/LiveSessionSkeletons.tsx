@@ -1,10 +1,10 @@
-import Link from 'next/link';
 import { ArrowLeft, BookOpen, History, Info, MessageCircle, MessagesSquare, TrendingUp, Zap } from 'lucide-react';
+import Link from 'next/link';
+import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
+import { ImmersiveShell } from '@/components/common/ImmersiveShell';
+import { Section } from '@/components/common/Section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Section } from '@/components/common/Section';
-import { ImmersiveShell } from '@/components/common/ImmersiveShell';
-import { ImmersiveHeader } from '@/components/common/ImmersiveHeader';
 import { buildLiveSessionHubHref } from '@/lib/liveSession/context';
 
 /*

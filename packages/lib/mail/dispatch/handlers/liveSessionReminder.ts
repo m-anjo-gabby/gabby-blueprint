@@ -1,6 +1,6 @@
 import 'server-only';
-import { USER_TYPES } from '@gabby/types/user';
 import { SESSION_STATUS } from '@gabby/types/session';
+import { USER_TYPES } from '@gabby/types/user';
 import { renderMail } from '../../render';
 import { buildLiveSessionReminderMail } from '../../templates/LiveSessionReminderEmailTemplate';
 import { formatReminderSchedule, toReminderLead } from '../../templates/reminder';

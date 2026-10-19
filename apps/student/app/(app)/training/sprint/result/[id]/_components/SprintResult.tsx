@@ -1,24 +1,24 @@
 // apps\student\app\(app)\training\sprint\result\[id]\_components\SprintResult.tsx
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { ChevronLeft, Home } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { SPRINT_FLOW_TIMING } from '@gabby/types/sprint';
-import { ChevronLeft, Home } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { formatZonedDate } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { SPRINT_FLOW_TIMING } from '@gabby/types/sprint';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
-import { useSprintResultPlayback } from '@/components/training/sprint-result/useSprintResultPlayback';
+import { SPRINT_RESULT_AUTOPLAY_PARAM } from '@/components/training/sprint-result/links';
 import { SprintResultQuestionList } from '@/components/training/sprint-result/SprintResultQuestionList';
 import {
+  getSprintSelectHref,
   SprintResultActions,
   SprintResultSummary,
-  getSprintSelectHref,
 } from '@/components/training/sprint-result/SprintResultSummary';
 import type { SprintResultData } from '@/components/training/sprint-result/types';
-import { SPRINT_RESULT_AUTOPLAY_PARAM } from '@/components/training/sprint-result/links';
+import { useSprintResultPlayback } from '@/components/training/sprint-result/useSprintResultPlayback';
 
 // 見出しの並び（戻る・見出し・日付）は履歴側の ShellPageHeader と揃える
 const NAV_BUTTON_CLASS =

@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
+import type { ReactNode } from 'react';
 import { BackLink } from '@/components/common/PageHeader';
-import { getUserDetail } from './_lib/userDetail';
-import { getUserDetailTabs } from './_lib/tabs';
 import { USER_LIST_PATH, UserDetailHeader } from './_components/UserDetailHeader';
 import { UserDetailTabs } from './_components/UserDetailTabs';
+import { getUserDetailTabs } from './_lib/tabs';
+import { getUserDetail } from './_lib/userDetail';
 
 /**
  * ユーザー詳細（一覧の「編集」・氏名から開く）。見出しとタブを持ち、各タブは子ルート。

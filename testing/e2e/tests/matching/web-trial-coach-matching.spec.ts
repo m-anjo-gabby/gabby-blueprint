@@ -1,16 +1,16 @@
 import type { Page } from '@playwright/test';
+import { signInAsRole } from '../../../helpers/auth.ts';
 import { openAdminContext } from '../../support/adminApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableCoach,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantLiveLicense,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
 import { openCoachContext } from '../../support/coachApp.ts';
-import { signInAsRole } from '../../../helpers/auth.ts';
 import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 
 /**

@@ -1,3 +1,4 @@
+import type { MailCategory } from '../dispatch/registry';
 import {
   mailSubject,
   type MailBlock,
@@ -5,7 +6,6 @@ import {
   type MailFooterLine,
   type MailLocale,
 } from '../layout/document';
-import type { MailCategory } from '../dispatch/registry';
 
 /*
  * 通知・リマインダーのメールの共通部分（宛名・配信理由と停止の案内のフッター・件名）。

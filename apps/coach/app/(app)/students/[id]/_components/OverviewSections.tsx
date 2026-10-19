@@ -1,19 +1,19 @@
 import { cache } from 'react';
+import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
+import { getAvailableDialogueContents, getStudentDialogueAssignments } from '@/actions/dialogueAction';
+import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
 import {
+  getContractTrainingReports,
   getStudentLiveSessionContracts,
-  getStudentSessionsByTicket,
   getStudentLiveSessionShortfalls,
   getStudentNotes,
-  getContractTrainingReports,
+  getStudentSessionsByTicket,
 } from '@/actions/studentAction';
-import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
-import { getStudentDialogueAssignments, getAvailableDialogueContents } from '@/actions/dialogueAction';
-import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
-import { LiveSessionHistoryCard } from './LiveSessionHistoryCard';
 import { CoachNotesCard } from './CoachNotesCard';
-import { TrainingReportCard } from './TrainingReportCard';
-import { LessonSprintCard } from './LessonSprintCard';
 import { DialoguePracticeCard } from './DialoguePracticeCard';
+import { LessonSprintCard } from './LessonSprintCard';
+import { LiveSessionHistoryCard } from './LiveSessionHistoryCard';
+import { TrainingReportCard } from './TrainingReportCard';
 
 /*
  * 生徒概要画面のカード単位のデータ取得。

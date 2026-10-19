@@ -1,10 +1,10 @@
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertTriangle, CheckCircle2, HelpCircle, Monitor, Smartphone } from 'lucide-react';
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { HelpCircle, Smartphone, Monitor, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface MicTroubleshootingDialogProps {
   open: boolean;

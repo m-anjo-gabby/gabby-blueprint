@@ -1,14 +1,17 @@
 'use client';
 
+import { ChevronDown, ChevronUp, Loader2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Loader2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
-import type { DialogueAssignmentSummary, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
+import {
+  DIALOGUE_CATEGORIES,
+  type DialogueAssignmentSummary,
+  type UpdateDialogueSessionProgressInput,
+} from '@gabby/types/dialogue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { DialogueSessionRow } from './DialogueSessionRow';
 
 interface DialogueAssignmentCardProps {

@@ -1,10 +1,10 @@
 // apps/admin/app/(app)/calendar-events/[id]/participants/page.tsx
 import { getTranslations } from 'next-intl/server';
-import { getCalendarEventParticipants, getCalendarEventMessages } from '@/actions/adminCalendarEventAction';
+import { getCalendarEventMessages, getCalendarEventParticipants } from '@/actions/adminCalendarEventAction';
 import { BackLink, PageHeader } from '@/components/common/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarEventParticipantsTable } from './_components/CalendarEventParticipantsTable';
 import { CalendarEventAnnouncementPanel } from './_components/CalendarEventAnnouncementPanel';
+import { CalendarEventParticipantsTable } from './_components/CalendarEventParticipantsTable';
 
 /**
  * カレンダーイベントの参加者・アナウンス管理。

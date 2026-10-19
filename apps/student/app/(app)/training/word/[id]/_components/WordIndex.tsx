@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useMemo, useEffect, useRef } from 'react';
-import { useWordDrillStore } from '@/stores/useWordDrillStore';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ChevronRight, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { X, ChevronRight } from 'lucide-react';
+import { useWordDrillStore } from '@/stores/useWordDrillStore';
 
 interface WordIndexProps {
   isOpen: boolean;

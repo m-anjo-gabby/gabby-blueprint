@@ -1,22 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
 import { BookOpen, CircleSlash, FileText, Loader2, MessageSquareText, Paperclip, Send, Undo2, X } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { HomeworkViewedStatus } from '@/components/session/HomeworkViewedStatus';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
-import {
-  createSessionHomework,
-  addHomeworkComment,
-  setSessionHomeworkNotNeeded,
-  uploadSessionHomeworkAttachment,
-} from '@/actions/sessionHomeworkAction';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
 import {
   HOMEWORK_ATTACHMENT_MAX_SIZE,
@@ -24,7 +15,16 @@ import {
   type SessionHomeworkAttachment,
   type SessionHomeworkEntry,
 } from '@gabby/types/sessionHomework';
-import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import {
+  addHomeworkComment,
+  createSessionHomework,
+  setSessionHomeworkNotNeeded,
+  uploadSessionHomeworkAttachment,
+} from '@/actions/sessionHomeworkAction';
+import { HomeworkViewedStatus } from '@/components/session/HomeworkViewedStatus';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 
 interface HomeworkComposerProps {
   sessionId: string;

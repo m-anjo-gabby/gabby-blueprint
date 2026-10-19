@@ -1,24 +1,24 @@
 // apps/coach/proxy.ts
 import { type NextRequest } from 'next/server';
 import {
+  decodeImpersonationCookie,
+  IMPERSONATION_COOKIE_NAME,
+  IMPERSONATION_REQUEST_HEADER_ADMIN_ID,
+  IMPERSONATION_REQUEST_HEADER_ID,
+  isImpersonationExpired,
+} from '@gabby/lib/impersonation';
+import { createRequestLogger } from '@gabby/lib/logger';
+import {
   createSupabaseProxy,
+  isDefaultPublicRoute,
+  logPageView,
+  redirectAfterLogin,
   redirectAndClearSession,
   redirectTo,
   redirectToLogin,
-  redirectAfterLogin,
-  isDefaultPublicRoute,
-  logPageView,
 } from '@gabby/lib/proxy-base';
-import { createRequestLogger } from '@gabby/lib/logger';
 import { USER_TYPES } from '@gabby/types/user';
 import { canAccessPath } from './lib/navigation';
-import {
-  IMPERSONATION_COOKIE_NAME,
-  IMPERSONATION_REQUEST_HEADER_ID,
-  IMPERSONATION_REQUEST_HEADER_ADMIN_ID,
-  decodeImpersonationCookie,
-  isImpersonationExpired,
-} from '@gabby/lib/impersonation';
 
 export async function proxy(req: NextRequest) {
   const { res, user, userType, roles, requestId, supabase } = await createSupabaseProxy(req);

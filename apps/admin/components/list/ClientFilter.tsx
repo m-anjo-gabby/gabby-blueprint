@@ -1,8 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { SearchableSelect } from '@/components/common/SearchableSelect';
 import type { ClientOption } from '@gabby/types/client';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 interface ClientFilterProps {
   clients: ClientOption[];

@@ -1,5 +1,5 @@
-import { cn } from '@/lib/utils';
 import type { LiveSessionOverview } from '@gabby/types/matching';
+import { cn } from '@/lib/utils';
 
 // 「コーチ未選択」の回は、まだ日時の枠自体が無いことを斜線で表す（色はトークンのみ使用）
 const HATCHED_CLASS = 'bg-[repeating-linear-gradient(135deg,var(--color-line)_0_3px,transparent_3px_6px)]';

@@ -1,10 +1,10 @@
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronDown, Lightbulb, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { X, Lightbulb, ChevronDown } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { type AnalysisResult, type FeedbackConfig } from '@gabby/types/speechAssessment';
 import { getWordMatchStyle } from '@gabby/lib/assessment/wordMatchStyle';
+import { type AnalysisResult, type FeedbackConfig } from '@gabby/types/speechAssessment';
 import { cn } from '@/lib/utils';
 
 export interface SpeechFeedbackModalProps {

@@ -1,17 +1,17 @@
 'use client';
 
+import { BookOpen, CalendarDays, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, CalendarDays, MessageCircle } from 'lucide-react';
 import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
+import { SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
+import { RouteSkeleton } from '@/components/shell/RouteLoading';
+import { useShellNavContext } from '@/components/shell/ShellNavContext';
+import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
-import { RouteSkeleton } from '@/components/shell/RouteLoading';
-import { SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
-import { useShellNavContext } from '@/components/shell/ShellNavContext';
-import { LiveSessionIntro } from './LiveSessionIntro';
 import { SectionHeading, SessionResultPageHeader } from '../sessions/[sessionId]/result/_components/SessionResultParts';
+import { LiveSessionIntro } from './LiveSessionIntro';
 
 const SPRINT = getTrainingMetricConfig('sprint');
 const HISTORY_ROW_COUNT = 3;

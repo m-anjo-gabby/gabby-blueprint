@@ -1,16 +1,16 @@
 'use server';
 
 import {
+  cancelCalendarEventParticipationCore,
+  getCalendarEventMessageAttachmentUrlCore,
+  getCalendarEventMessagesCore,
   getPublishedCalendarEventsCore,
   joinCalendarEventCore,
-  cancelCalendarEventParticipationCore,
-  getCalendarEventMessagesCore,
-  getCalendarEventMessageAttachmentUrlCore,
 } from '@gabby/lib/calendarEvent/actions/calendarEventActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { type CalendarEventItem, type CalendarEventMessageItem } from '@gabby/types/calendarEvent';
 import type { ActionResult } from '@gabby/types/action';
+import { type CalendarEventItem, type CalendarEventMessageItem } from '@gabby/types/calendarEvent';
 
 const logger = createLogger('coach');
 

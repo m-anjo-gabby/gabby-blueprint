@@ -1,16 +1,16 @@
 'use client';
 
-import Link from 'next/link';
 import { ChevronRight, CircleAlert, Hourglass } from 'lucide-react';
+import Link from 'next/link';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import type { SessionListItem } from '@gabby/types/session';
 import type { LiveSessionOverview } from '@gabby/types/matching';
-import { Skeleton } from '@/components/ui/skeleton';
-import { SessionCoachHeading, SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
-import { JoinSessionButton } from '@/components/session/JoinSessionButton';
+import type { SessionListItem } from '@gabby/types/session';
 import { SessionBreakdown } from '@/app/(app)/(shell)/live-room/_components/SessionBreakdown';
-import { HomeCard } from './HomeCard';
+import { JoinSessionButton } from '@/components/session/JoinSessionButton';
+import { SessionCoachHeading, SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { HomeCard } from './HomeCard';
 
 /**
  * ライブセッションで生徒の対応が必要なこと（ホームではライブセッション管理等への導線だけを出す）。

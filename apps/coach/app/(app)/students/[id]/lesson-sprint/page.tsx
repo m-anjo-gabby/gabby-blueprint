@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import { getStudentOverview } from '@/actions/studentAction';
 import { getAvailableSprintContents, getLessonSprintHistory } from '@/actions/lessonSprintAction';
+import { getStudentOverview } from '@/actions/studentAction';
 import { LessonSprintApp } from './_components/LessonSprintApp';
 
 export default async function LessonSprintSetupPage({

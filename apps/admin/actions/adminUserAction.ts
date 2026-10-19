@@ -1,34 +1,35 @@
 'use server';
 
-import { unstable_rethrow } from 'next/navigation';
+import { randomBytes } from 'crypto'; // 暗号トークン生成用
 
-import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
-import {
-  type UserRecord,
-  type CreateUserPayload,
-  type CreateUserResponse,
-  type BulkUser,
-  type BulkImportResponse,
-  type BulkImportResultDetail,
-  type RoleDefinition,
-  isUserType,
-} from '@gabby/types/user';
-import { formatToJstDate } from '@gabby/lib/date/date';
+import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
+import { unstable_rethrow } from 'next/navigation';
 import { z } from 'zod';
+import { validatePasswordStrength } from '@gabby/lib/auth/validation'; // パスワード強度の共通バリデーション
+import { formatToJstDate } from '@gabby/lib/date/date';
+import { issueInitialLicense, resolvePerformedBy } from '@gabby/lib/license/issue';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { exactPattern, ilikeAny } from '@gabby/lib/supabase/ilike';
-import { toRange, type ListParams, type ListResult } from '@/lib/list';
-import { issueInitialLicense, resolvePerformedBy } from '@gabby/lib/license/issue';
-import { INVITATION_EXPIRES_DAYS, sendInvitationEmail } from '@gabby/lib/mail/actions/sendAccountMail'; // 招待メール（ユーザー種別ごとのテンプレート・文言で送り分け）
-import { validatePasswordStrength } from '@gabby/lib/auth/validation'; // パスワード強度の共通バリデーション
-import { randomBytes } from 'crypto'; // 暗号トークン生成用
-import { getPortalBaseUrl } from '@gabby/lib/navigation/portalUrl';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
-import { getTranslations } from 'next-intl/server';
+import { INVITATION_EXPIRES_DAYS, sendInvitationEmail } from '@gabby/lib/mail/actions/sendAccountMail'; // 招待メール（ユーザー種別ごとのテンプレート・文言で送り分け）
+
+import { getPortalBaseUrl } from '@gabby/lib/navigation/portalUrl';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { exactPattern, ilikeAny } from '@gabby/lib/supabase/ilike';
 import type { ActionResult } from '@gabby/types/action';
+import {
+  isUserType,
+  type BulkImportResponse,
+  type BulkImportResultDetail,
+  type BulkUser,
+  type CreateUserPayload,
+  type CreateUserResponse,
+  type RoleDefinition,
+  type UserRecord,
+} from '@gabby/types/user';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
+import { toRange, type ListParams, type ListResult } from '@/lib/list';
 
 const logger = createLogger('admin');
 

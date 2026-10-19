@@ -1,16 +1,15 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, Paperclip } from 'lucide-react';
-
-import { cn } from '@/lib/utils';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { formatDateEn } from '@gabby/lib/date/dateEn';
-import { type NoticeItem, NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, type NoticeType } from '@gabby/types/notice';
+import { useCallback, useState } from 'react';
 import { NoticeDetail } from '@gabby/lib/components/notice/NoticeDetail';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { NOTICE_LABELS_EN } from '@gabby/lib/notice/labels';
-import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
+import { NOTICE_IMPORTANT_BADGE, NOTICE_TYPES, type NoticeItem, type NoticeType } from '@gabby/types/notice';
+import { NOTICE_IMPORTANT_LABEL_EN, NOTICE_TYPE_LABEL_EN } from '@/constants/notice';
+import { cn } from '@/lib/utils';
 
 interface NoticeCardProps {
   notice: NoticeItem;

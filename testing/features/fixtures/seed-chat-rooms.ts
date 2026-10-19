@@ -11,8 +11,8 @@
  *   時刻で投入するため、ルーム作成と同じく service_role で書き込む（業務ロジックRPCは呼ばない）
  * - 未読: 生徒01は、コーチとのルームの最後の3件・グループの最後の1件を未読の状態にする
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 import { createAdminClient } from '../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 import { createChatKit, type ChatMessageSeed } from '../../helpers/fixture-chat.ts';
 
 const env = resolveTestEnvFromArgs();

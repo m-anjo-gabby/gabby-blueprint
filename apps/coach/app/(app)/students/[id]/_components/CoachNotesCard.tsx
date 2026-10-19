@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
 import { StickyNote } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import type { CoachStudentNote } from '@gabby/types/coachStudent';
+import { addCoachStudentNote } from '@/actions/studentAction';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { addCoachStudentNote } from '@/actions/studentAction';
-import type { CoachStudentNote } from '@gabby/types/coachStudent';
 import { CoachNoteEntry } from './CoachNoteEntry';
 
 const COACH_NOTES_CARD_LIMIT = 5;

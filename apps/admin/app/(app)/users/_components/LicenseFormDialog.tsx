@@ -1,8 +1,18 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { AlertCircle, Ban, ClipboardList, Edit2, Loader2, RefreshCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useEffect, useMemo, useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type ContractDetail } from '@gabby/types/contract';
+import { type UserRecord } from '@gabby/types/user';
+import {
+  assignLicenseToUser,
+  getActiveContractsByClient,
+  getLicenseTimeline,
+  invalidateUserLicense,
+  updateUserLicense,
+} from '@/actions/adminContractAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,22 +24,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { RefreshCcw, ClipboardList, Loader2, AlertCircle, Edit2, Ban } from 'lucide-react';
-import { type ContractDetail } from '@gabby/types/contract';
-import {
-  getActiveContractsByClient,
-  getLicenseTimeline,
-  assignLicenseToUser,
-  invalidateUserLicense,
-  updateUserLicense,
-} from '@/actions/adminContractAction';
-import { type UserRecord } from '@gabby/types/user';
 
 /** ライセンスの履歴の1件（getLicenseTimeline の戻り値） */
 type LicenseTimelineItem = Awaited<ReturnType<typeof getLicenseTimeline>>[number];

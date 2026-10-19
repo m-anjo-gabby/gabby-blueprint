@@ -1,22 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Label } from '@/components/ui/label';
+import { useEffect, useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import type { AdminScheduleSlotSummary } from '@gabby/types/adminLiveSession';
+import { adjustTargetSessionsAsAdmin } from '@/actions/adminLiveSessionAction';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { adjustTargetSessionsAsAdmin } from '@/actions/adminLiveSessionAction';
-import type { AdminScheduleSlotSummary } from '@gabby/types/adminLiveSession';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface AdjustTargetSessionsDialogProps {
   target: AdminScheduleSlotSummary | null;

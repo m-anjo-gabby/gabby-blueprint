@@ -1,17 +1,17 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
 import { Save, Upload } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useRef, useState, useTransition } from 'react';
+import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { COMPANY_CODES, type CompanyProfile } from '@gabby/types/companyProfile';
+import { updateCompanyProfile, uploadCompanyLogo } from '@/actions/adminCompanyProfileAction';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { updateCompanyProfile, uploadCompanyLogo } from '@/actions/adminCompanyProfileAction';
-import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
-import { COMPANY_CODES, type CompanyProfile } from '@gabby/types/companyProfile';
-import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 /** 法人1社分の会社情報の編集カード（書面の発行元として印字される内容） */
 export function CompanyProfileCard({ initialProfile }: { initialProfile: CompanyProfile }) {

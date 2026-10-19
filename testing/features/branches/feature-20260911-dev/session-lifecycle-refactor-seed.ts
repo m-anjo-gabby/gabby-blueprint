@@ -11,11 +11,11 @@
  * テスト完了後にデータを削除する運用のため（ユーザー指示）、cleanup用に
  * session-lifecycle-refactor-cleanup.ts を用意している。verify.ts実行後に実行すること。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient, signInAsRole } from '../../../helpers/auth.ts';
-import { assertReleaseApplied, assertRpcRemoved } from '../../../helpers/preflight.ts';
-import { addDays } from '../../../helpers/dates.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient, signInAsRole } from '../../../helpers/auth.ts';
+import { addDays } from '../../../helpers/dates.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { assertReleaseApplied, assertRpcRemoved } from '../../../helpers/preflight.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

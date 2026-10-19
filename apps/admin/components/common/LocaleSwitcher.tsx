@@ -1,16 +1,16 @@
 'use client';
 
-import { useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Languages } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useTransition } from 'react';
+import { setLocale } from '@/actions/localeAction';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { setLocale } from '@/actions/localeAction';
 import type { AppLocale } from '@/i18n/request';
 
 const LOCALES: AppLocale[] = ['ja', 'en'];

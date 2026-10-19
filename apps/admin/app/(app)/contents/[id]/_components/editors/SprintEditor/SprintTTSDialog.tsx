@@ -1,8 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { Copy, Mic2, Play, PlusCircle, RotateCcw, Save, Sparkles, Volume2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { useCallback, useEffect, useState } from 'react';
+import { buildSsml } from '@gabby/lib/azure/ssml';
+import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
+import { type SprintQuestion } from '@gabby/types/sprint';
+import { type TTSAdjustmentData, type WordAdjustment } from '@gabby/types/word';
+import { saveSprintAudio } from '@/actions/adminSprintAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,21 +21,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
-import { Play, Save, Volume2, Sparkles, RotateCcw, PlusCircle, Mic2, Copy } from 'lucide-react';
-import { type SprintQuestion } from '@gabby/types/sprint';
-import { type TTSAdjustmentData, type WordAdjustment } from '@gabby/types/word';
-import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
-import { saveSprintAudio } from '@/actions/adminSprintAction';
-import { buildSsml } from '@gabby/lib/azure/ssml';
+import { Textarea } from '@/components/ui/textarea';
 
 interface SprintTTSDialogProps {
   question: SprintQuestion;

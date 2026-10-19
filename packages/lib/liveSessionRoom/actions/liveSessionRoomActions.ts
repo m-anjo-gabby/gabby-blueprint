@@ -1,18 +1,18 @@
 import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
-import { createServerClient } from '../../supabase/server';
-import { createLogger } from '../../logger';
-import { getLogContext } from '../../logger/context';
-import { generateVideoSdkSignature } from '../../zoom/signature';
-import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../constants';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import {
+  LIVE_SESSION_ROOM_ROLE,
   type CheckLiveSessionJoinableResult,
   type GetLiveSessionRoomAccessResult,
-  LIVE_SESSION_ROOM_ROLE,
   type RecordCallJoinResult,
 } from '@gabby/types/liveSessionRoom';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createLogger } from '../../logger';
+import { getLogContext } from '../../logger/context';
+import { createServerClient } from '../../supabase/server';
+import { generateVideoSdkSignature } from '../../zoom/signature';
+import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../constants';
 
 const logger = createLogger('common');
 

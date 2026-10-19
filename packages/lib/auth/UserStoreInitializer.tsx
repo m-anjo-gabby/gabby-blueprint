@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { createBrowserClient } from '../supabase/client';
-import { type UserAppMetadata, useUserStore } from '../stores/useUserStore';
 import { clientLogger } from '../logger/client';
+import { useUserStore, type UserAppMetadata } from '../stores/useUserStore';
+import { createBrowserClient } from '../supabase/client';
 
 /**
  * UserStoreInitializer の Props

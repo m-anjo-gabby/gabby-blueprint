@@ -1,5 +1,5 @@
 import { MessagesSquare, UserRound, Video, type LucideIcon } from 'lucide-react';
-import { SUPPORT_EMAIL, buildSupportMailto } from '@gabby/lib/contact';
+import { buildSupportMailto, SUPPORT_EMAIL } from '@gabby/lib/contact';
 
 /** コーポレートサイトの料金ページ（個人向け）。ライブセッションの紹介と、ホームの契約終了の案内で使う */
 export const PRICE_PAGE_URL = 'https://gabbyacademy.com/price';

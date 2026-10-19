@@ -3,12 +3,12 @@
 // NOTE: 実装前に @zoom/videosdk 2.5.0 の型定義（node_modules/@zoom/videosdk/dist/types/*.d.ts）で
 // 下記API（attachVideo/attachShareView, video-player-container要件, イベント名等）を実際に確認済み。
 // メジャーバージョンを上げる際は再度突き合わせること。
+import type ZoomVideo from '@zoom/videosdk';
 import { useCallback, useRef, useState } from 'react';
-import { ensureZoomClientInitialized } from '../client';
-import { describeZoomError } from '../errors';
 import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 import { clientLogger } from '../../logger/client';
-import type ZoomVideo from '@zoom/videosdk';
+import { ensureZoomClientInitialized } from '../client';
+import { describeZoomError } from '../errors';
 
 // SDK は画面で使う時だけ読み込む（import()）ため、型だけを参照する
 type ZoomClient = ReturnType<typeof ZoomVideo.createClient>;

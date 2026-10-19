@@ -1,33 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { CalendarClock, ChevronRight, Loader2, TriangleAlert, User, Video, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import type {
+  CoachSessionListItem,
+  LiveSessionShortfallItem,
+  StudentLiveSessionContractSummary,
+} from '@gabby/types/coachStudent';
+import {
+  isSelfInitiatedCancel,
+  SESSION_NON_ACTIONABLE_STATUSES,
+  SESSION_RESULT_STATUSES,
+  SESSION_STATUS,
+  type SessionListItem,
+} from '@gabby/types/session';
+import { getStudentSessionsByTicket } from '@/actions/studentAction';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getSessionStatusBadge } from '@/constants/session';
+import { cn } from '@/lib/utils';
 import { formatWeeklySlotEn } from '@/lib/weeklySlot';
-import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import {
-  SESSION_STATUS,
-  type SessionListItem,
-  SESSION_NON_ACTIONABLE_STATUSES,
-  SESSION_RESULT_STATUSES,
-  isSelfInitiatedCancel,
-} from '@gabby/types/session';
-import type {
-  CoachSessionListItem,
-  LiveSessionShortfallItem,
-  StudentLiveSessionContractSummary,
-} from '@gabby/types/coachStudent';
-import { getStudentSessionsByTicket } from '@/actions/studentAction';
 import { SessionActionDialog, type SessionActionTarget } from '../../../calendar/_components/SessionActionDialog';
 
 function toSessionListItem(

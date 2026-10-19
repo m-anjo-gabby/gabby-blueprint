@@ -1,18 +1,17 @@
 'use server';
 
-import { unstable_rethrow } from 'next/navigation';
-
-import { requireAdminRole, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { type PhraseRecord, type WordRecord } from '@gabby/types/word';
-import type { TableInsert } from '@gabby/types/db';
+import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
-import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
-import { getTranslations } from 'next-intl/server';
+import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
 import type { ActionResult, BasicErrorCode, CoreResult } from '@gabby/types/action';
+import type { TableInsert } from '@gabby/types/db';
+import { type PhraseRecord, type WordRecord } from '@gabby/types/word';
+import { ADMIN_OR_CONTENT_MANAGER, requireAdminRole } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 

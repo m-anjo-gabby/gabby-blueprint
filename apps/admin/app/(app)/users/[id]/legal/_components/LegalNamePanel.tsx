@@ -1,18 +1,18 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Save } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTranslations } from 'next-intl';
-import { Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { formatLegalName } from '@gabby/lib/userLegal/formatLegalName';
 import { LEGAL_NAME_MAX_LENGTH, type LegalName } from '@gabby/types/userLegal';
 import { saveUserLegalName } from '@/actions/adminUserLegalAction';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 
 type LegalT = ReturnType<typeof useTranslations<'users.legal'>>;
 

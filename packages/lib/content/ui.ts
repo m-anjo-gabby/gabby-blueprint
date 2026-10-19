@@ -1,17 +1,17 @@
 // packages/lib/content/ui.ts
-import { TAG_TYPES, type TagType } from '@gabby/types/content';
 import {
   BookOpen,
   FileText,
   HelpCircle,
-  type LucideIcon,
   MessageSquareText,
   MessagesSquare,
   Mic,
   Sliders,
   Video,
   Zap,
+  type LucideIcon,
 } from 'lucide-react';
+import { TAG_TYPES, type TagType } from '@gabby/types/content';
 
 export const getTagStyle = (tagType: string) => {
   const config = TAG_TYPES[tagType as TagType] || TAG_TYPES.other;

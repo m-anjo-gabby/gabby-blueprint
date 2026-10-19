@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Save } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type SessionPayRate } from '@gabby/types/monthlyReport';
+import { updateSessionPayRate } from '@/actions/adminPaymentSettingsAction';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { updateSessionPayRate } from '@/actions/adminPaymentSettingsAction';
-import { type SessionPayRate } from '@gabby/types/monthlyReport';
 
 export function PaymentSettingsForm({ initialSessionPayRate }: { initialSessionPayRate: SessionPayRate }) {
   const t = useTranslations('paymentSettings');

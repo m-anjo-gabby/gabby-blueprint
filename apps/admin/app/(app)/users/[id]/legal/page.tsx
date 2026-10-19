@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { getUserLegalName } from '@/actions/adminUserLegalAction';
-import { requireUserForTab } from '../_lib/userDetail';
 import { DetailSection } from '../_components/DetailSection';
+import { requireUserForTab } from '../_lib/userDetail';
 import { LegalNamePanel } from './_components/LegalNamePanel';
 
 /** 正式氏名タブ（書面に載せる氏名。本登録済みの生徒・コーチのみ） */

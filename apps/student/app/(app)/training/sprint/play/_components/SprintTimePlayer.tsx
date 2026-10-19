@@ -1,50 +1,50 @@
 'use client';
 
-import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ChevronLeft,
-  Timer,
-  CircleDot,
   ArrowRight,
+  ChartSpline,
   CheckCircle2,
+  ChevronLeft,
+  CircleDot,
+  FastForward,
   Headphones,
+  Loader2,
   Mic,
   MicOff,
-  FastForward,
-  Loader2,
-  ChartSpline,
+  Timer,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
+import { useRouter } from 'next/navigation';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  extractContentWords,
   getFeedbackConfig,
   getScoreTier,
   getSprintTitle,
   resolveSprintHasLevel,
-  extractContentWords,
 } from '@gabby/lib';
-import { clientLogger } from '@gabby/lib/logger/client';
-import { type SprintQuestion, SPRINT_FLOW_TIMING } from '@gabby/types/sprint';
-import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
-import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
 import { waitFor } from '@gabby/lib/audio/core/flow';
-import { getSprintQuestionPrompts } from '@gabby/lib/sprint/prompts';
-import { useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackFlow';
-import type { AnalysisResult } from '@gabby/types/speechAssessment';
+import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
+import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
+import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
+import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
 import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
-import { useSprintStore } from '@/stores/useSprintStore';
+import { useFullscreenAudioLifecycle } from '@gabby/lib/hooks/useSprintPlaybackFlow';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { clientLogger } from '@gabby/lib/logger/client';
+import { getSprintQuestionPrompts } from '@gabby/lib/sprint/prompts';
+import type { AnalysisResult } from '@gabby/types/speechAssessment';
+import { SPRINT_FLOW_TIMING, type SprintQuestion } from '@gabby/types/sprint';
 import { createSprintScore, type SprintHistoryItem } from '@/actions/sprintAction';
-import { useSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useSprintTimers';
-import { ExitProcessingOverlay } from './ExitProcessingOverlay';
-import { getSprintResultHref } from '@/components/training/sprint-result/links';
 import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
 import { CircularProgressRing } from '@/components/common/CircularProgressRing';
-import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 import { QuestionStepBadge, StepIndicator } from '@/components/common/QuestionStepBadge';
-import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
+import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
+import { getSprintResultHref } from '@/components/training/sprint-result/links';
+import { cn } from '@/lib/utils';
+import { useSprintStore } from '@/stores/useSprintStore';
+import { useAutoRedirectCountdown, useSprintCountdown } from '../_hooks/useSprintTimers';
+import { ExitProcessingOverlay } from './ExitProcessingOverlay';
 
 interface SprintTimePlayerProps {
   questions: SprintQuestion[];

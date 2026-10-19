@@ -1,21 +1,19 @@
 'use client';
 
-import { Fragment, useState, useCallback, useMemo } from 'react';
+import { AlertCircle, CheckCircle2, Headphones, Loader2, Music4, Plus, Settings2, Trash2, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, Trash2, AlertCircle, CheckCircle2, Music4, Headphones, Settings2, Zap } from 'lucide-react';
+import { Fragment, useCallback, useMemo, useState } from 'react';
+import { ipaToPhonemes } from '@gabby/lib/colorVowel/phonemes';
+import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
+import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { getPartOfSpeechTailwindColor } from '@gabby/types/colorVowel';
 import {
-  getCVDictionaryByWord,
   deleteCVDictionaryEntry,
+  getCVDictionaryByWord,
   type CVDictionaryEntry,
 } from '@/actions/adminCVDictionaryAction';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { CVWordFormDialog } from './CVWordFormDialog';
-import { CVTTSDialog } from './CVTTSDialog';
-import { CVTTSBulkDialog } from './CVTTSBulkDialog';
-import { cn } from '@/lib/utils';
+import { LoadErrorSection } from '@/components/common/LoadErrorSection';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,12 +25,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
-import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
-import { LoadErrorSection } from '@/components/common/LoadErrorSection';
-import { getPartOfSpeechTailwindColor } from '@gabby/types/colorVowel';
-import { ipaToPhonemes } from '@gabby/lib/colorVowel/phonemes';
+import { CVTTSBulkDialog } from './CVTTSBulkDialog';
+import { CVTTSDialog } from './CVTTSDialog';
+import { CVWordFormDialog } from './CVWordFormDialog';
 
 // 定数
 

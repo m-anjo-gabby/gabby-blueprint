@@ -1,4 +1,5 @@
 import { unstable_rethrow } from 'next/navigation';
+
 /**
  * タイムゾーン設定と端末（ブラウザ）のタイムゾーンのずれ判定。
  * ホームの日付行で、設定の誤りに気づけるようにするために使う。

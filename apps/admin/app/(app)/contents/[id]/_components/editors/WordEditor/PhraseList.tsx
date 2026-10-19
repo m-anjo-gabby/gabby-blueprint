@@ -1,27 +1,24 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  Headphones,
   Loader2,
+  Music4,
   Plus,
   Settings2,
   Trash2,
-  AlertCircle,
-  CheckCircle2,
-  Music4,
-  Headphones,
-  Download,
 } from 'lucide-react';
-import { getPhrasesByWordId, deletePhrase } from '@/actions/adminWordAction';
-import { type PhraseRecord } from '@gabby/types/word';
+import { useTranslations } from 'next-intl';
+import { useCallback, useMemo, useState } from 'react';
+import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
+import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { TTSDialog } from './TTSDialog';
-import { PhraseFormDialog } from './PhraseFormDialog';
-import { cn } from '@/lib/utils';
+import { type PhraseRecord } from '@gabby/types/word';
+import { deletePhrase, getPhrasesByWordId } from '@/actions/adminWordAction';
+import { LoadErrorSection } from '@/components/common/LoadErrorSection';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,10 +30,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 import { useWordStore } from '@/stores/useWordStore';
-import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
-import { LoadErrorSection } from '@/components/common/LoadErrorSection';
+import { PhraseFormDialog } from './PhraseFormDialog';
+import { TTSDialog } from './TTSDialog';
 
 interface PhraseListProps {
   wordId: string;

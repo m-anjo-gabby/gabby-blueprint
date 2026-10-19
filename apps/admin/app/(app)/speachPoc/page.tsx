@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import * as SpeechSDK from 'microsoft-cognitiveservices-speech-sdk';
-import { useAzureSpeechTest } from '@/hooks/useAzureSpeechTest';
-import { useSpeechSynthesis } from '@gabby/lib/speech/useSpeechSynthesis';
+import { useState } from 'react';
 import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
+import { useSpeechSynthesis } from '@gabby/lib/speech/useSpeechSynthesis';
 import { type AnalysisResult } from '@gabby/types/speechAssessment'; // AnalysisResultの型をインポート
+import { useAzureSpeechTest } from '@/hooks/useAzureSpeechTest';
 
 const samplePhrases = [
   'We start fermenting the soy.',

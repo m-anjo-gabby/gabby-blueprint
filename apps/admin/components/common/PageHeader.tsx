@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
-import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import type { ReactNode } from 'react';
 
 export interface PageBackLink {
   href: string;

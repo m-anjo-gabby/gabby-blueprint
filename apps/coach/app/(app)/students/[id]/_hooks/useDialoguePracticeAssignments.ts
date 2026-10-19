@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import type { DialogueAssignmentSummary, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
 import {
   getStudentDialogueAssignments,
   unassignDialogueContent,
   updateDialogueSessionProgress,
 } from '@/actions/dialogueAction';
-import type { DialogueAssignmentSummary, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
 
 /**
  * 生徒概要の要約カード(DialoguePracticeCard)と管理ページ(DialoguePracticeManager)の

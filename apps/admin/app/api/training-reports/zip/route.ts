@@ -1,17 +1,17 @@
-import { type NextRequest, NextResponse } from 'next/server';
 import { zipSync } from 'fflate';
+import { NextResponse, type NextRequest } from 'next/server';
 import { TRAINING_REPORT_BULK_LIMIT } from '@gabby/types/trainingReport';
-import {
-  fetchContractLicenseIds,
-  fetchTrainingReportData,
-  renderTrainingReportPdfs,
-} from '@/lib/trainingReport/queries';
 import { checkAdminRoleForRoute, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import {
   buildContentDisposition,
   buildTrainingReportFileBase,
   buildTrainingReportZipBase,
 } from '@/lib/trainingReport/format';
+import {
+  fetchContractLicenseIds,
+  fetchTrainingReportData,
+  renderTrainingReportPdfs,
+} from '@/lib/trainingReport/queries';
 
 // 認証(cookie)に依存し、作成のたびに最新のデータからPDFを作るため、静的キャッシュさせない
 export const dynamic = 'force-dynamic';

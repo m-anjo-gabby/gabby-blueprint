@@ -2,8 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
-import { useSpeechSynthesis } from '@gabby/lib/speech/useSpeechSynthesis';
 import { cancelSpeech } from '@gabby/lib/speech/synthesis';
+import { useSpeechSynthesis } from '@gabby/lib/speech/useSpeechSynthesis';
 
 interface FavoriteAudio {
   /**

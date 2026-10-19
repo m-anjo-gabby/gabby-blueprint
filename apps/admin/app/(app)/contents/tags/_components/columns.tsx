@@ -1,11 +1,11 @@
 'use client';
 
-import type { ListColumnDef } from '@/components/list/listTable';
-import type { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
+import type { useTranslations } from 'next-intl';
+import { TAG_TYPES, type ContentTag, type TagType } from '@gabby/types/content';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { TAG_TYPES, type ContentTag, type TagType } from '@gabby/types/content';
 import { TagFormDialog } from './TagFormDialog';
 
 type TableT = ReturnType<typeof useTranslations<'contents.tags.table'>>;

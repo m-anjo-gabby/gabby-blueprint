@@ -1,13 +1,13 @@
 // src\app\(app)\admin\contents\[id]\_components\editors\WordEditor\index.tsx
 'use client';
 
+import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { type PhraseRecord, type WordRecord } from '@gabby/types/word';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { WordList } from './WordList';
 import { PhraseList } from './PhraseList';
-import { Search } from 'lucide-react';
+import { WordList } from './WordList';
 
 interface WordEditorProps {
   contentId: string;

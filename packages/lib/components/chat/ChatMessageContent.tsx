@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Ban, FileText, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { type ChatAttachmentRecord, type ChatMessage } from '@gabby/types/chat';
 import { getChatAttachmentUrl } from '../../chat/actions/attachmentActions';
 import { formatFileSize } from '../../chat/formatFileSize';
 import { linkifyText } from '../../chat/linkifyText';
-import { type ChatAttachmentRecord, type ChatMessage } from '@gabby/types/chat';
-import { useChatUi } from './ChatUiContext';
-import { ChatImageViewer } from './ChatImageViewer';
 import { ExternalImage } from '../common/ExternalImage';
+import { ChatImageViewer } from './ChatImageViewer';
+import { useChatUi } from './ChatUiContext';
 
 /** 吹き出しの中身（本文・添付ファイル・削除済み表示） */
 export function ChatMessageContent({ message }: { message: ChatMessage }) {

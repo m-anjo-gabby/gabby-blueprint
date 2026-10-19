@@ -1,18 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { test, expect, agreeToPendingTerms } from '../../support/studentApp.ts';
+import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { QA_ADMIN_EMAIL } from '../../support/adminApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableCoach,
   createDisposableStudent,
   deleteFixtureChatRooms,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantLiveLicense,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
-import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
-import { QA_ADMIN_EMAIL } from '../../support/adminApp.ts';
 import { getPersonaPassword } from '../../support/personas.ts';
+import { agreeToPendingTerms, expect, test } from '../../support/studentApp.ts';
 
 /**
  * 専属コーチのマッチングは、契約期間内に予約できる回数の割合（DB の matching_min_bookable_rate()）で申請・承認を判断する

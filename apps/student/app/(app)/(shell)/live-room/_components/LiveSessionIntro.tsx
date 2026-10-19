@@ -1,12 +1,12 @@
-import Link from 'next/link';
 import { ArrowRight, ExternalLink, Mail } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import Link from 'next/link';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import {
   LIVE_SESSION_INTRO,
   type LiveSessionIntroAction,
   type LiveSessionIntroAudience,
 } from '@/constants/liveSessionIntro';
+import { cn } from '@/lib/utils';
 
 /**
  * ライブセッション紹介（アップセル）画面。

@@ -1,10 +1,10 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { SessionCoachHeading } from '@/components/session/SessionCoachHeading';
-import { JoinSessionButton } from '@/components/session/JoinSessionButton';
 import { type SessionListItem } from '@gabby/types/session';
+import { JoinSessionButton } from '@/components/session/JoinSessionButton';
+import { SessionCoachHeading } from '@/components/session/SessionCoachHeading';
 import { ShellSectionTitle } from '@/components/shell/ShellPage';
+import { Button } from '@/components/ui/button';
 import { PreviousSessionLink, type PreviousSessionSummary } from './PreviousSessionLink';
 
 interface NextSessionPanelProps {

@@ -1,37 +1,37 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
 import { format } from 'date-fns';
 import {
-  Check,
   CalendarClock,
+  Check,
   CheckCircle2,
   Copy,
+  Download,
   ExternalLink,
   Loader2,
   Megaphone,
   Paperclip,
-  Download,
   X,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { useState } from 'react';
+import { useEventAnnouncements } from '@gabby/lib/calendarEvent/useEventAnnouncements';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { CALENDAR_EVENT_TYPES, type CalendarEventItem } from '@gabby/types/calendarEvent';
+import { getCalendarItemKey, type CalendarItem } from '@gabby/types/calendarItem';
+import { SESSION_STATUS } from '@gabby/types/session';
+import {
+  cancelCalendarEventParticipation,
+  getCalendarEventMessageAttachmentUrl,
+  getCalendarEventMessages,
+  joinCalendarEvent,
+} from '@/actions/calendarEventAction';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { useEventAnnouncements } from '@gabby/lib/calendarEvent/useEventAnnouncements';
-import { SESSION_STATUS } from '@gabby/types/session';
-import { getSessionStatusBadge } from '@/constants/session';
-import { type CalendarEventItem, CALENDAR_EVENT_TYPES } from '@gabby/types/calendarEvent';
 import { CALENDAR_EVENT_TYPE_LABEL_EN } from '@/constants/calendarEvent';
-import { type CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
-import {
-  joinCalendarEvent,
-  cancelCalendarEventParticipation,
-  getCalendarEventMessages,
-  getCalendarEventMessageAttachmentUrl,
-} from '@/actions/calendarEventAction';
+import { getSessionStatusBadge } from '@/constants/session';
+import { cn } from '@/lib/utils';
 import { type SessionActionTarget } from './SessionActionDialog';
 
 interface DayDetailDrawerProps {

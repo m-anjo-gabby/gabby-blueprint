@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { GraduationCap } from 'lucide-react';
+import { useState } from 'react';
+import type { AssignedStudentSummary } from '@gabby/types/coachStudent';
 import { Button } from '@/components/ui/button';
 import { StudentCard } from './StudentCard';
-import type { AssignedStudentSummary } from '@gabby/types/coachStudent';
 
 interface StudentListViewProps {
   students: AssignedStudentSummary[];

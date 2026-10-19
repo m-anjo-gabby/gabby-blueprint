@@ -11,7 +11,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { ENVS, REPO_ROOT, api, connect } from './lib/connection.mjs';
+import { api, connect, ENVS, REPO_ROOT } from './lib/connection.mjs';
 import { askSecret } from './lib/prompt.mjs';
 
 const OUTPUT = path.join(REPO_ROOT, 'packages/types/database.ts');

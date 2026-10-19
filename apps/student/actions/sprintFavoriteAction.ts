@@ -1,18 +1,17 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '@gabby/lib/supabase/server';
-import { joinColumns } from '@gabby/lib/supabase/select';
+import { getSprintTitle, resolveSprintHasLevel } from '@gabby/lib';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { getSprintTitle, resolveSprintHasLevel } from '@gabby/lib';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { joinColumns } from '@gabby/lib/supabase/select';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import { CONTENT_STATUS, type ContentMetadata } from '@gabby/types/content';
 import { FAVORITE_SPRINT_QUESTION_COLUMNS, type FavoriteSprintQuestionItem } from '@gabby/types/sprint';
-import { toggleFavoriteRow } from '@/lib/favoriteToggle';
 import { FAVORITE_LIMIT, type FavoriteToggleResult } from '@/constants/favorites';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { toggleFavoriteRow } from '@/lib/favoriteToggle';
 
 const logger = createLogger('student');
 

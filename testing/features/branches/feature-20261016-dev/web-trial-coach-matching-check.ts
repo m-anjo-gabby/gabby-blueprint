@@ -14,10 +14,10 @@
  * qa-coach-us-01 に一時的にロールを付け、最後に実行前の状態へ戻す（データは残らない）。
  * RPC は各生徒の実JWTで呼ぶ。前提: qa-coach-us-01 はマッチングの条件（プロフィール・空き時間等）がそろっている。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { WEB_TRIAL_CLIENT_ID } from '../../../../packages/types/trialApplication.ts';
+import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

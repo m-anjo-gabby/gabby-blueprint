@@ -1,9 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
-import { cn } from '@/lib/utils';
+import Link from 'next/link';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import {
   formatTrialOccupation,
@@ -11,6 +9,8 @@ import {
   type TrialApplicationRow,
   type TrialApplicationStatus,
 } from '@gabby/types/trialApplication';
+import type { ListColumnDef } from '@/components/list/listTable';
+import { cn } from '@/lib/utils';
 
 type TableT = ReturnType<typeof useTranslations<'trialApplications.dataTable'>>;
 

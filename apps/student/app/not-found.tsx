@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
-import Link from 'next/link';
-import { Home, Compass, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { AlertCircle, Compass, Home } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect } from 'react';
 import { clientLogger } from '@gabby/lib/logger/client';
 
 export default function NotFound() {

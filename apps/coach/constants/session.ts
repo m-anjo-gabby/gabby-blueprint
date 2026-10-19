@@ -1,5 +1,5 @@
-import { SESSION_STATUS, type SessionStatus, type CompletionResult, type CancelCategory } from '@gabby/types/session';
 import { buildSessionStatusBadge, type SessionStatusBadgeLabels } from '@gabby/lib/session/sessionStatusBadge';
+import { SESSION_STATUS, type CancelCategory, type CompletionResult, type SessionStatus } from '@gabby/types/session';
 
 export interface SessionStatusBadge {
   label: string;

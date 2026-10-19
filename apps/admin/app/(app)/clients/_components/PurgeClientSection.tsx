@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import type { ClientRecord } from '@gabby/types/client';
-import { previewPurgeClient, purgeClient } from '@/actions/adminDataDeletionAction';
 import type { PurgeClientCounts } from '@gabby/types/dataDeletion';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { previewPurgeClient, purgeClient } from '@/actions/adminDataDeletionAction';
 import { DangerZone } from '@/components/common/DangerZone';
 import { TypedConfirmDialog } from '@/components/common/TypedConfirmDialog';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /** 件数の表に並べる順 */
 const COUNT_KEYS: readonly (keyof PurgeClientCounts)[] = [

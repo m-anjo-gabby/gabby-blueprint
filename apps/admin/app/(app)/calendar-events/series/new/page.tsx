@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
-import { getCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
 import { getCoachesFilter } from '@/actions/adminCalendarEventAction';
+import { getCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { PageHeader } from '@/components/common/PageHeader';
 import { sessionsAfter, sessionsCopiedFrom } from '../_lib/seriesSessions';

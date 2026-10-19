@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { createBrowserClient } from '@gabby/lib/supabase/client';
 import { getChatMessageById } from '@gabby/lib/chat/actions/messageActions';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
+import { createBrowserClient } from '@gabby/lib/supabase/client';
 import { type ChatMessage } from '@gabby/types/chat';
 
 interface UseChatRoomsRealtimeOptions {

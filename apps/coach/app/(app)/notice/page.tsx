@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { BellOff } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
+import { BellOff } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFetchOnMount } from '@gabby/lib/hooks/useFetchOnMount';
-import { NoticeCard } from './_components/NoticeCard';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { InboxListSkeleton, InboxPageLayout } from '@/components/common/InboxPageParts';
+import { NoticeCard } from './_components/NoticeCard';
 
 export default function NoticePage() {
   const searchParams = useSearchParams();

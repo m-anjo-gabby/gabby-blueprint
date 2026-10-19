@@ -1,15 +1,15 @@
 // apps/admin/proxy.ts
 import { type NextRequest } from 'next/server';
+import { createRequestLogger } from '@gabby/lib/logger';
 import {
   createSupabaseProxy,
+  isDefaultPublicRoute,
+  logPageView,
+  redirectAfterLogin,
   redirectAndClearSession,
   redirectTo,
   redirectToLogin,
-  redirectAfterLogin,
-  isDefaultPublicRoute,
-  logPageView,
 } from '@gabby/lib/proxy-base';
-import { createRequestLogger } from '@gabby/lib/logger';
 import { USER_TYPES } from '@gabby/types/user';
 import { canAccessPath } from './lib/navigation';
 

@@ -1,7 +1,12 @@
 'use client';
 
-import { useTransition } from 'react';
 import { CheckCircle2 } from 'lucide-react';
+import { useTransition } from 'react';
+import { SessionOutcomeFields, useSessionOutcomeDraft } from '@gabby/lib/components/common/SessionOutcomeFields';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { getOutcomeReasonKind } from '@gabby/lib/session/outcome';
+import { isConductedOutcome, type SessionOutcome } from '@gabby/types/session';
+import { getSessionOutcomeEvidence, recordSessionOutcome } from '@/actions/sessionAction';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,11 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { SessionOutcomeFields, useSessionOutcomeDraft } from '@gabby/lib/components/common/SessionOutcomeFields';
-import { getOutcomeReasonKind } from '@gabby/lib/session/outcome';
-import { isConductedOutcome, type SessionOutcome } from '@gabby/types/session';
-import { getSessionOutcomeEvidence, recordSessionOutcome } from '@/actions/sessionAction';
 import { COACH_OUTCOME_REASON_HINTS, COACH_SESSION_OUTCOME_LABELS } from '@/constants/sessionOutcome';
 
 interface EndSessionDialogProps {

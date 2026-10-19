@@ -1,9 +1,9 @@
 // packages/lib/components/common/SubmitButton.tsx
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
-import { Loader2 } from 'lucide-react';
 
 interface SubmitButtonProps {
   label: string;

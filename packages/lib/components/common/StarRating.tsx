@@ -1,9 +1,9 @@
 'use client';
 
-import { useRef, useState, type KeyboardEvent } from 'react';
 import { Star } from 'lucide-react';
-import { cn } from '../../utils';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { roundRatingToHalf } from '../../coachRating/format';
+import { cn } from '../../utils';
 
 const STAR_COUNT = 5;
 const STARS = Array.from({ length: STAR_COUNT }, (_, i) => i + 1);

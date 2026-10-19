@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import {
   getNotifications,
-  markNotificationAsRead,
   markAllNotificationsAsRead,
+  markNotificationAsRead,
 } from '@gabby/lib/notification/actions/notificationActions';
 import { type NotificationItem } from '@gabby/types/notification';
 import { clientLogger } from '../logger/client';

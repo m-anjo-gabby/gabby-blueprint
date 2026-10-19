@@ -1,6 +1,6 @@
 import { getUserTrainingPerformance } from '@/actions/performanceAction';
-import { TrainingPerformance } from './_components/TrainingPerformance';
 import { resolveTargetMonth } from '@/lib/userTimezone';
+import { TrainingPerformance } from './_components/TrainingPerformance';
 
 export const dynamic = 'force-dynamic';
 

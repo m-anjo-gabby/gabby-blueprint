@@ -11,9 +11,9 @@
  *
  * 使い捨ての教材担当を作り、最後に削除する。RPC・表は各アカウントの実JWTで呼ぶ（書き込みはしない）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

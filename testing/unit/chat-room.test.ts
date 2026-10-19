@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { getChatMessagePreviewText } from '@gabby/lib/chat/formatChatPreview';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import {

@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
-import { HistoryList } from '@/components/common/HistoryList';
-import { MatchingRequestCard } from '@/components/requests/MatchingRequestCard';
-import { BookingRequestCard } from '@/components/requests/BookingRequestCard';
-import { RescheduleProposalRequestCard } from '@/components/requests/RescheduleProposalRequestCard';
+import { type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { type IncomingMatchingRequestItem } from '@gabby/types/matching';
+import { type IncomingRescheduleProposalGroup } from '@gabby/types/session';
 import { getMatchingRequestHistoryPage } from '@/actions/matchingRequestAction';
 import { getBookingRequestHistoryPage, getRescheduleProposalHistoryPage } from '@/actions/sessionAction';
-import { type IncomingMatchingRequestItem } from '@gabby/types/matching';
-import { type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
-import { type IncomingRescheduleProposalGroup } from '@gabby/types/session';
+import { HistoryList } from '@/components/common/HistoryList';
+import { BookingRequestCard } from '@/components/requests/BookingRequestCard';
+import { MatchingRequestCard } from '@/components/requests/MatchingRequestCard';
+import { RescheduleProposalRequestCard } from '@/components/requests/RescheduleProposalRequestCard';
+import { cn } from '@/lib/utils';
 
 const HISTORY_PAGE_SIZE = 10;
 

@@ -1,15 +1,15 @@
-import { type NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
-import { getAdminCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
-import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { NextResponse, type NextRequest } from 'next/server';
 import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfile';
-import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
+import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { getAdminCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
 import { buildInvoiceNumber } from '@gabby/lib/monthlyReport/buildInvoiceNumber';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { InvoiceDocument } from '@/lib/pdf/InvoiceDocument';
-import { checkAdminRoleForRoute, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { fetchLegalName } from '@gabby/lib/userLegal/fetchLegalName';
 import { formatLegalName } from '@gabby/lib/userLegal/formatLegalName';
+import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
+import { checkAdminRoleForRoute, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
+import { InvoiceDocument } from '@/lib/pdf/InvoiceDocument';
 
 // apps/coach/app/api/monthly-reports/pay-notice/route.tsと同じ理由（cookieベース認証への
 // 依存がNext.jsの自動動的判定に検出されず静的キャッシュされる恐れがあるため）で、

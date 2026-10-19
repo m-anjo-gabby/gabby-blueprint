@@ -1,5 +1,5 @@
-import { Award, CalendarDays, type LucideIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { Award, CalendarDays, type LucideIcon } from 'lucide-react';
 import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
 import type { TrainingLifetimeStats } from '@/actions/performanceAction';
 import { cn } from '@/lib/utils';

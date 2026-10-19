@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { TriangleAlert } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 interface DangerZoneProps {
   title: ReactNode;

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-head-element, @next/next/no-img-element -- メールの HTML（Next.js の画面ではない）のため */
 import * as React from 'react';
-import { MAIL_LOGO_HEIGHT, MAIL_LOGO_WIDTH, getMailLogoUrl } from '../assets/logo';
-import { MAIL_COMPANY, companyName, type MailBlock, type MailDocument } from './document';
+import { getMailLogoUrl, MAIL_LOGO_HEIGHT, MAIL_LOGO_WIDTH } from '../assets/logo';
+import { companyName, MAIL_COMPANY, type MailBlock, type MailDocument } from './document';
 
 /*
  * メールの HTML 版（全メール共通の外枠と部品）。

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { unlockAudio } from '../audio/core/audioRuntime';
-import { requestPlaybackSession, requestPlayAndRecordSession } from '../audio/core/audioSession';
+import { requestPlayAndRecordSession, requestPlaybackSession } from '../audio/core/audioSession';
 import { getSpeechRecognizer, type RecognitionHandle } from '../audio/core/recognizer';
-import { primeSpeechSynthesis } from '../speech/synthesis';
 import { clientLogger } from '../logger/client';
+import { primeSpeechSynthesis } from '../speech/synthesis';
 
 export type MicStatus = 'checking' | 'granted' | 'denied' | 'prompt';
 

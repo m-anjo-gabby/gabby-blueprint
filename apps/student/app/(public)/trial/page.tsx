@@ -1,6 +1,6 @@
-import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { createLogger } from '@gabby/lib/logger';
 import { formatUtcOffset } from '@gabby/lib/date/timezone';
+import { createLogger } from '@gabby/lib/logger';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { TrialApplicationForm, type TrialTimezoneOption } from './_components/TrialApplicationForm';
 import { TrialSummary } from './_components/TrialSummary';
 

@@ -1,15 +1,15 @@
-import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
-import { QUESTION_TYPES } from '@gabby/types/sprint';
+import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import type { CompanyProfile } from '@gabby/types/companyProfile';
+import { QUESTION_TYPES } from '@gabby/types/sprint';
 import type { TrainingReportData } from '@gabby/types/trainingReport';
 import {
-  SPRINT_TYPE_ORDER,
   computeSnapshotStage,
   daysInMonth,
   formatLevel,
   formatMonthLabel,
   formatPeriodLength,
   formatReportDate,
+  SPRINT_TYPE_ORDER,
 } from '@/lib/trainingReport/format';
 import { PDF_FONT_FAMILY } from './registerFonts';
 

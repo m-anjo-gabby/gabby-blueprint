@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { ChevronRight, KeyRound, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { ProfileSection } from './ProfileSection';
 

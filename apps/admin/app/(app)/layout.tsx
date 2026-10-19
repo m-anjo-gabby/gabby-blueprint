@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation';
 import { UserStoreInitializer } from '@gabby/lib/auth/UserStoreInitializer';
-import { Header } from '@/components/common/Header';
-import { Sidebar } from '@/components/common/Sidebar';
-import { ToastContainer } from '@gabby/lib/components/common/ToastContainer';
 import { ConfirmContainer } from '@gabby/lib/components/common/ConfirmContainer';
+import { ToastContainer } from '@gabby/lib/components/common/ToastContainer';
+import { loadCommonShellData } from '@gabby/lib/shell/loadCommonShellData';
 import { type UserAppMetadata } from '@gabby/lib/stores/useUserStore';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { loadCommonShellData } from '@gabby/lib/shell/loadCommonShellData';
+import { Header } from '@/components/common/Header';
 import { ShellDataLoader } from '@/components/common/ShellDataLoader';
+import { Sidebar } from '@/components/common/Sidebar';
 import { ADMIN_SHELL_DATA_OPTIONS } from '@/lib/shellData';
 
 /**

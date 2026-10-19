@@ -10,24 +10,24 @@
  * - 要確認台帳（docs/cv-dictionary/review-ledger.tsv）で確定済みの語は、確定値と異なればエラー。
  *   確定値どおりなら要確認から外し、確認待ちの語は台帳IDを添えて要確認に残す
  */
-import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  CV_IMPORT_REQUIRED_HEADERS,
   CV_IMPORT_OPTIONAL_HEADERS,
-  type CVImportEntry,
-  normalizeCVImportRow,
-  validateCVImportEntry,
+  CV_IMPORT_REQUIRED_HEADERS,
   isSameCVImportEntry,
+  normalizeCVImportRow,
   toCVEntryKey,
+  validateCVImportEntry,
+  type CVImportEntry,
 } from '../../../../apps/admin/lib/cvDictionaryImport';
 import {
-  parseIpa,
-  expectedColorVowel,
   countVowelPhonemes,
+  expectedColorVowel,
+  parseIpa,
   stressedVowelPosition,
 } from '../../../../packages/lib/colorVowel/phonemes';
-import { DEFAULT_LEDGER_PATH, type LedgerRow, readLedger, ledgerKey, matchesLedger } from './ledgerLib';
+import { DEFAULT_LEDGER_PATH, ledgerKey, matchesLedger, readLedger, type LedgerRow } from './ledgerLib';
 
 const OUTPUT_HEADERS = [...CV_IMPORT_REQUIRED_HEADERS, ...CV_IMPORT_OPTIONAL_HEADERS];
 

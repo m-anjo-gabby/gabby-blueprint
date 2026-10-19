@@ -1,8 +1,8 @@
 'use client';
 
-import { useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, RotateCw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useTransition } from 'react';
 import { cn } from '../../utils';
 
 interface SectionLoadErrorProps {

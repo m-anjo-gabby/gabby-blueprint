@@ -1,8 +1,9 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { analyzePhrase, calculateSimilarity } from '@gabby/lib/assessment/native-speech';
+import { test } from 'node:test';
+import { getScoreTier } from '@gabby/lib/assessment/feedbackConfig';
 import { preprocessInputWords } from '@gabby/lib/assessment/inputNormalization';
-import { PHONETIC_CONFUSION_RULES, detectPhoneticConfusion } from '@gabby/lib/assessment/phoneticConfusions';
+import { analyzePhrase, calculateSimilarity } from '@gabby/lib/assessment/native-speech';
+import { detectPhoneticConfusion, PHONETIC_CONFUSION_RULES } from '@gabby/lib/assessment/phoneticConfusions';
 import {
   extractContentWords,
   isArticle,
@@ -10,7 +11,6 @@ import {
   tokenizeWords,
   tokenizeWordsWithPunctuation,
 } from '@gabby/lib/assessment/wordClassification';
-import { getScoreTier } from '@gabby/lib/assessment/feedbackConfig';
 
 /**
  * 発話の評価（自主トレの単語帳・フレーズ・スプリント）。ブラウザの音声認識の結果を正解の文と比べて点数を付ける。

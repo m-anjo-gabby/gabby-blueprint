@@ -1,16 +1,16 @@
 'use client';
 
-import type { MouseEvent } from 'react';
+import { BookOpen, CheckCircle, ChevronLeft, Layers, Zap } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-import { ChevronLeft, BookOpen, Layers, CheckCircle, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import type { MouseEvent } from 'react';
+import { CONTENT_TYPES, type ContentRecord } from '@gabby/types/content';
 import { Badge } from '@/components/ui/badge';
-import { type ContentRecord, CONTENT_TYPES } from '@gabby/types/content';
-import { WordBulkImportDialog } from './editors/WordEditor/WordBulkImportDialog';
-import { TTSBulkDialog } from './editors/WordEditor/TTSBulkDialog';
+import { Button } from '@/components/ui/button';
 import { CONTENTS_LIST_PATH, getContentsListHref } from '../../_lib/listQuery';
+import { TTSBulkDialog } from './editors/WordEditor/TTSBulkDialog';
+import { WordBulkImportDialog } from './editors/WordEditor/WordBulkImportDialog';
 
 interface ContentHeaderProps {
   content: ContentRecord;

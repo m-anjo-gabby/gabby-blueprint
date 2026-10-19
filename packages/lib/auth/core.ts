@@ -7,20 +7,20 @@
  */
 import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
-import { createServerClient } from '../supabase/server';
-import { createAdminClient } from '../supabase/admin';
 import { type User } from '@supabase/supabase-js';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { USER_TYPES } from '@gabby/types/user';
+import { issueInitialLicense, resolvePerformedBy } from '../license/issue';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
-import { issueInitialLicense, resolvePerformedBy } from '../license/issue';
-import { completeTrialRegistration, findTrialApplicationByInvitation } from '../trial/registration';
 import { sendPasswordResetEmail } from '../mail/actions/sendAccountMail';
 import type { MailLanguage } from '../mail/layout/document';
-import { getPasswordStrengthErrorCode } from './validation';
+import { createAdminClient } from '../supabase/admin';
+import { createServerClient } from '../supabase/server';
+import { completeTrialRegistration, findTrialApplicationByInvitation } from '../trial/registration';
 import { AUTH_ERROR_MESSAGES_JA, formatAuthErrorMessage, type AuthErrorCode } from './errors';
 import { clearRecoveryMarker, hasValidRecoveryMarker, setRecoveryMarker } from './recovery';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getPasswordStrengthErrorCode } from './validation';
 
 // 共通認証モジュールとしてのロガーを生成
 const logger = createLogger('common');

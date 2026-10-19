@@ -1,20 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { AlertCircle, Loader2, Search, Trash2, Volume2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Loader2, Search, Trash2, AlertCircle, Volume2 } from 'lucide-react';
-import { getCVDictionaryByWord, getCVDictionaryWords, type CVWordSummary } from '@/actions/adminCVDictionaryAction';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
-import { LoadErrorSection } from '@/components/common/LoadErrorSection';
-import { cn } from '@/lib/utils';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { CVWordFormDialog } from './CVWordFormDialog';
-import { CVWordBulkImportDialog } from './CVWordBulkImportDialog';
+import {
+  deleteCVDictionaryEntry,
+  getCVDictionaryByWord,
+  getCVDictionaryWords,
+  type CVWordSummary,
+} from '@/actions/adminCVDictionaryAction';
+import { LoadErrorSection } from '@/components/common/LoadErrorSection';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,8 +24,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
-import { deleteCVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
+import { CVWordBulkImportDialog } from './CVWordBulkImportDialog';
+import { CVWordFormDialog } from './CVWordFormDialog';
 
 // Component
 

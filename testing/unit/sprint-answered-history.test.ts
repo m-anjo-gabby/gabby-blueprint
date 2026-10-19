@@ -1,10 +1,10 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import {
-  SPRINT_HISTORY_MAX_ITEMS,
   lessonSprintHistorySchema,
   readSprintHistory,
   selfSprintHistorySchema,
+  SPRINT_HISTORY_MAX_ITEMS,
 } from '@gabby/lib/sprint/answeredHistory';
 
 /**

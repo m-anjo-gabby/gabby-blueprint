@@ -1,13 +1,12 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { type WordSummaryHistoryItem } from './wordAction'; // Re-use type
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
+import { type WordSummaryHistoryItem } from './wordAction'; // Re-use type
 
 const logger = createLogger('monitor');
 

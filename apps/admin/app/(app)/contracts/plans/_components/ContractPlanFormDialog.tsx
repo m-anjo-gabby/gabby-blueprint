@@ -1,21 +1,21 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { AlertCircle, CheckCircle2, Edit, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useMemo, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { z } from 'zod';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { type ContractPlan } from '@gabby/types/contract';
 import { upsertContractPlan } from '@/actions/adminContractAction';
 import { ActiveSwitchField } from '@/components/common/ActiveSwitchField';
-import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { type ContractPlan } from '@gabby/types/contract';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // コーチ有無はcontract_typeの実値(1/2)をそのまま文字列で扱う（Select用）
 const HAS_COACH_VALUE = { NO: '1', YES: '2' } as const;

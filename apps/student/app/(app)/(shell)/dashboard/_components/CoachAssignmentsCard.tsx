@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
 import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import { HomeCard, ProgressBar } from './HomeCard';

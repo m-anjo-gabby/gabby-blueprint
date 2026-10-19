@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import type { AdminCoachSummary, AdminOutcomeTarget, AdminSessionRecord } from '@gabby/types/adminLiveSession';
 import { DataTable } from '@/components/list/DataTable';
 import { ListSelectFilter } from '@/components/list/ListSelectFilter';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
-import { CorrectOutcomeDialog } from '../../_components/dialogs/CorrectOutcomeDialog';
 import { SESSION_RECORD_LIST_FILTERS, SESSION_RECORD_RESULT_VALUES, SESSION_RECORD_VIA_VALUES } from '../_lib/list';
+import { CorrectOutcomeDialog } from '../../_components/dialogs/CorrectOutcomeDialog';
 import { createColumns } from './columns';
 
 interface SessionRecordDataTableProps {

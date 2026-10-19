@@ -16,11 +16,11 @@
  *   チャットはメッセージが無いルームにだけ投入する。
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 import { createAdminClient } from '../../helpers/auth.ts';
-import { currentTermIndex, termOf } from '../../helpers/fixture-terms.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 import { createFixtureKit, type ClientType } from '../../helpers/fixture-accounts.ts';
 import { createChatKit, type ChatMessageSeed } from '../../helpers/fixture-chat.ts';
+import { currentTermIndex, termOf } from '../../helpers/fixture-terms.ts';
 import { createLiveKit, type LiveCoach, type LiveScheduleSeed } from './user-personas-live.ts';
 
 const env = resolveTestEnvFromArgs();

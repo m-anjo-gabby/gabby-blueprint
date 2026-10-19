@@ -1,5 +1,5 @@
 import { type MonthlyReportSession } from '@gabby/types/monthlyReport';
-import { SESSION_STATUS, COMPLETION_RESULT, CANCEL_CATEGORY } from '@gabby/types/session';
+import { CANCEL_CATEGORY, COMPLETION_RESULT, SESSION_STATUS } from '@gabby/types/session';
 
 /** 月次のレポートの詳細のダイアログに出す、セッションの状態の短い英語のラベル */
 export function sessionStatusLabel(session: MonthlyReportSession): string {

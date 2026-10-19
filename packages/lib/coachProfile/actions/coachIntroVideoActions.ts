@@ -1,21 +1,20 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '../../supabase/server';
-import { createAdminClient } from '../../supabase/admin';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import {
+  COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES,
+  COACH_INTRO_VIDEO_MAX_SIZE,
+  type CoachIntroVideoMimeType,
+  type RemoveCoachIntroVideoResult,
+  type UploadCoachIntroVideoResult,
+} from '@gabby/types/coachProfile';
+import { PROFILE_ICON_BUCKET } from '@gabby/types/profile';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { PROFILE_ICON_BUCKET } from '@gabby/types/profile';
-import {
-  COACH_INTRO_VIDEO_MAX_SIZE,
-  COACH_INTRO_VIDEO_ALLOWED_MIME_TYPES,
-  type CoachIntroVideoMimeType,
-  type UploadCoachIntroVideoResult,
-  type RemoveCoachIntroVideoResult,
-} from '@gabby/types/coachProfile';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createAdminClient } from '../../supabase/admin';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { Pencil, StickyNote } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { updateLessonSprintSessionNote } from '@/actions/lessonSprintAction';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 
 interface SessionNoteCardProps {
   lessonSprintId: string;

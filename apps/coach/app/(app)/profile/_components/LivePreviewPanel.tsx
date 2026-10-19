@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Eye } from 'lucide-react';
+import { useState } from 'react';
 import { CoachProfileCard } from '@gabby/lib/components/common/CoachProfileCard';
 import { CoachProfileDialog } from '@gabby/lib/components/common/CoachProfileDialog';
 import { type CoachProfileCardData, type CoachProfileDialogLabels } from '@gabby/types/coachProfile';

@@ -1,17 +1,17 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
 import { Info } from 'lucide-react';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { ChatTimeline } from '@gabby/lib/components/chat/ChatTimeline';
+import { useLocale, useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { ChatAvatar } from '@gabby/lib/components/chat/ChatAvatar';
+import { ChatTimeline } from '@gabby/lib/components/chat/ChatTimeline';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { CHAT_ROOM_TYPES, type ChatMessage, type ChatRoom, type ChatRoomMemberSummary } from '@gabby/types/chat';
 import { USER_TYPES } from '@gabby/types/user';
+import { UserTypeLabel } from '@/components/common/UserTypeLabel';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { GroupParticipantsManager } from './GroupParticipantsManager';
-import { UserTypeLabel } from '@/components/common/UserTypeLabel';
 
 interface AdminChatRoomProps {
   roomId: string;

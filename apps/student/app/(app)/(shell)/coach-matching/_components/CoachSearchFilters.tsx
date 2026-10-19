@@ -1,7 +1,7 @@
 'use client';
 
 import { AudioLines, Search, X } from 'lucide-react';
-import { type DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
+import { DAYS_OF_WEEK, type DayOfWeek } from '@gabby/types/coachAvailability';
 import { type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DAY_OF_WEEK_LABEL_JA, TIME_BUCKETS } from '@/constants/matching';

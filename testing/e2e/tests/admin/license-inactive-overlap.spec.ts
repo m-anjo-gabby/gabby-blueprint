@@ -1,11 +1,11 @@
 import type { Locator, Page } from '@playwright/test';
-import { QA_ADMIN_EMAIL, openAdminContext, openDialogBy } from '../../support/adminApp.ts';
+import { openAdminContext, openDialogBy, QA_ADMIN_EMAIL } from '../../support/adminApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableContract,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
 import { expect, test } from '../../support/studentApp.ts';

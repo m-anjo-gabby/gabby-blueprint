@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { getCoachMatchingMissingItems, isCoachMatchable } from '@gabby/lib/coachProfile/matchingReadiness';
 import type { CoachProfileFormValues } from '@gabby/types/coachProfile';
 

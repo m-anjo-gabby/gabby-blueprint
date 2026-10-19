@@ -1,24 +1,24 @@
 'use client';
 
-import { useState } from 'react';
 import { CalendarDays, ChevronRight, ExternalLink, UsersRound } from 'lucide-react';
+import { useState } from 'react';
 import { useNow } from '@gabby/lib/hooks/useNow';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getCalendarEventPhase, withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { AddToCalendarMenu } from '@/components/calendarEvent/AddToCalendarMenu';
 import { EventDetailDrawer } from '@/components/calendarEvent/EventDetailDrawer';
-import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
 import {
   EventCoachLine,
   EventDetailLink,
   EventSeriesLabel,
   EventTiming,
-  JoinedBadge,
   formatEventSlot,
+  JoinedBadge,
 } from '@/components/calendarEvent/EventMeta';
+import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { HomeCard } from './HomeCard';
 

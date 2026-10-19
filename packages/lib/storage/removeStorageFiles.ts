@@ -1,8 +1,8 @@
 import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createLogger, type LogContext, type LogEventName } from '../logger';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createLogger, type LogContext, type LogEventName } from '../logger';
 
 const logger = createLogger('common');
 

@@ -1,8 +1,8 @@
 // packages/lib/assessment/native-speech.ts
 import { type AnalysisResult, type WordMatch } from '@gabby/types/speechAssessment';
 import { getScoreTier, type ScoreTier } from './feedbackConfig';
-import { detectPhoneticConfusion, type PhoneticConfusionRule } from './phoneticConfusions';
 import { preprocessInputWords } from './inputNormalization';
+import { detectPhoneticConfusion, type PhoneticConfusionRule } from './phoneticConfusions';
 import { isArticle } from './wordClassification';
 
 // 重みの定義

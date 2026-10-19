@@ -1,7 +1,8 @@
 'use client';
+
 import { AnimatePresence } from 'framer-motion';
-import { ConfirmModal } from './ConfirmModal';
 import { useConfirmStore } from '../../stores/useConfirmStore';
+import { ConfirmModal } from './ConfirmModal';
 
 export function ConfirmContainer() {
   const { confirmState, closeConfirm } = useConfirmStore();

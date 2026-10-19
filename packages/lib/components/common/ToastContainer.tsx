@@ -1,8 +1,8 @@
 'use client';
 
-import { useToastStore } from '../../stores/useToastStore'; // Storeから直接取得
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react'; // アイコン追加で視認性UP
+import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react'; // アイコン追加で視認性UP
+import { useToastStore } from '../../stores/useToastStore'; // Storeから直接取得
 
 export function ToastContainer() {
   // Storeから状態と削除アクションを購読

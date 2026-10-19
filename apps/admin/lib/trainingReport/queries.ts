@@ -1,9 +1,9 @@
 import { renderToBuffer } from '@react-pdf/renderer';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { reportingMonthRange } from '@gabby/lib/date/reporting';
-import { createLogger } from '@gabby/lib/logger';
 import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfile';
 import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { reportingMonthRange } from '@gabby/lib/date/reporting';
+import { createLogger } from '@gabby/lib/logger';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
 import type { TrainingReportData, TrainingReportTarget } from '@gabby/types/trainingReport';
 import { TrainingReportDocument } from '@/lib/pdf/TrainingReportDocument';

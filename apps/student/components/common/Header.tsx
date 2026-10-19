@@ -1,32 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import * as Dialog from '@radix-ui/react-dialog'; // Radix UI Dialogをインポート
+
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertCircle, ChevronDown, FileText, Loader2, Lock, LogOut, UserIcon } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { LogOut, UserIcon, AlertCircle, Lock, FileText, ChevronDown, Loader2 } from 'lucide-react';
-import * as Dialog from '@radix-ui/react-dialog'; // Radix UI Dialogをインポート
+import { useState } from 'react';
 import { focusDialogContent } from '@gabby/lib/components/common/dialogFocus';
-import { motion, AnimatePresence } from 'framer-motion';
-
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { clientLogger } from '@gabby/lib/logger/client';
+import { reloadTo } from '@gabby/lib/navigation/reloadTo';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import type { TermDocument } from '@gabby/types/term';
+import { signOut } from '@/actions/authAction';
+import { getLatestTerms } from '@/actions/termAction';
 // Shadcn UI Components
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { signOut } from '@/actions/authAction';
-import { getLatestTerms } from '@/actions/termAction';
-import { TermsAgreementModal } from './TermsAgreementModal';
-import type { TermDocument } from '@gabby/types/term';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
-import { clientLogger } from '@gabby/lib/logger/client';
-import { reloadTo } from '@gabby/lib/navigation/reloadTo';
-import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { TermsAgreementModal } from './TermsAgreementModal';
 
 export function Header() {
   const user = useUserStore((state) => state.user);

@@ -1,23 +1,23 @@
 // apps/student/app/(app)/(shell)/profile/password/page.tsx
 'use client';
 
+import { KeyRound } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { useRouter } from 'next/navigation';
-import { KeyRound } from 'lucide-react';
-import { updatePassword } from '@/actions/authAction';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
 import {
   EMPTY_NEW_PASSWORD,
   NewPasswordFields,
   validateNewPassword,
   type NewPasswordValue,
 } from '@gabby/lib/components/auth/NewPasswordFields';
+import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { updatePassword } from '@/actions/authAction';
 import { Button } from '@/components/ui/button';
 import { AUTH_LABELS } from '@/constants/auth';
-import { ProfileSection } from '../_components/ProfileSection';
 import { PasswordPageHeader } from '../_components/ProfileParts';
+import { ProfileSection } from '../_components/ProfileSection';
 
 /**
  * パスワード変更ページ

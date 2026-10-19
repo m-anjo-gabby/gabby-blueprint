@@ -1,6 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { storageStatePath } from '../../support/personas.ts';
-import { agreeToPendingTerms, navTab } from '../../support/studentApp.ts';
 import {
   clearPopupNotices,
   createPopupNotices,
@@ -11,6 +10,7 @@ import {
   resetTermsAgreement,
   type PopupFixture,
 } from '../../support/popupFixtures.ts';
+import { agreeToPendingTerms, navTab } from '../../support/studentApp.ts';
 
 /**
  * 生徒アプリのポップアップ制御（PopupHost）。仕様: docs/screens/student/dashboard.md「ポップアップ表示」

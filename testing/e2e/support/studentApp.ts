@@ -1,4 +1,4 @@
-import { expect, test as base, type Locator, type Page } from '@playwright/test';
+import { test as base, expect, type Locator, type Page } from '@playwright/test';
 
 /**
  * studentアプリ共通の操作・ロケーター。

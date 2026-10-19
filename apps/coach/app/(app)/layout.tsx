@@ -1,14 +1,14 @@
 import { redirect } from 'next/navigation';
 import { UserStoreInitializer } from '@gabby/lib/auth/UserStoreInitializer';
-import { Header } from '@/components/common/Header';
-import { Sidebar } from '@/components/common/Sidebar';
-import { ToastContainer } from '@gabby/lib/components/common/ToastContainer';
 import { ConfirmContainer } from '@gabby/lib/components/common/ConfirmContainer';
+import { ToastContainer } from '@gabby/lib/components/common/ToastContainer';
 import { type UserAppMetadata } from '@gabby/lib/stores/useUserStore';
-import { GlobalNoticePopup } from '@/components/common/GlobalNoticePopup';
-import { ShellDataLoader } from '@/components/common/ShellDataLoader';
-import { loadCoachShellData } from '@/lib/shellData';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { GlobalNoticePopup } from '@/components/common/GlobalNoticePopup';
+import { Header } from '@/components/common/Header';
+import { ShellDataLoader } from '@/components/common/ShellDataLoader';
+import { Sidebar } from '@/components/common/Sidebar';
+import { loadCoachShellData } from '@/lib/shellData';
 
 /**
  * コーチ用 統合アプリケーションレイアウト

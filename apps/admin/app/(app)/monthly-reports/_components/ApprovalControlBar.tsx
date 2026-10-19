@@ -1,10 +1,12 @@
 'use client';
 
+import { CalendarCheck, CalendarX, TriangleAlert } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
-import { CalendarCheck, CalendarX, TriangleAlert } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type MonthlyReportApproval } from '@gabby/types/monthlyReport';
+import { approveMonthlyReport, revokeMonthlyReportApproval } from '@/actions/adminMonthlyReportAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,9 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { approveMonthlyReport, revokeMonthlyReportApproval } from '@/actions/adminMonthlyReportAction';
-import { type MonthlyReportApproval } from '@gabby/types/monthlyReport';
+import { Button } from '@/components/ui/button';
 
 export function ApprovalControlBar({
   coachId,

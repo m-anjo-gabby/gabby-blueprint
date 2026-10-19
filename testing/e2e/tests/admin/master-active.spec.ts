@@ -1,15 +1,15 @@
 import type { Page } from '@playwright/test';
+import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
 import { confirmAndSubmit, openAdminContext, openDialogBy } from '../../support/adminApp.ts';
-import { clickUntilVisible } from '../../support/hydration.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableContract,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
-import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { clickUntilVisible } from '../../support/hydration.ts';
 import { expect, test } from '../../support/studentApp.ts';
 
 /**

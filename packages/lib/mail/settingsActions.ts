@@ -1,13 +1,12 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '../supabase/server';
-import { getAuthUser } from '../supabase/authUser';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
+import { getAuthUser } from '../supabase/authUser';
+import { createServerClient } from '../supabase/server';
 import { ACTIVE_MAIL_CATEGORIES, isMailCategory, type MailCategory } from './dispatch/registry';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('common');
 

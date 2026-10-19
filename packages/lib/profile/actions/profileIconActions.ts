@@ -1,21 +1,20 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '../../supabase/server';
-import { createAdminClient } from '../../supabase/admin';
-import { createLogger } from '../../logger';
-import { getLogContext } from '../../logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import {
+  PROFILE_ICON_ALLOWED_MIME_TYPES,
   PROFILE_ICON_BUCKET,
   PROFILE_ICON_MAX_SIZE,
-  PROFILE_ICON_ALLOWED_MIME_TYPES,
   type ProfileIconMimeType,
-  type UploadProfileIconResult,
   type RemoveProfileIconResult,
+  type UploadProfileIconResult,
 } from '@gabby/types/profile';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createLogger } from '../../logger';
+import { getLogContext } from '../../logger/context';
+import { createAdminClient } from '../../supabase/admin';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 

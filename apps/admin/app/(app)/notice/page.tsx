@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { getNotices } from '@/actions/adminNoticeAction';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';

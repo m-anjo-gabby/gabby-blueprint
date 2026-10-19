@@ -1,33 +1,33 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, BookOpen, ChevronLeft, Loader2, Lock, Timer } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ArrowRight, Loader2, Lock, BookOpen, Timer } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  QUESTION_TYPES,
-  SPRINT_TIME_OPTIONS,
-  type SprintQuestionType,
-  type SprintAnswerType,
-  type SprintQuestion,
-  toSprintType,
-} from '@gabby/types/sprint';
-import {
-  resolveSprintHasLevel,
   formatSprintLevelLabel,
   getSprintTitle,
-  resolveCoachContentName,
   hasSprintQuestionsForType,
   isSprintLevelAvailable,
   pickSprintLevel,
+  resolveCoachContentName,
+  resolveSprintHasLevel,
 } from '@gabby/lib';
-import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
-import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import type { LessonSprintContentSummary, LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
+import type { LessonSprintContentSummary, LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
+import {
+  QUESTION_TYPES,
+  SPRINT_TIME_OPTIONS,
+  toSprintType,
+  type SprintAnswerType,
+  type SprintQuestion,
+  type SprintQuestionType,
+} from '@gabby/types/sprint';
+import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { StudentSnapshotPanel } from './StudentSnapshotPanel';
 
 interface LessonSprintSetupProps {

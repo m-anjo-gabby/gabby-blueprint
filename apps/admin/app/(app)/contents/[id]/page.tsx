@@ -1,18 +1,18 @@
-import { Suspense } from 'react';
-import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
 import { Loader2 } from 'lucide-react';
-import { getContentById } from '@/actions/adminContentAction';
-import { getPhrasesByWordId, getWordsByContentId } from '@/actions/adminWordAction';
-import { getSprintQuestionsByFilter } from '@/actions/adminSprintAction';
-import { getDialogueSessions } from '@/actions/adminDialogueAction';
-import { WordEditor } from './_components/editors/WordEditor';
-import { SprintEditor } from './_components/editors/SprintEditor';
-import { DialogueEditor } from './_components/editors/DialogueEditor';
-import { EditorHeader } from './_components/EditorHeader';
-import { SPRINT_EDITOR_INITIAL_LEVEL } from './_lib/editorDefaults';
-import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
+import { getTranslations } from 'next-intl/server';
+import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import { type Content } from '@gabby/types/content';
+import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
+import { getContentById } from '@/actions/adminContentAction';
+import { getDialogueSessions } from '@/actions/adminDialogueAction';
+import { getSprintQuestionsByFilter } from '@/actions/adminSprintAction';
+import { getPhrasesByWordId, getWordsByContentId } from '@/actions/adminWordAction';
+import { EditorHeader } from './_components/EditorHeader';
+import { DialogueEditor } from './_components/editors/DialogueEditor';
+import { SprintEditor } from './_components/editors/SprintEditor';
+import { WordEditor } from './_components/editors/WordEditor';
+import { SPRINT_EDITOR_INITIAL_LEVEL } from './_lib/editorDefaults';
 
 interface ContentDetailPageProps {
   params: Promise<{ id: string }>;

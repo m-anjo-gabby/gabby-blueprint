@@ -21,9 +21,9 @@
  *   - 生徒E: 過去に担当was解消済み(is_active=false)。現役の担当関係が無いコーチによる
  *            新規ドラフト作成がRLSで拒否されることを確認する（否定系）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { createAdminClient } from '../../../helpers/auth.ts';
 import { addDays } from '../../../helpers/dates.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

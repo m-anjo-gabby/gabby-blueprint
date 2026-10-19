@@ -1,3 +1,5 @@
+import type { TableRow, ViewRow } from './db';
+
 // src/types/contract.ts
 
 export interface ContractLicenseStats {
@@ -6,8 +8,6 @@ export interface ContractLicenseStats {
   current_active_count: number; // 現在有効な（期間内かつstatus=1）数
   remaining_licenses: number; // 割当可能数
 }
-
-import type { TableRow, ViewRow } from './db';
 
 // 契約タイプ 1: Blueprintのみ, 2: Blueprint+ライブセッション
 export type ContractType = 1 | 2;

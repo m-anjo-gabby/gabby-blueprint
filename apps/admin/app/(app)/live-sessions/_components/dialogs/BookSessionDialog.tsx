@@ -1,21 +1,21 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Label } from '@/components/ui/label';
+import { useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import type { AdminScheduleSlotSummary } from '@gabby/types/adminLiveSession';
+import { bookMakeupSessionAsAdmin } from '@/actions/adminLiveSessionAction';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { bookMakeupSessionAsAdmin } from '@/actions/adminLiveSessionAction';
+import { Label } from '@/components/ui/label';
 import { ADMIN_TIME_OPTIONS } from './adminTimeOptions';
-import type { AdminScheduleSlotSummary } from '@gabby/types/adminLiveSession';
 
 interface BookSessionDialogProps {
   target: AdminScheduleSlotSummary | null;

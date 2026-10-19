@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import { type MonthlyReportSession } from '@gabby/types/monthlyReport';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { type MonthlyReportSession } from '@gabby/types/monthlyReport';
 import { sessionStatusLabel } from './sessionStatusLabel';
 
 export interface AttentionCellDetail {

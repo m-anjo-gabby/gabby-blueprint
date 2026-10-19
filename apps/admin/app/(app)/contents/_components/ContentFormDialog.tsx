@@ -1,34 +1,34 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { CheckCircle2, Edit, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { z } from 'zod';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
 import {
-  type Content,
+  CEFR_CONFIG,
   CONTENT_SCOPES,
   CONTENT_STATUS,
   CONTENT_TYPES,
+  type Content,
   type ContentScope,
   type ContentStatus,
   type ContentType,
-  CEFR_CONFIG,
 } from '@gabby/types/content';
-import { SPRINT_TYPES } from '@gabby/types/sprint';
 import { DIALOGUE_CATEGORIES, type DialogueCategory } from '@gabby/types/dialogue';
+import { SPRINT_TYPES } from '@gabby/types/sprint';
 import { upsertContent, type ContentUpsertInput } from '@/actions/adminContentAction';
-import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 
 /**
  * --- 1. スキーマ定義 ---

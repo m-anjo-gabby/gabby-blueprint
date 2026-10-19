@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { Bell } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader, PageSkeletonFrame } from './PageHeader';
 

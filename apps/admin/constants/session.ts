@@ -1,6 +1,6 @@
 import type { useTranslations } from 'next-intl';
-import { type SessionStatus, type CompletionResult, type CancelCategory } from '@gabby/types/session';
 import { buildSessionStatusBadge, type SessionStatusBadgeLabels } from '@gabby/lib/session/sessionStatusBadge';
+import { type CancelCategory, type CompletionResult, type SessionStatus } from '@gabby/types/session';
 
 const SLATE_BADGE = { className: 'bg-slate-100 text-slate-500 border-slate-200' };
 

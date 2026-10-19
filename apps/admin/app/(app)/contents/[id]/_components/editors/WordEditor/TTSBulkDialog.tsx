@@ -1,8 +1,26 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  ChevronRight,
+  FileAudio,
+  Loader2,
+  RefreshCw,
+  Volume2,
+  Zap,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { useCallback, useMemo, useState } from 'react';
+import { buildSsml } from '@gabby/lib/azure/ssml';
+import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { clientLogger } from '@gabby/lib/logger/client';
+import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
+import { type PhraseRecord, type TTSAdjustmentData } from '@gabby/types/word';
+import { getPhrasesByContentId } from '@/actions/adminWordAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,32 +31,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Loader2,
-  Zap,
-  CheckCircle2,
-  AlertCircle,
-  FileAudio,
-  RefreshCw,
-  Volume2,
-  AlertTriangle,
-  ChevronRight,
-  ArrowLeft,
-} from 'lucide-react';
-import { type TTSParameters, usePlayAzureSpeech } from '@gabby/lib/hooks/usePlayAzureSpeech';
-import { useToast } from '@gabby/lib/hooks/useToast';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
-import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
-import { buildSsml } from '@gabby/lib/azure/ssml';
-import { type PhraseRecord, type TTSAdjustmentData } from '@gabby/types/word';
-import { getPhrasesByContentId } from '@/actions/adminWordAction';
 import { useWordStore } from '@/stores/useWordStore';
-import { clientLogger } from '@gabby/lib/logger/client';
 
 interface TTSBulkDialogProps {
   contentId: string;

@@ -1,11 +1,11 @@
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, ArrowRight, Bookmark, Check, Mic, RotateCw, Square, Volume2 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
-import { Bookmark, ArrowRight, ArrowLeft, RotateCw, Volume2, Mic, Check, Square } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { PlaybackRateControl } from '@/components/common/PlaybackRateControl';
 import { cn } from '@/lib/utils';
+import { useWordDrillStore } from '@/stores/useWordDrillStore';
 
 interface WordControlsProps {
   isListening: boolean;

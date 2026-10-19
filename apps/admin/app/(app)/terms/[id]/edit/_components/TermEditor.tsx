@@ -1,19 +1,19 @@
 'use client';
 
-import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { Eye, FileEdit, History, Info, Loader2, Save } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import * as React from 'react';
+import { TermViewer } from '@gabby/lib/components/term/TermViewer';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import type { TermDetail } from '@gabby/types/term';
+import { addTermRevision } from '@/actions/adminTermAction';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { addTermRevision } from '@/actions/adminTermAction';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { Save, Eye, FileEdit, History, Info, Loader2 } from 'lucide-react';
-import { TermViewer } from '@gabby/lib/components/term/TermViewer';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import type { TermDetail } from '@gabby/types/term';
 
 interface TermEditorProps {
   term: TermDetail;

@@ -16,10 +16,10 @@
  *   QA_LIVE_SESSION_TEST_PASSWORD='***' pnpm exec tsx testing/features/branches/feature-20261001-dev/training-report-sessions-verify.ts --env=dev --tag=trs01
  *   検証後はタグで作成したデータを削除する（--keep 指定時は残す）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient } from '../../../helpers/auth.ts';
-import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 import type { TrainingReportData } from '@gabby/types/trainingReport';
+import { createAdminClient } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

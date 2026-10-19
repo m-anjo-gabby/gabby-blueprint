@@ -1,18 +1,18 @@
-import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { getStudentOverview, getStudentUpcomingSession } from '@/actions/studentAction';
-import { getTimezoneNameMap } from '@gabby/lib/timezone/timezoneNames';
+import { Suspense } from 'react';
 import { pickTimezoneName } from '@gabby/lib/date/timezone';
+import { getTimezoneNameMap } from '@gabby/lib/timezone/timezoneNames';
+import { getStudentOverview, getStudentUpcomingSession } from '@/actions/studentAction';
+import {
+  CoachNotesSection,
+  DialoguePracticeSection,
+  LessonSprintSection,
+  LiveSessionHistorySection,
+  preloadOverviewSections,
+  TrainingReportSection,
+} from './_components/OverviewSections';
 import { OVERVIEW_GRID_CLASS, OverviewCardSkeleton } from './_components/OverviewSkeletons';
 import { StudentOverviewHeader } from './_components/StudentOverviewHeader';
-import {
-  LiveSessionHistorySection,
-  LessonSprintSection,
-  DialoguePracticeSection,
-  CoachNotesSection,
-  TrainingReportSection,
-  preloadOverviewSections,
-} from './_components/OverviewSections';
 
 export default async function StudentOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

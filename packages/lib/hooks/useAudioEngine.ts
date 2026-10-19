@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useRef, useState } from 'react';
-import { createBrowserClient } from '../supabase/client';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createAudioOwnerId,
   hasCachedAudioBuffer,
@@ -16,8 +15,9 @@ import {
 } from '../audio/core/audioRuntime';
 import { requestPlaybackSession } from '../audio/core/audioSession';
 import { useAudioResumeStatus } from '../audio/react/useAudioResumeStatus';
-import { cancelSpeech } from '../speech/synthesis';
 import { clientLogger } from '../logger/client';
+import { cancelSpeech } from '../speech/synthesis';
+import { createBrowserClient } from '../supabase/client';
 
 export type { AudioResumeStatus };
 

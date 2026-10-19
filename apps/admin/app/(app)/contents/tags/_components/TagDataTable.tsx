@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { TAG_TYPES, type ContentTag } from '@gabby/types/content';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { TAG_TYPES, type ContentTag } from '@gabby/types/content';
 import { deleteTag } from '@/actions/adminTagAction';
 import { DataTable } from '@/components/list/DataTable';
-import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
+import { boldChunks, DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
 import { ListSelectFilter } from '@/components/list/ListSelectFilter';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';

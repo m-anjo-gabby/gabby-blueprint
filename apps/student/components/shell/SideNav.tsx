@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
 import { isNavItemActive, type ShellNavItem } from '@/constants/navigation';
+import { cn } from '@/lib/utils';
 import { NavBadge } from './NavBadge';
 import type { ShellNavBadges } from './useShellNavBadges';
 

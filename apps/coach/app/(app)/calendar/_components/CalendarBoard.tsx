@@ -1,20 +1,20 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, format } from 'date-fns';
+import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, startOfMonth, startOfWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useMemo, useState } from 'react';
+import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
-import { toIsoDateInZone } from '@gabby/lib/date/date';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { CALENDAR_EVENT_TYPES, withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
+import { getCalendarItemKey, type CalendarItem } from '@gabby/types/calendarItem';
 import { type SessionListItem } from '@gabby/types/session';
-import { type CalendarEventItem, CALENDAR_EVENT_TYPES, withParticipation } from '@gabby/types/calendarEvent';
-import { type CalendarItem, getCalendarItemKey } from '@gabby/types/calendarItem';
 import { getSessionStatusBadge } from '@/constants/session';
-import { SessionActionDialog, type SessionActionTarget } from './SessionActionDialog';
-import { DayDetailDrawer } from './DayDetailDrawer';
+import { cn } from '@/lib/utils';
 import { useHighlightedDate } from './CalendarWorkspace';
+import { DayDetailDrawer } from './DayDetailDrawer';
+import { SessionActionDialog, type SessionActionTarget } from './SessionActionDialog';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_VISIBLE_CHIPS = 2;

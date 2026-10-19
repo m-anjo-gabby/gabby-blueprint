@@ -1,7 +1,7 @@
 import 'server-only';
-import { createAdminClient } from '../../supabase/admin';
 import { createLogger } from '../../logger';
-import { MAIL_CATEGORIES, isMailCategory } from '../dispatch/registry';
+import { createAdminClient } from '../../supabase/admin';
+import { isMailCategory, MAIL_CATEGORIES } from '../dispatch/registry';
 import { getUnsubscribeSecret, verifyUnsubscribeToken } from './token';
 
 const logger = createLogger('mail');

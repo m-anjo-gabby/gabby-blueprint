@@ -1,11 +1,11 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import {
+  checkMailConfig,
   classifySendError,
   isAllowedRecipient,
   isExpired,
   isUndeliverableAddress,
-  checkMailConfig,
   parseAllowlist,
   resolveDispatchMode,
   resolveRecipientLanguage,

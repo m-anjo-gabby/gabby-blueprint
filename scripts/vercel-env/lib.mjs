@@ -4,7 +4,7 @@
 // run.mjs から使い、lib.test.mjs で単体テストする。
 
 import { createHash } from 'node:crypto';
-import { LOCAL, OPTIONAL, UNSET, MANIFEST, SYSTEM_KEY_PATTERN } from './manifest.mjs';
+import { LOCAL, MANIFEST, OPTIONAL, SYSTEM_KEY_PATTERN, UNSET } from './manifest.mjs';
 
 /** 値ファイルに書くが Vercel には反映しないキー */
 export const RESERVED_KEYS = ['VERCEL_TOKEN'];

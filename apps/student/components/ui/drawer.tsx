@@ -1,11 +1,10 @@
 'use client';
 
-import * as React from 'react';
 import { X } from 'lucide-react';
+import * as React from 'react';
 import { Drawer as DrawerPrimitive } from 'vaul';
-
-import { cn } from '@/lib/utils';
 import { focusDialogContent } from '@gabby/lib/components/common/dialogFocus';
+import { cn } from '@/lib/utils';
 
 const Drawer = ({ shouldScaleBackground = true, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />

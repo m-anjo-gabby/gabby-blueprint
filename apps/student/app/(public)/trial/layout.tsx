@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
 import Image from 'next/image';
+import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
   title: '無料体験のお申し込み | Gabby Blueprint',

@@ -1,18 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { AlertCircle, Loader2, Search, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Loader2, Search, Trash2, AlertCircle } from 'lucide-react';
-import { getWordsByContentId, deleteWord } from '@/actions/adminWordAction';
-import { type WordRecord, WORD_STATUS } from '@gabby/types/word';
-import { cn } from '@/lib/utils';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { WordFormDialog } from './WordFormDialog';
+import { clientLogger } from '@gabby/lib/logger/client';
+import { WORD_STATUS, type WordRecord } from '@gabby/types/word';
+import { deleteWord, getWordsByContentId } from '@/actions/adminWordAction';
+import { LoadErrorSection } from '@/components/common/LoadErrorSection';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,10 +21,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 import { useWordStore } from '@/stores/useWordStore';
-import { clientLogger } from '@gabby/lib/logger/client';
-import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
-import { LoadErrorSection } from '@/components/common/LoadErrorSection';
+import { WordFormDialog } from './WordFormDialog';
 
 interface WordListProps {
   contentId: string;

@@ -1,13 +1,13 @@
-import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
 import { MessageSquare } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
+import { formatRatingValue } from '@gabby/lib/coachRating/format';
+import { formatToJstDate, formatToJstDateTime } from '@gabby/lib/date/date';
+import type { CoachRatingSource } from '@gabby/types/coachRating';
+import type { AdminCoachRatingRow } from '@/actions/adminCoachRatingAction';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { formatToJstDate, formatToJstDateTime } from '@gabby/lib/date/date';
-import { formatRatingValue } from '@gabby/lib/coachRating/format';
-import type { AdminCoachRatingRow } from '@/actions/adminCoachRatingAction';
-import type { CoachRatingSource } from '@gabby/types/coachRating';
 
 const SOURCE_LABEL_KEY: Record<CoachRatingSource, 'sourceApp' | 'sourceLegacy' | 'sourceInitial'> = {
   1: 'sourceApp',

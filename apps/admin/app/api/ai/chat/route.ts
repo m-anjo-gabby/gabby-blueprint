@@ -1,15 +1,15 @@
 import { unstable_rethrow } from 'next/navigation';
-import { type NextRequest, NextResponse } from 'next/server';
-import { checkAdminRoleForRoute, ADMIN_OR_CONTENT_MANAGER } from '@/lib/adminAuth';
+import { NextResponse, type NextRequest } from 'next/server';
 import {
-  streamChatResponse,
-  searchKnowledgeBase,
   formatKnowledgeMatchesAsContext,
+  searchKnowledgeBase,
+  streamChatResponse,
   type ChatMessage,
   type KnowledgeSourceType,
 } from '@gabby/lib/ai';
 import { createLogger } from '@gabby/lib/logger';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { ADMIN_OR_CONTENT_MANAGER, checkAdminRoleForRoute } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 

@@ -1,7 +1,7 @@
 'use client';
 
+import { RefreshCw, Volume2 } from 'lucide-react';
 import React from 'react';
-import { Volume2, RefreshCw } from 'lucide-react';
 import type { AudioResumeStatus } from '@gabby/lib/audio/core/audioRuntime';
 
 interface AudioResumeBannerProps {

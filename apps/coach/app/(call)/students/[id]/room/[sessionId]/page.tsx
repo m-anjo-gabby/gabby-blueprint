@@ -1,7 +1,7 @@
 import { VideoOff } from 'lucide-react';
 import { getLiveSessionRoomAccess } from '@/actions/videoSessionAction';
-import { LiveSessionRoom } from './_components/LiveSessionRoom';
 import { CloseTabButton } from './_components/CloseTabButton';
+import { LiveSessionRoom } from './_components/LiveSessionRoom';
 
 export default async function CoachLiveSessionRoomPage({
   params,

@@ -9,9 +9,9 @@
  * 前回以降に終了時刻を過ぎたセッションの完了だけが行われる。
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { signInAsRole } from '../../helpers/auth.ts';
 import { toUtcAvailabilityRows, type LocalWeeklyRange } from '../../helpers/coach-availability.ts';
-import { toIsoDateInZone } from '@gabby/lib/date/date';
 
 /** タイムゾーン tz の暦日 date・時刻 time（'HH:MM:SS'）を UTC の Date にする */
 export function zonedToUtc(date: string, time: string, tz: string): Date {

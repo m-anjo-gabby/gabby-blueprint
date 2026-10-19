@@ -1,13 +1,13 @@
-import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import { getSessionResultSummary } from '@/actions/sessionAction';
 import {
   HubDialoguePracticeSkeleton,
   HubPrepSkeleton,
   HubSelfTrainingSkeleton,
 } from '../../_components/LiveSessionSkeletons';
-import { SessionHub } from './_components/SessionHub';
 import { HubDialoguePractice, HubPrep, HubSelfTraining } from './_components/HubSections';
+import { SessionHub } from './_components/SessionHub';
 
 /**
  * セッション準備/実施ハブ。生徒概要画面から個別のライブセッションに入るとまずここに来る。

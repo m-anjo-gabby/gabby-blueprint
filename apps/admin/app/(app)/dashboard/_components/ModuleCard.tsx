@@ -1,10 +1,10 @@
 // apps/admin/app/(app)/dashboard/_components/ModuleCard.tsx
-import Link from 'next/link';
 import { ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 import type { DashboardModuleSummary } from '@/actions/adminDashboardAction';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { DASHBOARD_MODULE_CONFIG } from './moduleConfig';
 
 interface ModuleCardProps {

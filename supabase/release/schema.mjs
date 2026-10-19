@@ -18,8 +18,7 @@
 
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-
-import { ENVS, REPO_ROOT, connect } from './lib/connection.mjs';
+import { connect, ENVS, REPO_ROOT } from './lib/connection.mjs';
 import { askSecret } from './lib/prompt.mjs';
 
 const TABLE_DIR = path.join(REPO_ROOT, 'supabase/DDL/table');

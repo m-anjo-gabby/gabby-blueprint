@@ -8,11 +8,11 @@
  * 既存の他ブランチのテストデータ（feature-20260904-dev等）とは --tag と専用クライアント名で
  * 完全に別名前空間にして衝突を避ける。データは削除しない（比較・手動確認のため残す）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient, signInAsRole } from '../../../helpers/auth.ts';
-import { assertReleaseApplied, assertRpcRemoved } from '../../../helpers/preflight.ts';
-import { addDays, jstDateTimeISO, toDateOnlyString } from '../../../helpers/dates.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient, signInAsRole } from '../../../helpers/auth.ts';
+import { addDays, jstDateTimeISO, toDateOnlyString } from '../../../helpers/dates.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { assertReleaseApplied, assertRpcRemoved } from '../../../helpers/preflight.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

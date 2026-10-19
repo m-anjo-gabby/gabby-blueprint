@@ -1,19 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import { ChartSpline, Play, SkipForward, Star } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { getFeedbackConfig } from '@gabby/lib';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import type { SprintQuestion } from '@gabby/types/sprint';
 import type { AnalysisResult, FeedbackConfig } from '@gabby/types/speechAssessment';
+import type { SprintQuestion } from '@gabby/types/sprint';
 import type { SprintHistoryItem } from '@/actions/sprintAction';
 import { toggleSprintQuestionFavorite } from '@/actions/sprintFavoriteAction';
+import { SprintFeedback } from '@/app/(app)/training/sprint/play/_components/SprintFeedback';
 import { FAVORITE_TOGGLE_NETWORK_ERROR } from '@/constants/favorites';
 import { cn } from '@/lib/utils';
 import { SprintPhraseBlock, type SprintPhraseVariant } from './SprintPhraseBlock';
-import { SprintFeedback } from '@/app/(app)/training/sprint/play/_components/SprintFeedback';
-import { sprintAudioId, type SprintResultPlayback } from './useSprintResultPlayback';
 import type { SprintResultScore } from './types';
+import { sprintAudioId, type SprintResultPlayback } from './useSprintResultPlayback';
 
 /** 再生中インジケータ（3本のバー） */
 export function PlayingBars({ className }: { className?: string }) {

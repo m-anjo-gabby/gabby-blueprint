@@ -1,8 +1,8 @@
-import { type IncomingMatchingRequestItem, MATCHING_REQUEST_STATUS } from './matching';
+import { MATCHING_REQUEST_STATUS, type IncomingMatchingRequestItem } from './matching';
 import {
-  type IncomingRescheduleProposalGroup,
   RESCHEDULE_PROPOSAL_STATUS,
   SESSION_BOOKING_REQUEST_STATUS,
+  type IncomingRescheduleProposalGroup,
   type SessionBookingRequest,
 } from './session';
 

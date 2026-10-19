@@ -1,15 +1,15 @@
 import { unstable_rethrow } from 'next/navigation';
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import {
   FAVORITE_LIMIT_ERROR_CODE,
   FAVORITE_LIMIT_MESSAGE,
   FAVORITE_UPDATE_ERROR_MESSAGE,
   type FavoriteToggleResult,
 } from '@/constants/favorites';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 const logger = createLogger('student');
 

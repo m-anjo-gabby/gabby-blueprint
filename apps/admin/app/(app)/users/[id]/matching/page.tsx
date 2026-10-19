@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { getCoachMatchingStatus } from '@/actions/adminCoachMatchingAction';
-import { requireUserForTab } from '../_lib/userDetail';
 import { DetailSection } from '../_components/DetailSection';
+import { requireUserForTab } from '../_lib/userDetail';
 import { CoachMatchingPanel } from './_components/CoachMatchingPanel';
 
 /** コーチのマッチング対象タブ（生徒の「専属コーチを探す」に出るかの内訳と、アドミンによる休止） */

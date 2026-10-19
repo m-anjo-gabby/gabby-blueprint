@@ -1,27 +1,27 @@
 'use client';
 
-import { useCallback, useMemo, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
-import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
+import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { PillTabs } from '@/components/shell/PillTabs';
 import { Button } from '@/components/ui/button';
-import { FavoriteKindSection } from './FavoriteKindSection';
-import { FavoriteAudioProvider } from './FavoriteAudioProvider';
-import { replaceSearchParams } from '@/lib/replaceSearchParams';
 import { FAVORITE_TOGGLE_NETWORK_ERROR } from '@/constants/favorites';
+import { replaceSearchParams } from '@/lib/replaceSearchParams';
+import { FavoriteAudioProvider } from './FavoriteAudioProvider';
 import {
-  FAVORITE_KINDS,
-  FAVORITE_KIND_IDS,
   buildKindPills,
+  FAVORITE_KIND_IDS,
+  FAVORITE_KINDS,
   parseFavoriteKind,
   type FavoriteItemMap,
   type FavoriteKindDef,
   type FavoriteKindId,
   type FavoriteLists,
 } from './favoriteKinds';
+import { FavoriteKindSection } from './FavoriteKindSection';
 
 interface FavoritesViewProps {
   initialLists: FavoriteLists;

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { Check, ExternalLink, Loader2, RotateCcw } from 'lucide-react';
+import { useState } from 'react';
+import type { DialogueAssignmentSessionView, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import type { DialogueAssignmentSessionView, UpdateDialogueSessionProgressInput } from '@gabby/types/dialogue';
 
 interface DialogueSessionRowProps {
   assignmentId: string;

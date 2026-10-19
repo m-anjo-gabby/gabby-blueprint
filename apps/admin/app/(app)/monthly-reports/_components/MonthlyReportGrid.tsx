@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import {
   type CoachMonthlyReport,
   type MonthlyReportSession,
   type MonthlyReportStudentRow,
 } from '@gabby/types/monthlyReport';
-import { type AttentionCellDetail, AttentionCellDialog } from './AttentionCellDialog';
+import { AttentionCellDialog, type AttentionCellDetail } from './AttentionCellDialog';
 
 function daysInMonth(reportMonth: string): number {
   const [year, month] = reportMonth.split('-').map(Number);

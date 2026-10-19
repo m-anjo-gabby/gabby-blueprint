@@ -1,19 +1,19 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Edit } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo, useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTranslations } from 'next-intl';
-import { Edit } from 'lucide-react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import type { CalendarEventSeriesSummary } from '@gabby/types/calendarEvent';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { updateCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { updateCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
 
 type SeriesT = ReturnType<typeof useTranslations<'calendarEvents.series'>>;
 

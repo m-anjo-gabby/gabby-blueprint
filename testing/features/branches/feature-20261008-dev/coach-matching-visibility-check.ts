@@ -8,9 +8,9 @@
  * RPC・テーブルの操作は各ロール（qa-admin / qa-coach-us-01 / qa-student-01）の実JWTで行う。
  * 前提: qa-coach-us-01 はプロフィール・アイコン・空き時間がそろっている（features/fixtures/seed-fixed-accounts.ts）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

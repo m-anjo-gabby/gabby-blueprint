@@ -1,7 +1,7 @@
 'use client';
 
-import { Fragment, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { Fragment, useState } from 'react';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { NoticePopupDialog } from '@/components/common/NoticePopupDialog';
 import { POPUP_SCOPES, useAutoPopups, type PopupId } from './useAutoPopups';

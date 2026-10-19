@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
+import { BellOff, BellRing } from 'lucide-react';
 import Link from 'next/link';
-import { BellRing, BellOff } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { formatZonedDate } from '@gabby/lib/date/date';
+import { getNotificationDisplay } from '@gabby/lib/notification/display';
+import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
+import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,11 +17,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
-import { formatZonedDate } from '@gabby/lib/date/date';
-import { getNotificationDisplay } from '@gabby/lib/notification/display';
 
 // お知らせ管理(発信側)とは別に、システムが自動発火する通知(現状: チャット新着)を表示するベル
 const UnreadDot = () => <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 mt-1" />;

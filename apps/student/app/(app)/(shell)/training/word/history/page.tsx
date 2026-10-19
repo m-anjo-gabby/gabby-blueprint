@@ -1,7 +1,7 @@
 // apps\student\app\(app)\training\word\history\page.tsx
 import { getUserWordHistory } from '@/actions/wordAction';
-import { WordHistoryView } from './_components/WordHistoryView';
 import { resolveTargetMonth } from '@/lib/userTimezone';
+import { WordHistoryView } from './_components/WordHistoryView';
 
 export const dynamic = 'force-dynamic';
 

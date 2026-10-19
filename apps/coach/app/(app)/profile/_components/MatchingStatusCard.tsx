@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, CircleAlert, PauseCircle } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
+import Link from 'next/link';
+import { useState } from 'react';
+import { isCoachMatchable } from '@gabby/lib/coachProfile/matchingReadiness';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { type CoachMatchingRequiredItem } from '@gabby/types/coachProfile';
-import { isCoachMatchable } from '@gabby/lib/coachProfile/matchingReadiness';
 import { updateMyAcceptingStudents } from '@/actions/coachProfileAction';
+import { Switch } from '@/components/ui/switch';
 import { SAVE_NETWORK_ERROR_MESSAGE } from '@/constants/network';
 
 const ITEM_LABELS: Record<CoachMatchingRequiredItem, string> = {

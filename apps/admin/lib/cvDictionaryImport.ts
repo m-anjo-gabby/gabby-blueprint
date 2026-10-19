@@ -1,5 +1,5 @@
 // CV辞書 一括登録の行検証・キー正規化（クライアントのプレビューとServer Actionの双方で使用）
-import { PART_OF_SPEECH_TYPES, COLOR_VOWEL_COLORS } from '@gabby/types/colorVowel';
+import { COLOR_VOWEL_COLORS, PART_OF_SPEECH_TYPES } from '@gabby/types/colorVowel';
 import type { TtsStatus } from '@gabby/types/word';
 
 // 定数

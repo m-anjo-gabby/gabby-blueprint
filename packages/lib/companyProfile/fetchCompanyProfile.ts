@@ -1,5 +1,5 @@
-import { createAdminClient } from '../supabase/admin';
 import type { CompanyCode, CompanyProfile } from '@gabby/types/companyProfile';
+import { createAdminClient } from '../supabase/admin';
 
 export const COMPANY_PROFILE_SELECT =
   'company_code, company_name, company_name_ja, address, logo_path, tax_registration_number';

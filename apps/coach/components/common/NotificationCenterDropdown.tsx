@@ -1,26 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, BellOff } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
+import { getNotificationDisplay } from '@gabby/lib/notification/display';
+import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
+import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { NOTICE_IMPORTANT_BADGE, NOTICE_TYPES, type NoticeType } from '@gabby/types/notice';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NOTICE_IMPORTANT_LABEL_EN, NOTICE_TYPE_LABEL_EN } from '@/constants/notice';
 import { cn } from '@/lib/utils';
-import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
-import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
-import { formatDateEn } from '@gabby/lib/date/dateEn';
-import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, type NoticeType } from '@gabby/types/notice';
-import { getNotificationDisplay } from '@gabby/lib/notification/display';
-import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
 
 // お知らせ（アドミンが全体に出す連絡）と通知（システムが出す個人の出来事）を
 // 1つのベルにまとめる。データの取得元は別々のままで、入口と

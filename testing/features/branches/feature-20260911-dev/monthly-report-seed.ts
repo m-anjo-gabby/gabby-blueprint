@@ -8,11 +8,11 @@
  * 既存の他シナリオ（booking-management-renewal等）とは --tag と専用クライアント名で
  * 完全に別名前空間にして衝突を避ける。データは削除しない（ユーザーの指示によりブラウザ確認用に残す）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient, signInAsRole } from '../../../helpers/auth.ts';
-import { assertReleaseApplied } from '../../../helpers/preflight.ts';
-import { addDays, jstDateTimeISO, toDateOnlyString } from '../../../helpers/dates.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient, signInAsRole } from '../../../helpers/auth.ts';
+import { addDays, jstDateTimeISO, toDateOnlyString } from '../../../helpers/dates.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { assertReleaseApplied } from '../../../helpers/preflight.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

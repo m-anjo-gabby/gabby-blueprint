@@ -1,18 +1,18 @@
 'use client';
 
+import { IdCard, User as UserIcon } from 'lucide-react';
 import { useState } from 'react';
-import { User as UserIcon, IdCard } from 'lucide-react';
 import { AvatarCropUploader } from '@gabby/lib/components/common/AvatarCropUploader';
 import { TimezoneSelector } from '@gabby/lib/components/common/TimezoneSelector';
-import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { uploadProfileIcon, removeProfileIcon, updateMyTimezone } from '@/actions/studentProfileAction';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { type TimezoneMaster } from '@gabby/types/timezone';
 import type { MailSettings } from '@gabby/lib/mail/settingsActions';
-import { ProfileSection } from './ProfileSection';
-import { AccountInfoRow, SecuritySection } from './ProfileParts';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { type TimezoneMaster } from '@gabby/types/timezone';
+import { removeProfileIcon, updateMyTimezone, uploadProfileIcon } from '@/actions/studentProfileAction';
 import { MailSettingsSection } from './MailSettingsSection';
+import { AccountInfoRow, SecuritySection } from './ProfileParts';
+import { ProfileSection } from './ProfileSection';
 
 interface ProfileViewProps {
   userName: string;

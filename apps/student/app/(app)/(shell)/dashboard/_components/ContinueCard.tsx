@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import { getContentTypeConfig } from '@gabby/lib/content/ui';
 import { getResumePath } from '@gabby/lib/navigation/student-path';
 import type { ResumeContentResponse } from '@gabby/types/training';

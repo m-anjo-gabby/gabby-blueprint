@@ -1,21 +1,21 @@
 'use client';
 
 import { Zap } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserAvatar } from '@/components/common/UserAvatar';
-import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import {
   formatAcquiredSprintLevelLabel,
   formatSprintLevelLabel,
   isSprintLevelNotReached,
   resolveCoachContentName,
 } from '@gabby/lib';
-import { SPRINT_LEVEL_NOT_REACHED } from '../../_components/sprintLevelLabels';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
+import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
+import { UserAvatar } from '@/components/common/UserAvatar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { SPRINT_LEVEL_NOT_REACHED } from '../../_components/sprintLevelLabels';
 
 interface StudentSnapshotPanelProps {
   profile: StudentOverviewProfile;

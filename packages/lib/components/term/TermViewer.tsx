@@ -1,9 +1,9 @@
 'use client';
 
+import * as ScrollArea from '@radix-ui/react-scroll-area';
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import * as ScrollArea from '@radix-ui/react-scroll-area';
 import { cn } from '@gabby/lib/utils'; // パスは環境に合わせて調整してください
 
 interface TermViewerProps {

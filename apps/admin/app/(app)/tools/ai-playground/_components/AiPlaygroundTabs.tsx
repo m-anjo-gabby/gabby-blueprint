@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageSquare, Languages } from 'lucide-react';
+import { Languages, MessageSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChatPlayground } from './ChatPlayground';

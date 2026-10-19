@@ -1,14 +1,13 @@
 'use server';
 
 import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import type { UserTrainingPerformanceResponse } from '@gabby/types/training';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
+import type { UserTrainingPerformanceResponse } from '@gabby/types/training';
 
 const logger = createLogger('student');
 

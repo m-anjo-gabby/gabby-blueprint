@@ -1,8 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { cn } from '@/lib/utils';
 import { CONDUCTED_VIA, type ConductedVia } from '@gabby/types/session';
+import { cn } from '@/lib/utils';
 
 const FLAG_CLASS = 'inline-flex items-center rounded border px-1.5 py-px text-[10px] font-bold';
 

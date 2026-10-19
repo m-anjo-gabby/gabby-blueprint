@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Check } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
 import { cn } from '@/lib/utils';
 
 export const PLAYBACK_RATES = [0.8, 1.0, 1.2, 1.5] as const;

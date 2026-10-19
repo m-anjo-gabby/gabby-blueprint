@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { getResumePath, getTrainingPath } from '@gabby/lib/navigation/student-path';
 import type { ContentItem } from '@gabby/types/content';
 import type { ResumeContentResponse } from '@gabby/types/training';

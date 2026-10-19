@@ -1,8 +1,8 @@
 import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { headers } from 'next/headers';
+import { IMPERSONATION_REQUEST_HEADER_ADMIN_ID, IMPERSONATION_REQUEST_HEADER_ID } from '../impersonation';
 import type { LogContext } from './index';
-import { IMPERSONATION_REQUEST_HEADER_ID, IMPERSONATION_REQUEST_HEADER_ADMIN_ID } from '../impersonation';
 
 /**
  * Middleware (proxy-base) でセットされたカスタムヘッダーから

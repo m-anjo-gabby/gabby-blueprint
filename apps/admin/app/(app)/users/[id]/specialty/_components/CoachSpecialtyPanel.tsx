@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
 import { Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { useLocale, useTranslations } from 'next-intl';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { COACH_SPECIALTY_FIELD_MAX, type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
 import { setCoachSpecialties, type CoachSpecialtySettings } from '@/actions/adminCoachSpecialtyAction';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface CoachSpecialtyPanelProps {
   coachId: string;

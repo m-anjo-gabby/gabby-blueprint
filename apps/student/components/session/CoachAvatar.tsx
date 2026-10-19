@@ -1,7 +1,7 @@
 import { GraduationCap } from 'lucide-react';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { cn } from '@/lib/utils';
-import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 interface CoachAvatarProps {
   iconPath: string | null;

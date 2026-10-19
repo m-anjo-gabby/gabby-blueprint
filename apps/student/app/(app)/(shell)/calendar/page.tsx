@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
-import { toIsoMonthInZone } from '@gabby/lib/date/date';
 import { isMonthParam } from '@gabby/lib/calendar/monthGridRange';
+import { toIsoMonthInZone } from '@gabby/lib/date/date';
 import { getMyProfile } from '@/actions/studentProfileAction';
 import { CalendarBoard } from './_components/CalendarBoard';
 import { CalendarMonthSection } from './_components/CalendarMonthSection';

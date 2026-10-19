@@ -1,9 +1,9 @@
 import { unstable_rethrow } from 'next/navigation';
 import { NextResponse } from 'next/server';
-import { createServerClient } from '../supabase/server';
-import { createLogger } from '../logger';
-import { sanitizeReturnTo } from './returnTo';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createLogger } from '../logger';
+import { createServerClient } from '../supabase/server';
+import { sanitizeReturnTo } from './returnTo';
 
 /**
  * `/auth/callback`（メール内リンクの受け口）の共通処理。各アプリの route.ts は

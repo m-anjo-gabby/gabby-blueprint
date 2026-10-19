@@ -1,6 +1,6 @@
+import { HelpCircle, PowerOff, RefreshCw, Smartphone, XSquare } from 'lucide-react';
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { HelpCircle, RefreshCw, XSquare, Smartphone, PowerOff } from 'lucide-react';
 
 interface AudioTroubleshootingDialogProps {
   open: boolean;

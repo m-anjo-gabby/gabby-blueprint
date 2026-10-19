@@ -18,9 +18,9 @@
  *     （排他制約がuser_id単位で独立していることの確認用。生徒Bの既存ライセンスとの
  *     偶発的な重複を避けるため、生徒Aとは意図的に無関係な期間にする）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { createAdminClient } from '../../../helpers/auth.ts';
 import { addDays } from '../../../helpers/dates.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

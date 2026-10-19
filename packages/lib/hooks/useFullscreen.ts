@@ -1,7 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import type { RefObject } from 'react';
+import { useCallback, useEffect, useState, type RefObject } from 'react';
 import { clientLogger } from '../logger/client';
 
 /** 指定した要素をブラウザの全画面表示に出し入れする（Fullscreen API） */

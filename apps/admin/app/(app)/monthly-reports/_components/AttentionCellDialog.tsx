@@ -1,8 +1,8 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { type MonthlyReportSession } from '@gabby/types/monthlyReport';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { sessionStatusLabel } from './sessionStatusLabel';
 
 export interface AttentionCellDetail {

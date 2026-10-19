@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import { convertWeeklyTimeZone, formatDateTimeByZone } from '@gabby/lib/date/date';
 import { type DayOfWeek } from '@gabby/types/coachAvailability';
 import { type LiveSessionContractSummary, type LiveSessionOverview, type SlotStatusItem } from '@gabby/types/matching';
-import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import { ShellSectionTitle } from '@/components/shell/ShellPage';
+import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import { SessionBreakdown } from './SessionBreakdown';
 
 function formatContractDate(iso: string, timezone: string): string {

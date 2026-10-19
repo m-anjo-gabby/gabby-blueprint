@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { ArrowLeft, CheckCircle2, Hash, Loader2, Plus, Tag as TagIcon, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tag as TagIcon, Plus, X, Loader2, ArrowLeft, CheckCircle2, Hash } from 'lucide-react';
-import { getTagAssignmentData, assignTag, removeTag } from '@/actions/adminContentAction';
+import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { type Content, type ContentTagSummary } from '@gabby/types/content';
+import { assignTag, getTagAssignmentData, removeTag } from '@/actions/adminContentAction';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ContentTagDialogProps {
   content: Content;

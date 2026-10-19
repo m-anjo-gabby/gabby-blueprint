@@ -1,7 +1,6 @@
 import { expect, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import { clickUntilVisible } from './hydration.ts';
 import { getPersonaPassword } from './personas.ts';
-
 /**
  * adminアプリの操作（アドミンの画面操作を含むジャーニー用）。
  * テストの baseURL は student のため、admin は別のブラウザコンテキストで開く。

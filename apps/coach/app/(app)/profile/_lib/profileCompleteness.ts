@@ -1,5 +1,5 @@
-import { COACH_PROFILE_FORM_REQUIRED_ITEMS, type CoachProfileFormValues } from '@gabby/types/coachProfile';
 import { getCoachMatchingMissingItems } from '@gabby/lib/coachProfile/matchingReadiness';
+import { COACH_PROFILE_FORM_REQUIRED_ITEMS, type CoachProfileFormValues } from '@gabby/types/coachProfile';
 
 export interface CoachProfileFormProgress {
   filled: number;

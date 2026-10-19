@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
-import { MonthSelector } from './_components/MonthSelector';
+import { MonthlyReportsPageHeader, MonthlyReportTableSkeleton } from '@/components/common/ToolPageSkeletons';
 import { MonthlyReportSection } from './_components/MonthlyReportSection';
-import { MonthlyReportTableSkeleton, MonthlyReportsPageHeader } from '@/components/common/ToolPageSkeletons';
+import { MonthSelector } from './_components/MonthSelector';
 
 function currentYearMonth(): string {
   const now = new Date();

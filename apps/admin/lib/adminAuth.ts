@@ -1,7 +1,7 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
-import { getAuthUser, type AuthUser } from '@gabby/lib/supabase/authUser';
 import { createLogger } from '@gabby/lib/logger';
+import { getAuthUser, type AuthUser } from '@gabby/lib/supabase/authUser';
 import { USER_TYPES } from '@gabby/types/user';
 
 const logger = createLogger('admin');

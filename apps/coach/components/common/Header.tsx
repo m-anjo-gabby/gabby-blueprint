@@ -1,22 +1,22 @@
 'use client';
 
+import { ChevronDown, Lock, LogOut, Menu, User as UserIcon, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Menu, X, LogOut, User as UserIcon, Lock, ChevronDown } from 'lucide-react';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { signOut } from '@/actions/coachAuthAction';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
-import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { signOut } from '@/actions/coachAuthAction';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
-import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 export function Header() {
   const user = useUserStore((state) => state.user);

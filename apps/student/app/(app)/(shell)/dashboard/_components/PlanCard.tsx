@@ -1,8 +1,8 @@
 import { ExternalLink, Mail } from 'lucide-react';
 import { buildSupportMailto } from '@gabby/lib/contact';
-import { PRICE_PAGE_URL } from '@/constants/liveSessionIntro';
 import type { MyPlan } from '@/actions/dashboardAction';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PRICE_PAGE_URL } from '@/constants/liveSessionIntro';
 import { HomeCard } from './HomeCard';
 
 const DAY_MS = 24 * 60 * 60 * 1000;

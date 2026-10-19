@@ -18,11 +18,11 @@
  *   既に期間の重なる有効ライセンスがある場合は新規作成をスキップする（dev等、本スクリプト
  *   導入前に作られた固定アカウントとの互換のため）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 import { createAdminClient, signInAsRole } from '../../helpers/auth.ts';
-import { assertReleaseApplied } from '../../helpers/preflight.ts';
-import { currentTermIndex, termOf, type Term } from '../../helpers/fixture-terms.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 import { createFixtureKit } from '../../helpers/fixture-accounts.ts';
+import { currentTermIndex, termOf, type Term } from '../../helpers/fixture-terms.ts';
+import { assertReleaseApplied } from '../../helpers/preflight.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

@@ -6,8 +6,8 @@
  * 使い方:
  *   pnpm exec tsx testing/features/branches/feature-20260918-dev/company-profile-verify.ts --env=staging --tag=stg0924
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { createAdminClient } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 
 const env = resolveTestEnvFromArgs();

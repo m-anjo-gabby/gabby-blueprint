@@ -1,7 +1,7 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { matchesCoachSpecialtyFilter, toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
+import { test } from 'node:test';
 import { buildGoogleCalendarUrl, buildIcsContent } from '@gabby/lib/calendarEvent/addToCalendar';
+import { matchesCoachSpecialtyFilter, toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
 import { resolveCoachContentName } from '@gabby/lib/content/utils';
 import type { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
 

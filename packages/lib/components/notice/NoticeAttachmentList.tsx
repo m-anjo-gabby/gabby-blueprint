@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { Download, Eye, Loader2, Paperclip } from 'lucide-react';
+import { useState } from 'react';
 import type { NoticeAttachment } from '@gabby/types/notice';
-import { getNoticeAttachmentUrl } from '../../notice/actions/noticeActions';
-import { isPreviewableFile, forceDownloadFile } from '../../notice/download';
-import type { NoticeLabels } from '../../notice/labels';
 import { clientLogger } from '../../logger/client';
+import { getNoticeAttachmentUrl } from '../../notice/actions/noticeActions';
+import { forceDownloadFile, isPreviewableFile } from '../../notice/download';
+import type { NoticeLabels } from '../../notice/labels';
 import { cn } from '../../utils';
 
 function formatFileSize(bytes: number): string {

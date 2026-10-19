@@ -13,10 +13,10 @@
  *   必ず後始末まで完了させること（本スクリプトは finally で自動削除する）。
  *   --keep を付けた場合のみ後始末を行わない（ブラウザでの手動確認用）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
-import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 import { createClient } from '@supabase/supabase-js';
+import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import { writeResultLog, type CheckResult } from '../../../helpers/results.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

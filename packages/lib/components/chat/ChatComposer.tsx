@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { FileText, Loader2, Paperclip, Send, X } from 'lucide-react';
-import { useToast } from '../../hooks/useToast';
-import { useHydrated } from '../../hooks/useHydrated';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type ChatMessage } from '@gabby/types/chat';
 import { sendChatMessage } from '../../chat/actions/messageActions';
 import { formatFileSize } from '../../chat/formatFileSize';
+import { useHydrated } from '../../hooks/useHydrated';
+import { useToast } from '../../hooks/useToast';
 import { useChatDraft, useChatDraftStore } from '../../stores/useChatDraftStore';
 import { cn } from '../../utils';
-import { type ChatMessage } from '@gabby/types/chat';
 import { useChatUi } from './ChatUiContext';
 
 interface ChatComposerProps {

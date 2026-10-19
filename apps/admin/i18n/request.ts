@@ -1,6 +1,6 @@
 // apps/admin/i18n/request.ts
-import { cookies } from 'next/headers';
 import { getRequestConfig } from 'next-intl/server';
+import { cookies } from 'next/headers';
 
 export const SUPPORTED_LOCALES = ['ja', 'en'] as const;
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];

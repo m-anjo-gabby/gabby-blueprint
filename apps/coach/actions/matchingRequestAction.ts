@@ -1,16 +1,16 @@
 'use server';
 
-import {
-  approveMatchingRequestCore,
-  rejectMatchingRequestCore,
-  getMatchingRequestHistoryPageAsCoachCore,
-} from '@gabby/lib/matching/actions/matchingActions';
 import { getPendingIncomingRequestsForCoachCore } from '@gabby/lib/coachInbox/actions/coachInboxActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { type IncomingMatchingRequestItem, type MatchingRequestErrorCode } from '@gabby/types/matching';
-import { type CoachIncomingRequestItem } from '@gabby/types/coachInbox';
+import {
+  approveMatchingRequestCore,
+  getMatchingRequestHistoryPageAsCoachCore,
+  rejectMatchingRequestCore,
+} from '@gabby/lib/matching/actions/matchingActions';
 import type { ActionResult } from '@gabby/types/action';
+import { type CoachIncomingRequestItem } from '@gabby/types/coachInbox';
+import { type IncomingMatchingRequestItem, type MatchingRequestErrorCode } from '@gabby/types/matching';
 
 const logger = createLogger('coach');
 

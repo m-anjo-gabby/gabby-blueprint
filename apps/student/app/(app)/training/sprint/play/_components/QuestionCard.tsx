@@ -1,17 +1,16 @@
 // apps\student\app\(app)\training\sprint\play\_components\QuestionCard.tsx
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
+import { CircleDot, Eye, Headphones, Mic, MicOff } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
-import { Eye, CircleDot, Headphones, Mic, MicOff } from 'lucide-react';
-
+import { CircularProgressRing } from '@/components/common/CircularProgressRing';
+import { PhraseAudioHeader } from '@/components/common/PhraseAudioHeader';
+import { QuestionStepBadge, StepIndicator } from '@/components/common/QuestionStepBadge';
+import { cn } from '@/lib/utils';
 // Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
-import { cn } from '@/lib/utils';
-import { CircularProgressRing } from '@/components/common/CircularProgressRing';
-import { QuestionStepBadge, StepIndicator } from '@/components/common/QuestionStepBadge';
-import { PhraseAudioHeader } from '@/components/common/PhraseAudioHeader';
 
 /** 問題が無い間の空の一覧（描画のたびに新しい配列を作らないよう固定する） */
 const NO_QUESTIONS: SprintQuestion[] = [];

@@ -1,23 +1,23 @@
 'use client';
 
-import { useState, type MouseEvent, type ReactNode } from 'react';
-import Link from 'next/link';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Drawer } from 'vaul';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
+import Link from 'next/link';
+import { useState, type MouseEvent, type ReactNode } from 'react';
+import { Drawer } from 'vaul';
 import type { NoticeItem } from '@gabby/types/notice';
-import { useNoticeStore } from '../../stores/useNoticeStore';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useSmartClamp } from '../../hooks/useSmartClamp';
-import { toNoticePlainText } from '../../notice/plainText';
-import { getNoticeImageUrl } from '../../notice/links';
-import type { NoticeLabels } from '../../notice/labels';
 import { clientLogger } from '../../logger/client';
+import type { NoticeLabels } from '../../notice/labels';
+import { getNoticeImageUrl } from '../../notice/links';
+import { toNoticePlainText } from '../../notice/plainText';
+import { useNoticeStore } from '../../stores/useNoticeStore';
 import { cn } from '../../utils';
 import { focusDialogContent } from '../common/dialogFocus';
-import { NoticeMeta } from './NoticeMeta';
+import { hasNoticeCta, NoticeCtaLink, NoticeImage } from './NoticeCta';
 import { NoticeDetail } from './NoticeDetail';
-import { NoticeCtaLink, NoticeImage, hasNoticeCta } from './NoticeCta';
+import { NoticeMeta } from './NoticeMeta';
 
 /** ボトムシートをやめて中央のダイアログにする画面幅（Tailwind の sm） */
 const DESKTOP_QUERY = '(min-width: 640px)';

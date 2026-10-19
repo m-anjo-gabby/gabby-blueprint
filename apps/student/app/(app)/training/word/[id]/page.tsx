@@ -1,35 +1,34 @@
 'use client';
 
-import { useEffect, useRef, use, useCallback } from 'react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
+import { use, useCallback, useEffect, useRef } from 'react';
+import { getFeedbackConfig } from '@gabby/lib';
 import { useSpeakingPlayer } from '@gabby/lib/audio/react/useSpeakingPlayer';
-import { usePeriodicSync } from '@gabby/lib/hooks/usePeriodicSync';
-import { useToast } from '@gabby/lib/hooks/useToast';
+import { useSpeakingSession } from '@gabby/lib/audio/react/useSpeakingSession';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
+import { usePeriodicSync } from '@gabby/lib/hooks/usePeriodicSync';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { clientLogger } from '@gabby/lib/logger/client';
-import { getWordData, toggleFavorite, reportWordProgress } from '@/actions/wordAction';
-import { FAVORITE_TOGGLE_NETWORK_ERROR } from '@/constants/favorites';
-import { saveResumeContent, takeResumeContent } from '@/actions/contentAction';
-import { useWordDrillStore } from '@/stores/useWordDrillStore';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { cancelSpeech } from '@gabby/lib/speech/synthesis';
 import { type WordResumeMetadata } from '@gabby/types/training';
-import { getFeedbackConfig } from '@gabby/lib';
-
-// Components
-import { WordHeader } from './_components/WordHeader';
+import { type PhraseItem } from '@gabby/types/word';
+import { saveResumeContent, takeResumeContent } from '@/actions/contentAction';
+import { getWordData, reportWordProgress, toggleFavorite } from '@/actions/wordAction';
+import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
+import { ContentLoading } from '@/components/common/ContentLoading';
+import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
+import { ImmersivePanel } from '@/components/shell/PageFrames';
+import { FAVORITE_TOGGLE_NETWORK_ERROR } from '@/constants/favorites';
+import { useWordDrillStore } from '@/stores/useWordDrillStore';
 import { WordCard } from './_components/WordCard';
 import { WordControls } from './_components/WordControls';
 import { WordFeedback } from './_components/WordFeedback';
+// Components
+import { WordHeader } from './_components/WordHeader';
 import { WordIndex } from './_components/WordIndex';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
-import { type PhraseItem } from '@gabby/types/word';
-import { ContentLoading } from '@/components/common/ContentLoading';
-import { AudioResumeBanner } from '@/components/common/AudioResumeBanner';
-import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
-import { ImmersivePanel } from '@/components/shell/PageFrames';
-import { cancelSpeech } from '@gabby/lib/speech/synthesis';
-import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 
 export default function WordTrainingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: sectionId } = use(params);

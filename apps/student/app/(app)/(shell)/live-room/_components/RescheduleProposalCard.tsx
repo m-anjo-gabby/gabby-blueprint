@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
 import { CalendarClock, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@gabby/lib/hooks/useToast';
+import { useState } from 'react';
+import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { useNow } from '@gabby/lib/hooks/useNow';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { formatSessionSlot, formatTimeUntil } from '@/lib/sessionFormat';
-import { acceptRescheduleProposal, declineRescheduleProposals } from '@/actions/sessionAction';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { type MyRescheduleProposalGroup } from '@gabby/types/session';
+import { acceptRescheduleProposal, declineRescheduleProposals } from '@/actions/sessionAction';
+import { Button } from '@/components/ui/button';
+import { formatSessionSlot, formatTimeUntil } from '@/lib/sessionFormat';
+import { cn } from '@/lib/utils';
 
 interface RescheduleProposalCardProps {
   group: MyRescheduleProposalGroup;

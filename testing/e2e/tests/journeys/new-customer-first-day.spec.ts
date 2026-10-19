@@ -1,8 +1,8 @@
-import { test, expect, navTab, agreeToPendingTerms } from '../../support/studentApp.ts';
+import { createAdminClient } from '../../../helpers/auth.ts';
 import { confirmAndSubmit, openAdminContext, openDialogBy } from '../../support/adminApp.ts';
 import { cleanupAuthFixture, newTag, trackUserByEmail, type AuthFixture } from '../../support/authFixtures.ts';
 import { resendTestAddress } from '../../support/resendInbox.ts';
-import { createAdminClient } from '../../../helpers/auth.ts';
+import { agreeToPendingTerms, expect, navTab, test } from '../../support/studentApp.ts';
 
 /**
  * 新規顧客の受注〜生徒の初日（ジャーニー: e2e/journeys/new-customer-onboarding.md → student-first-day.md）

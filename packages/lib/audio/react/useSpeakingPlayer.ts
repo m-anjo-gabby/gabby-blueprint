@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AnalysisResult } from '@gabby/types/speechAssessment';
 import { useAudioEngine, type AudioEngineOptions, type AudioEnginePlayOptions } from '../../hooks/useAudioEngine';
-import { requestPlayAndRecordSession } from '../core/audioSession';
+import { cancelSpeech } from '../../speech/synthesis';
 import { subscribeAudioLifecycle } from '../core/audioRuntime';
-import { startSpeechAssessment, type SpeechAssessmentHandle } from '../core/speechAssessment';
+import { requestPlayAndRecordSession } from '../core/audioSession';
 import {
   waitFor,
   type PlayPromptsResult,
@@ -13,7 +13,7 @@ import {
   type SpeakingPrompt,
   type SpeakingTurnResult,
 } from '../core/flow';
-import { cancelSpeech } from '../../speech/synthesis';
+import { startSpeechAssessment, type SpeechAssessmentHandle } from '../core/speechAssessment';
 
 export interface ListenOptions {
   targetText: string;

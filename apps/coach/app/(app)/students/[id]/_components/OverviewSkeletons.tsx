@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { ArrowLeft, FileText, MessagesSquare, StickyNote, Video, Zap, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 

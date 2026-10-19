@@ -3,8 +3,8 @@
  * 実行: pnpm exec tsx e2e/support/authFixtures.leftovers.ts [--env=staging] [--delete]（既定は dev）
  * 対象は authFixtures.ts が作る命名（メール `e2e<接頭辞><数字>-…`。接頭辞は createAuthFixture に渡す英小文字。顧客 `【QAテスト】認証E2E（…）`）に限る。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 import { createAdminClient } from '../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 import { deleteBusinessRecords } from './authFixtures.ts';
 
 const env = resolveTestEnvFromArgs();

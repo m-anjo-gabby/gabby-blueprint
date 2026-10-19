@@ -1,10 +1,10 @@
 'use client';
 
-import type { ListColumnDef } from '@/components/list/listTable';
 import type { useTranslations } from 'next-intl';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import type { CalendarEventParticipant } from '@/actions/adminCalendarEventAction';
 import { UserTypeLabel } from '@/components/common/UserTypeLabel';
+import type { ListColumnDef } from '@/components/list/listTable';
 
 type TableT = ReturnType<typeof useTranslations<'calendarEvents.participantsTable'>>;
 

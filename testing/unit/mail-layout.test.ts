@@ -1,5 +1,6 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { DEFAULT_MAIL_LOGO_URL } from '@gabby/lib/mail/assets/logo';
 import { renderMail, type RenderedEmail } from '@gabby/lib/mail/render';
 import { buildAdminInviteMail } from '@gabby/lib/mail/templates/AdminInviteEmailTemplate';
 import { buildCoachInviteMail } from '@gabby/lib/mail/templates/CoachInviteEmailTemplate';
@@ -8,7 +9,6 @@ import { buildStudentInviteMail } from '@gabby/lib/mail/templates/InviteEmailTem
 import { buildLiveSessionReminderMail } from '@gabby/lib/mail/templates/LiveSessionReminderEmailTemplate';
 import { buildNotificationMail } from '@gabby/lib/mail/templates/NotificationEmailTemplate';
 import { buildPasswordResetMail } from '@gabby/lib/mail/templates/PasswordResetEmailTemplate';
-import { DEFAULT_MAIL_LOGO_URL } from '@gabby/lib/mail/assets/logo';
 import { buildUnsubscribeUrl, unsubscribeHeaders, verifyUnsubscribeToken } from '@gabby/lib/mail/unsubscribe/token';
 
 /**

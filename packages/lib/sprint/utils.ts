@@ -1,6 +1,6 @@
-import { QUESTION_TYPES, type SprintQuestionType, type SprintAvailableLevels } from '@gabby/types/sprint';
-import type { MetadataSprint } from '@gabby/types/content';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
+import type { MetadataSprint } from '@gabby/types/content';
+import { QUESTION_TYPES, type SprintAvailableLevels, type SprintQuestionType } from '@gabby/types/sprint';
 
 /**
  * 教材メタデータから「レベル概念を持つか」を判定する共通ヘルパー。

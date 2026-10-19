@@ -20,8 +20,8 @@
  * 使い方:
  *   pnpm exec tsx testing/features/branches/feature-20260918-dev/target-sessions-adjustment-cleanup.ts --env=dev --tag=targetsessions01
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 import { createAdminClient } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

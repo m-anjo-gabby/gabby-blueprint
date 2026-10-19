@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import { openAdminContext, openLiveSessionsFor, scheduleSlotRow as slotRow } from '../../support/adminApp.ts';
 import {
   cleanupAuthFixture,
   createAuthFixture,
@@ -7,7 +8,6 @@ import {
   DISPOSABLE_EMAIL_DOMAIN,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
-import { openAdminContext, openLiveSessionsFor, scheduleSlotRow as slotRow } from '../../support/adminApp.ts';
 import { openCoachContext } from '../../support/coachApp.ts';
 import { clickUntilVisible } from '../../support/hydration.ts';
 import {

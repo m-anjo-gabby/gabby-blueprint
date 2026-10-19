@@ -1,9 +1,9 @@
 // apps/admin/app/(app)/dashboard/_components/ModuleSummaryGrid.tsx
 'use client';
 
-import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 
 interface ModuleSummaryGridProps {
   // ModuleCard は next-intl/server の getTranslations を使う Server Component のため、

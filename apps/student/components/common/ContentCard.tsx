@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { motion } from 'framer-motion';
+import { ArrowRight, ChevronDown, ChevronUp, Star } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { getCefrStyle, getContentTypeConfig } from '@gabby/lib/content/ui';
+import { type ContentItem } from '@gabby/types/content';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
-import { type ContentItem } from '@gabby/types/content';
-import { motion } from 'framer-motion';
-import { getContentTypeConfig, getCefrStyle } from '@gabby/lib/content/ui';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface ContentCardProps {

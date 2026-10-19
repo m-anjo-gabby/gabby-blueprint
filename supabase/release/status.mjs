@@ -18,11 +18,11 @@
 //           Vercel は scripts/vercel-env/values/.env.<env> → 環境変数 VERCEL_TOKEN → 入力。
 
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseEnv } from 'node:util';
 import { APPS, ENVIRONMENTS, VERCEL_TEAM_ID } from '../../scripts/vercel-env/environments.mjs';
-import { ENVS, RELEASE_DIR, REPO_ROOT, connect } from './lib/connection.mjs';
+import { connect, ENVS, RELEASE_DIR, REPO_ROOT } from './lib/connection.mjs';
 import { askSecret } from './lib/prompt.mjs';
 import { fetchHistory, sectionState, splitSections } from './lib/releaseFile.mjs';
 

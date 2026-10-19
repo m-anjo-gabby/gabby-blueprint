@@ -2,8 +2,8 @@
 'use client';
 
 import * as React from 'react';
-import { useColorVowelLookup } from './ColorVowelLookupProvider';
 import { cn } from '@/lib/utils';
+import { useColorVowelLookup } from './ColorVowelLookupProvider';
 
 export interface LookupTextProps {
   /** 表示する英文テキスト */

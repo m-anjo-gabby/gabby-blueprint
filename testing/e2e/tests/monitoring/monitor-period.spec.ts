@@ -1,12 +1,12 @@
-import { test, expect, loginAsNewStudent } from '../../support/studentApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantAppLicense,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
+import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 
 /**
  * モニターの期間（ジャーニー: e2e/journeys/customer-progress-review.md「集計の基準」）

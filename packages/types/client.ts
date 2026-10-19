@@ -1,6 +1,6 @@
 // packages/types/client.ts
-import type { TableRow } from './db';
 import type { ActionResult } from './action';
+import type { TableRow } from './db';
 
 // com_m_client.status
 export const CLIENT_STATUS = {

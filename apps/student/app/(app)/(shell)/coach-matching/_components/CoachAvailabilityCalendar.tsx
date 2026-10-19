@@ -1,10 +1,10 @@
 'use client';
 
 import { Circle, Info, Triangle, X } from 'lucide-react';
-import { type DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
+import { DAYS_OF_WEEK, type DayOfWeek } from '@gabby/types/coachAvailability';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const SLOTS_PER_DAY = 48;
 

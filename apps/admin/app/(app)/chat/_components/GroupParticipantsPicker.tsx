@@ -1,16 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Check, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SearchableSelect } from '@/components/common/SearchableSelect';
-import { USER_TYPES, type UserType } from '@gabby/types/user';
+import { useTranslations } from 'next-intl';
+import { useMemo, useState } from 'react';
 import { type ChatTargetUser } from '@gabby/types/chat';
 import { type ClientOption } from '@gabby/types/client';
+import { USER_TYPES, type UserType } from '@gabby/types/user';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { UserTypeLabel } from '@/components/common/UserTypeLabel';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 const SELECTABLE_USER_TYPES: UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
 

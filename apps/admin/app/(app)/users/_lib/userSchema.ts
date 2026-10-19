@@ -1,6 +1,6 @@
-import { z } from 'zod';
 import type { useTranslations } from 'next-intl';
-import { USER_STATUS, USER_TYPES, isUserType, type UserRecord } from '@gabby/types/user';
+import { z } from 'zod';
+import { isUserType, USER_STATUS, USER_TYPES, type UserRecord } from '@gabby/types/user';
 
 type FormT = ReturnType<typeof useTranslations<'users.form'>>;
 

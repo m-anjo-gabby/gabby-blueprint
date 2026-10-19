@@ -1,16 +1,16 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import { CalendarDays, ChevronRight, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
-import { ChevronRight, CalendarDays, type LucideIcon } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 import { getContentTypeConfig, getTrainingMetricConfig } from '@gabby/lib/content/ui';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
 import { useMonthNavigator } from '@gabby/lib/hooks/useMonthNavigator';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { type UserTrainingPerformanceResponse } from '@gabby/types/training';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ShellPageHeader, ShellSectionTitle } from '@/components/shell/ShellPage';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Skeleton } from '@/components/ui/skeleton';
 import { MonthSwitcher } from '../../_components/MonthSwitcher';
 import { StatTile } from '../../_components/StatTile';
 

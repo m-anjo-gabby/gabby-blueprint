@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 import { openAdminContext } from '../../support/adminApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableCoach,
+  DISPOSABLE_EMAIL_DOMAIN,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
 import { clickUntilVisible } from '../../support/hydration.ts';

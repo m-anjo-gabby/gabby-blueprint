@@ -1,11 +1,10 @@
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, ArrowRight, Check, Mic, RotateCw, Square, Volume2 } from 'lucide-react';
 import React, { useState } from 'react';
-import { ArrowRight, ArrowLeft, RotateCw, Volume2, Mic, Check, Square } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
 import { PlaybackRateControl } from '@/components/common/PlaybackRateControl';
-
+import { cn } from '@/lib/utils';
 // Zustand ストアのインポート
 import { useSprintStore } from '@/stores/useSprintStore';
 

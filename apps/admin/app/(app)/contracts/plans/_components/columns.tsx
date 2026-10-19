@@ -1,12 +1,12 @@
 'use client';
 
-import type { ListColumnDef } from '@/components/list/listTable';
-import type { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
+import type { useTranslations } from 'next-intl';
+import type { ContractPlan } from '@gabby/types/contract';
+import { InactiveBadge } from '@/components/common/InactiveBadge';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { InactiveBadge } from '@/components/common/InactiveBadge';
-import type { ContractPlan } from '@gabby/types/contract';
 import { ContractPlanFormDialog } from './ContractPlanFormDialog';
 
 type TableT = ReturnType<typeof useTranslations<'contracts.plans.table'>>;

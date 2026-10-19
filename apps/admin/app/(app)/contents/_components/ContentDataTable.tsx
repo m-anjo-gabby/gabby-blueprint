@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 import { CONTENT_TYPES, type Content } from '@gabby/types/content';
 import { DataTable } from '@/components/list/DataTable';
 import { ListSelectFilter } from '@/components/list/ListSelectFilter';

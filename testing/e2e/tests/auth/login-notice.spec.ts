@@ -1,5 +1,5 @@
-import { test, expect } from '../../support/studentApp.ts';
 import { DISPOSABLE_EMAIL_DOMAIN } from '../../support/authFixtures.ts';
+import { expect, test } from '../../support/studentApp.ts';
 
 /**
  * ログイン画面の案内・エラー（画面: docs/screens/student/login.md）

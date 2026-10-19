@@ -4,9 +4,9 @@
  * service_role のクライアントで基盤データ（顧客・ユーザー・契約・ライセンス・アクセス権）だけを作る。
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Term } from './fixture-terms.ts';
 import { toUtcAvailabilityRows } from './coach-availability.ts';
 import { fillCoachMatchingProfile } from './coach-matching-profile.ts';
+import type { Term } from './fixture-terms.ts';
 
 export type PlanCode = 'BLUEPRINT_ONLY' | 'LIVE_WEEKLY1_3M' | 'LIVE_WEEKLY2_3M';
 

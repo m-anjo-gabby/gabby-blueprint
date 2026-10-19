@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
-import { getStudentOverview } from '@/actions/studentAction';
 import { getAvailableDialogueContents, getStudentDialogueAssignments } from '@/actions/dialogueAction';
-import { DialoguePracticeManager } from './_components/DialoguePracticeManager';
+import { getStudentOverview } from '@/actions/studentAction';
 import { StudentChildPageHeader } from '../../_components/StudentsSkeletons';
+import { DialoguePracticeManager } from './_components/DialoguePracticeManager';
 
 export default async function DialoguePracticePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

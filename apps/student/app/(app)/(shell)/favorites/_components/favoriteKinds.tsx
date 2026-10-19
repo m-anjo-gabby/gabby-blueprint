@@ -1,16 +1,16 @@
-import type { ReactNode } from 'react';
 import { MessageSquareQuote, Zap, type LucideIcon } from 'lucide-react';
-import type { FavoritePhraseItem } from '@gabby/types/word';
-import { QUESTION_TYPES, type FavoriteSprintQuestionItem, type SprintQuestionType } from '@gabby/types/sprint';
+import type { ReactNode } from 'react';
 import { formatSprintLevelLabel } from '@gabby/lib';
-import { toggleFavorite } from '@/actions/wordAction';
+import { QUESTION_TYPES, type FavoriteSprintQuestionItem, type SprintQuestionType } from '@gabby/types/sprint';
+import type { FavoritePhraseItem } from '@gabby/types/word';
 import { toggleSprintQuestionFavorite } from '@/actions/sprintFavoriteAction';
-import type { FavoriteToggleResult } from '@/constants/favorites';
+import { toggleFavorite } from '@/actions/wordAction';
 import type { PillTabItem } from '@/components/shell/PillTabs';
+import type { FavoriteToggleResult } from '@/constants/favorites';
 import { PhraseFavoriteCardSkeleton, SprintQuestionFavoriteCardSkeleton } from './FavoriteCardSkeletons';
+import type { FavoriteFilterDef } from './favoriteFilters';
 import { PhraseFavoriteCard } from './PhraseFavoriteCard';
 import { SprintQuestionFavoriteCard } from './SprintQuestionFavoriteCard';
-import type { FavoriteFilterDef } from './favoriteFilters';
 
 /**
  * お気に入りの種別ごとの項目の型。

@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, ChevronRight, History } from 'lucide-react';
-import { getCalendarEventPhase, withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { useNow } from '@gabby/lib/hooks/useNow';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
 import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
+import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { getCalendarEventPhase, withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
 import { EventDetailDrawer } from '@/components/calendarEvent/EventDetailDrawer';
 import { EventCoachLine, EventSeriesLabel, formatEventSlot } from '@/components/calendarEvent/EventMeta';
 import { scrollIntoContainer } from '@/lib/scroll';

@@ -1,8 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
-import { NextResponse, type NextRequest } from 'next/server';
 import type { User } from '@supabase/supabase-js';
-import type { UserType } from '@gabby/types/user';
+import { NextResponse, type NextRequest } from 'next/server';
 import { createLogger, type createRequestLogger } from '@gabby/lib/logger';
+import type { UserType } from '@gabby/types/user';
 import { buildLoginPath, RETURN_TO_PARAM, sanitizeReturnTo } from './auth/returnTo';
 import { IMPERSONATION_REQUEST_HEADER_ADMIN_ID, IMPERSONATION_REQUEST_HEADER_ID } from './impersonation';
 import { CLIENT_LOG_PATH } from './logger/client';

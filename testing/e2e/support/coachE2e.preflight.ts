@@ -8,10 +8,10 @@
  * - 接続先: コーチのサイトのログイン画面が開けるか（dev はローカルの dev サーバーが起動している場合だけ確認する）
  * 1つでも NG があれば終了コード1で終わる。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
-import { createAdminClient } from '../../helpers/auth.ts';
-import { assertReleaseApplied } from '../../helpers/preflight.ts';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createAdminClient } from '../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
+import { assertReleaseApplied } from '../../helpers/preflight.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import type { CalendarEventItem } from '@gabby/types/calendarEvent';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import type { CalendarEventItem } from '@gabby/types/calendarEvent';
 import { deleteCalendarEvent } from '@/actions/adminCalendarEventAction';
 import { DataTable } from '@/components/list/DataTable';
-import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
-import { createColumns } from './columns';
+import { boldChunks, DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
 import type { CalendarEventFormOptions } from './CalendarEventFormDialog';
+import { createColumns } from './columns';
 
 interface CalendarEventTableProps {
   data: CalendarEventItem[];

@@ -1,8 +1,8 @@
 'use client';
 
+import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
 import { Badge } from '@/components/ui/badge';
 import { TrainingReportEntry } from './TrainingReportEntry';
-import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
 
 interface TrainingReportContractRowProps {
   studentId: string;

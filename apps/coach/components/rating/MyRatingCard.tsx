@@ -1,9 +1,9 @@
 import { Star } from 'lucide-react';
-import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
-import { Skeleton } from '@/components/ui/skeleton';
 import { formatRatingValue } from '@gabby/lib/coachRating/format';
-import type { CoachRatingStats } from '@gabby/types/coachRating';
+import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
 import type { CoachProfileRatingDisplay } from '@gabby/types/coachProfile';
+import type { CoachRatingStats } from '@gabby/types/coachRating';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ratingAriaLabel = (value: number) => `${formatRatingValue(value)} out of 5`;
 const formatRatingCount = (count: number) => `${count} ${count === 1 ? 'rating' : 'ratings'}`;

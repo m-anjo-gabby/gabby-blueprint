@@ -1,16 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { formatAcquiredSprintLevelLabel, isSprintLevelNotReached } from '@gabby/lib';
-import {
-  SPRINT_LEVEL_NOT_REACHED,
-  SPRINT_LEVEL_NOT_REACHED_HINT,
-  SPRINT_LEVEL_NOT_REACHED_SHORT,
-} from './sprintLevelLabels';
-import { QUESTION_TYPES } from '@gabby/types/sprint';
-import type { StudentSprintProgress } from '@gabby/types/coachStudent';
+import { useState } from 'react';
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -21,6 +12,15 @@ import {
   Tooltip,
   type BaseTickContentProps,
 } from 'recharts';
+import { formatAcquiredSprintLevelLabel, isSprintLevelNotReached } from '@gabby/lib';
+import type { StudentSprintProgress } from '@gabby/types/coachStudent';
+import { QUESTION_TYPES } from '@gabby/types/sprint';
+import { Button } from '@/components/ui/button';
+import {
+  SPRINT_LEVEL_NOT_REACHED,
+  SPRINT_LEVEL_NOT_REACHED_HINT,
+  SPRINT_LEVEL_NOT_REACHED_SHORT,
+} from './sprintLevelLabels';
 import { StageLevelDialog } from './StageLevelDialog';
 
 interface SprintProgressRadarProps {

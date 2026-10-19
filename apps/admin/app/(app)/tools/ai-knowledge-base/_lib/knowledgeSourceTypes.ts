@@ -1,4 +1,4 @@
-import { BookOpenCheck, GraduationCap, Drama, type LucideIcon } from 'lucide-react';
+import { BookOpenCheck, Drama, GraduationCap, type LucideIcon } from 'lucide-react';
 import type { useTranslations } from 'next-intl';
 
 export interface KnowledgeSourceTypeOption {

@@ -1,20 +1,20 @@
 'use client';
 
+import { CheckCircle2, Globe, Info, RotateCcw, Save } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Globe, CheckCircle2, Info } from 'lucide-react';
-import { addAvailability, deleteAvailability, confirmAvailability } from '@/actions/availabilityAction';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getUtcOffsetMinutes, shiftWeeklyMinute } from '@gabby/lib/date/date';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { formatUtcOffset } from '@gabby/lib/date/timezone';
-import { type CoachAvailabilitySlot, type DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { DAYS_OF_WEEK, type CoachAvailabilitySlot, type DayOfWeek } from '@gabby/types/coachAvailability';
 import { type TimezoneMaster } from '@gabby/types/timezone';
+import { addAvailability, confirmAvailability, deleteAvailability } from '@/actions/availabilityAction';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DAY_OF_WEEK_LABEL_EN } from '@/constants/availability';
-import { WeeklyAvailabilityGrid, SLOTS_PER_DAY, slotKey, slotIndexToLabel } from './WeeklyAvailabilityGrid';
+import { slotIndexToLabel, slotKey, SLOTS_PER_DAY, WeeklyAvailabilityGrid } from './WeeklyAvailabilityGrid';
 
 interface AvailabilityViewProps {
   initialSlots: CoachAvailabilitySlot[];

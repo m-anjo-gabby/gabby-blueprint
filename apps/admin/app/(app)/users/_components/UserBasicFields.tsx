@@ -1,18 +1,18 @@
 'use client';
 
+import { Shield } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
-import { useTranslations } from 'next-intl';
-import { Shield } from 'lucide-react';
+import type { ClientOption } from '@gabby/types/client';
+import { USER_TYPES, type RoleDefinition } from '@gabby/types/user';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { UserTypeLabel, useUserTypeLabel } from '@/components/common/UserTypeLabel';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { SearchableSelect } from '@/components/common/SearchableSelect';
-import { USER_TYPES, type RoleDefinition } from '@gabby/types/user';
-import type { ClientOption } from '@gabby/types/client';
 import type { UserBaseValues } from '../_lib/userSchema';
-import { UserTypeLabel, useUserTypeLabel } from '@/components/common/UserTypeLabel';
 
 export const USER_FIELD_LABEL_CLASS = 'text-xs font-bold text-slate-600';
 const INPUT_CLASS = 'h-11 rounded-xl border-slate-200';

@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { ArrowRight, ChartSpline, CheckCircle2, PlayCircle, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
 import { cn } from '@/lib/utils';
 import { PlayingBars } from './SprintResultQuestionList';
-import type { SprintResultPlayback } from './useSprintResultPlayback';
 import type { SprintResultScore } from './types';
+import type { SprintResultPlayback } from './useSprintResultPlayback';
 
 /** 同じ教材・スプリント種別でスプリント選択画面を開くURL（リトライ・没入画面の戻る先） */
 export function getSprintSelectHref(scoreData: SprintResultScore) {

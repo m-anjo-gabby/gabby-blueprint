@@ -1,28 +1,28 @@
 // apps\admin\app\(app)\clients\_components\ClientFormDialog.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { AlertCircle, CheckCircle2, Edit, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { createClient, updateClient } from '@/actions/adminClientAction';
-import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
-import { Alert } from '@/components/ui/alert';
-import { PurgeClientSection } from './PurgeClientSection';
 import {
   CLIENT_STATUS,
-  type ClientRecord,
   type ClientPayload,
+  type ClientRecord,
   type ClientStatus,
   type ClientType,
 } from '@gabby/types/client';
+import { createClient, updateClient } from '@/actions/adminClientAction';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PurgeClientSection } from './PurgeClientSection';
 
 // --- 1. スキーマ定義 ---
 type FormT = ReturnType<typeof useTranslations<'clients.form'>>;

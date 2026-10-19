@@ -7,9 +7,9 @@
  * 固定アカウント qa-coach-us-01 の専門を書き換えて確認し、最後に実行前の設定へ戻す（データは残らない）。
  * RPC・テーブルの操作は各ロール（qa-admin / qa-coach-us-01 / qa-student-01）の実JWTで行う。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
-import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient, signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

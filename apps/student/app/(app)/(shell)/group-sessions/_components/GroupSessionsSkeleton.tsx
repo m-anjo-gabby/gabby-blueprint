@@ -1,8 +1,8 @@
 'use client';
 
-import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { PillTabs, type PillTabItem } from '@/components/shell/PillTabs';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
+import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export type GroupSessionsTab = 'upcoming' | 'past';

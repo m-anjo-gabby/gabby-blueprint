@@ -1,7 +1,7 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatMessageHeaderTime, isContinuationMessage } from '@gabby/lib/chat/messageGrouping';
+import { test } from 'node:test';
 import { getChatRoomPath, getChatRoomUrl } from '@gabby/lib/chat/links';
+import { formatMessageHeaderTime, isContinuationMessage } from '@gabby/lib/chat/messageGrouping';
 import type { ChatMessage } from '@gabby/types/chat';
 import { USER_TYPES } from '@gabby/types/user';
 

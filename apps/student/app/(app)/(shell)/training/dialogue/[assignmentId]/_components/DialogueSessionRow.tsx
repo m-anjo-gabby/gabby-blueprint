@@ -1,6 +1,6 @@
 import { CheckCircle2, ExternalLink } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import type { DialogueAssignmentSessionView } from '@gabby/types/dialogue';
+import { Badge } from '@/components/ui/badge';
 
 interface DialogueSessionRowProps {
   session: DialogueAssignmentSessionView;

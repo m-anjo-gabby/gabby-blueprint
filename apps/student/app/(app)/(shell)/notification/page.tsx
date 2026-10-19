@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { BellOff } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
+import { BellOff } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback } from 'react';
 import { useFetchOnMount } from '@gabby/lib/hooks/useFetchOnMount';
+import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
 import { type NotificationItem } from '@gabby/types/notification';
 import { NotificationCard } from './_components/NotificationCard';
 import { NotificationListSkeleton, NotificationPageHeader } from './_components/NotificationSkeleton';

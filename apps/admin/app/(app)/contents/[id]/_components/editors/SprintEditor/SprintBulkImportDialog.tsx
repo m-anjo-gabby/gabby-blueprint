@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import Papa from 'papaparse';
+import { AlertCircle, CheckCircle2, Download, FileUp, Loader2, RefreshCcw, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import Papa from 'papaparse';
+import { useRef, useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { Upload, AlertCircle, Loader2, CheckCircle2, FileUp, RefreshCcw, Download } from 'lucide-react';
-import { bulkImportSprintQuestions } from '@/actions/adminSprintAction';
-import { cn } from '@/lib/utils';
 import { type SprintQuestionType } from '@gabby/types/sprint';
+import { bulkImportSprintQuestions } from '@/actions/adminSprintAction';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 /** TSV の1行（ヘッダー名 → 値） */
 type TsvRow = Partial<Record<string, string>>;

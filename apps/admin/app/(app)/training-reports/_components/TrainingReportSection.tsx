@@ -1,5 +1,5 @@
-import { getTranslations } from 'next-intl/server';
 import { FileArchive, FileText } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { formatToJstDate } from '@gabby/lib/date/date';
 import type { TrainingReportTarget } from '@gabby/types/trainingReport';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';

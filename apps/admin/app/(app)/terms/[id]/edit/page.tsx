@@ -1,11 +1,11 @@
 // apps/admin/app/(app)/terms/[id]/edit/page.tsx
 import { getTranslations } from 'next-intl/server';
-import { getTermDetail } from '@/actions/adminTermAction';
-import { TermEditor } from './_components/TermEditor';
-import { unstable_rethrow, notFound } from 'next/navigation';
-import { PageHeader } from '@/components/common/PageHeader';
-import type { TermDetail } from '@gabby/types/term';
+import { notFound, unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
+import type { TermDetail } from '@gabby/types/term';
+import { getTermDetail } from '@/actions/adminTermAction';
+import { PageHeader } from '@/components/common/PageHeader';
+import { TermEditor } from './_components/TermEditor';
 
 const logger = createLogger('admin');
 

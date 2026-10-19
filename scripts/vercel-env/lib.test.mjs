@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { parseEnv } from 'node:util';
 import { ENVIRONMENTS } from './environments.mjs';
-import { LOCAL, OPTIONAL, UNSET, MANIFEST } from './manifest.mjs';
 import { buildValuesFile, diffProject, quoteEnvValue, resolveDesired, sha256, validateValue } from './lib.mjs';
+import { LOCAL, MANIFEST, OPTIONAL, UNSET } from './manifest.mjs';
 
 const config = ENVIRONMENTS.staging;
 

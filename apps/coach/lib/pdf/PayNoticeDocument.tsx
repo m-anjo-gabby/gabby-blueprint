@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer';
+import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
 // コーチ名・会社住所等に日本語が含まれる場合の文字化け対策。Helvetica等の標準14フォントは
 // 日本語グリフを持たないため、Noto Sans JP(静的ウェイト、Latin/日本語の両方をカバー)を

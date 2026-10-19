@@ -1,63 +1,62 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Check,
-  Lock,
-  ChevronLeft,
-  Sliders,
-  HelpCircle,
-  Lightbulb,
+  AlertTriangle,
   ArrowRight,
+  BookOpen,
+  Check,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
+  HelpCircle,
+  Home,
+  Lightbulb,
+  Loader2,
+  Lock,
   Mic,
   MicOff,
-  Loader2,
-  BookOpen,
   Settings2,
-  AlertTriangle,
+  Sliders,
   Timer,
   Zap,
-  Home,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  QUESTION_TYPES,
-  SPRINT_TIME_OPTIONS,
-  DEFAULT_SPRINT_TIME_KEY,
-  type SprintQuestionType,
-  type SprintAnswerType,
-  type SprintConfig,
-} from '@gabby/types/sprint';
-import {
-  SPRINT_THEMES,
-  SPRINT_NOTES,
   getSprintTitle,
-  resolveSprintHasLevel,
-  isSprintLevelSelectable,
   hasSprintQuestionsForType,
   isSprintLevelAvailable,
+  isSprintLevelSelectable,
   pickSprintLevel,
+  resolveSprintHasLevel,
+  SPRINT_NOTES,
+  SPRINT_THEMES,
 } from '@gabby/lib';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
 import { unlockAudio } from '@gabby/lib/audio/core/audioRuntime';
-
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { useSprintStore } from '@/stores/useSprintStore';
-import type { StudentSprintProgress } from '@gabby/types/coachStudent';
-import { getSprintProgress } from '@/actions/sprintAction';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { ConfirmContainer } from '@gabby/lib/components/common/ConfirmContainer';
+import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useMicPermission } from '@gabby/lib/hooks/useMicPermission';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import type { StudentSprintProgress } from '@gabby/types/coachStudent';
+import {
+  DEFAULT_SPRINT_TIME_KEY,
+  QUESTION_TYPES,
+  SPRINT_TIME_OPTIONS,
+  type SprintAnswerType,
+  type SprintConfig,
+  type SprintQuestionType,
+} from '@gabby/types/sprint';
+import { getSprintProgress } from '@/actions/sprintAction';
 import { AudioTroubleshootingDialog } from '@/components/help/AudioTroubleshootingDialog';
 import { MicTroubleshootingDialog } from '@/components/help/MicTroubleshootingDialog';
-import { SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
 import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { useSprintStore } from '@/stores/useSprintStore';
 
 interface SprintSelectProps {
   onStart: (config: SprintConfig & { answerType: SprintAnswerType; isAssessmentMode: boolean }) => void;

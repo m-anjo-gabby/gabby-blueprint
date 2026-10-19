@@ -1,11 +1,11 @@
+import { getAvailableDialogueContents, getStudentDialogueAssignments } from '@/actions/dialogueAction';
+import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
 import { getRecentSessionHomework } from '@/actions/sessionHomeworkAction';
 import { getSelfTrainingWeekSummary } from '@/actions/studentAction';
-import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
-import { getStudentDialogueAssignments, getAvailableDialogueContents } from '@/actions/dialogueAction';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buildLiveSessionHubHref } from '@/lib/liveSession/context';
-import { LessonSprintHistoryRow } from '../../../_components/LessonSprintHistoryRow';
 import { DialoguePracticeCard } from '../../../_components/DialoguePracticeCard';
+import { LessonSprintHistoryRow } from '../../../_components/LessonSprintHistoryRow';
 import { LastHomeworkList } from './LastHomeworkList';
 
 /*

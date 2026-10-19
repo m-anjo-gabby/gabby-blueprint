@@ -1,15 +1,14 @@
 'use server';
 
-import { unstable_rethrow } from 'next/navigation';
-
-import { createServerClient } from '@gabby/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import type { TermAgreementTarget, TermDocument, TermType } from '@gabby/types/term';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import type { ActionResult } from '@gabby/types/action';
+import type { TermAgreementTarget, TermDocument, TermType } from '@gabby/types/term';
 
 const logger = createLogger('student');
 

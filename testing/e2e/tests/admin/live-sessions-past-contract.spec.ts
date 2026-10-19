@@ -1,3 +1,4 @@
+import { openAdminContext, openLiveSessionsFor, scheduleSlotRow } from '../../support/adminApp.ts';
 import {
   cleanupAuthFixture,
   createAuthFixture,
@@ -5,7 +6,6 @@ import {
   grantLiveLicense,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
-import { openAdminContext, openLiveSessionsFor, scheduleSlotRow } from '../../support/adminApp.ts';
 import {
   approveMatchingRequest,
   createPendingMatchingRequest,

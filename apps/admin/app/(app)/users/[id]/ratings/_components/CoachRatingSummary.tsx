@@ -1,8 +1,8 @@
 import { getTranslations } from 'next-intl/server';
-import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
-import { Skeleton } from '@/components/ui/skeleton';
 import { formatRatingValue } from '@gabby/lib/coachRating/format';
+import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
 import type { AdminCoachRatingStats } from '@/actions/adminCoachRatingAction';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /** 集計カードの並び（本番と骨組みで共有する） */
 const SUMMARY_GRID = 'grid grid-cols-2 lg:grid-cols-4 gap-3';

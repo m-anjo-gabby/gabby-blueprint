@@ -1,11 +1,11 @@
 'use client';
 
 import { Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { CoachAvatar } from '@/components/session/CoachAvatar';
-import { formatSessionSlot } from '@/lib/sessionFormat';
 import { useIncrementalReveal } from '@gabby/lib/hooks/useIncrementalReveal';
 import { type MyBookingRequestItem, type MyRescheduleProposalGroup, type SessionListItem } from '@gabby/types/session';
+import { CoachAvatar } from '@/components/session/CoachAvatar';
+import { Button } from '@/components/ui/button';
+import { formatSessionSlot } from '@/lib/sessionFormat';
 
 const PAGE_SIZE = 5;
 

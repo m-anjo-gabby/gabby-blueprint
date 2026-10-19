@@ -2,12 +2,12 @@
 
 import { usePathname } from 'next/navigation';
 import { Header } from '@/components/common/Header';
-import { cn } from '@/lib/utils';
 import { getVisibleNavItems, isMobileFocusPath } from '@/constants/navigation';
-import { useShellNavContext } from './ShellNavContext';
-import { ShellDataLoader } from './ShellDataLoader';
-import { SideNav } from './SideNav';
+import { cn } from '@/lib/utils';
 import { BottomTabBar } from './BottomTabBar';
+import { ShellDataLoader } from './ShellDataLoader';
+import { useShellNavContext } from './ShellNavContext';
+import { SideNav } from './SideNav';
 import { useShellNavBadges } from './useShellNavBadges';
 
 interface AppShellProps {

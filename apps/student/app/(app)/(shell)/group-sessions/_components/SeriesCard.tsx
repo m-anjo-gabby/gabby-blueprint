@@ -1,19 +1,19 @@
 'use client';
 
-import { useState } from 'react';
 import { CheckCircle2, ExternalLink, ListChecks } from 'lucide-react';
-import type { CalendarEventItem } from '@gabby/types/calendarEvent';
+import { useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { Button } from '@/components/ui/button';
-import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
+import type { CalendarEventItem } from '@gabby/types/calendarEvent';
+import { joinCalendarEventSeries } from '@/actions/calendarEventAction';
 import {
   EventCoachLine,
   EventDetailLink,
   EventTiming,
-  JoinedBadge,
   formatEventSlot,
+  JoinedBadge,
 } from '@/components/calendarEvent/EventMeta';
-import { joinCalendarEventSeries } from '@/actions/calendarEventAction';
+import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getJoinableSessions } from '../_lib/groupBySeries';
 

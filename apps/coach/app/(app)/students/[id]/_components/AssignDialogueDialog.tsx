@@ -1,14 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import { ExternalLink, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
+import { useMemo, useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { DIALOGUE_CATEGORIES, type DialogueCategory, type DialogueContentSummary } from '@gabby/types/dialogue';
 import { assignDialogueContent } from '@/actions/dialogueAction';
-import { DIALOGUE_CATEGORIES } from '@gabby/types/dialogue';
-import type { DialogueCategory, DialogueContentSummary } from '@gabby/types/dialogue';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface AssignDialogueDialogProps {
   open: boolean;

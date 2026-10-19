@@ -1,11 +1,11 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { ShieldAlert } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 import { USER_STATUS, USER_TYPES, type UserRecord } from '@gabby/types/user';
 import { UserTypeLabel } from '@/components/common/UserTypeLabel';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const BADGE_BASE = 'h-5 shrink-0 whitespace-nowrap px-1.5 text-[11px] font-bold shadow-none';
 

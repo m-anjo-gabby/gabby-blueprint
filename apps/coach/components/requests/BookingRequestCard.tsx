@@ -1,25 +1,25 @@
 'use client';
 
-import { useState } from 'react';
 import { Check, X } from 'lucide-react';
+import { useState } from 'react';
+import { toIsoDateInZone } from '@gabby/lib/date/date';
+import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { SESSION_BOOKING_REQUEST_STATUS } from '@gabby/types/session';
+import { approveSessionBookingRequest, rejectSessionBookingRequest } from '@/actions/sessionAction';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { approveSessionBookingRequest, rejectSessionBookingRequest } from '@/actions/sessionAction';
-import { SESSION_BOOKING_REQUEST_STATUS } from '@gabby/types/session';
-import { type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { Textarea } from '@/components/ui/textarea';
 import { RequestKindTag } from './RequestKindTag';
 
 const STATUS_BADGE: Record<number, { label: string; className: string }> = {

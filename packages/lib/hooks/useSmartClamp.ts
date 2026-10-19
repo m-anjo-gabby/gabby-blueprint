@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 /**
  * テキストの溢れ（クランプ）を動的に検知し、開閉状態を管理するフック

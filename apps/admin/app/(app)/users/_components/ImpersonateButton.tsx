@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { LogIn, Loader2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2, LogIn } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { USER_TYPES, type UserRecord } from '@gabby/types/user';
 import { startImpersonation } from '@/actions/adminImpersonationAction';
-import { type UserRecord, USER_TYPES } from '@gabby/types/user';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ImpersonateButtonProps {
   user: UserRecord;

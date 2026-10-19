@@ -12,10 +12,10 @@
  * 経由）ため、preflightでのRPC存在確認は対象外。invalidate_user_licenseは既存リリース(2026-09-08)で
  * 導入済みのため、通常のdev/staging環境であれば追加のpreflightは不要。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient, signInAsRole } from '../../../helpers/auth.ts';
 import { addDays } from '../../../helpers/dates.ts';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);

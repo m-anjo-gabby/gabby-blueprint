@@ -1,7 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
-import { getMyLiveSessionContracts, getMySlotStatus } from '@/actions/matchingAction';
 import type { LiveSessionContractSummary, NextContractMatching } from '@gabby/types/matching';
+import { getMyLiveSessionContracts, getMySlotStatus } from '@/actions/matchingAction';
 
 /**
  * ログイン中の生徒のライブセッション契約（過去の契約を含む）。1リクエスト内で1回だけ取得する。

@@ -1,8 +1,26 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import {
+  Check,
+  Copy,
+  Loader2,
+  Mic2,
+  PencilLine,
+  Play,
+  PlusCircle,
+  RotateCcw,
+  Save,
+  Sparkles,
+  Volume2,
+  XCircle,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { useCallback, useEffect, useState } from 'react';
+import { buildSsml } from '@gabby/lib/azure/ssml';
+import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
+import { type PhraseRecord, type TTSAdjustmentData, type WordAdjustment } from '@gabby/types/word';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,33 +32,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
-import {
-  Loader2,
-  Play,
-  Save,
-  Volume2,
-  Sparkles,
-  RotateCcw,
-  PlusCircle,
-  Mic2,
-  XCircle,
-  PencilLine,
-  Check,
-  Copy,
-} from 'lucide-react';
-import { type PhraseRecord, type TTSAdjustmentData, type WordAdjustment } from '@gabby/types/word';
-import { usePlayAzureSpeech, type TTSParameters } from '@gabby/lib/hooks/usePlayAzureSpeech';
-import { useToast } from '@gabby/lib/hooks/useToast';
+import { Textarea } from '@/components/ui/textarea';
 import { useSaveAzureSpeech } from '@/hooks/useSaveAzureSpeech';
-import { AZURE_STYLES, AZURE_VOICES, type AzureStyle, type AzureVoice } from '@gabby/types/azure';
-import { buildSsml } from '@gabby/lib/azure/ssml';
 
 interface TTSDialogProps {
   phrase: PhraseRecord;

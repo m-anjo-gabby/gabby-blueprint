@@ -1,15 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import type { Download, Page } from '@playwright/test';
-import { test, expect, loginAsNewStudent, navTab } from '../../support/studentApp.ts';
 import { openAdminContext } from '../../support/adminApp.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   cleanupAuthFixture,
   createAuthFixture,
   createDisposableContract,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   type AuthFixture,
 } from '../../support/authFixtures.ts';
+import { expect, loginAsNewStudent, navTab, test } from '../../support/studentApp.ts';
 
 /**
  * 企業担当者による進捗確認（ジャーニー: e2e/journeys/customer-progress-review.md）

@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { useMemo } from 'react';
 import type { ChatLabels } from '@gabby/lib/components/chat/ChatUiContext';
 import { USER_TYPES } from '@gabby/types/user';
 import { userTypeLabelKey } from '@/lib/userTypeLabel';

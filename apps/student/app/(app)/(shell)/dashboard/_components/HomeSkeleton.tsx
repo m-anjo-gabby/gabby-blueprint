@@ -1,15 +1,15 @@
 'use client';
 
+import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
 import { useShellNavContext } from '@/components/shell/ShellNavContext';
-import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { WEEKDAY_LABELS } from '../_lib/weeklyActivity';
-import { HOME_LAYOUT, HeroBackdrop, HomeCard } from './HomeCard';
+import { HeroBackdrop, HOME_LAYOUT, HomeCard } from './HomeCard';
+import { HomeEventCardSkeleton } from './HomeEventCard';
 import { LIFETIME_ITEMS, LIFETIME_LAYOUT, LifetimeBlock } from './LifetimeStatsCard';
 import { LiveSessionCardSkeleton } from './LiveSessionCard';
-import { HomeEventCardSkeleton } from './HomeEventCard';
 import { PlanCardSkeleton } from './PlanCard';
 
 /*

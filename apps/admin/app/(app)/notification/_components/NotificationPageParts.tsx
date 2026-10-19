@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
-import { useTranslations } from 'next-intl';
 import { Bell } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import { PageHeader } from '@/components/common/PageHeader';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /*
  * 通知の画面（見出し＋件数バッジ＋一覧）の部品。画面と読み込み中の骨組み（loading.tsx）で共有する。

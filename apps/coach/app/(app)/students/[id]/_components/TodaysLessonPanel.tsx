@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { ArrowRight, CalendarClock, SquareArrowOutUpRight } from 'lucide-react';
+import Link from 'next/link';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { StudentSessionHistoryItem } from '@gabby/types/coachStudent';

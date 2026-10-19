@@ -1,11 +1,11 @@
 'use client';
 
 import type { NoticeItem } from '@gabby/types/notice';
-import { getNoticeImageUrl } from '../../notice/links';
 import type { NoticeLabels } from '../../notice/labels';
-import { NoticeMarkdown } from './NoticeMarkdown';
+import { getNoticeImageUrl } from '../../notice/links';
 import { NoticeAttachmentList } from './NoticeAttachmentList';
 import { NoticeCtaLink, NoticeImage } from './NoticeCta';
+import { NoticeMarkdown } from './NoticeMarkdown';
 
 export interface NoticeDetailProps {
   notice: NoticeItem;

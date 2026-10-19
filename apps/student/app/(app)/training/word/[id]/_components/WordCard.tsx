@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Star } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React from 'react';
 import { PHRASE_TYPES, type PhraseType } from '@gabby/types/word';
+import { cn } from '@/lib/utils';
 import { useWordDrillStore } from '@/stores/useWordDrillStore';
 
 interface WordCardProps {
