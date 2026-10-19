@@ -9,7 +9,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ライトモード専用の色定義 */
-:root { /* slate-50 */ /* slate-900 */
+:root {
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --border: oklch(0.922 0 0); /* slate-200 */

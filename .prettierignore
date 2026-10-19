@@ -1,4 +1,4 @@
-# Prettier で整形するのは JS/TS のコードだけ（package.json の format の対象）。docs/CODING.md「書式」
+# Prettier で整形するのは JS/TS のコード・CSS・admin の翻訳の JSON（package.json の format の対象）。docs/CODING.md「書式」
 # 生成物
 packages/types/database.ts
 **/.next/
