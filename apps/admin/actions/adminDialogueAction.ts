@@ -11,14 +11,16 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
-import type { ActionResult } from '@gabby/types/action';
+import type { ActionResult, BasicErrorCode, CoreResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
 /**
  * 指定教材（ダイアログプラクティスのセット）配下のセッション明細一覧を取得する
  */
-export async function getDialogueSessions(contentId: string): Promise<DialogueSession[]> {
+export async function getDialogueSessions(
+  contentId: string,
+): Promise<CoreResult<{ data: DialogueSession[] }, BasicErrorCode>> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
@@ -32,10 +34,10 @@ export async function getDialogueSessions(contentId: string): Promise<DialogueSe
 
     if (error) {
       logger.error('dialogue:get_sessions_failed', error.message, { ...ctx, err: error, payload: { contentId } });
-      return [];
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return (data || []) as DialogueSession[];
+    return { success: true, data: (data || []) as DialogueSession[] };
   } catch (error) {
     unstable_rethrow(error);
     logger.error('dialogue:get_sessions_unexpected', getErrorMessage(error), {
@@ -43,7 +45,7 @@ export async function getDialogueSessions(contentId: string): Promise<DialogueSe
       err: error,
       payload: { contentId },
     });
-    return [];
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 

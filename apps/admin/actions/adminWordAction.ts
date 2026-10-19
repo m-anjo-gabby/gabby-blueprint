@@ -12,7 +12,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
-import type { ActionResult } from '@gabby/types/action';
+import type { ActionResult, BasicErrorCode, CoreResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -35,7 +35,9 @@ export type PhraseInput = Pick<PhraseRecord, 'word_id' | 'phrase_en' | 'phrase_j
 /**
  * 特定の教材に紐づく単語一覧を取得する
  */
-export async function getWordsByContentId(contentId: string): Promise<WordRecord[]> {
+export async function getWordsByContentId(
+  contentId: string,
+): Promise<CoreResult<{ data: WordRecord[] }, BasicErrorCode>> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
@@ -53,10 +55,10 @@ export async function getWordsByContentId(contentId: string): Promise<WordRecord
         err: error,
         payload: { contentId },
       });
-      return [];
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return data as WordRecord[];
+    return { success: true, data: data as WordRecord[] };
   } catch (err) {
     unstable_rethrow(err);
     logger.error('word:get_words_by_content_id_unexpected', getErrorMessage(err), {
@@ -64,7 +66,7 @@ export async function getWordsByContentId(contentId: string): Promise<WordRecord
       err,
       payload: { contentId },
     });
-    return [];
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -191,7 +193,9 @@ export async function deleteWord(wordId: string): Promise<ActionResult> {
 /**
  * 特定の単語に紐づくフレーズ一覧を取得する
  */
-export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]> {
+export async function getPhrasesByWordId(
+  wordId: string,
+): Promise<CoreResult<{ data: PhraseRecord[] }, BasicErrorCode>> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
@@ -204,9 +208,9 @@ export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]
 
     if (error) {
       logger.error('word:get_phrases_by_word_id_failed', error.message, { ...ctx, err: error, payload: { wordId } });
-      return [];
+      return { success: false, errorCode: 'unexpected_error' };
     }
-    return data as PhraseRecord[];
+    return { success: true, data: data as PhraseRecord[] };
   } catch (err) {
     unstable_rethrow(err);
     logger.error('word:get_phrases_by_word_id_unexpected', getErrorMessage(err), {
@@ -214,7 +218,7 @@ export async function getPhrasesByWordId(wordId: string): Promise<PhraseRecord[]
       err,
       payload: { wordId },
     });
-    return [];
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 

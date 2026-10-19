@@ -14,7 +14,7 @@ import { getLogContext } from '@gabby/lib/logger/context';
 import { generateAzureAudioBuffer } from '@gabby/lib/azure/tts';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
-import type { ActionResult } from '@gabby/types/action';
+import type { ActionResult, BasicErrorCode, CoreResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -28,7 +28,7 @@ export async function getSprintQuestionsByFilter(
   contentId: string,
   type: SprintQuestionType,
   level: number,
-): Promise<SprintQuestion[]> {
+): Promise<CoreResult<{ data: SprintQuestion[] }, BasicErrorCode>> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
@@ -44,7 +44,7 @@ export async function getSprintQuestionsByFilter(
       .order('seq_no', { ascending: true });
 
     if (error) throw error;
-    return data as SprintQuestion[];
+    return { success: true, data: data as SprintQuestion[] };
   } catch (err) {
     unstable_rethrow(err);
     logger.error('sprint:get_questions_failed', getErrorMessage(err), {
@@ -52,7 +52,7 @@ export async function getSprintQuestionsByFilter(
       err,
       payload: { contentId, type, level },
     });
-    return [];
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 

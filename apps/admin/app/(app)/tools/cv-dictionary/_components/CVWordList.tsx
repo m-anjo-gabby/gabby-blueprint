@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, Trash2, AlertCircle, Volume2 } from 'lucide-react';
-import { getCVDictionaryWords, type CVWordSummary } from '@/actions/adminCVDictionaryAction';
+import { getCVDictionaryByWord, getCVDictionaryWords, type CVWordSummary } from '@/actions/adminCVDictionaryAction';
+import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
+import { LoadErrorSection } from '@/components/common/LoadErrorSection';
 import { cn } from '@/lib/utils';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { CVWordFormDialog } from './CVWordFormDialog';
@@ -29,16 +31,21 @@ import { deleteCVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
 
 // Component
 
-export function CVWordList() {
+interface CVWordListProps {
+  /** ページでサーバー取得した単語の一覧（null は取得の失敗） */
+  initialWords: CVWordSummary[] | null;
+}
+
+export function CVWordList({ initialWords }: CVWordListProps) {
   const t = useTranslations('tools.cvDictionary.wordList');
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedWord = searchParams.get('word');
   const { showToast } = useToast();
 
-  const [words, setWords] = useState<CVWordSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [words, setWords] = useState<CVWordSummary[]>(initialWords ?? []);
+  const [isLoadFailed, setIsLoadFailed] = useState(initialWords === null);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const lastUpdated = useCVDictionaryStore((s) => s.lastUpdated);
@@ -49,8 +56,13 @@ export function CVWordList() {
   const fetchWords = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getCVDictionaryWords();
-      setWords(data);
+      const res = await getCVDictionaryWords();
+      if (res.success) {
+        setWords(res.data);
+        setIsLoadFailed(false);
+      } else {
+        showToast(t('fetchFailedToast'), 'error');
+      }
     } catch {
       showToast(t('fetchFailedToast'), 'error');
     } finally {
@@ -58,9 +70,8 @@ export function CVWordList() {
     }
   }, [showToast, t]);
 
-  useEffect(() => {
-    fetchWords();
-  }, [fetchWords, lastUpdated]);
+  // 編集の後（lastUpdated の変化）だけ取り直す。初期表示はページで取得した一覧を使う
+  useRefetchOnChange(lastUpdated, fetchWords);
 
   // URLのwordが変わったらstoreを同期
   useEffect(() => {
@@ -75,7 +86,8 @@ export function CVWordList() {
   // 選択
 
   const handleSelect = (word: CVWordSummary) => {
-    router.push(`${pathname}?word=${encodeURIComponent(word.word_en)}`);
+    // 履歴だけを変え、ページをサーバーで描き直さない（エントリは CVEntryPane が取り直す）
+    window.history.pushState(null, '', `${pathname}?word=${encodeURIComponent(word.word_en)}`);
     setSelectedWordStore(word);
   };
 
@@ -84,10 +96,10 @@ export function CVWordList() {
   const handleDeleteWord = async (wordEn: string) => {
     // その単語の全エントリを取得して順次削除
     try {
-      const { getCVDictionaryByWord } = await import('@/actions/adminCVDictionaryAction');
-      const entries = await getCVDictionaryByWord(wordEn);
+      const res = await getCVDictionaryByWord(wordEn);
+      if (!res.success) throw new Error('entries not loaded');
 
-      for (const entry of entries) {
+      for (const entry of res.data) {
         await deleteCVDictionaryEntry(entry.word_en, entry.part_of_speech);
       }
 
@@ -95,7 +107,7 @@ export function CVWordList() {
       await fetchWords();
 
       if (selectedWord === wordEn) {
-        router.push(pathname);
+        window.history.pushState(null, '', pathname);
       }
     } catch {
       showToast(t('deleteErrorToast'), 'error');
@@ -132,7 +144,9 @@ export function CVWordList() {
 
       {/* リスト */}
       <ScrollArea className="flex-1">
-        {isLoading ? (
+        {isLoadFailed ? (
+          <LoadErrorSection className="m-4" />
+        ) : isLoading ? (
           <div className="flex justify-center p-12">
             <Loader2 className="animate-spin text-slate-200" />
           </div>

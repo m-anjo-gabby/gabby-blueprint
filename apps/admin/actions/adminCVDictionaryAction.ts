@@ -21,7 +21,7 @@ import {
 } from '@/lib/cvDictionaryImport';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getTranslations } from 'next-intl/server';
-import type { ActionResult } from '@gabby/types/action';
+import type { ActionResult, BasicErrorCode, CoreResult } from '@gabby/types/action';
 
 const logger = createLogger('admin');
 
@@ -45,7 +45,7 @@ export interface CVWordSummary {
 /**
  * 単語一覧の取得（word_en でグルーピングしたサマリー）
  */
-export async function getCVDictionaryWords(): Promise<CVWordSummary[]> {
+export async function getCVDictionaryWords(): Promise<CoreResult<{ data: CVWordSummary[] }, BasicErrorCode>> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
@@ -58,7 +58,7 @@ export async function getCVDictionaryWords(): Promise<CVWordSummary[]> {
 
     if (error) {
       logger.error('cvDict:get_words_failed', error.message, { ...ctx, err: error });
-      return [];
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     // クライアントサイドでグルーピング
@@ -72,22 +72,27 @@ export async function getCVDictionaryWords(): Promise<CVWordSummary[]> {
       });
     }
 
-    return Array.from(map.entries()).map(([word_en, counts]) => ({
-      word_en,
-      entry_count: counts.total,
-      has_audio_count: counts.hasAudio,
-    }));
+    return {
+      success: true,
+      data: Array.from(map.entries()).map(([word_en, counts]) => ({
+        word_en,
+        entry_count: counts.total,
+        has_audio_count: counts.hasAudio,
+      })),
+    };
   } catch (err) {
     unstable_rethrow(err);
     logger.error('cvDict:get_words_unexpected', getErrorMessage(err, 'Unknown'), { ...ctx, err });
-    return [];
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * 指定単語の品詞別エントリ一覧を取得
  */
-export async function getCVDictionaryByWord(wordEn: string): Promise<CVDictionaryEntry[]> {
+export async function getCVDictionaryByWord(
+  wordEn: string,
+): Promise<CoreResult<{ data: CVDictionaryEntry[] }, BasicErrorCode>> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
@@ -101,10 +106,10 @@ export async function getCVDictionaryByWord(wordEn: string): Promise<CVDictionar
 
     if (error) {
       logger.error('cvDict:get_by_word_failed', error.message, { ...ctx, err: error, payload: { wordEn } });
-      return [];
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return data as CVDictionaryEntry[];
+    return { success: true, data: data as CVDictionaryEntry[] };
   } catch (err) {
     unstable_rethrow(err);
     logger.error('cvDict:get_by_word_unexpected', getErrorMessage(err, 'Unknown'), {
@@ -112,7 +117,7 @@ export async function getCVDictionaryByWord(wordEn: string): Promise<CVDictionar
       err,
       payload: { wordEn },
     });
-    return [];
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 

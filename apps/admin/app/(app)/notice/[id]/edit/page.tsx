@@ -1,6 +1,7 @@
 // apps/admin/app/(app)/notice/[id]/edit/page.tsx
 import { getTranslations } from 'next-intl/server';
 import { getNoticeById } from '@/actions/adminNoticeAction';
+import { getClientsFilter } from '@/actions/adminClientAction';
 import { NoticeEditor } from '../../_components/NoticeEditor';
 import { unstable_rethrow, notFound } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
@@ -12,8 +13,9 @@ export default async function NoticeEditPage({ params }: { params: Promise<{ id:
   const { id } = await params;
 
   let notice;
+  let clientOptions;
   try {
-    notice = await getNoticeById(id);
+    [notice, clientOptions] = await Promise.all([getNoticeById(id), getClientsFilter()]);
     if (!notice) {
       notFound();
     }
@@ -31,6 +33,7 @@ export default async function NoticeEditPage({ params }: { params: Promise<{ id:
   return (
     <NoticeEditor
       mode="edit"
+      clientOptions={clientOptions}
       initialData={{
         notice_id: notice.notice_id,
         target_type: notice.target_type,

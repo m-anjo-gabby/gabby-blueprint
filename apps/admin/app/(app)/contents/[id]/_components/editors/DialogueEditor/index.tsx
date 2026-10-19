@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -8,29 +8,37 @@ import { type DialogueSession } from '@gabby/types/dialogue';
 import { getDialogueSessions } from '@/actions/adminDialogueAction';
 import { DialogueSessionList } from './DialogueSessionList';
 import { DialogueSessionFormDialog } from './DialogueSessionFormDialog';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { LoadErrorSection } from '@/components/common/LoadErrorSection';
 
 interface DialogueEditorProps {
   contentId: string;
+  /** ページでサーバー取得したセッションの一覧（null は取得の失敗）。編集の後だけブラウザから取り直す */
+  initialSessions: DialogueSession[] | null;
 }
 
-export function DialogueEditor({ contentId }: DialogueEditorProps) {
+export function DialogueEditor({ contentId, initialSessions }: DialogueEditorProps) {
   const t = useTranslations('contents.editor.dialogue.index');
-  const [sessions, setSessions] = useState<DialogueSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const tCommon = useTranslations('common');
+  const { showToast } = useToast();
+  const [sessions, setSessions] = useState<DialogueSession[]>(initialSessions ?? []);
+  const [isLoadFailed, setIsLoadFailed] = useState(initialSessions === null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchSessions = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getDialogueSessions(contentId);
-      setSessions(data);
+      const res = await getDialogueSessions(contentId);
+      if (res.success) {
+        setSessions(res.data);
+        setIsLoadFailed(false);
+      } else {
+        showToast(tCommon('errors.loadFailed'), 'error');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [contentId]);
-
-  useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+  }, [contentId, showToast, tCommon]);
 
   const nextSessionNo = sessions.length > 0 ? Math.max(...sessions.map((s) => s.session_no)) + 1 : 1;
 
@@ -52,7 +60,9 @@ export function DialogueEditor({ contentId }: DialogueEditorProps) {
 
       {/* リストエリア */}
       <div className="flex-1 overflow-hidden">
-        {isLoading ? (
+        {isLoadFailed ? (
+          <LoadErrorSection className="m-6" />
+        ) : isLoading ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-300">
             <Loader2 className="animate-spin" size={32} />
             <span className="text-sm font-medium italic">{t('loading')}</span>

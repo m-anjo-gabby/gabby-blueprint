@@ -7,6 +7,7 @@
     "back": "Back",
     "save": "Save",
     "loading": "Loading...",
+    "reload": "Reload",
     "systemError": "A system error occurred.",
     "networkError": "A network error occurred",
     "guestFallback": "Guest",
@@ -63,7 +64,8 @@
       "uploadFailed": "Upload failed.",
       "saveFailed": "Failed to save.",
       "deleteFailed": "Failed to delete.",
-      "invalidInput": "Please check your input."
+      "invalidInput": "Please check your input.",
+      "loadFailed": "Could not load this section. Please reload."
     },
     "results": {
       "registered": "Registered.",

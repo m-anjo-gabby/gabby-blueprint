@@ -7,6 +7,7 @@
     "back": "戻る",
     "save": "保存",
     "loading": "読込中...",
+    "reload": "再読み込み",
     "systemError": "システムエラーが発生しました。",
     "networkError": "通信エラーが発生しました",
     "guestFallback": "Guest",
@@ -63,7 +64,8 @@
       "uploadFailed": "アップロードに失敗しました",
       "saveFailed": "保存に失敗しました",
       "deleteFailed": "削除に失敗しました",
-      "invalidInput": "入力内容を確認してください"
+      "invalidInput": "入力内容を確認してください",
+      "loadFailed": "読み込めませんでした。再読み込みしてください。"
     },
     "results": {
       "registered": "登録しました",

@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState, useEffect, useCallback, useMemo } from 'react';
+import { Fragment, useState, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -29,6 +29,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useCVDictionaryStore } from '@/stores/useCVDictionaryStore';
+import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
+import { LoadErrorSection } from '@/components/common/LoadErrorSection';
 import { getPartOfSpeechTailwindColor } from '@gabby/types/colorVowel';
 import { ipaToPhonemes } from '@gabby/lib/colorVowel/phonemes';
 
@@ -68,17 +70,23 @@ function phonemeText(ipa: string): React.ReactNode | null {
 
 interface CVEntryListProps {
   wordEn: string;
+  /**
+   * ページでサーバー取得したエントリの一覧（null は取得の失敗）。開いた時に選ばれていた単語だけにあり、
+   * 選び直した単語（undefined）は表示した時に取得する
+   */
+  initialEntries?: CVDictionaryEntry[] | null;
 }
 
 // Component
 
-export function CVEntryList({ wordEn }: CVEntryListProps) {
+export function CVEntryList({ wordEn, initialEntries }: CVEntryListProps) {
   const t = useTranslations('tools.cvDictionary.entryList');
   const ttsStatusConfig = useMemo(() => createTtsStatusConfig(t), [t]);
   const { showToast } = useToast();
   const { play, isPlaying } = usePlayAudioSpeech();
-  const [entries, setEntries] = useState<CVDictionaryEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [entries, setEntries] = useState<CVDictionaryEntry[]>(initialEntries ?? []);
+  const [isLoadFailed, setIsLoadFailed] = useState(initialEntries === null);
+  const [isLoading, setIsLoading] = useState(initialEntries === undefined);
 
   const lastUpdated = useCVDictionaryStore((s) => s.lastUpdated);
 
@@ -87,8 +95,13 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
   const fetchEntries = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getCVDictionaryByWord(wordEn);
-      setEntries(data);
+      const res = await getCVDictionaryByWord(wordEn);
+      if (res.success) {
+        setEntries(res.data);
+        setIsLoadFailed(false);
+      } else {
+        showToast(t('fetchFailedToast'), 'error');
+      }
     } catch {
       showToast(t('fetchFailedToast'), 'error');
     } finally {
@@ -96,9 +109,8 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
     }
   }, [wordEn, showToast, t]);
 
-  useEffect(() => {
-    fetchEntries();
-  }, [fetchEntries, lastUpdated]);
+  // 編集の後（lastUpdated の変化）に取り直す。選び直した単語は初期値が無いため、表示した時にも取得する
+  useRefetchOnChange(lastUpdated, fetchEntries, initialEntries !== undefined);
 
   // 削除
 
@@ -168,7 +180,9 @@ export function CVEntryList({ wordEn }: CVEntryListProps) {
       {/* リストエリア */}
       <ScrollArea className="flex-1">
         <div className="p-6">
-          {isLoading ? (
+          {isLoadFailed ? (
+            <LoadErrorSection className="m-6" />
+          ) : isLoading ? (
             <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-300">
               <Loader2 className="animate-spin" size={32} />
               <span className="text-sm font-medium italic">Loading entries...</span>

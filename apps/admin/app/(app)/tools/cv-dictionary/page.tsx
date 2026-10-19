@@ -1,8 +1,9 @@
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { getCVDictionaryByWord, getCVDictionaryWords } from '@/actions/adminCVDictionaryAction';
 import { CVWordList } from './_components/CVWordList';
-import { CVEntryList } from './_components/CVEntryList';
+import { CVEntryPane } from './_components/CVEntryPane';
 import { BookOpenText } from 'lucide-react';
 
 // メタデータ
@@ -23,6 +24,9 @@ interface CVDictionaryPageProps {
 export default async function CVDictionaryPage({ searchParams }: CVDictionaryPageProps) {
   const t = await getTranslations('tools.cvDictionary.page');
   const { word } = await searchParams;
+  const wordEn = word ? decodeURIComponent(word) : null;
+  // 一覧はサーバーで取得し、各ペインは編集・選び直しの後だけブラウザから取り直す
+  const [words, entries] = await Promise.all([getCVDictionaryWords(), wordEn ? getCVDictionaryByWord(wordEn) : null]);
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
@@ -48,7 +52,7 @@ export default async function CVDictionaryPage({ searchParams }: CVDictionaryPag
             className="flex flex-col min-w-0 overflow-hidden"
           >
             <Suspense>
-              <CVWordList />
+              <CVWordList initialWords={words.success ? words.data : null} />
             </Suspense>
           </ResizablePanel>
 
@@ -61,21 +65,11 @@ export default async function CVDictionaryPage({ searchParams }: CVDictionaryPag
             defaultSize={72}
             className="flex flex-col min-w-0 overflow-hidden bg-slate-50"
           >
-            {word ? (
-              <Suspense>
-                <CVEntryList wordEn={decodeURIComponent(word)} />
-              </Suspense>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4">
-                <div className="p-6 bg-white rounded-full shadow-sm">
-                  <BookOpenText size={32} className="text-slate-200" />
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="text-sm font-bold">{t('selectWordTitle')}</p>
-                  <p className="text-xs text-slate-300">{t('selectWordHint')}</p>
-                </div>
-              </div>
-            )}
+            <Suspense>
+              <CVEntryPane
+                initial={wordEn && entries ? { wordEn, entries: entries.success ? entries.data : null } : null}
+              />
+            </Suspense>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

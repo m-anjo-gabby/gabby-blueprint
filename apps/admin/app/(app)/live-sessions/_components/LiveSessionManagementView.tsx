@@ -30,7 +30,6 @@ import {
   getScheduleSlotsForTicket,
   getSessionsForTicket,
   releaseLessonScheduleSlot,
-  getCoachesForMatching,
 } from '@/actions/adminLiveSessionAction';
 import { getAdminSessionStatusBadge, getAdminScheduleStatusLabel } from '@/constants/session';
 import { CancelSessionDialog } from './dialogs/CancelSessionDialog';
@@ -79,9 +78,11 @@ function canCorrectOutcome(session: AdminSessionListItem, now: Date): boolean {
 
 interface LiveSessionManagementViewProps {
   clients: ClientOption[];
+  /** マッチングのダイアログの選択肢（ページでサーバー取得する） */
+  coaches: AdminCoachSummary[];
 }
 
-export function LiveSessionManagementView({ clients }: LiveSessionManagementViewProps) {
+export function LiveSessionManagementView({ clients, coaches }: LiveSessionManagementViewProps) {
   const t = useTranslations('liveSessions.view');
   const tDay = useTranslations('liveSessions.day');
   const tStatus = useTranslations('liveSessions.status');
@@ -103,7 +104,6 @@ export function LiveSessionManagementView({ clients }: LiveSessionManagementView
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [releasingScheduleId, setReleasingScheduleId] = useState<string | null>(null);
 
-  const [coaches, setCoaches] = useState<AdminCoachSummary[]>([]);
   const [sessionTab, setSessionTab] = useState('upcoming');
 
   // 各ダイアログのトリガー状態（フォーム状態・送信処理は各ダイアログコンポーネント自身が持つ）
@@ -113,10 +113,6 @@ export function LiveSessionManagementView({ clients }: LiveSessionManagementView
   const [adjustTarget, setAdjustTarget] = useState<AdminScheduleSlotSummary | null>(null);
   const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
   const [matchSlotNo, setMatchSlotNo] = useState(1);
-
-  useEffect(() => {
-    getCoachesForMatching().then(setCoaches);
-  }, []);
 
   // 顧客が変わったら生徒・以降の選択状態をリセットして再取得
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -35,20 +35,28 @@ import {
 } from '@/components/ui/alert-dialog';
 import { usePlayAudioSpeech } from '@gabby/lib/hooks/usePlayAudioSpeech';
 import { useWordStore } from '@/stores/useWordStore';
+import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
+import { LoadErrorSection } from '@/components/common/LoadErrorSection';
 
 interface PhraseListProps {
   wordId: string;
+  /**
+   * ページでサーバー取得したフレーズの一覧（null は取得の失敗）。開いた時に選ばれていた単語だけにあり、
+   * 選び直した単語（undefined）は表示した時に取得する
+   */
+  initialPhrases?: PhraseRecord[] | null;
 }
 
 /**
  * 単語詳細パネル：フレーズ（例文）の一覧表示と管理を行うコンポーネント
  */
-export function PhraseList({ wordId }: PhraseListProps) {
+export function PhraseList({ wordId, initialPhrases }: PhraseListProps) {
   const t = useTranslations('contents.editor.word.phraseList');
   const { showToast } = useToast();
   const { play, isPlaying, download, isDownloading } = usePlayAudioSpeech();
-  const [phrases, setPhrases] = useState<PhraseRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [phrases, setPhrases] = useState<PhraseRecord[]>(initialPhrases ?? []);
+  const [isLoadFailed, setIsLoadFailed] = useState(initialPhrases === null);
+  const [isLoading, setIsLoading] = useState(initialPhrases === undefined);
 
   // Zustandから更新フラグと単語情報を取得
   const lastUpdated = useWordStore((state) => state.lastUpdated);
@@ -60,8 +68,13 @@ export function PhraseList({ wordId }: PhraseListProps) {
   const fetchPhrases = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getPhrasesByWordId(wordId);
-      setPhrases(data);
+      const res = await getPhrasesByWordId(wordId);
+      if (res.success) {
+        setPhrases(res.data);
+        setIsLoadFailed(false);
+      } else {
+        showToast(t('fetchFailed'), 'error');
+      }
     } catch {
       showToast(t('fetchFailed'), 'error');
     } finally {
@@ -69,9 +82,8 @@ export function PhraseList({ wordId }: PhraseListProps) {
     }
   }, [wordId, showToast, t]);
 
-  useEffect(() => {
-    fetchPhrases();
-  }, [fetchPhrases, lastUpdated]);
+  // 編集の後（lastUpdated の変化）に取り直す。選び直した単語は初期値が無いため、表示した時にも取得する
+  useRefetchOnChange(lastUpdated, fetchPhrases, initialPhrases !== undefined);
 
   /**
    * フレーズの削除実行
@@ -171,7 +183,9 @@ export function PhraseList({ wordId }: PhraseListProps) {
        */}
       <ScrollArea className="flex-1">
         <div className="p-6">
-          {isLoading ? (
+          {isLoadFailed ? (
+            <LoadErrorSection className="m-6" />
+          ) : isLoading ? (
             <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-300">
               <Loader2 className="animate-spin" size={32} />
               <span className="text-sm font-medium italic">Loading phrases...</span>

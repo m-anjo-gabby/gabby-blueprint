@@ -43,10 +43,9 @@ import {
   uploadNoticeFile,
   uploadNoticeImage,
   deleteNoticeFile,
-  utcToJstInputStr,
   type NoticeFormData,
 } from '@/actions/adminNoticeAction';
-import { getClientsFilter } from '@/actions/adminClientAction';
+import { toNoticeInputDate } from '../_lib/dates';
 import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 
 interface PendingAttachment {
@@ -77,6 +76,10 @@ interface NoticeEditorProps {
     is_published?: boolean;
   };
   mode: 'create' | 'edit';
+  /** 対象の顧客の選択肢（ページでサーバー取得する） */
+  clientOptions: ClientOption[];
+  /** 新規作成時の公開日の初期値（JST の YYYY-MM-DD。サーバーとブラウザで日付がずれないよう、ページで決める） */
+  defaultPublishedDate?: string;
 }
 
 /** 見出し画像として受け付ける形式と上限（サーバー側の uploadNoticeImage と同じ） */
@@ -99,7 +102,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
+export function NoticeEditor({ initialData, mode, clientOptions, defaultPublishedDate = '' }: NoticeEditorProps) {
   const t = useTranslations('notice.editor');
   const router = useRouter();
   const { showToast } = useToast();
@@ -123,8 +126,10 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
   const [isPublished, setIsPublished] = React.useState(initialData?.is_published ?? true);
 
   // JST日付入力用文字列 (YYYY-MM-DD)
-  const [publishedAtJst, setPublishedAtJst] = React.useState<string>('');
-  const [expiredAtJst, setExpiredAtJst] = React.useState<string>('');
+  const [publishedAtJst, setPublishedAtJst] = React.useState(() =>
+    initialData?.published_at ? toNoticeInputDate(initialData.published_at) : defaultPublishedDate,
+  );
+  const [expiredAtJst, setExpiredAtJst] = React.useState(() => toNoticeInputDate(initialData?.expired_at));
 
   const [content, setContent] = React.useState(initialData?.content || '');
   const [attachments, setAttachments] = React.useState<PendingAttachment[]>(() => {
@@ -138,38 +143,8 @@ export function NoticeEditor({ initialData, mode }: NoticeEditorProps) {
   });
   const [deletedPaths, setDeletedPaths] = React.useState<string[]>([]);
 
-  const [clientOptions, setClientOptions] = React.useState<ClientOption[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<'edit' | 'preview'>('edit');
-
-  // 初期日時のセット (UTC → JST <input type="date"> 形式へ変換)
-  React.useEffect(() => {
-    const initDates = async () => {
-      if (initialData?.published_at) {
-        const jst = await utcToJstInputStr(initialData.published_at);
-        setPublishedAtJst(jst);
-      } else {
-        // 新規作成時は当日の JST 日付 (YYYY-MM-DD)
-        const nowJstDate = new Date(new Date().getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-        setPublishedAtJst(nowJstDate);
-      }
-
-      if (initialData?.expired_at) {
-        const jstExp = await utcToJstInputStr(initialData.expired_at);
-        setExpiredAtJst(jstExp);
-      }
-    };
-    initDates();
-  }, [initialData]);
-
-  // 顧客選択肢の取得
-  React.useEffect(() => {
-    const fetchClients = async () => {
-      const clients = await getClientsFilter();
-      setClientOptions(clients);
-    };
-    fetchClients();
-  }, []);
 
   // 選び直し・画面を離れる時に、前のプレビューURLを片付ける
   React.useEffect(() => {

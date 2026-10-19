@@ -2,6 +2,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
+import { LoadErrorSection } from '@/components/common/LoadErrorSection';
+import { SPRINT_EDITOR_INITIAL_LEVEL } from '../../../_lib/editorDefaults';
 import { useTranslations } from 'next-intl';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUESTION_TYPES, type SprintQuestionType, type SprintQuestion } from '@gabby/types/sprint';
@@ -18,30 +22,39 @@ import { SprintBulkImportDialog } from './SprintBulkImportDialog';
 
 interface SprintEditorProps {
   contentId: string;
-  initialType?: SprintQuestionType;
+  initialType: SprintQuestionType;
   content: Content;
+  /** ページでサーバー取得した、initialType・レベル1の問題の一覧（null は取得の失敗） */
+  initialQuestions: SprintQuestion[] | null;
 }
 
-export function SprintEditor({ contentId, initialType, content }: SprintEditorProps) {
+export function SprintEditor({ contentId, initialType, content, initialQuestions }: SprintEditorProps) {
   const t = useTranslations('contents.editor.sprint.index');
-  const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialType || '0');
-  const [selectedLevel, setSelectedLevel] = useState<string>('1');
-  const [questions, setQuestions] = useState<SprintQuestion[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const tCommon = useTranslations('common');
+  const { showToast } = useToast();
+  const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialType);
+  const [selectedLevel, setSelectedLevel] = useState<string>(String(SPRINT_EDITOR_INITIAL_LEVEL));
+  const [questions, setQuestions] = useState<SprintQuestion[]>(initialQuestions ?? []);
+  const [isLoadFailed, setIsLoadFailed] = useState(initialQuestions === null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchQuestions = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await getSprintQuestionsByFilter(contentId, selectedType, Number(selectedLevel));
-      setQuestions(data);
+      const res = await getSprintQuestionsByFilter(contentId, selectedType, Number(selectedLevel));
+      if (res.success) {
+        setQuestions(res.data);
+        setIsLoadFailed(false);
+      } else {
+        showToast(tCommon('errors.loadFailed'), 'error');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [contentId, selectedType, selectedLevel]);
+  }, [contentId, selectedType, selectedLevel, showToast, tCommon]);
 
-  useEffect(() => {
-    fetchQuestions();
-  }, [fetchQuestions]);
+  // 種別・レベルを選び直した時だけ取り直す。開いた時の一覧はページで取得する
+  useRefetchOnChange(`${selectedType}:${selectedLevel}`, fetchQuestions);
 
   const sprintMeta = useMemo(() => content.metadata?.sprint, [content]);
 
@@ -198,7 +211,9 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
 
       {/* リストエリア */}
       <div className="flex-1 overflow-hidden">
-        {isLoading ? (
+        {isLoadFailed ? (
+          <LoadErrorSection className="m-6" />
+        ) : isLoading ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-300">
             <Loader2 className="animate-spin" size={32} />
             <span className="text-sm font-medium italic">Loading questions...</span>

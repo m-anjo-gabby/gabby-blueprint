@@ -119,19 +119,6 @@ function jstToUtcIso(jstStr: string | null | undefined): string | null {
 }
 
 /**
- * UTCの日時文字列を JST の <input type="date"> 用文字列 (YYYY-MM-DD) に変換
- */
-export async function utcToJstInputStr(utcStr: string | null | undefined): Promise<string> {
-  await requireAdminRole(SYSTEM_ADMIN_ONLY);
-  if (!utcStr) return '';
-  const d = new Date(utcStr);
-  if (isNaN(d.getTime())) return '';
-  // JST (+9時間)
-  const jstDate = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  return jstDate.toISOString().slice(0, 10);
-}
-
-/**
  * お知らせ一覧取得（ページネーション・タイトルの部分一致検索・種別での絞り込み・顧客名結合付き）
  */
 export async function getNotices(params: ListParams<'type'>): Promise<ListResult<AdminNoticeListItem>> {

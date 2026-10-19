@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -26,21 +26,25 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useWordStore } from '@/stores/useWordStore';
 import { clientLogger } from '@gabby/lib/logger/client';
+import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
+import { LoadErrorSection } from '@/components/common/LoadErrorSection';
 
 interface WordListProps {
   contentId: string;
+  /** ページでサーバー取得した単語の一覧（null は取得の失敗） */
+  initialWords: WordRecord[] | null;
 }
 
-export function WordList({ contentId }: WordListProps) {
+export function WordList({ contentId, initialWords }: WordListProps) {
   const t = useTranslations('contents.editor.word.wordList');
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedWordId = searchParams.get('wordId');
   const { showToast } = useToast();
 
-  const [words, setWords] = useState<WordRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [words, setWords] = useState<WordRecord[]>(initialWords ?? []);
+  const [isLoadFailed, setIsLoadFailed] = useState(initialWords === null);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const lastUpdated = useWordStore((state) => state.lastUpdated);
@@ -49,8 +53,13 @@ export function WordList({ contentId }: WordListProps) {
   const fetchWords = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getWordsByContentId(contentId);
-      setWords(data);
+      const res = await getWordsByContentId(contentId);
+      if (res.success) {
+        setWords(res.data);
+        setIsLoadFailed(false);
+      } else {
+        showToast(t('fetchFailed'), 'error');
+      }
     } catch {
       showToast(t('fetchFailed'), 'error');
     } finally {
@@ -58,9 +67,8 @@ export function WordList({ contentId }: WordListProps) {
     }
   }, [contentId, showToast, t]);
 
-  useEffect(() => {
-    fetchWords();
-  }, [fetchWords, lastUpdated]);
+  // 編集の後（lastUpdated の変化）だけ取り直す。初期表示はページで取得した一覧を使う
+  useRefetchOnChange(lastUpdated, fetchWords);
 
   /**
    * 初期読み込み時、またはURLのwordIdが変わった際の同期処理
@@ -80,8 +88,8 @@ export function WordList({ contentId }: WordListProps) {
    * 単語選択時
    */
   const handleSelect = (word: WordRecord) => {
-    // 1. URLを更新
-    router.push(`${pathname}?wordId=${word.word_id}`);
+    // 1. URLを更新（履歴だけを変え、ページをサーバーで描き直さない。フレーズは PhraseList が取り直す）
+    window.history.pushState(null, '', `${pathname}?wordId=${word.word_id}`);
     // 2. ストアに単語オブジェクトをまるごと保存
     setSelectedWord(word);
   };
@@ -108,7 +116,7 @@ export function WordList({ contentId }: WordListProps) {
 
         // 削除した単語が現在選択中の単語なら、右パネルを閉じるために URL をクリア
         if (selectedWordId === wordId) {
-          router.push(pathname);
+          window.history.pushState(null, '', pathname);
         }
       } else {
         showToast(result.message || t('deleteFailed'), 'error');
@@ -140,7 +148,9 @@ export function WordList({ contentId }: WordListProps) {
 
       {/* リストエリア */}
       <ScrollArea className="flex-1">
-        {isLoading ? (
+        {isLoadFailed ? (
+          <LoadErrorSection className="m-4" />
+        ) : isLoading ? (
           <div className="flex justify-center p-12">
             <Loader2 className="animate-spin text-slate-200" />
           </div>
