@@ -5,6 +5,7 @@
 ## 1. 前提
 
 - 入口の `proxy.ts` は**画面のパス**でログインとロールを判定する。サーバーアクションは、どの画面のパス（`/login` 等の公開の画面を含む）に送っても実行できるため、proxy では守れない。サーバーアクションは、ログインしていない人からも呼ばれる前提で書く。
+- ログイン中の利用者は `getAuthUser()`（`packages/lib/supabase/authUser.ts`）で取り、`supabase.auth.getUser()` を直接呼ばない。各リクエストは入口の proxy で `auth.getUser()`（Auth サーバーへの問い合わせ。失効したセッションも弾く）を通っているため、中では `auth.getClaims()` による手元の JWT の検証を `cache()` で1回にまとめる（処理ごとに Auth サーバーへ問い合わせると、順番待ちが毎回1段増える）。入口の `proxy-base.ts` と認証そのもの（ログイン・パスワード変更等の `packages/lib/auth/core.ts`）は `auth.getUser()` のままにする。
 - `createServerClient()` は利用者の権限で DB を読み書きし、RLS が効く。`createAdminClient()`（service_role）は RLS も関数の権限も通らない。service_role を使う処理は、RLS の代わりにコードで、誰が何をしてよいかを確かめる。
 
 ## 2. サーバーアクション

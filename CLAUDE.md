@@ -96,17 +96,12 @@
   報告で「未文書化」として一言触れること。
 - devのSupabase接続情報は各アプリの `apps/{admin,coach,student}/.env.local` を使用すること。
   リポジトリ直下の `.env.local` は現在死んでいるプロジェクトを指しており使用しない。
-- `supabase/release/` 配下のリリーススクリプトは、着手前に必ず対象RPCの存在確認
-  （ダミー引数でのRPC呼び出し等）を行い、未反映のstepがないか確認してから進めること。
-  反映済みの前提で進めると、途中の関数だけ反映されていて手戻りが発生する。
-- SECURITY DEFINER関数を認証済みユーザーの代わりに呼ぶ場合、service_role（管理者権限）では
-  auth.uid()がNULLになり、`本人 OR admin` 系の認可チェックが意図せず素通りする（＝誤った
-  分岐に入る）ことがある。テストスクリプトから業務ロジックRPCを呼ぶ際は、実際にサインインした
-  各ロールのJWTを使うこと。
-- **テストデータの後始末**: データ主体テストで作成したテストデータ（ユーザー・契約・セッション等）は、
-  原則としてテスト完了後に削除すること。ただし、ブラウザでの手動確認など、ユーザーが明示的に
-  「データを残してほしい」と指示した場合はこの限りではなく、削除しない。残したデータの期限は
-  そのブランチが次の段階へマージされるまで（アカウントの選び方・命名・後始末は `testing/FIXTURES.md`
+- `supabase/release/` のリリーススクリプトに依る作業・テストは、着手前に対象の RPC の存在を確かめ（ダミーの引数での呼び出し等）、
+  未反映の step がないか確かめる（途中の関数だけが反映された状態で進めると手戻りになる。`testing/CONVENTIONS.md` 4章）。
+- テストスクリプトから業務ロジックの RPC を呼ぶ場合は、実際にサインインした各ロールの JWT を使う。service_role では
+  `auth.uid()` が NULL になり、「本人 OR admin」等の認可の分岐を素通りする（`testing/CONVENTIONS.md` 3章）。
+- **テストデータの後始末**: データ主体テストで作ったデータは、テストの完了後に削除する。ユーザーが手動の確認等のために
+  「残してほしい」と指示した場合だけ残し、期限はそのブランチが次の段階へマージされるまで（`testing/FIXTURES.md`
   「アカウントの種類と使い分け」が正本）。
 
 # 7. データ更新・DBスキーマ管理の規約
@@ -114,39 +109,16 @@
 - **データ更新の経路**: 業務データの変更はサーバー側（Server Component / Server Actions
   `'use server'`）からのみ行い、クライアントコンポーネント（`'use client'`）から直接
   INSERT/UPDATE/DELETEは行わない（認証画面等、ケースによる例外はあり得る）。
-- **RPC(SECURITY DEFINER関数)が必要なケース**: サーバーアクション内で完結する単純な単一テーブルの
-  INSERT/UPDATE（例: `supabase.from('com_m_notice').update(...)`）はRPC化せず直接呼び出してよい。
-  複数テーブルにまたがる処理、トランザクションとしての一貫性が必要な処理、RLSの範囲を越えた
-  認可判定が必要な処理は、SECURITY DEFINER関数（RPC）として実装すること。
-- **ログイン中のユーザーの取得**: サーバーアクション・Server Component・Route Handler では
-  `supabase.auth.getUser()` を直接呼ばず、`getAuthUser()`（`packages/lib/supabase/authUser.ts`）を使う。
-  各リクエストは入口の `proxy.ts` で `auth.getUser()`（Auth サーバーへの問い合わせ。失効したセッションも弾く）を
-  通過済みのため、リクエスト内では `auth.getClaims()` による手元の JWT 検証＋`cache()` で1回にまとめる
-  （処理ごとに Auth サーバーへ問い合わせると、順番待ちの1段目が毎回増える）。入口の `proxy-base.ts` と
-  認証そのもの（ログイン・パスワード変更等の `packages/lib/auth/core.ts`）は `auth.getUser()` のままにする。
+- **ログイン中のユーザーの取得**: サーバーアクション・Server Component・Route Handler では `supabase.auth.getUser()` を
+  直接呼ばず、`getAuthUser()`（`packages/lib/supabase/authUser.ts`）を使う（理由と例外は `docs/SECURITY.md` 1章）。
+- **DB を変える作業**（テーブル・関数・ビュー・Storage）は、着手前に `supabase/DDL/README.md` を読む。要点:
+  - 正本（`supabase/DDL/`）は今の形だけを持ち、差分と理由はリリーススクリプト、経緯は git の履歴に置く。
+    適用するスクリプトは開発ブランチごとに `supabase/release/` の1ファイルにまとめる（`supabase/migrations/` は使わない）。
+  - テーブルの定義（`-- @schema` 〜 `-- @end-schema`）は手で書かず、dev に適用した後に `schema.mjs` で実DBから生成する。
+  - 単一のテーブルで済む単純な更新はサーバーアクションから直接書き、複数のテーブル・トランザクション・RLS を越えた認可が要る処理は
+    SECURITY DEFINER の関数（RPC）にする。関数の引数を変える場合は旧シグネチャを `DROP FUNCTION IF EXISTS` してから作る。
+- **削除の規約**: 正本は `docs/DATA-DELETION.md`。論理削除（`delete_flg`）は使わず、残すものは `status` / `is_active`、
+  消すものは物理削除にする。外部キーは全件で `RESTRICT` / `CASCADE` / `SET NULL` を明示する。個人情報を持つテーブル・
+  顧客に属するテーブルを追加したら、同じタスクで退会（`fn_withdraw_user`）・顧客単位の一括削除（`fn_purge_client`）と規約の表を直す。
 - **リリース作業**: staging・本番へのリリース（マージ → DB のリリーススクリプト → 環境変数 → GitHub Actions の `Deploy`）は
   `docs/RELEASE.md` が正本。Claude が進める場合は `.claude/skills/release` に従い、終わったら同スキルの `HISTORY.md` に記録とつまずきを残す。
-- **削除の規約**: 正本は `docs/DATA-DELETION.md`。論理削除（`delete_flg`）は使わず、残すものは意味のある状態
-  （業務の段階は `status`、選択肢の出し分けだけは `is_active`）、消すものは物理削除にする。画面の「削除」は誤登録の取り消しとし、
-  利用実績があれば外部キーの `RESTRICT` で止めて（`isInUseError()`）「使用をやめる」操作を案内する。外部キーは全件で
-  `RESTRICT`（業務の記録・マスタの参照）/ `CASCADE`（親に付属するだけ）/ `SET NULL`（操作者の記録）を明示し、`NO ACTION` を作らない。
-  退会（個人情報の消去）は `fn_withdraw_user`、顧客単位の一括削除は `fn_purge_client` で行い、admin の DangerZone に置く。
-  個人情報を持つテーブル・顧客に属するテーブルを追加したら、同じタスクでこの2つの関数と規約の表を直す。
-- **テーブル設計の規約**: `supabase/DDL/README.md`「テーブル設計の規約」が正本。日時は `insert_date` / `update_date`
-  （更新日時は `trg_set_update_date` で DB が更新する）、区分値の列は CHECK 制約・列のコメント・`packages/types` の定数をそろえ、
-  絞り込みに使う外部キーの列には索引を付ける。
-- RPCのシグネチャを変更する場合は、`DROP FUNCTION IF EXISTS`で旧シグネチャを明示的に削除してから
-  `CREATE OR REPLACE FUNCTION`で新シグネチャを作成すること（Postgresの関数オーバーロードの
-  曖昧性を避けるため）。
-- **DDL/DMLの管理**: テーブル・Function単位の正本は `supabase/DDL/` 配下（`table/`, `function/`等）
-  に保存する。実際にデータベースへ適用するスクリプトは、リリース単位（開発ブランチ）ごとに
-  `supabase/release/` 配下へ1ファイルにまとめて管理する
-  （例: `supabase/release/20260904_feature-20260904-dev_release.sql`）。
-  これはSupabase CLIの`supabase/migrations/`によるmigration機能とは連動させておらず、
-  実質的にmigrationファイルと同義のものとして扱う。新規のタイムスタンプ付きmigrationファイルは
-  作成しないこと。
-- **正本は「今の形」だけを持つ**（詳細は `supabase/DDL/README.md`）。正本に「追加パッチ」等の変更の差分や
-  日付付きの経緯を追記しない（差分と理由はリリーススクリプト、経緯は git の履歴）。テーブルの定義
-  （`-- @schema` 〜 `-- @end-schema` の間）は手で書かず、リリーススクリプトを dev に適用した後に
-  `node supabase/release/schema.mjs --env=dev --write <table>` で実DBから生成する。マーカーの外の設計メモには
-  今有効なルールだけを書き、テーブルの変更でルールが変わった場合は同じタスクで設計メモも更新する（古くなった記述は消す）。関数は `CREATE OR REPLACE` の全体を書き直す。

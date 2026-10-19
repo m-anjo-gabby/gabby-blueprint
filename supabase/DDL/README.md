@@ -50,6 +50,9 @@ CREATE TABLE ...       ← 定義（schema.mjs が実DBから生成する。手�
 
 ## 変更の手順
 
+リリーススクリプトは、リリース単位（開発ブランチ）ごとに1ファイルにまとめる（例: `supabase/release/20260904_feature-20260904-dev_release.sql`）。
+Supabase CLI の `supabase/migrations/` は使っておらず、日時付きの migration のファイルは作らない。
+
 1. リリーススクリプト（`supabase/release/<リリース>.sql`）に、変更の差分（ALTER 等）とその理由を書く
 2. dev に適用する（`node supabase/release/run.mjs <file> --env=dev --sections=pending`）
 3. 定義を取り込む
@@ -108,6 +111,12 @@ Supabase のクライアント（`packages/lib/supabase/*`）は、DB の型で�
 
 `CREATE OR REPLACE` で全体を書いたファイルを、変更のたびに書き直します（追記はしません）。
 先頭のコメントには、テーブルと同じく今有効なルールだけを書きます。
+
+- 関数の引数（シグネチャ）を変える場合は、リリーススクリプトで `DROP FUNCTION IF EXISTS <旧シグネチャ>` を書いてから
+  `CREATE OR REPLACE FUNCTION` で作る（Postgres は引数の違う同名の関数を別に残すため、呼び出しが曖昧になる）。
+- 単一のテーブルで済む単純な INSERT・UPDATE は、サーバーアクションから直接書いてよい（RPC にしない）。
+  複数のテーブルにまたがる処理、1つのトランザクションでそろえる必要がある処理、RLS を越えた認可の判定が要る処理は、
+  SECURITY DEFINER の関数（RPC）にする。
 
 ### 関数の権限
 
