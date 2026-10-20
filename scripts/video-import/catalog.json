@@ -1,0 +1,1435 @@
+{
+  "contents": [
+    {
+      "label": "VIDEO_CVC",
+      "name": "ColorVowel 入門",
+      "category": 3,
+      "sections": [
+        {
+          "name": null,
+          "videos": [
+            {
+              "legacyCode": "video_for_CVChart.mp4",
+              "title": "Color Vowel Chart Instructions",
+              "video": "cvc/video_for_CVChart.mp4",
+              "thumbnail": "cvc/thumbnail/cvchart_main.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_F1",
+      "name": "Foundational 1. INTRODUCTION TO THE COLOR VOWEL APPROACH (CVA)",
+      "category": 1,
+      "sections": [
+        {
+          "name": "1.1 The Color Vowel Chart and the fundamentals of spoken English",
+          "videos": [
+            {
+              "legacyCode": "F-1-1-1.mp4",
+              "title": "Intro to Phono-Focus",
+              "video": "runnow/F-1-1-1.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-1-1.png"
+            },
+            {
+              "legacyCode": "F-1-1-2.mp4",
+              "title": "Discovery: Let's warm up with the Color Vowel Chart! #1",
+              "video": "runnow/F-1-1-2.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-1-2.png"
+            },
+            {
+              "legacyCode": "F-1-1-3.mp4",
+              "title": "Discovery: What is the Color Vowel Approach?",
+              "video": "runnow/F-1-1-3.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-1-3.png"
+            },
+            {
+              "legacyCode": "F-1-1-4.mp4",
+              "title": "Discovery: What are syllables and how do I count them?",
+              "video": "runnow/F-1-1-4.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-1-4.png"
+            },
+            {
+              "legacyCode": "F-1-1-5.mp4",
+              "title": "Discovery: Why is English difficult for Japanese speakers?",
+              "video": "runnow/F-1-1-5.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-1-5.png"
+            },
+            {
+              "legacyCode": "F-1-1-6.mp4",
+              "title": "Discovery: Vowel letters versus vowel sounds",
+              "video": "runnow/F-1-1-6.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-1-6.png"
+            },
+            {
+              "legacyCode": "F-1-1-7.mp4",
+              "title": "Discovery: Some words have more than one Color",
+              "video": "runnow/F-1-1-7.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-1-7.png"
+            },
+            {
+              "legacyCode": "F-1-1-8.mp4",
+              "title": "Review: The Three Questions",
+              "video": "runnow/F-1-1-8.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-1-8.png"
+            },
+            {
+              "legacyCode": "F-1-1-9.mp4",
+              "title": "Discovery: Why is the shape of the Color Vowel Chart important?",
+              "video": "runnow/F-1-1-9.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-1-9.png"
+            },
+            {
+              "legacyCode": "F-1-1-10.mp4",
+              "title": "Review: Let's warm up with the Color Vowel Chart! #2",
+              "video": "runnow/F-1-1-10.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-1-10.png"
+            }
+          ]
+        },
+        {
+          "name": "1.2 Color Vowel Yoga",
+          "videos": [
+            {
+              "legacyCode": "F-1-2-1.mp4",
+              "title": "Discovery: Using the Open Hand gesture",
+              "video": "runnow/F-1-2-1.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-2-1.png"
+            },
+            {
+              "legacyCode": "F-1-2-2.mp4",
+              "title": "Bonus: More about the Open Hand gesture",
+              "video": "runnow/F-1-2-2.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-2-2.png"
+            },
+            {
+              "legacyCode": "F-1-2-3.mp4",
+              "title": "Disovery: What is 'schwa' and why is it important?",
+              "video": "runnow/F-1-2-3.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-2-3.png"
+            },
+            {
+              "legacyCode": "F-1-2-4.mp4",
+              "title": "Practice: The 'schwaccer' movement",
+              "video": "runnow/F-1-2-4.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-2-4.png"
+            }
+          ]
+        },
+        {
+          "name": "1.3 The Color Vowel Organizer",
+          "videos": [
+            {
+              "legacyCode": "F-1-3-1.mp4",
+              "title": "Discovery: The Color Vowel Organizer",
+              "video": "runnow/F-1-3-1.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-3-1.png"
+            },
+            {
+              "legacyCode": "F-1-3-2.mp4",
+              "title": "Practice: Let's organize and flood a few words!",
+              "video": "runnow/F-1-3-2.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-3-2.png"
+            },
+            {
+              "legacyCode": "F-1-3-3.mp4",
+              "title": "Review: Vowel letters versus vowel sounds",
+              "video": "runnow/F-1-3-3.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-3-3.png"
+            }
+          ]
+        },
+        {
+          "name": "1.4 Using the CVA to practice the rhythm of English",
+          "videos": [
+            {
+              "legacyCode": "F-1-4-1.mp4",
+              "title": "Discovery: Syllable and stress-timed languages",
+              "video": "runnow/F-1-4-1.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-4-1.png"
+            },
+            {
+              "legacyCode": "F-1-4-2.mp4",
+              "title": "Discovery: From a word to a sentence",
+              "video": "runnow/F-1-4-2.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-4-2.png"
+            },
+            {
+              "legacyCode": "F-1-4-3.mp4",
+              "title": "Practice: Using Color Vowel in conversation",
+              "video": "runnow/F-1-4-3.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-4-3.png"
+            },
+            {
+              "legacyCode": "F-1-4-4.mp4",
+              "title": "Let's review what you've learned so far!",
+              "video": "runnow/F-1-4-4.mp4",
+              "thumbnail": "runnow/thumbnail/F-1-4-4.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_F2",
+      "name": "Foundational 2. COLOR VOWEL YOGA, CONTINUED",
+      "category": 1,
+      "sections": [
+        {
+          "name": "2.1. Moving and non-moving vowels",
+          "videos": [
+            {
+              "legacyCode": "F-2-1-1.mp4",
+              "title": "Discovery: Moving and non-moving vowels",
+              "video": "runnow/F-2-1-1.mp4",
+              "thumbnail": "runnow/thumbnail/F-2-1-1.png"
+            },
+            {
+              "legacyCode": "F-2-1-2.mp4",
+              "title": "Discovery: Vowels that move to /y/, /w/ and /r/",
+              "video": "runnow/F-2-1-2.mp4",
+              "thumbnail": "runnow/thumbnail/F-2-1-2.png"
+            },
+            {
+              "legacyCode": "F-2-1-3.mp4",
+              "title": "Discovery: Vowels that move to /y/, /w/ and /r/",
+              "video": "runnow/F-2-1-3.mp4",
+              "thumbnail": "runnow/thumbnail/F-2-1-3.png"
+            },
+            {
+              "legacyCode": "F-2-1-4.mp4",
+              "title": "Discovery: Vowels that move to /y/, /w/ and /r/",
+              "video": "runnow/F-2-1-4.mp4",
+              "thumbnail": "runnow/thumbnail/F-2-1-4.png"
+            },
+            {
+              "legacyCode": "F-2-1-5.mp4",
+              "title": "Practice: Invisible /y/ and /w/",
+              "video": "runnow/F-2-1-5.mp4",
+              "thumbnail": "runnow/thumbnail/F-2-1-5.png"
+            }
+          ]
+        },
+        {
+          "name": "2.2 'R' vowel sounds",
+          "videos": [
+            {
+              "legacyCode": "F-2-2-1.mp4",
+              "title": "Discovery: The Purple Tongue Position and PURPLE SHIRT",
+              "video": "runnow/F-2-2-1.mp4",
+              "thumbnail": "runnow/thumbnail/F-2-2-1.png"
+            },
+            {
+              "legacyCode": "F-2-2-2.mp4",
+              "title": "Practice: The Purple Tongue Position and PURPLE SHIRT",
+              "video": "runnow/F-2-2-2.mp4",
+              "thumbnail": "runnow/thumbnail/F-2-2-2.png"
+            },
+            {
+              "legacyCode": "F-2-2-3.mp4",
+              "title": "Discovery: R-controlled vowels",
+              "video": "runnow/F-2-2-3.mp4",
+              "thumbnail": "runnow/thumbnail/F-2-2-3.png"
+            },
+            {
+              "legacyCode": "F-2-2-4.mp4",
+              "title": "Practice: R-controlled vowels",
+              "video": "runnow/F-2-2-4.mp4",
+              "thumbnail": "runnow/thumbnail/F-2-2-4.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_F3",
+      "name": "Foundational 3. CONSONANT SOUNDS",
+      "category": 1,
+      "sections": [
+        {
+          "name": "3.1 'R' and 'L'",
+          "videos": [
+            {
+              "legacyCode": "F-3-1-1.mp4",
+              "title": "Discovery: The consonant /r/",
+              "video": "runnow/F-3-1-1.mp4",
+              "thumbnail": "runnow/thumbnail/F-3-1-1.png"
+            },
+            {
+              "legacyCode": "F-3-1-2.mp4",
+              "title": "Practice: The consonant /r/",
+              "video": "runnow/F-3-1-2.mp4",
+              "thumbnail": "runnow/thumbnail/F-3-1-2.png"
+            },
+            {
+              "legacyCode": "F-3-1-3.mp4",
+              "title": "Discovery: Light and dark /l/",
+              "video": "runnow/F-3-1-3.mp4",
+              "thumbnail": "runnow/thumbnail/F-3-1-3.png"
+            },
+            {
+              "legacyCode": "F-3-1-4.mp4",
+              "title": "Practice:Light and dark /l/",
+              "video": "runnow/F-3-1-4.mp4",
+              "thumbnail": "runnow/thumbnail/F-3-1-4.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_F4",
+      "name": "Foundational 4. THE RHYTHM OF ENGLISH",
+      "category": 1,
+      "sections": [
+        {
+          "name": "4.1 Content and structure words",
+          "videos": [
+            {
+              "legacyCode": "F-4-1-1.mp4",
+              "title": "Dicovery: Content and structure words",
+              "video": "runnow/F-4-1-1.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-1-1.png"
+            },
+            {
+              "legacyCode": "F-4-1-2.mp4",
+              "title": "Practice: Content and structure words",
+              "video": "runnow/F-4-1-2.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-1-2.png"
+            },
+            {
+              "legacyCode": "F-4-1-3.mp4",
+              "title": "Bonus: More about content and structure words",
+              "video": "runnow/F-4-1-3.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-1-3.png"
+            }
+          ]
+        },
+        {
+          "name": "4.2 Reducing structure words",
+          "videos": [
+            {
+              "legacyCode": "F-4-2-1.mp4",
+              "title": "Discovery: Reducing structure words",
+              "video": "runnow/F-4-2-1.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-2-1.png"
+            },
+            {
+              "legacyCode": "F-4-2-2.mp4",
+              "title": "Practice: Reducing structure words",
+              "video": "runnow/F-4-2-2.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-2-2.png"
+            }
+          ]
+        },
+        {
+          "name": "4.3 Connected speech",
+          "videos": [
+            {
+              "legacyCode": "F-4-3-1.mp4",
+              "title": "Discovery: The five types of connected speech",
+              "video": "runnow/F-4-3-1.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-3-1.png"
+            },
+            {
+              "legacyCode": "F-4-3-2.mp4",
+              "title": "Discovery: Linking in a sentence",
+              "video": "runnow/F-4-3-2.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-3-2.png"
+            },
+            {
+              "legacyCode": "F-4-3-3.mp4",
+              "title": "Practice: Linking in a sentence",
+              "video": "runnow/F-4-3-3.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-3-3.png"
+            },
+            {
+              "legacyCode": "F-4-3-4.mp4",
+              "title": "Discovery: Invisible /y/ and /w/ in a sentence",
+              "video": "runnow/F-4-3-4.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-3-4.png"
+            },
+            {
+              "legacyCode": "F-4-3-5.mp4",
+              "title": "Practice: Invisible /y/ and /w/ in a sentence",
+              "video": "runnow/F-4-3-5.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-3-5.png"
+            },
+            {
+              "legacyCode": "F-4-3-6.mp4",
+              "title": "Discovery: Blended sounds in a sentence",
+              "video": "runnow/F-4-3-6.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-3-6.png"
+            },
+            {
+              "legacyCode": "F-4-3-7.mp4",
+              "title": "Practice: Blended sounds in a sentence",
+              "video": "runnow/F-4-3-7.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-3-7.png"
+            }
+          ]
+        },
+        {
+          "name": "4.4 Thought groups",
+          "videos": [
+            {
+              "legacyCode": "F-4-4-1.mp4",
+              "title": "Discovery: Thought groups and pauses",
+              "video": "runnow/F-4-4-1.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-4-1.png"
+            },
+            {
+              "legacyCode": "F-4-4-2.mp4",
+              "title": "Practice: Thought groups and pauses",
+              "video": "runnow/F-4-4-2.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-4-2.png"
+            },
+            {
+              "legacyCode": "F-4-4-3.mp4",
+              "title": "Discovery: Thought groups and focus words",
+              "video": "runnow/F-4-4-3.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-4-3.png"
+            },
+            {
+              "legacyCode": "F-4-4-4.mp4",
+              "title": "Practice: Thought groups and focus words",
+              "video": "runnow/F-4-4-4.mp4",
+              "thumbnail": "runnow/thumbnail/F-4-4-4.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_P1",
+      "name": "Personalized 1. INTRODUCTION TO THE COLOR VOWEL APPROACH (CVA)",
+      "category": 1,
+      "sections": [
+        {
+          "name": "1.1 Color Vowel Yoga",
+          "videos": [
+            {
+              "legacyCode": "P-1-1-1.mp4",
+              "title": "Discovery: GREEN TEA",
+              "video": "runnow/P-1-1-1.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-1.png"
+            },
+            {
+              "legacyCode": "P-1-1-2.mp4",
+              "title": "Discovery: SILVER PIN",
+              "video": "runnow/P-1-1-2.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-2.png"
+            },
+            {
+              "legacyCode": "P-1-1-3.mp4",
+              "title": "Discovery: GRAY DAY",
+              "video": "runnow/P-1-1-3.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-3.png"
+            },
+            {
+              "legacyCode": "P-1-1-4.mp4",
+              "title": "Discovery: RED PEPPER and BLACK CAT",
+              "video": "runnow/P-1-1-4.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-4.png"
+            },
+            {
+              "legacyCode": "P-1-1-5.mp4",
+              "title": "Discovery: OLIVE SOCK",
+              "video": "runnow/P-1-1-5.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-5.png"
+            },
+            {
+              "legacyCode": "P-1-1-6.mp4",
+              "title": "Bonus: OLIVE SOCK versus AUBURN DOG",
+              "video": "runnow/P-1-1-6.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-6.png"
+            },
+            {
+              "legacyCode": "P-1-1-7.mp4",
+              "title": "Discovery: a CUP of MUSTARD",
+              "video": "runnow/P-1-1-7.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-7.png"
+            },
+            {
+              "legacyCode": "P-1-1-8.mp4",
+              "title": "Discovery: ROSE BOAT",
+              "video": "runnow/P-1-1-8.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-8.png"
+            },
+            {
+              "legacyCode": "P-1-1-9.mp4",
+              "title": "Discovery: WOODEN HOOK",
+              "video": "runnow/P-1-1-9.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-9.png"
+            },
+            {
+              "legacyCode": "P-1-1-10.mp4",
+              "title": "Discovery: BLUE MOON",
+              "video": "runnow/P-1-1-10.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-10.png"
+            },
+            {
+              "legacyCode": "P-1-1-11.mp4",
+              "title": "Discovery: BROWN COW",
+              "video": "runnow/P-1-1-11.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-11.png"
+            },
+            {
+              "legacyCode": "P-1-1-12.mp4",
+              "title": "Discovery: WHITE TIE",
+              "video": "runnow/P-1-1-12.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-1-12.png"
+            }
+          ]
+        },
+        {
+          "name": "1.2 Moving and non-moving vowels",
+          "videos": [
+            {
+              "legacyCode": "P-1-2-1.mp4",
+              "title": "Discovery: The \"O\" Vowel Sounds",
+              "video": "runnow/P-1-2-1.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-2-1.png"
+            },
+            {
+              "legacyCode": "P-1-2-2.mp4",
+              "title": "Bonus: Invisible /y/ and BLUE MOON",
+              "video": "runnow/P-1-2-2.mp4",
+              "thumbnail": "runnow/thumbnail/P-1-2-2.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_P2",
+      "name": "Personalized 2. CONSONANT SOUNDS",
+      "category": 1,
+      "sections": [
+        {
+          "name": "2.1 Tricky consonant sounds",
+          "videos": [
+            {
+              "legacyCode": "P-2-1-1.mp4",
+              "title": "Discovery: /th/ and /TH/",
+              "video": "runnow/P-2-1-1.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-1.png"
+            },
+            {
+              "legacyCode": "P-2-1-2.mp4",
+              "title": "Practice: /th/ and /TH/",
+              "video": "runnow/P-2-1-2.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-2.png"
+            },
+            {
+              "legacyCode": "P-2-1-3.mp4",
+              "title": "Discovery: /f/ and /v/",
+              "video": "runnow/P-2-1-3.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-3.png"
+            },
+            {
+              "legacyCode": "P-2-1-4.mp4",
+              "title": "Practice: /f/ and /v/",
+              "video": "runnow/P-2-1-4.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-4.png"
+            },
+            {
+              "legacyCode": "P-2-1-5.mp4",
+              "title": "Discovery: /b/ and /p/",
+              "video": "runnow/P-2-1-5.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-5.png"
+            },
+            {
+              "legacyCode": "P-2-1-6.mp4",
+              "title": "Practice: /b/ and /p/",
+              "video": "runnow/P-2-1-6.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-6.png"
+            },
+            {
+              "legacyCode": "P-2-1-7.mp4",
+              "title": "Discovery: -s endings",
+              "video": "runnow/P-2-1-7.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-7.png"
+            },
+            {
+              "legacyCode": "P-2-1-8.mp4",
+              "title": "Practice: -s endings",
+              "video": "runnow/P-2-1-8.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-8.png"
+            },
+            {
+              "legacyCode": "P-2-1-9.mp4",
+              "title": "Discovery: /s/ and /sh/",
+              "video": "runnow/P-2-1-9.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-9.png"
+            },
+            {
+              "legacyCode": "P-2-1-10.mp4",
+              "title": "Practice: /s/ and /sh/",
+              "video": "runnow/P-2-1-10.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-10.png"
+            },
+            {
+              "legacyCode": "P-2-1-11.mp4",
+              "title": "Discovery: The true and silent /t/",
+              "video": "runnow/P-2-1-11.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-11.png"
+            },
+            {
+              "legacyCode": "P-2-1-12.mp4",
+              "title": "Practice: The true and silent /t/",
+              "video": "runnow/P-2-1-12.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-12.png"
+            },
+            {
+              "legacyCode": "P-2-1-13.mp4",
+              "title": "Discovery: The 'flap /t/' in North American English",
+              "video": "runnow/P-2-1-13.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-13.png"
+            },
+            {
+              "legacyCode": "P-2-1-14.mp4",
+              "title": "Practice: The 'flap /t/' in North American English",
+              "video": "runnow/P-2-1-14.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-14.png"
+            },
+            {
+              "legacyCode": "P-2-1-15.mp4",
+              "title": "Discovery: The glottal /t/",
+              "video": "runnow/P-2-1-15.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-15.png"
+            },
+            {
+              "legacyCode": "P-2-1-16.mp4",
+              "title": "Practice: The glottal /t/",
+              "video": "runnow/P-2-1-16.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-16.png"
+            },
+            {
+              "legacyCode": "P-2-1-17.mp4",
+              "title": "Bonus: The 't' sounds",
+              "video": "runnow/P-2-1-17.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-17.png"
+            },
+            {
+              "legacyCode": "P-2-1-18.mp4",
+              "title": "Discovery: /n/ and /ng/",
+              "video": "runnow/P-2-1-18.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-18.png"
+            },
+            {
+              "legacyCode": "P-2-1-19.mp4",
+              "title": "Practice: /n/ and /ng/",
+              "video": "runnow/P-2-1-19.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-1-19.png"
+            }
+          ]
+        },
+        {
+          "name": "2.2 Consonant clusters",
+          "videos": [
+            {
+              "legacyCode": "P-2-2-1.mp4",
+              "title": "Discovery: An overview of consonant clusters",
+              "video": "runnow/P-2-2-1.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-2-1.png"
+            },
+            {
+              "legacyCode": "P-2-2-2.mp4",
+              "title": "Discovery: Initial consonant clusters",
+              "video": "runnow/P-2-2-2.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-2-2.png"
+            },
+            {
+              "legacyCode": "P-2-2-3.mp4",
+              "title": "Practice: Initial consonant clusters",
+              "video": "runnow/P-2-2-3.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-2-3.png"
+            },
+            {
+              "legacyCode": "P-2-2-4.mp4",
+              "title": "Discovery: Final consonant clusters",
+              "video": "runnow/P-2-2-4.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-2-4.png"
+            },
+            {
+              "legacyCode": "P-2-2-5.mp4",
+              "title": "Practice: Final consonant clusters",
+              "video": "runnow/P-2-2-5.mp4",
+              "thumbnail": "runnow/thumbnail/P-2-2-5.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_P3",
+      "name": "Personalized 3. THE RHYTHM OF ENGLISH",
+      "category": 1,
+      "sections": [
+        {
+          "name": "3.1 Connected speech",
+          "videos": [
+            {
+              "legacyCode": "P-3-1-1.mp4",
+              "title": "Discovery: Disappearing sounds in a sentence",
+              "video": "runnow/P-3-1-1.mp4",
+              "thumbnail": "runnow/thumbnail/P-3-1-1.png"
+            },
+            {
+              "legacyCode": "P-3-1-2.mp4",
+              "title": "Practice: Disappearing sounds in a sentence",
+              "video": "runnow/P-3-1-2.mp4",
+              "thumbnail": "runnow/thumbnail/P-3-1-2.png"
+            },
+            {
+              "legacyCode": "P-3-1-3.mp4",
+              "title": "Discovery: Back-to-back consonants in a sentence",
+              "video": "runnow/P-3-1-3.mp4",
+              "thumbnail": "runnow/thumbnail/P-3-1-3.png"
+            },
+            {
+              "legacyCode": "P-3-1-4.mp4",
+              "title": "Practice: Back-to-back consonants in a sentence",
+              "video": "runnow/P-3-1-4.mp4",
+              "thumbnail": "runnow/thumbnail/P-3-1-4.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_P4",
+      "name": "Personalized 4. THE MUSIC OF ENGLISH",
+      "category": 1,
+      "sections": [
+        {
+          "name": "4.1 Intonation: The Basics",
+          "videos": [
+            {
+              "legacyCode": "P-4-1-1.mp4",
+              "title": "Discovery: The importance of intonation",
+              "video": "runnow/P-4-1-1.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-1-1.png"
+            },
+            {
+              "legacyCode": "P-4-1-2.mp4",
+              "title": "Discovery: Jumps and glides in intonation",
+              "video": "runnow/P-4-1-2.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-1-2.png"
+            },
+            {
+              "legacyCode": "P-4-1-3.mp4",
+              "title": "Practice: Jumps and glides in intonation",
+              "video": "runnow/P-4-1-3.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-1-3.png"
+            }
+          ]
+        },
+        {
+          "name": "4.2 Intonation: Statements",
+          "videos": [
+            {
+              "legacyCode": "P-4-2-1.mp4",
+              "title": "Discovery: Intonation in an affirmative statement.",
+              "video": "runnow/P-4-2-1.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-2-1.png"
+            },
+            {
+              "legacyCode": "P-4-2-2.mp4",
+              "title": "Practice: Intonation in an affirmative statement",
+              "video": "runnow/P-4-2-2.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-2-2.png"
+            },
+            {
+              "legacyCode": "P-4-2-3.mp4",
+              "title": "Discovery: Intonation in a list",
+              "video": "runnow/P-4-2-3.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-2-3.png"
+            },
+            {
+              "legacyCode": "P-4-2-4.mp4",
+              "title": "Practice: Intonation in a list",
+              "video": "runnow/P-4-2-4.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-2-4.png"
+            }
+          ]
+        },
+        {
+          "name": "4.3 Intonation: Questions",
+          "videos": [
+            {
+              "legacyCode": "P-4-3-1.mp4",
+              "title": "Discovery: Intonation in a yes/no question",
+              "video": "runnow/P-4-3-1.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-3-1.png"
+            },
+            {
+              "legacyCode": "P-4-3-2.mp4",
+              "title": "Practice: Intonation in a yes/no question",
+              "video": "runnow/P-4-3-2.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-3-2.png"
+            },
+            {
+              "legacyCode": "P-4-3-3.mp4",
+              "title": "Discovery: Intonation in a 'wh' question",
+              "video": "runnow/P-4-3-3.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-3-3.png"
+            },
+            {
+              "legacyCode": "P-4-3-4.mp4",
+              "title": "Practice: Intonation in a 'wh' question",
+              "video": "runnow/P-4-3-4.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-3-4.png"
+            }
+          ]
+        },
+        {
+          "name": "4.4 Tools to practice the music of English",
+          "videos": [
+            {
+              "legacyCode": "P-4-4-1.mp4",
+              "title": "Discovery: Using a kazoo to improve your intonation and pitch",
+              "video": "runnow/P-4-4-1.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-4-1.png"
+            },
+            {
+              "legacyCode": "P-4-4-2.mp4",
+              "title": "Practice: Using a kazoo to improve your intonation and pitch",
+              "video": "runnow/P-4-4-2.mp4",
+              "thumbnail": "runnow/thumbnail/P-4-4-2.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_S1",
+      "name": "発音練習のツール",
+      "category": 1,
+      "sections": [
+        {
+          "name": null,
+          "videos": [
+            {
+              "legacyCode": "S-1-1.mp4",
+              "title": "Review: The Color Vowel® Chart",
+              "video": "runnow/S-1-1.mp4",
+              "thumbnail": "runnow/thumbnail/S-1-1.png"
+            },
+            {
+              "legacyCode": "S-1-2.mp4",
+              "title": "Discovery: The Color Vowel Walkabout and Color Vowel Organizer (CVO)",
+              "video": "runnow/S-1-2.mp4",
+              "thumbnail": "runnow/thumbnail/S-1-2.png"
+            },
+            {
+              "legacyCode": "S-1-3.mp4",
+              "title": "Discovery: Online Color Vowel® games and search engines",
+              "video": "runnow/S-1-3.mp4",
+              "thumbnail": "runnow/thumbnail/S-1-3.png"
+            },
+            {
+              "legacyCode": "S-1-4.mp4",
+              "title": "Review: Color Vowel® Yoga",
+              "video": "runnow/S-1-4.mp4",
+              "thumbnail": "runnow/thumbnail/S-1-4.png"
+            },
+            {
+              "legacyCode": "S-1-5.mp4",
+              "title": "Review: Chanting",
+              "video": "runnow/S-1-5.mp4",
+              "thumbnail": "runnow/thumbnail/S-1-5.png"
+            },
+            {
+              "legacyCode": "S-1-6.mp4",
+              "title": "Discovery: Practice the rhythm of English with a metronome",
+              "video": "runnow/S-1-6.mp4",
+              "thumbnail": "runnow/thumbnail/S-1-6.png"
+            },
+            {
+              "legacyCode": "S-1-7.mp4",
+              "title": "Practice: Practce the rhythm of English with a metronome",
+              "video": "runnow/S-1-7.mp4",
+              "thumbnail": "runnow/thumbnail/S-1-7.png"
+            },
+            {
+              "legacyCode": "S-1-8.mp4",
+              "title": "Discovery: Practice the rhythm and music of English with limericks",
+              "video": "runnow/S-1-8.mp4",
+              "thumbnail": "runnow/thumbnail/S-1-8.png"
+            },
+            {
+              "legacyCode": "S-1-9.mp4",
+              "title": "Practice: Practice the rhythm and music of English with limericks",
+              "video": "runnow/S-1-9.mp4",
+              "thumbnail": "runnow/thumbnail/S-1-9.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_S2",
+      "name": "Sentence Practice 1",
+      "category": 1,
+      "sections": [
+        {
+          "name": null,
+          "videos": [
+            {
+              "legacyCode": "S-2-1.mp4",
+              "title": "Sentence Practice: \"I should get to the office by 9:00 am.\"",
+              "video": "runnow/S-2-1.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-1.png"
+            },
+            {
+              "legacyCode": "S-2-2.mp4",
+              "title": "Sentence Practice: \"My sister is going to buy a new car.\"",
+              "video": "runnow/S-2-2.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-2.png"
+            },
+            {
+              "legacyCode": "S-2-3.mp4",
+              "title": "Sentence Practice: \"My brother would love to talk to you.\"",
+              "video": "runnow/S-2-3.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-3.png"
+            },
+            {
+              "legacyCode": "S-2-4.mp4",
+              "title": "Sentence Practice: \"Both of my sisters will go to work tomorrow.\"",
+              "video": "runnow/S-2-4.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-4.png"
+            },
+            {
+              "legacyCode": "S-2-6.mp4",
+              "title": "Sentence Practice: \"My friend and I were talking about our plans.\"",
+              "video": "runnow/S-2-6.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-6.png"
+            },
+            {
+              "legacyCode": "S-2-8.mp4",
+              "title": "Sentence Practice: \"I can see that he's angry.\"",
+              "video": "runnow/S-2-8.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-8.png"
+            },
+            {
+              "legacyCode": "S-2-9.mp4",
+              "title": "Sentence Practice: \"He's talking to his son about school.\"",
+              "video": "runnow/S-2-9.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-9.png"
+            },
+            {
+              "legacyCode": "S-2-10.mp4",
+              "title": "Sentence Practice: \"I have to work on the presentation.\"",
+              "video": "runnow/S-2-10.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-10.png"
+            },
+            {
+              "legacyCode": "S-2-11.mp4",
+              "title": "Sentence Practice: \"She got a pencil from her desk.\"",
+              "video": "runnow/S-2-11.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-11.png"
+            },
+            {
+              "legacyCode": "S-2-12.mp4",
+              "title": "Sentence Practice: \"That software can run on any PC.\"",
+              "video": "runnow/S-2-12.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-12.png"
+            },
+            {
+              "legacyCode": "S-2-13.mp4",
+              "title": "Sentence Practice: \"The company's product is popular with teenagers.\"",
+              "video": "runnow/S-2-13.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-13.png"
+            },
+            {
+              "legacyCode": "S-2-14.mp4",
+              "title": "Sentence Practice: \"My brother and his wife have lived in the U.K since 2020.\"",
+              "video": "runnow/S-2-14.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-14.png"
+            },
+            {
+              "legacyCode": "S-2-15.mp4",
+              "title": "Sentence Practice: \"Their new teacher knows a lot about math.\"",
+              "video": "runnow/S-2-15.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-15.png"
+            },
+            {
+              "legacyCode": "S-2-16.mp4",
+              "title": "Sentence Practice: \"Some of my colleagues are moving to Tokyo.\"",
+              "video": "runnow/S-2-16.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-16.png"
+            },
+            {
+              "legacyCode": "S-2-17.mp4",
+              "title": "Sentence Practice: \"Some of the employees will get the day off tomorrow.\"",
+              "video": "runnow/S-2-17.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-17.png"
+            },
+            {
+              "legacyCode": "S-2-18.mp4",
+              "title": "Sentence Practice: \"The client and I can meet at 2:00 pm.\"",
+              "video": "runnow/S-2-18.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-18.png"
+            },
+            {
+              "legacyCode": "S-2-19.mp4",
+              "title": "Sentence Practice: \"His assistant can call me a taxi.\"",
+              "video": "runnow/S-2-19.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-19.png"
+            },
+            {
+              "legacyCode": "S-2-20.mp4",
+              "title": "Sentence Practice: \"The weekly meeting should have begun by now.\"",
+              "video": "runnow/S-2-20.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-20.png"
+            },
+            {
+              "legacyCode": "S-2-21.mp4",
+              "title": "Sentence Practice: \"I can see that he's angry.\"",
+              "video": "runnow/S-2-21.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-21.png"
+            },
+            {
+              "legacyCode": "S-2-22.mp4",
+              "title": "Sentence Practice: \"We're thinking of going to a movie.\"",
+              "video": "runnow/S-2-22.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-22.png"
+            },
+            {
+              "legacyCode": "S-2-23.mp4",
+              "title": "Sentence Practice: \"Please bring him a glass of water.\"",
+              "video": "runnow/S-2-23.mp4",
+              "thumbnail": "runnow/thumbnail/S-2-23.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_S3",
+      "name": "Sentence Practice 2",
+      "category": 1,
+      "sections": [
+        {
+          "name": null,
+          "videos": [
+            {
+              "legacyCode": "S-3-1.mp4",
+              "title": "Sentence Practice: \"Grace made a lot of friends when she travelled abroad.\"",
+              "video": "runnow/S-3-1.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-1.png"
+            },
+            {
+              "legacyCode": "S-3-2.mp4",
+              "title": "Sentence Practice: \"Dan and I want to go to Paris.\"",
+              "video": "runnow/S-3-2.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-2.png"
+            },
+            {
+              "legacyCode": "S-3-3.mp4",
+              "title": "Sentence Practice: \"The crowd is looking forward to the concert in the park.\"",
+              "video": "runnow/S-3-3.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-3.png"
+            },
+            {
+              "legacyCode": "S-3-4.mp4",
+              "title": "Sentence Practice: \"Tom used to be a nurse, but now he's an engineer.\"",
+              "video": "runnow/S-3-4.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-4.png"
+            },
+            {
+              "legacyCode": "S-3-5.mp4",
+              "title": "Sentence Practice: \"My nephew is going to get married very soon.\"",
+              "video": "runnow/S-3-5.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-5.png"
+            },
+            {
+              "legacyCode": "S-3-6.mp4",
+              "title": "Sentence Practice: \"James has to go to the dentist after leaving work.\"",
+              "video": "runnow/S-3-6.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-6.png"
+            },
+            {
+              "legacyCode": "S-3-7.mp4",
+              "title": "Sentence Practice: \"None of the students passed their history midterm.\"",
+              "video": "runnow/S-3-7.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-7.png"
+            },
+            {
+              "legacyCode": "S-3-8.mp4",
+              "title": "Sentence Practice: \"If Sam wants fries, he goes to McDonald's.\"",
+              "video": "runnow/S-3-8.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-8.png"
+            },
+            {
+              "legacyCode": "S-3-9.mp4",
+              "title": "Sentence Practice: \"Alice can't afford new clothes until she starts her job.\"",
+              "video": "runnow/S-3-9.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-9.png"
+            },
+            {
+              "legacyCode": "S-3-10.mp4",
+              "title": "Sentence Practice: \"Mary was able to arrive on time by taking the earlier train.\"",
+              "video": "runnow/S-3-10.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-10.png"
+            },
+            {
+              "legacyCode": "S-3-11.mp4",
+              "title": "Sentence Practice: \"The office elevator is going to be fixed next week.\"",
+              "video": "runnow/S-3-11.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-11.png"
+            },
+            {
+              "legacyCode": "S-3-12.mp4",
+              "title": "Sentence Practice: \"All of my sisters, except for Kate, are coming with me on holiday to Greece.\"",
+              "video": "runnow/S-3-12.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-12.png"
+            },
+            {
+              "legacyCode": "S-3-13.mp4",
+              "title": "Sentence Practice: \"Mr Black said that the company would rather not increase their prices.\"",
+              "video": "runnow/S-3-13.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-13.png"
+            },
+            {
+              "legacyCode": "S-3-14.mp4",
+              "title": "Sentence Practice: \"I was so busy that I completely forgot to call my mother.\"",
+              "video": "runnow/S-3-14.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-14.png"
+            },
+            {
+              "legacyCode": "S-3-15.mp4",
+              "title": "Sentence Practice: \"He'll need a vacation soon.\"",
+              "video": "runnow/S-3-15.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-15.png"
+            },
+            {
+              "legacyCode": "S-3-16.mp4",
+              "title": "Sentence Practice: \"I'll give them their tickets next week.\"",
+              "video": "runnow/S-3-16.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-16.png"
+            },
+            {
+              "legacyCode": "S-3-17.mp4",
+              "title": "Sentence Practice: \"It was really cold last night.\"",
+              "video": "runnow/S-3-17.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-17.png"
+            },
+            {
+              "legacyCode": "S-3-18.mp4",
+              "title": "Sentence Practice: \"My friend and I might go to the park.\"",
+              "video": "runnow/S-3-18.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-18.png"
+            },
+            {
+              "legacyCode": "S-3-19.mp4",
+              "title": "Sentence Practice: \"My wife and I were talking last night.\"",
+              "video": "runnow/S-3-19.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-19.png"
+            },
+            {
+              "legacyCode": "S-3-20.mp4",
+              "title": "Sentence Practice: \"They stayed at an expensive hotel last year.\"",
+              "video": "runnow/S-3-20.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-20.png"
+            },
+            {
+              "legacyCode": "S-3-21.mp4",
+              "title": "Sentence Practice: \"He went to a doctor because of his pain.\"",
+              "video": "runnow/S-3-21.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-21.png"
+            },
+            {
+              "legacyCode": "S-3-22.mp4",
+              "title": "Sentence Practice: \"Ben paid $10,000 for a car.\"",
+              "video": "runnow/S-3-22.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-22.png"
+            },
+            {
+              "legacyCode": "S-3-23.mp4",
+              "title": "Sentence Practice: \"Kate is emailing her boss about the meeting.\"",
+              "video": "runnow/S-3-23.mp4",
+              "thumbnail": "runnow/thumbnail/S-3-23.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_S4",
+      "name": "A Pronunciation Minute",
+      "category": 1,
+      "sections": [
+        {
+          "name": null,
+          "videos": [
+            {
+              "legacyCode": "S-4-1.mp4",
+              "title": "A Pronunciation Minute: \"My mom and dad are coming to visit.\"",
+              "video": "runnow/S-4-1.mp4",
+              "thumbnail": "runnow/thumbnail/S-4-1.png"
+            },
+            {
+              "legacyCode": "S-4-2.mp4",
+              "title": "A Pronunciation Minute: \"My boss and I are meeting for lunch.\"",
+              "video": "runnow/S-4-2.mp4",
+              "thumbnail": "runnow/thumbnail/S-4-2.png"
+            },
+            {
+              "legacyCode": "S-4-3.mp4",
+              "title": "A Pronunciation Minute: \"Let's look at the pros and cons.\"",
+              "video": "runnow/S-4-3.mp4",
+              "thumbnail": "runnow/thumbnail/S-4-3.png"
+            },
+            {
+              "legacyCode": "S-4-4.mp4",
+              "title": "A Pronunciation Minute: \"Let's meet with the sales and marketing teams.\"",
+              "video": "runnow/S-4-4.mp4",
+              "thumbnail": "runnow/thumbnail/S-4-4.png"
+            },
+            {
+              "legacyCode": "S-4-5.mp4",
+              "title": "A Pronunciation Minute: \"We check orders and deliveries in the morning.\"",
+              "video": "runnow/S-4-5.mp4",
+              "thumbnail": "runnow/thumbnail/S-4-5.png"
+            },
+            {
+              "legacyCode": "S-4-6.mp4",
+              "title": "A Pronunciation Minute: \"I work in R and D.\"",
+              "video": "runnow/S-4-6.mp4",
+              "thumbnail": "runnow/thumbnail/S-4-6.png"
+            },
+            {
+              "legacyCode": "S-4-7.mp4",
+              "title": "A Pronunciation Minute: \"The website connects buyers and sellers.\"",
+              "video": "runnow/S-4-7.mp4",
+              "thumbnail": "runnow/thumbnail/S-4-7.png"
+            },
+            {
+              "legacyCode": "S-4-8.mp4",
+              "title": "A Pronunciation Minute: \"We went back and forth on the price.\"",
+              "video": "runnow/S-4-8.mp4",
+              "thumbnail": "runnow/thumbnail/S-4-8.png"
+            },
+            {
+              "legacyCode": "S-4-9.mp4",
+              "title": "A Pronunciation Minute: \"My manager and I write notes and reports.\"",
+              "video": "runnow/S-4-9.mp4",
+              "thumbnail": "runnow/thumbnail/S-4-9.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_LD",
+      "name": "Logical Dialogue",
+      "category": 2,
+      "sections": [
+        {
+          "name": "Unit 1",
+          "videos": [
+            {
+              "legacyCode": "LogicalDialogue_Unit_1-1.mp4",
+              "title": "英語の敬語、丁寧表現の基本概念",
+              "video": "on-demand/LogicalDialogue_Unit_1-1.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_1-1.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_1-2.mp4",
+              "title": "丁寧度をコントロールする2つの指標",
+              "video": "on-demand/LogicalDialogue_Unit_1-2.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_1-2.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_1-3.mp4",
+              "title": "丁寧度を調整する7つの手法",
+              "video": "on-demand/LogicalDialogue_Unit_1-3.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_1-3.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_1-4.mp4",
+              "title": "日本人の英語が誤解されやすい理由",
+              "video": "on-demand/LogicalDialogue_Unit_1-4.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_1-4.png"
+            }
+          ]
+        },
+        {
+          "name": "Unit 2",
+          "videos": [
+            {
+              "legacyCode": "LogicalDialogue_Unit_2-1.mp4",
+              "title": "言語行為とは",
+              "video": "on-demand/LogicalDialogue_Unit_2-1.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_2-1.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_2-2.mp4",
+              "title": "英語のロジック（話の組み立て方・断りを例に）",
+              "video": "on-demand/LogicalDialogue_Unit_2-2.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_2-2.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_2-3.mp4",
+              "title": "日本語からの直訳が危険な会話事例",
+              "video": "on-demand/LogicalDialogue_Unit_2-3.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_2-3.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_2-4.mp4",
+              "title": "文化的な配慮が必要な表現とトピック",
+              "video": "on-demand/LogicalDialogue_Unit_2-4.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_2-4.png"
+            }
+          ]
+        },
+        {
+          "name": "Unit 3",
+          "videos": [
+            {
+              "legacyCode": "LogicalDialogue_Unit_3-1.mp4",
+              "title": "効果的な「依頼」の構成要素",
+              "video": "on-demand/LogicalDialogue_Unit_3-1.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_3-1.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_3-2.mp4",
+              "title": "効果的な「依頼」の表現方法とタブー",
+              "video": "on-demand/LogicalDialogue_Unit_3-2.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_3-2.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_3-3.mp4",
+              "title": "建設的な「提案」の構成要素",
+              "video": "on-demand/LogicalDialogue_Unit_3-3.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_3-3.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_3-4.mp4",
+              "title": "建設的な「提案」の表現方法とタブー",
+              "video": "on-demand/LogicalDialogue_Unit_3-4.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_3-4.png"
+            }
+          ]
+        },
+        {
+          "name": "Unit 4",
+          "videos": [
+            {
+              "legacyCode": "LogicalDialogue_Unit_4-1.mp4",
+              "title": "建設的な「反対」の構成要素",
+              "video": "on-demand/LogicalDialogue_Unit_4-1.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_4-1.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_4-2.mp4",
+              "title": "「反対」のための効果的な英語表現例",
+              "video": "on-demand/LogicalDialogue_Unit_4-2.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_4-2.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_4-3.mp4",
+              "title": "相手が動いてくれる「苦情」の伝え方",
+              "video": "on-demand/LogicalDialogue_Unit_4-3.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_4-3.png"
+            },
+            {
+              "legacyCode": "LogicalDialogue_Unit_4-4.mp4",
+              "title": "発音、トーン、イントネーションの重要性",
+              "video": "on-demand/LogicalDialogue_Unit_4-4.mp4",
+              "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_4-4.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_TENSE",
+      "name": "時制",
+      "category": 2,
+      "sections": [
+        {
+          "name": null,
+          "videos": [
+            {
+              "legacyCode": "student-yn-lv1.mp4",
+              "title": "Simple Present",
+              "video": "on-demand/student-yn-lv1.mp4",
+              "thumbnail": "on-demand/thumbnail/student-yn-lv1.png"
+            },
+            {
+              "legacyCode": "student-yn-lv2.mp4",
+              "title": "Present Continuous",
+              "video": "on-demand/student-yn-lv2.mp4",
+              "thumbnail": "on-demand/thumbnail/student-yn-lv2.png"
+            },
+            {
+              "legacyCode": "student-yn-lv3.mp4",
+              "title": "Simple Past",
+              "video": "on-demand/student-yn-lv3.mp4",
+              "thumbnail": "on-demand/thumbnail/student-yn-lv3.png"
+            },
+            {
+              "legacyCode": "student-yn-lv4.mp4",
+              "title": "Simple Future",
+              "video": "on-demand/student-yn-lv4.mp4",
+              "thumbnail": "on-demand/thumbnail/student-yn-lv4.png"
+            },
+            {
+              "legacyCode": "student-yn-lv5.mp4",
+              "title": "Present Perfect",
+              "video": "on-demand/student-yn-lv5.mp4",
+              "thumbnail": "on-demand/thumbnail/student-yn-lv5.png"
+            },
+            {
+              "legacyCode": "student-yn-lv7.mp4",
+              "title": "Past Continuous",
+              "video": "on-demand/student-yn-lv7.mp4",
+              "thumbnail": "on-demand/thumbnail/student-yn-lv7.png"
+            },
+            {
+              "legacyCode": "student-yn-lv8.mp4",
+              "title": "Future Continuous",
+              "video": "on-demand/student-yn-lv8.mp4",
+              "thumbnail": "on-demand/thumbnail/student-yn-lv8.png"
+            },
+            {
+              "legacyCode": "student-yn-lv9.mp4",
+              "title": "Past Perfect",
+              "video": "on-demand/student-yn-lv9.mp4",
+              "thumbnail": "on-demand/thumbnail/student-yn-lv9.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "VIDEO_RL",
+      "name": "発音 R・L",
+      "category": 2,
+      "sections": [
+        {
+          "name": null,
+          "videos": [
+            {
+              "legacyCode": "Finding_R_sound_in_3_steps.mp4",
+              "title": "Finding \"R\" sound in 3 steps",
+              "video": "on-demand/Finding_R_sound_in_3_steps.mp4",
+              "thumbnail": "on-demand/thumbnail/Finding_R_Suzanne.jpg"
+            },
+            {
+              "legacyCode": "Finding_two_L_sounds_Light_L_and_Dark_L.mp4",
+              "title": "Finding two \"L\" sounds, Light L and Dark L",
+              "video": "on-demand/Finding_two_L_sounds_Light_L_and_Dark_L.mp4",
+              "thumbnail": "on-demand/thumbnail/Light_L_and_Dark_L_Suzanne.jpg"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
