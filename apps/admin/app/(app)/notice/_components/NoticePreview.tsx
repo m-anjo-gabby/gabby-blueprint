@@ -122,7 +122,7 @@ export function NoticePreview({ draft }: { draft: NoticePreviewDraft }) {
               <article className="rounded-card border border-line bg-surface p-5 shadow-xs">
                 <div className="space-y-2 border-b border-line pb-4">
                   <NoticeMeta notice={notice} labels={labels} size="sm" />
-                  <h2 className="text-sm font-bold leading-snug text-ink">{notice.title}</h2>
+                  <h2 className="text-sm font-bold leading-snug text-ink wrap-anywhere">{notice.title}</h2>
                 </div>
                 <div className="pt-4">
                   <NoticeDetail notice={notice} labels={labels} imageUrl={draft.imageUrl} preview />

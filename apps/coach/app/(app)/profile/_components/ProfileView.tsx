@@ -255,7 +255,7 @@ export function ProfileView({
 
       <MailSettingsCard initialSettings={mailSettings} />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
         <PublicProfileForm
           countries={countries}
           form={coachProfileForm}

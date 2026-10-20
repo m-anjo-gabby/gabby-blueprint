@@ -495,7 +495,7 @@ function HomeworkAttachmentView({ attachment }: { attachment: SessionHomeworkAtt
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 text-xs text-brand underline underline-offset-2"
+      className="flex min-w-0 max-w-full items-center gap-2 text-xs text-brand underline underline-offset-2"
     >
       <FileText size={16} className="shrink-0" />
       <span className="truncate">{attachment.file_name}</span>

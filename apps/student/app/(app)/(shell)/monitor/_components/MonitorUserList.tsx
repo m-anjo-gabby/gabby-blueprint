@@ -208,7 +208,10 @@ export function MonitorUserList({ users, wordHistory, sprintHistory, query }: Mo
                 return (
                   <li
                     key={user.id}
-                    className={cn('grid gap-3 px-4 py-4 sm:px-5 lg:items-center lg:gap-4 lg:py-3', TABLE_GRID)}
+                    className={cn(
+                      'grid grid-cols-1 gap-3 px-4 py-4 sm:px-5 lg:items-center lg:gap-4 lg:py-3',
+                      TABLE_GRID,
+                    )}
                   >
                     <div className="min-w-0">
                       <MonitorUserName name={user.user_name} isMonitor={isMonitorAccount(user)} className="text-sm" />

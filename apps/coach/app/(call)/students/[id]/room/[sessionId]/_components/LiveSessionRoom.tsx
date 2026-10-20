@@ -479,7 +479,7 @@ export function LiveSessionRoom({ access }: LiveSessionRoomProps) {
                   <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                     <p className="font-bold text-slate-400 text-[10px]">{msg.senderName}</p>
                     <p
-                      className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-slate-800 text-slate-100'}`}
+                      className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg wrap-anywhere ${msg.isSelf ? 'bg-brand text-white' : 'bg-slate-800 text-slate-100'}`}
                     >
                       {msg.message}
                     </p>

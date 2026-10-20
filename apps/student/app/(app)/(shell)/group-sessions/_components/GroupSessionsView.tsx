@@ -80,7 +80,9 @@ function PastSessions({
                     {slot.date} {slot.time}
                   </p>
                   <EventSeriesLabel event={session} className="mt-0.5" />
-                  <p className="text-sm font-semibold text-ink group-hover:text-brand-strong">{session.title}</p>
+                  <p className="text-sm font-semibold text-ink wrap-anywhere group-hover:text-brand-strong">
+                    {session.title}
+                  </p>
                   <EventCoachLine event={session} className="mt-0.5" />
                 </div>
                 <ChevronRight

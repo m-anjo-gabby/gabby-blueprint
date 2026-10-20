@@ -41,12 +41,12 @@ admin / coach / student と共通部品（`packages/lib/components`）の画面�
 | 内容 | 扱い |
 | :--- | :--- |
 | 名前・ラベル（シリーズ名・コーチ名・プラン名・教材名等）、一覧の行 | 1行で省略（`truncate`）。全文は詳細で見せる |
-| タイトル・見出し | 折り返す（`wrap-break-word`）。カードの高さをそろえる場合は `line-clamp-2` |
+| タイトル・見出し | 折り返す（`wrap-anywhere`）。カードの高さをそろえる場合は `line-clamp-2` |
 | 説明・本文の抜粋（カード・一覧） | `line-clamp-N` で省略し、全文は詳細で見せる |
-| 詳細の本文 | 省略せず折り返す（改行を残す場合は `whitespace-pre-wrap wrap-break-word`） |
+| 詳細の本文・チャット | 省略せず折り返す（改行を残す場合は `whitespace-pre-wrap wrap-anywhere`） |
 
-- `truncate` を grid・flex の中に置く場合は、grid は列を明示し（`grid-cols-1` 等。列の指定が無い暗黙の列は中身の最小幅まで広がる）、flex の子には `min-w-0` を付ける。どちらも無いと、省略する前の長さまで枠が広がる（例: student ホームの `HOME_LAYOUT`・グループセッションのカード）。
-- 入力された値を折り返す要素には `wrap-break-word` を付ける。空白の無い URL・長い英単語は、指定が無いと折り返されない。
+- `truncate` を grid・flex の中に置く場合は、grid は列を明示し（`grid-cols-1` 等。列の指定が無い暗黙の列は中身の最小幅まで広がる）、flex の子には `min-w-0` を付ける。どちらも無いと、省略する前の長さまで枠が広がる（例: student ホームの `HOME_LAYOUT`・グループセッションのカード）。`min-w-0` は grid・flex の子そのものに付ける（さらに内側の要素に付けても、外の grid の列は中の文字の長さまで広がる）。
+- 入力された値を折り返す要素には `wrap-anywhere` を付ける。空白の無い URL・長い英単語は、指定が無いと折り返されない。`wrap-break-word` は中身に合わせて幅が決まる枠（`inline-block` の吹き出し・`min-w-0` の無い flex の子・列の指定が無い grid）の幅を縮めないため、`wrap-anywhere` にそろえる。
 - 確かめ方: スマホの幅（375px）で、長い値（全角30文字程度・空白の無い URL）を入れて崩れないことを見る。
 
 ## ダイアログ・シートを開いた時のフォーカス（全アプリ共通）

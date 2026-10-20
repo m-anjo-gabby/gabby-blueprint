@@ -70,7 +70,7 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
         )}
       </p>
       <EventSeriesLabel event={event} className="mt-1" />
-      <p className="mt-0.5 text-sm font-bold text-ink wrap-break-word">{event.title}</p>
+      <p className="mt-0.5 text-sm font-bold text-ink wrap-anywhere">{event.title}</p>
       <EventCoachLine event={event} className="mt-1" />
       {event.description && (
         <p className="mt-1 line-clamp-2 text-xs text-ink-soft whitespace-pre-line">{event.description}</p>

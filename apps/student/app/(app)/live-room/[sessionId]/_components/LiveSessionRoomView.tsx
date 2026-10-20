@@ -408,7 +408,7 @@ export function LiveSessionRoomView({ access }: LiveSessionRoomViewProps) {
                     <div key={msg.id} className={`text-[11px] ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                       <span className="font-bold text-ink-subtle mr-1.5">{msg.senderName}</span>
                       <span
-                        className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-ink-soft text-line'}`}
+                        className={`inline-block px-2 py-1 rounded-lg wrap-anywhere ${msg.isSelf ? 'bg-brand text-white' : 'bg-ink-soft text-line'}`}
                       >
                         {msg.message}
                       </span>
@@ -449,7 +449,7 @@ export function LiveSessionRoomView({ access }: LiveSessionRoomViewProps) {
                   <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                     <p className="font-bold text-ink-subtle text-[11px]">{msg.senderName}</p>
                     <p
-                      className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-ink text-line'}`}
+                      className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg wrap-anywhere ${msg.isSelf ? 'bg-brand text-white' : 'bg-ink text-line'}`}
                     >
                       {msg.message}
                     </p>

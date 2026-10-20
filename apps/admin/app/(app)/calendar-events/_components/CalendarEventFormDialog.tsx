@@ -234,7 +234,7 @@ export function CalendarEventFormDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white overflow-y-auto">
             {/* 短い項目は2列に並べる（説明・URL・担当コーチ等は全幅） */}
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* --- イベント種別 --- */}
               <FormField
                 control={form.control}
@@ -511,7 +511,7 @@ export function CalendarEventFormDialog({
               </div>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* --- 配信対象 --- */}
               <FormField
                 control={form.control}

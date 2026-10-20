@@ -53,7 +53,9 @@ export function SessionRow({ session, nowMs, timezone, onParticipationChanged, o
           <EventTiming event={session} nowMs={nowMs} timezone={timezone} />
           {isJoined && <JoinedBadge />}
         </p>
-        <p className="mt-0.5 text-sm font-semibold text-ink group-hover:text-brand-strong">{session.title}</p>
+        <p className="mt-0.5 text-sm font-semibold text-ink wrap-anywhere group-hover:text-brand-strong">
+          {session.title}
+        </p>
         <EventCoachLine event={session} className="mt-0.5" />
       </button>
       <div className="flex shrink-0 items-center gap-3">

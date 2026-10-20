@@ -233,13 +233,15 @@ export function VideoContentView({ content, initialVideoId, consumeBookmark }: V
             <section className="space-y-3">
               <div className="space-y-1">
                 <p className="text-xs text-ink-muted">{content.content_name}</p>
-                <h2 className="text-lg font-bold leading-snug text-ink">{current.title}</h2>
+                <h2 className="text-lg font-bold leading-snug text-ink wrap-anywhere">{current.title}</h2>
                 <p className="text-xs text-ink-muted tabular-nums">
                   {formatVideoDuration(current.duration_sec)}・{currentIndex + 1} / {total} 本目
                 </p>
               </div>
               {current.description && (
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">{current.description}</p>
+                <p className="whitespace-pre-wrap wrap-anywhere text-sm leading-relaxed text-ink-soft">
+                  {current.description}
+                </p>
               )}
               <div className="flex flex-wrap gap-2">
                 {next && (

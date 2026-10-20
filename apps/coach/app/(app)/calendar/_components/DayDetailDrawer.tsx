@@ -95,12 +95,12 @@ function CalendarEventAnnouncements({ event, timezone }: { event: CalendarEventI
           className="bg-brand-50/50 border border-brand-100 rounded-xl p-3 space-y-1.5"
         >
           <div className="flex items-start justify-between gap-2">
-            <p className="text-xs font-black text-slate-800">{message.title}</p>
+            <p className="text-xs font-black text-slate-800 wrap-anywhere">{message.title}</p>
             <p className="text-[10px] text-slate-400 font-bold shrink-0">
               {formatDateTimeInZone(message.insert_date, timezone)}
             </p>
           </div>
-          <p className="text-xs text-slate-600 whitespace-pre-wrap">{message.content}</p>
+          <p className="text-xs text-slate-600 whitespace-pre-wrap wrap-anywhere">{message.content}</p>
           {message.attachments.length > 0 && (
             <div className="space-y-1 pt-1">
               {message.attachments.map((att) => (
@@ -193,7 +193,8 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
   return (
     <article className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-2">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        {/* min-w-0: 1行で省略するシリーズ名の長さまで広がらないようにする */}
+        <div className="min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
             <span
               className={cn(
@@ -217,7 +218,7 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
             )}
           </div>
           {event.series && <p className="text-xs text-slate-500 truncate">{event.series.title}</p>}
-          <p className="text-sm font-black text-slate-800">{event.title}</p>
+          <p className="text-sm font-black text-slate-800 wrap-anywhere">{event.title}</p>
           <p className="text-xs text-slate-500 mt-0.5">
             {event.end_datetime
               ? `${formatTimeInZone(event.start_datetime, timezone)} - ${formatTimeInZone(event.end_datetime, timezone)}`
@@ -227,7 +228,7 @@ function CalendarEventCard({ event, timezone, onParticipationChanged }: Calendar
       </div>
 
       {event.description && (
-        <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 whitespace-pre-wrap">
+        <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 whitespace-pre-wrap wrap-anywhere">
           {event.description}
         </p>
       )}

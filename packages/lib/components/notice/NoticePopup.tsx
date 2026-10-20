@@ -45,7 +45,10 @@ export type NoticePopupVariant = 'sheet' | 'dialog';
 
 /** 件名の文字の大きさ（シート・ダイアログそれぞれの Title 部品に付ける） */
 export function noticePopupTitleClass(variant: NoticePopupVariant): string {
-  return cn('font-bold leading-snug tracking-normal text-ink', variant === 'sheet' ? 'text-lg' : 'text-xl');
+  return cn(
+    'font-bold leading-snug tracking-normal text-ink wrap-anywhere',
+    variant === 'sheet' ? 'text-lg' : 'text-xl',
+  );
 }
 
 interface NoticePopupProps {

@@ -51,12 +51,12 @@ function CalendarEventAnnouncements({ event, timezone }: { event: CalendarEventI
           className="bg-brand-soft/50 border border-brand-100 rounded-xl p-3 space-y-1.5"
         >
           <div className="flex items-start justify-between gap-2">
-            <p className="text-xs font-bold text-ink">{message.title}</p>
+            <p className="text-xs font-bold text-ink wrap-anywhere">{message.title}</p>
             <p className="text-[11px] text-ink-subtle font-bold shrink-0">
               {formatDateTimeByZone(message.insert_date, timezone, false)}
             </p>
           </div>
-          <p className="text-xs text-ink-soft whitespace-pre-wrap">{message.content}</p>
+          <p className="text-xs text-ink-soft whitespace-pre-wrap wrap-anywhere">{message.content}</p>
           {message.attachments.length > 0 && (
             <div className="space-y-1 pt-1">
               {message.attachments.map((att) => (
@@ -138,7 +138,7 @@ export function CalendarEventCard({
             )}
           </div>
           <EventSeriesLabel event={event} />
-          <p className="text-sm font-bold text-ink wrap-break-word">{event.title}</p>
+          <p className="text-sm font-bold text-ink wrap-anywhere">{event.title}</p>
           <p className="text-xs text-ink-muted mt-0.5">
             {event.end_datetime
               ? `${formatEventTimeInZone(event.start_datetime, timezone)} - ${formatEventTimeInZone(event.end_datetime, timezone)}`
@@ -149,7 +149,7 @@ export function CalendarEventCard({
       </div>
 
       {event.description && (
-        <p className="text-xs text-ink-soft bg-canvas border border-line/70 rounded-lg px-3 py-2 whitespace-pre-wrap wrap-break-word">
+        <p className="text-xs text-ink-soft bg-canvas border border-line/70 rounded-lg px-3 py-2 whitespace-pre-wrap wrap-anywhere">
           {event.description}
         </p>
       )}
@@ -157,8 +157,8 @@ export function CalendarEventCard({
       {/* シリーズの説明（企画の紹介・月のテーマ等）。各回の説明の下に添える */}
       {event.series?.description && (
         <div className="rounded-lg border border-line/70 px-3 py-2">
-          <p className="text-[11px] font-bold text-ink-subtle">{event.series.title}について</p>
-          <p className="mt-0.5 text-xs text-ink-soft whitespace-pre-wrap">{event.series.description}</p>
+          <p className="text-[11px] font-bold text-ink-subtle wrap-anywhere">{event.series.title}について</p>
+          <p className="mt-0.5 text-xs text-ink-soft whitespace-pre-wrap wrap-anywhere">{event.series.description}</p>
         </div>
       )}
 

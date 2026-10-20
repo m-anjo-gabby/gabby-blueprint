@@ -87,7 +87,11 @@ export function TrialApplicationConfirm({
           )}
         </ConfirmRow>
         <ConfirmRow label="ご要望・ご質問">
-          {values.message ? <span className="whitespace-pre-wrap">{values.message}</span> : <NotEntered />}
+          {values.message ? (
+            <span className="whitespace-pre-wrap wrap-anywhere">{values.message}</span>
+          ) : (
+            <NotEntered />
+          )}
         </ConfirmRow>
       </dl>
 
