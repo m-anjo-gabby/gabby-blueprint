@@ -8,7 +8,7 @@
 
 | 対象期間の終わり | ブランチ | 柱 | URL |
 |---|---|---|---|
-| 2026-10-19 | feature/20261016-dev | Webトライアル・削除と利用停止の見直し・データの見え方と権限・品質（ルール・規約の整備、CI/CD の本格運用） | https://claude.ai/artifact/WZJgzHAiz7nPWCH1AuxfjW |
+| 2026-10-19 | feature/20261016-dev | Webトライアル・削除と利用停止の見直し・データの見え方と権限・品質（ルール・規約の整備、CI/CD の本格運用） | https://claude.ai/artifact/WZJgzHAiz7nPWCH1AuxfjW（PDF: A_開発/20_スプリントMTG/20261021/リリース情報_20261016_20261019.pdf） |
 | 2026-10-14 | feature/20261008-dev | 専属コーチ選び（割合判定・回答期限・評価・専門・掲載条件）・ライブセッションの実施記録・お知らせの表示方法・Color Vowel 辞書（音素表記・改善サイクル）・品質（管理者アプリの自動テスト・DB正本） | https://claude.ai/artifact/9316FJDhZbekCiCpN3SFgJ（PDF: A_開発/30_リリース/20261019/リリース情報_20261008_20261014.pdf） |
 | 2026-10-08 | feature/20261004-dev | メール配信・グループセッション・品質（ログ・自動テスト） | https://claude.ai/artifact/Ts3YcDrxsM5yhkCpSwaFSk |
 | 2026-10-01 | feature/20260925-dev | 生徒アプリの見直し・3アプリ共通の見直し・トレーニングレポート・品質（Playwright） | https://claude.ai/artifact/E9o9b5hFkmeqXtnSdgkTwR |
