@@ -66,6 +66,7 @@
 |---|---|---|
 | 高 | 企画から参加・アナウンス・リマインダー・振り返りまで | 実装済み: ジャーニー `e2e/tests/journeys/group-session.spec.ts` |
 | 高 | 参加登録で参加URLが出て、詳細から取り消せる | 実装済み: `e2e/tests/home/group-session.spec.ts` |
+| 中 | 長いシリーズ名でもホームのカード・詳細が画面からはみ出さない（mobile） | 実装済み: `e2e/tests/home/group-session.spec.ts` |
 | 高 | シリーズの一覧・すべての回に参加・過去のセッション | 実装済み: `e2e/tests/home/group-session-list.spec.ts` |
 | 高 | 24時間前・1時間前のリマインダー（配信停止・ライセンスなし・期限外） | 実装済み: `e2e/tests/mail/event-reminder.spec.ts` |
 | 中 | アドミンのシリーズ作成（回ごとの参加URL・参加確認の固定） | 実装済み: `e2e/tests/home/group-session.spec.ts`（アドミンのイベント登録） |

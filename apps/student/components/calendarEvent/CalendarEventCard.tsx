@@ -124,7 +124,8 @@ export function CalendarEventCard({
   return (
     <article className="bg-surface rounded-control border border-line/70 shadow-sm p-4 space-y-2">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        {/* min-w-0: 1行で省略するシリーズ名の長さまで広がらないようにする */}
+        <div className="min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
             <span className={cn('text-[11px] font-bold px-2 py-1 rounded-md border', badge.badgeClass)}>
               {badge.label}
@@ -137,7 +138,7 @@ export function CalendarEventCard({
             )}
           </div>
           <EventSeriesLabel event={event} />
-          <p className="text-sm font-bold text-ink">{event.title}</p>
+          <p className="text-sm font-bold text-ink wrap-break-word">{event.title}</p>
           <p className="text-xs text-ink-muted mt-0.5">
             {event.end_datetime
               ? `${formatEventTimeInZone(event.start_datetime, timezone)} - ${formatEventTimeInZone(event.end_datetime, timezone)}`
@@ -148,7 +149,7 @@ export function CalendarEventCard({
       </div>
 
       {event.description && (
-        <p className="text-xs text-ink-soft bg-canvas border border-line/70 rounded-lg px-3 py-2 whitespace-pre-wrap">
+        <p className="text-xs text-ink-soft bg-canvas border border-line/70 rounded-lg px-3 py-2 whitespace-pre-wrap wrap-break-word">
           {event.description}
         </p>
       )}

@@ -37,9 +37,12 @@ interface LiveSessionCardProps {
 const CARD_TITLE = 'ライブセッション';
 const CARD_ACTION = { label: '詳しく見る', href: '/live-room' };
 
-/** カードの中の並び（本番と骨組みで共有する）。幅が広いときは「次回」と「契約の状況」を横に並べる */
+/**
+ * カードの中の並び（本番と骨組みで共有する）。幅が広いときは「次回」と「契約の状況」を横に並べる。
+ * 列の幅は grid-cols-1 で枠に収める（1行で省略するコーチ名の長さまで枠が広がらないように）
+ */
 const LIVE_LAYOUT = {
-  grid: 'grid gap-3 @2xl:grid-cols-2',
+  grid: 'grid grid-cols-1 gap-3 @2xl:grid-cols-2',
   block: 'rounded-control bg-canvas p-4',
   blockTitle: 'text-xs text-ink-muted',
 } as const;

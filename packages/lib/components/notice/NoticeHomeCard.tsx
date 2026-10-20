@@ -67,7 +67,7 @@ export function NoticeHomeCard({
               <X size={18} />
             </button>
           </div>
-          <h2 className="mt-2 text-base font-bold leading-snug text-ink">{notice.title}</h2>
+          <h2 className="mt-2 text-base font-bold leading-snug text-ink wrap-break-word">{notice.title}</h2>
           <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink-soft">{toNoticePlainText(notice.content)}</p>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <NoticeCtaLink notice={notice} labels={labels} preview={preview} className="h-10" />

@@ -76,6 +76,36 @@ test.describe('アプリのみ契約の生徒', () => {
       .eq('calendar_event_id', calendarEventId);
     expect(afterCancel).toBe(0);
   });
+
+  test('長いシリーズ名は省略し、カード・詳細とも画面の幅からはみ出さない', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name === 'desktop', '狭い画面で起きるため mobile のみ');
+    // シリーズ名は「E2E…シリーズ <label> <時刻>」になる。1行で省略するシリーズ名が枠を押し広げないことを見る
+    fixture = await createGroupSession(PERSONAS.monitorStudent.email, {
+      startOffsetMinutes: 10,
+      label: '【テスト】とても長いシリーズ名の発音グループセッション（GAのみ配信）',
+      withSeries: true,
+    });
+    const { title } = fixture;
+
+    await page.goto('/dashboard');
+    const card = groupSessionCard(page);
+    await expect(card.getByText(title)).toBeVisible();
+    // シェルは内側の領域がスクロールするため、ページの幅ではなく「次回の開催」の枠がカードの右端に収まるかで見る
+    const featured = card
+      .locator('section')
+      .filter({ has: page.getByRole('heading', { level: 3, name: '次回の開催' }) });
+    const [cardBox, featuredBox] = await Promise.all([card.boundingBox(), featured.boundingBox()]);
+    expect(featuredBox!.x + featuredBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width);
+
+    await card.getByRole('button', { name: '詳細' }).click();
+    const drawer = page.getByRole('dialog').filter({ hasText: title });
+    await expect(drawer).toBeVisible();
+    const drawerOverflows = await drawer.evaluate((el) => {
+      const article = el.querySelector('article');
+      return article !== null && article.scrollWidth > article.clientWidth;
+    });
+    expect(drawerOverflows).toBe(false);
+  });
 });
 
 test.describe('ライブセッション契約の生徒', () => {

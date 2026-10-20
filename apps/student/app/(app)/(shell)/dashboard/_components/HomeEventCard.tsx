@@ -29,9 +29,12 @@ const CARD_ACTION = { label: '一覧を見る', href: '/group-sessions' };
 /** 1件目の詳細の下に一覧で並べる件数 */
 const MAX_OTHER_EVENTS = 2;
 
-/** カードの中の並び（本番と骨組みで共有する）。幅が広いときは「次回」と「このあとの予定」を横に並べる */
+/**
+ * カードの中の並び（本番と骨組みで共有する）。幅が広いときは「次回」と「このあとの予定」を横に並べる。
+ * 列の幅は grid-cols-1 で枠に収める（列の指定が無いと、1行で省略するシリーズ名の長さまで枠が広がり、画面からはみ出す）
+ */
 const EVENT_LAYOUT = {
-  grid: 'grid gap-3 @2xl:grid-cols-2',
+  grid: 'grid grid-cols-1 gap-3 @2xl:grid-cols-2',
   featured: 'rounded-control border border-brand-100 bg-brand-soft p-4',
   block: 'rounded-control bg-canvas p-4',
   blockTitle: 'text-xs text-ink-muted',
@@ -67,7 +70,7 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
         )}
       </p>
       <EventSeriesLabel event={event} className="mt-1" />
-      <p className="mt-0.5 text-sm font-bold text-ink">{event.title}</p>
+      <p className="mt-0.5 text-sm font-bold text-ink wrap-break-word">{event.title}</p>
       <EventCoachLine event={event} className="mt-1" />
       {event.description && (
         <p className="mt-1 line-clamp-2 text-xs text-ink-soft whitespace-pre-line">{event.description}</p>

@@ -34,6 +34,21 @@ admin / coach / student と共通部品（`packages/lib/components`）の画面�
 - どのタイムゾーンで出すかは画面の基準に合わせる。admin の一覧・契約期間は日本時間、集計期間は `date/reporting.ts` の `REPORTING_TIMEZONE`、コーチの暦で区切るもの（月次レポート・カレンダー）はコーチの `timezone`。
 - ログイン中の利用者のタイムゾーン（`useTimezone`）はストアの値のため、サーバーで描く区画では使わず、サーバーで取得して渡す。
 
+## 長い文字の省略と折り返し（全アプリ共通）
+
+入力された値（名前・タイトル・本文）は長さが決まらないため、項目ごとに「1行で省略する」か「折り返す」かを決めて書く。指定が無いと、スマホの幅で枠や画面からはみ出す（横にスクロールでき、ページが揺れる）。
+
+| 内容 | 扱い |
+| :--- | :--- |
+| 名前・ラベル（シリーズ名・コーチ名・プラン名・教材名等）、一覧の行 | 1行で省略（`truncate`）。全文は詳細で見せる |
+| タイトル・見出し | 折り返す（`wrap-break-word`）。カードの高さをそろえる場合は `line-clamp-2` |
+| 説明・本文の抜粋（カード・一覧） | `line-clamp-N` で省略し、全文は詳細で見せる |
+| 詳細の本文 | 省略せず折り返す（改行を残す場合は `whitespace-pre-wrap wrap-break-word`） |
+
+- `truncate` を grid・flex の中に置く場合は、grid は列を明示し（`grid-cols-1` 等。列の指定が無い暗黙の列は中身の最小幅まで広がる）、flex の子には `min-w-0` を付ける。どちらも無いと、省略する前の長さまで枠が広がる（例: student ホームの `HOME_LAYOUT`・グループセッションのカード）。
+- 入力された値を折り返す要素には `wrap-break-word` を付ける。空白の無い URL・長い英単語は、指定が無いと折り返されない。
+- 確かめ方: スマホの幅（375px）で、長い値（全角30文字程度・空白の無い URL）を入れて崩れないことを見る。
+
 ## ダイアログ・シートを開いた時のフォーカス（全アプリ共通）
 
 開いただけで中の要素（×ボタン等）にフォーカスの枠が出ないよう、各アプリの `components/ui`（dialog / alert-dialog / sheet / drawer）の Content は `onOpenAutoFocus` の既定を `focusDialogContent`（`packages/lib/components/common/dialogFocus.ts`。枠そのものにフォーカスする）にしている。画面ごとに `onOpenAutoFocus={(e) => e.preventDefault()}` を書かない。Radix の Dialog を直接使う場合も `onOpenAutoFocus={focusDialogContent}` を渡す。開いた時に特定の要素へフォーカスが必要な場合（入力が主のダイアログ等）だけ、その要素に `autoFocus` を付ける。
