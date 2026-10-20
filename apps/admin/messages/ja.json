@@ -2189,6 +2189,7 @@
       "noData": "教材データが見つかりませんでした。",
       "editorButton": {
         "word": "単語を編集",
+        "video": "ビデオを編集",
         "sprint": "問題を編集",
         "dialogue": "セッションを編集"
       },
@@ -2247,11 +2248,21 @@
         "sprintTypeRequired": "スプリント種別を選択してください",
         "sprintThemeRequired": "コーパススプリントの場合はテーマを入力してください",
         "sprintSupportRequired": "少なくとも1つの問題種別を有効にしてください",
-        "dialogueCategoryRequired": "セット分類を選択してください"
+        "dialogueCategoryRequired": "セット分類を選択してください",
+        "videoCategoryRequired": "ビデオの種類を選択してください"
       },
       "statusLabel": "公開状態",
       "statusPublished": "公開",
-      "statusUnpublished": "非公開"
+      "statusUnpublished": "非公開",
+      "videoCategoryLabel": "ビデオの種類",
+      "videoCategoryUnselected": "未選択",
+      "videoCategoryPlaceholder": "選択してください",
+      "videoCategoryDescription": "生徒のライブラリでの分類に使います。",
+      "videoCategories": {
+        "pronunciation": "発音トレーニング",
+        "onDemand": "オンデマンド",
+        "colorVowel": "ColorVowel"
+      }
     },
     "accessDialog": {
       "toastFetchFailed": "データ取得に失敗しました",
@@ -2590,6 +2601,92 @@
             "sessionNoRequired": "セッション番号を入力してください"
           }
         }
+      },
+      "video": {
+        "index": {
+          "summary": "{sections}区切り・{videos}本",
+          "addSection": "区切りを追加",
+          "addVideo": "ビデオを追加",
+          "emptyState": "区切りがありません。「区切りを追加」から作ってください",
+          "untitledSection": "（見出しなし）",
+          "statusChanged": "公開状態を変更しました",
+          "videoDeleted": "ビデオを削除しました",
+          "sectionDeleted": "区切りを削除しました",
+          "deleteVideoTitle": "ビデオを削除しますか？",
+          "deleteVideoDescription": "<b>{title}</b> を削除します。動画とサムネイルのファイルも消え、元に戻せません。視聴の記録があるビデオは削除できないため、非公開にしてください。",
+          "deleteSectionTitle": "区切りを削除しますか？",
+          "deleteSectionDescription": "<b>{name}</b> を削除します。",
+          "deleteConfirm": "削除する"
+        },
+        "section": {
+          "untitled": "（見出しなし）",
+          "videoCount": "{count}本",
+          "moveUp": "上へ",
+          "moveDown": "下へ",
+          "rename": "見出しを変更",
+          "delete": "区切りを削除",
+          "deleteDisabledHint": "ビデオが残っている区切りは削除できません",
+          "addVideo": "ビデオを追加",
+          "empty": "この区切りにはビデオがありません"
+        },
+        "item": {
+          "preview": "プレビュー",
+          "legacyCode": "旧: {code}",
+          "published": "公開",
+          "unpublished": "非公開",
+          "moveUp": "上へ",
+          "moveDown": "下へ",
+          "moveToSection": "別の区切りへ移す",
+          "edit": "編集",
+          "delete": "削除"
+        },
+        "sectionForm": {
+          "createTitle": "区切りの追加",
+          "editTitle": "見出しの変更",
+          "nameLabel": "見出し",
+          "namePlaceholder": "例: Unit 1",
+          "nameDescription": "空にすると、見出しを出さずにビデオを並べます。",
+          "toastCreated": "区切りを追加しました",
+          "toastUpdated": "見出しを変更しました"
+        },
+        "videoForm": {
+          "createTitle": "ビデオの追加",
+          "editTitle": "ビデオの編集",
+          "sectionLabel": "区切り",
+          "untitledSection": "（見出しなし）",
+          "titleLabel": "タイトル",
+          "descriptionLabel": "説明",
+          "videoFileLabel": "動画ファイル（MP4・{max}MBまで）",
+          "videoFileRequiredHint": "動画ファイルを選んでください。",
+          "videoFileSelected": "{name}（再生時間 {duration}）",
+          "videoFileReplaceHint": "今の動画の再生時間: {duration}。ファイルを選ぶと差し替えます。",
+          "thumbnailLabel": "サムネイル（PNG・JPEG・WebP・{max}MBまで）",
+          "removeThumbnail": "サムネイルを外す",
+          "publishedLabel": "公開する",
+          "publishedDescription": "非公開のビデオは生徒に表示されません。",
+          "uploading": "アップロード中... {percent}%",
+          "uploadFailed": "ファイルのアップロードに失敗しました。もう一度お試しください",
+          "toastCreated": "ビデオを追加しました",
+          "toastUpdated": "ビデオを更新しました",
+          "errors": {
+            "titleRequired": "タイトルを入力してください",
+            "videoFileRequired": "動画ファイルを選んでください"
+          }
+        },
+        "moveDialog": {
+          "title": "ビデオを移す",
+          "description": "<b>{title}</b> の移動先を選んでください。移動先の区切りの最後に入ります。視聴の記録はそのまま残ります。",
+          "contentLabel": "教材",
+          "sectionLabel": "区切り",
+          "selectPlaceholder": "選択してください",
+          "untitledSection": "（見出しなし）",
+          "currentSection": "{name}（今の区切り）",
+          "confirm": "移す",
+          "toastMoved": "ビデオを移しました"
+        },
+        "previewDialog": {
+          "loading": "読み込み中"
+        }
       }
     },
     "errors": {
@@ -2598,7 +2695,16 @@
       "invalidLevel": "移動先のレベルが正しくありません",
       "noQuestionsSelected": "問題が選択されていません",
       "questionsNotFound": "対象の問題が見つかりませんでした",
-      "sameLevel": "移動先が現在と同じレベルです"
+      "sameLevel": "移動先が現在と同じレベルです",
+      "videoUnsupportedType": "このファイルの形式には対応していません",
+      "videoEmptyFile": "ファイルが空です",
+      "videoFileTooLarge": "ファイルが大きすぎます（{max}MBまで）",
+      "videoSectionNotEmpty": "ビデオが残っている区切りは削除できません。ビデオを移すか削除してください",
+      "videoNotFound": "ビデオが見つかりません",
+      "videoTitleRequired": "タイトルを入力してください",
+      "videoUploadMissing": "アップロードしたファイルを確認できませんでした。もう一度ファイルを選んでください",
+      "videoSectionNotFound": "移動先の区切りが見つかりません",
+      "videoInUse": "視聴の記録があるため削除できません。非公開にしてください"
     }
   },
   "companyProfiles": {

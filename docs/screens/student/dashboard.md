@@ -173,7 +173,8 @@
   E2E: `testing/e2e/tests/home/group-session.spec.ts`・`group-session-list.spec.ts`・`testing/e2e/tests/mail/event-reminder.spec.ts`
   再開情報（`getLatestResumeContent`）も同じくサーバーで取得し、削除は `clearResumeContent` の後に画面内の状態から外す。
   画面を開くたびに取得するため、単語帳トレーニングでブックマークした直後も最新の再開情報が表示される（クライアントキャッシュは持たない）。
-  再開情報は「続きから」で教材を開いた時点で削除される（単語帳トレーニング側の `takeResumeContent`）。
+  再開情報は「続きから」で教材を開いた時点で削除される（単語帳トレーニング・ビデオ教材の画面の `takeResumeContent`）。
+  ビデオの再開情報は「ブックマークして終了」で作り、同じビデオを開いてその位置（ビデオごとの視聴の記録）から再生する（[ビデオ教材の画面](training/video.md)）。
   「戻る・進む」でキャッシュ済みの画面が再利用された場合は `useRefreshOnRestoredRender` で取り直す
 - ポップアップの表示制御: `apps/student/components/popups/PopupHost.tsx`（排他・順番・表示画面）、
   `apps/student/components/popups/useAutoPopups.tsx`（自動表示ポップアップの登録簿）

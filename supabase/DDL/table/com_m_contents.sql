@@ -9,7 +9,15 @@
 -- 【ダイアログプラクティスの教材】
 -- content_type で種別を分け、ダイアログ教材もこのテーブルで持つ（汎用・顧客専用を content_scope で区別）。
 -- category_id（Beginner / Intermediate / Advanced / Corpus）はコーチの教材選択画面のタブに対応する分類で、
--- 公開範囲とは独立に設定する（組み合わせの制約は無い）。他の種別では NULL。
+-- 公開範囲とは独立に設定する（組み合わせの制約は無い）。
+--
+-- 【ビデオ教材】
+-- 1シリーズを1教材（content_type = 1）で持ち、区切り・ビデオは com_m_video_section / com_m_video に置く。
+-- category_id はビデオ教材の種類（1:発音トレーニング / 2:オンデマンド / 3:ColorVowel）。
+--
+-- 【category_id】
+-- 値の意味が content_type ごとに違うため CHECK は付けず、アプリ（packages/types の定数）で確かめる。
+-- ビデオ・ダイアログ以外の種別では NULL。
 -- =========================================================================
 
 -- @schema public.com_m_contents
@@ -48,7 +56,7 @@ COMMENT ON COLUMN public.com_m_contents.metadata IS 'メタデータ（タグな
 COMMENT ON COLUMN public.com_m_contents.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_contents.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_contents.content_name_en IS 'コンテンツ名称（英語版・任意。コーチ向け画面で使用し、未入力時はcontent_nameにフォールバックする）';
-COMMENT ON COLUMN public.com_m_contents.category_id IS 'セット分類ID（現状ダイアログプラクティスのみで使用。1:Beginner, 2:Intermediate, 3:Advanced, 4:Corpus）。他コンテンツ種別では未使用のためNULL';
+COMMENT ON COLUMN public.com_m_contents.category_id IS 'コンテンツ種別ごとの分類ID。1:ビデオ → 1:発音トレーニング, 2:オンデマンド, 3:ColorVowel / 3:ダイアログプラクティス → 1:Beginner, 2:Intermediate, 3:Advanced, 4:Corpus。他の種別ではNULL（値の意味が種別ごとに違うためCHECKは付けない）';
 COMMENT ON COLUMN public.com_m_contents.status IS '公開状態 1:公開 0:非公開（新規作成時は非公開）';
 
 CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_contents FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');

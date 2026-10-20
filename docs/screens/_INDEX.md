@@ -43,6 +43,7 @@
 | [training/sprint-play.md](student/training/sprint-play.md) | `/training/sprint/play` | スプリント実施画面 | ✅ |
 | [training/sprint-result.md](student/training/sprint-result.md) | `/training/sprint/result/[id]`、`/training/sprint/history/[id]` | スプリント結果（実施直後は没入画面・履歴からはシェル画面）、英文中の単語タップによるColor Vowel辞書 | ✅ |
 | [training/word-detail.md](student/training/word-detail.md) | `/training/word/[id]` | 単語帳カードのトレーニング画面 | ✅ |
+| [training/video.md](student/training/video.md) | `/training/video/[id]` | ビデオ教材の再生と区切りごとのビデオの一覧（視聴の記録・続きからの再生・ブックマーク） | ✅ |
 | [training/word-history.md](student/training/word-history.md) | `/training/word/history` | 単語帳の履歴 | ✅ |
 
 ## coach
@@ -98,7 +99,7 @@
 | [chat/list.md](admin/chat/list.md) | `/chat` | 管理者用チャットルーム一覧（査閲モード有） | ✅ |
 | [chat/room.md](admin/chat/room.md) | `/chat/[roomId]` | チャット詳細（査閲・グループ参加者管理） | ✅ |
 | [contents/list.md](admin/contents/list.md) | `/contents` | 学習教材の基本情報・公開範囲・タグ管理（要確認事項あり） | ✅ |
-| [contents/detail.md](admin/contents/detail.md) | `/contents/[id]` | 教材中身の編集（単語帳/スプリント/ダイアログ等） | ✅ |
+| [contents/detail.md](admin/contents/detail.md) | `/contents/[id]` | 教材中身の編集（単語帳/ビデオ/スプリント/ダイアログ） | ✅ |
 | [contents/tags.md](admin/contents/tags.md) | `/contents/tags` | 教材タグのマスタ管理 | ✅ |
 | [notice/list.md](admin/notice/list.md) | `/notice` | お知らせ一覧・検索・削除 | ✅ |
 | [notice/new.md](admin/notice/new.md) | `/notice/new` | お知らせ新規作成（正本） | ✅ |

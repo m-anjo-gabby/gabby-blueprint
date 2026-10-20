@@ -16,11 +16,12 @@ import { ContentTagDialog } from './ContentTagDialog';
 type TableT = ReturnType<typeof useTranslations<'contents.dataTable'>>;
 
 /**
- * 種別ごとのエディタ導線設定（ビデオ(1)はエディタ未実装のため定義しない）。
+ * 種別ごとのエディタ導線のボタンの文言。
  * 色・アイコンは種別バッジと同じく getContentTypeConfig（全アプリ共通の分類色）から取得する。
  */
-const EDITOR_LABEL_KEYS: Partial<Record<ContentType, 'word' | 'sprint' | 'dialogue'>> = {
+const EDITOR_LABEL_KEYS: Record<ContentType, 'word' | 'video' | 'sprint' | 'dialogue'> = {
   0: 'word',
+  1: 'video',
   2: 'sprint',
   3: 'dialogue',
 };
@@ -40,18 +41,14 @@ export function createColumns(t: TableT): ListColumnDef<Content>[] {
       header: t('nameHeader'),
       cell: ({ row }) => (
         <div className="flex flex-col gap-0.5 py-1">
-          {/* エディタがある種別は教材名からも遷移できるようにする（操作列ボタンの補助導線） */}
+          {/* 教材名からもエディタへ遷移できるようにする（操作列ボタンの補助導線） */}
           <div className="flex items-center gap-2">
-            {EDITOR_LABEL_KEYS[row.original.content_type] ? (
-              <Link
-                href={getEditorHref(row.original)}
-                className="text-sm font-bold text-slate-900 leading-tight w-fit hover:text-brand hover:underline underline-offset-2 transition-colors"
-              >
-                {row.original.content_name}
-              </Link>
-            ) : (
-              <span className="text-sm font-bold text-slate-900 leading-tight">{row.original.content_name}</span>
-            )}
+            <Link
+              href={getEditorHref(row.original)}
+              className="text-sm font-bold text-slate-900 leading-tight w-fit hover:text-brand hover:underline underline-offset-2 transition-colors"
+            >
+              {row.original.content_name}
+            </Link>
             {row.original.status === CONTENT_STATUS.UNPUBLISHED && <InactiveBadge label={t('unpublishedBadge')} />}
           </div>
           {row.original.content_name_en && (
@@ -199,25 +196,21 @@ export function createColumns(t: TableT): ListColumnDef<Content>[] {
             {/* 教材基本情報の編集モーダル */}
             <ContentFormDialog mode="edit" initialData={row.original} />
 
-            {/* 中身（単語・問題・セッション）のエディタ画面へ。未対応種別は列を揃えるため空枠を置く */}
-            {editorLabelKey ? (
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className={`h-8 min-w-38 justify-between gap-2 px-3 font-bold text-xs shadow-sm transition-colors ${theme.chip} ${theme.chipHover}`}
-              >
-                <Link href={getEditorHref(row.original)}>
-                  <span className="flex items-center gap-1.5">
-                    <TypeIcon size={13} />
-                    {t(`editorButton.${editorLabelKey}`)}
-                  </span>
-                  <ArrowRight size={13} />
-                </Link>
-              </Button>
-            ) : (
-              <div className="min-w-38" aria-hidden />
-            )}
+            {/* 中身（単語・ビデオ・問題・セッション）のエディタ画面へ */}
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className={`h-8 min-w-38 justify-between gap-2 px-3 font-bold text-xs shadow-sm transition-colors ${theme.chip} ${theme.chipHover}`}
+            >
+              <Link href={getEditorHref(row.original)}>
+                <span className="flex items-center gap-1.5">
+                  <TypeIcon size={13} />
+                  {t(`editorButton.${editorLabelKey}`)}
+                </span>
+                <ArrowRight size={13} />
+              </Link>
+            </Button>
           </div>
         );
       },

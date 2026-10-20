@@ -1,11 +1,13 @@
 /**
  * 認証E2Eの残骸（失敗で後始末できなかった使い捨てユーザー・顧客）を確認・削除する。
  * 実行: pnpm exec tsx e2e/support/authFixtures.leftovers.ts [--env=staging] [--delete]（既定は dev）
- * 対象は authFixtures.ts が作る命名（メール `e2e<接頭辞><数字>-…`。接頭辞は createAuthFixture に渡す英小文字。顧客 `【QAテスト】認証E2E（…）`）に限る。
+ * 対象は authFixtures.ts が作る命名（メール `e2e<接頭辞><数字>-…`。接頭辞は createAuthFixture に渡す英小文字。顧客 `【QAテスト】認証E2E（…）`）と、
+ * videoFixtures.ts が作るビデオ教材（`【QAテスト】ビデオ教材E2E（…）`。ビデオのファイルも消す）に限る。
  */
 import { createAdminClient } from '../../helpers/auth.ts';
 import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
 import { deleteBusinessRecords } from './authFixtures.ts';
+import { cleanupVideoContents, VIDEO_CONTENT_NAME_PREFIX } from './videoFixtures.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);
@@ -38,9 +40,13 @@ if ((clients ?? []).length > 0) {
 }
 const { data: invitations } = await admin.from('com_t_invitation').select('email').like('email', '%e2e%');
 const leftoverInvitations = (invitations ?? []).filter((i) => PATTERN.test(i.email));
+const { data: videoContents } = await admin
+  .from('com_m_contents')
+  .select('content_id')
+  .like('content_name', `${VIDEO_CONTENT_NAME_PREFIX}%`);
 
 console.log(
-  `env=${env} users=${users.length} clients=${clients?.length ?? 0} invitations=${leftoverInvitations.length}`,
+  `env=${env} users=${users.length} clients=${clients?.length ?? 0} invitations=${leftoverInvitations.length} videoContents=${videoContents?.length ?? 0}`,
 );
 if (doDelete) {
   if (leftoverInvitations.length > 0)
@@ -73,5 +79,10 @@ if (doDelete) {
     const { error } = await admin.from('com_m_client').delete().eq('client_id', c.client_id);
     if (error) console.warn(`client ${c.client_name}: ${error.message}`);
   }
+  // 視聴の記録（生徒から CASCADE）が消えた後に消す
+  await cleanupVideoContents(
+    admin,
+    (videoContents ?? []).map((c) => c.content_id as string),
+  );
   console.log('deleted');
 }

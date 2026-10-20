@@ -134,7 +134,7 @@ export interface ContentRecord {
   seq_no: number;
   difficulty_level: number;
   recommend: number;
-  // セット分類ID（現状ダイアログプラクティス content_type=3 のみで使用。1:Beginner, 2:Intermediate, 3:Advanced, 4:Corpus）
+  // 種別ごとの分類ID。ビデオ（content_type=1）は VideoCategory（video.ts）、ダイアログ（content_type=3）は DialogueCategory（dialogue.ts）。他は null
   category_id: number | null;
   metadata: ContentMetadata;
   status: ContentStatus;

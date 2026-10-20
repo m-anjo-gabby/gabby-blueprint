@@ -118,6 +118,17 @@ Supabase のクライアント（`packages/lib/supabase/*`）は、DB の型で�
   複数のテーブルにまたがる処理、1つのトランザクションでそろえる必要がある処理、RLS を越えた認可の判定が要る処理は、
   SECURITY DEFINER の関数（RPC）にする。
 
+### ファイルの置き場所
+
+| ファイル | 置き場所 | 扱う場所 |
+|---|---|---|
+| ビデオ教材の動画・サムネイル | Cloudflare R2（環境ごとの非公開のバケット） | `packages/lib/video/storage.ts` だけ。列にはバケットの中のキーだけを書く |
+| それ以外 | Supabase Storage | バケットの定義は `storage/` |
+
+- 大きく何度も読まれるファイル（動画）は、転送量の課金の無い R2 に置く。Supabase Storage の転送量は Pro プランで月 250GB まで含まれ、超えると課金される。
+- コーチの紹介ビデオ（`profile` バケット）もこの決まりでは R2 の側だが、Supabase の Usage の画面で Storage の転送量が月 250GB に近づくまでは移さない。
+- R2 の準備ができるまでは、ビデオ教材は dev だけ Supabase Storage の一時のバケット（`video`。`storage/` に置かず手で作った）を使う。R2 に移したら消す。
+
 ### 関数の権限
 
 SECURITY DEFINER の関数は所有者の権限で RLS を通らずに動くため、次をそろえます（入口全体の考え方は `docs/SECURITY.md`）。

@@ -7,10 +7,12 @@ import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import { getContentById } from '@/actions/adminContentAction';
 import { getDialogueSessions } from '@/actions/adminDialogueAction';
 import { getSprintQuestionsByFilter } from '@/actions/adminSprintAction';
+import { getVideoEditorSections } from '@/actions/adminVideoAction';
 import { getPhrasesByWordId, getWordsByContentId } from '@/actions/adminWordAction';
 import { EditorHeader } from './_components/EditorHeader';
 import { DialogueEditor } from './_components/editors/DialogueEditor';
 import { SprintEditor } from './_components/editors/SprintEditor';
+import { VideoEditor } from './_components/editors/VideoEditor';
 import { WordEditor } from './_components/editors/WordEditor';
 import { SPRINT_EDITOR_INITIAL_LEVEL } from './_lib/editorDefaults';
 
@@ -39,6 +41,11 @@ async function EditorBody({ content, wordId, type }: { content: Content; wordId?
         initialPhrases={wordId && phrases ? { wordId, phrases: phrases.success ? phrases.data : null } : null}
       />
     );
+  }
+
+  if (content.content_type === 1) {
+    const res = await getVideoEditorSections(contentId);
+    return <VideoEditor contentId={contentId} initialSections={res.success ? res.sections : null} />;
   }
 
   if (content.content_type === 2) {

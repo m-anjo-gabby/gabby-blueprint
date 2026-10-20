@@ -1631,6 +1631,94 @@ export type Database = {
           },
         ]
       }
+      com_m_video: {
+        Row: {
+          description: string | null
+          duration_sec: number | null
+          insert_date: string
+          legacy_code: string | null
+          section_id: string
+          seq_no: number
+          status: 0 | 1
+          thumbnail_path: string | null
+          title: string
+          update_date: string
+          video_id: string
+          video_path: string
+        }
+        Insert: {
+          description?: string | null
+          duration_sec?: number | null
+          insert_date?: string
+          legacy_code?: string | null
+          section_id: string
+          seq_no?: number
+          status?: 0 | 1
+          thumbnail_path?: string | null
+          title: string
+          update_date?: string
+          video_id?: string
+          video_path: string
+        }
+        Update: {
+          description?: string | null
+          duration_sec?: number | null
+          insert_date?: string
+          legacy_code?: string | null
+          section_id?: string
+          seq_no?: number
+          status?: 0 | 1
+          thumbnail_path?: string | null
+          title?: string
+          update_date?: string
+          video_id?: string
+          video_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "com_m_video_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "com_m_video_section"
+            referencedColumns: ["section_id"]
+          },
+        ]
+      }
+      com_m_video_section: {
+        Row: {
+          content_id: string
+          insert_date: string
+          section_id: string
+          section_name: string | null
+          seq_no: number
+          update_date: string
+        }
+        Insert: {
+          content_id: string
+          insert_date?: string
+          section_id?: string
+          section_name?: string | null
+          seq_no?: number
+          update_date?: string
+        }
+        Update: {
+          content_id?: string
+          insert_date?: string
+          section_id?: string
+          section_name?: string | null
+          seq_no?: number
+          update_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "com_m_video_section_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "com_m_contents"
+            referencedColumns: ["content_id"]
+          },
+        ]
+      }
       com_m_word: {
         Row: {
           content_id: string | null
@@ -4388,6 +4476,51 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "com_m_user"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_m_video_progress: {
+        Row: {
+          completed_at: string | null
+          insert_date: string
+          last_position_sec: number
+          last_viewed_at: string
+          update_date: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          insert_date?: string
+          last_position_sec?: number
+          last_viewed_at?: string
+          update_date?: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          insert_date?: string
+          last_position_sec?: number
+          last_viewed_at?: string
+          update_date?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_m_video_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "com_m_user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_m_video_progress_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "com_m_video"
+            referencedColumns: ["video_id"]
           },
         ]
       }

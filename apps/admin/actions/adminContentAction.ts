@@ -10,6 +10,7 @@ import { removeStorageFiles } from '@gabby/lib/storage/removeStorageFiles';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
 import { isInUseError } from '@gabby/lib/supabase/pgErrors';
+import { removeVideoFiles } from '@gabby/lib/video/storage';
 import type { ActionResult } from '@gabby/types/action';
 import { CLIENT_STATUS } from '@gabby/types/client';
 import {
@@ -198,6 +199,20 @@ export async function upsertContent(payload: ContentUpsertInput): Promise<Action
     }
 
     const savedContent = data?.[0] as Content;
+
+    // ビデオ教材は区切りの中にビデオを置くため、見出しの無い区切りを1つ作っておく（失敗してもエディタから足せる）
+    if (!isEdit && savedContent.content_type === 1) {
+      const { error: sectionError } = await supabase
+        .from('com_m_video_section')
+        .insert({ content_id: savedContent.content_id, section_name: null, seq_no: 1 });
+      if (sectionError) {
+        logger.error('video:create_default_section_failed', sectionError.message, {
+          ...ctx,
+          err: sectionError,
+          payload: { contentId: savedContent.content_id },
+        });
+      }
+    }
     logger.info(
       'content:upsert_content_success',
       `Content ${isEdit ? 'updated' : 'created'}: ${savedContent.content_name}`,
@@ -231,8 +246,13 @@ export async function deleteContent(contentId: string): Promise<ActionResult<obj
   try {
     const supabase = await createAdminClient();
 
-    // 消す前に、教材に付属する音声のパスを集める（単語・フレーズは CASCADE、スプリントの問題は外部キーが無いため後で消す）
-    const [{ data: phrases, error: phraseError }, { data: questions, error: questionError }] = await Promise.all([
+    // 消す前に、教材に付属するファイルのパスを集める（単語・フレーズ・区切り・ビデオは CASCADE、
+    // スプリントの問題は外部キーが無いため後で消す）
+    const [
+      { data: phrases, error: phraseError },
+      { data: questions, error: questionError },
+      { data: videos, error: videoError },
+    ] = await Promise.all([
       supabase
         .from('com_m_phrase')
         .select('audio_path, com_m_word!inner(content_id)')
@@ -241,9 +261,14 @@ export async function deleteContent(contentId: string): Promise<ActionResult<obj
         .from('com_m_sprint_questions')
         .select('statement_voice, question_voice, answer_sentence_yes_voice, answer_sentence_no_voice')
         .eq('content_id', contentId),
+      supabase
+        .from('com_m_video')
+        .select('video_path, thumbnail_path, com_m_video_section!inner(content_id)')
+        .eq('com_m_video_section.content_id', contentId),
     ]);
     if (phraseError) throw phraseError;
     if (questionError) throw questionError;
+    if (videoError) throw videoError;
 
     const { error } = await supabase.from('com_m_contents').delete().eq('content_id', contentId);
 
@@ -281,6 +306,10 @@ export async function deleteContent(contentId: string): Promise<ActionResult<obj
             ])),
       ],
       { event: 'content:delete_files_failed', ctx, payload: { contentId } },
+    );
+    await removeVideoFiles(
+      (videos ?? []).flatMap((v) => [v.video_path, v.thumbnail_path]),
+      { ctx, payload: { contentId } },
     );
 
     logger.info('content:delete_content_success', `Content deleted`, {

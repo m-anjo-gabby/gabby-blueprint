@@ -20,6 +20,7 @@ import {
 } from '@gabby/types/content';
 import { DIALOGUE_CATEGORIES, type DialogueCategory } from '@gabby/types/dialogue';
 import { SPRINT_TYPES } from '@gabby/types/sprint';
+import { VIDEO_CATEGORY, type VideoCategory } from '@gabby/types/video';
 import { upsertContent, type ContentUpsertInput } from '@/actions/adminContentAction';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -59,9 +60,16 @@ function createContentSchema(t: FormT) {
 
     // ダイアログプラクティス用のセット分類（content_type=3のみで使用）
     dialogue_category: z.string().optional(),
+
+    // ビデオ教材の種類（content_type=1のみで使用）
+    video_category: z.string().optional(),
   });
 
   return contentSchema.superRefine((data, ctx) => {
+    if (data.content_type === '1' && (!data.video_category || data.video_category === 'none')) {
+      ctx.addIssue({ code: 'custom', message: t('errors.videoCategoryRequired'), path: ['video_category'] });
+    }
+
     // 教材種別が「ダイアログプラクティス (3)」の場合のバリデーション
     if (data.content_type === '3') {
       if (!data.dialogue_category || data.dialogue_category === 'none') {
@@ -138,7 +146,15 @@ const DEFAULT_VALUES: ContentFormValues = {
   sprint_support_structure: false,
   sprint_support_mastery: false,
   dialogue_category: 'none',
+  video_category: 'none',
 };
+
+/** ビデオ教材の種類の表示名（com_m_contents.category_id） */
+const VIDEO_CATEGORY_LABEL_KEYS = {
+  [VIDEO_CATEGORY.PRONUNCIATION]: 'videoCategories.pronunciation',
+  [VIDEO_CATEGORY.ON_DEMAND]: 'videoCategories.onDemand',
+  [VIDEO_CATEGORY.COLOR_VOWEL]: 'videoCategories.colorVowel',
+} as const satisfies Record<VideoCategory, string>;
 
 export function ContentFormDialog({ mode = 'create', initialData }: ContentFormDialogProps) {
   const t = useTranslations('contents.formDialog');
@@ -172,7 +188,8 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       sprint_support_builders: sprintMeta?.supported_types?.builders ?? false,
       sprint_support_structure: sprintMeta?.supported_types?.structure ?? false,
       sprint_support_mastery: sprintMeta?.supported_types?.mastery ?? false,
-      dialogue_category: data.category_id ? String(data.category_id) : 'none',
+      dialogue_category: data.content_type === 3 && data.category_id ? String(data.category_id) : 'none',
+      video_category: data.content_type === 1 && data.category_id ? String(data.category_id) : 'none',
     };
   };
 
@@ -192,6 +209,9 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
     }
     if (currentContentType !== '3') {
       form.setValue('dialogue_category', 'none');
+    }
+    if (currentContentType !== '1') {
+      form.setValue('video_category', 'none');
     }
   }, [currentContentType, form]);
 
@@ -237,6 +257,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       }
 
       const isDialogue = values.content_type === '3';
+      const isVideo = values.content_type === '1';
 
       const payload: ContentUpsertInput = {
         content_name: values.content_name,
@@ -247,7 +268,9 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         category_id:
           isDialogue && values.dialogue_category && values.dialogue_category !== 'none'
             ? Number(values.dialogue_category)
-            : null,
+            : isVideo && values.video_category && values.video_category !== 'none'
+              ? Number(values.video_category)
+              : null,
         content_label: values.content_label,
         seq_no: Number(values.seq_no),
         difficulty_level: Number(values.difficulty_level || 1),
@@ -499,6 +522,50 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
                   </FormItem>
                 )}
               />
+
+              {/* --- ビデオ選択時のみ表示する特化セクション --- */}
+              {currentContentType === '1' && (
+                <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-100/80 space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="video_category"
+                    render={({ field }) => (
+                      <FormItem className="w-full">
+                        <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">
+                          {t('videoCategoryLabel')}
+                        </FormLabel>
+                        {isConfirming ? (
+                          <div className="p-3 bg-white rounded-xl text-sm border-2 border-brand-100 text-slate-700 font-medium">
+                            {field.value && field.value !== 'none'
+                              ? t(VIDEO_CATEGORY_LABEL_KEYS[Number(field.value) as VideoCategory])
+                              : t('videoCategoryUnselected')}
+                          </div>
+                        ) : (
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-white rounded-xl border-slate-200 focus:border-brand-500 focus:ring-brand-500">
+                                <SelectValue placeholder={t('videoCategoryPlaceholder')} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">{t('videoCategoryPlaceholder')}</SelectItem>
+                              {Object.values(VIDEO_CATEGORY).map((category) => (
+                                <SelectItem key={category} value={String(category)}>
+                                  {t(VIDEO_CATEGORY_LABEL_KEYS[category])}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <FormDescription className="text-[11px] text-slate-400">
+                          {t('videoCategoryDescription')}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
 
               {/* --- ダイアログプラクティス選択時のみ表示する特化セクション --- */}
               {currentContentType === '3' && (

@@ -2189,6 +2189,7 @@
       "noData": "No content data found.",
       "editorButton": {
         "word": "Edit Words",
+        "video": "Edit videos",
         "sprint": "Edit Questions",
         "dialogue": "Edit Sessions"
       },
@@ -2247,11 +2248,21 @@
         "sprintTypeRequired": "Please select a sprint type",
         "sprintThemeRequired": "Please enter a theme for the Corpus Sprint",
         "sprintSupportRequired": "Please enable at least one question type",
-        "dialogueCategoryRequired": "Please select a set category"
+        "dialogueCategoryRequired": "Please select a set category",
+        "videoCategoryRequired": "Select a video type"
       },
       "statusLabel": "Visibility",
       "statusPublished": "Published",
-      "statusUnpublished": "Unpublished"
+      "statusUnpublished": "Unpublished",
+      "videoCategoryLabel": "Video type",
+      "videoCategoryUnselected": "Not selected",
+      "videoCategoryPlaceholder": "Select",
+      "videoCategoryDescription": "Used to group videos in the student library.",
+      "videoCategories": {
+        "pronunciation": "Pronunciation training",
+        "onDemand": "On-demand",
+        "colorVowel": "ColorVowel"
+      }
     },
     "accessDialog": {
       "toastFetchFailed": "Failed to fetch data",
@@ -2590,6 +2601,92 @@
             "sessionNoRequired": "Please enter a session number"
           }
         }
+      },
+      "video": {
+        "index": {
+          "summary": "{sections} sections · {videos} videos",
+          "addSection": "Add section",
+          "addVideo": "Add video",
+          "emptyState": "No sections yet. Create one with \"Add section\"",
+          "untitledSection": "(No heading)",
+          "statusChanged": "Visibility updated",
+          "videoDeleted": "Video deleted",
+          "sectionDeleted": "Section deleted",
+          "deleteVideoTitle": "Delete this video?",
+          "deleteVideoDescription": "<b>{title}</b> will be deleted along with its video and thumbnail files. This cannot be undone. Videos with viewing records cannot be deleted; unpublish them instead.",
+          "deleteSectionTitle": "Delete this section?",
+          "deleteSectionDescription": "<b>{name}</b> will be deleted.",
+          "deleteConfirm": "Delete"
+        },
+        "section": {
+          "untitled": "(No heading)",
+          "videoCount": "{count} videos",
+          "moveUp": "Move up",
+          "moveDown": "Move down",
+          "rename": "Rename heading",
+          "delete": "Delete section",
+          "deleteDisabledHint": "A section that still has videos cannot be deleted",
+          "addVideo": "Add video",
+          "empty": "No videos in this section"
+        },
+        "item": {
+          "preview": "Preview",
+          "legacyCode": "Legacy: {code}",
+          "published": "Published",
+          "unpublished": "Unpublished",
+          "moveUp": "Move up",
+          "moveDown": "Move down",
+          "moveToSection": "Move to another section",
+          "edit": "Edit",
+          "delete": "Delete"
+        },
+        "sectionForm": {
+          "createTitle": "Add section",
+          "editTitle": "Rename heading",
+          "nameLabel": "Heading",
+          "namePlaceholder": "e.g. Unit 1",
+          "nameDescription": "Leave empty to list the videos without a heading.",
+          "toastCreated": "Section added",
+          "toastUpdated": "Heading updated"
+        },
+        "videoForm": {
+          "createTitle": "Add video",
+          "editTitle": "Edit video",
+          "sectionLabel": "Section",
+          "untitledSection": "(No heading)",
+          "titleLabel": "Title",
+          "descriptionLabel": "Description",
+          "videoFileLabel": "Video file (MP4, max {max} MB)",
+          "videoFileRequiredHint": "Select a video file.",
+          "videoFileSelected": "{name} (duration {duration})",
+          "videoFileReplaceHint": "Current duration: {duration}. Select a file to replace the video.",
+          "thumbnailLabel": "Thumbnail (PNG, JPEG, WebP, max {max} MB)",
+          "removeThumbnail": "Remove thumbnail",
+          "publishedLabel": "Publish",
+          "publishedDescription": "Unpublished videos are not shown to students.",
+          "uploading": "Uploading... {percent}%",
+          "uploadFailed": "The file upload failed. Please try again",
+          "toastCreated": "Video added",
+          "toastUpdated": "Video updated",
+          "errors": {
+            "titleRequired": "Enter a title",
+            "videoFileRequired": "Select a video file"
+          }
+        },
+        "moveDialog": {
+          "title": "Move video",
+          "description": "Choose where to move <b>{title}</b>. It is added to the end of the destination section. Viewing records are kept.",
+          "contentLabel": "Content",
+          "sectionLabel": "Section",
+          "selectPlaceholder": "Select",
+          "untitledSection": "(No heading)",
+          "currentSection": "{name} (current)",
+          "confirm": "Move",
+          "toastMoved": "Video moved"
+        },
+        "previewDialog": {
+          "loading": "Loading"
+        }
       }
     },
     "errors": {
@@ -2598,7 +2695,16 @@
       "invalidLevel": "The destination level is invalid.",
       "noQuestionsSelected": "No questions are selected.",
       "questionsNotFound": "The selected questions were not found.",
-      "sameLevel": "The destination is the same as the current level."
+      "sameLevel": "The destination is the same as the current level.",
+      "videoUnsupportedType": "This file format is not supported",
+      "videoEmptyFile": "The file is empty",
+      "videoFileTooLarge": "The file is too large (max {max} MB)",
+      "videoSectionNotEmpty": "A section that still has videos cannot be deleted. Move or delete the videos first",
+      "videoNotFound": "Video not found",
+      "videoTitleRequired": "Enter a title",
+      "videoUploadMissing": "The uploaded file could not be confirmed. Please select the file again",
+      "videoSectionNotFound": "The destination section was not found",
+      "videoInUse": "This video has viewing records and cannot be deleted. Unpublish it instead"
     }
   },
   "companyProfiles": {

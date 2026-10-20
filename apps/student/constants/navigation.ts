@@ -48,7 +48,7 @@ export const SHELL_NAV_ITEMS: ShellNavItem[] = [
     label: 'トレーニング',
     href: '/library',
     icon: BookOpen,
-    // トレーニング記録・履歴・ダイアログ課題（シェル内のトレーニング画面）もトレーニングタブ配下として扱う
+    // トレーニング記録・履歴・ダイアログ課題・ビデオ教材（シェル内のトレーニング画面）もトレーニングタブ配下として扱う
     matchPaths: [
       '/library',
       '/favorites',
@@ -56,6 +56,7 @@ export const SHELL_NAV_ITEMS: ShellNavItem[] = [
       '/training/word/history',
       '/training/sprint/history',
       '/training/dialogue',
+      '/training/video',
     ],
     isVisible: () => true,
   },

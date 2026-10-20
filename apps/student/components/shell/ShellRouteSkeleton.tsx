@@ -16,6 +16,7 @@ import { ProfileRouteSkeleton } from '@/app/(app)/(shell)/profile/_components/Pr
 import { DialogueSkeleton } from '@/app/(app)/(shell)/training/dialogue/_components/DialogueSkeleton';
 import { TrainingPerformanceSkeleton } from '@/app/(app)/(shell)/training/performance/_components/TrainingPerformanceSkeleton';
 import { SprintHistoryRouteSkeleton } from '@/app/(app)/(shell)/training/sprint/history/_components/SprintHistoryRouteSkeleton';
+import { VideoContentSkeleton } from '@/app/(app)/(shell)/training/video/_components/VideoContentSkeleton';
 import { WordHistorySkeleton } from '@/app/(app)/(shell)/training/word/history/_components/WordHistorySkeleton';
 import { isImmersivePath, isTrainingSectionPath } from '@/constants/navigation';
 import { SHELL_CONTENT_WIDTH } from '@/constants/shellLayout';
@@ -60,6 +61,7 @@ function resolveShellSkeleton(pathname: string): { width: ContentWidth; skeleton
       if (second === 'sprint' && third === 'history')
         return { width: SHELL_CONTENT_WIDTH.sprintHistory, skeleton: <SprintHistoryRouteSkeleton /> };
       if (second === 'dialogue') return { width: SHELL_CONTENT_WIDTH.dialogue, skeleton: <DialogueSkeleton /> };
+      if (second === 'video') return { width: SHELL_CONTENT_WIDTH.video, skeleton: <VideoContentSkeleton /> };
       return null;
     default:
       return null;
