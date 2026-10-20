@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { LOCAL_NETWORK_DEV_ORIGINS } from '../../packages/lib/security/devOrigins';
 import { FRAME_DENY_HEADERS } from '../../packages/lib/security/frameHeaders';
 
 const nextConfig: NextConfig = {
@@ -8,6 +9,9 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@gabby/ui', '@gabby/types', '@gabby/lib', '@gabby/utils'],
 
   reactCompiler: true,
+
+  // 同じ LAN の実機から PC の IP で開発サーバーを開くため（packages/lib/security/devOrigins.ts）
+  allowedDevOrigins: LOCAL_NETWORK_DEV_ORIGINS,
 
   // 他のサイトの iframe への埋め込みを禁止する（全アプリ共通。packages/lib/security/frameHeaders.ts）
   async headers() {

@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { LOCAL_NETWORK_DEV_ORIGINS } from '../../packages/lib/security/devOrigins';
 import { FRAME_DENY_HEADERS } from '../../packages/lib/security/frameHeaders';
 
 const nextConfig: NextConfig = {
@@ -10,6 +11,9 @@ const nextConfig: NextConfig = {
 
   // experimental の中から外に出します
   reactCompiler: true,
+
+  // 同じ LAN の実機から PC の IP で開発サーバーを開くため（packages/lib/security/devOrigins.ts）
+  allowedDevOrigins: LOCAL_NETWORK_DEV_ORIGINS,
 
   // 他のサイトの iframe への埋め込みを禁止する（全アプリ共通。packages/lib/security/frameHeaders.ts）
   async headers() {
