@@ -152,3 +152,49 @@ WITH CHECK (
 );
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】ビデオ・区切りの英名
+--
+-- 【内容】
+--   コーチもビデオを見られるようにする予定のため、他の教材（content_name / content_name_en）と同じく
+--   ビデオのタイトルと区切りの見出しに英名の列を足す。説明は生徒だけに見せるため和文だけにする。
+--   1. com_m_video.title_en（英名・任意。未入力時は title にフォールバック）
+--   2. com_m_video_section.section_name_en（英名・任意。未入力時は section_name にフォールバック）
+--
+-- 対応ファイル: DDL/table/com_m_video.sql, DDL/table/com_m_video_section.sql
+-- =========================================================================
+
+BEGIN;
+
+ALTER TABLE public.com_m_video ADD COLUMN title_en text;
+
+COMMENT ON COLUMN public.com_m_video.title IS 'タイトル（和名）';
+COMMENT ON COLUMN public.com_m_video.title_en IS 'タイトル（英名・任意。コーチ向け画面で使用し、未入力時はtitleにフォールバックする）';
+
+ALTER TABLE public.com_m_video_section ADD COLUMN section_name_en text;
+
+COMMENT ON COLUMN public.com_m_video_section.section_name IS '区切りの見出し（和名。NULL:見出しを出さない）';
+COMMENT ON COLUMN public.com_m_video_section.section_name_en IS '区切りの見出し（英名・任意。コーチ向け画面で使用し、未入力時はsection_nameにフォールバックする）';
+
+COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】ビデオ教材の「区切り」を「セクション」と呼ぶ
+--
+-- 【内容】
+--   画面の呼び方を「セクション」にそろえたため、列・表のコメントも合わせる（構造は変えない）。
+--
+-- 対応ファイル: DDL/table/com_m_video.sql, DDL/table/com_m_video_section.sql
+-- =========================================================================
+
+BEGIN;
+
+COMMENT ON TABLE public.com_m_video_section IS 'ビデオ教材のセクションマスタ';
+COMMENT ON COLUMN public.com_m_video_section.section_id IS 'セクションID';
+COMMENT ON COLUMN public.com_m_video_section.section_name IS 'セクションの見出し（和名。NULL:見出しを出さない）';
+COMMENT ON COLUMN public.com_m_video_section.section_name_en IS 'セクションの見出し（英名・任意。コーチ向け画面で使用し、未入力時はsection_nameにフォールバックする）';
+COMMENT ON COLUMN public.com_m_video.section_id IS 'セクションID';
+COMMENT ON COLUMN public.com_m_video.seq_no IS 'セクションの中の並び順';
+
+COMMIT;

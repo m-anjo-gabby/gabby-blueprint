@@ -27,6 +27,10 @@ URL は `https://drive.google.com/drive/folders/<ID>`（フォルダ）、`https
 | Axiom | `14LWo0CudP-lRPdYnxy7OrwXfW1vzT2Di` | `Axiom（ログの保存とエラーの通知）`（`1mbK7k5jJY3RH6d2uSXX0XN7Z8oeYlY3H13QZGD3053I`。正本は docs/LOGGING.md） |
 | （直下） | — | `会社アカウントへの移行手順`（`1jPyKsLfGtEFIgZsPFVIYe6PpJArlFWuNfqBNx4bJH3s`。全サービス共通の作業の手順。終わったら 90_アーカイブ へ移す） |
 
+| 60_旧システム移行の中 | ID | 中身 |
+|---|---|---|
+| ビデオ教材 | `12oHJI8ytpIttL5Xuh_o8io4E8ICmW-3A` | 最初に作った `ビデオ教材 確認表`（`1O_GaOBdTzdXUkBYecRRV9-y12A_HdKwoRndAP-dgkIM`）が残っている。正は B_運営共有/80_システム移行 の写し。消すかはユーザーの判断待ち |
+
 A_開発の各フォルダの細かい使い方はまだ決めていない（HISTORY.md の未決事項）。
 
 ## B_運営共有（運営スタッフも見る）
@@ -44,6 +48,8 @@ A_開発の各フォルダの細かい使い方はまだ決めていない（HIS
 | 60_メール文面 | `1IB0X9BVsT_ozIGQ6RYWk6B7RYCBIU0VS` | アプリが送るメールの一覧（メール文面カタログのPDF） |
 | 70_要望・不具合の受付 | `1Gs5vpWWA5XvgzTSmXxeZGdrNg51y2qLF` | 受付フォームと受付台帳 |
 | 70_…/補足資料 | `1YFgRw0w1khdTwulxnB4IqXYn8U3lGhZO` | 起票者がスクリーンショット・ログを1件1フォルダで置く |
+| 80_システム移行 | `1E7oZfksdbUcLP-KRz8rA_Bf2F7JN12tB` | 旧システムからの移行で運営に確認してもらう資料（題材ごとにフォルダ） |
+| 80_…/ビデオ教材 | `1MJrPHYMFA4YVO70hdBJOd3hPopAEWv_q` | ビデオ教材の名前・説明の確認 |
 | 90_アーカイブ | `1Kk0KDvMZR87Jm4p25bDY7XJe9k3Nc8Zy` | 古くなった資料 |
 
 ### 主なファイル
@@ -52,6 +58,7 @@ A_開発の各フォルダの細かい使い方はまだ決めていない（HIS
 |---|---|---|---|
 | はじめにお読みください | ドキュメント | `13uTP3XkhEPljGRRCc2DAANNuyjB_42u9qadbXxT2gS8` | 00 フォルダ。タブは `t.0` の1つ、ページなし形式 |
 | Gabby Blueprint 要望・不具合の受付 | フォーム | `1DLcRf7JdhzHgwfEAXP1jS5XCMI8wH8UosVaW6dUfdsg` | 70 フォルダ。回答用は `…/forms/d/<ID>/viewform` |
+| ビデオ教材 確認表 | スプレッドシート | `17YISzHc4ZlHLixTPLZ7fMVdRUr2pjv8v3rIaokRljM4` | 80_…/ビデオ教材。タブ: 説明・教材一覧・セクション一覧（sheetId 2）・ビデオ一覧（sheetId 3）。リポジトリの `scripts/video-import/catalog.json` から作り、回答は開発チームが catalog.json に反映する |
 | 要望・不具合の受付台帳 | スプレッドシート | `1zDKOht5jWxq0nEdvuMbDDf9KR5FkijE7aoW3wpPUOkI` | 70 フォルダ。シート「受付台帳」（sheetId `1156693813`） |
 
 ## 共有ドライブ直下（A/B の外）

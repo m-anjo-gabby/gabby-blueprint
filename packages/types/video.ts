@@ -2,7 +2,7 @@ import type { TableRow } from './db';
 
 /**
  * ビデオ教材（com_m_contents.content_type = 1。1シリーズ = 1教材）の区分値と行の型。
- * 区切り・ビデオ・視聴の進み具合は com_m_video_section / com_m_video / student_m_video_progress。
+ * セクション・ビデオ・視聴の進み具合は com_m_video_section / com_m_video / student_m_video_progress。
  */
 
 /**
@@ -38,7 +38,7 @@ export interface AdminVideoItem extends VideoRow {
   thumbnail_url: string | null;
 }
 
-/** admin のエディタの区切り（ビデオは seq_no の順） */
+/** admin のエディタのセクション（ビデオは seq_no の順） */
 export interface AdminVideoSection extends VideoSectionRow {
   videos: AdminVideoItem[];
 }
@@ -57,7 +57,7 @@ export interface StudentVideoItem {
   progress: StudentVideoProgress | null;
 }
 
-/** 生徒の教材の画面の区切り（公開中のビデオが無い区切りは含めない） */
+/** 生徒の教材の画面のセクション（公開中のビデオが無いセクションは含めない） */
 export interface StudentVideoSection {
   section_id: string;
   section_name: string | null;
@@ -72,7 +72,7 @@ export interface StudentVideoContent {
   sections: StudentVideoSection[];
 }
 
-/** ビデオの移動先の候補（ビデオ教材ごとの区切り） */
+/** ビデオの移動先の候補（ビデオ教材ごとのセクション） */
 export interface VideoMoveTarget {
   content_id: string;
   content_name: string;

@@ -39,7 +39,7 @@ const VIDEO_CONTENT_TYPE = 1;
 
 type ErrorsT = Awaited<ReturnType<typeof getTranslations<'contents.errors'>>>;
 
-/** 区切り・ビデオの並びの同順の時の並び（旧データの seq_no の重複に備え、登録順で決める） */
+/** セクション・ビデオの並びの同順の時の並び（旧データの seq_no の重複に備え、登録順で決める） */
 function byOrder<T extends { seq_no: number; insert_date: string }>(a: T, b: T): number {
   return a.seq_no - b.seq_no || a.insert_date.localeCompare(b.insert_date);
 }
@@ -76,7 +76,7 @@ async function isUploadedFile(videoId: string, key: string, kind: VideoFileKind)
 }
 
 /**
- * ビデオ教材のエディタの区切りとビデオ（非公開のビデオも含む）。サムネイルには表示用の URL を添える
+ * ビデオ教材のエディタのセクションとビデオ（非公開のビデオも含む）。サムネイルには表示用の URL を添える
  */
 export async function getVideoEditorSections(
   contentId: string,
@@ -119,12 +119,13 @@ export async function getVideoEditorSections(
 }
 
 /**
- * 区切りの登録・名前の変更。見出しを出さない区切りは名前を空にする（NULL）
+ * セクションの登録・名前の変更。見出しを出さないセクションは名前を空にする（NULL）
  */
 export async function saveVideoSection(input: {
   section_id?: string;
   content_id: string;
   section_name: string;
+  section_name_en: string;
 }): Promise<ActionResult> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const t = await getTranslations();
@@ -132,11 +133,16 @@ export async function saveVideoSection(input: {
   try {
     const supabase = createAdminClient();
     const sectionName = input.section_name.trim() || null;
+    const sectionNameEn = input.section_name_en.trim() || null;
+    // 見出しの有無は和名で決めるため、英名だけのセクションは作らせない
+    if (!sectionName && sectionNameEn) {
+      return { success: false, message: t('contents.errors.videoSectionNameRequiredForEn') };
+    }
 
     if (input.section_id) {
       const { error } = await supabase
         .from('com_m_video_section')
-        .update({ section_name: sectionName })
+        .update({ section_name: sectionName, section_name_en: sectionNameEn })
         .eq('section_id', input.section_id)
         .eq('content_id', input.content_id);
       if (error) throw error;
@@ -153,6 +159,7 @@ export async function saveVideoSection(input: {
       const { error } = await supabase.from('com_m_video_section').insert({
         content_id: input.content_id,
         section_name: sectionName,
+        section_name_en: sectionNameEn,
         seq_no: nextSeqNo(content.com_m_video_section),
       });
       if (error) throw error;
@@ -175,7 +182,7 @@ export async function saveVideoSection(input: {
 }
 
 /**
- * 区切りの削除。ビデオが残っている区切りは消さない（ビデオを移すか消してから）
+ * セクションの削除。ビデオが残っているセクションは消さない（ビデオを移すか消してから）
  */
 export async function deleteVideoSection(sectionId: string): Promise<ActionResult<object, 'not_empty'>> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
@@ -205,7 +212,7 @@ export async function deleteVideoSection(sectionId: string): Promise<ActionResul
 }
 
 /**
- * 区切りを1つ上・下へ動かす
+ * セクションを1つ上・下へ動かす
  */
 export async function moveVideoSection(sectionId: string, direction: -1 | 1): Promise<ActionResult> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
@@ -331,9 +338,10 @@ export async function discardVideoUploads(videoId: string, keys: string[]): Prom
 
 export interface SaveVideoInput {
   video_id: string;
-  /** 新しいビデオの登録先の区切り（登録時だけ使う。移動は moveVideoToSection） */
+  /** 新しいビデオの登録先のセクション（登録時だけ使う。移動は moveVideoToSection） */
   section_id?: string;
   title: string;
+  title_en: string;
   description: string;
   status: VideoStatus;
   /** 新しくアップロードした動画のキー（登録時は必須。編集時は差し替える時だけ） */
@@ -359,6 +367,7 @@ export async function saveVideo(input: SaveVideoInput): Promise<ActionResult> {
     const supabase = createAdminClient();
     const title = input.title.trim();
     if (!title) return { success: false, message: t('contents.errors.videoTitleRequired') };
+    const titleEn = input.title_en.trim() || null;
     if (!Object.values(VIDEO_STATUS).includes(input.status)) {
       return { success: false, message: t('common.errors.unexpected') };
     }
@@ -395,6 +404,7 @@ export async function saveVideo(input: SaveVideoInput): Promise<ActionResult> {
         video_id: input.video_id,
         section_id: section.section_id,
         title,
+        title_en: titleEn,
         description: input.description.trim() || null,
         status: input.status,
         video_path: input.video_key,
@@ -415,6 +425,7 @@ export async function saveVideo(input: SaveVideoInput): Promise<ActionResult> {
       .from('com_m_video')
       .update({
         title,
+        title_en: titleEn,
         description: input.description.trim() || null,
         status: input.status,
         thumbnail_path: thumbnailPath,
@@ -524,7 +535,7 @@ export async function deleteVideo(videoId: string): Promise<ActionResult<object,
 }
 
 /**
- * ビデオを区切りの中で1つ上・下へ動かす
+ * ビデオをセクションの中で1つ上・下へ動かす
  */
 export async function moveVideoInSection(videoId: string, direction: -1 | 1): Promise<ActionResult> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
@@ -567,7 +578,7 @@ export async function moveVideoInSection(videoId: string, direction: -1 | 1): Pr
 }
 
 /**
- * ビデオを別の区切り（別の教材の区切りでもよい）の末尾へ移す。視聴の記録はビデオに付くため、そのまま残る
+ * ビデオを別のセクション（別の教材のセクションでもよい）の末尾へ移す。視聴の記録はビデオに付くため、そのまま残る
  */
 export async function moveVideoToSection(videoId: string, targetSectionId: string): Promise<ActionResult> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
@@ -609,7 +620,7 @@ export async function moveVideoToSection(videoId: string, targetSectionId: strin
 }
 
 /**
- * ビデオの移動先の候補（全てのビデオ教材と、その区切り）
+ * ビデオの移動先の候補（全てのビデオ教材と、そのセクション）
  */
 export async function getVideoMoveTargets(): Promise<CoreResult<{ targets: VideoMoveTarget[] }, BasicErrorCode>> {
   await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);

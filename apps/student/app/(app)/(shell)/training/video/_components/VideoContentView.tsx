@@ -52,8 +52,6 @@ export function VideoContentView({ content, initialVideoId, consumeBookmark }: V
   const [progressMap, setProgressMap] = useState<ProgressMap>(() =>
     Object.fromEntries(videos.map((v) => [v.video_id, v.progress])),
   );
-  /** 一覧から選んだビデオだけ自動で再生する（開いた直後は再生しない） */
-  const [autoPlayId, setAutoPlayId] = useState<string | null>(null);
   const [loadFailedId, setLoadFailedId] = useState<string | null>(null);
   const [isBookmarking, setIsBookmarking] = useState(false);
 
@@ -126,9 +124,10 @@ export function VideoContentView({ content, initialVideoId, consumeBookmark }: V
   const select = (videoId: string) => {
     if (videoId === currentId) return;
     flush();
-    setAutoPlayId(videoId);
     setLoadFailedId(null);
-    window.history.pushState(null, '', `?v=${videoId}`);
+    // 選んでも自動では再生しない（サムネイル・説明を見てから再生してもらう）。
+    // 履歴は積まず、画面の戻るで教材を開く前の画面へ戻れるようにする
+    window.history.replaceState(null, '', `?v=${videoId}`);
   };
 
   const handleTimeUpdate = (video: StudentVideoItem, el: HTMLVideoElement) => {
@@ -198,7 +197,6 @@ export function VideoContentView({ content, initialVideoId, consumeBookmark }: V
                 controls
                 playsInline
                 preload="metadata"
-                autoPlay={autoPlayId === current.video_id}
                 controlsList="nodownload"
                 className="h-full w-full"
                 onLoadedMetadata={(e) => seekToResume(current, e.currentTarget)}

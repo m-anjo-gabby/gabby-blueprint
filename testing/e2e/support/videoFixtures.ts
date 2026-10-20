@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { newTag } from './authFixtures.ts';
 
 /**
- * ビデオ教材の使い捨てデータ（教材・区切り・ビデオと、ビデオのバケットのファイル）。
+ * ビデオ教材の使い捨てデータ（教材・セクション・ビデオと、ビデオのバケットのファイル）。
  * 教材名は `【QAテスト】ビデオ教材E2E（${tag}）`（残骸は authFixtures.leftovers.ts が確かめる）。
  * ファイルはアプリ（packages/lib/video/storage.ts）と同じバケットを直接扱う（置き場所を R2 に移したら、ここも合わせて直す）。
  */
@@ -60,7 +60,7 @@ export interface SeededVideoContent {
 }
 
 /**
- * 画面を通さずにビデオ教材を作る（区切りごとのビデオ）。画面の登録の操作そのものを確かめないテストの前提に使う。
+ * 画面を通さずにビデオ教材を作る（セクションごとのビデオ）。画面の登録の操作そのものを確かめないテストの前提に使う。
  * 既定は非公開・共通の教材。生徒に見せる場合は `published` と、公開先の使い捨ての顧客（`accessClientId`）を渡す
  * （限定公開にし、その顧客の生徒にだけ見せる。固定アカウントの教材一覧に出さないため）。
  */
@@ -99,7 +99,7 @@ export async function seedVideoContent(
       .insert({ content_id: seeded.contentId, section_name: section.name, seq_no: sectionIndex + 1 })
       .select('section_id')
       .single();
-    if (sectionError) throw new Error(`区切りの作成に失敗しました: ${sectionError.message}`);
+    if (sectionError) throw new Error(`セクションの作成に失敗しました: ${sectionError.message}`);
 
     const videos: SeededVideoContent['sections'][number]['videos'] = [];
     for (const [videoIndex, video] of section.videos.entries()) {
@@ -127,7 +127,7 @@ export async function seedVideoContent(
 }
 
 /**
- * 使い捨てのビデオ教材と、そのビデオのファイルを消す（教材を消すと区切り・ビデオは CASCADE で消える）。
+ * 使い捨てのビデオ教材と、そのビデオのファイルを消す（教材を消すとセクション・ビデオは CASCADE で消える）。
  * 視聴の記録（student_m_video_progress）が残っていると RESTRICT で止まるため、生徒の後始末（cleanupAuthFixture）の後に呼ぶ。
  * 失敗は警告だけ出して続ける（後始末のため）。
  */

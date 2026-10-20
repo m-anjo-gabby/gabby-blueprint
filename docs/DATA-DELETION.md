@@ -50,7 +50,7 @@
 | `com_m_notice` | — （公開は `is_published`） | 物理（既読も一緒に消える） |
 | `com_m_dialogue_session` | — | B（進捗・会話ログがあれば拒否） |
 | `com_m_video` | `status`（1:公開 / 0:非公開。新規作成時は非公開） | B（視聴の記録 `student_m_video_progress` があれば拒否）。動画・サムネイルは行の削除・ファイルの差し替えの後に `removeVideoFiles()`（`packages/lib/video/storage.ts`）で消す。教材の削除で `CASCADE` で消えるビデオのファイルも同じ |
-| `com_m_video_section` | — | 物理（ビデオが残っている区切りは admin で削除させない） |
+| `com_m_video_section` | — | 物理（ビデオが残っているセクションは admin で削除させない） |
 | `com_m_calendar_event_series` / `com_m_coach_availability` / `com_m_contents_access` / `com_m_contents_tag` / `com_m_phrase` / `com_m_ai_knowledge_base` | — | 物理 |
 | `com_m_color_vowel` / `com_m_role` | — | 固定のマスタ。画面からは削除しない |
 

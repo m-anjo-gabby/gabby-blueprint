@@ -1,7 +1,7 @@
 // scripts/video-import/run.mjs
 //
 // 旧システムのビデオ（D:\work\video 等に落とした runnow / on-demand / cvc）を、ビデオ教材として取り込む。
-// 教材・区切り・並び順・タイトルは catalog.json（旧マスタと割り当て表から作った定義）が正本。
+// 教材・セクション・並び順・タイトルは catalog.json（旧マスタと割り当て表から作った定義）が正本。
 // 運用手順は同ディレクトリの README.md を参照。
 //
 // 使い方（リポジトリ直下で実行）:
@@ -244,6 +244,8 @@ async function importVideo(opts, supabase, storage, sectionId, { video, seq }) {
         video_id: videoId,
         section_id: sectionId,
         title: video.title,
+        title_en: video.titleEn ?? null,
+        description: video.description ?? null,
         video_path: files[0].key,
         thumbnail_path: files[1].key,
         // admin の登録と同じく、置いたファイルから測る（dev・staging は切り出しの長さになる）
@@ -297,7 +299,7 @@ async function main() {
   for (const { content, contentId, sections } of plan.contents) {
     const counts = sections.flatMap((s) => s.videos).reduce((n, v) => n + (v.exists ? 0 : 1), 0);
     console.log(
-      `  ${contentId ? '既存' : '新規'} ${content.label}「${content.name}」 区切り ${sections.length} / 追加するビデオ ${counts}`,
+      `  ${contentId ? '既存' : '新規'} ${content.label}「${content.name}」 セクション ${sections.length} / 追加するビデオ ${counts}`,
     );
   }
   console.log(`追加するビデオ: ${plan.newVideos} 本（取り込み済み ${plan.existingVideos} 本は変更しません）`);
@@ -332,6 +334,8 @@ async function main() {
         'com_m_contents',
         {
           content_name: content.name,
+          content_name_en: content.nameEn ?? null,
+          description: content.description ?? null,
           content_label: content.label,
           content_type: 1,
           category_id: content.category,
@@ -348,7 +352,12 @@ async function main() {
         (await insertRow(
           supabase,
           'com_m_video_section',
-          { content_id: contentId, section_name: section.name, seq_no: sectionSeq },
+          {
+            content_id: contentId,
+            section_name: section.name,
+            section_name_en: section.nameEn ?? null,
+            seq_no: sectionSeq,
+          },
           'section_id',
         ));
       for (const v of videos.filter((x) => !x.exists)) {

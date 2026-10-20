@@ -16,7 +16,7 @@ interface VideoListProps {
   onSelect: (videoId: string) => void;
 }
 
-/** 教材の中のビデオの一覧（区切りの見出しごと）。見終えたビデオに印、途中のビデオに進み具合を出す */
+/** 教材の中のビデオの一覧（セクションの見出しごと）。見終えたビデオに印、途中のビデオに進み具合を出す */
 export function VideoList({ contentName, sections, currentId, completedCount, totalCount, onSelect }: VideoListProps) {
   return (
     <nav aria-label="ビデオの一覧" className="rounded-card border border-line bg-surface p-3">

@@ -43,7 +43,7 @@
 | [training/sprint-play.md](student/training/sprint-play.md) | `/training/sprint/play` | スプリント実施画面 | ✅ |
 | [training/sprint-result.md](student/training/sprint-result.md) | `/training/sprint/result/[id]`、`/training/sprint/history/[id]` | スプリント結果（実施直後は没入画面・履歴からはシェル画面）、英文中の単語タップによるColor Vowel辞書 | ✅ |
 | [training/word-detail.md](student/training/word-detail.md) | `/training/word/[id]` | 単語帳カードのトレーニング画面 | ✅ |
-| [training/video.md](student/training/video.md) | `/training/video/[id]` | ビデオ教材の再生と区切りごとのビデオの一覧（視聴の記録・続きからの再生・ブックマーク） | ✅ |
+| [training/video.md](student/training/video.md) | `/training/video/[id]` | ビデオ教材の再生とセクションごとのビデオの一覧（視聴の記録・続きからの再生・ブックマーク） | ✅ |
 | [training/word-history.md](student/training/word-history.md) | `/training/word/history` | 単語帳の履歴 | ✅ |
 
 ## coach

@@ -2,15 +2,21 @@
   "contents": [
     {
       "label": "VIDEO_CVC",
-      "name": "ColorVowel 入門",
+      "name": "Color Vowel Chart 入門",
+      "nameEn": "Introduction to the Color Vowel Chart",
+      "description": "英語の母音を色とキーワードで整理した Color Vowel Chart の見方と使い方を紹介します。発音トレーニングを始める前にご覧ください。",
       "category": 3,
       "sections": [
         {
           "name": null,
+          "nameEn": null,
           "videos": [
             {
               "legacyCode": "video_for_CVChart.mp4",
-              "title": "Color Vowel Chart Instructions",
+              "legacyTitle": "Color Vowel Chart Instructions",
+              "title": "Color Vowel Chart の使い方",
+              "titleEn": "Color Vowel Chart Instructions",
+              "description": "Color Vowel Chart の見方と、チャートを使った発音練習の進め方を説明します。",
               "video": "cvc/video_for_CVChart.mp4",
               "thumbnail": "cvc/thumbnail/cvchart_main.png"
             }
@@ -20,69 +26,102 @@
     },
     {
       "label": "VIDEO_F1",
-      "name": "Foundational 1. INTRODUCTION TO THE COLOR VOWEL APPROACH (CVA)",
+      "name": "Foundational 1｜Color Vowel Approach 入門",
+      "nameEn": "Foundational 1. Introduction to the Color Vowel Approach (CVA)",
+      "description": "英語の母音を「色」と「キーワード」で捉える Color Vowel Approach の考え方と、Color Vowel Chart を使った発音練習の基本を学びます。",
       "category": 1,
       "sections": [
         {
-          "name": "1.1 The Color Vowel Chart and the fundamentals of spoken English",
+          "name": "1.1 Color Vowel Chart と話し言葉の基本",
+          "nameEn": "1.1 The Color Vowel Chart and the fundamentals of spoken English",
           "videos": [
             {
               "legacyCode": "F-1-1-1.mp4",
-              "title": "Intro to Phono-Focus",
+              "legacyTitle": "Intro to Phono-Focus",
+              "title": "Phono-Focus へようこそ",
+              "titleEn": "Intro to Phono-Focus",
+              "description": "発音トレーニング Phono-Focus の目的と、これから学ぶ内容の全体像を紹介します。",
               "video": "runnow/F-1-1-1.mp4",
               "thumbnail": "runnow/thumbnail/F-1-1-1.png"
             },
             {
               "legacyCode": "F-1-1-2.mp4",
-              "title": "Discovery: Let's warm up with the Color Vowel Chart! #1",
+              "legacyTitle": "Discovery: Let's warm up with the Color Vowel Chart! #1",
+              "title": "【解説】Color Vowel Chart でウォームアップ #1",
+              "titleEn": "Discovery: Let's warm up with the Color Vowel Chart! #1",
+              "description": "Color Vowel Chart の母音を声に出しながら、口と耳を英語の音に慣らします。",
               "video": "runnow/F-1-1-2.mp4",
               "thumbnail": "runnow/thumbnail/F-1-1-2.png"
             },
             {
               "legacyCode": "F-1-1-3.mp4",
-              "title": "Discovery: What is the Color Vowel Approach?",
+              "legacyTitle": "Discovery: What is the Color Vowel Approach?",
+              "title": "【解説】Color Vowel Approach とは？",
+              "titleEn": "Discovery: What is the Color Vowel Approach?",
+              "description": "母音を色とキーワードで覚える Color Vowel Approach の考え方と、そのメリットを紹介します。",
               "video": "runnow/F-1-1-3.mp4",
               "thumbnail": "runnow/thumbnail/F-1-1-3.png"
             },
             {
               "legacyCode": "F-1-1-4.mp4",
-              "title": "Discovery: What are syllables and how do I count them?",
+              "legacyTitle": "Discovery: What are syllables and how do I count them?",
+              "title": "【解説】音節とは？ 音節の数え方",
+              "titleEn": "Discovery: What are syllables and how do I count them?",
+              "description": "英語の音節の考え方と数え方を学び、日本語の「拍」との違いを確かめます。",
               "video": "runnow/F-1-1-4.mp4",
               "thumbnail": "runnow/thumbnail/F-1-1-4.png"
             },
             {
               "legacyCode": "F-1-1-5.mp4",
-              "title": "Discovery: Why is English difficult for Japanese speakers?",
+              "legacyTitle": "Discovery: Why is English difficult for Japanese speakers?",
+              "title": "【解説】日本語話者にとって英語の発音が難しい理由",
+              "titleEn": "Discovery: Why is English difficult for Japanese speakers?",
+              "description": "日本語と英語の音やリズムの違いから、日本語話者がつまずきやすいポイントを整理します。",
               "video": "runnow/F-1-1-5.mp4",
               "thumbnail": "runnow/thumbnail/F-1-1-5.png"
             },
             {
               "legacyCode": "F-1-1-6.mp4",
-              "title": "Discovery: Vowel letters versus vowel sounds",
+              "legacyTitle": "Discovery: Vowel letters versus vowel sounds",
+              "title": "【解説】母音の「文字」と母音の「音」の違い",
+              "titleEn": "Discovery: Vowel letters versus vowel sounds",
+              "description": "同じ母音字でも読み方が変わる理由を知り、つづりではなく音で母音を捉える考え方を学びます。",
               "video": "runnow/F-1-1-6.mp4",
               "thumbnail": "runnow/thumbnail/F-1-1-6.png"
             },
             {
               "legacyCode": "F-1-1-7.mp4",
-              "title": "Discovery: Some words have more than one Color",
+              "legacyTitle": "Discovery: Some words have more than one Color",
+              "title": "【解説】複数の Color を持つ単語",
+              "titleEn": "Discovery: Some words have more than one Color",
+              "description": "使い方や強勢によって母音の音（Color）が変わる単語を紹介します。",
               "video": "runnow/F-1-1-7.mp4",
               "thumbnail": "runnow/thumbnail/F-1-1-7.png"
             },
             {
               "legacyCode": "F-1-1-8.mp4",
-              "title": "Review: The Three Questions",
+              "legacyTitle": "Review: The Three Questions",
+              "title": "【復習】3つの質問",
+              "titleEn": "Review: The Three Questions",
+              "description": "単語の発音を確かめるときに使う「3つの質問」をおさらいします。",
               "video": "runnow/F-1-1-8.mp4",
               "thumbnail": "runnow/thumbnail/F-1-1-8.png"
             },
             {
               "legacyCode": "F-1-1-9.mp4",
-              "title": "Discovery: Why is the shape of the Color Vowel Chart important?",
+              "legacyTitle": "Discovery: Why is the shape of the Color Vowel Chart important?",
+              "title": "【解説】Color Vowel Chart の形に込められた意味",
+              "titleEn": "Discovery: Why is the shape of the Color Vowel Chart important?",
+              "description": "チャートの並びが、口の形や舌の位置とどう対応しているかを学びます。",
               "video": "runnow/F-1-1-9.mp4",
               "thumbnail": "runnow/thumbnail/F-1-1-9.png"
             },
             {
               "legacyCode": "F-1-1-10.mp4",
-              "title": "Review: Let's warm up with the Color Vowel Chart! #2",
+              "legacyTitle": "Review: Let's warm up with the Color Vowel Chart! #2",
+              "title": "【復習】Color Vowel Chart でウォームアップ #2",
+              "titleEn": "Review: Let's warm up with the Color Vowel Chart! #2",
+              "description": "これまでに学んだ母音を Color Vowel Chart で通して発音し、定着を確かめます。",
               "video": "runnow/F-1-1-10.mp4",
               "thumbnail": "runnow/thumbnail/F-1-1-10.png"
             }
@@ -90,80 +129,116 @@
         },
         {
           "name": "1.2 Color Vowel Yoga",
+          "nameEn": "1.2 Color Vowel Yoga",
           "videos": [
             {
               "legacyCode": "F-1-2-1.mp4",
-              "title": "Discovery: Using the Open Hand gesture",
+              "legacyTitle": "Discovery: Using the Open Hand gesture",
+              "title": "【解説】Open Hand ジェスチャーの使い方",
+              "titleEn": "Discovery: Using the Open Hand gesture",
+              "description": "手の動きで音節と強勢を捉える Open Hand ジェスチャーを学びます。",
               "video": "runnow/F-1-2-1.mp4",
               "thumbnail": "runnow/thumbnail/F-1-2-1.png"
             },
             {
               "legacyCode": "F-1-2-2.mp4",
-              "title": "Bonus: More about the Open Hand gesture",
+              "legacyTitle": "Bonus: More about the Open Hand gesture",
+              "title": "【補足】Open Hand ジェスチャーをもっと詳しく",
+              "titleEn": "Bonus: More about the Open Hand gesture",
+              "description": "Open Hand ジェスチャーの応用的な使い方を紹介します。",
               "video": "runnow/F-1-2-2.mp4",
               "thumbnail": "runnow/thumbnail/F-1-2-2.png"
             },
             {
               "legacyCode": "F-1-2-3.mp4",
-              "title": "Disovery: What is 'schwa' and why is it important?",
+              "legacyTitle": "Disovery: What is 'schwa' and why is it important?",
+              "title": "【解説】schwa（あいまい母音）とは？ なぜ大切なのか",
+              "titleEn": "Discovery: What is 'schwa' and why is it important?",
+              "description": "英語で最もよく使われる弱い母音 schwa の音と、英語らしいリズムを作るうえでの役割を学びます。",
               "video": "runnow/F-1-2-3.mp4",
               "thumbnail": "runnow/thumbnail/F-1-2-3.png"
             },
             {
               "legacyCode": "F-1-2-4.mp4",
-              "title": "Practice: The 'schwaccer' movement",
+              "legacyTitle": "Practice: The 'schwaccer' movement",
+              "title": "【練習】'schwaccer' の動き",
+              "titleEn": "Practice: The 'schwaccer' movement",
+              "description": "schwa と強勢のある母音の違いを、体の動きを使って練習します。",
               "video": "runnow/F-1-2-4.mp4",
               "thumbnail": "runnow/thumbnail/F-1-2-4.png"
             }
           ]
         },
         {
-          "name": "1.3 The Color Vowel Organizer",
+          "name": "1.3 Color Vowel Organizer",
+          "nameEn": "1.3 The Color Vowel Organizer",
           "videos": [
             {
               "legacyCode": "F-1-3-1.mp4",
-              "title": "Discovery: The Color Vowel Organizer",
+              "legacyTitle": "Discovery: The Color Vowel Organizer",
+              "title": "【解説】Color Vowel Organizer",
+              "titleEn": "Discovery: The Color Vowel Organizer",
+              "description": "単語を母音の Color ごとに分類する Color Vowel Organizer の使い方を学びます。",
               "video": "runnow/F-1-3-1.mp4",
               "thumbnail": "runnow/thumbnail/F-1-3-1.png"
             },
             {
               "legacyCode": "F-1-3-2.mp4",
-              "title": "Practice: Let's organize and flood a few words!",
+              "legacyTitle": "Practice: Let's organize and flood a few words!",
+              "title": "【練習】単語を Color ごとに分けて flooding しよう",
+              "titleEn": "Practice: Let's organize and flood a few words!",
+              "description": "いくつかの単語を Color Vowel Organizer に分類し、キーワードと一緒に繰り返し発音する flooding を練習します。",
               "video": "runnow/F-1-3-2.mp4",
               "thumbnail": "runnow/thumbnail/F-1-3-2.png"
             },
             {
               "legacyCode": "F-1-3-3.mp4",
-              "title": "Review: Vowel letters versus vowel sounds",
+              "legacyTitle": "Review: Vowel letters versus vowel sounds",
+              "title": "【復習】母音の「文字」と母音の「音」の違い",
+              "titleEn": "Review: Vowel letters versus vowel sounds",
+              "description": "つづりと音の違いをおさらいし、つづりに引きずられずに母音を発音できるか確かめます。",
               "video": "runnow/F-1-3-3.mp4",
               "thumbnail": "runnow/thumbnail/F-1-3-3.png"
             }
           ]
         },
         {
-          "name": "1.4 Using the CVA to practice the rhythm of English",
+          "name": "1.4 Color Vowel Approach で英語のリズムを練習する",
+          "nameEn": "1.4 Using the CVA to practice the rhythm of English",
           "videos": [
             {
               "legacyCode": "F-1-4-1.mp4",
-              "title": "Discovery: Syllable and stress-timed languages",
+              "legacyTitle": "Discovery: Syllable and stress-timed languages",
+              "title": "【解説】音節で刻む言語と強勢で刻む言語",
+              "titleEn": "Discovery: Syllable and stress-timed languages",
+              "description": "音節ごとにほぼ同じ長さで話す日本語と、強勢ごとにリズムを刻む英語の違いを学びます。",
               "video": "runnow/F-1-4-1.mp4",
               "thumbnail": "runnow/thumbnail/F-1-4-1.png"
             },
             {
               "legacyCode": "F-1-4-2.mp4",
-              "title": "Discovery: From a word to a sentence",
+              "legacyTitle": "Discovery: From a word to a sentence",
+              "title": "【解説】単語から文へ",
+              "titleEn": "Discovery: From a word to a sentence",
+              "description": "単語の強勢が、文のリズムにどうつながるかを学びます。",
               "video": "runnow/F-1-4-2.mp4",
               "thumbnail": "runnow/thumbnail/F-1-4-2.png"
             },
             {
               "legacyCode": "F-1-4-3.mp4",
-              "title": "Practice: Using Color Vowel in conversation",
+              "legacyTitle": "Practice: Using Color Vowel in conversation",
+              "title": "【練習】会話で Color Vowel を使う",
+              "titleEn": "Practice: Using Color Vowel in conversation",
+              "description": "会話の中で Color Vowel のキーワードを使い、発音を確かめ合う方法を練習します。",
               "video": "runnow/F-1-4-3.mp4",
               "thumbnail": "runnow/thumbnail/F-1-4-3.png"
             },
             {
               "legacyCode": "F-1-4-4.mp4",
-              "title": "Let's review what you've learned so far!",
+              "legacyTitle": "Let's review what you've learned so far!",
+              "title": "【復習】ここまでのまとめ",
+              "titleEn": "Let's review what you've learned so far!",
+              "description": "Foundational 1 で学んだ内容をまとめて振り返ります。",
               "video": "runnow/F-1-4-4.mp4",
               "thumbnail": "runnow/thumbnail/F-1-4-4.png"
             }
@@ -173,68 +248,102 @@
     },
     {
       "label": "VIDEO_F2",
-      "name": "Foundational 2. COLOR VOWEL YOGA, CONTINUED",
+      "name": "Foundational 2｜Color Vowel Yoga（続き）",
+      "nameEn": "Foundational 2. Color Vowel Yoga, Continued",
+      "description": "母音を発音するときの口や舌の動きに注目し、動く母音・動かない母音と、R の付く母音を学びます。",
       "category": 1,
       "sections": [
         {
-          "name": "2.1. Moving and non-moving vowels",
+          "name": "2.1 動く母音と動かない母音",
+          "nameEn": "2.1 Moving and non-moving vowels",
           "videos": [
             {
               "legacyCode": "F-2-1-1.mp4",
-              "title": "Discovery: Moving and non-moving vowels",
+              "legacyTitle": "Discovery: Moving and non-moving vowels",
+              "title": "【解説】動く母音と動かない母音",
+              "titleEn": "Discovery: Moving and non-moving vowels",
+              "description": "発音の途中で口の形が変わる母音と、変わらない母音の違いを学びます。",
               "video": "runnow/F-2-1-1.mp4",
               "thumbnail": "runnow/thumbnail/F-2-1-1.png"
             },
             {
               "legacyCode": "F-2-1-2.mp4",
-              "title": "Discovery: Vowels that move to /y/, /w/ and /r/",
+              "legacyTitle": "Discovery: Vowels that move to /y/, /w/ and /r/",
+              "title": "【解説】/y/・/w/・/r/ へ動く母音（1）",
+              "titleEn": "Discovery: Vowels that move to /y/, /w/ and /r/ (1)",
+              "description": "発音の終わりに /y/・/w/・/r/ の方向へ口が動く母音を学びます（全3回の1回目）。",
               "video": "runnow/F-2-1-2.mp4",
-              "thumbnail": "runnow/thumbnail/F-2-1-2.png"
+              "thumbnail": "runnow/thumbnail/F-2-1-2.png",
+              "note": "旧システムでは F-2-1-2〜4 が同じタイトルだったため（1）〜（3）を付けました。内容に合うタイトルをご確認ください"
             },
             {
               "legacyCode": "F-2-1-3.mp4",
-              "title": "Discovery: Vowels that move to /y/, /w/ and /r/",
+              "legacyTitle": "Discovery: Vowels that move to /y/, /w/ and /r/",
+              "title": "【解説】/y/・/w/・/r/ へ動く母音（2）",
+              "titleEn": "Discovery: Vowels that move to /y/, /w/ and /r/ (2)",
+              "description": "発音の終わりに /y/・/w/・/r/ の方向へ口が動く母音を学びます（全3回の2回目）。",
               "video": "runnow/F-2-1-3.mp4",
-              "thumbnail": "runnow/thumbnail/F-2-1-3.png"
+              "thumbnail": "runnow/thumbnail/F-2-1-3.png",
+              "note": "同上（F-2-1-2 を参照）"
             },
             {
               "legacyCode": "F-2-1-4.mp4",
-              "title": "Discovery: Vowels that move to /y/, /w/ and /r/",
+              "legacyTitle": "Discovery: Vowels that move to /y/, /w/ and /r/",
+              "title": "【解説】/y/・/w/・/r/ へ動く母音（3）",
+              "titleEn": "Discovery: Vowels that move to /y/, /w/ and /r/ (3)",
+              "description": "発音の終わりに /y/・/w/・/r/ の方向へ口が動く母音を学びます（全3回の3回目）。",
               "video": "runnow/F-2-1-4.mp4",
-              "thumbnail": "runnow/thumbnail/F-2-1-4.png"
+              "thumbnail": "runnow/thumbnail/F-2-1-4.png",
+              "note": "同上（F-2-1-2 を参照）"
             },
             {
               "legacyCode": "F-2-1-5.mp4",
-              "title": "Practice: Invisible /y/ and /w/",
+              "legacyTitle": "Practice: Invisible /y/ and /w/",
+              "title": "【練習】見えない /y/ と /w/",
+              "titleEn": "Practice: Invisible /y/ and /w/",
+              "description": "母音と母音の間に自然に入る /y/・/w/ の音を練習します。",
               "video": "runnow/F-2-1-5.mp4",
               "thumbnail": "runnow/thumbnail/F-2-1-5.png"
             }
           ]
         },
         {
-          "name": "2.2 'R' vowel sounds",
+          "name": "2.2 R の付く母音",
+          "nameEn": "2.2 'R' vowel sounds",
           "videos": [
             {
               "legacyCode": "F-2-2-1.mp4",
-              "title": "Discovery: The Purple Tongue Position and PURPLE SHIRT",
+              "legacyTitle": "Discovery: The Purple Tongue Position and PURPLE SHIRT",
+              "title": "【解説】Purple Tongue Position と PURPLE SHIRT",
+              "titleEn": "Discovery: The Purple Tongue Position and PURPLE SHIRT",
+              "description": "R の音を作る舌の位置（Purple Tongue Position）と、PURPLE SHIRT の母音を学びます。",
               "video": "runnow/F-2-2-1.mp4",
               "thumbnail": "runnow/thumbnail/F-2-2-1.png"
             },
             {
               "legacyCode": "F-2-2-2.mp4",
-              "title": "Practice: The Purple Tongue Position and PURPLE SHIRT",
+              "legacyTitle": "Practice: The Purple Tongue Position and PURPLE SHIRT",
+              "title": "【練習】Purple Tongue Position と PURPLE SHIRT",
+              "titleEn": "Practice: The Purple Tongue Position and PURPLE SHIRT",
+              "description": "Purple Tongue Position を意識しながら、PURPLE SHIRT の母音を含む単語を練習します。",
               "video": "runnow/F-2-2-2.mp4",
               "thumbnail": "runnow/thumbnail/F-2-2-2.png"
             },
             {
               "legacyCode": "F-2-2-3.mp4",
-              "title": "Discovery: R-controlled vowels",
+              "legacyTitle": "Discovery: R-controlled vowels",
+              "title": "【解説】R の付く母音",
+              "titleEn": "Discovery: R-controlled vowels",
+              "description": "car・more・here など、母音の後に R が続く音の作り方を学びます。",
               "video": "runnow/F-2-2-3.mp4",
               "thumbnail": "runnow/thumbnail/F-2-2-3.png"
             },
             {
               "legacyCode": "F-2-2-4.mp4",
-              "title": "Practice: R-controlled vowels",
+              "legacyTitle": "Practice: R-controlled vowels",
+              "title": "【練習】R の付く母音",
+              "titleEn": "Practice: R-controlled vowels",
+              "description": "R の付く母音を含む単語やフレーズを練習します。",
               "video": "runnow/F-2-2-4.mp4",
               "thumbnail": "runnow/thumbnail/F-2-2-4.png"
             }
@@ -244,33 +353,48 @@
     },
     {
       "label": "VIDEO_F3",
-      "name": "Foundational 3. CONSONANT SOUNDS",
+      "name": "Foundational 3｜子音",
+      "nameEn": "Foundational 3. Consonant Sounds",
+      "description": "日本語話者が苦手としやすい R と L の子音を、舌の位置から身につけます。",
       "category": 1,
       "sections": [
         {
-          "name": "3.1 'R' and 'L'",
+          "name": "3.1 R と L",
+          "nameEn": "3.1 'R' and 'L'",
           "videos": [
             {
               "legacyCode": "F-3-1-1.mp4",
-              "title": "Discovery: The consonant /r/",
+              "legacyTitle": "Discovery: The consonant /r/",
+              "title": "【解説】子音 /r/",
+              "titleEn": "Discovery: The consonant /r/",
+              "description": "舌先をどこにも付けずに出す /r/ の音の作り方を学びます。",
               "video": "runnow/F-3-1-1.mp4",
               "thumbnail": "runnow/thumbnail/F-3-1-1.png"
             },
             {
               "legacyCode": "F-3-1-2.mp4",
-              "title": "Practice: The consonant /r/",
+              "legacyTitle": "Practice: The consonant /r/",
+              "title": "【練習】子音 /r/",
+              "titleEn": "Practice: The consonant /r/",
+              "description": "/r/ を含む単語やフレーズを練習します。",
               "video": "runnow/F-3-1-2.mp4",
               "thumbnail": "runnow/thumbnail/F-3-1-2.png"
             },
             {
               "legacyCode": "F-3-1-3.mp4",
-              "title": "Discovery: Light and dark /l/",
+              "legacyTitle": "Discovery: Light and dark /l/",
+              "title": "【解説】Light L と Dark L",
+              "titleEn": "Discovery: Light and dark /l/",
+              "description": "語頭などの明るい L と、語末などの暗い L、2つの /l/ の違いを学びます。",
               "video": "runnow/F-3-1-3.mp4",
               "thumbnail": "runnow/thumbnail/F-3-1-3.png"
             },
             {
               "legacyCode": "F-3-1-4.mp4",
-              "title": "Practice:Light and dark /l/",
+              "legacyTitle": "Practice:Light and dark /l/",
+              "title": "【練習】Light L と Dark L",
+              "titleEn": "Practice: Light and dark /l/",
+              "description": "2種類の /l/ を含む単語やフレーズを練習します。",
               "video": "runnow/F-3-1-4.mp4",
               "thumbnail": "runnow/thumbnail/F-3-1-4.png"
             }
@@ -280,120 +404,174 @@
     },
     {
       "label": "VIDEO_F4",
-      "name": "Foundational 4. THE RHYTHM OF ENGLISH",
+      "name": "Foundational 4｜英語のリズム",
+      "nameEn": "Foundational 4. The Rhythm of English",
+      "description": "内容語と機能語、音のつながり、意味のまとまり（Thought Group）を通して、英語らしいリズムで話す練習をします。",
       "category": 1,
       "sections": [
         {
-          "name": "4.1 Content and structure words",
+          "name": "4.1 内容語と機能語",
+          "nameEn": "4.1 Content and structure words",
           "videos": [
             {
               "legacyCode": "F-4-1-1.mp4",
-              "title": "Dicovery: Content and structure words",
+              "legacyTitle": "Dicovery: Content and structure words",
+              "title": "【解説】内容語と機能語",
+              "titleEn": "Discovery: Content and structure words",
+              "description": "文の中で強く読む内容語と、弱く読む機能語の違いを学びます。",
               "video": "runnow/F-4-1-1.mp4",
               "thumbnail": "runnow/thumbnail/F-4-1-1.png"
             },
             {
               "legacyCode": "F-4-1-2.mp4",
-              "title": "Practice: Content and structure words",
+              "legacyTitle": "Practice: Content and structure words",
+              "title": "【練習】内容語と機能語",
+              "titleEn": "Practice: Content and structure words",
+              "description": "内容語を強く、機能語を弱く読み分ける練習をします。",
               "video": "runnow/F-4-1-2.mp4",
               "thumbnail": "runnow/thumbnail/F-4-1-2.png"
             },
             {
               "legacyCode": "F-4-1-3.mp4",
-              "title": "Bonus: More about content and structure words",
+              "legacyTitle": "Bonus: More about content and structure words",
+              "title": "【補足】内容語と機能語をもっと詳しく",
+              "titleEn": "Bonus: More about content and structure words",
+              "description": "内容語と機能語の見分け方で、迷いやすい単語や例外を紹介します。",
               "video": "runnow/F-4-1-3.mp4",
               "thumbnail": "runnow/thumbnail/F-4-1-3.png"
             }
           ]
         },
         {
-          "name": "4.2 Reducing structure words",
+          "name": "4.2 機能語を弱く発音する",
+          "nameEn": "4.2 Reducing structure words",
           "videos": [
             {
               "legacyCode": "F-4-2-1.mp4",
-              "title": "Discovery: Reducing structure words",
+              "legacyTitle": "Discovery: Reducing structure words",
+              "title": "【解説】機能語を弱く発音する",
+              "titleEn": "Discovery: Reducing structure words",
+              "description": "to・for・and などの機能語が、文の中で短く弱くなる仕組みを学びます。",
               "video": "runnow/F-4-2-1.mp4",
               "thumbnail": "runnow/thumbnail/F-4-2-1.png"
             },
             {
               "legacyCode": "F-4-2-2.mp4",
-              "title": "Practice: Reducing structure words",
+              "legacyTitle": "Practice: Reducing structure words",
+              "title": "【練習】機能語を弱く発音する",
+              "titleEn": "Practice: Reducing structure words",
+              "description": "機能語を弱く発音して、文を英語らしいリズムで読む練習をします。",
               "video": "runnow/F-4-2-2.mp4",
               "thumbnail": "runnow/thumbnail/F-4-2-2.png"
             }
           ]
         },
         {
-          "name": "4.3 Connected speech",
+          "name": "4.3 音のつながり",
+          "nameEn": "4.3 Connected speech",
           "videos": [
             {
               "legacyCode": "F-4-3-1.mp4",
-              "title": "Discovery: The five types of connected speech",
+              "legacyTitle": "Discovery: The five types of connected speech",
+              "title": "【解説】音のつながり 5つのパターン",
+              "titleEn": "Discovery: The five types of connected speech",
+              "description": "英語の文の中で起こる、音のつながり・変化の5つのパターンを紹介します。",
               "video": "runnow/F-4-3-1.mp4",
               "thumbnail": "runnow/thumbnail/F-4-3-1.png"
             },
             {
               "legacyCode": "F-4-3-2.mp4",
-              "title": "Discovery: Linking in a sentence",
+              "legacyTitle": "Discovery: Linking in a sentence",
+              "title": "【解説】文の中のリンキング",
+              "titleEn": "Discovery: Linking in a sentence",
+              "description": "単語の終わりと次の単語の始まりがつながる「リンキング」を学びます。",
               "video": "runnow/F-4-3-2.mp4",
               "thumbnail": "runnow/thumbnail/F-4-3-2.png"
             },
             {
               "legacyCode": "F-4-3-3.mp4",
-              "title": "Practice: Linking in a sentence",
+              "legacyTitle": "Practice: Linking in a sentence",
+              "title": "【練習】文の中のリンキング",
+              "titleEn": "Practice: Linking in a sentence",
+              "description": "リンキングを意識して文を読む練習をします。",
               "video": "runnow/F-4-3-3.mp4",
               "thumbnail": "runnow/thumbnail/F-4-3-3.png"
             },
             {
               "legacyCode": "F-4-3-4.mp4",
-              "title": "Discovery: Invisible /y/ and /w/ in a sentence",
+              "legacyTitle": "Discovery: Invisible /y/ and /w/ in a sentence",
+              "title": "【解説】文の中の見えない /y/ と /w/",
+              "titleEn": "Discovery: Invisible /y/ and /w/ in a sentence",
+              "description": "単語と単語の間に入る /y/・/w/ の音を、文の中で学びます。",
               "video": "runnow/F-4-3-4.mp4",
               "thumbnail": "runnow/thumbnail/F-4-3-4.png"
             },
             {
               "legacyCode": "F-4-3-5.mp4",
-              "title": "Practice: Invisible /y/ and /w/ in a sentence",
+              "legacyTitle": "Practice: Invisible /y/ and /w/ in a sentence",
+              "title": "【練習】文の中の見えない /y/ と /w/",
+              "titleEn": "Practice: Invisible /y/ and /w/ in a sentence",
+              "description": "見えない /y/・/w/ を意識して文を読む練習をします。",
               "video": "runnow/F-4-3-5.mp4",
               "thumbnail": "runnow/thumbnail/F-4-3-5.png"
             },
             {
               "legacyCode": "F-4-3-6.mp4",
-              "title": "Discovery: Blended sounds in a sentence",
+              "legacyTitle": "Discovery: Blended sounds in a sentence",
+              "title": "【解説】文の中で混ざり合う音",
+              "titleEn": "Discovery: Blended sounds in a sentence",
+              "description": "did you が「ディジュ」になるように、隣り合う音が混ざって別の音になる現象を学びます。",
               "video": "runnow/F-4-3-6.mp4",
               "thumbnail": "runnow/thumbnail/F-4-3-6.png"
             },
             {
               "legacyCode": "F-4-3-7.mp4",
-              "title": "Practice: Blended sounds in a sentence",
+              "legacyTitle": "Practice: Blended sounds in a sentence",
+              "title": "【練習】文の中で混ざり合う音",
+              "titleEn": "Practice: Blended sounds in a sentence",
+              "description": "音が混ざり合う箇所を意識して文を読む練習をします。",
               "video": "runnow/F-4-3-7.mp4",
               "thumbnail": "runnow/thumbnail/F-4-3-7.png"
             }
           ]
         },
         {
-          "name": "4.4 Thought groups",
+          "name": "4.4 Thought Group（意味のまとまり）",
+          "nameEn": "4.4 Thought groups",
           "videos": [
             {
               "legacyCode": "F-4-4-1.mp4",
-              "title": "Discovery: Thought groups and pauses",
+              "legacyTitle": "Discovery: Thought groups and pauses",
+              "title": "【解説】Thought Group と間（ポーズ）",
+              "titleEn": "Discovery: Thought groups and pauses",
+              "description": "意味のまとまり（Thought Group）ごとに区切って話すと伝わりやすくなる理由を学びます。",
               "video": "runnow/F-4-4-1.mp4",
               "thumbnail": "runnow/thumbnail/F-4-4-1.png"
             },
             {
               "legacyCode": "F-4-4-2.mp4",
-              "title": "Practice: Thought groups and pauses",
+              "legacyTitle": "Practice: Thought groups and pauses",
+              "title": "【練習】Thought Group と間（ポーズ）",
+              "titleEn": "Practice: Thought groups and pauses",
+              "description": "Thought Group ごとに間を取りながら文を読む練習をします。",
               "video": "runnow/F-4-4-2.mp4",
               "thumbnail": "runnow/thumbnail/F-4-4-2.png"
             },
             {
               "legacyCode": "F-4-4-3.mp4",
-              "title": "Discovery: Thought groups and focus words",
+              "legacyTitle": "Discovery: Thought groups and focus words",
+              "title": "【解説】Thought Group と Focus Word",
+              "titleEn": "Discovery: Thought groups and focus words",
+              "description": "Thought Group の中で最も強調する Focus Word の選び方を学びます。",
               "video": "runnow/F-4-4-3.mp4",
               "thumbnail": "runnow/thumbnail/F-4-4-3.png"
             },
             {
               "legacyCode": "F-4-4-4.mp4",
-              "title": "Practice: Thought groups and focus words",
+              "legacyTitle": "Practice: Thought groups and focus words",
+              "title": "【練習】Thought Group と Focus Word",
+              "titleEn": "Practice: Thought groups and focus words",
+              "description": "Focus Word をはっきり強調して文を読む練習をします。",
               "video": "runnow/F-4-4-4.mp4",
               "thumbnail": "runnow/thumbnail/F-4-4-4.png"
             }
@@ -403,98 +581,144 @@
     },
     {
       "label": "VIDEO_P1",
-      "name": "Personalized 1. INTRODUCTION TO THE COLOR VOWEL APPROACH (CVA)",
+      "name": "Personalized 1｜Color Vowel の母音",
+      "nameEn": "Personalized 1. Introduction to the Color Vowel Approach (CVA)",
+      "description": "Color Vowel Chart の母音を1つずつ取り上げます。自分の苦手な母音を選んで重点的に練習できます。",
       "category": 1,
       "sections": [
         {
           "name": "1.1 Color Vowel Yoga",
+          "nameEn": "1.1 Color Vowel Yoga",
           "videos": [
             {
               "legacyCode": "P-1-1-1.mp4",
-              "title": "Discovery: GREEN TEA",
+              "legacyTitle": "Discovery: GREEN TEA",
+              "title": "【解説】GREEN TEA",
+              "titleEn": "Discovery: GREEN TEA",
+              "description": "GREEN TEA の母音の口の形と発音のしかたを学びます。",
               "video": "runnow/P-1-1-1.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-1.png"
             },
             {
               "legacyCode": "P-1-1-2.mp4",
-              "title": "Discovery: SILVER PIN",
+              "legacyTitle": "Discovery: SILVER PIN",
+              "title": "【解説】SILVER PIN",
+              "titleEn": "Discovery: SILVER PIN",
+              "description": "SILVER PIN の母音の口の形と発音のしかたを学びます。",
               "video": "runnow/P-1-1-2.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-2.png"
             },
             {
               "legacyCode": "P-1-1-3.mp4",
-              "title": "Discovery: GRAY DAY",
+              "legacyTitle": "Discovery: GRAY DAY",
+              "title": "【解説】GRAY DAY",
+              "titleEn": "Discovery: GRAY DAY",
+              "description": "GRAY DAY の母音の口の形と発音のしかたを学びます。",
               "video": "runnow/P-1-1-3.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-3.png"
             },
             {
               "legacyCode": "P-1-1-4.mp4",
-              "title": "Discovery: RED PEPPER and BLACK CAT",
+              "legacyTitle": "Discovery: RED PEPPER and BLACK CAT",
+              "title": "【解説】RED PEPPER と BLACK CAT",
+              "titleEn": "Discovery: RED PEPPER and BLACK CAT",
+              "description": "RED PEPPER と BLACK CAT の2つの母音の違いと、発音のしかたを学びます。",
               "video": "runnow/P-1-1-4.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-4.png"
             },
             {
               "legacyCode": "P-1-1-5.mp4",
-              "title": "Discovery: OLIVE SOCK",
+              "legacyTitle": "Discovery: OLIVE SOCK",
+              "title": "【解説】OLIVE SOCK",
+              "titleEn": "Discovery: OLIVE SOCK",
+              "description": "OLIVE SOCK の母音の口の形と発音のしかたを学びます。",
               "video": "runnow/P-1-1-5.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-5.png"
             },
             {
               "legacyCode": "P-1-1-6.mp4",
-              "title": "Bonus: OLIVE SOCK versus AUBURN DOG",
+              "legacyTitle": "Bonus: OLIVE SOCK versus AUBURN DOG",
+              "title": "【補足】OLIVE SOCK と AUBURN DOG の違い",
+              "titleEn": "Bonus: OLIVE SOCK versus AUBURN DOG",
+              "description": "似ている OLIVE SOCK と AUBURN DOG の母音の違いを確かめます。",
               "video": "runnow/P-1-1-6.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-6.png"
             },
             {
               "legacyCode": "P-1-1-7.mp4",
-              "title": "Discovery: a CUP of MUSTARD",
+              "legacyTitle": "Discovery: a CUP of MUSTARD",
+              "title": "【解説】a CUP of MUSTARD",
+              "titleEn": "Discovery: a CUP of MUSTARD",
+              "description": "a CUP of MUSTARD の母音の口の形と発音のしかたを学びます。",
               "video": "runnow/P-1-1-7.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-7.png"
             },
             {
               "legacyCode": "P-1-1-8.mp4",
-              "title": "Discovery: ROSE BOAT",
+              "legacyTitle": "Discovery: ROSE BOAT",
+              "title": "【解説】ROSE BOAT",
+              "titleEn": "Discovery: ROSE BOAT",
+              "description": "ROSE BOAT の母音の口の形と発音のしかたを学びます。",
               "video": "runnow/P-1-1-8.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-8.png"
             },
             {
               "legacyCode": "P-1-1-9.mp4",
-              "title": "Discovery: WOODEN HOOK",
+              "legacyTitle": "Discovery: WOODEN HOOK",
+              "title": "【解説】WOODEN HOOK",
+              "titleEn": "Discovery: WOODEN HOOK",
+              "description": "WOODEN HOOK の母音の口の形と発音のしかたを学びます。",
               "video": "runnow/P-1-1-9.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-9.png"
             },
             {
               "legacyCode": "P-1-1-10.mp4",
-              "title": "Discovery: BLUE MOON",
+              "legacyTitle": "Discovery: BLUE MOON",
+              "title": "【解説】BLUE MOON",
+              "titleEn": "Discovery: BLUE MOON",
+              "description": "BLUE MOON の母音の口の形と発音のしかたを学びます。",
               "video": "runnow/P-1-1-10.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-10.png"
             },
             {
               "legacyCode": "P-1-1-11.mp4",
-              "title": "Discovery: BROWN COW",
+              "legacyTitle": "Discovery: BROWN COW",
+              "title": "【解説】BROWN COW",
+              "titleEn": "Discovery: BROWN COW",
+              "description": "BROWN COW の母音の口の形と発音のしかたを学びます。",
               "video": "runnow/P-1-1-11.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-11.png"
             },
             {
               "legacyCode": "P-1-1-12.mp4",
-              "title": "Discovery: WHITE TIE",
+              "legacyTitle": "Discovery: WHITE TIE",
+              "title": "【解説】WHITE TIE",
+              "titleEn": "Discovery: WHITE TIE",
+              "description": "WHITE TIE の母音の口の形と発音のしかたを学びます。",
               "video": "runnow/P-1-1-12.mp4",
               "thumbnail": "runnow/thumbnail/P-1-1-12.png"
             }
           ]
         },
         {
-          "name": "1.2 Moving and non-moving vowels",
+          "name": "1.2 動く母音と動かない母音",
+          "nameEn": "1.2 Moving and non-moving vowels",
           "videos": [
             {
               "legacyCode": "P-1-2-1.mp4",
-              "title": "Discovery: The \"O\" Vowel Sounds",
+              "legacyTitle": "Discovery: The \"O\" Vowel Sounds",
+              "title": "【解説】「O」の母音",
+              "titleEn": "Discovery: The \"O\" Vowel Sounds",
+              "description": "つづりに O を含む単語の、さまざまな母音の読み方を学びます。",
               "video": "runnow/P-1-2-1.mp4",
               "thumbnail": "runnow/thumbnail/P-1-2-1.png"
             },
             {
               "legacyCode": "P-1-2-2.mp4",
-              "title": "Bonus: Invisible /y/ and BLUE MOON",
+              "legacyTitle": "Bonus: Invisible /y/ and BLUE MOON",
+              "title": "【補足】見えない /y/ と BLUE MOON",
+              "titleEn": "Bonus: Invisible /y/ and BLUE MOON",
+              "description": "few・music のように、BLUE MOON の母音の前に /y/ が入る単語を紹介します。",
               "video": "runnow/P-1-2-2.mp4",
               "thumbnail": "runnow/thumbnail/P-1-2-2.png"
             }
@@ -504,158 +728,234 @@
     },
     {
       "label": "VIDEO_P2",
-      "name": "Personalized 2. CONSONANT SOUNDS",
+      "name": "Personalized 2｜子音",
+      "nameEn": "Personalized 2. Consonant Sounds",
+      "description": "日本語話者が間違えやすい子音や、子音が続く箇所を取り上げます。自分の苦手な音を選んで重点的に練習できます。",
       "category": 1,
       "sections": [
         {
-          "name": "2.1 Tricky consonant sounds",
+          "name": "2.1 間違えやすい子音",
+          "nameEn": "2.1 Tricky consonant sounds",
           "videos": [
             {
               "legacyCode": "P-2-1-1.mp4",
-              "title": "Discovery: /th/ and /TH/",
+              "legacyTitle": "Discovery: /th/ and /TH/",
+              "title": "【解説】/th/ と /TH/",
+              "titleEn": "Discovery: /th/ and /TH/",
+              "description": "think の /th/ と this の /TH/、2つの th の音の作り方を学びます。",
               "video": "runnow/P-2-1-1.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-1.png"
             },
             {
               "legacyCode": "P-2-1-2.mp4",
-              "title": "Practice: /th/ and /TH/",
+              "legacyTitle": "Practice: /th/ and /TH/",
+              "title": "【練習】/th/ と /TH/",
+              "titleEn": "Practice: /th/ and /TH/",
+              "description": "2つの th の音を含む単語やフレーズを練習します。",
               "video": "runnow/P-2-1-2.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-2.png"
             },
             {
               "legacyCode": "P-2-1-3.mp4",
-              "title": "Discovery: /f/ and /v/",
+              "legacyTitle": "Discovery: /f/ and /v/",
+              "title": "【解説】/f/ と /v/",
+              "titleEn": "Discovery: /f/ and /v/",
+              "description": "上の歯を下唇に当てて出す /f/ と /v/ の音の作り方を学びます。",
               "video": "runnow/P-2-1-3.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-3.png"
             },
             {
               "legacyCode": "P-2-1-4.mp4",
-              "title": "Practice: /f/ and /v/",
+              "legacyTitle": "Practice: /f/ and /v/",
+              "title": "【練習】/f/ と /v/",
+              "titleEn": "Practice: /f/ and /v/",
+              "description": "/f/ と /v/ を含む単語やフレーズを練習します。",
               "video": "runnow/P-2-1-4.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-4.png"
             },
             {
               "legacyCode": "P-2-1-5.mp4",
-              "title": "Discovery: /b/ and /p/",
+              "legacyTitle": "Discovery: /b/ and /p/",
+              "title": "【解説】/b/ と /p/",
+              "titleEn": "Discovery: /b/ and /p/",
+              "description": "唇を使う /b/ と /p/ の違い（声の有無と息の強さ）を学びます。",
               "video": "runnow/P-2-1-5.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-5.png"
             },
             {
               "legacyCode": "P-2-1-6.mp4",
-              "title": "Practice: /b/ and /p/",
+              "legacyTitle": "Practice: /b/ and /p/",
+              "title": "【練習】/b/ と /p/",
+              "titleEn": "Practice: /b/ and /p/",
+              "description": "/b/ と /p/ を含む単語やフレーズを練習します。",
               "video": "runnow/P-2-1-6.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-6.png"
             },
             {
               "legacyCode": "P-2-1-7.mp4",
-              "title": "Discovery: -s endings",
+              "legacyTitle": "Discovery: -s endings",
+              "title": "【解説】語尾の -s",
+              "titleEn": "Discovery: -s endings",
+              "description": "複数形や三人称単数の -s が /s/・/z/・/iz/ のどれになるかを学びます。",
               "video": "runnow/P-2-1-7.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-7.png"
             },
             {
               "legacyCode": "P-2-1-8.mp4",
-              "title": "Practice: -s endings",
+              "legacyTitle": "Practice: -s endings",
+              "title": "【練習】語尾の -s",
+              "titleEn": "Practice: -s endings",
+              "description": "語尾の -s を含む単語やフレーズを練習します。",
               "video": "runnow/P-2-1-8.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-8.png"
             },
             {
               "legacyCode": "P-2-1-9.mp4",
-              "title": "Discovery: /s/ and /sh/",
+              "legacyTitle": "Discovery: /s/ and /sh/",
+              "title": "【解説】/s/ と /sh/",
+              "titleEn": "Discovery: /s/ and /sh/",
+              "description": "sea と she のように、/s/ と /sh/ の舌と唇の形の違いを学びます。",
               "video": "runnow/P-2-1-9.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-9.png"
             },
             {
               "legacyCode": "P-2-1-10.mp4",
-              "title": "Practice: /s/ and /sh/",
+              "legacyTitle": "Practice: /s/ and /sh/",
+              "title": "【練習】/s/ と /sh/",
+              "titleEn": "Practice: /s/ and /sh/",
+              "description": "/s/ と /sh/ を含む単語やフレーズを練習します。",
               "video": "runnow/P-2-1-10.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-10.png"
             },
             {
               "legacyCode": "P-2-1-11.mp4",
-              "title": "Discovery: The true and silent /t/",
+              "legacyTitle": "Discovery: The true and silent /t/",
+              "title": "【解説】発音する /t/ と発音しない /t/",
+              "titleEn": "Discovery: The true and silent /t/",
+              "description": "はっきり発音する /t/ と、ほとんど聞こえなくなる /t/ の違いを学びます。",
               "video": "runnow/P-2-1-11.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-11.png"
             },
             {
               "legacyCode": "P-2-1-12.mp4",
-              "title": "Practice: The true and silent /t/",
+              "legacyTitle": "Practice: The true and silent /t/",
+              "title": "【練習】発音する /t/ と発音しない /t/",
+              "titleEn": "Practice: The true and silent /t/",
+              "description": "2つの /t/ を含む単語やフレーズを練習します。",
               "video": "runnow/P-2-1-12.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-12.png"
             },
             {
               "legacyCode": "P-2-1-13.mp4",
-              "title": "Discovery: The 'flap /t/' in North American English",
+              "legacyTitle": "Discovery: The 'flap /t/' in North American English",
+              "title": "【解説】北米英語の flap /t/",
+              "titleEn": "Discovery: The 'flap /t/' in North American English",
+              "description": "water・better のように、母音に挟まれた /t/ がラ行に近い音になる flap /t/ を学びます。",
               "video": "runnow/P-2-1-13.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-13.png"
             },
             {
               "legacyCode": "P-2-1-14.mp4",
-              "title": "Practice: The 'flap /t/' in North American English",
+              "legacyTitle": "Practice: The 'flap /t/' in North American English",
+              "title": "【練習】北米英語の flap /t/",
+              "titleEn": "Practice: The 'flap /t/' in North American English",
+              "description": "flap /t/ を含む単語やフレーズを練習します。",
               "video": "runnow/P-2-1-14.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-14.png"
             },
             {
               "legacyCode": "P-2-1-15.mp4",
-              "title": "Discovery: The glottal /t/",
+              "legacyTitle": "Discovery: The glottal /t/",
+              "title": "【解説】のどで止める glottal /t/",
+              "titleEn": "Discovery: The glottal /t/",
+              "description": "button・mountain のように、のどで息を止めて出す /t/ を学びます。",
               "video": "runnow/P-2-1-15.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-15.png"
             },
             {
               "legacyCode": "P-2-1-16.mp4",
-              "title": "Practice: The glottal /t/",
+              "legacyTitle": "Practice: The glottal /t/",
+              "title": "【練習】のどで止める glottal /t/",
+              "titleEn": "Practice: The glottal /t/",
+              "description": "glottal /t/ を含む単語やフレーズを練習します。",
               "video": "runnow/P-2-1-16.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-16.png"
             },
             {
               "legacyCode": "P-2-1-17.mp4",
-              "title": "Bonus: The 't' sounds",
+              "legacyTitle": "Bonus: The 't' sounds",
+              "title": "【補足】さまざまな t の音",
+              "titleEn": "Bonus: The 't' sounds",
+              "description": "これまでに学んだ t の音をまとめて整理します。",
               "video": "runnow/P-2-1-17.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-17.png"
             },
             {
               "legacyCode": "P-2-1-18.mp4",
-              "title": "Discovery: /n/ and /ng/",
+              "legacyTitle": "Discovery: /n/ and /ng/",
+              "title": "【解説】/n/ と /ng/",
+              "titleEn": "Discovery: /n/ and /ng/",
+              "description": "舌先を使う /n/ と、舌の奥を使う /ng/ の違いを学びます。",
               "video": "runnow/P-2-1-18.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-18.png"
             },
             {
               "legacyCode": "P-2-1-19.mp4",
-              "title": "Practice: /n/ and /ng/",
+              "legacyTitle": "Practice: /n/ and /ng/",
+              "title": "【練習】/n/ と /ng/",
+              "titleEn": "Practice: /n/ and /ng/",
+              "description": "/n/ と /ng/ を含む単語やフレーズを練習します。",
               "video": "runnow/P-2-1-19.mp4",
               "thumbnail": "runnow/thumbnail/P-2-1-19.png"
             }
           ]
         },
         {
-          "name": "2.2 Consonant clusters",
+          "name": "2.2 子音が続く音",
+          "nameEn": "2.2 Consonant clusters",
           "videos": [
             {
               "legacyCode": "P-2-2-1.mp4",
-              "title": "Discovery: An overview of consonant clusters",
+              "legacyTitle": "Discovery: An overview of consonant clusters",
+              "title": "【解説】子音が続く音とは",
+              "titleEn": "Discovery: An overview of consonant clusters",
+              "description": "母音を挟まずに子音が続く音（consonant cluster）の全体像を学びます。",
               "video": "runnow/P-2-2-1.mp4",
               "thumbnail": "runnow/thumbnail/P-2-2-1.png"
             },
             {
               "legacyCode": "P-2-2-2.mp4",
-              "title": "Discovery: Initial consonant clusters",
+              "legacyTitle": "Discovery: Initial consonant clusters",
+              "title": "【解説】語頭で子音が続く音",
+              "titleEn": "Discovery: Initial consonant clusters",
+              "description": "street・play のように、語頭で子音が続く単語の発音を学びます。子音の間に母音を入れないのがポイントです。",
               "video": "runnow/P-2-2-2.mp4",
               "thumbnail": "runnow/thumbnail/P-2-2-2.png"
             },
             {
               "legacyCode": "P-2-2-3.mp4",
-              "title": "Practice: Initial consonant clusters",
+              "legacyTitle": "Practice: Initial consonant clusters",
+              "title": "【練習】語頭で子音が続く音",
+              "titleEn": "Practice: Initial consonant clusters",
+              "description": "語頭で子音が続く単語やフレーズを練習します。",
               "video": "runnow/P-2-2-3.mp4",
               "thumbnail": "runnow/thumbnail/P-2-2-3.png"
             },
             {
               "legacyCode": "P-2-2-4.mp4",
-              "title": "Discovery: Final consonant clusters",
+              "legacyTitle": "Discovery: Final consonant clusters",
+              "title": "【解説】語末で子音が続く音",
+              "titleEn": "Discovery: Final consonant clusters",
+              "description": "asked・months のように、語末で子音が続く単語の発音を学びます。",
               "video": "runnow/P-2-2-4.mp4",
               "thumbnail": "runnow/thumbnail/P-2-2-4.png"
             },
             {
               "legacyCode": "P-2-2-5.mp4",
-              "title": "Practice: Final consonant clusters",
+              "legacyTitle": "Practice: Final consonant clusters",
+              "title": "【練習】語末で子音が続く音",
+              "titleEn": "Practice: Final consonant clusters",
+              "description": "語末で子音が続く単語やフレーズを練習します。",
               "video": "runnow/P-2-2-5.mp4",
               "thumbnail": "runnow/thumbnail/P-2-2-5.png"
             }
@@ -665,33 +965,49 @@
     },
     {
       "label": "VIDEO_P3",
-      "name": "Personalized 3. THE RHYTHM OF ENGLISH",
+      "name": "Personalized 3｜英語のリズム",
+      "nameEn": "Personalized 3. The Rhythm of English",
+      "description": "文の中で音が消える・続く箇所を取り上げ、自然なスピードの英語に近づく練習をします。",
       "category": 1,
+      "note": "割り当て表にある 3.2（P-3-2-1・P-3-2-2）は動画のファイルが無いため入れていません",
       "sections": [
         {
-          "name": "3.1 Connected speech",
+          "name": "3.1 音のつながり",
+          "nameEn": "3.1 Connected speech",
           "videos": [
             {
               "legacyCode": "P-3-1-1.mp4",
-              "title": "Discovery: Disappearing sounds in a sentence",
+              "legacyTitle": "Discovery: Disappearing sounds in a sentence",
+              "title": "【解説】文の中で消える音",
+              "titleEn": "Discovery: Disappearing sounds in a sentence",
+              "description": "文の中で弱くなったり、聞こえなくなったりする音を学びます。",
               "video": "runnow/P-3-1-1.mp4",
               "thumbnail": "runnow/thumbnail/P-3-1-1.png"
             },
             {
               "legacyCode": "P-3-1-2.mp4",
-              "title": "Practice: Disappearing sounds in a sentence",
+              "legacyTitle": "Practice: Disappearing sounds in a sentence",
+              "title": "【練習】文の中で消える音",
+              "titleEn": "Practice: Disappearing sounds in a sentence",
+              "description": "消える音を意識して文を読む練習をします。",
               "video": "runnow/P-3-1-2.mp4",
               "thumbnail": "runnow/thumbnail/P-3-1-2.png"
             },
             {
               "legacyCode": "P-3-1-3.mp4",
-              "title": "Discovery: Back-to-back consonants in a sentence",
+              "legacyTitle": "Discovery: Back-to-back consonants in a sentence",
+              "title": "【解説】文の中で子音が続く箇所",
+              "titleEn": "Discovery: Back-to-back consonants in a sentence",
+              "description": "単語の終わりと次の単語の始まりで子音が続く箇所の発音を学びます。",
               "video": "runnow/P-3-1-3.mp4",
               "thumbnail": "runnow/thumbnail/P-3-1-3.png"
             },
             {
               "legacyCode": "P-3-1-4.mp4",
-              "title": "Practice: Back-to-back consonants in a sentence",
+              "legacyTitle": "Practice: Back-to-back consonants in a sentence",
+              "title": "【練習】文の中で子音が続く箇所",
+              "titleEn": "Practice: Back-to-back consonants in a sentence",
+              "description": "子音が続く箇所を意識して文を読む練習をします。",
               "video": "runnow/P-3-1-4.mp4",
               "thumbnail": "runnow/thumbnail/P-3-1-4.png"
             }
@@ -701,102 +1017,147 @@
     },
     {
       "label": "VIDEO_P4",
-      "name": "Personalized 4. THE MUSIC OF ENGLISH",
+      "name": "Personalized 4｜英語のメロディー",
+      "nameEn": "Personalized 4. The Music of English",
+      "description": "イントネーション（声の上がり下がり）を取り上げ、平叙文・リスト・疑問文で自然に聞こえる抑揚を練習します。",
       "category": 1,
       "sections": [
         {
-          "name": "4.1 Intonation: The Basics",
+          "name": "4.1 イントネーションの基本",
+          "nameEn": "4.1 Intonation: The basics",
           "videos": [
             {
               "legacyCode": "P-4-1-1.mp4",
-              "title": "Discovery: The importance of intonation",
+              "legacyTitle": "Discovery: The importance of intonation",
+              "title": "【解説】イントネーションの大切さ",
+              "titleEn": "Discovery: The importance of intonation",
+              "description": "イントネーションによって、同じ言葉でも伝わる意味や印象が変わることを学びます。",
               "video": "runnow/P-4-1-1.mp4",
               "thumbnail": "runnow/thumbnail/P-4-1-1.png"
             },
             {
               "legacyCode": "P-4-1-2.mp4",
-              "title": "Discovery: Jumps and glides in intonation",
+              "legacyTitle": "Discovery: Jumps and glides in intonation",
+              "title": "【解説】イントネーションのジャンプとグライド",
+              "titleEn": "Discovery: Jumps and glides in intonation",
+              "description": "声の高さが一気に変わる「ジャンプ」と、なめらかに変わる「グライド」の2つの動きを学びます。",
               "video": "runnow/P-4-1-2.mp4",
               "thumbnail": "runnow/thumbnail/P-4-1-2.png"
             },
             {
               "legacyCode": "P-4-1-3.mp4",
-              "title": "Practice: Jumps and glides in intonation",
+              "legacyTitle": "Practice: Jumps and glides in intonation",
+              "title": "【練習】イントネーションのジャンプとグライド",
+              "titleEn": "Practice: Jumps and glides in intonation",
+              "description": "ジャンプとグライドを使い分けて文を読む練習をします。",
               "video": "runnow/P-4-1-3.mp4",
               "thumbnail": "runnow/thumbnail/P-4-1-3.png"
             }
           ]
         },
         {
-          "name": "4.2 Intonation: Statements",
+          "name": "4.2 イントネーション：平叙文",
+          "nameEn": "4.2 Intonation: Statements",
           "videos": [
             {
               "legacyCode": "P-4-2-1.mp4",
-              "title": "Discovery: Intonation in an affirmative statement.",
+              "legacyTitle": "Discovery: Intonation in an affirmative statement.",
+              "title": "【解説】平叙文のイントネーション",
+              "titleEn": "Discovery: Intonation in an affirmative statement",
+              "description": "肯定の平叙文で、文末に向けて声が下がるイントネーションを学びます。",
               "video": "runnow/P-4-2-1.mp4",
               "thumbnail": "runnow/thumbnail/P-4-2-1.png"
             },
             {
               "legacyCode": "P-4-2-2.mp4",
-              "title": "Practice: Intonation in an affirmative statement",
+              "legacyTitle": "Practice: Intonation in an affirmative statement",
+              "title": "【練習】平叙文のイントネーション",
+              "titleEn": "Practice: Intonation in an affirmative statement",
+              "description": "平叙文のイントネーションで文を読む練習をします。",
               "video": "runnow/P-4-2-2.mp4",
               "thumbnail": "runnow/thumbnail/P-4-2-2.png"
             },
             {
               "legacyCode": "P-4-2-3.mp4",
-              "title": "Discovery: Intonation in a list",
+              "legacyTitle": "Discovery: Intonation in a list",
+              "title": "【解説】リスト（列挙）のイントネーション",
+              "titleEn": "Discovery: Intonation in a list",
+              "description": "A, B, and C のように物事を並べて言うときのイントネーションを学びます。",
               "video": "runnow/P-4-2-3.mp4",
               "thumbnail": "runnow/thumbnail/P-4-2-3.png"
             },
             {
               "legacyCode": "P-4-2-4.mp4",
-              "title": "Practice: Intonation in a list",
+              "legacyTitle": "Practice: Intonation in a list",
+              "title": "【練習】リスト（列挙）のイントネーション",
+              "titleEn": "Practice: Intonation in a list",
+              "description": "物事を並べて言う文のイントネーションを練習します。",
               "video": "runnow/P-4-2-4.mp4",
               "thumbnail": "runnow/thumbnail/P-4-2-4.png"
             }
           ]
         },
         {
-          "name": "4.3 Intonation: Questions",
+          "name": "4.3 イントネーション：疑問文",
+          "nameEn": "4.3 Intonation: Questions",
           "videos": [
             {
               "legacyCode": "P-4-3-1.mp4",
-              "title": "Discovery: Intonation in a yes/no question",
+              "legacyTitle": "Discovery: Intonation in a yes/no question",
+              "title": "【解説】Yes/No 疑問文のイントネーション",
+              "titleEn": "Discovery: Intonation in a yes/no question",
+              "description": "Yes か No で答える疑問文のイントネーションを学びます。",
               "video": "runnow/P-4-3-1.mp4",
               "thumbnail": "runnow/thumbnail/P-4-3-1.png"
             },
             {
               "legacyCode": "P-4-3-2.mp4",
-              "title": "Practice: Intonation in a yes/no question",
+              "legacyTitle": "Practice: Intonation in a yes/no question",
+              "title": "【練習】Yes/No 疑問文のイントネーション",
+              "titleEn": "Practice: Intonation in a yes/no question",
+              "description": "Yes/No 疑問文のイントネーションを練習します。",
               "video": "runnow/P-4-3-2.mp4",
               "thumbnail": "runnow/thumbnail/P-4-3-2.png"
             },
             {
               "legacyCode": "P-4-3-3.mp4",
-              "title": "Discovery: Intonation in a 'wh' question",
+              "legacyTitle": "Discovery: Intonation in a 'wh' question",
+              "title": "【解説】Wh 疑問文のイントネーション",
+              "titleEn": "Discovery: Intonation in a 'wh' question",
+              "description": "What・Where などで始まる疑問文のイントネーションを学びます。",
               "video": "runnow/P-4-3-3.mp4",
               "thumbnail": "runnow/thumbnail/P-4-3-3.png"
             },
             {
               "legacyCode": "P-4-3-4.mp4",
-              "title": "Practice: Intonation in a 'wh' question",
+              "legacyTitle": "Practice: Intonation in a 'wh' question",
+              "title": "【練習】Wh 疑問文のイントネーション",
+              "titleEn": "Practice: Intonation in a 'wh' question",
+              "description": "Wh 疑問文のイントネーションを練習します。",
               "video": "runnow/P-4-3-4.mp4",
               "thumbnail": "runnow/thumbnail/P-4-3-4.png"
             }
           ]
         },
         {
-          "name": "4.4 Tools to practice the music of English",
+          "name": "4.4 英語のメロディーを練習するツール",
+          "nameEn": "4.4 Tools to practice the music of English",
           "videos": [
             {
               "legacyCode": "P-4-4-1.mp4",
-              "title": "Discovery: Using a kazoo to improve your intonation and pitch",
+              "legacyTitle": "Discovery: Using a kazoo to improve your intonation and pitch",
+              "title": "【解説】kazoo でイントネーションと音の高さを磨く",
+              "titleEn": "Discovery: Using a kazoo to improve your intonation and pitch",
+              "description": "おもちゃの笛 kazoo を使い、言葉を外して声の上がり下がりだけを練習する方法を学びます。",
               "video": "runnow/P-4-4-1.mp4",
               "thumbnail": "runnow/thumbnail/P-4-4-1.png"
             },
             {
               "legacyCode": "P-4-4-2.mp4",
-              "title": "Practice: Using a kazoo to improve your intonation and pitch",
+              "legacyTitle": "Practice: Using a kazoo to improve your intonation and pitch",
+              "title": "【練習】kazoo でイントネーションと音の高さを磨く",
+              "titleEn": "Practice: Using a kazoo to improve your intonation and pitch",
+              "description": "kazoo を使って、イントネーションと音の高さを練習します。",
               "video": "runnow/P-4-4-2.mp4",
               "thumbnail": "runnow/thumbnail/P-4-4-2.png"
             }
@@ -807,62 +1168,92 @@
     {
       "label": "VIDEO_S1",
       "name": "発音練習のツール",
+      "nameEn": "Tools for Pronunciation Practice",
+      "description": "Color Vowel Chart やメトロノーム、リメリック（五行詩）など、ひとりでも続けられる発音練習の道具と使い方を紹介します。",
       "category": 1,
       "sections": [
         {
           "name": null,
+          "nameEn": null,
           "videos": [
             {
               "legacyCode": "S-1-1.mp4",
-              "title": "Review: The Color Vowel® Chart",
+              "legacyTitle": "Review: The Color Vowel® Chart",
+              "title": "【復習】Color Vowel® Chart",
+              "titleEn": "Review: The Color Vowel® Chart",
+              "description": "Color Vowel Chart の見方と使い方をおさらいします。",
               "video": "runnow/S-1-1.mp4",
               "thumbnail": "runnow/thumbnail/S-1-1.png"
             },
             {
               "legacyCode": "S-1-2.mp4",
-              "title": "Discovery: The Color Vowel Walkabout and Color Vowel Organizer (CVO)",
+              "legacyTitle": "Discovery: The Color Vowel Walkabout and Color Vowel Organizer (CVO)",
+              "title": "【解説】Color Vowel Walkabout と Color Vowel Organizer（CVO）",
+              "titleEn": "Discovery: The Color Vowel Walkabout and Color Vowel Organizer (CVO)",
+              "description": "Color Vowel Walkabout と Color Vowel Organizer を使った練習方法を紹介します。",
               "video": "runnow/S-1-2.mp4",
               "thumbnail": "runnow/thumbnail/S-1-2.png"
             },
             {
               "legacyCode": "S-1-3.mp4",
-              "title": "Discovery: Online Color Vowel® games and search engines",
+              "legacyTitle": "Discovery: Online Color Vowel® games and search engines",
+              "title": "【解説】オンラインの Color Vowel® ゲームと検索ツール",
+              "titleEn": "Discovery: Online Color Vowel® games and search engines",
+              "description": "Color Vowel をオンラインで練習できるゲームや、単語の Color を調べられる検索ツールを紹介します。",
               "video": "runnow/S-1-3.mp4",
               "thumbnail": "runnow/thumbnail/S-1-3.png"
             },
             {
               "legacyCode": "S-1-4.mp4",
-              "title": "Review: Color Vowel® Yoga",
+              "legacyTitle": "Review: Color Vowel® Yoga",
+              "title": "【復習】Color Vowel® Yoga",
+              "titleEn": "Review: Color Vowel® Yoga",
+              "description": "Color Vowel Yoga の動きをおさらいします。",
               "video": "runnow/S-1-4.mp4",
               "thumbnail": "runnow/thumbnail/S-1-4.png"
             },
             {
               "legacyCode": "S-1-5.mp4",
-              "title": "Review: Chanting",
+              "legacyTitle": "Review: Chanting",
+              "title": "【復習】チャンツ",
+              "titleEn": "Review: Chanting",
+              "description": "リズムに合わせて唱えるチャンツで、英語のリズムを体で覚える練習をおさらいします。",
               "video": "runnow/S-1-5.mp4",
               "thumbnail": "runnow/thumbnail/S-1-5.png"
             },
             {
               "legacyCode": "S-1-6.mp4",
-              "title": "Discovery: Practice the rhythm of English with a metronome",
+              "legacyTitle": "Discovery: Practice the rhythm of English with a metronome",
+              "title": "【解説】メトロノームで英語のリズムを練習する",
+              "titleEn": "Discovery: Practice the rhythm of English with a metronome",
+              "description": "メトロノームの一定の拍に合わせて、強勢のリズムを練習する方法を学びます。",
               "video": "runnow/S-1-6.mp4",
               "thumbnail": "runnow/thumbnail/S-1-6.png"
             },
             {
               "legacyCode": "S-1-7.mp4",
-              "title": "Practice: Practce the rhythm of English with a metronome",
+              "legacyTitle": "Practice: Practce the rhythm of English with a metronome",
+              "title": "【練習】メトロノームで英語のリズムを練習する",
+              "titleEn": "Practice: Practice the rhythm of English with a metronome",
+              "description": "メトロノームに合わせて文を読み、英語のリズムを練習します。",
               "video": "runnow/S-1-7.mp4",
               "thumbnail": "runnow/thumbnail/S-1-7.png"
             },
             {
               "legacyCode": "S-1-8.mp4",
-              "title": "Discovery: Practice the rhythm and music of English with limericks",
+              "legacyTitle": "Discovery: Practice the rhythm and music of English with limericks",
+              "title": "【解説】リメリックで英語のリズムとメロディーを練習する",
+              "titleEn": "Discovery: Practice the rhythm and music of English with limericks",
+              "description": "リズムと韻のある五行詩（リメリック）を使って、英語のリズムとメロディーを練習する方法を学びます。",
               "video": "runnow/S-1-8.mp4",
               "thumbnail": "runnow/thumbnail/S-1-8.png"
             },
             {
               "legacyCode": "S-1-9.mp4",
-              "title": "Practice: Practice the rhythm and music of English with limericks",
+              "legacyTitle": "Practice: Practice the rhythm and music of English with limericks",
+              "title": "【練習】リメリックで英語のリズムとメロディーを練習する",
+              "titleEn": "Practice: Practice the rhythm and music of English with limericks",
+              "description": "リメリックを声に出して読み、英語のリズムとメロディーを練習します。",
               "video": "runnow/S-1-9.mp4",
               "thumbnail": "runnow/thumbnail/S-1-9.png"
             }
@@ -872,135 +1263,204 @@
     },
     {
       "label": "VIDEO_S2",
-      "name": "Sentence Practice 1",
+      "name": "センテンス練習 1",
+      "nameEn": "Sentence Practice 1",
+      "description": "日常やビジネスでよく使う短い文を1本に1文ずつ取り上げ、強勢・リズム・音のつながりに気をつけて発音を練習します。",
       "category": 1,
+      "note": "S-2-5・S-2-7 は旧システムのマスタにも動画のファイルにもありません",
       "sections": [
         {
           "name": null,
+          "nameEn": null,
           "videos": [
             {
               "legacyCode": "S-2-1.mp4",
-              "title": "Sentence Practice: \"I should get to the office by 9:00 am.\"",
+              "legacyTitle": "Sentence Practice: \"I should get to the office by 9:00 am.\"",
+              "title": "I should get to the office by 9:00 am.",
+              "titleEn": "Sentence Practice: \"I should get to the office by 9:00 am.\"",
+              "description": "「I should get to the office by 9:00 am.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-1.mp4",
               "thumbnail": "runnow/thumbnail/S-2-1.png"
             },
             {
               "legacyCode": "S-2-2.mp4",
-              "title": "Sentence Practice: \"My sister is going to buy a new car.\"",
+              "legacyTitle": "Sentence Practice: \"My sister is going to buy a new car.\"",
+              "title": "My sister is going to buy a new car.",
+              "titleEn": "Sentence Practice: \"My sister is going to buy a new car.\"",
+              "description": "「My sister is going to buy a new car.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-2.mp4",
               "thumbnail": "runnow/thumbnail/S-2-2.png"
             },
             {
               "legacyCode": "S-2-3.mp4",
-              "title": "Sentence Practice: \"My brother would love to talk to you.\"",
+              "legacyTitle": "Sentence Practice: \"My brother would love to talk to you.\"",
+              "title": "My brother would love to talk to you.",
+              "titleEn": "Sentence Practice: \"My brother would love to talk to you.\"",
+              "description": "「My brother would love to talk to you.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-3.mp4",
               "thumbnail": "runnow/thumbnail/S-2-3.png"
             },
             {
               "legacyCode": "S-2-4.mp4",
-              "title": "Sentence Practice: \"Both of my sisters will go to work tomorrow.\"",
+              "legacyTitle": "Sentence Practice: \"Both of my sisters will go to work tomorrow.\"",
+              "title": "Both of my sisters will go to work tomorrow.",
+              "titleEn": "Sentence Practice: \"Both of my sisters will go to work tomorrow.\"",
+              "description": "「Both of my sisters will go to work tomorrow.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-4.mp4",
               "thumbnail": "runnow/thumbnail/S-2-4.png"
             },
             {
               "legacyCode": "S-2-6.mp4",
-              "title": "Sentence Practice: \"My friend and I were talking about our plans.\"",
+              "legacyTitle": "Sentence Practice: \"My friend and I were talking about our plans.\"",
+              "title": "My friend and I were talking about our plans.",
+              "titleEn": "Sentence Practice: \"My friend and I were talking about our plans.\"",
+              "description": "「My friend and I were talking about our plans.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-6.mp4",
               "thumbnail": "runnow/thumbnail/S-2-6.png"
             },
             {
               "legacyCode": "S-2-8.mp4",
-              "title": "Sentence Practice: \"I can see that he's angry.\"",
+              "legacyTitle": "Sentence Practice: \"I can see that he's angry.\"",
+              "title": "I can see that he's angry.",
+              "titleEn": "Sentence Practice: \"I can see that he's angry.\"",
+              "description": "「I can see that he's angry.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-8.mp4",
-              "thumbnail": "runnow/thumbnail/S-2-8.png"
+              "thumbnail": "runnow/thumbnail/S-2-8.png",
+              "note": "旧システムで S-2-21 と同じ文です。同じ内容の動画かご確認ください"
             },
             {
               "legacyCode": "S-2-9.mp4",
-              "title": "Sentence Practice: \"He's talking to his son about school.\"",
+              "legacyTitle": "Sentence Practice: \"He's talking to his son about school.\"",
+              "title": "He's talking to his son about school.",
+              "titleEn": "Sentence Practice: \"He's talking to his son about school.\"",
+              "description": "「He's talking to his son about school.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-9.mp4",
               "thumbnail": "runnow/thumbnail/S-2-9.png"
             },
             {
               "legacyCode": "S-2-10.mp4",
-              "title": "Sentence Practice: \"I have to work on the presentation.\"",
+              "legacyTitle": "Sentence Practice: \"I have to work on the presentation.\"",
+              "title": "I have to work on the presentation.",
+              "titleEn": "Sentence Practice: \"I have to work on the presentation.\"",
+              "description": "「I have to work on the presentation.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-10.mp4",
               "thumbnail": "runnow/thumbnail/S-2-10.png"
             },
             {
               "legacyCode": "S-2-11.mp4",
-              "title": "Sentence Practice: \"She got a pencil from her desk.\"",
+              "legacyTitle": "Sentence Practice: \"She got a pencil from her desk.\"",
+              "title": "She got a pencil from her desk.",
+              "titleEn": "Sentence Practice: \"She got a pencil from her desk.\"",
+              "description": "「She got a pencil from her desk.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-11.mp4",
               "thumbnail": "runnow/thumbnail/S-2-11.png"
             },
             {
               "legacyCode": "S-2-12.mp4",
-              "title": "Sentence Practice: \"That software can run on any PC.\"",
+              "legacyTitle": "Sentence Practice: \"That software can run on any PC.\"",
+              "title": "That software can run on any PC.",
+              "titleEn": "Sentence Practice: \"That software can run on any PC.\"",
+              "description": "「That software can run on any PC.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-12.mp4",
               "thumbnail": "runnow/thumbnail/S-2-12.png"
             },
             {
               "legacyCode": "S-2-13.mp4",
-              "title": "Sentence Practice: \"The company's product is popular with teenagers.\"",
+              "legacyTitle": "Sentence Practice: \"The company's product is popular with teenagers.\"",
+              "title": "The company's product is popular with teenagers.",
+              "titleEn": "Sentence Practice: \"The company's product is popular with teenagers.\"",
+              "description": "「The company's product is popular with teenagers.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-13.mp4",
               "thumbnail": "runnow/thumbnail/S-2-13.png"
             },
             {
               "legacyCode": "S-2-14.mp4",
-              "title": "Sentence Practice: \"My brother and his wife have lived in the U.K since 2020.\"",
+              "legacyTitle": "Sentence Practice: \"My brother and his wife have lived in the U.K since 2020.\"",
+              "title": "My brother and his wife have lived in the U.K since 2020.",
+              "titleEn": "Sentence Practice: \"My brother and his wife have lived in the U.K since 2020.\"",
+              "description": "「My brother and his wife have lived in the U.K since 2020.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-14.mp4",
               "thumbnail": "runnow/thumbnail/S-2-14.png"
             },
             {
               "legacyCode": "S-2-15.mp4",
-              "title": "Sentence Practice: \"Their new teacher knows a lot about math.\"",
+              "legacyTitle": "Sentence Practice: \"Their new teacher knows a lot about math.\"",
+              "title": "Their new teacher knows a lot about math.",
+              "titleEn": "Sentence Practice: \"Their new teacher knows a lot about math.\"",
+              "description": "「Their new teacher knows a lot about math.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-15.mp4",
               "thumbnail": "runnow/thumbnail/S-2-15.png"
             },
             {
               "legacyCode": "S-2-16.mp4",
-              "title": "Sentence Practice: \"Some of my colleagues are moving to Tokyo.\"",
+              "legacyTitle": "Sentence Practice: \"Some of my colleagues are moving to Tokyo.\"",
+              "title": "Some of my colleagues are moving to Tokyo.",
+              "titleEn": "Sentence Practice: \"Some of my colleagues are moving to Tokyo.\"",
+              "description": "「Some of my colleagues are moving to Tokyo.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-16.mp4",
               "thumbnail": "runnow/thumbnail/S-2-16.png"
             },
             {
               "legacyCode": "S-2-17.mp4",
-              "title": "Sentence Practice: \"Some of the employees will get the day off tomorrow.\"",
+              "legacyTitle": "Sentence Practice: \"Some of the employees will get the day off tomorrow.\"",
+              "title": "Some of the employees will get the day off tomorrow.",
+              "titleEn": "Sentence Practice: \"Some of the employees will get the day off tomorrow.\"",
+              "description": "「Some of the employees will get the day off tomorrow.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-17.mp4",
               "thumbnail": "runnow/thumbnail/S-2-17.png"
             },
             {
               "legacyCode": "S-2-18.mp4",
-              "title": "Sentence Practice: \"The client and I can meet at 2:00 pm.\"",
+              "legacyTitle": "Sentence Practice: \"The client and I can meet at 2:00 pm.\"",
+              "title": "The client and I can meet at 2:00 pm.",
+              "titleEn": "Sentence Practice: \"The client and I can meet at 2:00 pm.\"",
+              "description": "「The client and I can meet at 2:00 pm.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-18.mp4",
               "thumbnail": "runnow/thumbnail/S-2-18.png"
             },
             {
               "legacyCode": "S-2-19.mp4",
-              "title": "Sentence Practice: \"His assistant can call me a taxi.\"",
+              "legacyTitle": "Sentence Practice: \"His assistant can call me a taxi.\"",
+              "title": "His assistant can call me a taxi.",
+              "titleEn": "Sentence Practice: \"His assistant can call me a taxi.\"",
+              "description": "「His assistant can call me a taxi.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-19.mp4",
               "thumbnail": "runnow/thumbnail/S-2-19.png"
             },
             {
               "legacyCode": "S-2-20.mp4",
-              "title": "Sentence Practice: \"The weekly meeting should have begun by now.\"",
+              "legacyTitle": "Sentence Practice: \"The weekly meeting should have begun by now.\"",
+              "title": "The weekly meeting should have begun by now.",
+              "titleEn": "Sentence Practice: \"The weekly meeting should have begun by now.\"",
+              "description": "「The weekly meeting should have begun by now.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-20.mp4",
               "thumbnail": "runnow/thumbnail/S-2-20.png"
             },
             {
               "legacyCode": "S-2-21.mp4",
-              "title": "Sentence Practice: \"I can see that he's angry.\"",
+              "legacyTitle": "Sentence Practice: \"I can see that he's angry.\"",
+              "title": "I can see that he's angry.",
+              "titleEn": "Sentence Practice: \"I can see that he's angry.\"",
+              "description": "「I can see that he's angry.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-21.mp4",
-              "thumbnail": "runnow/thumbnail/S-2-21.png"
+              "thumbnail": "runnow/thumbnail/S-2-21.png",
+              "note": "旧システムで S-2-8 と同じ文です。同じ内容の動画かご確認ください"
             },
             {
               "legacyCode": "S-2-22.mp4",
-              "title": "Sentence Practice: \"We're thinking of going to a movie.\"",
+              "legacyTitle": "Sentence Practice: \"We're thinking of going to a movie.\"",
+              "title": "We're thinking of going to a movie.",
+              "titleEn": "Sentence Practice: \"We're thinking of going to a movie.\"",
+              "description": "「We're thinking of going to a movie.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-22.mp4",
               "thumbnail": "runnow/thumbnail/S-2-22.png"
             },
             {
               "legacyCode": "S-2-23.mp4",
-              "title": "Sentence Practice: \"Please bring him a glass of water.\"",
+              "legacyTitle": "Sentence Practice: \"Please bring him a glass of water.\"",
+              "title": "Please bring him a glass of water.",
+              "titleEn": "Sentence Practice: \"Please bring him a glass of water.\"",
+              "description": "「Please bring him a glass of water.」を、強勢・リズム・音のつながりに気をつけて練習します。",
               "video": "runnow/S-2-23.mp4",
               "thumbnail": "runnow/thumbnail/S-2-23.png"
             }
@@ -1010,147 +1470,219 @@
     },
     {
       "label": "VIDEO_S3",
-      "name": "Sentence Practice 2",
+      "name": "センテンス練習 2",
+      "nameEn": "Sentence Practice 2",
+      "description": "センテンス練習 1 より少し長い文を取り上げ、意味のまとまり（Thought Group）や強勢に気をつけて発音を練習します。",
       "category": 1,
       "sections": [
         {
           "name": null,
+          "nameEn": null,
           "videos": [
             {
               "legacyCode": "S-3-1.mp4",
-              "title": "Sentence Practice: \"Grace made a lot of friends when she travelled abroad.\"",
+              "legacyTitle": "Sentence Practice: \"Grace made a lot of friends when she travelled abroad.\"",
+              "title": "Grace made a lot of friends when she travelled abroad.",
+              "titleEn": "Sentence Practice: \"Grace made a lot of friends when she travelled abroad.\"",
+              "description": "「Grace made a lot of friends when she travelled abroad.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-1.mp4",
               "thumbnail": "runnow/thumbnail/S-3-1.png"
             },
             {
               "legacyCode": "S-3-2.mp4",
-              "title": "Sentence Practice: \"Dan and I want to go to Paris.\"",
+              "legacyTitle": "Sentence Practice: \"Dan and I want to go to Paris.\"",
+              "title": "Dan and I want to go to Paris.",
+              "titleEn": "Sentence Practice: \"Dan and I want to go to Paris.\"",
+              "description": "「Dan and I want to go to Paris.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-2.mp4",
               "thumbnail": "runnow/thumbnail/S-3-2.png"
             },
             {
               "legacyCode": "S-3-3.mp4",
-              "title": "Sentence Practice: \"The crowd is looking forward to the concert in the park.\"",
+              "legacyTitle": "Sentence Practice: \"The crowd is looking forward to the concert in the park.\"",
+              "title": "The crowd is looking forward to the concert in the park.",
+              "titleEn": "Sentence Practice: \"The crowd is looking forward to the concert in the park.\"",
+              "description": "「The crowd is looking forward to the concert in the park.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-3.mp4",
               "thumbnail": "runnow/thumbnail/S-3-3.png"
             },
             {
               "legacyCode": "S-3-4.mp4",
-              "title": "Sentence Practice: \"Tom used to be a nurse, but now he's an engineer.\"",
+              "legacyTitle": "Sentence Practice: \"Tom used to be a nurse, but now he's an engineer.\"",
+              "title": "Tom used to be a nurse, but now he's an engineer.",
+              "titleEn": "Sentence Practice: \"Tom used to be a nurse, but now he's an engineer.\"",
+              "description": "「Tom used to be a nurse, but now he's an engineer.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-4.mp4",
               "thumbnail": "runnow/thumbnail/S-3-4.png"
             },
             {
               "legacyCode": "S-3-5.mp4",
-              "title": "Sentence Practice: \"My nephew is going to get married very soon.\"",
+              "legacyTitle": "Sentence Practice: \"My nephew is going to get married very soon.\"",
+              "title": "My nephew is going to get married very soon.",
+              "titleEn": "Sentence Practice: \"My nephew is going to get married very soon.\"",
+              "description": "「My nephew is going to get married very soon.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-5.mp4",
               "thumbnail": "runnow/thumbnail/S-3-5.png"
             },
             {
               "legacyCode": "S-3-6.mp4",
-              "title": "Sentence Practice: \"James has to go to the dentist after leaving work.\"",
+              "legacyTitle": "Sentence Practice: \"James has to go to the dentist after leaving work.\"",
+              "title": "James has to go to the dentist after leaving work.",
+              "titleEn": "Sentence Practice: \"James has to go to the dentist after leaving work.\"",
+              "description": "「James has to go to the dentist after leaving work.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-6.mp4",
               "thumbnail": "runnow/thumbnail/S-3-6.png"
             },
             {
               "legacyCode": "S-3-7.mp4",
-              "title": "Sentence Practice: \"None of the students passed their history midterm.\"",
+              "legacyTitle": "Sentence Practice: \"None of the students passed their history midterm.\"",
+              "title": "None of the students passed their history midterm.",
+              "titleEn": "Sentence Practice: \"None of the students passed their history midterm.\"",
+              "description": "「None of the students passed their history midterm.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-7.mp4",
               "thumbnail": "runnow/thumbnail/S-3-7.png"
             },
             {
               "legacyCode": "S-3-8.mp4",
-              "title": "Sentence Practice: \"If Sam wants fries, he goes to McDonald's.\"",
+              "legacyTitle": "Sentence Practice: \"If Sam wants fries, he goes to McDonald's.\"",
+              "title": "If Sam wants fries, he goes to McDonald's.",
+              "titleEn": "Sentence Practice: \"If Sam wants fries, he goes to McDonald's.\"",
+              "description": "「If Sam wants fries, he goes to McDonald's.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-8.mp4",
               "thumbnail": "runnow/thumbnail/S-3-8.png"
             },
             {
               "legacyCode": "S-3-9.mp4",
-              "title": "Sentence Practice: \"Alice can't afford new clothes until she starts her job.\"",
+              "legacyTitle": "Sentence Practice: \"Alice can't afford new clothes until she starts her job.\"",
+              "title": "Alice can't afford new clothes until she starts her job.",
+              "titleEn": "Sentence Practice: \"Alice can't afford new clothes until she starts her job.\"",
+              "description": "「Alice can't afford new clothes until she starts her job.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-9.mp4",
               "thumbnail": "runnow/thumbnail/S-3-9.png"
             },
             {
               "legacyCode": "S-3-10.mp4",
-              "title": "Sentence Practice: \"Mary was able to arrive on time by taking the earlier train.\"",
+              "legacyTitle": "Sentence Practice: \"Mary was able to arrive on time by taking the earlier train.\"",
+              "title": "Mary was able to arrive on time by taking the earlier train.",
+              "titleEn": "Sentence Practice: \"Mary was able to arrive on time by taking the earlier train.\"",
+              "description": "「Mary was able to arrive on time by taking the earlier train.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-10.mp4",
               "thumbnail": "runnow/thumbnail/S-3-10.png"
             },
             {
               "legacyCode": "S-3-11.mp4",
-              "title": "Sentence Practice: \"The office elevator is going to be fixed next week.\"",
+              "legacyTitle": "Sentence Practice: \"The office elevator is going to be fixed next week.\"",
+              "title": "The office elevator is going to be fixed next week.",
+              "titleEn": "Sentence Practice: \"The office elevator is going to be fixed next week.\"",
+              "description": "「The office elevator is going to be fixed next week.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-11.mp4",
               "thumbnail": "runnow/thumbnail/S-3-11.png"
             },
             {
               "legacyCode": "S-3-12.mp4",
-              "title": "Sentence Practice: \"All of my sisters, except for Kate, are coming with me on holiday to Greece.\"",
+              "legacyTitle": "Sentence Practice: \"All of my sisters, except for Kate, are coming with me on holiday to Greece.\"",
+              "title": "All of my sisters, except for Kate, are coming with me on holiday to Greece.",
+              "titleEn": "Sentence Practice: \"All of my sisters, except for Kate, are coming with me on holiday to Greece.\"",
+              "description": "「All of my sisters, except for Kate, are coming with me on holiday to Greece.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-12.mp4",
               "thumbnail": "runnow/thumbnail/S-3-12.png"
             },
             {
               "legacyCode": "S-3-13.mp4",
-              "title": "Sentence Practice: \"Mr Black said that the company would rather not increase their prices.\"",
+              "legacyTitle": "Sentence Practice: \"Mr Black said that the company would rather not increase their prices.\"",
+              "title": "Mr Black said that the company would rather not increase their prices.",
+              "titleEn": "Sentence Practice: \"Mr Black said that the company would rather not increase their prices.\"",
+              "description": "「Mr Black said that the company would rather not increase their prices.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-13.mp4",
               "thumbnail": "runnow/thumbnail/S-3-13.png"
             },
             {
               "legacyCode": "S-3-14.mp4",
-              "title": "Sentence Practice: \"I was so busy that I completely forgot to call my mother.\"",
+              "legacyTitle": "Sentence Practice: \"I was so busy that I completely forgot to call my mother.\"",
+              "title": "I was so busy that I completely forgot to call my mother.",
+              "titleEn": "Sentence Practice: \"I was so busy that I completely forgot to call my mother.\"",
+              "description": "「I was so busy that I completely forgot to call my mother.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-14.mp4",
               "thumbnail": "runnow/thumbnail/S-3-14.png"
             },
             {
               "legacyCode": "S-3-15.mp4",
-              "title": "Sentence Practice: \"He'll need a vacation soon.\"",
+              "legacyTitle": "Sentence Practice: \"He'll need a vacation soon.\"",
+              "title": "He'll need a vacation soon.",
+              "titleEn": "Sentence Practice: \"He'll need a vacation soon.\"",
+              "description": "「He'll need a vacation soon.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-15.mp4",
               "thumbnail": "runnow/thumbnail/S-3-15.png"
             },
             {
               "legacyCode": "S-3-16.mp4",
-              "title": "Sentence Practice: \"I'll give them their tickets next week.\"",
+              "legacyTitle": "Sentence Practice: \"I'll give them their tickets next week.\"",
+              "title": "I'll give them their tickets next week.",
+              "titleEn": "Sentence Practice: \"I'll give them their tickets next week.\"",
+              "description": "「I'll give them their tickets next week.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-16.mp4",
               "thumbnail": "runnow/thumbnail/S-3-16.png"
             },
             {
               "legacyCode": "S-3-17.mp4",
-              "title": "Sentence Practice: \"It was really cold last night.\"",
+              "legacyTitle": "Sentence Practice: \"It was really cold last night.\"",
+              "title": "It was really cold last night.",
+              "titleEn": "Sentence Practice: \"It was really cold last night.\"",
+              "description": "「It was really cold last night.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-17.mp4",
               "thumbnail": "runnow/thumbnail/S-3-17.png"
             },
             {
               "legacyCode": "S-3-18.mp4",
-              "title": "Sentence Practice: \"My friend and I might go to the park.\"",
+              "legacyTitle": "Sentence Practice: \"My friend and I might go to the park.\"",
+              "title": "My friend and I might go to the park.",
+              "titleEn": "Sentence Practice: \"My friend and I might go to the park.\"",
+              "description": "「My friend and I might go to the park.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-18.mp4",
               "thumbnail": "runnow/thumbnail/S-3-18.png"
             },
             {
               "legacyCode": "S-3-19.mp4",
-              "title": "Sentence Practice: \"My wife and I were talking last night.\"",
+              "legacyTitle": "Sentence Practice: \"My wife and I were talking last night.\"",
+              "title": "My wife and I were talking last night.",
+              "titleEn": "Sentence Practice: \"My wife and I were talking last night.\"",
+              "description": "「My wife and I were talking last night.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-19.mp4",
               "thumbnail": "runnow/thumbnail/S-3-19.png"
             },
             {
               "legacyCode": "S-3-20.mp4",
-              "title": "Sentence Practice: \"They stayed at an expensive hotel last year.\"",
+              "legacyTitle": "Sentence Practice: \"They stayed at an expensive hotel last year.\"",
+              "title": "They stayed at an expensive hotel last year.",
+              "titleEn": "Sentence Practice: \"They stayed at an expensive hotel last year.\"",
+              "description": "「They stayed at an expensive hotel last year.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-20.mp4",
               "thumbnail": "runnow/thumbnail/S-3-20.png"
             },
             {
               "legacyCode": "S-3-21.mp4",
-              "title": "Sentence Practice: \"He went to a doctor because of his pain.\"",
+              "legacyTitle": "Sentence Practice: \"He went to a doctor because of his pain.\"",
+              "title": "He went to a doctor because of his pain.",
+              "titleEn": "Sentence Practice: \"He went to a doctor because of his pain.\"",
+              "description": "「He went to a doctor because of his pain.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-21.mp4",
               "thumbnail": "runnow/thumbnail/S-3-21.png"
             },
             {
               "legacyCode": "S-3-22.mp4",
-              "title": "Sentence Practice: \"Ben paid $10,000 for a car.\"",
+              "legacyTitle": "Sentence Practice: \"Ben paid $10,000 for a car.\"",
+              "title": "Ben paid $10,000 for a car.",
+              "titleEn": "Sentence Practice: \"Ben paid $10,000 for a car.\"",
+              "description": "「Ben paid $10,000 for a car.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-22.mp4",
               "thumbnail": "runnow/thumbnail/S-3-22.png"
             },
             {
               "legacyCode": "S-3-23.mp4",
-              "title": "Sentence Practice: \"Kate is emailing her boss about the meeting.\"",
+              "legacyTitle": "Sentence Practice: \"Kate is emailing her boss about the meeting.\"",
+              "title": "Kate is emailing her boss about the meeting.",
+              "titleEn": "Sentence Practice: \"Kate is emailing her boss about the meeting.\"",
+              "description": "「Kate is emailing her boss about the meeting.」を、意味のまとまりと強勢に気をつけて練習します。",
               "video": "runnow/S-3-23.mp4",
               "thumbnail": "runnow/thumbnail/S-3-23.png"
             }
@@ -1160,63 +1692,93 @@
     },
     {
       "label": "VIDEO_S4",
-      "name": "A Pronunciation Minute",
+      "name": "1分間発音レッスン",
+      "nameEn": "A Pronunciation Minute",
+      "description": "ビジネスでよく使う「A and B」の形のフレーズを1分ほどで取り上げ、and を弱く短く発音するコツを練習します。",
       "category": 1,
       "sections": [
         {
           "name": null,
+          "nameEn": null,
           "videos": [
             {
               "legacyCode": "S-4-1.mp4",
-              "title": "A Pronunciation Minute: \"My mom and dad are coming to visit.\"",
+              "legacyTitle": "A Pronunciation Minute: \"My mom and dad are coming to visit.\"",
+              "title": "My mom and dad are coming to visit.",
+              "titleEn": "A Pronunciation Minute: \"My mom and dad are coming to visit.\"",
+              "description": "「My mom and dad are coming to visit.」を例に、and を弱く短く発音するコツを練習します。",
               "video": "runnow/S-4-1.mp4",
               "thumbnail": "runnow/thumbnail/S-4-1.png"
             },
             {
               "legacyCode": "S-4-2.mp4",
-              "title": "A Pronunciation Minute: \"My boss and I are meeting for lunch.\"",
+              "legacyTitle": "A Pronunciation Minute: \"My boss and I are meeting for lunch.\"",
+              "title": "My boss and I are meeting for lunch.",
+              "titleEn": "A Pronunciation Minute: \"My boss and I are meeting for lunch.\"",
+              "description": "「My boss and I are meeting for lunch.」を例に、and を弱く短く発音するコツを練習します。",
               "video": "runnow/S-4-2.mp4",
               "thumbnail": "runnow/thumbnail/S-4-2.png"
             },
             {
               "legacyCode": "S-4-3.mp4",
-              "title": "A Pronunciation Minute: \"Let's look at the pros and cons.\"",
+              "legacyTitle": "A Pronunciation Minute: \"Let's look at the pros and cons.\"",
+              "title": "Let's look at the pros and cons.",
+              "titleEn": "A Pronunciation Minute: \"Let's look at the pros and cons.\"",
+              "description": "「Let's look at the pros and cons.」を例に、and を弱く短く発音するコツを練習します。",
               "video": "runnow/S-4-3.mp4",
               "thumbnail": "runnow/thumbnail/S-4-3.png"
             },
             {
               "legacyCode": "S-4-4.mp4",
-              "title": "A Pronunciation Minute: \"Let's meet with the sales and marketing teams.\"",
+              "legacyTitle": "A Pronunciation Minute: \"Let's meet with the sales and marketing teams.\"",
+              "title": "Let's meet with the sales and marketing teams.",
+              "titleEn": "A Pronunciation Minute: \"Let's meet with the sales and marketing teams.\"",
+              "description": "「Let's meet with the sales and marketing teams.」を例に、and を弱く短く発音するコツを練習します。",
               "video": "runnow/S-4-4.mp4",
               "thumbnail": "runnow/thumbnail/S-4-4.png"
             },
             {
               "legacyCode": "S-4-5.mp4",
-              "title": "A Pronunciation Minute: \"We check orders and deliveries in the morning.\"",
+              "legacyTitle": "A Pronunciation Minute: \"We check orders and deliveries in the morning.\"",
+              "title": "We check orders and deliveries in the morning.",
+              "titleEn": "A Pronunciation Minute: \"We check orders and deliveries in the morning.\"",
+              "description": "「We check orders and deliveries in the morning.」を例に、and を弱く短く発音するコツを練習します。",
               "video": "runnow/S-4-5.mp4",
               "thumbnail": "runnow/thumbnail/S-4-5.png"
             },
             {
               "legacyCode": "S-4-6.mp4",
-              "title": "A Pronunciation Minute: \"I work in R and D.\"",
+              "legacyTitle": "A Pronunciation Minute: \"I work in R and D.\"",
+              "title": "I work in R and D.",
+              "titleEn": "A Pronunciation Minute: \"I work in R and D.\"",
+              "description": "「I work in R and D.」を例に、and を弱く短く発音するコツを練習します。",
               "video": "runnow/S-4-6.mp4",
               "thumbnail": "runnow/thumbnail/S-4-6.png"
             },
             {
               "legacyCode": "S-4-7.mp4",
-              "title": "A Pronunciation Minute: \"The website connects buyers and sellers.\"",
+              "legacyTitle": "A Pronunciation Minute: \"The website connects buyers and sellers.\"",
+              "title": "The website connects buyers and sellers.",
+              "titleEn": "A Pronunciation Minute: \"The website connects buyers and sellers.\"",
+              "description": "「The website connects buyers and sellers.」を例に、and を弱く短く発音するコツを練習します。",
               "video": "runnow/S-4-7.mp4",
               "thumbnail": "runnow/thumbnail/S-4-7.png"
             },
             {
               "legacyCode": "S-4-8.mp4",
-              "title": "A Pronunciation Minute: \"We went back and forth on the price.\"",
+              "legacyTitle": "A Pronunciation Minute: \"We went back and forth on the price.\"",
+              "title": "We went back and forth on the price.",
+              "titleEn": "A Pronunciation Minute: \"We went back and forth on the price.\"",
+              "description": "「We went back and forth on the price.」を例に、and を弱く短く発音するコツを練習します。",
               "video": "runnow/S-4-8.mp4",
               "thumbnail": "runnow/thumbnail/S-4-8.png"
             },
             {
               "legacyCode": "S-4-9.mp4",
-              "title": "A Pronunciation Minute: \"My manager and I write notes and reports.\"",
+              "legacyTitle": "A Pronunciation Minute: \"My manager and I write notes and reports.\"",
+              "title": "My manager and I write notes and reports.",
+              "titleEn": "A Pronunciation Minute: \"My manager and I write notes and reports.\"",
+              "description": "「My manager and I write notes and reports.」を例に、and を弱く短く発音するコツを練習します。",
               "video": "runnow/S-4-9.mp4",
               "thumbnail": "runnow/thumbnail/S-4-9.png"
             }
@@ -1226,120 +1788,174 @@
     },
     {
       "label": "VIDEO_LD",
-      "name": "Logical Dialogue",
+      "name": "ロジカル・ダイアログ",
+      "nameEn": "Logical Dialogue",
+      "description": "英語の丁寧表現や話の組み立て方、依頼・提案・反対・苦情の伝え方など、誤解なく伝わる英語のコミュニケーションを日本語で解説します。",
       "category": 2,
       "sections": [
         {
-          "name": "Unit 1",
+          "name": "Unit 1 英語の丁寧表現",
+          "nameEn": "Unit 1 Politeness in English",
           "videos": [
             {
               "legacyCode": "LogicalDialogue_Unit_1-1.mp4",
+              "legacyTitle": "英語の敬語、丁寧表現の基本概念",
               "title": "英語の敬語、丁寧表現の基本概念",
+              "titleEn": "Basic concepts of politeness in English",
+              "description": "英語にも敬語や丁寧表現があることと、その基本的な考え方を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_1-1.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_1-1.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_1-2.mp4",
+              "legacyTitle": "丁寧度をコントロールする2つの指標",
               "title": "丁寧度をコントロールする2つの指標",
+              "titleEn": "Two measures for controlling politeness",
+              "description": "丁寧さの度合いを決める2つの指標を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_1-2.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_1-2.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_1-3.mp4",
+              "legacyTitle": "丁寧度を調整する7つの手法",
               "title": "丁寧度を調整する7つの手法",
+              "titleEn": "Seven techniques for adjusting politeness",
+              "description": "場面に合わせて丁寧さを調整する7つの手法を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_1-3.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_1-3.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_1-4.mp4",
+              "legacyTitle": "日本人の英語が誤解されやすい理由",
               "title": "日本人の英語が誤解されやすい理由",
+              "titleEn": "Why Japanese speakers' English is easily misunderstood",
+              "description": "日本語話者の英語が、意図とは違って受け取られやすい理由を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_1-4.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_1-4.png"
             }
           ]
         },
         {
-          "name": "Unit 2",
+          "name": "Unit 2 英語のロジックと文化",
+          "nameEn": "Unit 2 The logic of English and culture",
           "videos": [
             {
               "legacyCode": "LogicalDialogue_Unit_2-1.mp4",
+              "legacyTitle": "言語行為とは",
               "title": "言語行為とは",
+              "titleEn": "What is a speech act?",
+              "description": "言葉によって依頼や謝罪などの行為を行う「言語行為」の考え方を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_2-1.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_2-1.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_2-2.mp4",
+              "legacyTitle": "英語のロジック（話の組み立て方・断りを例に）",
               "title": "英語のロジック（話の組み立て方・断りを例に）",
+              "titleEn": "The logic of English: structuring what you say (with refusals as an example)",
+              "description": "断りの場面を例に、英語らしい話の組み立て方を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_2-2.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_2-2.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_2-3.mp4",
+              "legacyTitle": "日本語からの直訳が危険な会話事例",
               "title": "日本語からの直訳が危険な会話事例",
+              "titleEn": "Conversations where translating directly from Japanese is risky",
+              "description": "日本語をそのまま英訳すると誤解を招く会話の例を紹介します。",
               "video": "on-demand/LogicalDialogue_Unit_2-3.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_2-3.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_2-4.mp4",
+              "legacyTitle": "文化的な配慮が必要な表現とトピック",
               "title": "文化的な配慮が必要な表現とトピック",
+              "titleEn": "Expressions and topics that require cultural sensitivity",
+              "description": "文化的な配慮が必要な表現や話題を紹介します。",
               "video": "on-demand/LogicalDialogue_Unit_2-4.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_2-4.png"
             }
           ]
         },
         {
-          "name": "Unit 3",
+          "name": "Unit 3 依頼と提案",
+          "nameEn": "Unit 3 Requests and suggestions",
           "videos": [
             {
               "legacyCode": "LogicalDialogue_Unit_3-1.mp4",
+              "legacyTitle": "効果的な「依頼」の構成要素",
               "title": "効果的な「依頼」の構成要素",
+              "titleEn": "The components of an effective request",
+              "description": "相手に気持ちよく引き受けてもらえる「依頼」の構成要素を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_3-1.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_3-1.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_3-2.mp4",
+              "legacyTitle": "効果的な「依頼」の表現方法とタブー",
               "title": "効果的な「依頼」の表現方法とタブー",
+              "titleEn": "Expressions and taboos for effective requests",
+              "description": "効果的な依頼の英語表現と、避けたい言い方を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_3-2.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_3-2.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_3-3.mp4",
+              "legacyTitle": "建設的な「提案」の構成要素",
               "title": "建設的な「提案」の構成要素",
+              "titleEn": "The components of a constructive suggestion",
+              "description": "前向きに受け止めてもらえる「提案」の構成要素を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_3-3.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_3-3.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_3-4.mp4",
+              "legacyTitle": "建設的な「提案」の表現方法とタブー",
               "title": "建設的な「提案」の表現方法とタブー",
+              "titleEn": "Expressions and taboos for constructive suggestions",
+              "description": "建設的な提案の英語表現と、避けたい言い方を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_3-4.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_3-4.png"
             }
           ]
         },
         {
-          "name": "Unit 4",
+          "name": "Unit 4 反対と苦情",
+          "nameEn": "Unit 4 Disagreeing and complaining",
           "videos": [
             {
               "legacyCode": "LogicalDialogue_Unit_4-1.mp4",
+              "legacyTitle": "建設的な「反対」の構成要素",
               "title": "建設的な「反対」の構成要素",
+              "titleEn": "The components of constructive disagreement",
+              "description": "関係を損なわずに意見を伝える「反対」の構成要素を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_4-1.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_4-1.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_4-2.mp4",
+              "legacyTitle": "「反対」のための効果的な英語表現例",
               "title": "「反対」のための効果的な英語表現例",
+              "titleEn": "Effective English expressions for disagreeing",
+              "description": "反対の意見を伝えるときに使える英語表現の例を紹介します。",
               "video": "on-demand/LogicalDialogue_Unit_4-2.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_4-2.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_4-3.mp4",
+              "legacyTitle": "相手が動いてくれる「苦情」の伝え方",
               "title": "相手が動いてくれる「苦情」の伝え方",
+              "titleEn": "How to make a complaint that gets a response",
+              "description": "相手に対応してもらえる「苦情」の伝え方を学びます。",
               "video": "on-demand/LogicalDialogue_Unit_4-3.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_4-3.png"
             },
             {
               "legacyCode": "LogicalDialogue_Unit_4-4.mp4",
+              "legacyTitle": "発音、トーン、イントネーションの重要性",
               "title": "発音、トーン、イントネーションの重要性",
+              "titleEn": "The importance of pronunciation, tone, and intonation",
+              "description": "同じ言葉でも、発音・トーン・イントネーションによって印象が大きく変わることを学びます。",
               "video": "on-demand/LogicalDialogue_Unit_4-4.mp4",
               "thumbnail": "on-demand/thumbnail/LogicalDialogue_Unit_4-4.png"
             }
@@ -1349,57 +1965,85 @@
     },
     {
       "label": "VIDEO_TENSE",
-      "name": "時制",
+      "name": "英語の時制",
+      "nameEn": "English Tenses",
+      "description": "英語の主な時制を1本に1つずつ取り上げ、形と使い方を学びます。",
       "category": 2,
+      "note": "lv6 は旧システムのマスタにも動画のファイルにもありません",
       "sections": [
         {
           "name": null,
+          "nameEn": null,
           "videos": [
             {
               "legacyCode": "student-yn-lv1.mp4",
-              "title": "Simple Present",
+              "legacyTitle": "Simple Present",
+              "title": "現在形",
+              "titleEn": "Simple Present",
+              "description": "習慣や事実を表す現在形の形と使い方を学びます。",
               "video": "on-demand/student-yn-lv1.mp4",
               "thumbnail": "on-demand/thumbnail/student-yn-lv1.png"
             },
             {
               "legacyCode": "student-yn-lv2.mp4",
-              "title": "Present Continuous",
+              "legacyTitle": "Present Continuous",
+              "title": "現在進行形",
+              "titleEn": "Present Continuous",
+              "description": "今まさに起きていることを表す現在進行形の形と使い方を学びます。",
               "video": "on-demand/student-yn-lv2.mp4",
               "thumbnail": "on-demand/thumbnail/student-yn-lv2.png"
             },
             {
               "legacyCode": "student-yn-lv3.mp4",
-              "title": "Simple Past",
+              "legacyTitle": "Simple Past",
+              "title": "過去形",
+              "titleEn": "Simple Past",
+              "description": "過去の出来事を表す過去形の形と使い方を学びます。",
               "video": "on-demand/student-yn-lv3.mp4",
               "thumbnail": "on-demand/thumbnail/student-yn-lv3.png"
             },
             {
               "legacyCode": "student-yn-lv4.mp4",
-              "title": "Simple Future",
+              "legacyTitle": "Simple Future",
+              "title": "未来形（will）",
+              "titleEn": "Simple Future",
+              "description": "will を使って未来のことを表す形と使い方を学びます。",
               "video": "on-demand/student-yn-lv4.mp4",
               "thumbnail": "on-demand/thumbnail/student-yn-lv4.png"
             },
             {
               "legacyCode": "student-yn-lv5.mp4",
-              "title": "Present Perfect",
+              "legacyTitle": "Present Perfect",
+              "title": "現在完了形",
+              "titleEn": "Present Perfect",
+              "description": "過去から今につながる経験・継続・完了を表す現在完了形の形と使い方を学びます。",
               "video": "on-demand/student-yn-lv5.mp4",
               "thumbnail": "on-demand/thumbnail/student-yn-lv5.png"
             },
             {
               "legacyCode": "student-yn-lv7.mp4",
-              "title": "Past Continuous",
+              "legacyTitle": "Past Continuous",
+              "title": "過去進行形",
+              "titleEn": "Past Continuous",
+              "description": "過去のある時点で進んでいたことを表す過去進行形の形と使い方を学びます。",
               "video": "on-demand/student-yn-lv7.mp4",
               "thumbnail": "on-demand/thumbnail/student-yn-lv7.png"
             },
             {
               "legacyCode": "student-yn-lv8.mp4",
-              "title": "Future Continuous",
+              "legacyTitle": "Future Continuous",
+              "title": "未来進行形",
+              "titleEn": "Future Continuous",
+              "description": "未来のある時点で進んでいることを表す未来進行形の形と使い方を学びます。",
               "video": "on-demand/student-yn-lv8.mp4",
               "thumbnail": "on-demand/thumbnail/student-yn-lv8.png"
             },
             {
               "legacyCode": "student-yn-lv9.mp4",
-              "title": "Past Perfect",
+              "legacyTitle": "Past Perfect",
+              "title": "過去完了形",
+              "titleEn": "Past Perfect",
+              "description": "過去のある時点より前に起きたことを表す過去完了形の形と使い方を学びます。",
               "video": "on-demand/student-yn-lv9.mp4",
               "thumbnail": "on-demand/thumbnail/student-yn-lv9.png"
             }
@@ -1409,21 +2053,30 @@
     },
     {
       "label": "VIDEO_RL",
-      "name": "発音 R・L",
+      "name": "R と L の発音",
+      "nameEn": "Pronouncing R and L",
+      "description": "日本語話者が苦手としやすい R と L の音を、短いレッスンで身につけます。",
       "category": 2,
       "sections": [
         {
           "name": null,
+          "nameEn": null,
           "videos": [
             {
               "legacyCode": "Finding_R_sound_in_3_steps.mp4",
-              "title": "Finding \"R\" sound in 3 steps",
+              "legacyTitle": "Finding \"R\" sound in 3 steps",
+              "title": "3ステップで R の音をつかむ",
+              "titleEn": "Finding the \"R\" sound in 3 steps",
+              "description": "3つのステップで、R の音を出すための舌の位置と動きを身につけます。",
               "video": "on-demand/Finding_R_sound_in_3_steps.mp4",
               "thumbnail": "on-demand/thumbnail/Finding_R_Suzanne.jpg"
             },
             {
               "legacyCode": "Finding_two_L_sounds_Light_L_and_Dark_L.mp4",
-              "title": "Finding two \"L\" sounds, Light L and Dark L",
+              "legacyTitle": "Finding two \"L\" sounds, Light L and Dark L",
+              "title": "2つの L の音：Light L と Dark L",
+              "titleEn": "Finding two \"L\" sounds: Light L and Dark L",
+              "description": "語頭などの Light L と語末などの Dark L、2つの L の音の違いと出し方を学びます。",
               "video": "on-demand/Finding_two_L_sounds_Light_L_and_Dark_L.mp4",
               "thumbnail": "on-demand/thumbnail/Light_L_and_Dark_L_Suzanne.jpg"
             }

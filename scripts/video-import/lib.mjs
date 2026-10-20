@@ -8,7 +8,7 @@ export const ENVS = ['dev', 'staging', 'prod'];
 
 /**
  * 環境ごとに置く動画。容量の都合で実物は本番だけに置き、dev・staging は短い切り出しにする
- * （R2 の無料枠に3環境分の実物は入らないため。教材・区切り・並び順は全環境で同じにする）。
+ * （R2 の無料枠に3環境分の実物は入らないため。教材・セクション・並び順は全環境で同じにする）。
  */
 export const FILE_MODE = { dev: 'clip', staging: 'clip', prod: 'full' };
 
@@ -80,7 +80,7 @@ export function flattenCatalog(catalog) {
   );
 }
 
-/** 定義の誤り（重複・空の区切り・種類の値）を返す。空なら正しい */
+/** 定義の誤り（重複・空のセクション・種類の値）を返す。空なら正しい */
 export function validateCatalog(catalog) {
   const errors = [];
   const categories = new Set(Object.values(VIDEO_CATEGORY));
@@ -91,13 +91,18 @@ export function validateCatalog(catalog) {
     labels.add(content.label);
     if (!categories.has(content.category))
       errors.push(`ビデオの種類の値が不正です: ${content.label} ${content.category}`);
-    if (content.sections.length === 0) errors.push(`区切りがありません: ${content.label}`);
+    if (!content.name) errors.push(`教材名がありません: ${content.label}`);
+    if (content.sections.length === 0) errors.push(`セクションがありません: ${content.label}`);
     const sectionNames = new Set();
     for (const section of content.sections) {
       if (sectionNames.has(section.name))
-        errors.push(`区切りの見出しが重複しています: ${content.label} ${section.name}`);
+        errors.push(`セクションの見出しが重複しています: ${content.label} ${section.name}`);
       sectionNames.add(section.name);
-      if (section.videos.length === 0) errors.push(`ビデオの無い区切りがあります: ${content.label} ${section.name}`);
+      // 見出しの有無は和名で決めるため、英名だけのセクションは admin と同じく作らない
+      if (!section.name && section.nameEn)
+        errors.push(`英名だけのセクションがあります: ${content.label} ${section.nameEn}`);
+      if (section.videos.length === 0)
+        errors.push(`ビデオの無いセクションがあります: ${content.label} ${section.name}`);
       for (const video of section.videos) {
         if (codes.has(video.legacyCode)) errors.push(`旧ファイル名が重複しています: ${video.legacyCode}`);
         codes.add(video.legacyCode);
@@ -108,13 +113,13 @@ export function validateCatalog(catalog) {
   return errors;
 }
 
-/** 区切りの突き合わせのキー（見出しの無い区切りは content ごとに1つ） */
+/** セクションの突き合わせのキー（見出しの無いセクションは content ごとに1つ） */
 export function sectionKey(contentId, sectionName) {
   return `${contentId}\u0000${sectionName ?? ''}`;
 }
 
 /**
- * 既に取り込んだ分を除いた計画を作る。突き合わせは、教材 = ラベル、区切り = 教材と見出し、ビデオ = 旧ファイル名。
+ * 既に取り込んだ分を除いた計画を作る。突き合わせは、教材 = ラベル、セクション = 教材と見出し、ビデオ = 旧ファイル名。
  * 既にある行は書き換えない（運営が admin で直した名前・並び順を戻さないため）。
  */
 export function planImport(catalog, existing) {

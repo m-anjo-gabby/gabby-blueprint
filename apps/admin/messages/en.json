@@ -2631,7 +2631,6 @@
         },
         "item": {
           "preview": "Preview",
-          "legacyCode": "Legacy: {code}",
           "published": "Published",
           "unpublished": "Unpublished",
           "moveUp": "Move up",
@@ -2643,9 +2642,11 @@
         "sectionForm": {
           "createTitle": "Add section",
           "editTitle": "Rename heading",
-          "nameLabel": "Heading",
+          "nameLabel": "Heading (Japanese)",
           "namePlaceholder": "e.g. Unit 1",
           "nameDescription": "Leave empty to list the videos without a heading.",
+          "nameEnLabel": "Heading (English, optional)",
+          "nameEnDescription": "Used on coach screens. If empty, the Japanese heading is shown.",
           "toastCreated": "Section added",
           "toastUpdated": "Heading updated"
         },
@@ -2654,7 +2655,9 @@
           "editTitle": "Edit video",
           "sectionLabel": "Section",
           "untitledSection": "(No heading)",
-          "titleLabel": "Title",
+          "titleLabel": "Title (Japanese)",
+          "titleEnLabel": "Title (English, optional)",
+          "titleEnDescription": "Used on coach screens. If empty, the Japanese title is shown.",
           "descriptionLabel": "Description",
           "videoFileLabel": "Video file (MP4, max {max} MB)",
           "videoFileRequiredHint": "Select a video file.",
@@ -2703,6 +2706,7 @@
       "videoNotFound": "Video not found",
       "videoTitleRequired": "Enter a title",
       "videoUploadMissing": "The uploaded file could not be confirmed. Please select the file again",
+      "videoSectionNameRequiredForEn": "Enter the Japanese heading as well when you enter an English heading",
       "videoSectionNotFound": "The destination section was not found",
       "videoInUse": "This video has viewing records and cannot be deleted. Unpublish it instead"
     }

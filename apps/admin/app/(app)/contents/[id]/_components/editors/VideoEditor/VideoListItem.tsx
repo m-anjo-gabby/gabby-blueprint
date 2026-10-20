@@ -21,7 +21,7 @@ interface VideoListItemProps {
   onChangeStatus: (status: VideoStatus) => void;
 }
 
-/** 区切りの中のビデオ1本の行 */
+/** セクションの中のビデオ1本の行 */
 export function VideoListItem({
   video,
   isFirst,
@@ -59,10 +59,8 @@ export function VideoListItem({
 
       <div className="flex-1 min-w-0 space-y-1">
         <p className="text-sm font-bold text-slate-800 truncate">{video.title}</p>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-slate-400">
-          <span>{formatVideoDuration(video.duration_sec)}</span>
-          {video.legacy_code && <span className="font-mono">{t('legacyCode', { code: video.legacy_code })}</span>}
-        </div>
+        {video.title_en && <p className="text-[11px] text-slate-500 italic truncate">{video.title_en}</p>}
+        <p className="text-[11px] font-bold text-slate-400">{formatVideoDuration(video.duration_sec)}</p>
       </div>
 
       <label className="flex items-center gap-2 shrink-0 text-xs font-bold text-slate-500">

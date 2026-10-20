@@ -68,7 +68,7 @@ async function setup(page: Page): Promise<{ seeded: SeededVideoContent; studentI
           { title: 'E2E 2-2 hidden', status: 0 },
         ],
       },
-      // 公開中のビデオが無い区切りは出さない
+      // 公開中のビデオが無いセクションは出さない
       { name: 'Unit 3', videos: [{ title: 'E2E 3-1 hidden', status: 0 }] },
     ],
     { published: true, accessClientId: fixture.clientId },
@@ -93,7 +93,7 @@ async function play(page: Page) {
   });
 }
 
-test('教材一覧から開き、最後まで見ると視聴済みになる（非公開のビデオ・公開中のビデオが無い区切りは出さない）', async ({
+test('教材一覧から開き、最後まで見ると視聴済みになる（非公開のビデオ・公開中のビデオが無いセクションは出さない）', async ({
   page,
 }) => {
   const { seeded, studentId, tag } = await setup(page);
@@ -134,7 +134,9 @@ test('教材一覧から開き、最後まで見ると視聴済みになる（�
   await expect(listItem(page, 'E2E 1-2 long')).toHaveAttribute('aria-current', 'true');
 });
 
-test('続きの位置から再生し、途中の位置を保存する。選び直しはブラウザの戻るで戻せる', async ({ page }) => {
+test('続きの位置から再生し、途中の位置を保存する。選び直しは自動で再生せず、戻るは教材を開く前の画面へ', async ({
+  page,
+}) => {
   const { seeded, studentId } = await setup(page);
   const longId = videoIdOf(seeded, 'E2E 1-2 long');
   const { error } = await fixture!.admin
@@ -142,6 +144,7 @@ test('続きの位置から再生し、途中の位置を保存する。選び�
     .insert({ user_id: studentId, video_id: longId, last_position_sec: 10 });
   expect(error).toBeNull();
 
+  await page.goto('/library');
   await page.goto(`/training/video/${seeded.contentId}?v=${longId}`);
   await expect(listItem(page, 'E2E 1-2 long')).toHaveAttribute('aria-current', 'true');
   await expect.poll(() => player(page).evaluate((v: HTMLVideoElement) => Math.round(v.currentTime))).toBe(10);
@@ -165,13 +168,19 @@ test('続きの位置から再生し、途中の位置を保存する。選び�
     })
     .toEqual({ last_position_sec: pausedAt, completed_at: null });
 
-  // 一覧から選び直し → 戻るで前のビデオに戻る
+  // 一覧から選び直しても自動では再生しない
   await listItem(page, 'E2E 2-1').click();
   await expect(page).toHaveURL(new RegExp(`\\?v=${videoIdOf(seeded, 'E2E 2-1')}$`));
   await expect(page.getByRole('heading', { level: 2, name: 'E2E 2-1' })).toBeVisible();
-  await page.goBack();
+  await expect.poll(() => player(page).evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThan(0);
+  expect(await player(page).evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+  // 選び直した前のビデオは続きの位置から
+  await listItem(page, 'E2E 1-2 long').click();
   await expect(listItem(page, 'E2E 1-2 long')).toHaveAttribute('aria-current', 'true');
   await expect.poll(() => player(page).evaluate((v: HTMLVideoElement) => Math.round(v.currentTime))).toBe(pausedAt);
+  // 選び直しは履歴に積まないため、戻るは教材を開く前の画面へ戻る
+  await page.getByRole('button', { name: '戻る' }).click();
+  await page.waitForURL('**/library');
 });
 
 test('ブックマークして終了し、ホームの「続きから」で同じビデオの続きから再開する', async ({ page }) => {

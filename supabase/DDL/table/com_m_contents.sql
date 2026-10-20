@@ -12,7 +12,7 @@
 -- 公開範囲とは独立に設定する（組み合わせの制約は無い）。
 --
 -- 【ビデオ教材】
--- 1シリーズを1教材（content_type = 1）で持ち、区切り・ビデオは com_m_video_section / com_m_video に置く。
+-- 1シリーズを1教材（content_type = 1）で持ち、セクション・ビデオは com_m_video_section / com_m_video に置く。
 -- category_id はビデオ教材の種類（1:発音トレーニング / 2:オンデマンド / 3:ColorVowel）。
 --
 -- 【category_id】

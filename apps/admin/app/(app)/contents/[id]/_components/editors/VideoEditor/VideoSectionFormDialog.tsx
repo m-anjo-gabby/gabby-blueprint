@@ -23,19 +23,24 @@ interface VideoSectionFormDialogProps {
 
 interface FormValues {
   section_name: string;
+  section_name_en: string;
 }
 
-/** 区切りの追加・見出しの変更（見出しは空でもよい） */
+/** セクションの追加・見出しの変更（見出しは空でもよい） */
 export function VideoSectionFormDialog({ contentId, target, onClose, onSaved }: VideoSectionFormDialogProps) {
   const t = useTranslations('contents.editor.video.sectionForm');
   const tCommon = useTranslations('common');
   const { showToast } = useToast();
-  const form = useForm<FormValues>({ defaultValues: { section_name: '' } });
+  const form = useForm<FormValues>({ defaultValues: { section_name: '', section_name_en: '' } });
   const { isSubmitting } = form.formState;
 
   // 開いた時だけ初期値を入れ直す
   const resetToTarget = useEffectEvent((next: VideoSectionFormTarget) =>
-    form.reset({ section_name: next.mode === 'edit' ? (next.section.section_name ?? '') : '' }),
+    form.reset(
+      next.mode === 'edit'
+        ? { section_name: next.section.section_name ?? '', section_name_en: next.section.section_name_en ?? '' }
+        : { section_name: '', section_name_en: '' },
+    ),
   );
   useEffect(() => {
     if (target) resetToTarget(target);
@@ -47,6 +52,7 @@ export function VideoSectionFormDialog({ contentId, target, onClose, onSaved }: 
       section_id: target.mode === 'edit' ? target.section.section_id : undefined,
       content_id: contentId,
       section_name: values.section_name,
+      section_name_en: values.section_name_en,
     });
     if (!res.success) {
       showToast(res.message, 'error');
@@ -75,6 +81,19 @@ export function VideoSectionFormDialog({ contentId, target, onClose, onSaved }: 
                     <Input {...field} autoFocus placeholder={t('namePlaceholder')} />
                   </FormControl>
                   <FormDescription>{t('nameDescription')}</FormDescription>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="section_name_en"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('nameEnLabel')}</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder={t('namePlaceholder')} />
+                  </FormControl>
+                  <FormDescription>{t('nameEnDescription')}</FormDescription>
                 </FormItem>
               )}
             />

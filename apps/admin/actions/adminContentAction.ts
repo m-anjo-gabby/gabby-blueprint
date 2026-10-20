@@ -200,7 +200,7 @@ export async function upsertContent(payload: ContentUpsertInput): Promise<Action
 
     const savedContent = data?.[0] as Content;
 
-    // ビデオ教材は区切りの中にビデオを置くため、見出しの無い区切りを1つ作っておく（失敗してもエディタから足せる）
+    // ビデオ教材はセクションの中にビデオを置くため、見出しの無いセクションを1つ作っておく（失敗してもエディタから足せる）
     if (!isEdit && savedContent.content_type === 1) {
       const { error: sectionError } = await supabase
         .from('com_m_video_section')
@@ -246,7 +246,7 @@ export async function deleteContent(contentId: string): Promise<ActionResult<obj
   try {
     const supabase = await createAdminClient();
 
-    // 消す前に、教材に付属するファイルのパスを集める（単語・フレーズ・区切り・ビデオは CASCADE、
+    // 消す前に、教材に付属するファイルのパスを集める（単語・フレーズ・セクション・ビデオは CASCADE、
     // スプリントの問題は外部キーが無いため後で消す）
     const [
       { data: phrases, error: phraseError },

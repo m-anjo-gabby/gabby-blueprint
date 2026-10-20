@@ -26,7 +26,7 @@ import { VideoSectionFormDialog, type VideoSectionFormTarget } from './VideoSect
 
 interface VideoEditorProps {
   contentId: string;
-  /** ページでサーバー取得した区切りとビデオ（null は取得の失敗）。編集の後だけブラウザから取り直す */
+  /** ページでサーバー取得したセクションとビデオ（null は取得の失敗）。編集の後だけブラウザから取り直す */
   initialSections: AdminVideoSection[] | null;
 }
 
@@ -38,7 +38,7 @@ export function VideoEditor({ contentId, initialSections }: VideoEditorProps) {
   const { showToast } = useToast();
   const [sections, setSections] = useState<AdminVideoSection[]>(initialSections ?? []);
   const [isLoadFailed, setIsLoadFailed] = useState(initialSections === null);
-  /** 操作中の区切り・ビデオの ID（その行のボタンを止める） */
+  /** 操作中のセクション・ビデオの ID（その行のボタンを止める） */
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [sectionForm, setSectionForm] = useState<VideoSectionFormTarget | null>(null);

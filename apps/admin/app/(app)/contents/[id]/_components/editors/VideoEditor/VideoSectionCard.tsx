@@ -23,7 +23,7 @@ interface VideoSectionCardProps {
   onChangeStatus: (video: AdminVideoItem, status: VideoStatus) => void;
 }
 
-/** 区切り1つ（見出しと、その中のビデオ） */
+/** セクション1つ（見出しと、その中のビデオ） */
 export function VideoSectionCard({
   section,
   isFirst,
@@ -51,6 +51,9 @@ export function VideoSectionCard({
           <h2 className={`text-sm font-black truncate ${section.section_name ? 'text-slate-800' : 'text-slate-400'}`}>
             {section.section_name ?? t('untitled')}
           </h2>
+          {section.section_name_en && (
+            <span className="text-[11px] text-slate-500 italic truncate">{section.section_name_en}</span>
+          )}
           <span className="text-[11px] font-bold text-slate-400 shrink-0">
             {t('videoCount', { count: section.videos.length })}
           </span>

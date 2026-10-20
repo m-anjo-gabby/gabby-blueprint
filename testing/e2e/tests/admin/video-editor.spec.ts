@@ -63,7 +63,7 @@ async function videoRowOf(videoId: string) {
   };
 }
 
-test('教材の作成（ビデオの種類の必須・見出しなしの区切り）と区切りの追加・見出しの変更・並べ替え・削除', async ({
+test('教材の作成（ビデオの種類の必須・見出しなしのセクション）とセクションの追加・見出しの変更・並べ替え・削除', async ({
   browser,
 }) => {
   const { context, page } = await openAdminContext(browser);
@@ -84,7 +84,7 @@ test('教材の作成（ビデオの種類の必須・見出しなしの区切�
     const contentId = page.url().split('/').pop()!;
     contentIds.push(contentId);
 
-    await expect(page.getByText('1区切り・0本')).toBeVisible();
+    await expect(page.getByText('1セクション・0本')).toBeVisible();
     await expect(sectionCard(page, '（見出しなし）')).toBeVisible();
     const { data: content } = await admin
       .from('com_m_contents')
@@ -93,33 +93,41 @@ test('教材の作成（ビデオの種類の必須・見出しなしの区切�
       .single();
     expect(content).toEqual({ content_type: 1, category_id: 2, status: 0 });
 
-    let dialog = await openDialogBy(page, page.getByRole('button', { name: '区切りを追加' }));
-    await dialog.getByLabel('見出し').fill('Unit 2');
+    let dialog = await openDialogBy(page, page.getByRole('button', { name: 'セクションを追加' }));
+    await dialog.getByLabel('見出し（日本語）').fill('Unit 2');
     await dialog.getByRole('button', { name: '保存' }).click();
-    await expect(page.getByText('2区切り・0本')).toBeVisible();
+    await expect(page.getByText('2セクション・0本')).toBeVisible();
 
     dialog = await openDialogBy(
       page,
       sectionCard(page, '（見出しなし）').getByRole('button', { name: '見出しを変更' }),
     );
-    await dialog.getByLabel('見出し').fill('Unit 1');
+    // 英名だけではセクションに見出しを付けられない（見出しの有無は和名で決める）
+    await dialog.getByLabel('見出し（英語・任意）').fill('Unit 1 (en)');
+    await dialog.getByRole('button', { name: '保存' }).click();
+    await expect(page.getByText('英語の見出しを入れる場合は、日本語の見出しも入力してください')).toBeVisible();
+    await dialog.getByLabel('見出し（日本語）').fill('Unit 1');
     await dialog.getByRole('button', { name: '保存' }).click();
     await expect(page.getByText('見出しを変更しました')).toBeVisible();
+    await expect(sectionCard(page, 'Unit 1')).toContainText('Unit 1 (en)');
 
     await sectionCard(page, 'Unit 2').getByRole('button', { name: '上へ' }).click();
     await expect(page.locator('section').first().getByRole('heading')).toHaveText('Unit 2');
     const { data: sections } = await admin
       .from('com_m_video_section')
-      .select('section_name')
+      .select('section_name, section_name_en')
       .eq('content_id', contentId)
       .order('seq_no');
-    expect(sections!.map((s) => s.section_name)).toEqual(['Unit 2', 'Unit 1']);
+    expect(sections).toEqual([
+      { section_name: 'Unit 2', section_name_en: null },
+      { section_name: 'Unit 1', section_name_en: 'Unit 1 (en)' },
+    ]);
     await expect(page.locator('section').first().getByRole('button', { name: '上へ' })).toBeDisabled();
 
-    await sectionCard(page, 'Unit 1').getByRole('button', { name: '区切りを削除' }).click();
+    await sectionCard(page, 'Unit 1').getByRole('button', { name: 'セクションを削除' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: '削除する' }).click();
-    await expect(page.getByText('区切りを削除しました')).toBeVisible();
-    await expect(page.getByText('1区切り・0本')).toBeVisible();
+    await expect(page.getByText('セクションを削除しました')).toBeVisible();
+    await expect(page.getByText('1セクション・0本')).toBeVisible();
   } finally {
     await context.close();
   }
@@ -134,7 +142,8 @@ test('ビデオの登録（アップロード・再生時間・サムネイル�
   try {
     await page.goto(`/contents/${seeded.contentId}`);
     let dialog = await openDialogBy(page, page.getByRole('button', { name: 'ビデオを追加' }).first());
-    await dialog.getByLabel('タイトル').fill('E2E video');
+    await dialog.getByLabel('タイトル（日本語）').fill('E2E video');
+    await dialog.getByLabel('タイトル（英語・任意）').fill('E2E video (en)');
     // 形式の違うファイルは選んだ時点で断る
     await dialog.getByLabel(/動画ファイル/).setInputFiles(VIDEO_FILES.thumbnail);
     await expect(dialog.getByText('このファイルの形式には対応していません')).toBeVisible();
@@ -147,6 +156,7 @@ test('ビデオの登録（アップロード・再生時間・サムネイル�
 
     const row = videoRow(page, 'E2E video');
     await expect(row).toContainText('0:02');
+    await expect(row).toContainText('E2E video (en)');
     await expect(row).toContainText('非公開');
     await expect(row.locator('img')).toBeVisible();
     const { data: created } = await admin
@@ -155,7 +165,7 @@ test('ビデオの登録（アップロード・再生時間・サムネイル�
       .eq('section_id', seeded.sections[0].sectionId)
       .single();
     const first = await videoRowOf(created!.video_id as string);
-    expect(first).toMatchObject({ duration_sec: 2, status: 0, seq_no: 1 });
+    expect(first).toMatchObject({ title_en: 'E2E video (en)', duration_sec: 2, status: 0, seq_no: 1 });
     expect(first.video_path).toMatch(new RegExp(`^${created!.video_id}/[0-9a-f-]{36}\\.mp4$`));
     expect(first.thumbnail_path).toMatch(new RegExp(`^${created!.video_id}/[0-9a-f-]{36}\\.png$`));
     expect(await videoFileExists(admin, first.video_path)).toBe(true);
@@ -197,7 +207,9 @@ test('ビデオの登録（アップロード・再生時間・サムネイル�
   }
 });
 
-test('ビデオの並べ替え・公開の切り替え・別の教材の区切りへの移動、一覧からエディタへの導線', async ({ browser }) => {
+test('ビデオの並べ替え・公開の切り替え・別の教材のセクションへの移動、一覧からエディタへの導線', async ({
+  browser,
+}) => {
   const source = await seedVideoContent(admin, tag, [
     { name: 'S1', videos: [{ title: 'E2E video 1' }, { title: 'E2E video 2' }] },
   ]);
@@ -228,15 +240,15 @@ test('ビデオの並べ替え・公開の切り替え・別の教材の区切�
     await expect(videoRow(s1, 'E2E video 1')).toContainText('公開');
     expect((await videoRowOf(v1.videoId)).status).toBe(1);
 
-    // 別の教材の区切りへ移す（今の区切りは選べない）
+    // 別の教材のセクションへ移す（今のセクションは選べない）
     const dialog = await openDialogBy(
       page,
-      videoRow(s1, 'E2E video 1').getByRole('button', { name: '別の区切りへ移す' }),
+      videoRow(s1, 'E2E video 1').getByRole('button', { name: '別のセクションへ移す' }),
     );
     const [contentSelect, sectionSelect] = [dialog.getByRole('combobox').nth(0), dialog.getByRole('combobox').nth(1)];
     await expect(contentSelect).toHaveText(videoContentName(tag));
     await sectionSelect.click();
-    await expect(page.getByRole('option', { name: 'S1（今の区切り）' })).toBeDisabled();
+    await expect(page.getByRole('option', { name: 'S1（今のセクション）' })).toBeDisabled();
     await page.keyboard.press('Escape');
     await contentSelect.click();
     await page.getByRole('option', { name: videoContentName(otherTag) }).click();
@@ -252,7 +264,7 @@ test('ビデオの並べ替え・公開の切り替え・別の教材の区切�
   }
 });
 
-test('ビデオの削除（ファイルも消える）・視聴の記録があるビデオの削除の拒否・ビデオの残る区切りは削除できない', async ({
+test('ビデオの削除（ファイルも消える）・視聴の記録があるビデオの削除の拒否・ビデオの残るセクションは削除できない', async ({
   browser,
 }) => {
   const seeded = await seedVideoContent(admin, tag, [
@@ -274,7 +286,7 @@ test('ビデオの削除（ファイルも消える）・視聴の記録があ�
   try {
     await page.goto(`/contents/${seeded.contentId}`);
     const s1 = sectionCard(page, 'S1');
-    await expect(s1.getByRole('button', { name: '区切りを削除' })).toBeDisabled();
+    await expect(s1.getByRole('button', { name: 'セクションを削除' })).toBeDisabled();
 
     await videoRow(s1, 'E2E unwatched').getByRole('button', { name: '削除', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: '削除する' }).click();

@@ -75,8 +75,12 @@ test('定義の誤りを見つける', () => {
   bad.contents[1].sections[1].videos[0].legacyCode = 'a1.mp4';
   bad.contents[1].sections[1].videos[1].title = '';
   bad.contents[0].sections.push({ name: 'empty', videos: [] });
+  bad.contents[0].sections.push({ name: null, nameEn: 'English only', videos: [] });
   assert.deepEqual(validateCatalog(bad), [
-    'ビデオの無い区切りがあります: A empty',
+    'ビデオの無いセクションがあります: A empty',
+    'セクションの見出しが重複しています: A null',
+    '英名だけのセクションがあります: A English only',
+    'ビデオの無いセクションがあります: A null',
     '教材のラベルが重複しています: A',
     'ビデオの種類の値が不正です: A 9',
     '旧ファイル名が重複しています: a1.mp4',
@@ -97,7 +101,7 @@ test('並び順は定義の順（1から）', () => {
   );
 });
 
-test('取り込み済みの教材・区切り・ビデオは作らない', () => {
+test('取り込み済みの教材・セクション・ビデオは作らない', () => {
   const plan = planImport(sample, {
     contentIdByLabel: new Map([['B', 'cB']]),
     sectionIdByKey: new Map([[sectionKey('cB', 'Unit 2'), 'sB2']]),
@@ -127,7 +131,7 @@ test('取り込み済みの教材・区切り・ビデオは作らない', () =>
   );
 });
 
-test('見出しの無い区切りは教材ごとに区別する', () => {
+test('見出しの無いセクションは教材ごとに区別する', () => {
   assert.notEqual(sectionKey('c1', null), sectionKey('c2', null));
   assert.equal(sectionKey('c1', null), sectionKey('c1', null));
 });

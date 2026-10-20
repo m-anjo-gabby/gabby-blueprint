@@ -25,7 +25,7 @@ interface VideoMoveDialogProps {
   onMoved: () => Promise<void>;
 }
 
-/** ビデオを別の区切り（別の教材の区切りでもよい）の末尾へ移す。移動先の候補は開いた時に取得する */
+/** ビデオを別のセクション（別の教材のセクションでもよい）の末尾へ移す。移動先の候補は開いた時に取得する */
 export function VideoMoveDialog({ video, onClose, onMoved }: VideoMoveDialogProps) {
   const t = useTranslations('contents.editor.video.moveDialog');
   const tCommon = useTranslations('common');

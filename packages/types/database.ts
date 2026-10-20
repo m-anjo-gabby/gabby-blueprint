@@ -1642,6 +1642,7 @@ export type Database = {
           status: 0 | 1
           thumbnail_path: string | null
           title: string
+          title_en: string | null
           update_date: string
           video_id: string
           video_path: string
@@ -1656,6 +1657,7 @@ export type Database = {
           status?: 0 | 1
           thumbnail_path?: string | null
           title: string
+          title_en?: string | null
           update_date?: string
           video_id?: string
           video_path: string
@@ -1670,6 +1672,7 @@ export type Database = {
           status?: 0 | 1
           thumbnail_path?: string | null
           title?: string
+          title_en?: string | null
           update_date?: string
           video_id?: string
           video_path?: string
@@ -1690,6 +1693,7 @@ export type Database = {
           insert_date: string
           section_id: string
           section_name: string | null
+          section_name_en: string | null
           seq_no: number
           update_date: string
         }
@@ -1698,6 +1702,7 @@ export type Database = {
           insert_date?: string
           section_id?: string
           section_name?: string | null
+          section_name_en?: string | null
           seq_no?: number
           update_date?: string
         }
@@ -1706,6 +1711,7 @@ export type Database = {
           insert_date?: string
           section_id?: string
           section_name?: string | null
+          section_name_en?: string | null
           seq_no?: number
           update_date?: string
         }
