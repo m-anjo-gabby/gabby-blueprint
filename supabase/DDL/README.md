@@ -127,7 +127,7 @@ Supabase のクライアント（`packages/lib/supabase/*`）は、DB の型で�
 
 - 大きく何度も読まれるファイル（動画）は、転送量の課金の無い R2 に置く。Supabase Storage の転送量は Pro プランで月 250GB まで含まれ、超えると課金される。
 - コーチの紹介ビデオ（`profile` バケット）もこの決まりでは R2 の側だが、Supabase の Usage の画面で Storage の転送量が月 250GB に近づくまでは移さない。
-- R2 の準備ができるまでは、ビデオ教材は dev だけ Supabase Storage の一時のバケット（`video`。`storage/` に置かず手で作った）を使う。R2 に移したら消す。
+- R2 のバケットは環境ごとに1つ（`blueprint-video-dev` / `-stg` / `-prod`。公開しない）。読み出し・アップロードはサーバーが発行する署名付き URL で行い、admin のブラウザからの PUT のため、各バケットの CORS でその環境の admin のオリジンに PUT / GET / HEAD を許す。接続先は環境変数 `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_VIDEO_BUCKET`（API トークンは環境ごとに、そのバケットだけの Object Read & Write）。
 
 ### 関数の権限
 

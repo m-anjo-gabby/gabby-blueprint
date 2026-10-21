@@ -96,6 +96,9 @@ catalogs:
     ai:
       specifier: ^7.0.127
       version: 7.0.143
+    aws4fetch:
+      specifier: ^1.0.20
+      version: 1.0.20
     babel-plugin-react-compiler:
       specifier: 1.0.0
       version: 1.0.0
@@ -746,6 +749,9 @@ importers:
       ai:
         specifier: 'catalog:'
         version: 7.0.143(zod@4.6.7)
+      aws4fetch:
+        specifier: 'catalog:'
+        version: 1.0.20
       clsx:
         specifier: 'catalog:'
         version: 2.1.1
@@ -2848,6 +2854,9 @@ packages:
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
+
+  aws4fetch@1.0.20:
+    resolution: {integrity: sha512-/djoAN709iY65ETD6LKCtyyEI04XIBP5xVvfmNxsEP0uJB5tyaGBztSryRr4HqMStr9R06PisQE7m9zDTXKu6g==}
 
   axe-core@4.11.1:
     resolution: {integrity: sha512-BASOg+YwO2C+346x3LZOeoovTIoTrRqEsqMa6fmfAV0P+U9mFr9NsyOEpiYvFjbc64NMrSswhV50WdXzdb/Z5A==}
@@ -6741,6 +6750,8 @@ snapshots:
   available-typed-arrays@1.0.7:
     dependencies:
       possible-typed-array-names: 1.1.0
+
+  aws4fetch@1.0.20: {}
 
   axe-core@4.11.1: {}
 

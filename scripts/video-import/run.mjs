@@ -22,9 +22,11 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
+import { createR2Bucket, readR2BucketConfig } from '../../packages/lib/r2/bucket.ts';
 import { buildVideoObjectKey, checkVideoFile } from '../../packages/lib/video/files.ts';
 import { CONTENT_STATUS } from '../../packages/types/content.ts';
 import { VIDEO_STATUS } from '../../packages/types/video.ts';
+import { MANIFEST } from '../vercel-env/manifest.mjs';
 import {
   clipEncodeArgs,
   ENVS,
@@ -150,25 +152,35 @@ function connect(envName) {
 }
 
 /**
- * ビデオのファイルの置き場所。アプリ（packages/lib/video/storage.ts）と同じバケットに置く。
- * R2 の準備ができるまでは dev の Supabase Storage の一時のバケット（video）だけ。R2 に移す時は storage.ts と一緒にここを直す。
+ * ビデオのファイルの置き場所（R2）。アプリ（packages/lib/video/storage.ts）と同じバケットに置く。
+ * バケット名は環境変数の定義（scripts/vercel-env/manifest.mjs の R2_VIDEO_BUCKET）で環境ごとに決まる。
+ * 鍵は、dev は apps/admin/.env.local、staging・本番は環境変数の値ファイル（scripts/vercel-env/values/.env.<env>）から読む。
  */
-function createVideoStorage(envName, supabase) {
-  if (envName !== 'dev') {
+function createVideoStorage(envName) {
+  const envPath =
+    envName === 'dev'
+      ? path.join(REPO_ROOT, 'apps/admin/.env.local')
+      : path.join(REPO_ROOT, `scripts/vercel-env/values/.env.${envName}`);
+  if (!existsSync(envPath)) throw new Error(`環境ファイルがありません: ${path.relative(REPO_ROOT, envPath)}`);
+  const { value } = MANIFEST.find((d) => d.key === 'R2_VIDEO_BUCKET');
+  const expected = value[envName] ?? value.default;
+  const vars = parseEnv(readFileSync(envPath, 'utf8'));
+  // 取り違えを防ぐため、.env.local に書いたバケット名も環境のものかを確かめる
+  if (vars.R2_VIDEO_BUCKET && vars.R2_VIDEO_BUCKET !== expected)
     throw new Error(
-      'staging・本番のビデオの置き場所（R2）がまだ用意されていません。--prepare でファイルを作るところまでは実行できます。',
+      `${path.basename(envPath)} の R2_VIDEO_BUCKET (${vars.R2_VIDEO_BUCKET}) が ${expected} ではありません。`,
     );
-  }
-  const bucket = supabase.storage.from('video');
+  const config = readR2BucketConfig('R2_VIDEO_BUCKET', { ...vars, R2_VIDEO_BUCKET: expected });
+  const bucket = createR2Bucket(config);
   return {
+    name: config.bucket,
     async upload(key, file, contentType) {
-      const { error } = await bucket.upload(key, readFileSync(file), { contentType });
-      if (error) throw new Error(`ファイルの配置に失敗しました: ${key} ${error.message}`);
+      await bucket.put(key, readFileSync(file), contentType);
     },
     async remove(keys) {
-      const { error } = await bucket.remove(keys);
-      if (error)
-        console.warn(`  ファイルの削除に失敗しました（手で消してください）: ${keys.join(', ')} ${error.message}`);
+      const { failed } = await bucket.remove(keys);
+      if (failed.length > 0)
+        console.warn(`  ファイルの削除に失敗しました（手で消してください）: ${failed.map((f) => f.key).join(', ')}`);
     },
   };
 }
@@ -316,7 +328,8 @@ async function main() {
     return;
   }
 
-  const storage = createVideoStorage(opts.env, supabase);
+  const storage = createVideoStorage(opts.env);
+  console.log(`ファイルの置き場所: R2 ${storage.name}`);
   const answer = await ask(
     opts.env === 'dev' ? '\n取り込みますか？ (y/N): ' : `\n取り込む場合は環境名（${opts.env}）を入力してください: `,
   );

@@ -13,9 +13,17 @@
 --   DDL/table/com_m_contents.sql, com_m_video_section.sql（新規）, com_m_video.sql（新規）,
 --   student_m_video_progress.sql（新規）
 --
--- 【注意】ビデオのファイルの置き場所は Cloudflare R2（環境ごとの非公開のバケット）。R2 の準備ができるまでは
---   dev だけ Supabase Storage の一時のバケット（video）で作っており、staging・本番にはビデオの機能を出さない
---   （packages/lib/video/storage.ts）。
+-- 【注意】ビデオのファイルの置き場所は Cloudflare R2（環境ごとの非公開のバケット blueprint-video-stg / -prod。
+--   packages/lib/video/storage.ts）。バケット・CORS・API トークンは作成済み（2026-10-21）。
+--
+-- 【環境変数（このスクリプトの適用の後、Deploy の前）】
+--   admin・student に R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_VIDEO_BUCKET を追加する。
+--     pnpm vercel-env --env=<staging|prod> --apply
+--
+-- 【ビデオの取り込み（Deploy の後）】
+--   旧システムのビデオを取り込む（教材は非公開で入る。admin のプレビューで確かめてから公開する）。
+--     node scripts/video-import/run.mjs --env=<staging|prod> --src=D:/work/video --apply
+--   本番は実物の再エンコードに1時間ほどかかるため、先に --prepare で作っておく（scripts/video-import/README.md）。
 --
 -- 【実行方法】
 --   supabase/release/README.md の手順に従い run.mjs で適用してください。

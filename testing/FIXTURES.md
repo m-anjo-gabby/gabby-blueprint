@@ -199,7 +199,7 @@ Resend のテスト用アドレス `delivered+${TAG}-<用途>@resend.dev` を使
 - 固定のビデオ教材は置かない。テストごとに使い捨てで作る（`e2e/support/videoFixtures.ts`。教材名 `【QAテスト】ビデオ教材E2E（${TAG}）`）。
   後始末は教材とビデオのファイルの両方を消す（視聴の記録があると消せないため、使い捨ての生徒を先に消す）。残骸は `authFixtures.leftovers.ts` が確かめる。
 - テスト用のファイルは `e2e/fixtures/video/`（ffmpeg の合成のテストパターン。2秒・3秒の MP4 と PNG。各数KB）。旧システムの実物の動画はテストに使わない。
-- ファイルの置き場所は、R2 の準備ができるまで dev の Supabase Storage の一時のバケット `video` のため、ビデオのテストは dev だけで実行する。
+- ファイルはアプリと同じ R2 のバケット（dev は `blueprint-video-dev`）に置く。接続先は環境変数 `R2_*`、無ければ dev は `apps/admin/.env.local` から読む（staging で実行する場合は環境変数で渡す）。
 - 生徒の再生のテストは desktop（Chromium）だけで実行する（Windows の WebKit は H.264 の動画を再生できない）。生徒に見せる教材は使い捨ての顧客にだけ限定公開する（`seedVideoContent` の `accessClientId`）。
 
 ## 対象ブラウザ・デバイス（E2E）

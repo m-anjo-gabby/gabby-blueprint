@@ -20,7 +20,7 @@
 - ビデオ教材は `seedVideoContent` の `published` と `accessClientId` で、使い捨ての顧客にだけ限定公開して作る（固定アカウントの教材一覧に出さない）。
   動画は2秒・20秒のテスト用のファイル（`testing/e2e/fixtures/video/`）。
 - Windows の WebKit は H.264 の動画を再生できないため desktop（Chromium）だけで実行する。iPhone の Safari での再生は実機で確かめる。
-- ファイルの置き場所は、R2 の準備ができるまで dev の Supabase Storage の一時のバケット `video`（dev だけで実行する）。
+- ファイルの置き場所は R2 のバケット（dev は `blueprint-video-dev`。接続先は `testing/FIXTURES.md`「ビデオ教材（E2E）」）。
 
 ## フロー（正常系）
 

@@ -1,19 +1,35 @@
+import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import { createR2Bucket, readR2BucketConfig, type R2Bucket } from '@gabby/lib/r2/bucket';
 import { newTag } from './authFixtures.ts';
+import { E2E_ENV } from './targets.ts';
 
 /**
  * ビデオ教材の使い捨てデータ（教材・セクション・ビデオと、ビデオのバケットのファイル）。
  * 教材名は `【QAテスト】ビデオ教材E2E（${tag}）`（残骸は authFixtures.leftovers.ts が確かめる）。
- * ファイルはアプリ（packages/lib/video/storage.ts）と同じバケットを直接扱う（置き場所を R2 に移したら、ここも合わせて直す）。
+ * ファイルはアプリ（packages/lib/video/storage.ts）と同じ R2 のバケットを直接扱う。
  */
 
-/** ビデオのバケット（R2 に移るまでは dev の Supabase Storage の一時のバケット） */
-export const VIDEO_BUCKET = 'video';
+const SUPPORT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const FIXTURE_DIR = path.join(SUPPORT_DIR, '../fixtures/video');
 
-const FIXTURE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../fixtures/video');
+let bucket: R2Bucket | undefined;
+
+/**
+ * ビデオのバケット（admin の R2_VIDEO_BUCKET）。接続先は環境変数、無ければ dev は apps/admin/.env.local から読む
+ * （ステージングは環境変数で渡す）。
+ */
+function videoBucket(): R2Bucket {
+  if (bucket) return bucket;
+  const envPath = path.join(SUPPORT_DIR, '../../../apps/admin/.env.local');
+  const local = E2E_ENV === 'dev' && existsSync(envPath) ? dotenv.parse(readFileSync(envPath)) : {};
+  bucket = createR2Bucket(readR2BucketConfig('R2_VIDEO_BUCKET', { ...local, ...process.env }));
+  return bucket;
+}
 
 /** テスト用のファイル（ffmpeg の合成のテストパターン。数KB） */
 export const VIDEO_FILES = {
@@ -36,9 +52,8 @@ export function videoContentName(tag: string): string {
   return `${VIDEO_CONTENT_NAME_PREFIX}${tag}）`;
 }
 
-export async function videoFileExists(admin: SupabaseClient, key: string): Promise<boolean> {
-  const { error } = await admin.storage.from(VIDEO_BUCKET).info(key);
-  return !error;
+export async function videoFileExists(key: string): Promise<boolean> {
+  return (await videoBucket().head(key)) !== null;
 }
 
 interface SeedVideo {
@@ -105,10 +120,7 @@ export async function seedVideoContent(
     for (const [videoIndex, video] of section.videos.entries()) {
       const videoId = crypto.randomUUID();
       const videoPath = `${videoId}/${crypto.randomUUID()}.mp4`;
-      const { error: uploadError } = await admin.storage
-        .from(VIDEO_BUCKET)
-        .upload(videoPath, bodies[video.file ?? 'short'], { contentType: 'video/mp4' });
-      if (uploadError) throw new Error(`動画の配置に失敗しました: ${uploadError.message}`);
+      await videoBucket().put(videoPath, bodies[video.file ?? 'short'], 'video/mp4');
       const { error: videoError } = await admin.from('com_m_video').insert({
         video_id: videoId,
         section_id: row.section_id,
@@ -144,8 +156,9 @@ export async function cleanupVideoContents(admin: SupabaseClient, contentIds: st
   const { error } = await admin.from('com_m_contents').delete().in('content_id', contentIds);
   if (error) console.warn(`[videoFixtures] ビデオ教材の削除に失敗: ${contentIds.join(',')} ${error.message}`);
   if (keys.length > 0) {
-    const { error: removeError } = await admin.storage.from(VIDEO_BUCKET).remove(keys);
-    if (removeError) console.warn(`[videoFixtures] ビデオのファイルの削除に失敗: ${removeError.message}`);
+    const { failed } = await videoBucket().remove(keys);
+    if (failed.length > 0)
+      console.warn(`[videoFixtures] ビデオのファイルの削除に失敗: ${failed.map((f) => f.key).join(',')}`);
   }
 }
 

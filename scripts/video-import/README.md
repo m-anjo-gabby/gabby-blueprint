@@ -60,6 +60,6 @@ pnpm video-import --env=dev --src=D:/work/video --apply
 
 本番の実物の再エンコードは1時間ほどかかるため、先に `--env=prod --prepare` で作っておくと取り込みが早く終わります。
 
-## 置き場所（R2 の準備まで）
+## 置き場所
 
-ファイルはアプリ（`packages/lib/video/storage.ts`）と同じバケットに置きます。R2 の準備ができるまでは dev の Supabase Storage の一時のバケット `video` だけに置けるため、staging・本番の `--apply` は中止します（`--prepare` は実行できます）。R2 に移す時は、`storage.ts` と一緒に `run.mjs` の `createVideoStorage` を直し、dev は取り込んだ教材を消してから取り込み直します（`legacy_code` が残っていると取り込み済みとして飛ばすため）。
+ファイルはアプリ（`packages/lib/video/storage.ts`）と同じ R2 のバケットに置きます。バケット（`blueprint-video-dev` / `-stg` / `-prod`）は環境変数の定義（`scripts/vercel-env/manifest.mjs` の `R2_VIDEO_BUCKET`）で決まります。鍵（`R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`）は、dev は `apps/admin/.env.local`、staging・本番は環境変数の値ファイル（`scripts/vercel-env/values/.env.<env>`）から読みます。

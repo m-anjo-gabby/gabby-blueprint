@@ -13,10 +13,11 @@ export const VIDEO_FILE_TYPES: Record<VideoFileKind, Readonly<Record<string, str
 
 /**
  * 1ファイルの上限（バイト）。
- * dev の一時の置き場所（Supabase Storage の Free プラン）が1ファイル 50MB までのため、R2 に移すまではそれに合わせる。
+ * 動画は、旧システムの最も大きいもの（約 380MB。取り込みでは 720p に作り直す）を作り直さずに置ける大きさにする
+ * （R2 の1回の PUT の上限は 5GB）。
  */
 export const VIDEO_FILE_MAX_BYTES: Record<VideoFileKind, number> = {
-  video: 50 * 1024 * 1024,
+  video: 500 * 1024 * 1024,
   thumbnail: 5 * 1024 * 1024,
 };
 

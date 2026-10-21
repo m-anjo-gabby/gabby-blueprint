@@ -268,6 +268,41 @@ export const MANIFEST = [
     },
   },
 
+  // ---------------------------------------------------------------- Cloudflare R2（ビデオ教材のファイル）
+  {
+    key: 'R2_ACCOUNT_ID',
+    apps: ['admin', 'student'],
+    group: 'Cloudflare R2（ビデオ教材のファイル）',
+    description: 'Cloudflare のアカウント ID（R2 の概要の画面の Account ID。全環境で同じ）',
+    validate: /^[0-9a-f]{32}$/,
+    value: { default: LOCAL },
+  },
+  {
+    key: 'R2_ACCESS_KEY_ID',
+    apps: ['admin', 'student'],
+    group: 'Cloudflare R2（ビデオ教材のファイル）',
+    description: 'R2 の API トークンの Access Key ID（環境ごとに、その環境のバケットだけの Object Read & Write）',
+    validate: /^[0-9a-f]{32}$/,
+    value: { default: LOCAL },
+  },
+  {
+    key: 'R2_SECRET_ACCESS_KEY',
+    apps: ['admin', 'student'],
+    group: 'Cloudflare R2（ビデオ教材のファイル）',
+    description: 'R2 の API トークンの Secret Access Key（トークンの作成時に一度だけ表示される）',
+    secret: true,
+    validate: /^[0-9a-f]{64}$/,
+    value: { default: LOCAL },
+  },
+  {
+    key: 'R2_VIDEO_BUCKET',
+    apps: ['admin', 'student'],
+    group: 'Cloudflare R2（ビデオ教材のファイル）',
+    description: 'ビデオ教材の動画・サムネイルを置くバケット（環境ごとに決まる）',
+    value: { default: 'blueprint-video-prod', dev: 'blueprint-video-dev', staging: 'blueprint-video-stg' },
+    note: 'バケットの CORS で、その環境の admin のオリジンに PUT / GET / HEAD を許してください（scripts/video-import/README.md）。',
+  },
+
   // ---------------------------------------------------------------- Gemini
   {
     key: 'GEMINI_API_KEY',

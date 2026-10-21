@@ -168,7 +168,7 @@ test('ビデオの登録（アップロード・再生時間・サムネイル�
     expect(first).toMatchObject({ title_en: 'E2E video (en)', duration_sec: 2, status: 0, seq_no: 1 });
     expect(first.video_path).toMatch(new RegExp(`^${created!.video_id}/[0-9a-f-]{36}\\.mp4$`));
     expect(first.thumbnail_path).toMatch(new RegExp(`^${created!.video_id}/[0-9a-f-]{36}\\.png$`));
-    expect(await videoFileExists(admin, first.video_path)).toBe(true);
+    expect(await videoFileExists(first.video_path)).toBe(true);
 
     // プレビュー（非公開でも再生できる）
     dialog = await openDialogBy(page, row.getByRole('button', { name: 'プレビュー' }));
@@ -191,8 +191,8 @@ test('ビデオの登録（アップロード・再生時間・サムネイル�
     expect(replaced.video_path).not.toBe(first.video_path);
     expect(replaced.thumbnail_path).toBe(first.thumbnail_path);
     expect(replaced.duration_sec).toBe(3);
-    expect(await videoFileExists(admin, replaced.video_path)).toBe(true);
-    expect(await videoFileExists(admin, first.video_path)).toBe(false);
+    expect(await videoFileExists(replaced.video_path)).toBe(true);
+    expect(await videoFileExists(first.video_path)).toBe(false);
 
     // サムネイルを外す: 列が空になり、ファイルも消える
     dialog = await openDialogBy(page, row.getByRole('button', { name: '編集' }));
@@ -201,7 +201,7 @@ test('ビデオの登録（アップロード・再生時間・サムネイル�
     await expect(page.getByText('ビデオを更新しました')).toBeVisible();
     await expect(row.locator('img')).toHaveCount(0);
     expect((await videoRowOf(created!.video_id as string)).thumbnail_path).toBeNull();
-    expect(await videoFileExists(admin, first.thumbnail_path!)).toBe(false);
+    expect(await videoFileExists(first.thumbnail_path!)).toBe(false);
   } finally {
     await context.close();
   }
@@ -292,13 +292,13 @@ test('ビデオの削除（ファイルも消える）・視聴の記録があ�
     await page.getByRole('alertdialog').getByRole('button', { name: '削除する' }).click();
     await expect(page.getByText('ビデオを削除しました')).toBeVisible();
     await expect(videoRow(s1, 'E2E unwatched')).toHaveCount(0);
-    expect(await videoFileExists(admin, unwatched.videoPath)).toBe(false);
+    expect(await videoFileExists(unwatched.videoPath)).toBe(false);
 
     await videoRow(s1, 'E2E watched').getByRole('button', { name: '削除', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: '削除する' }).click();
     await expect(page.getByText('視聴の記録があるため削除できません。非公開にしてください')).toBeVisible();
     await expect(videoRow(s1, 'E2E watched')).toBeVisible();
-    expect(await videoFileExists(admin, watched.videoPath)).toBe(true);
+    expect(await videoFileExists(watched.videoPath)).toBe(true);
   } finally {
     await context.close();
   }

@@ -16,6 +16,7 @@
     "@supabase/supabase-js": "catalog:",
     "@zoom/videosdk": "catalog:",
     "ai": "catalog:",
+    "aws4fetch": "catalog:",
     "clsx": "catalog:",
     "framer-motion": "catalog:",
     "jsonwebtoken": "catalog:",
