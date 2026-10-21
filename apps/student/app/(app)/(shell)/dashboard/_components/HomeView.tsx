@@ -17,7 +17,6 @@ import { clearResumeContent } from '@/actions/contentAction';
 import type { MyPlan } from '@/actions/dashboardAction';
 import type { TrainingLifetimeStats } from '@/actions/performanceAction';
 import { cn } from '@/lib/utils';
-import { resolveTodayFocus } from '../_lib/todayFocus';
 import { buildCurrentWeek, resolveStreakDays, type TrainingActivity } from '../_lib/weeklyActivity';
 import { CoachAssignmentsCard } from './CoachAssignmentsCard';
 import { ContinueCard } from './ContinueCard';
@@ -26,7 +25,7 @@ import { HomeHeaderSkeleton, WeeklyActivityCardSkeleton } from './HomeSkeleton';
 import { LifetimeStatsCard } from './LifetimeStatsCard';
 import { PlanCard } from './PlanCard';
 import { TodayDateLine } from './TodayDateLine';
-import { TodayFocusCard } from './TodayFocusCard';
+import { TodayMenuCard, type TodayMenuState } from './TodayMenuCard';
 import { WeeklyActivityCard } from './WeeklyActivityCard';
 
 interface HomeViewProps {
@@ -41,6 +40,8 @@ interface HomeViewProps {
   resume: ResumeContentResponse | null;
   /** 有効な契約（利用中・開始前） */
   plans: MyPlan[];
+  /** 今日のトレーニングメニュー（取得に失敗した場合は 'error'） */
+  todayMenu: TodayMenuState;
   /** お知らせのカード（表示方法が「ホームのカード」の未読がある場合だけ。無ければ null） */
   noticeCard: React.ReactNode;
   /** ライブセッションの区画（サーバー側で Suspense に包んで渡す。ライブセッション付きの契約が無い場合は null） */
@@ -59,8 +60,8 @@ const getGreeting = (hour: number) => {
 
 /**
  * ホーム画面。
- * 1行目に自主トレーニングの「今日やること」（主役）と今週のトレーニング、続けて「これからの予定」としてライブセッション（契約がある場合だけ）とグループセッションを1行ずつ、
- * その下にこれまでの歩みとご契約プラン、最後に主役に出ていない「続きから」と課題を並べる（モバイル=1列、PC(lg以上)=3列グリッド）。
+ * 1行目に今日のトレーニングメニュー（主役）と今週のトレーニング、続けて「これからの予定」としてライブセッション（契約がある場合だけ）とグループセッションを1行ずつ、
+ * その下にこれまでの歩みとご契約プラン、最後に「続きから」とコーチからの課題を並べる（モバイル=1列、PC(lg以上)=3列グリッド）。
  * プランによる違いはライブセッションの行の有無だけにする。トレーニングの各画面への入口はシェルのトレーニングタブ（TrainingSectionNav）が受け持つ。
  * 現在時刻の確定前（初回表示のハイドレーション時）は、時刻に依存する部分を loading.tsx と同じ骨組みで描く。
  */
@@ -71,6 +72,7 @@ export function HomeView({
   timezoneNames,
   resume: serverResume,
   plans,
+  todayMenu,
   noticeCard,
   liveSection,
   eventSection,
@@ -108,17 +110,10 @@ export function HomeView({
   };
 
   const pendingAssignments = assignments.filter((a) => !a.is_set_completed);
-  const focus = resolveTodayFocus({ assignments: pendingAssignments, resume });
-
-  // 「今日やること」に出した項目は補助カード側では重複表示しない
-  const otherAssignments = pendingAssignments.filter(
-    (a) => !(focus.kind === 'assignment' && focus.assignment.assignment_id === a.assignment_id),
-  );
   const week = nowMs !== null ? buildCurrentWeek(activities, timezone, nowMs) : null;
   const streakDays = nowMs !== null ? resolveStreakDays(lifetimeStats, timezone, nowMs) : 0;
-  const showAssignments = otherAssignments.length > 0;
-  // 再開が主役に出ていない（課題を優先した）場合だけ、補助カード「続きから」に出す
-  const showContinue = resume !== null && focus.kind !== 'resume';
+  const showAssignments = pendingAssignments.length > 0;
+  const showContinue = resume !== null;
 
   return (
     <div className={HOME_LAYOUT.page}>
@@ -143,7 +138,7 @@ export function HomeView({
 
       <div className={HOME_LAYOUT.grid}>
         <div className={HOME_LAYOUT.focus}>
-          <TodayFocusCard focus={focus} onClearResume={handleClearResume} />
+          <TodayMenuCard menu={todayMenu} />
         </div>
 
         {week ? (
@@ -169,13 +164,13 @@ export function HomeView({
         />
         {plans.length > 0 && <PlanCard plans={plans} nowMs={nowMs} timezone={timezone} />}
 
-        {/* 途中の教材の再開（主役に出ていない場合）とコーチからの課題。両方あるときは半分ずつ、片方だけなら全幅 */}
+        {/* 途中の教材の再開とコーチからの課題。両方あるときは半分ずつ、片方だけなら全幅 */}
         {(showContinue || showAssignments) && (
           <div
             className={cn('grid grid-cols-1 gap-4 lg:col-span-3', showContinue && showAssignments && 'lg:grid-cols-2')}
           >
             {showContinue && <ContinueCard resume={resume} onClear={handleClearResume} />}
-            {showAssignments && <CoachAssignmentsCard assignments={otherAssignments} />}
+            {showAssignments && <CoachAssignmentsCard assignments={pendingAssignments} />}
           </div>
         )}
       </div>

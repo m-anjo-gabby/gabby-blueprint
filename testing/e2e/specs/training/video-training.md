@@ -12,7 +12,7 @@
 |---|---|---|---|
 | 生徒 | 教材一覧 | `student` `/library` | `LibraryView.tsx`、`getTrainingPath`。画面仕様: [docs/screens/student/library.md](../../../../docs/screens/student/library.md) |
 | 生徒 | ビデオ教材の画面 | `student` `/training/video/[id]`（`?v=<ビデオID>`） | `training/video/_components/VideoContentView.tsx`・`VideoList.tsx`、`getStudentVideoContent`・`saveVideoProgress`・`saveVideoBookmark`。画面仕様: [docs/screens/student/training/video.md](../../../../docs/screens/student/training/video.md) |
-| 生徒 | ホーム（続きから） | `student` `/dashboard` | `TodayFocusCard.tsx`・`ContinueCard.tsx`、`getResumePath`。画面仕様: [docs/screens/student/dashboard.md](../../../../docs/screens/student/dashboard.md) |
+| 生徒 | ホーム（続きから） | `student` `/dashboard` | `ContinueCard.tsx`、`getResumePath`。画面仕様: [docs/screens/student/dashboard.md](../../../../docs/screens/student/dashboard.md) |
 
 ## 前提条件
 

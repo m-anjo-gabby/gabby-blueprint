@@ -207,8 +207,11 @@ test('ブックマークして終了し、ホームの「続きから」で同�
   const savedAt = (resume!.metadata as { video_time: number }).video_time;
   expect(savedAt).toBeGreaterThan(5);
 
-  await expect(page.getByText('ビデオ・前回の続きから再開できます')).toBeVisible();
-  const continueLink = page.getByRole('link', { name: '続きから再開' });
+  const continueCard = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { name: '続きから', exact: true }) });
+  await expect(continueCard.getByText('ビデオ', { exact: true })).toBeVisible();
+  const continueLink = continueCard.getByRole('link');
   await clickUntilVisible(continueLink, page.getByRole('heading', { level: 1, name: 'ビデオ', exact: true }));
   await expect(page).toHaveURL(new RegExp(`/training/video/${seeded.contentId}\\?v=${longId}$`));
   await expect(listItem(page, 'E2E 1-2 long')).toHaveAttribute('aria-current', 'true');

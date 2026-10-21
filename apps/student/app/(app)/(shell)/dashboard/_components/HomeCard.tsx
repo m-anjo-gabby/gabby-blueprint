@@ -20,7 +20,7 @@ export const HOME_LAYOUT = {
   page: 'space-y-6 pb-6',
   header: 'space-y-1 px-1',
   grid: 'grid grid-cols-1 gap-4 lg:grid-cols-3',
-  /** 主役カード「今日やること」の区画 */
+  /** 主役カード「今日のトレーニングメニュー」の区画 */
   focus: 'lg:col-span-2',
   /** 2列分のカード（ご契約プランと並ぶ「これまでの歩み」） */
   wide: 'lg:col-span-2',

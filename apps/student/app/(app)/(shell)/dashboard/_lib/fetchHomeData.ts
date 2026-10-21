@@ -9,6 +9,8 @@ import {
   type TrainingLifetimeStats,
 } from '@/actions/performanceAction';
 import { getTimezoneList } from '@/actions/studentProfileAction';
+import { getTodayTrainingMenu } from '@/lib/trainingMenu';
+import type { TodayMenuState } from '../_components/TodayMenuCard';
 import { collectActivities, getMonthKeysCoveringThisWeek, type TrainingActivity } from './weeklyActivity';
 
 export interface HomeData {
@@ -21,19 +23,22 @@ export interface HomeData {
   resume: ResumeContentResponse | null;
   /** 有効な契約（利用中・開始前）。ご契約プランのカードに使う */
   plans: MyPlan[];
+  /** 今日のトレーニングメニュー（主役のカード） */
+  todayMenu: TodayMenuState;
 }
 
-/** ホームの「今日やること」・補助カードの判定材料を並列で取得する（ライブセッションの区画は別に遅れて取得する） */
+/** ホームの今日のトレーニングメニュー・補助カードの材料を並列で取得する（ライブセッションの区画は別に遅れて取得する） */
 export async function fetchHomeData(): Promise<HomeData> {
   const monthKeys = getMonthKeysCoveringThisWeek(Date.now());
 
-  const [assignments, performances, lifetimeStats, timezones, resume, plans] = await Promise.all([
+  const [assignments, performances, lifetimeStats, timezones, resume, plans, todayMenu] = await Promise.all([
     getMyDialogueAssignments(),
     Promise.all(monthKeys.map((month) => getUserTrainingPerformance(month))),
     getMyTrainingLifetimeStats(),
     getTimezoneList(),
     getLatestResumeContent(),
     getMyActivePlans(),
+    getTodayTrainingMenu(),
   ]);
 
   return {
@@ -43,5 +48,6 @@ export async function fetchHomeData(): Promise<HomeData> {
     timezoneNames: Object.fromEntries(timezones.map((tz) => [tz.timezone, tz.display_name_ja])),
     resume: resume?.com_m_contents ? resume : null,
     plans,
+    todayMenu: todayMenu.success ? todayMenu.data : 'error',
   };
 }

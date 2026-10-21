@@ -51,6 +51,8 @@ DB・コードの名前（`contract_type` 等）は変えずに残してよく�
 | **公開範囲：全体公開 / 顧客限定** | 教材を誰に見せるか。全体公開はすべての顧客、顧客限定は許可した顧客だけ | Public / Client-limited | クライアント限定 | `com_m_contents.content_scope`（0 / 1）、許可は `com_m_contents_access` | 確定 |
 | **教材の種類** | 単語帳・スプリント・ダイアログ・ビデオ | — | — | `com_m_contents.content_type`、表示名は `packages/lib/content/ui.ts` | 確定 |
 | **問題種類** | スプリントの問題の種類。UG Speed / UG Builders / UG Structure / UG Mastery の4つ | 同左 | Structure・Mastery（UG を省いた形）・UG Master | `QUESTION_TYPES`（`packages/types/sprint.ts`） | 確定 |
+| **今日のトレーニングメニュー** | 生徒ごと・日ごとの自主トレーニングのやることの並び。ホームの主役に出す | Today's training menu | 今日やること（ホームの主役の名前として）・RunNow（旧システムの名前） | `student_t_training_menu` / `student_t_training_menu_item` | 確定 |
+| **標準メニュー** | 今日のトレーニングメニューの中身のうち、旧システムのメニューを引き継いで決まりで組むもの（スプリント2種類＋発音トレーニングのビデオ）。コースに参加していない生徒に出す | Standard menu | — | `menu_source = 1`（`TRAINING_MENU_SOURCE.STANDARD`） | 仮置き |
 | **タイムアタック / ドリル** | スプリントの2つのやり方（制限時間あり / なし）。「スプリント」は教材の種類の名前にだけ使う | — | スプリント（やり方の名前として） | `mode: 'sprint' \| 'drill'`、表示名は `SPRINT_MODE_LABEL` | 確定 |
 
 - **出どころと公開範囲は別の軸**。「顧客限定＝コーパス教材」ではない。法人ごとに割り当てを変えるために、汎用教材を顧客限定にすることがある。
@@ -75,3 +77,4 @@ DB・コードの名前（`contract_type` 等）は変えずに残してよく�
 | 2 | 通常の区分の名前 | スタンダード（Standard）/ Gabby Standard / Gabby Training。開発からの推奨はスタンダード | 未決 |
 | 3 | 契約の区分を、資料・画面でどう見せるか | §1 の表（区分 × 利用形態）をそのまま使う | 未決 |
 | 4 | 汎用スプリントの教材名「Gabby NLT」 | NLT は方法論の名前のため、教材名として残すかを確かめる | 未決 |
+| 5 | 今日のトレーニングメニューの中身の呼び方 | 旧システムを引き継いだものを「標準メニュー」、コースのものを「コースのメニュー」とする | 仮置き |

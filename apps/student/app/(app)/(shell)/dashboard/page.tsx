@@ -12,8 +12,8 @@ import { fetchHomeData } from './_lib/fetchHomeData';
 
 /**
  * ホーム（ダッシュボード）
- * サーバー側で課題・今週・通算のトレーニング実績・再開情報（ブックマーク）・契約をまとめて取得し、
- * 「今日やること」の判定材料として渡す。開くたびに取得するため、トレーニング後の再開情報もそのまま反映される。
+ * サーバー側で今日のトレーニングメニュー・課題・今週・通算のトレーニング実績・再開情報（ブックマーク）・契約をまとめて取得する。
+ * 開くたびに取得するため、トレーニング後のメニューの完了・再開情報もそのまま反映される。
  * ライブセッションとグループセッションの区画は、区画ごとに Suspense で遅れて表示する。
  * グループセッションは全プランの生徒に出す。
  * 表示方法が「ホームのカード」の未読のお知らせがあれば、先頭の1件を上部に出す（お知らせはシェルの通知センターと同じ取得を使う）。
@@ -21,7 +21,7 @@ import { fetchHomeData } from './_lib/fetchHomeData';
  */
 export default async function DashboardPage() {
   // 契約一覧は (app)/layout.tsx と同じ取得を使う（1リクエスト内で1回）
-  const [{ assignments, activities, lifetimeStats, timezoneNames, resume, plans }, liveContracts, notices] =
+  const [{ assignments, activities, lifetimeStats, timezoneNames, resume, plans, todayMenu }, liveContracts, notices] =
     await Promise.all([fetchHomeData(), getMyLiveSessionContractsCached(), getNoticesCached()]);
   // 取得順（重要→公開日の新しい順）のまま先頭を出す
   const homeNotices = (notices.success ? notices.data : []).filter((n) => n.display_mode === 'HOME' && !n.is_read);
@@ -35,6 +35,7 @@ export default async function DashboardPage() {
       timezoneNames={timezoneNames}
       resume={resume}
       plans={plans}
+      todayMenu={todayMenu}
       noticeCard={homeNotices[0] && <HomeNoticeCard notice={homeNotices[0]} moreCount={homeNotices.length - 1} />}
       liveSection={
         liveContract && (

@@ -49,12 +49,9 @@ test.describe('使い捨てのアプリのみ契約の生徒', () => {
     return { f, userId };
   }
 
-  /** ホームの「今日やること」の見出し（続きから／今日のトレーニング） */
-  const todayFocus = (page: Page, eyebrow: '続きから' | '今日のトレーニング') =>
-    page
-      .locator('section')
-      .filter({ has: page.getByText(eyebrow, { exact: true }) })
-      .first();
+  /** ホームの「続きから」のカード（ブックマークした教材） */
+  const continueCard = (page: Page) =>
+    page.locator('section').filter({ has: page.getByRole('heading', { name: '続きから', exact: true }) });
 
   /** 単語帳を1つ進めてからブックマークして終える（ホームへ戻る） */
   async function bookmarkWord(page: Page, contentId: string): Promise<void> {
@@ -78,32 +75,33 @@ test.describe('使い捨てのアプリのみ契約の生徒', () => {
     const { f } = await startAsNewStudent(page, 'selftr');
     const word = await prepareWordContent(f);
 
-    await expect(todayFocus(page, '今日のトレーニング')).toBeVisible();
+    await expect(page.getByText('今日のトレーニングメニュー', { exact: true })).toBeVisible();
+    await expect(continueCard(page)).toHaveCount(0);
 
-    await test.step('ブックマークして終えると、今日やることが「続きから」になる', async () => {
+    await test.step('ブックマークして終えると、ホームに「続きから」が出る', async () => {
       await bookmarkWord(page, word.content_id);
-      const focus = todayFocus(page, '続きから');
-      await expect(focus).toBeVisible();
-      await expect(focus.getByText(word.content_name)).toBeVisible();
-      await expect(focus.getByText('単語帳・前回の続きから再開できます')).toBeVisible();
+      const card = continueCard(page);
+      await expect(card).toBeVisible();
+      await expect(card.getByText(word.content_name)).toBeVisible();
+      await expect(card.getByText('単語帳', { exact: true })).toBeVisible();
     });
 
     await test.step('続きから再開すると保存した位置から始まり、再開情報は消える', async () => {
-      await todayFocus(page, '続きから').getByRole('link', { name: '続きから再開' }).click();
+      await continueCard(page).getByRole('link').click();
       await page.waitForURL(`**/training/word/${word.content_id}**`);
       await expect(page.getByText('続きから再開しました')).toBeVisible({ timeout: 30_000 });
 
       await page.goto('/dashboard');
-      await expect(todayFocus(page, '今日のトレーニング')).toBeVisible();
-      await expect(page.getByRole('link', { name: '続きから再開' })).toHaveCount(0);
+      await expect(page.getByText('今日のトレーニングメニュー', { exact: true })).toBeVisible();
+      await expect(continueCard(page)).toHaveCount(0);
     });
 
     await test.step('ブックマークはホームから削除できる', async () => {
       await bookmarkWord(page, word.content_id);
-      await todayFocus(page, '続きから').getByRole('button', { name: 'ブックマークを削除' }).click();
+      await continueCard(page).getByRole('button', { name: 'ブックマークを削除' }).click();
       await page.getByRole('button', { name: 'OK' }).click();
       await expect(page.getByText('再開情報を削除しました')).toBeVisible();
-      await expect(todayFocus(page, '今日のトレーニング')).toBeVisible();
+      await expect(continueCard(page)).toHaveCount(0);
     });
   });
 

@@ -85,8 +85,12 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
         // URLパラメータに content_id が無い場合は、最新 of DB履歴からフォールバック
         const fallbackContentId = contentId || dbConfig?.content_id || '';
 
-        // 優先順位: 1. DB履歴(dbConfig) > 2. URLパラメータ > 3. システムデフォルト
-        const fallbackType = (dbConfig?.question_type || resolvedParams.type || '0') as SprintQuestionType;
+        // 優先順位: 1. DB履歴(dbConfig) > 2. URLパラメータ > 3. システムデフォルト。
+        // ただし種別とレベルの両方を指定して開いた場合（ホームの今日のトレーニングメニュー）は、指定どおりにする
+        const isPreset = !!resolvedParams.type && !!resolvedParams.level && resolvedParams.resume !== 'true';
+        const fallbackType = (
+          isPreset ? resolvedParams.type : dbConfig?.question_type || resolvedParams.type || '0'
+        ) as SprintQuestionType;
         const fallbackLevel =
           resolvedParams.level || String(dbConfig?.difficulty_level ?? QUESTION_TYPES[fallbackType]?.minLevel ?? 0);
         const fallbackTime = parseInt(resolvedParams.time_limit_sec || '', 10) || dbConfig?.time_limit_sec || 60;
@@ -134,7 +138,6 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
 
       // 初期表示Viewの決定
       const isResume = resolvedParams.resume === 'true';
-      const hasLevel = !!resolvedParams.level;
 
       if (!targetConfig.contentId) {
         setUiView('no_content');
@@ -143,7 +146,7 @@ export default function SprintPlayPage({ searchParams }: PageProps) {
         // configをセットしてからフラグをクリアする。
         // SprintSelect は props 経由で完全に初期化されるため、フラグをクリアしても安全
         clearSessionProgress();
-      } else if (isResume || hasLevel) {
+      } else if (isResume) {
         setUiView('gesture_needed');
       } else {
         setUiView('selecting');

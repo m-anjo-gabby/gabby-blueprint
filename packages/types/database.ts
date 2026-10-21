@@ -4587,6 +4587,111 @@ export type Database = {
           },
         ]
       }
+      student_t_training_menu: {
+        Row: {
+          completed_at: string | null
+          insert_date: string
+          menu_date: string
+          menu_id: string
+          menu_source: number
+          update_date: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          insert_date?: string
+          menu_date: string
+          menu_id?: string
+          menu_source?: number
+          update_date?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          insert_date?: string
+          menu_date?: string
+          menu_id?: string
+          menu_source?: number
+          update_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_t_training_menu_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "com_m_user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_t_training_menu_item: {
+        Row: {
+          completed_at: string | null
+          content_id: string
+          difficulty_level: number | null
+          insert_date: string
+          item_id: string
+          item_type: 1 | 2
+          menu_id: string
+          question_type: "0" | "4" | "5" | "6" | null
+          seq_no: number
+          target_count: number
+          update_date: string
+          video_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          content_id: string
+          difficulty_level?: number | null
+          insert_date?: string
+          item_id?: string
+          item_type: 1 | 2
+          menu_id: string
+          question_type?: "0" | "4" | "5" | "6" | null
+          seq_no: number
+          target_count?: number
+          update_date?: string
+          video_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          content_id?: string
+          difficulty_level?: number | null
+          insert_date?: string
+          item_id?: string
+          item_type?: 1 | 2
+          menu_id?: string
+          question_type?: "0" | "4" | "5" | "6" | null
+          seq_no?: number
+          target_count?: number
+          update_date?: string
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_t_training_menu_item_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "com_m_contents"
+            referencedColumns: ["content_id"]
+          },
+          {
+            foreignKeyName: "student_t_training_menu_item_menu_id_fkey"
+            columns: ["menu_id"]
+            isOneToOne: false
+            referencedRelation: "student_t_training_menu"
+            referencedColumns: ["menu_id"]
+          },
+          {
+            foreignKeyName: "student_t_training_menu_item_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "com_m_video"
+            referencedColumns: ["video_id"]
+          },
+        ]
+      }
     }
     Views: {
       vw_contract_details: {
@@ -4842,6 +4947,7 @@ export type Database = {
         }
         Returns: string
       }
+      create_training_menu: { Args: { p_items: Json }; Returns: string }
       enqueue_coach_availability_reminders: { Args: never; Returns: number }
       enqueue_event_reminders: { Args: never; Returns: number }
       enqueue_live_session_reminders: { Args: never; Returns: number }

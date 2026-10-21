@@ -24,9 +24,9 @@
 
 | # | 実行者 | 操作 | 期待する状態 | 参照仕様書 | 補足 |
 |---|---|---|---|---|---|
-| 1 | 生徒 | ログインしてホームを見る | 今週のトレーニングに前日までの実施日が塗られ、2日以上続いていれば「n日連続」が出る。これまでの歩みに通算の実施日数・発話評価と次の節目が出る。今日やることは、ブックマークがあれば「続きから」、無ければ「今日のトレーニング」 | [docs/screens/student/dashboard.md](../../../docs/screens/student/dashboard.md)、[specs/training/training-stats.md](../specs/training/training-stats.md) | 連続日数は最終実施日が「昨日」より前なら途切れ扱い（今日未実施でも昨日まで続いていれば継続中） |
+| 1 | 生徒 | ログインしてホームを見る | 今週のトレーニングに前日までの実施日が塗られ、2日以上続いていれば「n日連続」が出る。これまでの歩みに通算の実施日数・発話評価と次の節目が出る。主役は今日のトレーニングメニュー（その日のやることと済んだ数）。ブックマークがあれば「続きから」のカードが出る | [docs/screens/student/dashboard.md](../../../docs/screens/student/dashboard.md)、[specs/training/training-stats.md](../specs/training/training-stats.md) | 連続日数は最終実施日が「昨日」より前なら途切れ扱い（今日未実施でも昨日まで続いていれば継続中） |
 | 2 | 生徒 | ライブラリで教材を探す（種別タブ・検索・お気に入りの絞り込み） | 単語帳・スプリント等の利用できる教材が出る。「お気に入り」の絞り込みはURLに残り、トレーニングから戻っても保たれる（検索・種別タブは残らない） | [docs/screens/student/library.md](../../../docs/screens/student/library.md) | ダイアログはコーチの割当てのみが出るため、アプリのみ契約では出ない。ビデオは種別（タブ）だけ先行して用意した未実装の教材で、このジャーニーの対象外 |
-| 3 | 生徒 | 単語帳を進め、途中でブックマークして終える | ホームへ戻り、今日やること（または続きから）に教材名と進捗率が出る | [docs/screens/student/training/word-detail.md](../../../docs/screens/student/training/word-detail.md)、[dashboard.md](../../../docs/screens/student/dashboard.md) | 再開情報は1人1件（別の教材で保存すると上書き）。進捗は5分ごと・画面を離れる時・ブックマーク時にサーバーへ同期 |
+| 3 | 生徒 | 単語帳を進め、途中でブックマークして終える | ホームへ戻り、「続きから」のカードに教材名と進捗率が出る | [docs/screens/student/training/word-detail.md](../../../docs/screens/student/training/word-detail.md)、[dashboard.md](../../../docs/screens/student/dashboard.md) | 再開情報は1人1件（別の教材で保存すると上書き）。進捗は5分ごと・画面を離れる時・ブックマーク時にサーバーへ同期 |
 | 4 | 生徒 | 翌日、ホームの「続きから再開」で再開する | 保存した位置から始まり「続きから再開しました」が出る。再開した時点で再開情報は消え、ホームの「続きから」も消える | [word-detail.md](../../../docs/screens/student/training/word-detail.md) | 単語帳は繰り返し実施する前提。最後のフレーズの「Finish」は、そこまで進んだことをトーストで知らせるだけで、画面は移らず教材の完了も記録しない |
 | 5 | 生徒 | 単語帳のカードの☆でフレーズを登録する | ☆が即座に塗られ、お気に入り画面の「フレーズ」に出る | [specs/favorites/student-favorites.md](../specs/favorites/student-favorites.md) | 上限は種別ごと1,000件 |
 | 6 | 生徒 | スプリントの設定画面で種別・レベル・制限時間を選んで実施する | 問題がある種別・レベルだけが出て、すべて選べる（アプリのみ契約は初期ライセンスの発行時にレベル管理オフになる）。完了・タイムアップで結果画面へ移る | [docs/screens/student/training/sprint-play.md](../../../docs/screens/student/training/sprint-play.md) | レベル管理オン（到達レベル+1まで、全教材で共通）はライブ付き契約でコーチが定期的に引き上げる運用で、このジャーニーの対象外 |

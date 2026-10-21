@@ -206,3 +206,178 @@ COMMENT ON COLUMN public.com_m_video.section_id IS 'セクションID';
 COMMENT ON COLUMN public.com_m_video.seq_no IS 'セクションの中の並び順';
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】今日のトレーニングメニュー
+--
+-- 【内容】
+--   ホームの「今日やること」を、生徒ごと・日ごとの「今日のトレーニングメニュー」（やることの並び）に置き換える土台。
+--   中身は、旧システムのメニュー（RunNow）を引き継いだ標準メニュー（スプリント2種類＋発音トレーニングのビデオ）から始め、
+--   後でコース（はじめの2週間等）のその日のメニューを同じ表に入れる。
+--   1. student_t_training_menu（生徒 × 生徒のタイムゾーンでの日付で1行）
+--   2. student_t_training_menu_item（メニューのやること。スプリントは種別・レベル・回数、ビデオはビデオを指す）
+--   3. create_training_menu（その日のメニューとやることを1トランザクションで作る RPC）
+--   完了は各トレーニングの記録（self_t_sprint・student_m_video_progress）から判定し、生徒本人が completed_at だけを書く。
+--   メニューは学習の記録ではなく案内のため、教材・ビデオの削除では一緒に消す（CASCADE。実績は各トレーニングの記録に残る）。
+--
+-- 対応ファイル:
+--   DDL/table/student_t_training_menu.sql（新規）, DDL/table/student_t_training_menu_item.sql（新規）,
+--   DDL/function/create_training_menu.sql（新規）
+-- =========================================================================
+
+BEGIN;
+
+CREATE TABLE public.student_t_training_menu (
+    menu_id       uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id       uuid        NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    menu_date     date        NOT NULL,
+    menu_source   smallint    NOT NULL DEFAULT 1,
+    completed_at  timestamp with time zone,
+    insert_date   timestamp with time zone NOT NULL DEFAULT now(),
+    update_date   timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT uq_training_menu_user_date UNIQUE (user_id, menu_date),
+    CONSTRAINT chk_training_menu_menu_source CHECK (menu_source IN (1))
+);
+
+COMMENT ON TABLE public.student_t_training_menu IS '今日のトレーニングメニュー（生徒 × 日付）';
+COMMENT ON COLUMN public.student_t_training_menu.menu_id IS 'メニューID';
+COMMENT ON COLUMN public.student_t_training_menu.user_id IS 'ユーザーID (com_m_user.id)';
+COMMENT ON COLUMN public.student_t_training_menu.menu_date IS 'メニューの日付（生徒のタイムゾーンでの日付）';
+COMMENT ON COLUMN public.student_t_training_menu.menu_source IS 'メニューの作り方（1:標準メニュー）';
+COMMENT ON COLUMN public.student_t_training_menu.completed_at IS 'すべてのやることを終えた日時（NULL:未完了）';
+COMMENT ON COLUMN public.student_t_training_menu.insert_date IS '登録日時';
+COMMENT ON COLUMN public.student_t_training_menu.update_date IS '更新日時';
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.student_t_training_menu FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
+ALTER TABLE public.student_t_training_menu ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own training menus" ON public.student_t_training_menu FOR SELECT TO authenticated
+USING (
+    user_id = auth.uid()
+);
+
+CREATE POLICY "Users can complete their own training menus" ON public.student_t_training_menu FOR UPDATE TO authenticated
+USING (
+    user_id = auth.uid()
+)
+WITH CHECK (
+    user_id = auth.uid()
+);
+
+-- 作るのは create_training_menu だけ。本人が書き換えてよいのは完了の日時だけにする
+REVOKE INSERT, UPDATE, DELETE ON public.student_t_training_menu FROM authenticated;
+GRANT UPDATE (completed_at) ON public.student_t_training_menu TO authenticated;
+
+CREATE TABLE public.student_t_training_menu_item (
+    item_id           uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+    menu_id           uuid        NOT NULL REFERENCES public.student_t_training_menu(menu_id) ON DELETE CASCADE,
+    seq_no            smallint    NOT NULL,
+    item_type         smallint    NOT NULL,
+    content_id        uuid        NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+    video_id          uuid        REFERENCES public.com_m_video(video_id) ON DELETE CASCADE,
+    question_type     text,
+    difficulty_level  smallint,
+    target_count      smallint    NOT NULL DEFAULT 1,
+    completed_at      timestamp with time zone,
+    insert_date       timestamp with time zone NOT NULL DEFAULT now(),
+    update_date       timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT uq_training_menu_item_seq UNIQUE (menu_id, seq_no),
+    CONSTRAINT chk_training_menu_item_item_type CHECK (item_type IN (1, 2)),
+    CONSTRAINT chk_training_menu_item_question_type CHECK (question_type IN ('0', '4', '5', '6')),
+    CONSTRAINT chk_training_menu_item_target CHECK (
+        (item_type = 1 AND question_type IS NOT NULL AND difficulty_level IS NOT NULL AND video_id IS NULL AND target_count >= 1)
+        OR (item_type = 2 AND video_id IS NOT NULL AND question_type IS NULL AND difficulty_level IS NULL AND target_count = 1)
+    )
+);
+
+COMMENT ON TABLE public.student_t_training_menu_item IS '今日のトレーニングメニューのやること';
+COMMENT ON COLUMN public.student_t_training_menu_item.item_id IS 'やることID';
+COMMENT ON COLUMN public.student_t_training_menu_item.menu_id IS 'メニューID';
+COMMENT ON COLUMN public.student_t_training_menu_item.seq_no IS 'メニューの中の並び順';
+COMMENT ON COLUMN public.student_t_training_menu_item.item_type IS 'やることの種類（1:スプリントのタイムアタック, 2:ビデオ）';
+COMMENT ON COLUMN public.student_t_training_menu_item.content_id IS 'コンテンツID（スプリント・ビデオの教材）';
+COMMENT ON COLUMN public.student_t_training_menu_item.video_id IS 'ビデオID（item_type=2 のみ）';
+COMMENT ON COLUMN public.student_t_training_menu_item.question_type IS 'スプリント問題種別（item_type=1 のみ。''0'': Speed, ''4'': Structure, ''5'': Builders, ''6'': Mastery）';
+COMMENT ON COLUMN public.student_t_training_menu_item.difficulty_level IS 'スプリントの難易度レベル（item_type=1 のみ）';
+COMMENT ON COLUMN public.student_t_training_menu_item.target_count IS '行う回数（スプリントはタイムアタックの回数。ビデオは1）';
+COMMENT ON COLUMN public.student_t_training_menu_item.completed_at IS '終えた日時（NULL:未完了）';
+COMMENT ON COLUMN public.student_t_training_menu_item.insert_date IS '登録日時';
+COMMENT ON COLUMN public.student_t_training_menu_item.update_date IS '更新日時';
+
+CREATE INDEX idx_training_menu_item_content ON public.student_t_training_menu_item (content_id);
+CREATE INDEX idx_training_menu_item_video ON public.student_t_training_menu_item (video_id);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.student_t_training_menu_item FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
+ALTER TABLE public.student_t_training_menu_item ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own training menu items" ON public.student_t_training_menu_item FOR SELECT TO authenticated
+USING (
+    EXISTS (SELECT 1 FROM public.student_t_training_menu m WHERE m.menu_id = student_t_training_menu_item.menu_id AND m.user_id = auth.uid())
+);
+
+CREATE POLICY "Users can complete their own training menu items" ON public.student_t_training_menu_item FOR UPDATE TO authenticated
+USING (
+    EXISTS (SELECT 1 FROM public.student_t_training_menu m WHERE m.menu_id = student_t_training_menu_item.menu_id AND m.user_id = auth.uid())
+)
+WITH CHECK (
+    EXISTS (SELECT 1 FROM public.student_t_training_menu m WHERE m.menu_id = student_t_training_menu_item.menu_id AND m.user_id = auth.uid())
+);
+
+REVOKE INSERT, UPDATE, DELETE ON public.student_t_training_menu_item FROM authenticated;
+GRANT UPDATE (completed_at) ON public.student_t_training_menu_item TO authenticated;
+
+-- 生徒のタイムゾーンでの今日のメニューを作る。同じ日のメニューが既にあれば作らず、そのIDを返す
+CREATE OR REPLACE FUNCTION public.create_training_menu(p_items jsonb)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_user_id uuid := auth.uid();
+    v_menu_date date;
+    v_menu_id uuid;
+BEGIN
+    IF v_user_id IS NULL THEN
+        RAISE EXCEPTION 'unauthorized' USING ERRCODE = '42501';
+    END IF;
+    IF jsonb_typeof(p_items) IS DISTINCT FROM 'array' OR jsonb_array_length(p_items) NOT BETWEEN 1 AND 10 THEN
+        RAISE EXCEPTION 'p_items must be an array of 1 to 10 items' USING ERRCODE = '22023';
+    END IF;
+
+    SELECT (CURRENT_TIMESTAMP AT TIME ZONE COALESCE(u.timezone, 'Asia/Tokyo'))::date
+    INTO v_menu_date
+    FROM public.com_m_user u
+    WHERE u.id = v_user_id;
+
+    INSERT INTO public.student_t_training_menu (user_id, menu_date)
+    VALUES (v_user_id, v_menu_date)
+    ON CONFLICT (user_id, menu_date) DO NOTHING
+    RETURNING menu_id INTO v_menu_id;
+
+    IF v_menu_id IS NULL THEN
+        SELECT m.menu_id INTO v_menu_id
+        FROM public.student_t_training_menu m
+        WHERE m.user_id = v_user_id AND m.menu_date = v_menu_date;
+        RETURN v_menu_id;
+    END IF;
+
+    INSERT INTO public.student_t_training_menu_item (
+        menu_id, seq_no, item_type, content_id, video_id, question_type, difficulty_level, target_count
+    )
+    SELECT v_menu_id, x.seq_no, x.item_type, x.content_id, x.video_id, x.question_type, x.difficulty_level, COALESCE(x.target_count, 1)
+    FROM jsonb_to_recordset(p_items) AS x(
+        seq_no smallint, item_type smallint, content_id uuid, video_id uuid,
+        question_type text, difficulty_level smallint, target_count smallint
+    );
+
+    RETURN v_menu_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.create_training_menu(jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_training_menu(jsonb) TO authenticated;
+
+COMMIT;
