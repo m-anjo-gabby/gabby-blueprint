@@ -8,6 +8,7 @@
 
 | 日付 | ブランチ | 環境 | DB（リリーススクリプト） | アプリ（デプロイしたコミット） | 確認 |
 |---|---|---|---|---|---|
+| 2026-10-21 | staging（#99）＋ revert #101 | 本番 | 20261016 sec 1〜17（student の環境変数5件を事前に `--apply`） | 6e0cefc9（#101）3アプリ | DB `--status` 全件適用済み・ログイン画面 200・`/trial` 404（`TRIAL_APPLICATION_ENABLED=false`）。`schema.mjs --check` は列のコメントのずれだけ（staging も同じ。下の「改善の候補」） |
 | 2026-10-20 | feature/20261019-dev（#98） | staging | なし（student の環境変数 `TRIAL_APPLICATION_ENABLED` の追加を `--apply`） | 777640e1（#98）3アプリ | アプリは最新。DB は 20261016 の sec 1 が「適用後に内容変更あり」（冒頭コメントだけ。下の「つまずきと対処」）。Webトライアル・お気に入り・CV 辞書・shell-data の E2E 19件成功・1 スキップ（お気に入りの上限1000件は staging のフレーズ不足） |
 | 2026-10-19 | feature/20261016-dev ＋ hotfix（#96 `/trial` のビルド・#97 Next.js 16.1.6） | staging | 20261016 sec 1〜17 | d7cc91f9（#97）3アプリ | `release:status` 反映済み。今回の機能の E2E 19件成功。desktop 全件は 159 成功・5 失敗（お気に入り3・CV 辞書1は staging の固定データの違い、admin の shell-data 1はテストの期待が本番ビルドと合わない）・21 スキップ |
 | 2026-10-16 | feature/20261008-dev ＋ feature/20261015-dev | 本番 | 20261008 sec 1〜23 → 20261015 sec 1 | c47cb2f2（#92）3アプリ | `release:status` 反映済み・ログイン画面 200。Workflow での初めての本番デプロイ |
@@ -22,13 +23,14 @@
 
 | 日付 | 事象 | 原因 | 対処 |
 |---|---|---|---|
-| 2026-10-20 | staging の `release:status` が 20261016 の sec 1 を「適用後に内容変更あり」と判定し、「反映済み」にならない | staging に適用した後、本番向けの注記（`TRIAL_APPLICATION_ENABLED`）を冒頭のコメントに書き足した（SQL は変わっていない） | ユーザーの判断で例外として許容した（本番は未適用のため、本番では普通に適用されて影響しない）。20261016 の本番リリースが済んだら、この行を消す |
-| 2026-10-16 | 本番の `run.mjs` にトークンと Reference ID を続けて標準入力で渡すと、確認で止まった（SQL は未実行） | トークンの入力欄が2行とも読み込む | `connection.mjs` がトークンを環境変数 `SUPABASE_ACCESS_TOKEN` から受け取るようにした。SKILL.md「進め方の注意」・docs/RELEASE.md 3-2 |
-| 2026-10-16 | 本番の `schema.mjs --check` をトークンの入力で実行できなかった | `schema.mjs` は環境変数しか読まず、入力を求めなかった | `schema.mjs` も入力を求めるようにした（`lib/prompt.mjs` を共有） |
+| 2026-10-21 | 本番の `schema.mjs --check` で、次のリリースの動画のテーブル・コメントの変更が差分に出た | 手元の作業ツリー（feature/20261020-dev）の正本と比べた | origin/main の worktree で実行し直した。docs/RELEASE.md 3-4 |
+| 2026-10-21 | 本番PR（#99）のマージの後に、Dependabot の #100（next 16.1.7 等）が main に入り、staging で確かめていない版が本番へ出るところだった | Dependabot の PR の宛先が main。Deploy は main の最新しか出せない | DB の適用の前に気づき、revert の #101 を入れてから進めた。docs/RELEASE.md 3-1 にマージ後の差分の確認を足した。Dependabot の PR を staging 宛てにし、直接マージしない決まりを docs/DEPENDENCIES.md に書いた |
 
 ## 改善の候補
 
 まだ反映していない改善。着手したら消す。
+
+- staging・本番の列のコメントが正本とずれている（`com_m_calendar_event_series.title`・`has_dialogue_practice` の4表等）。コメントを合わせるセクションをリリーススクリプトに足すか、正本を実DBに合わせる。
 
 - staging・本番の `Deploy` に承認者を付ける（リポジトリの所有者が GitHub Free のため、private リポジトリの Environments の保護ルールが使えない。プランを上げたら `production` Environment に必須の承認者を付ける）。
 - `release:status` の結果を `Deploy` ワークフローの Summary にも出す（デプロイ後に DB の適用漏れに気づけるように）。

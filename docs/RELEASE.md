@@ -70,7 +70,9 @@ Claude がリリースを進める場合は `.claude/skills/release` に従い�
 
 ## 3. 本番
 
-1. [ ] 本番PRをマージする（`staging` → `main`）。
+1. [ ] 本番PRをマージする（`staging` → `main`）。マージの後、`git diff --stat origin/staging origin/main` が空であることを確かめる。
+   Deploy は main の最新を出すため、Dependabot 等の PR が main に入っていると staging で確かめていない版が本番へ出る。
+   入っていた場合は、その PR を revert する PR を main へ入れてから進める（更新は次の開発ブランチで入れ直す）。
 2. [ ] Supabase の**一時トークン**を発行する（権限は `supabase/release/README.md`「アクセストークンの発行」と同じ。作業が終わったら削除する）。
    ファイルには書かず、環境変数で渡す（PowerShell は `$env:SUPABASE_ACCESS_TOKEN = '...'`）。
    ```bash
@@ -85,6 +87,8 @@ Claude がリリースを進める場合は `.claude/skills/release` に従い�
    node supabase/release/schema.mjs --env=prod --check
    ```
    - staging と同じく、複数のリリースは古いファイルから順に適用する。
+   - `schema.mjs --check` は手元の作業ツリーの正本と比べる。次の開発ブランチで実行すると、その変更が差分に出るため、
+     `git worktree add <一時フォルダ> origin/main` の作業フォルダで実行する。
 5. [ ] アプリをデプロイする: Actions → Deploy（environment は `production`、confirm に `prod`）。
    ```bash
    gh workflow run deploy.yml -f environment=production -f confirm=prod

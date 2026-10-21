@@ -41,11 +41,15 @@ pnpm --filter gabby-blueprint-student add <パッケージ> --save-catalog   # c
 
 ### マイナー版・パッチ版（月1回）
 
-1. Dependabot（`.github/dependabot.yml`）が月1回、マイナー版・パッチ版をまとめた PR を作ります（メジャー版は作りません）。
+1. Dependabot（`.github/dependabot.yml`）が月1回、マイナー版・パッチ版をまとめた PR を `staging` 宛てに作ります（メジャー版は作りません）。
 2. GitHub Actions の `CI`（型チェック・lint・単体テスト）が通ることを確認します。
-3. 開発ブランチ（`feature/YYYYMMDD-dev`）に取り込み、`pnpm build` と主要な E2E（`testing/e2e/CONVENTIONS.md`）で確認してから、通常のリリースに乗せます。
+3. 開発ブランチ（`feature/YYYYMMDD-dev`）に取り込み（`git merge origin/<PR のブランチ>`）、`pnpm build` と主要な E2E（`testing/e2e/CONVENTIONS.md`）で確認してから、通常のリリースに乗せます。
+   PR は GitHub の画面でマージせず、開発ブランチが staging に入った時点で Dependabot が閉じます。
 
-セキュリティ修正（Dependabot alerts）は版の種類に関わらず随時 PR になるため、内容を見て早めに取り込みます。
+**Dependabot の PR は main・staging へ直接マージしません。** 本番の Deploy は main の最新を出すため、main に直接入ると staging で確かめていない版が次の本番リリースに混ざります。
+
+セキュリティ修正（Dependabot alerts）は版の種類に関わらず随時 PR になります。こちらは `target-branch` が効かず main 宛てになるため、同じく直接マージせず、内容を見て早めに開発ブランチへ取り込みます。
+急ぐ場合は `origin/staging` から hotfix ブランチを作って同じ更新を入れ、staging → main の順に通常のリリースで出します（`docs/RELEASE.md` 2章の末尾）。
 
 ### メジャー版（計画して1つずつ）
 
