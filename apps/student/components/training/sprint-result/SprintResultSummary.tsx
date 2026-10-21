@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { ArrowRight, ChartSpline, CheckCircle2, PlayCircle, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
 import { cn } from '@/lib/utils';
 import { PlayingBars } from './SprintResultQuestionList';
-import type { SprintResultPlayback } from './useSprintResultPlayback';
 import type { SprintResultScore } from './types';
+import type { SprintResultPlayback } from './useSprintResultPlayback';
 
 /** 同じ教材・スプリント種別でスプリント選択画面を開くURL（リトライ・没入画面の戻る先） */
 export function getSprintSelectHref(scoreData: SprintResultScore) {
@@ -18,7 +18,12 @@ export function getSprintSelectHref(scoreData: SprintResultScore) {
   return `/training/sprint/play?${params.toString()}`;
 }
 
-function SummaryMetric({ icon: Icon, iconClassName, label, children }: {
+function SummaryMetric({
+  icon: Icon,
+  iconClassName,
+  label,
+  children,
+}: {
   icon: LucideIcon;
   iconClassName: string;
   label: string;
@@ -50,7 +55,9 @@ export function SprintResultSummary({ scoreData, courseTitle, className }: Sprin
   return (
     <div className={cn('space-y-3 rounded-card border border-line bg-surface p-4 sm:p-5', className)}>
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <h2 className="min-w-0 truncate text-center text-lg font-bold tracking-tight text-ink sm:text-xl">{courseTitle}</h2>
+        <h2 className="min-w-0 truncate text-center text-lg font-bold tracking-tight text-ink sm:text-xl">
+          {courseTitle}
+        </h2>
         {scoreData.question_type === '0' && (
           <span className="rounded-full border border-line bg-surface px-2 py-0.5 text-xs font-semibold text-ink-soft">
             {scoreData.answer_type === '1' ? 'NO' : 'YES'}
@@ -97,7 +104,7 @@ function SprintPlayAllButton({ playback }: { playback: SprintResultPlayback }) {
         ACTION_BUTTON_CLASS,
         isPlayingAll
           ? 'border border-brand-200 bg-brand-soft text-brand'
-          : 'border border-line bg-surface text-ink-soft hover:border-brand-200 hover:text-brand'
+          : 'border border-line bg-surface text-ink-soft hover:border-brand-200 hover:text-brand',
       )}
     >
       {isPlayingAll ? <PlayingBars className="h-3 w-3" /> : <PlayCircle size={16} strokeWidth={2.5} />}
@@ -126,7 +133,13 @@ function SprintRetryLink({ scoreData }: { scoreData: SprintResultScore }) {
  * 履歴から開く画面（シェル）は見出しの下、実施直後の画面（没入）は下部に置く（置き場所だけが違い、並び・表記・動きは同じ）。
  * シェルの下部にはモバイルのタブメニューがあるため上に、没入画面はナビが無く親指で押しやすい下に置く。
  */
-export function SprintResultActions({ scoreData, playback }: { scoreData: SprintResultScore; playback: SprintResultPlayback }) {
+export function SprintResultActions({
+  scoreData,
+  playback,
+}: {
+  scoreData: SprintResultScore;
+  playback: SprintResultPlayback;
+}) {
   return (
     <div className="grid grid-cols-2 gap-3">
       <SprintPlayAllButton playback={playback} />

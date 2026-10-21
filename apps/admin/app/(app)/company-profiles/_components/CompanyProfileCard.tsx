@@ -1,16 +1,17 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
 import { Save, Upload } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useRef, useState, useTransition } from 'react';
+import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { COMPANY_CODES, type CompanyProfile } from '@gabby/types/companyProfile';
+import { updateCompanyProfile, uploadCompanyLogo } from '@/actions/adminCompanyProfileAction';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { updateCompanyProfile, uploadCompanyLogo } from '@/actions/adminCompanyProfileAction';
-import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
-import { COMPANY_CODES, CompanyProfile } from '@gabby/types/companyProfile';
 
 /** 法人1社分の会社情報の編集カード（書面の発行元として印字される内容） */
 export function CompanyProfileCard({ initialProfile }: { initialProfile: CompanyProfile }) {
@@ -112,8 +113,11 @@ export function CompanyProfileCard({ initialProfile }: { initialProfile: Company
         <Label>{t('logoLabel')}</Label>
         <div className="flex items-center gap-4">
           {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage上の画像URLのプレビュー表示
-            <img src={logoUrl} alt={t('logoAlt')} className="h-16 w-auto max-w-[160px] object-contain border border-slate-100 rounded-md p-2" />
+            <ExternalImage
+              src={logoUrl}
+              alt={t('logoAlt')}
+              className="h-16 w-auto max-w-[160px] object-contain border border-slate-100 rounded-md p-2"
+            />
           ) : (
             <span className="text-xs text-slate-400">{t('logoNotSet')}</span>
           )}

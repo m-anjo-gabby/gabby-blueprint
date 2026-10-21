@@ -30,12 +30,16 @@ export const NOTICE_TYPES = {
 
 export type NoticeType = keyof typeof NOTICE_TYPES;
 
+/** 画面・URL から受け取った値がお知らせ種別か */
+export function isNoticeType(value: unknown): value is NoticeType {
+  return typeof value === 'string' && Object.hasOwn(NOTICE_TYPES, value);
+}
+
 // 重要お知らせバッジ定義
 export const NOTICE_IMPORTANT_BADGE = {
   label: '重要',
   badgeClass: 'bg-rose-50 text-rose-600 border-rose-100',
 } as const;
-
 
 // 表示方法（POPUP: ホームを開いた時にポップアップ / HOME: ホームのカード（生徒のみ） / LIST: お知らせ一覧のみ）
 export const NOTICE_DISPLAY_MODES = ['POPUP', 'HOME', 'LIST'] as const;
@@ -52,11 +56,11 @@ export type NoticeTargetType = 'ALL' | 'CLIENT' | 'COACH';
  * Supabase Storage の notice バケットに格納
  */
 export interface NoticeAttachment {
-  id: string;           // UUID
-  name: string;         // ファイル名 (例: 2026_Summer_Campaign.pdf)
-  path: string;         // Storageパス (例: notices/202607/e3a1f4b2.pdf)
-  size: number;         // バイト数
-  mime_type: string;    // MIMEタイプ (例: application/pdf)
+  id: string; // UUID
+  name: string; // ファイル名 (例: 2026_Summer_Campaign.pdf)
+  path: string; // Storageパス (例: notices/202607/e3a1f4b2.pdf)
+  size: number; // バイト数
+  mime_type: string; // MIMEタイプ (例: application/pdf)
 }
 
 /**
@@ -77,14 +81,13 @@ export interface NoticeItem {
   /** 行動ボタンの文言・リンク先（生徒向けのみ。両方そろっている場合だけ表示する） */
   cta_label: string | null;
   cta_url: string | null;
-  published_at: string;    // UTC ISO文字列
+  published_at: string; // UTC ISO文字列
   expired_at: string | null;
   is_published: boolean;
-  delete_flg: string;
   insert_date: string;
   update_date: string;
   // 結合フィールド
-  is_read: boolean;        // com_t_notice_read から結合
+  is_read: boolean; // com_t_notice_read から結合
 }
 
 /**

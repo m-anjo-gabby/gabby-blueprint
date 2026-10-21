@@ -1,4 +1,4 @@
-import { BookOpenCheck, GraduationCap, Drama, type LucideIcon } from 'lucide-react';
+import { BookOpenCheck, Drama, GraduationCap, type LucideIcon } from 'lucide-react';
 import type { useTranslations } from 'next-intl';
 
 export interface KnowledgeSourceTypeOption {
@@ -22,9 +22,6 @@ export function getKnowledgeSourceTypeOptions(t: SourceTypeT): readonly Knowledg
   ] as const;
 }
 
-export function getKnowledgeSourceTypeOption(
-  value: string,
-  t: SourceTypeT
-): KnowledgeSourceTypeOption | undefined {
+export function getKnowledgeSourceTypeOption(value: string, t: SourceTypeT): KnowledgeSourceTypeOption | undefined {
   return getKnowledgeSourceTypeOptions(t).find((o) => o.value === value);
 }

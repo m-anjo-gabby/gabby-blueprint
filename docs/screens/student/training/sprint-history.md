@@ -50,6 +50,6 @@
 
 - `apps/student/app/(app)/(shell)/training/sprint/history/page.tsx`
 - `apps/student/app/(app)/(shell)/training/sprint/history/_components/SprintHistoryView.tsx`
-- `apps/student/actions/sprintAction.ts`（`getUserSprintHistoryAction`）
+- `apps/student/actions/sprintAction.ts`（`getUserSprintHistory`）
 - 指標・教材種別のアイコンと分類色: `packages/lib/content/ui.ts`（`getTrainingMetricConfig` / `getContentTypeConfig`）
 - `packages/lib/hooks/useMonthNavigator.ts`

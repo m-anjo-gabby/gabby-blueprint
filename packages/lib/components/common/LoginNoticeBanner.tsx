@@ -11,7 +11,10 @@ export function LoginNoticeBanner({ notice, messages }: LoginNoticeBannerProps) 
   if (!notice) return null;
 
   return (
-    <div role="status" className="p-3 rounded-lg border flex items-center gap-2 bg-amber-50 border-amber-100 text-amber-700">
+    <div
+      role="status"
+      className="p-3 rounded-lg border flex items-center gap-2 bg-amber-50 border-amber-100 text-amber-700"
+    >
       <AlertCircle className="w-4 h-4 shrink-0" aria-hidden />
       <span className="text-xs font-medium">{messages[notice]}</span>
     </div>

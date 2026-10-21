@@ -27,9 +27,9 @@
 -- @schema public.com_m_lesson_schedule
 CREATE TABLE public.com_m_lesson_schedule (
     schedule_id              uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    ticket_id                uuid         NOT NULL REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE CASCADE,
-    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id),
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id),
+    ticket_id                uuid         NOT NULL REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE RESTRICT,
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     slot_no                  smallint     NOT NULL,
     day_of_week              smallint     NOT NULL,
     start_time               time without time zone NOT NULL,
@@ -37,10 +37,10 @@ CREATE TABLE public.com_m_lesson_schedule (
     status                   smallint     NOT NULL DEFAULT 1,
     start_date               date         NOT NULL,
     end_date                 date         NOT NULL,
-    source_request_id        uuid         REFERENCES public.com_t_matching_request(request_id),
+    source_request_id        uuid         REFERENCES public.com_t_matching_request(request_id) ON DELETE SET NULL,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
-    schedule_timezone        text         NOT NULL REFERENCES public.com_m_timezone(timezone),
+    schedule_timezone        text         NOT NULL REFERENCES public.com_m_timezone(timezone) ON DELETE RESTRICT,
     target_sessions          smallint     NOT NULL,
     CONSTRAINT chk_lesson_schedule_date_range CHECK (end_date >= start_date),
     CONSTRAINT chk_lesson_schedule_day CHECK (day_of_week >= 0 AND day_of_week <= 6),
@@ -73,11 +73,12 @@ CREATE INDEX idx_lesson_schedule_student ON public.com_m_lesson_schedule (studen
 CREATE UNIQUE INDEX uq_lesson_schedule_active_slot ON public.com_m_lesson_schedule (ticket_id, slot_no) WHERE status = 1;
 
 CREATE TRIGGER on_lesson_schedule_change_sync_relationship AFTER INSERT OR DELETE OR UPDATE ON public.com_m_lesson_schedule FOR EACH ROW EXECUTE FUNCTION public.sync_coach_student_relationship();
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_lesson_schedule FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_lesson_schedule ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Involved users can view lesson schedules" ON public.com_m_lesson_schedule FOR SELECT TO authenticated
 USING (
-    student_id = auth.uid() OR coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    student_id = auth.uid() OR coach_id = auth.uid() OR public.is_system_admin()
 );
 -- @end-schema

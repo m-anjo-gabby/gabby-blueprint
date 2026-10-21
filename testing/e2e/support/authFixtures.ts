@@ -1,7 +1,7 @@
-import { randomBytes } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { createAdminClient } from "../../helpers/auth.ts";
-import { fillCoachMatchingProfile } from "../../helpers/coach-matching-profile.ts";
+import { randomBytes } from 'node:crypto';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient } from '../../helpers/auth.ts';
+import { fillCoachMatchingProfile } from '../../helpers/coach-matching-profile.ts';
 
 /**
  * 認証まわり（パスワード再設定・招待）のE2E用の使い捨てデータ。
@@ -13,7 +13,7 @@ import { fillCoachMatchingProfile } from "../../helpers/coach-matching-profile.t
  * - 後始末は cleanupAuthFixture で必ず行う（テスト失敗時も afterAll で呼ぶ）。
  */
 
-export const DISPOSABLE_EMAIL_DOMAIN = "gabby-qa-test.example";
+export const DISPOSABLE_EMAIL_DOMAIN = 'gabby-qa-test.example';
 
 export interface AuthFixture {
   admin: SupabaseClient;
@@ -34,9 +34,9 @@ export async function createAuthFixture(prefix: string): Promise<AuthFixture> {
   const admin = await createAdminClient();
   const tag = newTag(prefix);
   const { data, error } = await admin
-    .from("com_m_client")
+    .from('com_m_client')
     .insert({ client_name: `【QAテスト】認証E2E（${tag}）`, client_type: 1, industry_type: 1 })
-    .select("client_id")
+    .select('client_id')
     .single();
   if (error) throw new Error(`顧客の作成に失敗しました: ${error.message}`);
   return { admin, tag, clientId: data.client_id, userIds: [], invitationEmails: [] };
@@ -45,13 +45,17 @@ export async function createAuthFixture(prefix: string): Promise<AuthFixture> {
 /** 使い捨ての生徒（ライセンスなし）を作る */
 export async function createDisposableStudent(
   fixture: AuthFixture,
-  params: { email: string; password: string; userName?: string }
+  params: { email: string; password: string; userName?: string },
 ): Promise<string> {
   const { data, error } = await fixture.admin.auth.admin.createUser({
     email: params.email,
     password: params.password,
     email_confirm: true,
-    user_metadata: { user_name: params.userName ?? `E2E生徒（${fixture.tag}）`, user_type: "1", client_id: fixture.clientId },
+    user_metadata: {
+      user_name: params.userName ?? `E2E生徒（${fixture.tag}）`,
+      user_type: '1',
+      client_id: fixture.clientId,
+    },
   });
   if (error || !data.user) throw new Error(`生徒の作成に失敗しました: ${error?.message}`);
   fixture.userIds.push(data.user.id);
@@ -64,16 +68,20 @@ export async function createDisposableStudent(
  */
 export async function createDisposableContract(
   fixture: AuthFixture,
-  params: { planCode: string; label: string; maxLicenses?: number; start?: Date; end?: Date }
+  params: { planCode: string; label: string; maxLicenses?: number; start?: Date; end?: Date },
 ): Promise<{ contractId: string; start: Date; end: Date }> {
   const { admin } = fixture;
-  const { data: plan, error: planError } = await admin.from("com_m_contract_plan").select("*").eq("plan_code", params.planCode).single();
+  const { data: plan, error: planError } = await admin
+    .from('com_m_contract_plan')
+    .select('*')
+    .eq('plan_code', params.planCode)
+    .single();
   if (planError) throw new Error(`契約プランの取得に失敗しました: ${planError.message}`);
 
   const start = params.start ?? new Date(Date.now() - 24 * 60 * 60 * 1000);
   const end = params.end ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   const { data: contract, error: contractError } = await admin
-    .from("com_m_contract")
+    .from('com_m_contract')
     .insert({
       client_id: fixture.clientId,
       plan_id: plan.plan_id,
@@ -90,7 +98,7 @@ export async function createDisposableContract(
       status: 1,
       note: `【QAテスト】認証E2E（${fixture.tag}）`,
     })
-    .select("contract_id")
+    .select('contract_id')
     .single();
   if (contractError) throw new Error(`契約の作成に失敗しました: ${contractError.message}`);
   return { contractId: contract.contract_id, start, end };
@@ -100,12 +108,20 @@ export async function createDisposableContract(
  * 使い捨ての生徒に、アプリのみ契約（BLUEPRINT_ONLY）のライセンスを付ける（ログイン後の画面まで確かめる場合）。
  * 本登録時の初期ライセンスと同じく、スプリントのレベル管理をオフにする。期間の既定は昨日〜30日後。
  */
-export async function grantAppLicense(fixture: AuthFixture, userId: string, period?: { start: Date; end: Date }): Promise<void> {
+export async function grantAppLicense(
+  fixture: AuthFixture,
+  userId: string,
+  period?: { start: Date; end: Date },
+): Promise<void> {
   const { admin } = fixture;
-  const { contractId, start, end } = await createDisposableContract(fixture, { planCode: "BLUEPRINT_ONLY", label: userId.slice(0, 8), ...period });
+  const { contractId, start, end } = await createDisposableContract(fixture, {
+    planCode: 'BLUEPRINT_ONLY',
+    label: userId.slice(0, 8),
+    ...period,
+  });
 
   // ライセンスの追加で auth.users の app_metadata.is_licensed が更新される（トリガー）
-  const { error: licenseError } = await admin.from("com_t_user_license").insert({
+  const { error: licenseError } = await admin.from('com_t_user_license').insert({
     contract_id: contractId,
     user_id: userId,
     status: 1,
@@ -115,7 +131,10 @@ export async function grantAppLicense(fixture: AuthFixture, userId: string, peri
   if (licenseError) throw new Error(`ライセンスの付与に失敗しました: ${licenseError.message}`);
 
   // アプリの初期ライセンス発行（packages/lib/license/issue.ts）と同じく、アプリのみ契約はスプリントのレベル管理をしない
-  const { error: progressError } = await admin.from("student_m_sprint_progress").update({ level_managed: false }).eq("user_id", userId);
+  const { error: progressError } = await admin
+    .from('student_m_sprint_progress')
+    .update({ level_managed: false })
+    .eq('user_id', userId);
   if (progressError) throw new Error(`レベル管理の設定に失敗しました: ${progressError.message}`);
 }
 
@@ -126,14 +145,17 @@ export async function grantAppLicense(fixture: AuthFixture, userId: string, peri
 export async function grantLiveLicense(
   fixture: AuthFixture,
   userId: string,
-  params: { planCode: string; label: string; start: Date; end: Date }
+  params: { planCode: string; label: string; start: Date; end: Date },
 ): Promise<{ ticketId: string }> {
   const { admin } = fixture;
   const { contractId } = await createDisposableContract(fixture, params);
   const { data: contract } = await admin
-    .from("com_m_contract").select("weekly_frequency, total_sessions, has_dialogue_practice").eq("contract_id", contractId).single();
+    .from('com_m_contract')
+    .select('weekly_frequency, total_sessions, has_dialogue_practice')
+    .eq('contract_id', contractId)
+    .single();
   const { data: license, error: licenseError } = await admin
-    .from("com_t_user_license")
+    .from('com_t_user_license')
     .insert({
       contract_id: contractId,
       user_id: userId,
@@ -142,11 +164,11 @@ export async function grantLiveLicense(
       end_date: params.end.toISOString(),
       has_dialogue_practice: contract!.has_dialogue_practice,
     })
-    .select("license_id")
+    .select('license_id')
     .single();
   if (licenseError) throw new Error(`ライセンスの付与に失敗しました: ${licenseError.message}`);
   const { data: ticket, error: ticketError } = await admin
-    .from("com_t_user_session_ticket")
+    .from('com_t_user_session_ticket')
     .insert({
       license_id: license.license_id,
       contract_id: contractId,
@@ -154,7 +176,7 @@ export async function grantLiveLicense(
       weekly_frequency: contract!.weekly_frequency,
       total_sessions: contract!.total_sessions,
     })
-    .select("ticket_id")
+    .select('ticket_id')
     .single();
   if (ticketError) throw new Error(`チケットの発行に失敗しました: ${ticketError.message}`);
   return { ticketId: ticket.ticket_id };
@@ -172,23 +194,28 @@ export async function createDisposableCoach(
     userName: string;
     timezone: string;
     availability: { dayOfWeek: number; startTime: string; endTime: string }[];
-  }
+  },
 ): Promise<string> {
   const { admin } = fixture;
   const { data, error } = await admin.auth.admin.createUser({
     email: params.email,
     password: params.password,
     email_confirm: true,
-    user_metadata: { user_name: params.userName, user_type: "2" },
+    user_metadata: { user_name: params.userName, user_type: '2' },
   });
   if (error || !data.user) throw new Error(`コーチの作成に失敗しました: ${error?.message}`);
   const coachId = data.user.id;
   fixture.userIds.push(coachId);
-  await admin.from("com_m_user").update({ timezone: params.timezone }).eq("id", coachId);
-  await fillCoachMatchingProfile(admin, coachId, { countryCode: "US" });
+  await admin.from('com_m_user').update({ timezone: params.timezone }).eq('id', coachId);
+  await fillCoachMatchingProfile(admin, coachId, { countryCode: 'US' });
   if (params.availability.length > 0) {
-    const { error: availabilityError } = await admin.from("com_m_coach_availability").insert(
-      params.availability.map((a) => ({ coach_id: coachId, day_of_week: a.dayOfWeek, start_time: a.startTime, end_time: a.endTime }))
+    const { error: availabilityError } = await admin.from('com_m_coach_availability').insert(
+      params.availability.map((a) => ({
+        coach_id: coachId,
+        day_of_week: a.dayOfWeek,
+        start_time: a.startTime,
+        end_time: a.endTime,
+      })),
     );
     if (availabilityError) throw new Error(`空き時間の登録に失敗しました: ${availabilityError.message}`);
   }
@@ -201,9 +228,12 @@ export async function createDisposableCoach(
  */
 export async function deleteFixtureChatRooms(fixture: AuthFixture | undefined): Promise<void> {
   if (!fixture || fixture.userIds.length === 0) return;
-  const { data: rooms } = await fixture.admin.from("com_t_chat_room_user").select("room_id").in("user_id", fixture.userIds);
+  const { data: rooms } = await fixture.admin
+    .from('com_t_chat_room_user')
+    .select('room_id')
+    .in('user_id', fixture.userIds);
   const roomIds = Array.from(new Set((rooms ?? []).map((r) => r.room_id)));
-  if (roomIds.length > 0) await fixture.admin.from("com_t_chat_room").delete().in("room_id", roomIds);
+  if (roomIds.length > 0) await fixture.admin.from('com_t_chat_room').delete().in('room_id', roomIds);
 }
 
 /**
@@ -214,20 +244,22 @@ export async function deleteFixtureChatRooms(fixture: AuthFixture | undefined): 
 export async function prepareContent(
   fixture: AuthFixture,
   contentType: 0 | 2 | 3,
-  contentIds?: string[]
+  contentIds?: string[],
 ): Promise<{ content_id: string; content_name: string }> {
   let query = fixture.admin
-    .from("com_m_contents")
-    .select("content_id, content_name, content_scope")
-    .eq("content_type", contentType)
-    .in("content_scope", [0, 1])
-    .eq("delete_flg", "0")
-    .not("content_name", "like", "[%");
-  if (contentIds) query = query.in("content_id", contentIds);
-  const { data, error } = await query.order("content_scope").order("content_name").limit(1).single();
+    .from('com_m_contents')
+    .select('content_id, content_name, content_scope')
+    .eq('content_type', contentType)
+    .in('content_scope', [0, 1])
+    .eq('status', 1)
+    .not('content_name', 'like', '[%');
+  if (contentIds) query = query.in('content_id', contentIds);
+  const { data, error } = await query.order('content_scope').order('content_name').limit(1).single();
   if (error || !data) throw new Error(`教材（種別 ${contentType}）が見つかりません: ${error?.message}`);
   if (data.content_scope === 1) {
-    const { error: accessError } = await fixture.admin.from("com_m_contents_access").insert({ client_id: fixture.clientId, content_id: data.content_id });
+    const { error: accessError } = await fixture.admin
+      .from('com_m_contents_access')
+      .insert({ client_id: fixture.clientId, content_id: data.content_id });
     if (accessError) throw new Error(`教材の公開先の追加に失敗しました: ${accessError.message}`);
   }
   return { content_id: data.content_id, content_name: data.content_name };
@@ -241,13 +273,13 @@ export async function prepareWordContent(fixture: AuthFixture): Promise<{ conten
 /** 招待（com_t_invitation）を直接作る。contractId を渡すと、本登録時にその契約の初期ライセンスが付く。戻り値は招待トークン */
 export async function createInvitation(
   fixture: AuthFixture,
-  params: { email: string; userName: string; expiresAt: Date; contractId?: string }
+  params: { email: string; userName: string; expiresAt: Date; contractId?: string },
 ): Promise<string> {
-  const token = randomBytes(32).toString("hex");
-  const { error } = await fixture.admin.from("com_t_invitation").insert({
+  const token = randomBytes(32).toString('hex');
+  const { error } = await fixture.admin.from('com_t_invitation').insert({
     email: params.email,
     user_name: params.userName,
-    user_type: "1",
+    user_type: '1',
     client_id: fixture.clientId,
     contract_id: params.contractId ?? null,
     token,
@@ -280,49 +312,120 @@ export async function cleanupAuthFixture(fixture: AuthFixture | undefined): Prom
   if (!fixture) return;
   const { admin } = fixture;
   if (fixture.invitationEmails.length > 0) {
-    await admin.from("com_t_invitation").delete().in("email", fixture.invitationEmails);
+    await admin.from('com_t_invitation').delete().in('email', fixture.invitationEmails);
   }
   if (!fixture.clientId) {
     await deleteUsers(fixture);
     return;
   }
   // 顧客に付けた教材の公開先（画面操作で割り当てた場合）
-  await admin.from("com_m_contents_access").delete().eq("client_id", fixture.clientId);
-  // 使い捨て顧客の契約・ライセンス・ライブのチケット（grantAppLicense・createDisposableContract）
-  const { data: contracts } = await admin.from("com_m_contract").select("contract_id").eq("client_id", fixture.clientId);
-  const contractIds = (contracts ?? []).map((c) => c.contract_id);
-  if (contractIds.length > 0) {
-    // チケットの担当枠（マッチングの成立・直接作成）を先に消す。セッションは担当枠と一緒に消える
-    // （com_t_session.ticket_id は削除で連動しないため、残るとチケット以降を消せない。KJ-2026-1006-01）
-    const { data: tickets } = await admin.from("com_t_user_session_ticket").select("ticket_id").in("contract_id", contractIds);
-    const ticketIds = (tickets ?? []).map((t) => t.ticket_id);
-    if (ticketIds.length > 0) {
-      await admin.from("com_m_lesson_schedule").delete().in("ticket_id", ticketIds);
-      // 生徒のコーチ評価はチケットを参照する
-      await admin.from("com_t_coach_rating").delete().in("ticket_id", ticketIds);
-    }
-    await admin.from("com_t_user_session_ticket_history").delete().in("contract_id", contractIds);
-    await admin.from("com_t_user_session_ticket").delete().in("contract_id", contractIds);
-    await admin.from("com_t_user_license_history").delete().in("contract_id", contractIds);
-    await admin.from("com_t_user_license").delete().in("contract_id", contractIds);
-    await admin.from("com_m_contract").delete().in("contract_id", contractIds);
-  }
+  await admin.from('com_m_contents_access').delete().eq('client_id', fixture.clientId);
+  // 使い捨て顧客の契約・ライセンス・ライブのチケット（grantAppLicense・createDisposableContract）と、ユーザーの業務の記録
+  const { data: contracts } = await admin
+    .from('com_m_contract')
+    .select('contract_id')
+    .eq('client_id', fixture.clientId);
+  const contractIds = (contracts ?? []).map((c) => c.contract_id as string);
+  await deleteBusinessRecords(admin, { userIds: fixture.userIds, contractIds });
+  if (contractIds.length > 0) await admin.from('com_m_contract').delete().in('contract_id', contractIds);
   await deleteUsers(fixture);
-  const { error } = await admin.from("com_m_client").delete().eq("client_id", fixture.clientId);
+  const { error } = await admin.from('com_m_client').delete().eq('client_id', fixture.clientId);
   if (error) console.warn(`[authFixtures] 顧客削除に失敗: ${fixture.clientId} ${error.message}`);
+}
+
+/**
+ * 使い捨てのユーザー・契約に関わる業務の記録（評価・研修レポート・セッション・担当枠・マッチング・担当関係・チケット・ライセンス）を消す。
+ * 業務の記録の外部キーは RESTRICT のため（docs/DATA-DELETION.md §3）、参照する側から順に消す（fn_purge_client と同じ順序）。
+ * 固定のコーチとの記録も、使い捨ての生徒側の記録として消える。失敗は警告だけ出して続ける（後始末のため）。
+ */
+export async function deleteBusinessRecords(
+  admin: SupabaseClient,
+  { userIds, contractIds }: { userIds: string[]; contractIds: string[] },
+): Promise<void> {
+  if (userIds.length === 0 && contractIds.length === 0) return;
+  const list = (ids: string[]) => `(${ids.join(',')})`;
+  /** 列のどれかが ids に含まれる行（ids が空の列は条件にしない） */
+  const anyOf = (conds: [string, string[]][]) =>
+    conds
+      .filter(([, ids]) => ids.length > 0)
+      .map(([col, ids]) => `${col}.in.${list(ids)}`)
+      .join(',');
+  const remove = async (table: string, conds: [string, string[]][]) => {
+    const filter = anyOf(conds);
+    if (!filter) return;
+    const { error } = await admin.from(table).delete().or(filter);
+    if (error) console.warn(`[authFixtures] ${table} の削除に失敗: ${error.message}`);
+  };
+
+  const { data: licenses } = await admin
+    .from('com_t_user_license')
+    .select('license_id')
+    .or(
+      anyOf([
+        ['user_id', userIds],
+        ['contract_id', contractIds],
+      ]),
+    );
+  const licenseIds = (licenses ?? []).map((l) => l.license_id as string);
+  const { data: tickets } = await admin
+    .from('com_t_user_session_ticket')
+    .select('ticket_id')
+    .or(
+      anyOf([
+        ['user_id', userIds],
+        ['contract_id', contractIds],
+        ['license_id', licenseIds],
+      ]),
+    );
+  const ticketIds = (tickets ?? []).map((t) => t.ticket_id as string);
+  const people: [string, string[]][] = [
+    ['student_id', userIds],
+    ['coach_id', userIds],
+  ];
+
+  await remove('com_t_coach_rating', [...people, ['ticket_id', ticketIds]]);
+  await remove('com_t_contract_training_report', [...people, ['ticket_id', ticketIds]]);
+  await remove('lesson_t_sprint', people);
+  await remove('com_t_session_dialogue_log', [['opened_by_coach_id', userIds]]);
+  await remove('com_t_dialogue_session_progress', [['updated_by_coach_id', userIds]]);
+  await remove('com_t_dialogue_assignment', [
+    ['student_id', userIds],
+    ['assigned_by_coach_id', userIds],
+  ]);
+  await remove('com_t_session_call_log', [['user_id', userIds]]);
+  await remove('com_t_session', [...people, ['ticket_id', ticketIds]]);
+  await remove('com_m_lesson_schedule', [...people, ['ticket_id', ticketIds]]);
+  await remove('com_t_matching_request', [...people, ['ticket_id', ticketIds]]);
+  await remove('com_t_coach_monthly_report_approval', [['coach_id', userIds]]);
+  await remove('com_m_coach_student_relationship', people);
+  await remove('com_t_user_session_ticket_history', [
+    ['user_id', userIds],
+    ['contract_id', contractIds],
+  ]);
+  await remove('com_t_user_session_ticket', [['ticket_id', ticketIds]]);
+  await remove('com_t_user_license_history', [
+    ['user_id', userIds],
+    ['contract_id', contractIds],
+  ]);
+  await remove('com_t_user_license', [['license_id', licenseIds]]);
 }
 
 async function deleteUsers(fixture: AuthFixture): Promise<void> {
   const { admin } = fixture;
   for (const id of fixture.userIds) {
     // コーチが割り当てたダイアログ教材（進捗・セッションでの教材オープンの記録も連動して消える）
-    await admin.from("com_t_dialogue_assignment").delete().eq("student_id", id);
+    await admin.from('com_t_dialogue_assignment').delete().eq('student_id', id);
     // 担当枠を作ったテストでは、トリガーで担当関係が作られる（固定コーチとの関係も残さない。コーチを生徒より先に消す場合もあるため両側で消す）
-    await admin.from("com_m_coach_student_relationship").delete().or(`student_id.eq.${id},coach_id.eq.${id}`);
+    await admin.from('com_m_coach_student_relationship').delete().or(`student_id.eq.${id},coach_id.eq.${id}`);
     // コーチ評価（コーチの作成時にトリガーで入る初期値の評価を含む）。com_m_user を参照し、残るとユーザーを消せない
-    await admin.from("com_t_coach_rating").delete().or(`coach_id.eq.${id},student_id.eq.${id}`);
-    await admin.from("com_t_user_role").delete().eq("user_id", id);
-    await admin.from("com_m_user").delete().eq("id", id);
+    await admin.from('com_t_coach_rating').delete().or(`coach_id.eq.${id},student_id.eq.${id}`);
+    await admin.from('com_t_user_role').delete().eq('user_id', id);
+    const { error: userError } = await admin.from('com_m_user').delete().eq('id', id);
+    if (userError) {
+      // 業務の記録が残っていてユーザーの行を消せない場合は、認証のアカウントも残す（authFixtures.leftovers.ts で見つけられるようにする）
+      console.warn(`[authFixtures] ユーザーの行の削除に失敗: ${id} ${userError.message}`);
+      continue;
+    }
     const { error } = await admin.auth.admin.deleteUser(id);
     if (error) console.warn(`[authFixtures] ユーザー削除に失敗: ${id} ${error.message}`);
   }
@@ -330,7 +433,7 @@ async function deleteUsers(fixture: AuthFixture): Promise<void> {
 
 /** 再設定リンク（メール内のリンクと同じ形）を発行する。メールは送らない */
 export async function generateRecoveryLinkPath(admin: SupabaseClient, email: string): Promise<string> {
-  const { data, error } = await admin.auth.admin.generateLink({ type: "recovery", email });
+  const { data, error } = await admin.auth.admin.generateLink({ type: 'recovery', email });
   if (error) throw new Error(`再設定リンクの発行に失敗しました: ${error.message}`);
   return `/auth/callback?token_hash=${data.properties.hashed_token}&type=recovery&next=/update-password`;
 }

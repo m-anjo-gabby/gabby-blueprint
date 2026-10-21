@@ -1,8 +1,8 @@
 import { getTranslations } from 'next-intl/server';
-import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
-import { Skeleton } from '@/components/ui/skeleton';
 import { formatRatingValue } from '@gabby/lib/coachRating/format';
+import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
 import type { AdminCoachRatingStats } from '@/actions/adminCoachRatingAction';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /** 集計カードの並び（本番と骨組みで共有する） */
 const SUMMARY_GRID = 'grid grid-cols-2 lg:grid-cols-4 gap-3';
@@ -30,7 +30,11 @@ export async function CoachRatingSummary({ stats }: { stats: AdminCoachRatingSta
             ) : (
               <div className="mt-1 flex items-center gap-2">
                 <span className="text-2xl font-bold text-slate-800 tabular-nums">{formatRatingValue(value)}</span>
-                <StarRatingDisplay value={value} size={14} label={t('starLabel', { value: formatRatingValue(value) })} />
+                <StarRatingDisplay
+                  value={value}
+                  size={14}
+                  label={t('starLabel', { value: formatRatingValue(value) })}
+                />
               </div>
             )}
             <p className="text-[11px] text-slate-400 mt-1">

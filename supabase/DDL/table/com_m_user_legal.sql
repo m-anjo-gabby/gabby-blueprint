@@ -16,6 +16,8 @@
 --
 -- 【書き込み・参照】
 -- アドミンの「ユーザー管理 > 正式氏名」から登録・変更する（単一テーブルのため RPC にはしない）。
+-- Webトライアルの申込者は、本登録時に申込（com_t_trial_application）の姓・名とローマ字から作る
+-- （本人の申告のため updated_by は NULL。packages/lib/trial/registration.ts）。
 -- 本人は自分の行を参照だけできる（変更は運営に依頼する）。書面はサーバー側で service_role を使って読む。
 -- =========================================================================
 
@@ -44,14 +46,16 @@ COMMENT ON COLUMN public.com_m_user_legal.updated_by IS '最後に登録・変�
 COMMENT ON COLUMN public.com_m_user_legal.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_user_legal.update_date IS '更新日時';
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_user_legal FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_user_legal ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can manage user legal info" ON public.com_m_user_legal FOR ALL TO authenticated
 USING (
-    COALESCE(public.get_jwt_user_type(), ''::text) = '0'::text
+    public.is_system_admin()
 )
 WITH CHECK (
-    COALESCE(public.get_jwt_user_type(), ''::text) = '0'::text
+    public.is_system_admin()
 );
 
 CREATE POLICY "Users can view their own legal info" ON public.com_m_user_legal FOR SELECT TO authenticated

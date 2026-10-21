@@ -1,18 +1,18 @@
 'use client';
 
+import { BadgeCheck, BadgeX, CalendarClock, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { ChevronRight, BadgeCheck, BadgeX, CalendarClock } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { UserAvatar } from '@/components/common/UserAvatar';
 import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { AssignedStudentSummary } from '@gabby/types/coachStudent';
+import { UserAvatar } from '@/components/common/UserAvatar';
+import { Card, CardContent } from '@/components/ui/card';
 
-interface Props {
+interface StudentCardProps {
   student: AssignedStudentSummary;
 }
 
-export function StudentCard({ student }: Props) {
+export function StudentCard({ student }: StudentCardProps) {
   const { latest_contract, next_session } = student;
   const isCurrent = latest_contract?.is_current ?? false;
   const timezone = useTimezone();
@@ -54,7 +54,9 @@ export function StudentCard({ student }: Props) {
                   {latest_contract.plan_name_en}
                 </p>
                 <p>
-                  <span className={`font-semibold ${isCurrent ? 'text-emerald-500/80' : 'text-slate-400'}`}>Period </span>
+                  <span className={`font-semibold ${isCurrent ? 'text-emerald-500/80' : 'text-slate-400'}`}>
+                    Period{' '}
+                  </span>
                   {formatDateEn(latest_contract.start_date)} &ndash; {formatDateEn(latest_contract.end_date)}
                 </p>
               </div>

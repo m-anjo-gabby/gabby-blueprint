@@ -1,13 +1,11 @@
 // apps/admin/app/(app)/profile/password/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { updatePassword } from '@/actions/adminAuthAction';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
-import { SubmitButton } from '@gabby/lib/components/common/SubmitButton';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { FormError } from '@gabby/lib/components/auth/AuthLayout';
 import {
   EMPTY_NEW_PASSWORD,
@@ -15,9 +13,11 @@ import {
   validateNewPassword,
   type NewPasswordValue,
 } from '@gabby/lib/components/auth/NewPasswordFields';
+import { PasswordInput } from '@gabby/lib/components/common/PasswordInput';
+import { SubmitButton } from '@gabby/lib/components/common/SubmitButton';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { updatePassword } from '@/actions/adminAuthAction';
 import { usePasswordFieldLabels } from '@/components/auth/useAuthLabels';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 
 /**
  * パスワード変更ページ（管理者ポータル）
@@ -47,13 +47,13 @@ export default function PasswordChangePage() {
 
     const result = await updatePassword(formData);
 
-    if (result?.error) {
-      // result.error は表示言語に合わせた文言。どの入力欄に出すかは errorCode で判定する
+    if (!result.success) {
+      // result.message は表示言語に合わせた文言。どの入力欄に出すかは errorCode で判定する
       if (result.errorCode === 'current_password_incorrect') {
-        setCurrentPasswordError(result.error);
+        setCurrentPasswordError(result.message);
         setCurrentPassword('');
       } else {
-        setNewPasswordError(result.error);
+        setNewPasswordError(result.message);
       }
       showToast(t('toastUpdateFailed'), 'error');
     } else {
@@ -77,9 +77,7 @@ export default function PasswordChangePage() {
               onChange={(e) => setCurrentPassword(e.target.value)}
               required
             />
-            {currentPasswordError && (
-              <p className="text-[11px] text-rose-600 font-bold ml-1">{currentPasswordError}</p>
-            )}
+            {currentPasswordError && <p className="text-[11px] text-rose-600 font-bold ml-1">{currentPasswordError}</p>}
           </div>
 
           <NewPasswordFields

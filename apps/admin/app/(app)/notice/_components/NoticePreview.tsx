@@ -1,20 +1,26 @@
 'use client';
 
-import * as React from 'react';
-import { useTranslations } from 'next-intl';
 import { Monitor, Smartphone, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { NoticeAttachment, NoticeDisplayMode, NoticeItem, NoticeTargetType, NoticeType } from '@gabby/types/notice';
-import { NOTICE_LABELS_EN, NOTICE_LABELS_JA, type NoticeLabels } from '@gabby/lib/notice/labels';
+import { useTranslations } from 'next-intl';
+import * as React from 'react';
+import { NoticeDetail } from '@gabby/lib/components/notice/NoticeDetail';
+import { NoticeHomeCard } from '@gabby/lib/components/notice/NoticeHomeCard';
+import { NoticeMeta } from '@gabby/lib/components/notice/NoticeMeta';
 import {
   NOTICE_POPUP_CLASSES,
   NoticePopupContent,
   noticePopupTitleClass,
   type NoticePopupVariant,
 } from '@gabby/lib/components/notice/NoticePopup';
-import { NoticeHomeCard } from '@gabby/lib/components/notice/NoticeHomeCard';
-import { NoticeDetail } from '@gabby/lib/components/notice/NoticeDetail';
-import { NoticeMeta } from '@gabby/lib/components/notice/NoticeMeta';
+import { NOTICE_LABELS_EN, NOTICE_LABELS_JA, type NoticeLabels } from '@gabby/lib/notice/labels';
+import type {
+  NoticeAttachment,
+  NoticeDisplayMode,
+  NoticeItem,
+  NoticeTargetType,
+  NoticeType,
+} from '@gabby/types/notice';
+import { cn } from '@/lib/utils';
 
 /** プレビューに渡す編集中の内容（保存前の値） */
 export interface NoticePreviewDraft {
@@ -72,7 +78,11 @@ export function NoticePreview({ draft }: { draft: NoticePreviewDraft }) {
   );
 
   const caption =
-    draft.displayMode === 'POPUP' ? t('previewCaptionPopup') : draft.displayMode === 'HOME' ? t('previewCaptionHome') : t('previewCaptionList');
+    draft.displayMode === 'POPUP'
+      ? t('previewCaptionPopup')
+      : draft.displayMode === 'HOME'
+        ? t('previewCaptionHome')
+        : t('previewCaptionList');
 
   return (
     <div className="flex h-full flex-col gap-4 bg-slate-50/50 p-6">
@@ -81,7 +91,11 @@ export function NoticePreview({ draft }: { draft: NoticePreviewDraft }) {
           <p className="text-xs font-black text-slate-800">{caption}</p>
           <p className="text-[10px] text-slate-500">{isCoach ? t('previewCoachNote') : t('previewStudentNote')}</p>
         </div>
-        <div className="flex items-center gap-1 rounded-xl border bg-white p-1 shadow-sm" role="radiogroup" aria-label={t('previewDeviceLabel')}>
+        <div
+          className="flex items-center gap-1 rounded-xl border bg-white p-1 shadow-sm"
+          role="radiogroup"
+          aria-label={t('previewDeviceLabel')}
+        >
           {(['mobile', 'desktop'] as const).map((d) => (
             <button
               key={d}
@@ -91,7 +105,7 @@ export function NoticePreview({ draft }: { draft: NoticePreviewDraft }) {
               onClick={() => setDevice(d)}
               className={cn(
                 'flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-colors',
-                device === d ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-800'
+                device === d ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-800',
               )}
             >
               {d === 'mobile' ? <Smartphone size={13} /> : <Monitor size={13} />}
@@ -172,7 +186,6 @@ function toPreviewNotice(draft: NoticePreviewDraft, noTitle: string): NoticeItem
     published_at: draft.publishedAtJst ? new Date(`${draft.publishedAtJst}T00:00:00+09:00`).toISOString() : now,
     expired_at: null,
     is_published: true,
-    delete_flg: '0',
     insert_date: now,
     update_date: now,
     is_read: false,
@@ -185,7 +198,9 @@ function DeviceFrame({ device, children }: { device: Device; children: React.Rea
     <div
       className={cn(
         'relative shrink-0 overflow-hidden bg-canvas font-sans text-ink',
-        device === 'mobile' ? 'max-h-[720px] min-h-[480px] w-[375px] rounded-[2.5rem] border-[10px] border-slate-800 shadow-xl' : 'max-h-[600px] min-h-[420px] w-full max-w-[960px] rounded-xl border border-slate-200 shadow-sm'
+        device === 'mobile'
+          ? 'max-h-[720px] min-h-[480px] w-[375px] rounded-[2.5rem] border-[10px] border-slate-800 shadow-xl'
+          : 'max-h-[600px] min-h-[420px] w-full max-w-[960px] rounded-xl border border-slate-200 shadow-sm',
       )}
     >
       {children}
@@ -240,7 +255,7 @@ function PreviewPopup({
           className={cn(
             'absolute left-1/2 top-1/2 max-h-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2',
             NOTICE_POPUP_CLASSES.dialog,
-            'w-[calc(100%-2rem)]'
+            'w-[calc(100%-2rem)]',
           )}
         >
           {content}

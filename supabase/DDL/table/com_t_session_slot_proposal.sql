@@ -33,7 +33,7 @@ CREATE TABLE public.com_t_session_slot_proposal (
     reason                   text,
     reject_reason            text,
     responded_at             timestamp with time zone,
-    resulting_session_id     uuid         REFERENCES public.com_t_session(session_id),
+    resulting_session_id     uuid         REFERENCES public.com_t_session(session_id) ON DELETE SET NULL,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT chk_slot_proposal_booking_role CHECK (source_session_id IS NOT NULL OR proposed_by_role = 1),
@@ -59,10 +59,12 @@ CREATE INDEX idx_slot_proposal_schedule ON public.com_t_session_slot_proposal (s
 CREATE INDEX idx_slot_proposal_source_session ON public.com_t_session_slot_proposal (source_session_id);
 CREATE INDEX idx_slot_proposal_student_status ON public.com_t_session_slot_proposal (student_id, status);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_session_slot_proposal FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_session_slot_proposal ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Involved users can view slot proposals" ON public.com_t_session_slot_proposal FOR SELECT TO authenticated
 USING (
-    student_id = auth.uid() OR coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    student_id = auth.uid() OR coach_id = auth.uid() OR public.is_system_admin()
 );
 -- @end-schema

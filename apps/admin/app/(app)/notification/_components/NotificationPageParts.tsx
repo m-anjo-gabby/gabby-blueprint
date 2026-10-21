@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
-import { useTranslations } from 'next-intl';
 import { Bell } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import { PageHeader } from '@/components/common/PageHeader';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /*
  * 通知の画面（見出し＋件数バッジ＋一覧）の部品。画面と読み込み中の骨組み（loading.tsx）で共有する。
@@ -15,7 +15,8 @@ function ItemCountBadge({ count }: { count: number | null }) {
   return (
     <div className="flex shrink-0 items-center gap-1.5 rounded-xl border border-brand-100 bg-brand-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-brand">
       <Bell size={10} />
-      {count === null ? <Skeleton className="h-2.5 w-3" /> : count} <span className="ml-0.5 opacity-60">{t('itemsLabel')}</span>
+      {count === null ? <Skeleton className="h-2.5 w-3" /> : count}{' '}
+      <span className="ml-0.5 opacity-60">{t('itemsLabel')}</span>
     </div>
   );
 }

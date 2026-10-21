@@ -1,10 +1,5 @@
-import { QUESTION_TYPES, SprintQuestionType } from '@gabby/types/sprint';
-import {
-  MAX_STAGE,
-  STAGE_CONDITIONS,
-  StageLevelGap,
-  StageLevels,
-} from '@gabby/types/stageProgression';
+import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
+import { MAX_STAGE, STAGE_CONDITIONS, type StageLevelGap, type StageLevels } from '@gabby/types/stageProgression';
 
 /**
  * ステージ判定・レベル更新に関する共通ロジック。

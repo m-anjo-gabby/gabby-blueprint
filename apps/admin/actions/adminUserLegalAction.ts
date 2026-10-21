@@ -1,12 +1,15 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
 import { z } from 'zod';
-import { createServerClient } from '@gabby/lib/supabase/server';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
 import { LEGAL_NAME_SELECT } from '@gabby/lib/userLegal/fetchLegalName';
 import { LEGAL_NAME_MAX_LENGTH, type LegalName } from '@gabby/types/userLegal';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 
@@ -38,11 +41,16 @@ const saveUserLegalNameInput = z
  * RLS でアドミンだけが他人の行を読めるため、ログイン中のクライアントで読む。
  */
 export async function getUserLegalName(userId: string): Promise<GetUserLegalNameResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   if (!z.uuid().safeParse(userId).success) return { success: false };
 
   const supabase = await createServerClient();
-  const { data, error } = await supabase.from('com_m_user_legal').select(LEGAL_NAME_SELECT).eq('user_id', userId).maybeSingle();
+  const { data, error } = await supabase
+    .from('com_m_user_legal')
+    .select(LEGAL_NAME_SELECT)
+    .eq('user_id', userId)
+    .maybeSingle();
   if (error) {
     logger.error('user_legal:get_failed', error.message, { ...ctx, err: error, payload: { userId } });
     return { success: false };
@@ -61,6 +69,7 @@ export async function saveUserLegalName(input: {
   last_name_latin: string;
   first_name_latin: string;
 }): Promise<SaveUserLegalNameResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const parsed = saveUserLegalNameInput.safeParse(input);
   if (!parsed.success) return { success: false };
@@ -88,7 +97,7 @@ export async function saveUserLegalName(input: {
         updated_by: admin?.id ?? null,
         update_date: new Date().toISOString(),
       },
-      { onConflict: 'user_id' }
+      { onConflict: 'user_id' },
     );
     if (error) {
       logger.error('user_legal:save_failed', error.message, { ...ctx, err: error, payload: { userId } });
@@ -99,7 +108,8 @@ export async function saveUserLegalName(input: {
     logger.info('user_legal:save_success', 'User legal name saved', { ...ctx, payload: { userId } });
     return { success: true, legalName };
   } catch (err) {
-    logger.error('user_legal:save_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('user_legal:save_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { userId },

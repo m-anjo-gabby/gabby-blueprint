@@ -1,15 +1,19 @@
 'use server';
 
-import { createServerClient } from '@gabby/lib/supabase/server';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
+import type { CoreResult } from '@gabby/types/action';
 import {
   CHAT_ATTACHMENT_ALLOWED_MIME_TYPES,
   CHAT_ATTACHMENT_MAX_SIZE,
-  PendingChatAttachment,
+  type ChatAttachmentErrorCode,
+  type PendingChatAttachment,
 } from '@gabby/types/chat';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
 
 const logger = createLogger('common');
 
@@ -20,28 +24,28 @@ const logger = createLogger('common');
  */
 export async function uploadChatAttachment(
   roomId: string,
-  formData: FormData
-): Promise<{ success: boolean; attachment?: PendingChatAttachment; message?: string }> {
+  formData: FormData,
+): Promise<CoreResult<{ attachment: PendingChatAttachment }, ChatAttachmentErrorCode>> {
   const ctx = await getLogContext();
   try {
     const file = formData.get('file') as File | null;
     if (!file) {
-      return { success: false, message: 'ファイルが選択されていません' };
+      return { success: false, errorCode: 'no_file' };
     }
 
     if (file.size > CHAT_ATTACHMENT_MAX_SIZE) {
-      return { success: false, message: 'ファイルサイズは10MBまでです' };
+      return { success: false, errorCode: 'file_too_large' };
     }
 
     const mimeType = file.type || 'application/octet-stream';
     if (!CHAT_ATTACHMENT_ALLOWED_MIME_TYPES.includes(mimeType as (typeof CHAT_ATTACHMENT_ALLOWED_MIME_TYPES)[number])) {
-      return { success: false, message: 'サポートされていないファイル形式です' };
+      return { success: false, errorCode: 'unsupported_type' };
     }
 
     // ルーム参加権限の確認（RLS: is_chat_room_member）
     const serverSupabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, message: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data: membership, error: membershipError } = await serverSupabase
       .from('com_t_chat_room_user')
@@ -52,7 +56,7 @@ export async function uploadChatAttachment(
       .maybeSingle();
 
     if (membershipError || !membership) {
-      return { success: false, message: 'このルームへのアクセス権限がありません' };
+      return { success: false, errorCode: 'forbidden' };
     }
 
     const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -70,7 +74,7 @@ export async function uploadChatAttachment(
         err: uploadError,
         payload: { roomId, fileName: file.name },
       });
-      return { success: false, message: `アップロードに失敗しました: ${uploadError.message}` };
+      return { success: false, errorCode: 'upload_failed' };
     }
 
     const attachment: PendingChatAttachment = {
@@ -87,24 +91,48 @@ export async function uploadChatAttachment(
 
     return { success: true, attachment };
   } catch (err) {
-    logger.error('chat:upload_attachment_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('chat:upload_attachment_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { roomId },
     });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * チャット添付ファイルの公開URL（署名付きURL）を取得
  * "chat" バケットはPrivate運用のため、有効期限付きの署名URLを返す。
+ * 署名は service_role で作るため、先に利用者の権限（RLS: ルームの参加者・アドミン）で添付の行が見えるかを確かめる
+ * （パスを知っていることを見てよい権利の代わりにしない。docs/SECURITY.md 4章）。
  */
-export async function getChatAttachmentUrl(
-  path: string
-): Promise<{ url: string | null; error?: string }> {
+export async function getChatAttachmentUrl(path: string): Promise<{ url: string | null }> {
   const ctx = await getLogContext();
   try {
+    const user = await getAuthUser();
+    if (!user) return { url: null };
+
+    const serverSupabase = await createServerClient();
+    const { data: visible, error: lookupError } = await serverSupabase
+      .from('com_t_chat_attachment')
+      .select('file_path')
+      .eq('file_path', path)
+      .limit(1)
+      .maybeSingle();
+    if (lookupError || !visible) {
+      logger.warn(
+        'chat:get_attachment_url_forbidden',
+        lookupError?.message ?? 'Attachment is not visible to the user',
+        {
+          ...ctx,
+          err: lookupError,
+          payload: { path },
+        },
+      );
+      return { url: null };
+    }
+
     const supabase = createAdminClient();
     const { data, error } = await supabase.storage.from('chat').createSignedUrl(path, 60 * 60);
 
@@ -114,16 +142,17 @@ export async function getChatAttachmentUrl(
         err: error,
         payload: { path },
       });
-      return { url: null, error: error?.message || 'Failed to generate signed URL' };
+      return { url: null };
     }
 
     return { url: data.signedUrl };
   } catch (err) {
-    logger.error('chat:get_attachment_url_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('chat:get_attachment_url_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { path },
     });
-    return { url: null, error: 'Unexpected error' };
+    return { url: null };
   }
 }

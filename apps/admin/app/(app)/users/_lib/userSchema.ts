@@ -1,6 +1,6 @@
-import { z } from 'zod';
 import type { useTranslations } from 'next-intl';
-import { USER_TYPES, type UserRecord } from '@gabby/types/user';
+import { z } from 'zod';
+import { isUserType, USER_STATUS, USER_TYPES, type UserRecord } from '@gabby/types/user';
 
 type FormT = ReturnType<typeof useTranslations<'users.form'>>;
 
@@ -13,7 +13,9 @@ export function createUserBaseSchema(t: FormT) {
     email: z.email({ message: t('errors.invalidEmail') }),
     user_name: z.string().min(1, t('errors.nameRequired')),
     client_id: z.string().min(1, t('errors.clientRequired')),
-    user_type: z.string().min(1, t('errors.userTypeRequired')),
+    user_type: z.enum([USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH], {
+      message: t('errors.userTypeRequired'),
+    }),
     roles: z.array(z.string()),
   });
 }
@@ -55,7 +57,8 @@ export function toUserBaseValues(user: UserRecord): UserBaseValues {
     email: user.email ?? '',
     user_name: user.user_name ?? '',
     client_id: user.client_id ?? '',
-    user_type: user.user_type,
+    // com_m_user.user_type は NULL を許す列のため、種別でない値は生徒として表示する（保存時に選び直せる）
+    user_type: isUserType(user.user_type) ? user.user_type : USER_TYPES.STUDENT,
     roles: user.roles ?? [],
   };
 }
@@ -65,7 +68,18 @@ export function isRegisteredUser(user: Pick<UserRecord, 'last_sign_in_at' | 'con
   return !!user.last_sign_in_at || !!user.confirmed_at;
 }
 
-/** 代理ログインできるか（本登録済みの生徒・コーチのみ。管理者は対象外） */
-export function canImpersonateUser(user: Pick<UserRecord, 'user_type' | 'last_sign_in_at' | 'confirmed_at'>): boolean {
-  return (user.user_type === USER_TYPES.STUDENT || user.user_type === USER_TYPES.COACH) && isRegisteredUser(user);
+/** 代理ログインできるか（本登録済みで有効な生徒・コーチのみ。管理者・停止中・退会済みは対象外） */
+export function canImpersonateUser(
+  user: Pick<UserRecord, 'user_type' | 'last_sign_in_at' | 'confirmed_at' | 'user_status'>,
+): boolean {
+  return (
+    (user.user_type === USER_TYPES.STUDENT || user.user_type === USER_TYPES.COACH) &&
+    user.user_status === USER_STATUS.ACTIVE &&
+    isRegisteredUser(user)
+  );
+}
+
+/** 停止・退会の操作を出すか（ユーザーの行がある生徒・コーチ。招待中は対象外） */
+export function canManageAccount(user: Pick<UserRecord, 'user_type' | 'user_status'>): boolean {
+  return (user.user_type === USER_TYPES.STUDENT || user.user_type === USER_TYPES.COACH) && user.user_status !== null;
 }

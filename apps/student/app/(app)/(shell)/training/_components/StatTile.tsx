@@ -10,12 +10,13 @@ type StatTileProps = {
   unit: string;
   /** 主要指標として大きく表示する */
   emphasis?: boolean;
-} & (
+} &
   /** 分類のある指標：アイコンと分類色を共通定義から取得する */
-  | { metric: TrainingMetric; icon?: never }
-  /** 分類でない指標（実施日数等）：ブランド色で表示する */
-  | { metric?: never; icon: LucideIcon }
-);
+  (
+    | { metric: TrainingMetric; icon?: never }
+    /** 分類でない指標（実施日数等）：ブランド色で表示する */
+    | { metric?: never; icon: LucideIcon }
+  );
 
 /** トレーニング記録の数値表示（ラベル・数値・単位） */
 export function StatTile({ label, value, unit, metric, icon, emphasis = false }: StatTileProps) {
@@ -39,7 +40,9 @@ export function StatTile({ label, value, unit, metric, icon, emphasis = false }:
         </div>
       ) : (
         <p className="mt-3 flex items-baseline gap-1 tabular-nums">
-          <span className={cn('font-bold tracking-tight text-ink', emphasis ? 'text-3xl sm:text-4xl' : 'text-2xl')}>{value}</span>
+          <span className={cn('font-bold tracking-tight text-ink', emphasis ? 'text-3xl sm:text-4xl' : 'text-2xl')}>
+            {value}
+          </span>
           <span className="text-sm text-ink-muted">{unit}</span>
         </p>
       )}

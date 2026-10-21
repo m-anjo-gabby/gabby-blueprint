@@ -1,6 +1,12 @@
-import { SprintAnswerType, SprintAvailableLevels, SprintQuestion, SprintQuestionType } from './sprint';
-import { CoachStudentErrorCode } from './coachStudent';
-import { ContentMetadata } from './content';
+import { type CoachStudentErrorCode } from './coachStudent';
+import { type ContentMetadata } from './content';
+import {
+  type SprintAnswerType,
+  type SprintAvailableLevels,
+  type SprintQuestion,
+  type SprintQuestionType,
+  type SprintType,
+} from './sprint';
 
 /**
  * コーチ向け Lesson Sprint の問題1件あたりの実施履歴。
@@ -31,7 +37,7 @@ export interface CreateLessonSprintResultInput {
   student_id: string;
   /** 実施したライブセッション (com_t_session.session_id)。単独実施（外部Zoom等）の場合はnull */
   session_id: string | null;
-  sprint_type: string;
+  sprint_type: SprintType;
   content_id: string;
   question_type: SprintQuestionType;
   answer_type: SprintAnswerType;
@@ -67,10 +73,10 @@ export interface LessonSprintRecord {
   coach_id: string;
   student_id: string;
   session_id: string | null;
-  sprint_type: string;
+  sprint_type: SprintType;
   content_id: string;
-  question_type: string;
-  answer_type: string;
+  question_type: SprintQuestionType;
+  answer_type: SprintAnswerType;
   difficulty_level: number;
   time_limit_sec: number;
   total_answered: number;
@@ -94,20 +100,16 @@ export const LESSON_SPRINT_SCORE_META: Record<number, { label: string; color: st
 export const DEFAULT_LESSON_SPRINT_SCORE = 3;
 
 export type GetLessonSprintContentsResult =
-  | { success: true; contents: LessonSprintContentSummary[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; contents: LessonSprintContentSummary[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetLessonSprintQuestionsResult =
-  | { success: true; questions: SprintQuestion[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; questions: SprintQuestion[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type CreateLessonSprintResultResponse =
-  | { success: true; lesson_sprint_id: string }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; lesson_sprint_id: string } | { success: false; errorCode: CoachStudentErrorCode };
 
 export type GetLessonSprintHistoryResult =
-  | { success: true; records: LessonSprintHistoryListItem[] }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true; records: LessonSprintHistoryListItem[] } | { success: false; errorCode: CoachStudentErrorCode };
 
 /** 生徒×コーチのLesson Sprint実施履歴を、insert_dateカーソルでページング取得した結果（履歴一覧画面用） */
 export type GetLessonSprintHistoryPageResult =
@@ -119,5 +121,4 @@ export type GetLessonSprintDetailResult =
   | { success: false; errorCode: CoachStudentErrorCode };
 
 export type UpdateLessonSprintSessionNoteResult =
-  | { success: true }
-  | { success: false; errorCode: CoachStudentErrorCode };
+  { success: true } | { success: false; errorCode: CoachStudentErrorCode };

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 import { CONTENT_TYPES, type Content } from '@gabby/types/content';
 import { DataTable } from '@/components/list/DataTable';
 import { ListSelectFilter } from '@/components/list/ListSelectFilter';
@@ -31,7 +31,12 @@ export function ContentDataTable({ data, totalCount, pageCount }: ContentDataTab
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      >
         <ListSelectFilter
           label={t('typeHeader')}
           allLabel={t('typeFilterAllOption')}

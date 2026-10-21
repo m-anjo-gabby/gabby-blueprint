@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
+import { useMemo } from 'react';
+import { type ChatTargetUser } from '@gabby/types/chat';
+import { type ClientOption } from '@gabby/types/client';
+import { USER_TYPES, type UserType } from '@gabby/types/user';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { UserTypeLabel } from '@/components/common/UserTypeLabel';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { USER_TYPES, UserType, getUserTypeLabel } from '@gabby/types/user';
-import { ChatTargetUser } from '@gabby/types/chat';
-import { ClientOption } from '@gabby/types/client';
 
 const SELECTABLE_USER_TYPES: UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
 
@@ -58,7 +59,7 @@ export function ParticipantPicker({ label, users, clients, value, onChange, disa
         <TabsList className="grid grid-cols-3 w-full">
           {SELECTABLE_USER_TYPES.map((t) => (
             <TabsTrigger key={t} value={t} disabled={disabled}>
-              {getUserTypeLabel(t)}
+              <UserTypeLabel type={t} />
             </TabsTrigger>
           ))}
         </TabsList>

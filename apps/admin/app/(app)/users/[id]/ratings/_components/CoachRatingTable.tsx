@@ -1,12 +1,13 @@
-import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
 import { MessageSquare } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
+import { formatRatingValue } from '@gabby/lib/coachRating/format';
+import { formatToJstDate, formatToJstDateTime } from '@gabby/lib/date/date';
+import type { CoachRatingSource } from '@gabby/types/coachRating';
+import type { AdminCoachRatingRow } from '@/actions/adminCoachRatingAction';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { formatToJstDate, formatToJstDateTime } from '@gabby/lib/date/date';
-import { formatRatingValue } from '@gabby/lib/coachRating/format';
-import type { AdminCoachRatingRow, CoachRatingSource } from '@/actions/adminCoachRatingAction';
 
 const SOURCE_LABEL_KEY: Record<CoachRatingSource, 'sourceApp' | 'sourceLegacy' | 'sourceInitial'> = {
   1: 'sourceApp',
@@ -49,11 +50,21 @@ interface CoachRatingTableProps {
 }
 
 /** 評価の一覧（新しい順）。「すべて／コメントあり」は URL の ?feedback=1 で切り替える */
-export async function CoachRatingTable({ coachId, rows, feedbackOnly, totalCount, feedbackCount }: CoachRatingTableProps) {
+export async function CoachRatingTable({
+  coachId,
+  rows,
+  feedbackOnly,
+  totalCount,
+  feedbackCount,
+}: CoachRatingTableProps) {
   const t = await getTranslations('users.ratingsPage');
   const filters = [
     { href: `/users/${coachId}/ratings`, label: t('filterAll', { count: totalCount }), active: !feedbackOnly },
-    { href: `/users/${coachId}/ratings?feedback=1`, label: t('filterFeedback', { count: feedbackCount }), active: feedbackOnly },
+    {
+      href: `/users/${coachId}/ratings?feedback=1`,
+      label: t('filterFeedback', { count: feedbackCount }),
+      active: feedbackOnly,
+    },
   ];
 
   return (
@@ -66,7 +77,9 @@ export async function CoachRatingTable({ coachId, rows, feedbackOnly, totalCount
             scroll={false}
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-bold border transition-colors',
-              filter.active ? 'bg-brand text-white border-brand' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+              filter.active
+                ? 'bg-brand text-white border-brand'
+                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50',
             )}
           >
             {filter.label}
@@ -89,18 +102,25 @@ export async function CoachRatingTable({ coachId, rows, feedbackOnly, totalCount
                 const average = (row.coaching + row.friendliness + row.recommendation) / 3;
                 return (
                   <tr key={row.ratingId} className="align-top">
-                    <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap tabular-nums">{formatToJstDateTime(row.ratedAt)}</td>
+                    <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap tabular-nums">
+                      {formatToJstDateTime(row.ratedAt)}
+                    </td>
                     <td className="px-4 py-3">
                       {row.student ? (
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-sm font-bold text-slate-800">{row.student.name ?? t('unknownStudent')}</span>
+                          <span className="text-sm font-bold text-slate-800">
+                            {row.student.name ?? t('unknownStudent')}
+                          </span>
                           <span className="text-[11px] text-slate-400">{row.student.email}</span>
                         </div>
                       ) : (
                         <span className="text-xs text-slate-400">-</span>
                       )}
                       {row.source !== 1 && (
-                        <Badge variant="outline" className="mt-1 h-5 px-1.5 text-[10px] font-bold text-slate-500 border-slate-200 bg-slate-50">
+                        <Badge
+                          variant="outline"
+                          className="mt-1 h-5 px-1.5 text-[10px] font-bold text-slate-500 border-slate-200 bg-slate-50"
+                        >
                           {t(SOURCE_LABEL_KEY[row.source])}
                         </Badge>
                       )}
@@ -122,7 +142,9 @@ export async function CoachRatingTable({ coachId, rows, feedbackOnly, totalCount
                         {formatRatingValue(row[key])}
                       </td>
                     ))}
-                    <td className="px-4 py-3 text-center text-sm font-bold text-slate-900 tabular-nums">{formatRatingValue(average)}</td>
+                    <td className="px-4 py-3 text-center text-sm font-bold text-slate-900 tabular-nums">
+                      {formatRatingValue(average)}
+                    </td>
                     <td className="px-4 py-3 text-xs text-slate-700 leading-relaxed">
                       {row.feedback ? (
                         <p className="flex gap-1.5 whitespace-pre-wrap wrap-break-word">

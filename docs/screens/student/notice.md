@@ -46,4 +46,4 @@
 - `apps/student/app/(app)/(shell)/notice/_components/NoticeCard.tsx`
 - お知らせ種別定義: `packages/types/notice.ts`（`NOTICE_TYPES`, `NOTICE_IMPORTANT_BADGE`）
 - 状態管理: `@gabby/lib/stores/useNoticeStore`（`fetchNotices`, `markAsRead`）
-- 関連アクション: `getNoticeAttachmentUrlAction`（`@gabby/lib/notice/actions/noticeActions`）
+- 関連アクション: `getNoticeAttachmentUrl`（`@gabby/lib/notice/actions/noticeActions`）

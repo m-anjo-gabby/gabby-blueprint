@@ -1,10 +1,10 @@
 'use client';
 
 import { Circle, Info, Triangle, X } from 'lucide-react';
-import { DayOfWeek, DAYS_OF_WEEK } from '@gabby/types/coachAvailability';
+import { DAYS_OF_WEEK, type DayOfWeek } from '@gabby/types/coachAvailability';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DAY_OF_WEEK_LABEL_JA } from '@/constants/matching';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const SLOTS_PER_DAY = 48;
 
@@ -46,7 +46,9 @@ function timeToSlotIndex(time: string): number {
 }
 
 function slotIndexToLabel(slotIndex: number): string {
-  const hour = Math.floor(slotIndex / 2).toString().padStart(2, '0');
+  const hour = Math.floor(slotIndex / 2)
+    .toString()
+    .padStart(2, '0');
   const minute = slotIndex % 2 === 0 ? '00' : '30';
   return `${hour}:${minute}`;
 }
@@ -56,7 +58,12 @@ function slotIndexToLabel(slotIndex: number): string {
  * セルをクリックするとそのままセッション開始時刻の選択として確定する
  * （曜日チップ＋プルダウンの2段階選択に代わる、直感的な1ステップ操作）。
  */
-export function CoachAvailabilityCalendar({ cells, cellStates, selectedKey, onSelect }: CoachAvailabilityCalendarProps) {
+export function CoachAvailabilityCalendar({
+  cells,
+  cellStates,
+  selectedKey,
+  onSelect,
+}: CoachAvailabilityCalendarProps) {
   if (cells.length === 0) {
     return <p className="text-xs text-ink-subtle text-center py-10">現在、対応可能時間の登録がありません</p>;
   }
@@ -78,7 +85,10 @@ export function CoachAvailabilityCalendar({ cells, cellStates, selectedKey, onSe
 
   return (
     // モバイルの全画面のダイアログでは、凡例・選んだ枠の内容がカレンダーの下に見えるよう、高さを画面の約4割にする
-    <div className="max-h-[40dvh] sm:max-h-[360px] overflow-y-auto rounded-control border border-line select-none" aria-busy={cellStates === null}>
+    <div
+      className="max-h-[40dvh] sm:max-h-[360px] overflow-y-auto rounded-control border border-line select-none"
+      aria-busy={cellStates === null}
+    >
       <div className="grid" style={{ gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))' }}>
         <div className="sticky top-0 z-20 bg-white border-b border-line" />
         {DAYS_OF_WEEK.map((day) => (
@@ -97,7 +107,7 @@ export function CoachAvailabilityCalendar({ cells, cellStates, selectedKey, onSe
               <div
                 className={cn(
                   'h-[26px] pr-2 text-right text-[11px] text-ink-subtle font-medium leading-[26px]',
-                  isHour ? 'border-t border-line' : 'border-t border-line/70'
+                  isHour ? 'border-t border-line' : 'border-t border-line/70',
                 )}
               >
                 {isHour ? slotIndexToLabel(slotIndex) : ''}
@@ -136,7 +146,7 @@ export function CoachAvailabilityCalendar({ cells, cellStates, selectedKey, onSe
                               : isPartial
                                 ? 'bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white'
                                 : 'bg-brand-soft text-brand-500 hover:bg-brand-500 hover:text-white'
-                            : 'bg-white'
+                            : 'bg-white',
                     )}
                   >
                     {isUnavailable && <X size={15} strokeWidth={3} aria-hidden="true" />}
@@ -162,7 +172,7 @@ function LegendMark({ state }: { state: AvailabilityCellState }) {
         'inline-flex size-5 items-center justify-center border border-line/70',
         state === 'full' && 'bg-brand-soft text-brand-500',
         state === 'partial' && 'bg-amber-50 text-amber-600',
-        state === 'unavailable' && 'bg-canvas text-ink-subtle'
+        state === 'unavailable' && 'bg-canvas text-ink-subtle',
       )}
     >
       {state === 'full' && <Circle size={11} strokeWidth={3} />}
@@ -203,7 +213,8 @@ export function AvailabilityLegend() {
             <span className="font-bold">〇</span> 契約期間内の全ての回を予約できます。
           </p>
           <p>
-            <span className="font-bold">△</span> 一部の回がコーチまたはあなたの他の予定と重なります。重なる回は未予約になり、マッチング成立後にコーチと個別に日時を調整します。
+            <span className="font-bold">△</span>{' '}
+            一部の回がコーチまたはあなたの他の予定と重なります。重なる回は未予約になり、マッチング成立後にコーチと個別に日時を調整します。
           </p>
           <p>
             <span className="font-bold">×</span> 他の予定や他の方のリクエストと重なる回が多く、リクエストできません。

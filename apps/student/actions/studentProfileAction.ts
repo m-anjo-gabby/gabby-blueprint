@@ -1,12 +1,13 @@
 'use server';
 
-import { getMyProfileCore } from '@gabby/lib/profile/actions/profileActions';
-import { uploadProfileIconCore, removeProfileIconCore } from '@gabby/lib/profile/actions/profileIconActions';
-import { getTimezoneListCore, updateMyTimezoneCore } from '@gabby/lib/profile/actions/timezoneActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { ProfileIconErrorCode, MyProfile, UpdateTimezoneErrorCode } from '@gabby/types/profile';
-import { TimezoneMaster } from '@gabby/types/timezone';
+import { getMyProfileCore } from '@gabby/lib/profile/actions/profileActions';
+import { removeProfileIconCore, uploadProfileIconCore } from '@gabby/lib/profile/actions/profileIconActions';
+import { getTimezoneListCore, updateMyTimezoneCore } from '@gabby/lib/profile/actions/timezoneActions';
+import type { ActionResult } from '@gabby/types/action';
+import { type MyProfile, type ProfileIconErrorCode, type UpdateTimezoneErrorCode } from '@gabby/types/profile';
+import { type TimezoneMaster } from '@gabby/types/timezone';
 
 const logger = createLogger('student');
 
@@ -43,9 +44,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
 /**
  * プロフィールアイコンのアップロード
  */
-export async function uploadProfileIcon(
-  formData: FormData
-): Promise<{ success: true; iconPath: string } | { success: false; message: string }> {
+export async function uploadProfileIcon(formData: FormData): Promise<ActionResult<{ iconPath: string }>> {
   const ctx = await getLogContext();
   const result = await uploadProfileIconCore(formData);
 
@@ -61,7 +60,7 @@ export async function uploadProfileIcon(
 /**
  * プロフィールアイコンの削除
  */
-export async function removeProfileIcon(): Promise<{ success: true } | { success: false; message: string }> {
+export async function removeProfileIcon(): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await removeProfileIconCore();
 
@@ -90,9 +89,7 @@ export async function getTimezoneList(): Promise<TimezoneMaster[]> {
 /**
  * 自分自身のタイムゾーンの更新
  */
-export async function updateMyTimezone(
-  timezone: string
-): Promise<{ success: true; timezone: string } | { success: false; message: string }> {
+export async function updateMyTimezone(timezone: string): Promise<ActionResult<{ timezone: string }>> {
   const ctx = await getLogContext();
   const result = await updateMyTimezoneCore(timezone);
 

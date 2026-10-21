@@ -1,24 +1,24 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { ArrowDown, ChevronLeft, Loader2, Paperclip, Trash2 } from 'lucide-react';
-import { useChatStore } from '../../stores/useChatStore';
-import { useTimezone } from '../../hooks/useTimezone';
-import { useConfirm } from '../../hooks/useConfirm';
-import { useToast } from '../../hooks/useToast';
-import { useChatRealtimeMessages } from '../../chat/realtime/useChatRealtimeMessages';
-import { useChatReadReceipt } from '../../chat/realtime/useChatReadReceipt';
+import Link from 'next/link';
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
+import { CHAT_ROOM_TYPES, type ChatMessage, type ChatRoom, type ChatRoomMemberSummary } from '@gabby/types/chat';
 import { deleteChatMessage, getChatMessageById, getChatMessages } from '../../chat/actions/messageActions';
 import { formatMessageHeaderTime, isContinuationMessage } from '../../chat/messageGrouping';
+import { useChatReadReceipt } from '../../chat/realtime/useChatReadReceipt';
+import { useChatRealtimeMessages } from '../../chat/realtime/useChatRealtimeMessages';
 import { getChatRoomCounterpart, getChatRoomTitle } from '../../chat/roomDisplay';
+import { useConfirm } from '../../hooks/useConfirm';
+import { useTimezone } from '../../hooks/useTimezone';
+import { useToast } from '../../hooks/useToast';
+import { useChatStore } from '../../stores/useChatStore';
 import { cn } from '../../utils';
-import { CHAT_ROOM_TYPES, ChatMessage, ChatRoom, ChatRoomMemberSummary } from '@gabby/types/chat';
-import { CHAT_SPLIT_CLASSES, getHeaderTimeLabels, useChatUi } from './ChatUiContext';
 import { ChatAvatar } from './ChatAvatar';
 import { ChatComposer } from './ChatComposer';
-import { useChatAttachmentUpload } from './useChatAttachmentUpload';
 import { ChatMessageContent } from './ChatMessageContent';
+import { CHAT_SPLIT_CLASSES, getHeaderTimeLabels, useChatUi } from './ChatUiContext';
+import { useChatAttachmentUpload } from './useChatAttachmentUpload';
 
 interface ChatTimelineProps {
   roomId: string;
@@ -149,7 +149,8 @@ export function ChatTimeline({
     return () => setActiveRoom(null);
   }, [roomId, setActiveRoom]);
 
-  useEffect(() => {
+  // 初めて表示した時だけ既読にし、読む位置へ寄せる（ルームを切り替えると部品ごと作り直される）
+  const alignOnMount = useEffectEvent(() => {
     markLatestAsRead();
     // 未読がある場合は「ここから未読」の位置から読めるようにする。無ければ最新へ
     if (unreadDividerRef.current) {
@@ -163,8 +164,9 @@ export function ChatTimeline({
     } else {
       bottomRef.current?.scrollIntoView({ block: 'end' });
     }
-    // 初回マウント時のみ実行（ルーム切り替え時は親コンポーネントごと再マウントされる）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    alignOnMount();
   }, []);
 
   // タブを裏から戻したときに、裏にいる間に届いたメッセージを既読にする
@@ -227,7 +229,7 @@ export function ChatTimeline({
           loadMoreRef.current();
         }
       },
-      { root: container, threshold: 0 }
+      { root: container, threshold: 0 },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -237,7 +239,7 @@ export function ChatTimeline({
   const advanceCounterpartRead = (readAt: string) =>
     setCounterpartReadAt((prev) => (prev && prev >= readAt ? prev : readAt));
 
-  useChatReadReceipt(roomId, showReadReceipt ? counterpart?.user_id ?? null : null, (lastReadChatId) => {
+  useChatReadReceipt(roomId, showReadReceipt ? (counterpart?.user_id ?? null) : null, (lastReadChatId) => {
     const known = messages.find((m) => m.chat_id === lastReadChatId);
     if (known) {
       advanceCounterpartRead(known.created_at);
@@ -306,13 +308,13 @@ export function ChatTimeline({
 
     const res = await deleteChatMessage({ chatId });
     if (!res.success) {
-      showToast(res.error || labels.deleteMessageFailed, 'error');
+      showToast(labels.deleteMessageFailed, 'error');
       return;
     }
     setMessages((prev) =>
       prev.map((m) =>
-        m.chat_id === chatId ? { ...m, deleted_at: new Date().toISOString(), message: '', attachments: [] } : m
-      )
+        m.chat_id === chatId ? { ...m, deleted_at: new Date().toISOString(), message: '', attachments: [] } : m,
+      ),
     );
   };
 
@@ -366,7 +368,7 @@ export function ChatTimeline({
       <header
         className={cn(
           'flex shrink-0 items-center gap-3 border-b px-3 py-3 transition-colors sm:px-4',
-          isScrolledFromTop ? 'border-line' : 'border-transparent'
+          isScrolledFromTop ? 'border-line' : 'border-transparent',
         )}
       >
         <Link
@@ -374,7 +376,7 @@ export function ChatTimeline({
           aria-label={labels.backToList}
           className={cn(
             '-ml-1 flex size-9 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-canvas hover:text-ink',
-            CHAT_SPLIT_CLASSES[breakpoint].backButton
+            CHAT_SPLIT_CLASSES[breakpoint].backButton,
           )}
         >
           <ChevronLeft size={22} />
@@ -451,7 +453,9 @@ export function ChatTimeline({
                         className="mb-1 flex items-center gap-2"
                         style={{ paddingLeft: AVATAR_SIZE + AVATAR_GAP + BUBBLE_PADDING_X }}
                       >
-                        <span className="text-xs font-bold text-ink-soft">{sender?.user_name || labels.unnamedUser}</span>
+                        <span className="text-xs font-bold text-ink-soft">
+                          {sender?.user_name || labels.unnamedUser}
+                        </span>
                         <span className="text-[11px] text-ink-subtle">{time}</span>
                       </div>
                     ))}
@@ -465,14 +469,14 @@ export function ChatTimeline({
                     <div
                       className={cn(
                         'relative flex min-w-0 max-w-full items-end gap-1.5',
-                        isMine ? 'justify-end' : 'justify-start'
+                        isMine ? 'justify-end' : 'justify-start',
                       )}
                     >
                       {!showHeader && (
                         <span
                           className={cn(
                             'absolute bottom-1 whitespace-nowrap text-[11px] text-ink-subtle opacity-0 transition-opacity group-hover:opacity-100',
-                            isMine ? 'right-full mr-1.5' : 'left-full ml-1.5'
+                            isMine ? 'right-full mr-1.5' : 'left-full ml-1.5',
                           )}
                         >
                           {time}
@@ -484,7 +488,7 @@ export function ChatTimeline({
                           'min-w-0 max-w-140 rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed',
                           // 自分=淡いブランド色、相手=淡いグレー。どちらも濃い文字にして長文でも読みやすくし、
                           // 濃いブランド色は送信ボタン等のアクセントに限定する（Google Chat と同じ考え方）
-                          isMine ? 'rounded-br-sm bg-brand-100 text-ink' : 'rounded-bl-sm bg-ink/5 text-ink'
+                          isMine ? 'rounded-br-sm bg-brand-100 text-ink' : 'rounded-bl-sm bg-ink/5 text-ink',
                         )}
                       >
                         <ChatMessageContent message={msg} />
@@ -515,7 +519,9 @@ export function ChatTimeline({
       )}
 
       {/* 入力エリアはタイムラインと同じ背景で一体に見せる。過去のメッセージを読んでいる間だけ境界線を出す */}
-      <div className={cn('shrink-0 border-t transition-colors', isAwayFromBottom ? 'border-line' : 'border-transparent')}>
+      <div
+        className={cn('shrink-0 border-t transition-colors', isAwayFromBottom ? 'border-line' : 'border-transparent')}
+      >
         {isMember ? (
           <ChatComposer roomId={roomId} onSent={handleSent} isUploading={isUploading} onAddFiles={addFiles} />
         ) : (

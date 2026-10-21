@@ -1,16 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
-import { getAdminCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
-import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { NextResponse, type NextRequest } from 'next/server';
 import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfile';
-import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
+import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { getAdminCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
 import { buildInvoiceNumber } from '@gabby/lib/monthlyReport/buildInvoiceNumber';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { USER_TYPES } from '@gabby/types/user';
-import { InvoiceDocument } from '@/lib/pdf/InvoiceDocument';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { fetchLegalName } from '@gabby/lib/userLegal/fetchLegalName';
 import { formatLegalName } from '@gabby/lib/userLegal/formatLegalName';
+import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
+import { checkAdminRoleForRoute, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
+import { InvoiceDocument } from '@/lib/pdf/InvoiceDocument';
 
 // apps/coach/app/api/monthly-reports/pay-notice/route.tsと同じ理由（cookieベース認証への
 // 依存がNext.jsの自動動的判定に検出されず静的キャッシュされる恐れがあるため）で、
@@ -31,13 +30,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'coachId and month query parameters are required' }, { status: 400 });
   }
 
-  const user = await getAuthUser();
-  if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
-  if (user.app_metadata?.user_type !== USER_TYPES.ADMIN) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  }
+  const { denied } = await checkAdminRoleForRoute(SYSTEM_ADMIN_ONLY);
+  if (denied) return denied;
 
   const result = await getAdminCoachMonthlyReportCore(coachId, reportMonth);
   if (!result.success) {
@@ -63,13 +57,13 @@ export async function GET(request: NextRequest) {
   // 同じ内容になるように、承認時点の事実を表示する）。
   const issueDateLabel = approval.approved_at
     ? new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(
-        new Date(approval.approved_at)
+        new Date(approval.approved_at),
       )
     : '';
 
   const [year, month] = result.report.report_month.split('-').map(Number);
   const periodLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
-    new Date(Date.UTC(year, month - 1, 1))
+    new Date(Date.UTC(year, month - 1, 1)),
   );
 
   // 支払通知書と同じく、正式な氏名（未登録の場合は画面の名前）を載せる
@@ -94,7 +88,7 @@ export async function GET(request: NextRequest) {
       lateCancelCount: result.report.late_cancel_count,
       noShowCount: result.report.no_show_count,
       totalEarnings,
-    })
+    }),
   );
 
   return new NextResponse(new Uint8Array(buffer), {

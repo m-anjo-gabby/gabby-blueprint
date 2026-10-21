@@ -40,6 +40,7 @@ if (error) {
 - 第1引数はイベント名（3章）、第2引数は人が読む短い説明、第3引数は文脈。
 - 文脈に置ける項目は `LogContext` の型で決まっている（`userId` / `requestId` / `ip` / `path` / `impersonation` / `err` / `payload` 等）。それ以外の値は `payload` に入れる。
 - エラーは必ず `err` に**エラーそのもの**を渡す（`error.message` だけを渡さない）。`type` / `message` / `code` / `details` / `hint` / `stack` / `cause` に整形して出す。
+- `catch` の値は型注記を付けずに受け（`unknown`）、ログの本文や画面に出すメッセージは `getErrorMessage(err)`（`packages/lib/logger/errorMessage.ts`。Supabase の Error でないエラーも扱う）で取り出す（`err instanceof Error ? err.message : …` は ESLint で止める）。画面に返す文言には、エラーの本文を入れない（`docs/CODING.md`「エラーの返し方」）。
 - Server Action・Server Component では `getLogContext()` を広げて渡す（proxy のログと `requestId` で突き合わせられる）。
 
 ### ブラウザ
@@ -108,4 +109,23 @@ clientLogger.debug('speech:recognition_failed', 'Speech recognition error', { pa
 
 - 調べるときは `service` / `event` / `level` / `userId` / `requestId` で絞る（`event` の前方一致でドメイン単位にまとまる）。
 - ブラウザのログは `source == "client"` で区別する（受け口の仕様: [testing/e2e/specs/logging/client-log.md](../testing/e2e/specs/logging/client-log.md)）。
-- アラート: `level == "error"` の件数の急増を監視する（Axiom の Monitor で設定。設定はコード外）。
+- アラート: 本番のエラーのログを Axiom の Monitor で監視し、メールで知らせる（設定はコード外。内容は下の表を正本にする）。
+  メールの送信処理が止まっていないことは、運営向けの日次の要約のメール（毎日届く）で確かめる。
+
+| 項目 | 設定 |
+|---|---|
+| 名前 | `blueprint-prod-errors` |
+| 対象 | 本番の3アプリ（Vercel のプロジェクト `blueprint-admin-prod` / `blueprint-coach-prod` / `blueprint-student-prod`）の `level == "error"` |
+| 条件 | 15分ごとに直近15分の件数を数え、1件以上で通知する（利用者が少ない間は1件でも調べる。件数が増えたらしきい値を上げる） |
+| 通知 | メール（宛先は運用担当で決める） |
+| 除くもの | 原因が分かっていて対応不要なエラーだけを、`event` を指定して除く（除いた理由をこの表に書く）。現在は無し |
+
+条件の APL（項目名は Axiom の画面で実際のログを見て合わせる。Vercel のログドレインでは、プロジェクト名は `vercel.projectName`、
+アプリが出した JSON の項目は `level` 等の名前で入る想定）:
+
+```kusto
+['<データセット名>']
+| where ['vercel.projectName'] in ('blueprint-admin-prod', 'blueprint-coach-prod', 'blueprint-student-prod')
+| where level == 'error'
+| summarize count() by bin_auto(_time)
+```

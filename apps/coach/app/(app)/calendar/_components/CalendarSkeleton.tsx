@@ -1,10 +1,10 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { toIsoMonthInZone } from '@gabby/lib/date/date';
-import { ScheduleTabs } from '@/components/common/ScheduleTabs';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { PageHeader, PageSkeletonFrame } from '@/components/common/PageHeader';
+import { ScheduleTabs } from '@/components/common/ScheduleTabs';
 import { CalendarBoard } from './CalendarBoard';
 import { CalendarWorkspaceGrid } from './CalendarWorkspace';
 import { PendingRequestsPanelSkeleton } from './PendingRequestsPanel';

@@ -1,22 +1,25 @@
 'use server';
 
-import { createServerClient } from '../../supabase/server';
-import { createLogger } from '../../logger';
-import { getLogContext } from '../../logger/context';
+import { unstable_rethrow } from 'next/navigation';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import {
-  CalendarEventCoachOption,
-  CalendarEventItem,
-  CalendarEventMessageItem,
   getCalendarEventPhase,
   sortCalendarEventMessages,
+  type CalendarEventCoachOption,
+  type CalendarEventItem,
+  type CalendarEventMessageItem,
 } from '@gabby/types/calendarEvent';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createLogger } from '../../logger';
+import { getLogContext } from '../../logger/context';
 import { createAdminClient } from '../../supabase/admin';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 
 /** アナウンスの取得列（一覧への結合・単独の取得で共有する） */
-const MESSAGE_COLUMNS = 'calendar_event_message_id, calendar_event_id, title, content, attachments, insert_date, update_date';
+const MESSAGE_COLUMNS =
+  'calendar_event_message_id, calendar_event_id, title, content, attachments, insert_date, update_date';
 
 function toMessageItems(rows: unknown): CalendarEventMessageItem[] {
   if (!Array.isArray(rows)) return [];
@@ -24,20 +27,22 @@ function toMessageItems(rows: unknown): CalendarEventMessageItem[] {
     rows.map((row: CalendarEventMessageItem) => ({
       ...row,
       attachments: Array.isArray(row.attachments) ? row.attachments : [],
-    }))
+    })),
   );
 }
 
 /**
  * ログイン中ユーザー（生徒/コーチいずれか）向けに公開中のカレンダーイベント一覧を、
  * 指定期間内で取得する（ポータル共通）。
- * RLS（is_published=TRUE AND delete_flg='0' かつ target_type/user_typeに応じた絞り込み）
+ * RLS（is_published=TRUE かつ target_type/user_typeに応じた絞り込み）
  * に依存するため、呼び出し側でロールを意識する必要はない。
  */
 export async function getPublishedCalendarEventsCore(
   startIso: string,
-  endIso: string
-): Promise<{ success: true; events: CalendarEventItem[] } | { success: false; errorCode: 'unauthorized' | 'unexpected_error' }> {
+  endIso: string,
+): Promise<
+  { success: true; events: CalendarEventItem[] } | { success: false; errorCode: 'unauthorized' | 'unexpected_error' }
+> {
   const ctx = await getLogContext();
 
   try {
@@ -54,7 +59,7 @@ export async function getPublishedCalendarEventsCore(
     const { data, error } = await supabase
       .from('com_m_calendar_event')
       .select(
-        `*, participant:com_t_calendar_event_participant(calendar_event_id), assigned_coach:com_t_calendar_event_coach(calendar_event_id), series:com_m_calendar_event_series(series_id, title, description), messages:com_t_calendar_event_message(${MESSAGE_COLUMNS})`
+        `*, participant:com_t_calendar_event_participant(calendar_event_id), assigned_coach:com_t_calendar_event_coach(calendar_event_id), series:com_m_calendar_event_series(series_id, title, description), messages:com_t_calendar_event_message(${MESSAGE_COLUMNS})`,
       )
       .gte('start_datetime', startIso)
       .lt('start_datetime', endIso)
@@ -65,8 +70,10 @@ export async function getPublishedCalendarEventsCore(
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    const coachesByEventId = await getAssignedCoachesByEventId((data ?? []).map((row) => row.calendar_event_id as string));
-    const events: CalendarEventItem[] = (data ?? []).map((row: any) => ({
+    const coachesByEventId = await getAssignedCoachesByEventId(
+      (data ?? []).map((row) => row.calendar_event_id as string),
+    );
+    const events: CalendarEventItem[] = (data ?? []).map((row) => ({
       ...row,
       is_joined: Array.isArray(row.participant) && row.participant.length > 0,
       is_assigned_coach: Array.isArray(row.assigned_coach) && row.assigned_coach.length > 0,
@@ -77,7 +84,11 @@ export async function getPublishedCalendarEventsCore(
 
     return { success: true, events };
   } catch (err) {
-    logger.error('calendarEvent:get_published_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('calendarEvent:get_published_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -87,7 +98,9 @@ export async function getPublishedCalendarEventsCore(
  * 担当コーチの割当（com_t_calendar_event_coach）は RLS で本人の行しか読めず、コーチの氏名も生徒からは読めないため、
  * service_role で取得する。対象は呼び出し側が RLS で取得した（＝閲覧できる）イベントのIDに限る。
  */
-async function getAssignedCoachesByEventId(calendarEventIds: string[]): Promise<Map<string, CalendarEventCoachOption[]>> {
+async function getAssignedCoachesByEventId(
+  calendarEventIds: string[],
+): Promise<Map<string, CalendarEventCoachOption[]>> {
   const map = new Map<string, CalendarEventCoachOption[]>();
   if (calendarEventIds.length === 0) return map;
   const admin = createAdminClient();
@@ -99,7 +112,7 @@ async function getAssignedCoachesByEventId(calendarEventIds: string[]): Promise<
     logger.error('calendarEvent:get_assigned_coaches_failed', error.message, { err: error });
     return map;
   }
-  for (const row of (data ?? []) as unknown as { calendar_event_id: string; coach_id: string; com_m_user: { user_name: string | null } | null }[]) {
+  for (const row of data ?? []) {
     const list = map.get(row.calendar_event_id) ?? [];
     list.push({ coach_id: row.coach_id, user_name: row.com_m_user?.user_name ?? null });
     map.set(row.calendar_event_id, list);
@@ -111,7 +124,7 @@ async function getAssignedCoachesByEventId(calendarEventIds: string[]): Promise<
  * カレンダーイベントへの参加登録（生徒/コーチ共通。ポータル共通）
  */
 export async function joinCalendarEventCore(
-  calendarEventId: string
+  calendarEventId: string,
 ): Promise<{ success: true } | { success: false; errorCode: 'unauthorized' | 'unexpected_error' }> {
   const ctx = await getLogContext();
 
@@ -125,14 +138,27 @@ export async function joinCalendarEventCore(
       .upsert({ user_id: user.id, calendar_event_id: calendarEventId }, { onConflict: 'user_id,calendar_event_id' });
 
     if (error) {
-      logger.error('calendarEvent:join_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { calendarEventId } });
+      logger.error('calendarEvent:join_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { calendarEventId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    logger.info('calendarEvent:join_success', 'Joined calendar event', { ...ctx, userId: user.id, payload: { calendarEventId } });
+    logger.info('calendarEvent:join_success', 'Joined calendar event', {
+      ...ctx,
+      userId: user.id,
+      payload: { calendarEventId },
+    });
     return { success: true };
   } catch (err) {
-    logger.error('calendarEvent:join_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('calendarEvent:join_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -144,8 +170,10 @@ export async function joinCalendarEventCore(
  * @returns 新たに参加登録した回のID
  */
 export async function joinCalendarEventSeriesCore(
-  seriesId: string
-): Promise<{ success: true; joinedIds: string[] } | { success: false; errorCode: 'unauthorized' | 'unexpected_error' }> {
+  seriesId: string,
+): Promise<
+  { success: true; joinedIds: string[] } | { success: false; errorCode: 'unauthorized' | 'unexpected_error' }
+> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -155,12 +183,19 @@ export async function joinCalendarEventSeriesCore(
     const nowMs = Date.now();
     const { data, error } = await supabase
       .from('com_m_calendar_event')
-      .select('calendar_event_id, start_datetime, end_datetime, rsvp_enabled, participant:com_t_calendar_event_participant(calendar_event_id)')
+      .select(
+        'calendar_event_id, start_datetime, end_datetime, rsvp_enabled, participant:com_t_calendar_event_participant(calendar_event_id)',
+      )
       .eq('series_id', seriesId)
       .eq('rsvp_enabled', true)
       .gte('start_datetime', new Date(nowMs - 24 * 60 * 60 * 1000).toISOString());
     if (error) {
-      logger.error('calendarEvent:join_series_fetch_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { seriesId } });
+      logger.error('calendarEvent:join_series_fetch_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { seriesId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -170,14 +205,17 @@ export async function joinCalendarEventSeriesCore(
       .map((row) => row.calendar_event_id as string);
     if (targetIds.length === 0) return { success: true, joinedIds: [] };
 
-    const { error: insertError } = await supabase
-      .from('com_t_calendar_event_participant')
-      .upsert(
-        targetIds.map((calendarEventId) => ({ user_id: user.id, calendar_event_id: calendarEventId })),
-        { onConflict: 'user_id,calendar_event_id' }
-      );
+    const { error: insertError } = await supabase.from('com_t_calendar_event_participant').upsert(
+      targetIds.map((calendarEventId) => ({ user_id: user.id, calendar_event_id: calendarEventId })),
+      { onConflict: 'user_id,calendar_event_id' },
+    );
     if (insertError) {
-      logger.error('calendarEvent:join_series_failed', insertError.message, { ...ctx, err: insertError, userId: user.id, payload: { seriesId } });
+      logger.error('calendarEvent:join_series_failed', insertError.message, {
+        ...ctx,
+        err: insertError,
+        userId: user.id,
+        payload: { seriesId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -188,7 +226,11 @@ export async function joinCalendarEventSeriesCore(
     });
     return { success: true, joinedIds: targetIds };
   } catch (err) {
-    logger.error('calendarEvent:join_series_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('calendarEvent:join_series_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -197,7 +239,7 @@ export async function joinCalendarEventSeriesCore(
  * カレンダーイベントの参加キャンセル（生徒/コーチ共通。ポータル共通）
  */
 export async function cancelCalendarEventParticipationCore(
-  calendarEventId: string
+  calendarEventId: string,
 ): Promise<{ success: true } | { success: false; errorCode: 'unauthorized' | 'unexpected_error' }> {
   const ctx = await getLogContext();
 
@@ -213,7 +255,12 @@ export async function cancelCalendarEventParticipationCore(
       .eq('calendar_event_id', calendarEventId);
 
     if (error) {
-      logger.error('calendarEvent:cancel_participation_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { calendarEventId } });
+      logger.error('calendarEvent:cancel_participation_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { calendarEventId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -224,7 +271,8 @@ export async function cancelCalendarEventParticipationCore(
     });
     return { success: true };
   } catch (err) {
-    logger.error('calendarEvent:cancel_participation_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('calendarEvent:cancel_participation_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -235,8 +283,11 @@ export async function cancelCalendarEventParticipationCore(
  * 指定した場合は空配列が返る。
  */
 export async function getCalendarEventMessagesCore(
-  calendarEventId: string
-): Promise<{ success: true; messages: CalendarEventMessageItem[] } | { success: false; errorCode: 'unauthorized' | 'unexpected_error' }> {
+  calendarEventId: string,
+): Promise<
+  | { success: true; messages: CalendarEventMessageItem[] }
+  | { success: false; errorCode: 'unauthorized' | 'unexpected_error' }
+> {
   const ctx = await getLogContext();
 
   try {
@@ -250,13 +301,22 @@ export async function getCalendarEventMessagesCore(
       .eq('calendar_event_id', calendarEventId);
 
     if (error) {
-      logger.error('calendarEvent:get_messages_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { calendarEventId } });
+      logger.error('calendarEvent:get_messages_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { calendarEventId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, messages: toMessageItems(data) };
   } catch (err) {
-    logger.error('calendarEvent:get_messages_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('calendarEvent:get_messages_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

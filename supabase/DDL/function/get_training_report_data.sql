@@ -1,5 +1,5 @@
 ---------------------------------------------
--- トレーニングレポート(PDF)の掲載データ取得 (2026-10-01 追加)
+-- トレーニングレポート(PDF)の掲載データ取得
 -- 前提: function/get_sprint_level_as_of.sql, table/com_m_user_legal.sql, table/self_t_word_summary.sql, table/self_t_sprint_summary.sql,
 --       table/com_t_session.sql（ステータス簡素化パッチまで）, table/com_t_contract_training_report.sql の作成が完了していること。
 ---------------------------------------------
@@ -21,7 +21,7 @@
 --     completed: 実施（正常終了・早期終了）/ no_show: 生徒の欠席 / late_cancel: 生徒の直前キャンセル（返還なし）
 --   comments: コーチからのコメント（下書き・確定の両方。PDF側で下書きを区別して表示する）
 --   student_name: 正式な氏名（com_m_user_legal、日本語の書面のため「姓 名」。並べ方は
---     packages/lib/userLegal/formatLegalName.ts と同じ）。未登録の場合は画面の名前（user_name）。(2026-10-13 変更)
+--     packages/lib/userLegal/formatLegalName.ts と同じ）。未登録の場合は画面の名前（user_name）。
 --
 -- 【呼び出し元】
 -- apps/admin から createAdminClient()（service_role）経由でのみ呼ぶ。

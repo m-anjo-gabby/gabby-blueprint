@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import {
-  getNoticesAction,
-  markNoticeAsReadAction,
-  markNoticesAsReadBatchAction,
-  recordNoticeCtaClickAction,
+  getNotices,
+  markNoticeAsRead,
+  markNoticesAsReadBatch,
+  recordNoticeCtaClick,
 } from '@gabby/lib/notice/actions/noticeActions';
-import { NoticeItem } from '@gabby/types/notice';
+import { type NoticeItem } from '@gabby/types/notice';
 import { clientLogger } from '../logger/client';
 
 interface NoticeState {
@@ -17,8 +17,8 @@ interface NoticeState {
   unreadCount: number;
 
   // ダッシュボードのダイアログ表示制御
-  dialogNotices: NoticeItem[];   // 表示方法がポップアップ（POPUP）かつ未読
-  isDialogDismissed: boolean;    // セッション中に一度閉じたか
+  dialogNotices: NoticeItem[]; // 表示方法がポップアップ（POPUP）かつ未読
+  isDialogDismissed: boolean; // セッション中に一度閉じたか
 
   // グローバルダイアログ用（ユーザーが個別にクリックして開く用）
   selectedNoticeId: string | null;
@@ -38,13 +38,12 @@ interface NoticeState {
 /** 1件を既読にした状態（楽観的 UI 更新） */
 function markReadInState(state: NoticeState, noticeId: string): Partial<NoticeState> {
   return {
-    notices: state.notices.map(n =>
-      n.notice_id === noticeId ? { ...n, is_read: true } : n
+    notices: state.notices.map((n) => (n.notice_id === noticeId ? { ...n, is_read: true } : n)),
+    unreadCount: Math.max(
+      0,
+      state.unreadCount - (state.notices.find((n) => n.notice_id === noticeId && !n.is_read) ? 1 : 0),
     ),
-    unreadCount: Math.max(0, state.unreadCount - (
-      state.notices.find(n => n.notice_id === noticeId && !n.is_read) ? 1 : 0
-    )),
-    dialogNotices: state.dialogNotices.filter(n => n.notice_id !== noticeId),
+    dialogNotices: state.dialogNotices.filter((n) => n.notice_id !== noticeId),
   };
 }
 
@@ -68,7 +67,7 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
 
     set({ isLoading: true });
     try {
-      const res = await getNoticesAction();
+      const res = await getNotices();
       if (!res.success) return;
       get().applyNotices(res.data);
     } catch (err) {
@@ -81,41 +80,37 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
   applyNotices: (notices) => {
     set({
       notices,
-      unreadCount: notices.filter(n => !n.is_read).length,
+      unreadCount: notices.filter((n) => !n.is_read).length,
       // 表示方法がポップアップかつ未読のお知らせをダイアログ表示対象に
-      dialogNotices: notices.filter(n => n.display_mode === 'POPUP' && !n.is_read),
+      dialogNotices: notices.filter((n) => n.display_mode === 'POPUP' && !n.is_read),
       lastFetched: Date.now(),
     });
   },
 
   markAsRead: async (noticeId: string) => {
     // 楽観的 UI 更新
-    set(state => markReadInState(state, noticeId));
-    await markNoticeAsReadAction(noticeId);
+    set((state) => markReadInState(state, noticeId));
+    await markNoticeAsRead(noticeId);
   },
 
   recordCtaClick: async (noticeId: string) => {
-    set(state => markReadInState(state, noticeId));
-    await recordNoticeCtaClickAction(noticeId);
+    set((state) => markReadInState(state, noticeId));
+    await recordNoticeCtaClick(noticeId);
   },
 
   markBatchAsRead: async (noticeIds: string[]) => {
     if (noticeIds.length === 0) return;
     // 楽観的 UI 更新
-    set(state => {
+    set((state) => {
       const readSet = new Set(noticeIds);
-      const prevUnreadInBatch = state.notices.filter(
-        n => readSet.has(n.notice_id) && !n.is_read
-      ).length;
+      const prevUnreadInBatch = state.notices.filter((n) => readSet.has(n.notice_id) && !n.is_read).length;
       return {
-        notices: state.notices.map(n =>
-          readSet.has(n.notice_id) ? { ...n, is_read: true } : n
-        ),
+        notices: state.notices.map((n) => (readSet.has(n.notice_id) ? { ...n, is_read: true } : n)),
         unreadCount: Math.max(0, state.unreadCount - prevUnreadInBatch),
-        dialogNotices: state.dialogNotices.filter(n => !readSet.has(n.notice_id)),
+        dialogNotices: state.dialogNotices.filter((n) => !readSet.has(n.notice_id)),
       };
     });
-    await markNoticesAsReadBatchAction(noticeIds);
+    await markNoticesAsReadBatch(noticeIds);
   },
 
   dismissDialog: () => {

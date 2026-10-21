@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Check, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
+import { useMemo, useRef, useState } from 'react';
+import { type CalendarEventCoachOption } from '@gabby/types/calendarEvent';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { CalendarEventCoachOption } from '@gabby/types/calendarEvent';
+import { cn } from '@/lib/utils';
 
 interface CalendarEventCoachPickerProps {
   coaches: CalendarEventCoachOption[];

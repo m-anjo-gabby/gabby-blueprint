@@ -25,7 +25,6 @@ CREATE TABLE public.com_m_notice (
     published_at             timestamp with time zone NOT NULL,
     expired_at               timestamp with time zone,
     is_published             boolean      NOT NULL DEFAULT false,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     display_mode             character varying(10) NOT NULL DEFAULT 'LIST'::character varying,
@@ -34,15 +33,17 @@ CREATE TABLE public.com_m_notice (
     cta_url                  text,
     CONSTRAINT chk_notice_coach_display CHECK (target_type::text <> 'COACH'::text OR display_mode::text <> 'HOME'::text AND image_path IS NULL AND cta_url IS NULL),
     CONSTRAINT chk_notice_cta CHECK ((cta_label IS NULL) = (cta_url IS NULL) AND (cta_label IS NULL OR char_length(cta_label) >= 1 AND char_length(cta_label) <= 30) AND (cta_url IS NULL OR cta_url ~ '^(/([^/]|$)|https://)'::text)),
-    CONSTRAINT chk_notice_display_mode CHECK (display_mode::text = ANY (ARRAY['POPUP'::character varying, 'HOME'::character varying, 'LIST'::character varying]::text[])),
-    CONSTRAINT chk_notice_target CHECK (target_type::text = 'ALL'::text AND client_id IS NULL OR target_type::text = 'CLIENT'::text AND client_id IS NOT NULL OR target_type::text = 'COACH'::text AND client_id IS NULL)
+    CONSTRAINT chk_notice_display_mode CHECK (display_mode::text = ANY (ARRAY['POPUP'::character varying::text, 'HOME'::character varying::text, 'LIST'::character varying::text])),
+    CONSTRAINT chk_notice_notice_type CHECK (notice_type::text = ANY (ARRAY['INFO'::text, 'CAMPAIGN'::text, 'MAINTENANCE'::text, 'UPDATE'::text])),
+    CONSTRAINT chk_notice_target CHECK (target_type::text = 'ALL'::text AND client_id IS NULL OR target_type::text = 'CLIENT'::text AND client_id IS NOT NULL OR target_type::text = 'COACH'::text AND client_id IS NULL),
+    CONSTRAINT chk_notice_target_type CHECK (target_type::text = ANY (ARRAY['ALL'::text, 'CLIENT'::text, 'COACH'::text]))
 );
 
 COMMENT ON TABLE public.com_m_notice IS 'お知らせマスタ';
 COMMENT ON COLUMN public.com_m_notice.notice_id IS 'お知らせID';
 COMMENT ON COLUMN public.com_m_notice.target_type IS '配信対象タイプ (ALL: 全体 / CLIENT: 顧客単位)';
 COMMENT ON COLUMN public.com_m_notice.client_id IS '対象顧客ID (target_typeがCLIENTの場合に使用)';
-COMMENT ON COLUMN public.com_m_notice.notice_type IS 'お知らせ種別 (INFO, CAMPAIGN, MAINTENANCE 等)';
+COMMENT ON COLUMN public.com_m_notice.notice_type IS 'お知らせ種別 (INFO, CAMPAIGN, MAINTENANCE, UPDATE)';
 COMMENT ON COLUMN public.com_m_notice.is_important IS '重要フラグ (重要バッジ表示用)';
 COMMENT ON COLUMN public.com_m_notice.title IS 'タイトル';
 COMMENT ON COLUMN public.com_m_notice.content IS '本文 (Markdown形式も想定)';
@@ -50,7 +51,6 @@ COMMENT ON COLUMN public.com_m_notice.attachments IS '添付ファイル情報 (
 COMMENT ON COLUMN public.com_m_notice.published_at IS '公開開始日時 (JST入力→UTC保持)';
 COMMENT ON COLUMN public.com_m_notice.expired_at IS '公開終了日時 (JST入力→UTC保持)';
 COMMENT ON COLUMN public.com_m_notice.is_published IS '公開フラグ (TRUE: 公開中 / FALSE: 下書き等)';
-COMMENT ON COLUMN public.com_m_notice.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_notice.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_notice.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_notice.display_mode IS '表示方法 (POPUP: ホームを開いた時にポップアップ / HOME: ホームのカード（生徒のみ） / LIST: お知らせ一覧のみ)';
@@ -59,12 +59,14 @@ COMMENT ON COLUMN public.com_m_notice.cta_label IS '行動ボタンの文言 (�
 COMMENT ON COLUMN public.com_m_notice.cta_url IS '行動ボタンのリンク先 (アプリ内の /... または https://...)';
 
 CREATE INDEX idx_notice_client ON public.com_m_notice (client_id) WHERE client_id IS NOT NULL;
-CREATE INDEX idx_notice_fetch ON public.com_m_notice (is_published, delete_flg, published_at, expired_at);
+CREATE INDEX idx_notice_fetch ON public.com_m_notice (is_published, published_at, expired_at);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_notice FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_notice ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view published notices for all or their client" ON public.com_m_notice FOR SELECT TO authenticated
 USING (
-    is_published = true AND delete_flg = '0'::text AND published_at <= now() AND (expired_at IS NULL OR expired_at > now()) AND (target_type::text = 'ALL'::text AND public.get_jwt_user_type() = '1'::text OR target_type::text = 'CLIENT'::text AND public.get_jwt_user_type() = '1'::text AND client_id = public.get_jwt_client_id() OR target_type::text = 'COACH'::text AND public.get_jwt_user_type() = '2'::text)
+    is_published = true AND published_at <= now() AND (expired_at IS NULL OR expired_at > now()) AND (target_type::text = 'ALL'::text AND public.get_jwt_user_type() = '1'::text OR target_type::text = 'CLIENT'::text AND public.get_jwt_user_type() = '1'::text AND client_id = public.get_jwt_client_id() OR target_type::text = 'COACH'::text AND public.get_jwt_user_type() = '2'::text)
 );
 -- @end-schema

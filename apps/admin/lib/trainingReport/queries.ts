@@ -1,28 +1,20 @@
 import { renderToBuffer } from '@react-pdf/renderer';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { reportingMonthRange } from '@gabby/lib/date/reporting';
-import { createLogger } from '@gabby/lib/logger';
 import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfile';
 import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
+import { reportingMonthRange } from '@gabby/lib/date/reporting';
+import { createLogger } from '@gabby/lib/logger';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { DOCUMENT_ISSUER } from '@gabby/types/companyProfile';
-import { USER_TYPES } from '@gabby/types/user';
 import type { TrainingReportData, TrainingReportTarget } from '@gabby/types/trainingReport';
 import { TrainingReportDocument } from '@/lib/pdf/TrainingReportDocument';
 
 const logger = createLogger('admin');
 
-/** 呼び出し元が管理者か（PDFのダウンロードURLで使う。画面遷移は proxy.ts でも弾いている） */
-export async function isAdminRequest(): Promise<boolean> {
-  const user = await getAuthUser();
-  return user?.app_metadata?.user_type === USER_TYPES.ADMIN;
-}
-
 /**
  * 満了日が指定月（集計期間のタイムゾーン＝日本時間）にあるライセンスの一覧。fetchedAt は取得時刻（期限を過ぎたかの判定に使う）
  */
 export async function fetchTrainingReportTargets(
-  yearMonth: string
+  yearMonth: string,
 ): Promise<{ targets: TrainingReportTarget[]; fetchedAt: number } | null> {
   const { from, to } = reportingMonthRange(yearMonth);
   const { data, error } = await createAdminClient().rpc('get_training_report_targets', { p_from: from, p_to: to });
@@ -38,24 +30,33 @@ export async function fetchTrainingReportData(licenseIds: string[]): Promise<Tra
   if (licenseIds.length === 0) return [];
   const { data, error } = await createAdminClient().rpc('get_training_report_data', { p_license_ids: licenseIds });
   if (error) {
-    logger.error('admin:get_training_report_data_failed', error.message, { err: error, payload: { count: licenseIds.length } });
+    logger.error('admin:get_training_report_data_failed', error.message, {
+      err: error,
+      payload: { count: licenseIds.length },
+    });
     return null;
   }
   return (data ?? []) as TrainingReportData[];
 }
 
 /** 契約に紐づくライセンス（＝一括作成の対象） */
-export async function fetchContractLicenseIds(contractId: string): Promise<{ contractName: string; licenseIds: string[] } | null> {
+export async function fetchContractLicenseIds(
+  contractId: string,
+): Promise<{ contractName: string; licenseIds: string[] } | null> {
   const admin = createAdminClient();
   const [{ data: contract, error: contractError }, { data: licenses, error: licenseError }] = await Promise.all([
     admin.from('com_m_contract').select('contract_name').eq('contract_id', contractId).maybeSingle(),
     admin.from('com_t_user_license').select('license_id').eq('contract_id', contractId),
   ]);
   if (contractError || licenseError || !contract) {
-    logger.error('admin:get_contract_licenses_failed', contractError?.message ?? licenseError?.message ?? 'contract not found', {
-      err: contractError,
-      payload: { contractId },
-    });
+    logger.error(
+      'admin:get_contract_licenses_failed',
+      contractError?.message ?? licenseError?.message ?? 'contract not found',
+      {
+        err: contractError,
+        payload: { contractId },
+      },
+    );
     return null;
   }
   return { contractName: contract.contract_name, licenseIds: (licenses ?? []).map((l) => l.license_id) };

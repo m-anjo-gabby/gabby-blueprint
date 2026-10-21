@@ -1,22 +1,22 @@
 import { type NextRequest } from 'next/server';
 import {
+  decodeImpersonationCookie,
+  IMPERSONATION_COOKIE_NAME,
+  IMPERSONATION_REQUEST_HEADER_ADMIN_ID,
+  IMPERSONATION_REQUEST_HEADER_ID,
+  isImpersonationExpired,
+} from '@gabby/lib/impersonation';
+import { createRequestLogger } from '@gabby/lib/logger';
+import {
   createSupabaseProxy,
+  isDefaultPublicRoute,
+  logPageView,
+  redirectAfterLogin,
   redirectAndClearSession,
   redirectTo,
   redirectToLogin,
-  redirectAfterLogin,
-  isDefaultPublicRoute,
-  logPageView,
 } from '@gabby/lib/proxy-base';
-import { createRequestLogger } from '@gabby/lib/logger';
 import { USER_TYPES } from '@gabby/types/user';
-import {
-  IMPERSONATION_COOKIE_NAME,
-  IMPERSONATION_REQUEST_HEADER_ID,
-  IMPERSONATION_REQUEST_HEADER_ADMIN_ID,
-  decodeImpersonationCookie,
-  isImpersonationExpired,
-} from '@gabby/lib/impersonation';
 
 // ディレクトリ構成に基づいた、生徒がアクセス可能な有効な画面ルートのホワイトリスト
 const VALID_STUDENT_ROUTES = [
@@ -69,7 +69,8 @@ export async function proxy(req: NextRequest) {
   // 公開ルートの判定
   const isPublicRoute = isDefaultPublicRoute(pathname, {
     // /mail/unsubscribe: メールのログイン不要の配信停止（署名で照合する）
-    extraExactPaths: ['/forgot-password', '/update-password', '/mail/unsubscribe'],
+    // /trial: Webトライアルの申込（コーポレートサイトからリンクする。CAPTCHA で守る）・/trial/complete: その受付完了
+    extraExactPaths: ['/forgot-password', '/update-password', '/mail/unsubscribe', '/trial', '/trial/complete'],
     extraPrefixes: ['/auth'],
   });
 
@@ -93,7 +94,7 @@ export async function proxy(req: NextRequest) {
     logger.warn('proxy:admin_access_denied', `Admin session detected in student app (User ID: ${user.id})`, {
       userId: user.id,
       path: pathname,
-      payload: { userType }
+      payload: { userType },
     });
 
     return redirectAndClearSession(req, loginPath);
@@ -104,7 +105,7 @@ export async function proxy(req: NextRequest) {
     logger.error('proxy:license_check_failed', `License check failed (User ID: ${user.id})`, {
       userId: user.id,
       path: pathname,
-      payload: { appMetadata: user.app_metadata }
+      payload: { appMetadata: user.app_metadata },
     });
 
     return redirectAndClearSession(req, loginPath);
@@ -130,7 +131,9 @@ export async function proxy(req: NextRequest) {
 
   // --- C-2. 直接入力および無効なアドレスへのアクセス制御 ---
   // 公開ルート（メールリンク等）ではなく、かつ定義された有効な生徒ルート（ホワイトリスト）にも前方一致しない場合
-  const isValidStudentRoute = VALID_STUDENT_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`));
+  const isValidStudentRoute = VALID_STUDENT_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
 
   if (!isPublicRoute && !isValidStudentRoute) {
     logger.info('proxy:invalid_route_redirect', `Invalid path direct access redirected to dashboard: ${pathname}`, {
@@ -143,9 +146,18 @@ export async function proxy(req: NextRequest) {
   // --- D. アクセスログの記録 ---
   // Server Action (POSTリクエスト) は proxy:page_view ログから完全に除外する
   // これにより、通信頻度の高い学習中の実績同期ログが画面アクセスログと混ざるのを防ぐ
-  logPageView(logger, req, user, pathname, isPublicRoute, impersonation ? {
-    payload: { impersonationId: impersonation.id, adminId: impersonation.adminId },
-  } : undefined);
+  logPageView(
+    logger,
+    req,
+    user,
+    pathname,
+    isPublicRoute,
+    impersonation
+      ? {
+          payload: { impersonationId: impersonation.id, adminId: impersonation.adminId },
+        }
+      : undefined,
+  );
 
   return res;
 }

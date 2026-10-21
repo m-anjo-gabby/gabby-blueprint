@@ -1,5 +1,5 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * E2Eで使う固定アカウント（testing/FIXTURES.md「状態ペルソナ一覧」の一部）。
@@ -7,20 +7,22 @@ import { fileURLToPath } from "node:url";
  */
 export const PERSONAS = {
   /** ライブセッション付き契約あり（チャットタブが表示される） */
-  liveStudent: { email: "qa-student-01@gabby-qa-test.example" },
+  liveStudent: { email: 'qa-student-01@gabby-qa-test.example' },
   /** アプリのみ契約＋monitorロール（ライブセッションは紹介画面、モニタータブが表示される） */
-  monitorStudent: { email: "qa-student-02@gabby-qa-test.example" },
+  monitorStudent: { email: 'qa-student-02@gabby-qa-test.example' },
   /** ポップアップ検証用（専用テナント所属）。規約同意・お知らせの状態をテストが都度作り直す */
-  popupStudent: { email: "qa-student-07@gabby-qa-test.example" },
+  popupStudent: { email: 'qa-student-07@gabby-qa-test.example' },
   /** 利用者ペルソナ P01（アプリのみ・毎日学習）。表示崩れ・エラーが無いことの確認だけに使う */
-  dailyLearner: { email: "qa-p-student-01@gabby-qa-test.example" },
+  dailyLearner: { email: 'qa-p-student-01@gabby-qa-test.example' },
   /** 利用者ペルソナ P03（アプリのみ・土日だけ学習。連続日数が途切れる） */
-  weekendLearner: { email: "qa-p-student-03@gabby-qa-test.example" },
+  weekendLearner: { email: 'qa-p-student-03@gabby-qa-test.example' },
+  /** 利用者ペルソナ P10（お気に入りが多く、レベルが上がったため問題種別ごとに複数のレベルの問題がある）。お気に入りの一覧・絞り込みの確認に使う */
+  favoriteCollector: { email: 'qa-p-student-10@gabby-qa-test.example' },
 } as const;
 
 export type PersonaKey = keyof typeof PERSONAS;
 
-const AUTH_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "../.auth");
+const AUTH_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../.auth');
 
 /** ログイン状態（Cookie等）の保存先。git管理外 */
 export const storageStatePath = (key: PersonaKey): string => path.join(AUTH_DIR, `${key}.json`);
@@ -28,7 +30,7 @@ export const storageStatePath = (key: PersonaKey): string => path.join(AUTH_DIR,
 export function getPersonaPassword(): string {
   const password = process.env.QA_LIVE_SESSION_TEST_PASSWORD;
   if (!password) {
-    throw new Error("QA_LIVE_SESSION_TEST_PASSWORD が未設定です（testing/.env.local を確認してください）。");
+    throw new Error('QA_LIVE_SESSION_TEST_PASSWORD が未設定です（testing/.env.local を確認してください）。');
   }
   return password;
 }

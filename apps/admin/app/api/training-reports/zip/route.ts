@@ -1,13 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { zipSync } from 'fflate';
+import { NextResponse, type NextRequest } from 'next/server';
 import { TRAINING_REPORT_BULK_LIMIT } from '@gabby/types/trainingReport';
+import { checkAdminRoleForRoute, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
+import {
+  buildContentDisposition,
+  buildTrainingReportFileBase,
+  buildTrainingReportZipBase,
+} from '@/lib/trainingReport/format';
 import {
   fetchContractLicenseIds,
   fetchTrainingReportData,
-  isAdminRequest,
   renderTrainingReportPdfs,
 } from '@/lib/trainingReport/queries';
-import { buildContentDisposition, buildTrainingReportFileBase, buildTrainingReportZipBase } from '@/lib/trainingReport/format';
 
 // 認証(cookie)に依存し、作成のたびに最新のデータからPDFを作るため、静的キャッシュさせない
 export const dynamic = 'force-dynamic';
@@ -23,9 +27,8 @@ export async function GET(request: NextRequest) {
   if (!contractId) {
     return NextResponse.json({ error: 'contractId query parameter is required' }, { status: 400 });
   }
-  if (!(await isAdminRequest())) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  }
+  const { denied } = await checkAdminRoleForRoute(SYSTEM_ADMIN_ONLY);
+  if (denied) return denied;
 
   const contract = await fetchContractLicenseIds(contractId);
   if (!contract) {
@@ -60,7 +63,9 @@ export async function GET(request: NextRequest) {
     status: 200,
     headers: {
       'Content-Type': 'application/zip',
-      'Content-Disposition': buildContentDisposition(`${buildTrainingReportZipBase(contract.contractName, new Date())}.zip`),
+      'Content-Disposition': buildContentDisposition(
+        `${buildTrainingReportZipBase(contract.contractName, new Date())}.zip`,
+      ),
       'Cache-Control': 'no-store',
     },
   });

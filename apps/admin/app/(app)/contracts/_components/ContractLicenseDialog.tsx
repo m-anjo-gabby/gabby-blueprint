@@ -1,14 +1,12 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { startOfDay } from 'date-fns';
+import { AlertCircle, ArrowLeft, Ban, CheckCircle2, Loader2, UserPlus, Users } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useCallback, useMemo, useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type ContractDetail, type LicenseUserItem } from '@gabby/types/contract';
+import { assignLicenseToUser, getLicenseAssignmentUsers, invalidateUserLicense } from '@/actions/adminContractAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,18 +17,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Users, UserPlus, Ban, Loader2, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
-import { useTranslations } from 'next-intl'
-import { getLicenseAssignmentUsers, assignLicenseToUser, invalidateUserLicense } from '@/actions/adminContractAction'
-import { useToast } from '@gabby/lib/hooks/useToast'
-import { LicenseUserItem, ContractDetail } from '@gabby/types/contract'
-import { startOfDay } from 'date-fns'
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface Props {
+interface ContractLicenseDialogProps {
   contract: ContractDetail;
   children: React.ReactNode;
 }
@@ -39,17 +32,17 @@ interface Props {
  * ライセンス割当管理ダイアログ
  * 特定の契約に対して、ユーザーの割当（追加）および解除（削除）を行う
  */
-export function ContractLicenseDialog({ contract, children }: Props) {
-  const t = useTranslations('contracts.licenseDialog')
-  const tCommon = useTranslations('common')
+export function ContractLicenseDialog({ contract, children }: ContractLicenseDialogProps) {
+  const t = useTranslations('contracts.licenseDialog');
+  const tCommon = useTranslations('common');
   // --- 状態管理 ---
-  const [open, setOpen] = useState(false)
-  const [isAddMode, setIsAddMode] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [assignedUsers, setAssignedUsers] = useState<LicenseUserItem[]>([])
-  const [unassignedUsers, setUnassignedUsers] = useState<LicenseUserItem[]>([])
-  
-  const { showToast } = useToast()
+  const [open, setOpen] = useState(false);
+  const [isAddMode, setIsAddMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [assignedUsers, setAssignedUsers] = useState<LicenseUserItem[]>([]);
+  const [unassignedUsers, setUnassignedUsers] = useState<LicenseUserItem[]>([]);
+
+  const { showToast } = useToast();
 
   // 契約終了判定
   // "YYYY-MM-DD"（JSTの日付文字列）をそのままnew Date()に渡すとUTC 00:00として解釈され、
@@ -59,26 +52,26 @@ export function ContractLicenseDialog({ contract, children }: Props) {
   }, [contract.end_date]);
 
   // --- 算出プロパティ ---
-  const isLicenseFull = useMemo(() => 
-    assignedUsers.length >= contract.max_licenses, 
-    [assignedUsers.length, contract.max_licenses]
-  )
+  const isLicenseFull = useMemo(
+    () => assignedUsers.length >= contract.max_licenses,
+    [assignedUsers.length, contract.max_licenses],
+  );
 
   /**
    * 割当状況・未割当ユーザーの一覧を取得
    */
   const loadData = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const data = await getLicenseAssignmentUsers(contract.contract_id, contract.client_id)
-      setAssignedUsers(data.assignedUsers)
-      setUnassignedUsers(data.unassignedUsers)
-    } catch (error) {
-      showToast(t('toastFetchFailed'), 'error')
+      const data = await getLicenseAssignmentUsers(contract.contract_id, contract.client_id);
+      setAssignedUsers(data.assignedUsers);
+      setUnassignedUsers(data.unassignedUsers);
+    } catch {
+      showToast(t('toastFetchFailed'), 'error');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [contract.contract_id, contract.client_id, showToast, t])
+  }, [contract.contract_id, contract.client_id, showToast, t]);
 
   // --- ハンドラー ---
 
@@ -86,76 +79,69 @@ export function ContractLicenseDialog({ contract, children }: Props) {
    * ライセンス無効化
    */
   const handleInvalidate = async (licenseId: string) => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await invalidateUserLicense(licenseId)
+      const res = await invalidateUserLicense(licenseId);
       if (res.success) {
-        showToast(t('toastInvalidated'), 'success')
-        await loadData()
+        showToast(t('toastInvalidated'), 'success');
+        await loadData();
       } else {
-        showToast(res.message || t('toastInvalidateFailed'), 'error')
-        setLoading(false)
+        showToast(res.message || t('toastInvalidateFailed'), 'error');
+        setLoading(false);
       }
     } catch {
-      showToast(t('toastNetworkError'), 'error')
-      setLoading(false)
+      showToast(t('toastNetworkError'), 'error');
+      setLoading(false);
     }
-  }
+  };
 
   /**
    * ライセンス割当
    */
   const handleAdd = async (userId: string) => {
     if (isLicenseFull) {
-      showToast(t('toastLimitReached'), 'error')
-      return
+      showToast(t('toastLimitReached'), 'error');
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await assignLicenseToUser(
-        contract.contract_id, 
-        userId, 
-        contract.start_date, 
-        contract.end_date
-      )
+      const res = await assignLicenseToUser(contract.contract_id, userId, contract.start_date, contract.end_date);
       if (res.success) {
-        showToast(t('toastAdded'), 'success')
-        await loadData()
-        setIsAddMode(false)
+        showToast(t('toastAdded'), 'success');
+        await loadData();
+        setIsAddMode(false);
       } else {
-        showToast(res.message || t('toastAddFailed'), 'error')
-        setLoading(false)
+        showToast(res.message || t('toastAddFailed'), 'error');
+        setLoading(false);
       }
     } catch {
-      showToast(t('toastNetworkError'), 'error')
-      setLoading(false)
+      showToast(t('toastNetworkError'), 'error');
+      setLoading(false);
     }
-  }
+  };
 
   /**
    * ダイアログ開閉時の処理
    */
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen)
-    
+    setOpen(nextOpen);
+
     if (nextOpen) {
       // 開くときは必ず一覧モードから開始し、最新データをロード
-      setIsAddMode(false)
-      loadData()
+      setIsAddMode(false);
+      loadData();
     } else {
       // 閉じるときは状態をクリア（前回のリストを一瞬見せないため）
-      setAssignedUsers([])
-      setUnassignedUsers([])
-      setIsAddMode(false)
+      setAssignedUsers([]);
+      setUnassignedUsers([]);
+      setIsAddMode(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
 
       {/*
         max-w-lg: ユーザー行(アイコン+氏名/メール+チケット数+無効化ボタン)を横一列に収めるため、
@@ -178,23 +164,28 @@ export function ContractLicenseDialog({ contract, children }: Props) {
         <div className="p-6 bg-white">
           {/* ローディング表示 (初回一覧読み込み時のみ) */}
           {loading && !isAddMode && assignedUsers.length === 0 ? (
-            <div className="flex justify-center p-12"><Loader2 className="animate-spin text-brand-500" /></div>
+            <div className="flex justify-center p-12">
+              <Loader2 className="animate-spin text-brand-500" />
+            </div>
           ) : isAddMode ? (
             /* --- 追加モード UI --- */
             <div className="space-y-4">
               {/* 戻るボタンエリア */}
               <div className="flex items-center justify-between">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setIsAddMode(false)} 
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsAddMode(false)}
                   className="h-8 text-slate-500 hover:text-brand p-0 font-bold transition-colors"
                 >
                   <ArrowLeft size={16} className="mr-1" /> {t('back')}
                 </Button>
 
                 {isLicenseFull && (
-                  <Badge variant="destructive" className="bg-rose-50 text-rose-600 border-rose-100 text-[10px] font-bold shadow-none">
+                  <Badge
+                    variant="destructive"
+                    className="bg-rose-50 text-rose-600 border-rose-100 text-[10px] font-bold shadow-none"
+                  >
                     {t('limitReachedBadge')}
                   </Badge>
                 )}
@@ -224,9 +215,7 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                           <p className="text-sm font-bold text-slate-800 truncate group-hover:text-brand-900 transition-colors">
                             {user.user_name}
                           </p>
-                          <p className="text-[11px] text-slate-400 truncate font-medium">
-                            {user.email}
-                          </p>
+                          <p className="text-[11px] text-slate-400 truncate font-medium">{user.email}</p>
                         </div>
 
                         <Button
@@ -235,9 +224,10 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                           disabled={loading || isLicenseFull}
                           className={`
                             h-8 px-4 rounded-xl font-bold transition-all active:scale-95 shrink-0
-                            ${isLicenseFull
-                              ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                              : 'bg-brand hover:bg-brand-strong text-white shadow-md shadow-brand-100'
+                            ${
+                              isLicenseFull
+                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : 'bg-brand hover:bg-brand-strong text-white shadow-md shadow-brand-100'
                             }
                           `}
                         >
@@ -255,8 +245,8 @@ export function ContractLicenseDialog({ contract, children }: Props) {
               {!isExpired && (
                 /* 有効契約のみ追加可能 */
                 <div className="flex justify-end">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     disabled={isLicenseFull || loading}
                     onClick={() => setIsAddMode(true)}
                     className="bg-slate-900 hover:bg-slate-800 text-white gap-1.5 rounded-lg shadow-md transition-all active:scale-95"
@@ -273,65 +263,82 @@ export function ContractLicenseDialog({ contract, children }: Props) {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {assignedUsers.map(user => {
+                    {assignedUsers.map((user) => {
                       const isInvalidated = user.license_status === 0;
                       return (
-                      <div key={user.id} className={`flex items-center justify-between p-3 border rounded-xl group ${isInvalidated ? 'bg-slate-50 opacity-60' : 'bg-white shadow-sm'}`}>
-                        <div className="flex items-center gap-3 overflow-hidden min-w-0 flex-1">
-                          {isInvalidated ? (
-                            <Ban size={16} className="text-slate-400 shrink-0" />
-                          ) : (
-                            <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                          )}
-                          <div className="overflow-hidden min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className="text-sm font-bold text-slate-800 truncate">{user.user_name}</p>
-                              {isInvalidated && (
-                                <span className="shrink-0 text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full">{t('invalidatedBadge')}</span>
-                              )}
+                        <div
+                          key={user.id}
+                          className={`flex items-center justify-between p-3 border rounded-xl group ${isInvalidated ? 'bg-slate-50 opacity-60' : 'bg-white shadow-sm'}`}
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden min-w-0 flex-1">
+                            {isInvalidated ? (
+                              <Ban size={16} className="text-slate-400 shrink-0" />
+                            ) : (
+                              <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                            )}
+                            <div className="overflow-hidden min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-bold text-slate-800 truncate">{user.user_name}</p>
+                                {isInvalidated && (
+                                  <span className="shrink-0 text-[9px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full">
+                                    {t('invalidatedBadge')}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
                             </div>
-                            <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
+                            {contract.contract_type === 2 && user.ticket && (
+                              <Badge className="shrink-0 bg-brand-50 text-brand border-brand-100 hover:bg-brand-50 text-[10px] font-mono font-bold">
+                                {t('ticketUsage', {
+                                  used: user.ticket.used_sessions,
+                                  total: user.ticket.total_sessions,
+                                })}
+                              </Badge>
+                            )}
                           </div>
-                          {contract.contract_type === 2 && user.ticket && (
-                            <Badge className="shrink-0 bg-brand-50 text-brand border-brand-100 hover:bg-brand-50 text-[10px] font-mono font-bold">
-                              {t('ticketUsage', { used: user.ticket.used_sessions, total: user.ticket.total_sessions })}
-                            </Badge>
+
+                          {/* 無効化確認ダイアログ（有効契約かつ未無効化の場合のみ） */}
+                          {!isExpired && user.license_id && !isInvalidated && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={loading}
+                                  className="h-8 w-8 p-0 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors shrink-0"
+                                >
+                                  <Ban size={16} />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
+                                <AlertDialogHeader className="space-y-4">
+                                  <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto">
+                                    <AlertCircle size={32} />
+                                  </div>
+                                  <div className="text-center space-y-2">
+                                    <AlertDialogTitle className="text-xl font-black text-slate-800">
+                                      {t('invalidateConfirmTitle')}
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
+                                      {t('invalidateConfirmBody', { name: user.user_name ?? '' })}
+                                    </AlertDialogDescription>
+                                  </div>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="flex gap-3 sm:justify-center mt-6">
+                                  <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-slate-100 text-slate-500 font-bold hover:bg-slate-200">
+                                    {tCommon('cancel')}
+                                  </AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleInvalidate(user.license_id!)}
+                                    className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg shadow-rose-100 border-none"
+                                  >
+                                    {t('invalidateConfirmAction')}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           )}
                         </div>
-
-                        {/* 無効化確認ダイアログ（有効契約かつ未無効化の場合のみ） */}
-                        {!isExpired && user.license_id && !isInvalidated && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" disabled={loading} className="h-8 w-8 p-0 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors shrink-0">
-                                <Ban size={16} />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
-                              <AlertDialogHeader className="space-y-4">
-                                <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto">
-                                  <AlertCircle size={32} />
-                                </div>
-                                <div className="text-center space-y-2">
-                                  <AlertDialogTitle className="text-xl font-black text-slate-800">{t('invalidateConfirmTitle')}</AlertDialogTitle>
-                                  <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed">
-                                    {t('invalidateConfirmBody', { name: user.user_name })}
-                                  </AlertDialogDescription>
-                                </div>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter className="flex gap-3 sm:justify-center mt-6">
-                                <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-slate-100 text-slate-500 font-bold hover:bg-slate-200">{tCommon('cancel')}</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleInvalidate(user.license_id!)}
-                                  className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg shadow-rose-100 border-none"
-                                >
-                                  {t('invalidateConfirmAction')}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
                       );
                     })}
                   </div>
@@ -343,9 +350,9 @@ export function ContractLicenseDialog({ contract, children }: Props) {
 
         {/* フッターエリア */}
         <DialogFooter className="p-4 bg-slate-50 border-t flex justify-center">
-           <p className="text-[10px] text-slate-400 font-medium">{t('footerHint')}</p>
+          <p className="text-[10px] text-slate-400 font-medium">{t('footerHint')}</p>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

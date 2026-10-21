@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { useState } from 'react';
 import { formatUtcOffset } from '@gabby/lib/date/timezone';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { formatTimeInZone, getDeviceTimezone, hasTimezoneMismatch } from '../_lib/timezoneMismatch';
 
 /** 「このままにする」を選んだ「設定|端末」の組み合わせ（端末ごとの表示設定） */
@@ -28,7 +28,9 @@ const writeDismissed = (value: string) => {
 };
 
 const formatToday = (nowMs: number, timeZone: string) =>
-  new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(nowMs));
+  new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(
+    new Date(nowMs),
+  );
 
 interface TodayDateLineProps {
   nowMs: number;
@@ -53,9 +55,7 @@ export function TodayDateLine({ nowMs, timezone, settingTimezone, timezoneNames 
 
   const pairKey = settingTimezone && deviceTimezone ? `${settingTimezone}|${deviceTimezone}` : null;
   const showWarning =
-    pairKey !== null &&
-    dismissed !== pairKey &&
-    hasTimezoneMismatch(settingTimezone!, deviceTimezone!, nowMs);
+    pairKey !== null && dismissed !== pairKey && hasTimezoneMismatch(settingTimezone!, deviceTimezone!, nowMs);
 
   if (!showWarning) return <p className="text-sm text-ink-muted">{today}</p>;
 

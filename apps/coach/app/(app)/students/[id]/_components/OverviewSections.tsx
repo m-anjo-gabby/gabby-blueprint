@@ -1,19 +1,19 @@
 import { cache } from 'react';
+import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
+import { getAvailableDialogueContents, getStudentDialogueAssignments } from '@/actions/dialogueAction';
+import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
 import {
+  getContractTrainingReports,
   getStudentLiveSessionContracts,
-  getStudentSessionsByTicket,
   getStudentLiveSessionShortfalls,
   getStudentNotes,
-  getContractTrainingReports,
+  getStudentSessionsByTicket,
 } from '@/actions/studentAction';
-import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
-import { getStudentDialogueAssignments, getAvailableDialogueContents } from '@/actions/dialogueAction';
-import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
-import { LiveSessionHistoryCard } from './LiveSessionHistoryCard';
 import { CoachNotesCard } from './CoachNotesCard';
-import { TrainingReportCard } from './TrainingReportCard';
-import { LessonSprintCard } from './LessonSprintCard';
 import { DialoguePracticeCard } from './DialoguePracticeCard';
+import { LessonSprintCard } from './LessonSprintCard';
+import { LiveSessionHistoryCard } from './LiveSessionHistoryCard';
+import { TrainingReportCard } from './TrainingReportCard';
 
 /*
  * 生徒概要画面のカード単位のデータ取得。
@@ -59,7 +59,13 @@ export function preloadOverviewSections(studentId: string) {
   getReports(studentId).catch(ignore);
 }
 
-export async function LiveSessionHistorySection({ studentId, profile }: { studentId: string; profile: StudentOverviewProfile }) {
+export async function LiveSessionHistorySection({
+  studentId,
+  profile,
+}: {
+  studentId: string;
+  profile: StudentOverviewProfile;
+}) {
   const [{ contracts, initialContract, initialSessions }, shortfalls] = await Promise.all([
     getInitialLiveSessions(studentId),
     getShortfalls(studentId),
@@ -106,10 +112,7 @@ export async function CoachNotesSection({ studentId }: { studentId: string }) {
 }
 
 export async function TrainingReportSection({ studentId }: { studentId: string }) {
-  const [contracts, reports] = await Promise.all([
-    getContracts(studentId),
-    getReports(studentId),
-  ]);
+  const [contracts, reports] = await Promise.all([getContracts(studentId), getReports(studentId)]);
   // 直近5件の契約のみを表示し、それより古い分はtraining-reports一覧ページへ誘導する
   // (contractsはstart_date降順のため先頭5件で足りる)
   return <TrainingReportCard studentId={studentId} contracts={contracts.slice(0, 5)} initialReports={reports} />;

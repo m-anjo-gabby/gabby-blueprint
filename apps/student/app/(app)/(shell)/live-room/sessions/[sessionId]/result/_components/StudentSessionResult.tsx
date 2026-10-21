@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   BookOpen,
@@ -13,18 +12,20 @@ import {
   MessageCircle,
   MessageSquareText,
 } from 'lucide-react';
-import { formatDateTimeByZone } from '@gabby/lib/date/date';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useEffect, useState } from 'react';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
+import { formatDateTimeByZone } from '@gabby/lib/date/date';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
-import { SectionHeading, SessionResultPageHeader } from './SessionResultParts';
-import { getTrainingMetricConfig } from '@gabby/lib/content/ui';
 import type { SessionResultSummary } from '@gabby/types/session';
 import type { SessionHomeworkAttachment, SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import { SectionHeading, SessionResultPageHeader } from './SessionResultParts';
 
-interface Props {
+interface StudentSessionResultProps {
   session: SessionResultSummary;
   homework: SessionHomeworkEntry | null;
 }
@@ -35,7 +36,7 @@ interface Props {
  * 画面を開くと、宿題を開いたことがサーバー側で記録される（page.tsx。コーチの画面の「見たか」に使う）。
  * セクションは優先度順（サマリー→宿題→トレーニング→チャット履歴）に並べる。
  */
-export function StudentSessionResult({ session, homework }: Props) {
+export function StudentSessionResult({ session, homework }: StudentSessionResultProps) {
   const timezone = useTimezone();
   const [showCallLog, setShowCallLog] = useState(false);
   const coachIconUrl = getProfileIconUrl(session.counterpart_icon_path);
@@ -49,13 +50,17 @@ export function StudentSessionResult({ session, homework }: Props) {
         <section className="rounded-card border border-line bg-surface p-4 space-y-3">
           <div className="space-y-3">
             <p className="text-base sm:text-lg font-bold text-ink tracking-tight">
-              {formatDateTimeByZone(session.start_datetime, timezone, false)} 〜 {formatDateTimeByZone(session.end_datetime, timezone, false)}
+              {formatDateTimeByZone(session.start_datetime, timezone, false)} 〜{' '}
+              {formatDateTimeByZone(session.end_datetime, timezone, false)}
             </p>
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-control bg-brand-soft overflow-hidden flex items-center justify-center text-brand-500 shrink-0">
                 {coachIconUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={coachIconUrl} alt={session.counterpart_name} className="w-full h-full object-cover" />
+                  <ExternalImage
+                    src={coachIconUrl}
+                    alt={session.counterpart_name}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <GraduationCap size={20} />
                 )}
@@ -93,13 +98,19 @@ export function StudentSessionResult({ session, homework }: Props) {
                       <ul className="space-y-2">
                         {session.call_log.map((entry) => (
                           <li key={entry.call_log_id} className="flex items-start gap-2 text-xs">
-                            <span className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${entry.role === 'coach' ? 'bg-canvas text-ink-muted' : 'bg-brand-soft text-brand'}`}>
+                            <span
+                              className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${entry.role === 'coach' ? 'bg-canvas text-ink-muted' : 'bg-brand-soft text-brand'}`}
+                            >
                               {entry.left_at ? <LogOut size={11} /> : <LogIn size={11} />}
                             </span>
                             <span className="text-ink-soft">
-                              <span className="font-bold">{entry.role === 'coach' ? 'コーチ' : '自分'}</span>{' '}
-                              入室 {formatDateTimeByZone(entry.joined_at, timezone, false)}
-                              {entry.left_at ? <> ・ 退室 {formatDateTimeByZone(entry.left_at, timezone, false)}</> : <> ・ 接続中</>}
+                              <span className="font-bold">{entry.role === 'coach' ? 'コーチ' : '自分'}</span> 入室{' '}
+                              {formatDateTimeByZone(entry.joined_at, timezone, false)}
+                              {entry.left_at ? (
+                                <> ・ 退室 {formatDateTimeByZone(entry.left_at, timezone, false)}</>
+                              ) : (
+                                <> ・ 接続中</>
+                              )}
                             </span>
                           </li>
                         ))}
@@ -121,8 +132,12 @@ export function StudentSessionResult({ session, homework }: Props) {
           ) : (
             <>
               <div className="rounded-xl border border-line bg-canvas px-3.5 py-3 space-y-2">
-                <p className="text-[11px] font-bold text-ink-subtle">{formatDateTimeByZone(homework.insert_date, timezone, false)}</p>
-                <p className="text-sm text-ink-soft whitespace-pre-wrap wrap-break-word">{linkifyText(homework.homework_text)}</p>
+                <p className="text-[11px] font-bold text-ink-subtle">
+                  {formatDateTimeByZone(homework.insert_date, timezone, false)}
+                </p>
+                <p className="text-sm text-ink-soft whitespace-pre-wrap wrap-break-word">
+                  {linkifyText(homework.homework_text)}
+                </p>
                 {homework.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {homework.attachments.map((attachment) => (
@@ -143,10 +158,17 @@ export function StudentSessionResult({ session, homework }: Props) {
                 ) : (
                   <div className="space-y-3">
                     {homework.comments.map((comment) => (
-                      <div key={comment.comment_id} className="rounded-xl border border-line bg-canvas px-3.5 py-3 space-y-2">
-                        <p className="text-[11px] font-bold text-ink-subtle">{formatDateTimeByZone(comment.insert_date, timezone, false)}</p>
+                      <div
+                        key={comment.comment_id}
+                        className="rounded-xl border border-line bg-canvas px-3.5 py-3 space-y-2"
+                      >
+                        <p className="text-[11px] font-bold text-ink-subtle">
+                          {formatDateTimeByZone(comment.insert_date, timezone, false)}
+                        </p>
                         {comment.comment_text && (
-                          <p className="text-sm text-ink-soft whitespace-pre-wrap wrap-break-word">{linkifyText(comment.comment_text)}</p>
+                          <p className="text-sm text-ink-soft whitespace-pre-wrap wrap-break-word">
+                            {linkifyText(comment.comment_text)}
+                          </p>
                         )}
                         {comment.attachments.length > 0 && (
                           <div className="flex flex-wrap gap-2">
@@ -175,10 +197,15 @@ export function StudentSessionResult({ session, homework }: Props) {
             ) : (
               <ul className="space-y-2">
                 {session.sprint_log.map((entry) => (
-                  <li key={entry.lesson_sprint_id} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-line bg-canvas">
+                  <li
+                    key={entry.lesson_sprint_id}
+                    className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-line bg-canvas"
+                  >
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-ink-soft truncate">{entry.content_name}</p>
-                      <p className="text-[11px] text-ink-subtle">{formatDateTimeByZone(entry.insert_date, timezone, false)}</p>
+                      <p className="text-[11px] text-ink-subtle">
+                        {formatDateTimeByZone(entry.insert_date, timezone, false)}
+                      </p>
                     </div>
                     <span className="shrink-0 text-[11px] font-bold text-brand bg-brand-soft border border-brand-100 rounded-full px-2.5 py-1">
                       {entry.average_score !== null ? `${entry.average_score}/5` : '—'}
@@ -211,8 +238,13 @@ export function StudentSessionResult({ session, homework }: Props) {
           ) : (
             <ul className="space-y-2">
               {session.chat_log.map((entry) => (
-                <li key={entry.chat_id} className={`text-xs ${entry.sender_role === 'student' ? 'text-right' : 'text-left'}`}>
-                  <p className="font-bold text-ink-subtle text-[11px]">{entry.sender_role === 'coach' ? 'コーチ' : '自分'}</p>
+                <li
+                  key={entry.chat_id}
+                  className={`text-xs ${entry.sender_role === 'student' ? 'text-right' : 'text-left'}`}
+                >
+                  <p className="font-bold text-ink-subtle text-[11px]">
+                    {entry.sender_role === 'coach' ? 'コーチ' : '自分'}
+                  </p>
                   <p
                     className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg whitespace-pre-wrap wrap-break-word ${
                       entry.sender_role === 'student' ? 'bg-brand-soft text-brand-strong' : 'bg-canvas text-ink-soft'
@@ -259,8 +291,7 @@ function HomeworkAttachmentView({ attachment }: { attachment: SessionHomeworkAtt
   if (isImage) {
     return (
       <a href={url} target="_blank" rel="noopener noreferrer">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt={attachment.file_name} className="max-w-60 max-h-60 rounded-lg object-cover" />
+        <ExternalImage src={url} alt={attachment.file_name} className="max-w-60 max-h-60 rounded-lg object-cover" />
       </a>
     );
   }

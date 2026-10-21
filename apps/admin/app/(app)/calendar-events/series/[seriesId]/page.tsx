@@ -1,13 +1,13 @@
-import Link from 'next/link';
 import { Copy } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { BackLink, PageHeader } from '@/components/common/PageHeader';
 import { getTranslations } from 'next-intl/server';
-import { getCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
+import Link from 'next/link';
 import { getCoachesFilter } from '@/actions/adminCalendarEventAction';
+import { getCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
-import { CalendarEventTable } from '../../_components/CalendarEventTable';
+import { BackLink, PageHeader } from '@/components/common/PageHeader';
+import { Button } from '@/components/ui/button';
 import { SeriesFormDialog } from '../_components/SeriesFormDialog';
+import { CalendarEventTable } from '../../_components/CalendarEventTable';
 import { AddSeriesSessionsDialog } from './_components/AddSeriesSessionsDialog';
 import { DeleteSeriesButton } from './_components/DeleteSeriesButton';
 
@@ -51,7 +51,12 @@ export default async function CalendarEventSeriesDetailPage({ params }: { params
                 </Link>
               </Button>
               <DeleteSeriesButton seriesId={series.series_id} title={series.title} />
-              <AddSeriesSessionsDialog seriesId={series.series_id} sessions={sessions} coaches={coaches} clients={clients} />
+              <AddSeriesSessionsDialog
+                seriesId={series.series_id}
+                sessions={sessions}
+                coaches={coaches}
+                clients={clients}
+              />
             </>
           }
         />

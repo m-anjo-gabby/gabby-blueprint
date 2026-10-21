@@ -17,7 +17,15 @@ export function MonitorAccountBadge() {
 }
 
 /** 受講生名（モニター用アカウントにはラベルを付ける） */
-export function MonitorUserName({ name, isMonitor, className }: { name: string | null; isMonitor: boolean; className?: string }) {
+export function MonitorUserName({
+  name,
+  isMonitor,
+  className,
+}: {
+  name: string | null;
+  isMonitor: boolean;
+  className?: string;
+}) {
   return (
     <span className={cn('flex min-w-0 items-center gap-1.5', className)}>
       <span className="truncate font-semibold text-ink">{name || '未設定'}</span>
@@ -89,7 +97,15 @@ export function MonitorDayCard({ date, metrics, children }: MonitorDayCardProps)
 }
 
 /** 履歴カードの1行（受講生・教材・実績）。md 以上では3列に揃える */
-export function MonitorDayRow({ user, content, metrics }: { user: React.ReactNode; content: React.ReactNode; metrics: React.ReactNode }) {
+export function MonitorDayRow({
+  user,
+  content,
+  metrics,
+}: {
+  user: React.ReactNode;
+  content: React.ReactNode;
+  metrics: React.ReactNode;
+}) {
   return (
     <li className="grid grid-cols-1 gap-1.5 px-4 py-3 text-sm md:grid-cols-12 md:items-center md:gap-4 sm:px-5">
       <div className="min-w-0 md:col-span-3">{user}</div>

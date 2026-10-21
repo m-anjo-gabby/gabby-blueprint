@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
 import { clientLogger } from '@gabby/lib/logger/client';
+import type { MonitorUser, MonitorWordSummaryHistoryItem } from '@/actions/monitorAction';
 import { cn } from '@/lib/utils';
 import { HistoryEmpty, HistoryMetric } from '../../training/_components/HistoryParts';
 import { MonitorFilterBar } from './MonitorFilterBar';
@@ -43,7 +43,7 @@ export function MonitorWordHistoryView({ initialData, users, query }: MonitorWor
     navigate(patch);
   };
 
-  const handleExportCSV = () => {
+  const handleExportCsv = () => {
     clientLogger.info('monitor:word_history_csv_exported', `Word history CSV exported: ${startDate}~${endDate}`, {
       payload: { startDate, endDate, targetUserIds: userIds, rowCount: initialData.length },
     });
@@ -56,12 +56,12 @@ export function MonitorWordHistoryView({ initialData, users, query }: MonitorWor
         s.word_count,
         s.phrase_count,
         s.assessment_count,
-      ])
+      ]),
     );
     downloadCsv(
       `blueprint_word_drill_history_${startDate}_to_${endDate}${includeMonitor ? '_with_monitor' : ''}.csv`,
       ['日付', '受講生名', 'トレーニング教材', '単語数', 'フレーズ数', '発話評価数'],
-      rows
+      rows,
     );
   };
 
@@ -76,7 +76,7 @@ export function MonitorWordHistoryView({ initialData, users, query }: MonitorWor
         selectedUserIds={userIds}
         onApply={applyFilters}
         isPending={isPending}
-        onExport={handleExportCSV}
+        onExport={handleExportCsv}
         exportDisabled={initialData.length === 0}
       />
 
@@ -95,7 +95,8 @@ export function MonitorWordHistoryView({ initialData, users, query }: MonitorWor
         ) : (
           pagedDates.map((date) => {
             const sessions = groups.get(date) ?? [];
-            const sum = (key: 'word_count' | 'phrase_count' | 'assessment_count') => sessions.reduce((acc, s) => acc + s[key], 0);
+            const sum = (key: 'word_count' | 'phrase_count' | 'assessment_count') =>
+              sessions.reduce((acc, s) => acc + s[key], 0);
 
             return (
               <MonitorDayCard
@@ -113,7 +114,11 @@ export function MonitorWordHistoryView({ initialData, users, query }: MonitorWor
                   <MonitorDayRow
                     key={`${s.user_id}-${s.content_id}`}
                     user={<MonitorUserName name={s.com_m_user?.user_name} isMonitor={monitorIds.has(s.user_id)} />}
-                    content={<span className="block truncate text-ink-soft">{s.com_m_contents?.content_name || '教材名なし'}</span>}
+                    content={
+                      <span className="block truncate text-ink-soft">
+                        {s.com_m_contents?.content_name || '教材名なし'}
+                      </span>
+                    }
                     metrics={
                       <>
                         <HistoryMetric metric="word" label="単語" value={s.word_count} />

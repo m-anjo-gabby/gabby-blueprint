@@ -1,6 +1,7 @@
 'use client';
-import { useConfirmStore } from '../stores/useConfirmStore';
+
 import { useCallback } from 'react';
+import { useConfirmStore } from '../stores/useConfirmStore';
 
 export const useConfirm = () => {
   const openConfirm = useConfirmStore((state) => state.openConfirm);
@@ -20,7 +21,7 @@ export const useConfirm = () => {
         isModal?: boolean;
         confirmText?: string;
         cancelText?: string;
-      } = {}
+      } = {},
     ) => {
       // ストアのアクションを呼び出して結果を待機
       return await openConfirm({
@@ -32,7 +33,7 @@ export const useConfirm = () => {
         cancelText: options.cancelText,
       });
     },
-    [openConfirm]
+    [openConfirm],
   );
 
   return { showConfirm };

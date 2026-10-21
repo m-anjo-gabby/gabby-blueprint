@@ -92,9 +92,7 @@ export function createAudioOwnerId(): number {
 
 function getAudioContextClass(): typeof AudioContext | null {
   if (typeof window === 'undefined') return null;
-  return window.AudioContext
-    || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-    || null;
+  return window.AudioContext || window.webkitAudioContext || null;
 }
 
 /**
@@ -130,7 +128,9 @@ function report(event: LogEventName, level: 'info' | 'warn', detail: Record<stri
         userAgent: navigator.userAgent,
       },
     });
-  } catch { /* 記録の失敗は再生に影響させない */ }
+  } catch {
+    /* 記録の失敗は再生に影響させない */
+  }
 }
 
 // ─── 音声再開の状態 ─────────────────────────────────────────────
@@ -147,18 +147,26 @@ export function getAudioResumeStatus(): AudioResumeStatus {
 
 export function subscribeAudioResumeStatus(listener: () => void): () => void {
   statusListeners.add(listener);
-  return () => { statusListeners.delete(listener); };
+  return () => {
+    statusListeners.delete(listener);
+  };
 }
 
 /** 中断・復旧の通知を受け取る */
 export function subscribeAudioLifecycle(listener: (event: AudioLifecycleEvent) => void): () => void {
   lifecycleListeners.add(listener);
-  return () => { lifecycleListeners.delete(listener); };
+  return () => {
+    lifecycleListeners.delete(listener);
+  };
 }
 
 function emitLifecycle(event: AudioLifecycleEvent) {
   lifecycleListeners.forEach((listener) => {
-    try { listener(event); } catch (e) { clientLogger.warn('audio:lifecycle_listener_failed', 'Audio lifecycle listener failed', { err: e }); }
+    try {
+      listener(event);
+    } catch (e) {
+      clientLogger.warn('audio:lifecycle_listener_failed', 'Audio lifecycle listener failed', { err: e });
+    }
   });
 }
 
@@ -168,16 +176,28 @@ function markFailed(reason: string) {
   try {
     const raw = window.sessionStorage.getItem(FAILURE_STORAGE_KEY);
     const previous = raw ? (JSON.parse(raw) as { path?: string; at?: number }) : null;
-    repeated = !!previous && previous.path === window.location.pathname
-      && typeof previous.at === 'number' && Date.now() - previous.at < FAILURE_REPEAT_WINDOW_MS;
-    window.sessionStorage.setItem(FAILURE_STORAGE_KEY, JSON.stringify({ path: window.location.pathname, at: Date.now() }));
-  } catch { /* 保存できない環境では「また失敗」を判定しない */ }
+    repeated =
+      !!previous &&
+      previous.path === window.location.pathname &&
+      typeof previous.at === 'number' &&
+      Date.now() - previous.at < FAILURE_REPEAT_WINDOW_MS;
+    window.sessionStorage.setItem(
+      FAILURE_STORAGE_KEY,
+      JSON.stringify({ path: window.location.pathname, at: Date.now() }),
+    );
+  } catch {
+    /* 保存できない環境では「また失敗」を判定しない */
+  }
   setResumeStatus(repeated ? 'failedAgain' : 'failed');
   report(repeated ? 'audio:recover_failed_again' : 'audio:recover_failed', 'warn', { reason });
 }
 
 function clearFailureMark() {
-  try { window.sessionStorage.removeItem(FAILURE_STORAGE_KEY); } catch { /* no-op */ }
+  try {
+    window.sessionStorage.removeItem(FAILURE_STORAGE_KEY);
+  } catch {
+    /* no-op */
+  }
 }
 
 /** 再生・発話を続けられなくなった。再生を止め、各プレイヤーに流れを止めさせる */
@@ -226,10 +246,11 @@ export function getAudioContext(): AudioContext | null {
 
 function resumeWithTimeout(context: AudioContext): Promise<void> {
   suspendedByUs = false;
-  return Promise.race([
-    context.resume(),
-    new Promise<void>((resolve) => setTimeout(resolve, RESUME_TIMEOUT_MS)),
-  ]).catch(() => { /* no-op */ });
+  return Promise.race([context.resume(), new Promise<void>((resolve) => setTimeout(resolve, RESUME_TIMEOUT_MS))]).catch(
+    () => {
+      /* no-op */
+    },
+  );
 }
 
 /** running で、かつ再生位置が進んでいるか（iOS は running なのに無音のことがある） */
@@ -276,7 +297,9 @@ function handleHidden() {
   interrupt('hidden');
   if (isRunning(context.state)) {
     suspendedByUs = true;
-    context.suspend().catch(() => { /* no-op */ });
+    context.suspend().catch(() => {
+      /* no-op */
+    });
   }
 }
 
@@ -284,7 +307,8 @@ function handleVisible() {
   const context = ctx;
   const hiddenMs = hiddenAt !== null ? Date.now() - hiddenAt : null;
   hiddenAt = null;
-  if (!context || !hasEverRun || !interruptionPending || resumeStatus === 'failed' || resumeStatus === 'failedAgain') return;
+  if (!context || !hasEverRun || !interruptionPending || resumeStatus === 'failed' || resumeStatus === 'failedAgain')
+    return;
   void tryRecoverWithoutGesture(context, 'auto').then((ok) => {
     if (ok || context !== ctx) return;
     setResumeStatus('needsResume');
@@ -348,7 +372,9 @@ function playSilentTick(context: AudioContext) {
     source.buffer = buffer;
     source.connect(context.destination);
     source.start(0);
-  } catch { /* no-op */ }
+  } catch {
+    /* no-op */
+  }
 }
 
 /**
@@ -381,7 +407,9 @@ export async function unlockAudio(): Promise<void> {
   stopActiveClip('interrupted');
   const old = context;
   context = createContext();
-  old.close().catch(() => { /* no-op */ });
+  old.close().catch(() => {
+    /* no-op */
+  });
   if (!context) return;
 
   playSilentTick(context);
@@ -398,7 +426,11 @@ function stopActiveClip(result: PlayClipResult = 'stopped') {
   const clip = activeClip;
   if (!clip) return;
   activeClip = null;
-  try { clip.source.stop(); } catch { /* no-op */ }
+  try {
+    clip.source.stop();
+  } catch {
+    /* no-op */
+  }
   clip.finish(result);
 }
 
@@ -414,7 +446,11 @@ export function stopAudioClip(ownerId?: number) {
 /** 再生中のクリップの再生速度を変える */
 export function setAudioClipRate(rate: number) {
   if (!activeClip) return;
-  try { activeClip.source.playbackRate.value = rate; } catch { /* no-op */ }
+  try {
+    activeClip.source.playbackRate.value = rate;
+  } catch {
+    /* no-op */
+  }
 }
 
 export function hasCachedAudioBuffer(url: string): boolean {
@@ -440,7 +476,9 @@ export function loadAudioBuffer(url: string, opts: { decodeTimeoutMs?: number } 
     const decoded = opts.decodeTimeoutMs
       ? await Promise.race([
           decode,
-          new Promise<AudioBuffer>((_, reject) => setTimeout(() => reject(new Error('decodeAudioData timeout')), opts.decodeTimeoutMs)),
+          new Promise<AudioBuffer>((_, reject) =>
+            setTimeout(() => reject(new Error('decodeAudioData timeout')), opts.decodeTimeoutMs),
+          ),
         ])
       : await decode;
     bufferCache.set(url, decoded);
@@ -449,8 +487,12 @@ export function loadAudioBuffer(url: string, opts: { decodeTimeoutMs?: number } 
 
   inflightLoads.set(url, load);
   load.then(
-    () => { inflightLoads.delete(url); },
-    () => { inflightLoads.delete(url); },
+    () => {
+      inflightLoads.delete(url);
+    },
+    () => {
+      inflightLoads.delete(url);
+    },
   );
   return load;
 }
@@ -523,8 +565,7 @@ function getChimeBuffer(): Promise<AudioBuffer | null> {
   if (chimePromise) return chimePromise;
   if (typeof window === 'undefined') return Promise.resolve(null);
 
-  const OfflineCtxClass = window.OfflineAudioContext
-    || (window as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext }).webkitOfflineAudioContext;
+  const OfflineCtxClass = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   if (!OfflineCtxClass) return Promise.resolve(null);
 
   const sampleRate = 44100;
@@ -544,10 +585,11 @@ function getChimeBuffer(): Promise<AudioBuffer | null> {
     osc.start(startAt);
     osc.stop(endAt);
   };
-  tone(659.25, 0, 0.65, 0.25);    // E5
-  tone(987.77, 0.10, 0.55, 0.45); // B5
+  tone(659.25, 0, 0.65, 0.25); // E5
+  tone(987.77, 0.1, 0.55, 0.45); // B5
 
-  chimePromise = offlineCtx.startRendering()
+  chimePromise = offlineCtx
+    .startRendering()
     .then((rendered) => {
       chimeBuffer = rendered;
       return rendered;
@@ -583,7 +625,10 @@ export async function playChimeSound(): Promise<void> {
       source.buffer = buffer;
       source.connect(gainNode);
       gainNode.connect(context.destination);
-      source.onended = () => { clearTimeout(safety); resolve(); };
+      source.onended = () => {
+        clearTimeout(safety);
+        resolve();
+      };
       source.start(0);
     } catch (e) {
       clientLogger.warn('audio:chime_play_failed', 'Chime playback failed', { err: e });

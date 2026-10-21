@@ -36,7 +36,12 @@ export function CalendarEventParticipantsTable({ data }: CalendarEventParticipan
           pageCount={list.pageCount}
           page={list.page}
         />
-        <DataTable columns={createColumns(t)} data={list.rows} getRowId={(row) => row.participant_id} emptyMessage={t('noParticipants')} />
+        <DataTable
+          columns={createColumns(t)}
+          data={list.rows}
+          getRowId={(row) => row.participant_id}
+          emptyMessage={t('noParticipants')}
+        />
       </div>
     </div>
   );

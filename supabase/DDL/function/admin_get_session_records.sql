@@ -1,6 +1,6 @@
 ---------------------------------------------
--- アドミンの「実施記録」一覧の取得RPC (2026-10-14 追加)
--- 前提: table/com_t_session.sql（2026-10-14パッチ）, table/com_t_session_outcome_history.sql,
+-- アドミンの「実施記録」一覧の取得RPC
+-- 前提: table/com_t_session.sql, table/com_t_session_outcome_history.sql,
 --       function/fn_assert_actor_or_admin.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】

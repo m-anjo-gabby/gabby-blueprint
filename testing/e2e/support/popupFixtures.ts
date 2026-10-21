@@ -1,5 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { createAdminClient } from "../../helpers/auth.ts";
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient } from '../../helpers/auth.ts';
 
 /**
  * ポップアップ検証用ペルソナ（qa-student-07、専用テナント）の状態を作り直すヘルパー。
@@ -7,8 +7,8 @@ import { createAdminClient } from "../../helpers/auth.ts";
  * お知らせは専用テナント限定（target_type='CLIENT'）で配信するため、他の利用者には表示されない。
  */
 
-const POPUP_CLIENT_NAME = "【QA固定】ポップアップ検証";
-const NOTICE_TITLE_PREFIX = "【QA固定】ポップアップ検証";
+const POPUP_CLIENT_NAME = '【QA固定】ポップアップ検証';
+const NOTICE_TITLE_PREFIX = '【QA固定】ポップアップ検証';
 
 export interface PopupFixture {
   admin: SupabaseClient;
@@ -19,18 +19,20 @@ export interface PopupFixture {
 export async function loadPopupFixture(): Promise<PopupFixture> {
   const admin = await createAdminClient();
   const { data: client, error: clientErr } = await admin
-    .from("com_m_client")
-    .select("client_id")
-    .eq("client_name", POPUP_CLIENT_NAME)
+    .from('com_m_client')
+    .select('client_id')
+    .eq('client_name', POPUP_CLIENT_NAME)
     .single();
   if (clientErr || !client) {
-    throw new Error(`${POPUP_CLIENT_NAME} が見つかりません。testing/features/fixtures/seed-fixed-accounts.ts を実行してください。`);
+    throw new Error(
+      `${POPUP_CLIENT_NAME} が見つかりません。testing/features/fixtures/seed-fixed-accounts.ts を実行してください。`,
+    );
   }
   const { data: user, error: userErr } = await admin
-    .from("com_m_user")
-    .select("id")
-    .eq("client_id", client.client_id)
-    .eq("user_type", "1")
+    .from('com_m_user')
+    .select('id')
+    .eq('client_id', client.client_id)
+    .eq('user_type', '1')
     .single();
   if (userErr || !user) throw new Error(`${POPUP_CLIENT_NAME} の生徒が見つかりません: ${userErr?.message}`);
   return { admin, clientId: client.client_id as string, userId: user.id as string };
@@ -38,13 +40,13 @@ export async function loadPopupFixture(): Promise<PopupFixture> {
 
 /** 規約の同意履歴を削除し、「最新規約に未同意」の状態にする（テスト内で画面から同意し直す） */
 export async function resetTermsAgreement({ admin, userId }: PopupFixture): Promise<void> {
-  const { error } = await admin.from("com_t_user_terms_agreement").delete().eq("user_id", userId);
+  const { error } = await admin.from('com_t_user_terms_agreement').delete().eq('user_id', userId);
   if (error) throw new Error(`規約同意履歴の削除に失敗: ${error.message}`);
 }
 
 /** 専用テナント宛てのお知らせをすべて削除する（既読行は ON DELETE CASCADE で消える） */
 export async function clearPopupNotices({ admin, clientId }: PopupFixture): Promise<void> {
-  const { error } = await admin.from("com_m_notice").delete().eq("client_id", clientId);
+  const { error } = await admin.from('com_m_notice').delete().eq('client_id', clientId);
   if (error) throw new Error(`お知らせの削除に失敗: ${error.message}`);
 }
 
@@ -54,22 +56,22 @@ export async function clearPopupNotices({ admin, clientId }: PopupFixture): Prom
  */
 export async function markOtherNoticesRead({ admin, clientId, userId }: PopupFixture): Promise<void> {
   const { data, error } = await admin
-    .from("com_m_notice")
-    .select("notice_id")
-    .in("display_mode", ["POPUP", "HOME"])
-    .eq("delete_flg", "0")
+    .from('com_m_notice')
+    .select('notice_id')
+    .in('display_mode', ['POPUP', 'HOME'])
     .or(`target_type.eq.ALL,and(target_type.eq.CLIENT,client_id.neq.${clientId})`);
   if (error) throw new Error(`お知らせの取得に失敗: ${error.message}`);
   if (!data?.length) return;
-  const { error: upsertErr } = await admin
-    .from("com_t_notice_read")
-    .upsert(data.map((n) => ({ notice_id: n.notice_id, user_id: userId })), { ignoreDuplicates: true });
+  const { error: upsertErr } = await admin.from('com_t_notice_read').upsert(
+    data.map((n) => ({ notice_id: n.notice_id, user_id: userId })),
+    { ignoreDuplicates: true },
+  );
   if (upsertErr) throw new Error(`既読化に失敗: ${upsertErr.message}`);
 }
 
 export interface PopupNoticeOptions {
   /** 表示方法（既定はポップアップ） */
-  displayMode?: "POPUP" | "HOME" | "LIST";
+  displayMode?: 'POPUP' | 'HOME' | 'LIST';
   /** 行動ボタン（文言とリンク先） */
   cta?: { label: string; url: string };
 }
@@ -78,13 +80,13 @@ export interface PopupNoticeOptions {
 export async function createPopupNotices(
   { admin, clientId }: PopupFixture,
   count: number,
-  { displayMode = "POPUP", cta }: PopupNoticeOptions = {},
+  { displayMode = 'POPUP', cta }: PopupNoticeOptions = {},
 ): Promise<string[]> {
   const now = Date.now();
   const rows = Array.from({ length: count }, (_, i) => ({
-    target_type: "CLIENT",
+    target_type: 'CLIENT',
     client_id: clientId,
-    notice_type: "INFO",
+    notice_type: 'INFO',
     display_mode: displayMode,
     cta_label: cta?.label ?? null,
     cta_url: cta?.url ?? null,
@@ -94,7 +96,7 @@ export async function createPopupNotices(
     // 表示順を安定させるため公開日時をずらす
     published_at: new Date(now - (i + 1) * 60_000).toISOString(),
   }));
-  const { error } = await admin.from("com_m_notice").insert(rows);
+  const { error } = await admin.from('com_m_notice').insert(rows);
   if (error) throw new Error(`お知らせの作成に失敗: ${error.message}`);
   return rows.map((r) => r.title);
 }
@@ -102,10 +104,10 @@ export async function createPopupNotices(
 /** 既読になっているお知らせのタイトル一覧 */
 export async function readNoticeTitles({ admin, clientId, userId }: PopupFixture): Promise<string[]> {
   const { data, error } = await admin
-    .from("com_t_notice_read")
-    .select("com_m_notice!inner(title, client_id)")
-    .eq("user_id", userId)
-    .eq("com_m_notice.client_id", clientId);
+    .from('com_t_notice_read')
+    .select('com_m_notice!inner(title, client_id)')
+    .eq('user_id', userId)
+    .eq('com_m_notice.client_id', clientId);
   if (error) throw new Error(`既読状態の取得に失敗: ${error.message}`);
   return (data ?? [])
     .flatMap((row) => {
@@ -118,11 +120,11 @@ export async function readNoticeTitles({ admin, clientId, userId }: PopupFixture
 /** 行動ボタンを押したお知らせのタイトル一覧 */
 export async function ctaClickedNoticeTitles({ admin, clientId, userId }: PopupFixture): Promise<string[]> {
   const { data, error } = await admin
-    .from("com_t_notice_read")
-    .select("com_m_notice!inner(title, client_id)")
-    .eq("user_id", userId)
-    .eq("com_m_notice.client_id", clientId)
-    .not("cta_clicked_at", "is", null);
+    .from('com_t_notice_read')
+    .select('com_m_notice!inner(title, client_id)')
+    .eq('user_id', userId)
+    .eq('com_m_notice.client_id', clientId)
+    .not('cta_clicked_at', 'is', null);
   if (error) throw new Error(`行動ボタンの記録の取得に失敗: ${error.message}`);
   return (data ?? [])
     .flatMap((row) => {

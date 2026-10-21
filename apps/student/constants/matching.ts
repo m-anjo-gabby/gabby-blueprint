@@ -1,4 +1,4 @@
-import { DayOfWeek } from '@gabby/types/coachAvailability';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
 
 /** 専属コーチマッチング機能の曜日ラベル（0:日 ... 6:土、com_m_coach_availability.day_of_weekに準拠） */
 export const DAY_OF_WEEK_LABEL_JA: Record<DayOfWeek, string> = {
@@ -67,12 +67,12 @@ export function slotMatchesFilter(
   startTime: string,
   endTime: string,
   selectedDays: Set<DayOfWeek>,
-  selectedTimeBuckets: Set<string>
+  selectedTimeBuckets: Set<string>,
 ): boolean {
   if (selectedDays.size > 0 && !selectedDays.has(day)) return false;
   if (selectedTimeBuckets.size > 0) {
     const bucketMatch = TIME_BUCKETS.some(
-      (bucket) => selectedTimeBuckets.has(bucket.key) && overlapsTimeBucket(startTime, endTime, bucket)
+      (bucket) => selectedTimeBuckets.has(bucket.key) && overlapsTimeBucket(startTime, endTime, bucket),
     );
     if (!bucketMatch) return false;
   }

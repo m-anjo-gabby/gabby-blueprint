@@ -1,17 +1,17 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { RouteLoading } from '@/components/common/RouteLoading';
+import { CalendarSkeleton } from '@/app/(app)/calendar/_components/CalendarSkeleton';
+import { DashboardSkeleton } from '@/app/(app)/dashboard/_components/DashboardLayout';
+import { StudentsRouteSkeleton } from '@/app/(app)/students/_components/StudentsRouteSkeleton';
 import { InboxPageSkeleton } from '@/components/common/InboxPageParts';
+import { RouteLoading } from '@/components/common/RouteLoading';
 import {
   AvailabilitySkeleton,
   MonthlyReportsSkeleton,
   ProfileRouteSkeleton,
   RequestsSkeleton,
 } from '@/components/common/ToolPageSkeletons';
-import { DashboardSkeleton } from '@/app/(app)/dashboard/_components/DashboardLayout';
-import { CalendarSkeleton } from '@/app/(app)/calendar/_components/CalendarSkeleton';
-import { StudentsRouteSkeleton } from '@/app/(app)/students/_components/StudentsRouteSkeleton';
 
 /**
  * アプリ全体（(app)/loading.tsx）の読み込み中表示。

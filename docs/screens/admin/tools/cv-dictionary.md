@@ -133,4 +133,4 @@
   `getCVDictionaryKeys`, `bulkUpsertCVDictionary`, `saveCVDictionaryAudio`,
   `getAllCVDictionaryEntries`。RPCは使わず
   `com_m_color_vowel_dictionary`テーブルとStorage `audio`バケットを直接操作する）
-- `packages/lib/azure/ssml.ts`（`buildSSML`）, `packages/lib/hooks/usePlayAzureSpeech`
+- `packages/lib/azure/ssml.ts`（`buildSsml`）, `packages/lib/hooks/usePlayAzureSpeech`

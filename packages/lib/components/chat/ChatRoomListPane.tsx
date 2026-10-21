@@ -1,19 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { MessageCircle, Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSelectedLayoutSegment } from 'next/navigation';
-import { MessageCircle, Search, X } from 'lucide-react';
-import { useUserStore } from '../../stores/useUserStore';
-import { useTimezone } from '../../hooks/useTimezone';
+import { useEffect, useMemo, useState } from 'react';
+import { CHAT_ROOM_TYPES, type ChatRoomListItem } from '@gabby/types/chat';
 import { getChatMessagePreviewText } from '../../chat/formatChatPreview';
 import { formatMessageHeaderTime } from '../../chat/messageGrouping';
 import { getChatRoomCounterpart, getChatRoomTitle, matchesChatRoomQuery } from '../../chat/roomDisplay';
+import { useTimezone } from '../../hooks/useTimezone';
+import { useUserStore } from '../../stores/useUserStore';
 import { cn } from '../../utils';
-import { CHAT_ROOM_TYPES, type ChatRoomListItem } from '@gabby/types/chat';
-import { getHeaderTimeLabels, useChatUi } from './ChatUiContext';
 import { Skeleton } from '../common/Skeleton';
 import { ChatAvatar } from './ChatAvatar';
+import { getHeaderTimeLabels, useChatUi } from './ChatUiContext';
 
 type ReadFilter = 'all' | 'unread';
 
@@ -54,9 +54,9 @@ export function ChatRoomListPane({ rooms, isLoading, headerAction, toolbar, empt
           ({ room, title }) =>
             // 開いているルームは既読になっても未読の絞り込みから消さない（読んでいる最中に一覧から消えないように）
             (readFilter === 'all' || room.unread_count > 0 || room.room_id === selectedRoomId) &&
-            matchesChatRoomQuery(room, title, query)
+            matchesChatRoomQuery(room, title, query),
         ),
-    [rooms, currentUserId, labels, readFilter, selectedRoomId, query]
+    [rooms, currentUserId, labels, readFilter, selectedRoomId, query],
   );
 
   // Alt + ↑/↓ で前後のルームへ（入力欄での操作中でも使えるよう window で受ける）
@@ -80,7 +80,7 @@ export function ChatRoomListPane({ rooms, isLoading, headerAction, toolbar, empt
       <div
         className={cn(
           'shrink-0 space-y-3 border-b px-4 pb-3 pt-4 transition-colors',
-          isListScrolled ? 'border-line' : 'border-transparent'
+          isListScrolled ? 'border-line' : 'border-transparent',
         )}
       >
         <div className="flex items-center justify-between gap-2">
@@ -120,7 +120,7 @@ export function ChatRoomListPane({ rooms, isLoading, headerAction, toolbar, empt
               onClick={() => setReadFilter(filter)}
               className={cn(
                 'flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition-colors',
-                readFilter === filter ? 'bg-brand-soft text-brand-strong' : 'text-ink-muted hover:bg-canvas'
+                readFilter === filter ? 'bg-brand-soft text-brand-strong' : 'text-ink-muted hover:bg-canvas',
               )}
             >
               {filter === 'all' ? labels.filterAll : labels.filterUnread}
@@ -212,7 +212,7 @@ function ChatRoomRow({ room, title, href, isActive, currentUserId, time }: ChatR
       aria-current={isActive ? 'page' : undefined}
       className={cn(
         'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
-        isActive ? 'bg-brand-soft' : 'hover:bg-canvas'
+        isActive ? 'bg-brand-soft' : 'hover:bg-canvas',
       )}
     >
       <ChatAvatar
@@ -224,7 +224,12 @@ function ChatRoomRow({ room, title, href, isActive, currentUserId, time }: ChatR
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className={cn('truncate text-sm', hasUnread || isActive ? 'font-bold text-ink' : 'font-medium text-ink-soft')}>
+          <p
+            className={cn(
+              'truncate text-sm',
+              hasUnread || isActive ? 'font-bold text-ink' : 'font-medium text-ink-soft',
+            )}
+          >
             {title}
           </p>
           {badge && <span className={cn('shrink-0 text-[11px] font-bold', badge.className)}>{badge.text}</span>}

@@ -1,17 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useEffect, useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { adjustTargetSessionsAsAdmin } from '@/actions/adminLiveSessionAction';
 import type { AdminScheduleSlotSummary } from '@gabby/types/adminLiveSession';
+import { adjustTargetSessionsAsAdmin } from '@/actions/adminLiveSessionAction';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
-interface Props {
+interface AdjustTargetSessionsDialogProps {
   target: AdminScheduleSlotSummary | null;
   onClose: () => void;
   onAdjusted: () => Promise<void> | void;
@@ -21,7 +28,7 @@ interface Props {
  * 定期スケジュール枠のtarget_sessions個別引き上げ（アドミン代理操作）。
  * total_sessions（契約全体）は変更しない例外措置のため、理由(reason)入力を必須とする。
  */
-export function AdjustTargetSessionsDialog({ target, onClose, onAdjusted }: Props) {
+export function AdjustTargetSessionsDialog({ target, onClose, onAdjusted }: AdjustTargetSessionsDialogProps) {
   const t = useTranslations('liveSessions.adjustTargetSessionsDialog');
   const { showToast } = useToast();
   const [newValue, setNewValue] = useState('');
@@ -85,14 +92,24 @@ export function AdjustTargetSessionsDialog({ target, onClose, onAdjusted }: Prop
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('reasonLabel')}</Label>
-            <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('reasonPlaceholder')} />
+            <Textarea
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={t('reasonPlaceholder')}
+            />
           </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => handleClose(false)} disabled={isSubmitting}>
             {t('close')}
           </Button>
-          <Button pending={isSubmitting} type="button" onClick={handleSubmit} disabled={isSubmitting || !isValueValid || !reason.trim()}>
+          <Button
+            pending={isSubmitting}
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !isValueValid || !reason.trim()}
+          >
             {t('confirmButton')}
           </Button>
         </DialogFooter>

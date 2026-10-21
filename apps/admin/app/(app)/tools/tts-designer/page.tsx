@@ -2,7 +2,7 @@ import { History, Sparkles } from 'lucide-react';
 import { getTTSAssets } from '@/actions/adminTTSAction';
 import { PageHeader } from '@/components/common/PageHeader';
 import { parseListParams, toPageCount, type RawSearchParams } from '@/lib/list';
-import TTSAssetGenerator from './_components/TTSAssetGenerator';
+import { TTSAssetGenerator } from './_components/TTSAssetGenerator';
 import { TTSAssetTable } from './_components/TTSAssetTable';
 
 /**

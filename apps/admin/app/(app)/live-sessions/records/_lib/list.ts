@@ -6,7 +6,14 @@
  */
 export const SESSION_RECORD_LIST_FILTERS = ['month', 'coach', 'result', 'via', 'review'] as const;
 
-export const SESSION_RECORD_RESULT_VALUES = ['unrecorded', 'completed', 'left_early', 'no_show', 'coach_absent', 'technical'] as const;
+export const SESSION_RECORD_RESULT_VALUES = [
+  'unrecorded',
+  'completed',
+  'left_early',
+  'no_show',
+  'coach_absent',
+  'technical',
+] as const;
 export const SESSION_RECORD_VIA_VALUES = ['app', 'external'] as const;
 
 /** 月の絞り込みの選択肢の数（今月から遡る） */

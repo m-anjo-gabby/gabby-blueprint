@@ -11,7 +11,6 @@ CREATE TABLE public.com_m_color_vowel (
     audio_path               text         NOT NULL,
     video_title              text,
     video_path               text,
-    delete_flg               integer      NOT NULL DEFAULT 0,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now()
 );
@@ -24,16 +23,15 @@ COMMENT ON COLUMN public.com_m_color_vowel.icon_path IS 'Storage内のアイコ�
 COMMENT ON COLUMN public.com_m_color_vowel.audio_path IS 'Storage内の音声ファイルパス';
 COMMENT ON COLUMN public.com_m_color_vowel.video_title IS '解説動画タイトル';
 COMMENT ON COLUMN public.com_m_color_vowel.video_path IS 'Storage内の動画ファイルパス';
-COMMENT ON COLUMN public.com_m_color_vowel.delete_flg IS '削除フラグ (0: 有効, 1: 削除済み)';
 COMMENT ON COLUMN public.com_m_color_vowel.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_color_vowel.update_date IS '更新日時';
 
-CREATE INDEX idx_com_m_color_vowel_lookup ON public.com_m_color_vowel (cv_id, delete_flg);
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_color_vowel FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_color_vowel ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view active color vowels" ON public.com_m_color_vowel FOR SELECT TO authenticated
 USING (
-    delete_flg = 0
+    true
 );
 -- @end-schema

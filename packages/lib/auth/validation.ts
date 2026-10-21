@@ -1,9 +1,9 @@
 import { AUTH_ERROR_MESSAGES_JA, type AuthErrorCode } from './errors';
 
 /**
- * 🔒 パスワードの強度を検証する共通関数
+ * パスワードの強度を検証する共通関数
  *
- * 💡 'use server' ディレクティブを持つ actions.ts から分離。
+ * 'use server' ディレクティブを持つ actions.ts から分離。
  * Server Actionsモジュールはエクスポートする関数を全てasyncにする必要があるため、
  * 同期的なバリデーション関数はこちらの純粋なユーティリティファイルに切り出す。
  */

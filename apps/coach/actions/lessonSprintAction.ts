@@ -1,24 +1,25 @@
 'use server';
 
 import {
-  getAvailableSprintContentsCore,
-  getLessonSprintQuestionsCore,
   createLessonSprintResultCore,
+  getAvailableSprintContentsCore,
   getLessonSprintHistoryCore,
   getLessonSprintHistoryPageCore,
+  getLessonSprintQuestionsCore,
   getLessonSprintResultCore,
   updateLessonSprintSessionNoteCore,
 } from '@gabby/lib/coachStudent/actions/lessonSprintActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import type { ActionResult } from '@gabby/types/action';
+import { type CoachStudentErrorCode } from '@gabby/types/coachStudent';
 import {
-  CreateLessonSprintResultInput,
-  LessonSprintContentSummary,
-  LessonSprintHistoryListItem,
-  LessonSprintRecord,
+  type CreateLessonSprintResultInput,
+  type LessonSprintContentSummary,
+  type LessonSprintHistoryListItem,
+  type LessonSprintRecord,
 } from '@gabby/types/lessonSprint';
-import { CoachStudentErrorCode } from '@gabby/types/coachStudent';
-import { SprintQuestion, SprintQuestionType } from '@gabby/types/sprint';
+import { type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 
 const logger = createLogger('coach');
 
@@ -31,8 +32,8 @@ const LESSON_SPRINT_ERROR_MESSAGES_EN: Record<CoachStudentErrorCode, string> = {
 };
 
 /**
- * Fetches the list of sprint contents a coach can pick from when starting a Lesson Sprint
- * for the given student (only contents published to the student's tenant)
+ * レッスンスプリントを始める時にコーチが選べるスプリントの教材の一覧を取得する
+ * （生徒の顧客に公開されている教材だけ）
  */
 export async function getAvailableSprintContents(studentId: string): Promise<LessonSprintContentSummary[]> {
   const result = await getAvailableSprintContentsCore(studentId);
@@ -45,13 +46,13 @@ export async function getAvailableSprintContents(studentId: string): Promise<Les
 }
 
 /**
- * Fetches a sampled set of sprint questions for the given content/type/level
+ * 教材・種別・レベルを指定して、スプリントの問題を抜き出して取得する
  */
 export async function getLessonSprintQuestions(
   contentId: string,
   questionType: SprintQuestionType,
-  difficultyLevel: number
-): Promise<{ success: true; questions: SprintQuestion[] } | { success: false; message: string }> {
+  difficultyLevel: number,
+): Promise<ActionResult<{ questions: SprintQuestion[] }>> {
   const result = await getLessonSprintQuestionsCore(contentId, questionType, difficultyLevel);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -62,11 +63,11 @@ export async function getLessonSprintQuestions(
 }
 
 /**
- * Saves a completed Lesson Sprint session's results
+ * 終わったレッスンスプリントの結果を保存する
  */
 export async function createLessonSprintResult(
-  input: CreateLessonSprintResultInput
-): Promise<{ success: true; lessonSprintId: string } | { success: false; message: string }> {
+  input: CreateLessonSprintResultInput,
+): Promise<ActionResult<{ lessonSprintId: string }>> {
   const result = await createLessonSprintResultCore(input);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -77,7 +78,7 @@ export async function createLessonSprintResult(
 }
 
 /**
- * Fetches this coach's Lesson Sprint history with the given student
+ * このコーチとその生徒のレッスンスプリントの履歴を取得する
  */
 export async function getLessonSprintHistory(studentId: string): Promise<LessonSprintHistoryListItem[]> {
   const result = await getLessonSprintHistoryCore(studentId);
@@ -90,14 +91,14 @@ export async function getLessonSprintHistory(studentId: string): Promise<LessonS
 }
 
 /**
- * Fetches one page of this coach's Lesson Sprint history with the given student,
- * ordered newest-first. Pass the previous page's `nextCursor` to fetch the next page;
- * a null `nextCursor` means there are no more pages.
+ * このコーチとその生徒のレッスンスプリントの履歴を、新しい順に1ページ分取得する。
+ * 次のページは前のページの `nextCursor` を渡して取得する。
+ * `nextCursor` が null なら、次のページは無い。
  */
 export async function getLessonSprintHistoryPage(
   studentId: string,
   cursor: string | null,
-  limit: number
+  limit: number,
 ): Promise<{ items: LessonSprintHistoryListItem[]; nextCursor: string | null }> {
   const result = await getLessonSprintHistoryPageCore(studentId, cursor, limit);
   if (!result.success) {
@@ -109,11 +110,11 @@ export async function getLessonSprintHistoryPage(
 }
 
 /**
- * Fetches one Lesson Sprint result with its questions reconstructed in play order
+ * レッスンスプリントの結果を1件、出題した順に組み立て直した問題とともに取得する
  */
 export async function getLessonSprintResult(
-  lessonSprintId: string
-): Promise<{ success: true; record: LessonSprintRecord; questions: SprintQuestion[] } | { success: false; message: string }> {
+  lessonSprintId: string,
+): Promise<ActionResult<{ record: LessonSprintRecord; questions: SprintQuestion[] }>> {
   const result = await getLessonSprintResultCore(lessonSprintId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -124,12 +125,12 @@ export async function getLessonSprintResult(
 }
 
 /**
- * Updates the session note on a completed Lesson Sprint result
+ * 終わったレッスンスプリントの結果のセッションのメモを更新する
  */
 export async function updateLessonSprintSessionNote(
   lessonSprintId: string,
-  sessionNote: string
-): Promise<{ success: true } | { success: false; message: string }> {
+  sessionNote: string,
+): Promise<ActionResult> {
   const trimmed = sessionNote.trim();
   const result = await updateLessonSprintSessionNoteCore(lessonSprintId, trimmed.length > 0 ? trimmed : null);
   if (!result.success) {

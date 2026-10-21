@@ -1,13 +1,12 @@
 ---------------------------------------------
--- 専属コーチのマッチングで、毎週の枠の1回分が予約できない（他の予定と重なる）かの判定 (2026-10-09 追加)
+-- 専属コーチのマッチングで、毎週の枠の1回分が予約できない（他の予定と重なる）かの判定
 -- 前提: table/com_t_session.sql, table/com_m_lesson_schedule.sql, table/com_t_matching_request.sql,
 --       table/com_t_coach_availability_exception.sql, table/com_t_user_session_ticket.sql, table/com_t_user_license.sql,
 --       function/fn_weekly_occurrences.sql の作成が完了していること。
 ---------------------------------------------
 -- 【背景】
--- 従来のマッチングは、コーチの他の定期スケジュールと1回でも重なれば申請・承認できなかった
--- （check_coach_schedule_conflict。申請カレンダーの×は get_coaches_unavailable_slots。どちらも 2026-10-09 に削除）。
--- 予約できる回数の割合で判断するようにしたため（fn_matching_slot_availability）、1回ずつ「予約できるか」を判定する。
+-- マッチングは、コーチの他の予定と重なる回があっても、予約できる回数の割合で申請・承認できるかを判断する
+-- （fn_matching_slot_availability）。そのため1回ずつ「予約できるか」を判定する。
 -- 承認時のセッションの作成（fn_generate_sessions_for_schedule）も同じ判定で重なる回を飛ばすため、
 -- 申請時に数えた回数と実際に作られる回数が一致する。
 --

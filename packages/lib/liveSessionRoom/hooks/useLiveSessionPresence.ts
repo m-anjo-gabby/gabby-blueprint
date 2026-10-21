@@ -1,10 +1,8 @@
 'use client';
 
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserClient } from '../../supabase/client';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type RealtimeChannel = any;
 
 type LiveSessionRole = 'coach' | 'student';
 
@@ -38,7 +36,11 @@ export function useLiveSessionPresence(sessionName: string): UseLiveSessionPrese
 
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState() as Record<string, Array<{ role: LiveSessionRole }>>;
-      const roles = new Set(Object.values(state).flat().map((entry) => entry.role));
+      const roles = new Set(
+        Object.values(state)
+          .flat()
+          .map((entry) => entry.role),
+      );
       setIsCoachPresent(roles.has('coach'));
       setIsStudentPresent(roles.has('student'));
     });

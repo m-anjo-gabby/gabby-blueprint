@@ -1,19 +1,20 @@
 'use server';
 
-import { createAdminClient } from "@gabby/lib/supabase/admin";
+import { getTranslations } from 'next-intl/server';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { USER_TYPES } from "@gabby/types/user";
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import type { ActionResult } from '@gabby/types/action';
+import { USER_STATUS, USER_TYPES } from '@gabby/types/user';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-interface StartImpersonationResult {
-  success: boolean;
-  url?: string;
-  message?: string;
-}
+type StartImpersonationResult = ActionResult<{ url: string }>;
 
 /**
  * 対象ユーザーとして生徒ポータル／コーチポータルへ代理ログインするためのマジックリンクを発行する。
@@ -21,16 +22,21 @@ interface StartImpersonationResult {
  * 発行のたびに監査ログ(com_t_admin_impersonation_log)へ理由付きで記録する。
  */
 export async function startImpersonation(targetUserId: string, reason: string): Promise<StartImpersonationResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
 
   const trimmedReason = reason?.trim();
   if (!trimmedReason) {
-    return { success: false, message: '理由の入力は必須です' };
+    return { success: false, message: t('users.errors.reasonRequired') };
   }
 
   if (!ctx.userId || !UUID_PATTERN.test(ctx.userId)) {
-    logger.error('impersonation:missing_admin_identity', 'Admin user id could not be resolved from request context', { ...ctx, payload: { targetUserId } });
-    return { success: false, message: '管理者情報の取得に失敗しました。再ログイン後にお試しください' };
+    logger.error('impersonation:missing_admin_identity', 'Admin user id could not be resolved from request context', {
+      ...ctx,
+      payload: { targetUserId },
+    });
+    return { success: false, message: t('users.errors.adminInfoFailed') };
   }
 
   try {
@@ -39,25 +45,34 @@ export async function startImpersonation(targetUserId: string, reason: string): 
     // 対象ユーザーが「生徒」または「コーチ」であることを確認する（管理者への代理ログインは対象外）
     const { data: targetUser, error: targetUserError } = await supabase
       .from('com_m_user')
-      .select('id, user_type, user_name, delete_flg')
+      .select('id, user_type, user_name, status')
       .eq('id', targetUserId)
       .maybeSingle();
 
     if (targetUserError || !targetUser) {
-      logger.error('impersonation:target_lookup_failed', targetUserError?.message || 'User not found', { ...ctx, err: targetUserError, payload: { targetUserId } });
-      return { success: false, message: '対象ユーザーが見つかりませんでした' };
+      logger.error('impersonation:target_lookup_failed', targetUserError?.message || 'User not found', {
+        ...ctx,
+        err: targetUserError,
+        payload: { targetUserId },
+      });
+      return { success: false, message: t('users.errors.userNotFound') };
     }
 
-    const isImpersonatableType = targetUser.user_type === USER_TYPES.STUDENT || targetUser.user_type === USER_TYPES.COACH;
-    if (!isImpersonatableType || targetUser.delete_flg !== '0') {
-      return { success: false, message: '生徒・コーチアカウントのみ代理ログインできます' };
+    const isImpersonatableType =
+      targetUser.user_type === USER_TYPES.STUDENT || targetUser.user_type === USER_TYPES.COACH;
+    if (!isImpersonatableType || targetUser.status !== USER_STATUS.ACTIVE) {
+      return { success: false, message: t('users.errors.impersonateRoleOnly') };
     }
 
     // Authユーザー情報（メールアドレス）はcom_m_userに持たないため、Admin APIで別途取得
     const { data: authUserData, error: authUserError } = await supabase.auth.admin.getUserById(targetUserId);
     if (authUserError || !authUserData?.user?.email) {
-      logger.error('impersonation:auth_user_lookup_failed', authUserError?.message || 'Auth user or email not found', { ...ctx, err: authUserError, payload: { targetUserId } });
-      return { success: false, message: '対象ユーザーの認証情報が見つかりませんでした' };
+      logger.error('impersonation:auth_user_lookup_failed', authUserError?.message || 'Auth user or email not found', {
+        ...ctx,
+        err: authUserError,
+        payload: { targetUserId },
+      });
+      return { success: false, message: t('users.errors.authUserNotFound') };
     }
 
     // 監査ログを先に記録し、発行したマジックリンクとの相関IDを採番する
@@ -72,8 +87,12 @@ export async function startImpersonation(targetUserId: string, reason: string): 
       .single();
 
     if (logError || !logRow) {
-      logger.error('impersonation:audit_log_insert_failed', logError?.message || 'Insert failed', { ...ctx, err: logError, payload: { targetUserId } });
-      return { success: false, message: '監査ログの記録に失敗しました' };
+      logger.error('impersonation:audit_log_insert_failed', logError?.message || 'Insert failed', {
+        ...ctx,
+        err: logError,
+        payload: { targetUserId },
+      });
+      return { success: false, message: t('users.errors.auditLogFailed') };
     }
 
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
@@ -83,8 +102,12 @@ export async function startImpersonation(targetUserId: string, reason: string): 
 
     const tokenHash = linkData?.properties?.hashed_token;
     if (linkError || !tokenHash) {
-      logger.error('impersonation:generate_link_failed', linkError?.message || 'hashed_token missing in response', { ...ctx, err: linkError, payload: { targetUserId, impersonationId: logRow.impersonation_id } });
-      return { success: false, message: 'ログインリンクの発行に失敗しました' };
+      logger.error('impersonation:generate_link_failed', linkError?.message || 'hashed_token missing in response', {
+        ...ctx,
+        err: linkError,
+        payload: { targetUserId, impersonationId: logRow.impersonation_id },
+      });
+      return { success: false, message: t('users.errors.loginLinkFailed') };
     }
 
     logger.warn('impersonation:started', `Admin started impersonation of user: ${authUserData.user.email}`, {
@@ -92,11 +115,15 @@ export async function startImpersonation(targetUserId: string, reason: string): 
       payload: { impersonationId: logRow.impersonation_id, targetUserId: targetUser.id, reason: trimmedReason },
     });
 
-    const portalEnvKey = targetUser.user_type === USER_TYPES.COACH ? 'NEXT_PUBLIC_COACH_URL' : 'NEXT_PUBLIC_STUDENT_URL';
+    const portalEnvKey =
+      targetUser.user_type === USER_TYPES.COACH ? 'NEXT_PUBLIC_COACH_URL' : 'NEXT_PUBLIC_STUDENT_URL';
     const portalBaseUrl = process.env[portalEnvKey];
     if (!portalBaseUrl) {
-      logger.error('impersonation:missing_portal_url', `${portalEnvKey} is not configured`, { ...ctx, payload: { targetUserId } });
-      return { success: false, message: 'ポータルのURL設定が見つかりませんでした' };
+      logger.error('impersonation:missing_portal_url', `${portalEnvKey} is not configured`, {
+        ...ctx,
+        payload: { targetUserId },
+      });
+      return { success: false, message: t('users.errors.portalUrlMissing') };
     }
 
     const impersonateUrl = new URL('/auth/impersonate', portalBaseUrl);
@@ -105,7 +132,12 @@ export async function startImpersonation(targetUserId: string, reason: string): 
 
     return { success: true, url: impersonateUrl.toString() };
   } catch (error) {
-    logger.error('impersonation:start_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { targetUserId } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('impersonation:start_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { targetUserId },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

@@ -10,7 +10,7 @@
 
 | 区分 | 内容 | 入手方法 |
 |---|---|---|
-| ツール | Git / Node.js / pnpm / mkcert / VSCode | 各自インストール（手順1） |
+| ツール | Git / GitHub CLI / Node.js / pnpm / mkcert / VSCode | 各自インストール（手順1） |
 | ツール（任意） | Python 3 / openpyxl（CV辞書の確認依頼Excelを出力する場合のみ） | 各自インストール（手順10） |
 | ソース | GitHub `m-anjo-gabby/gabby-blueprint` | clone（手順2） |
 | 環境ファイル | `apps/*/.env.local` など（Git管理外・シークレット） | 既存端末からコピー、または担当者から受領（手順4） |
@@ -44,8 +44,8 @@ pnpm env:export -- -OutDir D:\transfer # 出力先を指定する場合
 
 | 順 | 内容 | 対応する手動手順 |
 |---|---|---|
-| 1 | Git / Node.js / mkcert / VSCode を winget でインストール | 手順1 |
-| 2 | Git の設定（`core.autocrlf=input`・`core.longpaths=true`・名前とメール） | 手順1 |
+| 1 | Git / GitHub CLI / Node.js / mkcert / VSCode を winget でインストール | 手順1 |
+| 2 | Git の設定（`core.autocrlf=input`・`core.longpaths=true`・名前とメール）と GitHub CLI のログイン | 手順1 |
 | 3 | clone と作業ブランチへの切り替え（配置先はエクスポート元と同じパスが既定） | 手順2 |
 | 4 | pnpm のインストールと `pnpm install --frozen-lockfile` | 手順1・3 |
 | 5 | 環境ファイル等の展開（既存のファイルと内容が違う場合は上書きを確認） | 手順4 |
@@ -70,17 +70,18 @@ PowerShell で実行します（winget は Windows 11 標準）。
 
 ```powershell
 winget install --id Git.Git -e
-winget install --id OpenJS.NodeJS.LTS -e      # Node.js 24 LTS（package.json の engines は >=20.10）
+winget install --id GitHub.cli -e              # GitHub CLI（Deploy の実行・CI の確認。docs/RELEASE.md の gh コマンド）
+winget install --id OpenJS.NodeJS.LTS -e      # Node.js 24 LTS（版は .nvmrc。package.json の engines も 24.x）
 winget install --id FiloSottile.mkcert -e     # ローカルHTTPS用の証明書作成ツール
 winget install --id Microsoft.VisualStudioCode -e
 ```
 
 インストール後、**PowerShell を開き直して**から pnpm を有効化します。
-pnpm のバージョンは `package.json` の `packageManager`（`pnpm@9.15.0`）に固定されています。
+pnpm のバージョンは `package.json` の `packageManager`（`pnpm@10.34.6`）に固定されています。
 
 ```powershell
-corepack enable          # 失敗する場合（権限エラー等）は: npm install -g pnpm@9.15.0
-pnpm -v                  # 9.15.0 と表示されればOK
+corepack enable          # 失敗する場合（権限エラー等）は: npm install -g pnpm@10.34.6
+pnpm -v                  # 10.34.6 と表示されればOK
 ```
 
 ### Git の改行コード設定（clone 前に必ず実施）
@@ -95,6 +96,16 @@ git config --global user.name  "<名前>"
 git config --global user.email "<メールアドレス>"
 ```
 
+### GitHub CLI のログイン
+
+ブラウザで認証します。`gh auth setup-git` で git の認証にも使われるため、次の clone でサインインを求められません。
+
+```powershell
+gh auth login --hostname github.com --git-protocol https --web
+gh auth setup-git
+gh auth status           # Logged in to github.com と表示されればOK
+```
+
 ## 2. ソースの取得
 
 **`C:\react\gabby-blueprint` に clone することを推奨します。**
@@ -106,6 +117,7 @@ cd C:\react
 git clone https://github.com/m-anjo-gabby/gabby-blueprint.git
 cd gabby-blueprint
 git switch <作業ブランチ>     # 例: feature/20260925-dev
+git config blame.ignoreRevsFile .git-blame-ignore-revs   # 書式だけの一括変更を git blame で飛ばす
 ```
 
 初回の push/pull でブラウザが開き、GitHub へのサインインを求められます（Git Credential Manager）。
@@ -197,16 +209,17 @@ Get-NetTCPConnection -LocalPort 3000,3001,3002 -State Listen -ErrorAction Silent
 | 拡張機能 | 用途 |
 |---|---|
 | ESLint | Lint 表示 |
-| Prettier | 整形 |
+| Prettier | 整形（JS/TS は保存時に整形する。`.vscode/settings.json`） |
 | Tailwind CSS IntelliSense | クラス名の補完 |
 | Claude Code | AI による開発支援（任意） |
 | Japanese Language Pack | VSCode の日本語化（任意） |
 
-変更後のチェックは次のとおりです（`CLAUDE.md` の完了条件）。
+変更後のチェックは次のとおりです（`CLAUDE.md` の完了条件）。push すると GitHub Actions の `CI` でも同じ内容を実行します。
 
 ```powershell
-pnpm --filter gabby-blueprint-student exec tsc --noEmit
-pnpm --filter gabby-blueprint-student exec eslint <変更したファイル>
+pnpm check                                                  # 型チェック・lint・書式・単体テスト（全パッケージ。CI と同じ）
+pnpm --filter gabby-blueprint-student exec tsc --noEmit     # 1つのアプリだけ型チェックする場合
+pnpm exec eslint <変更したファイル>                           # 変更したファイルだけ lint する場合
 ```
 
 ## 8. Claude Code（任意）
@@ -254,5 +267,5 @@ python -c "import openpyxl"   # エラーが出なければOK
 | ブラウザで「この接続ではプライバシーが保護されません」 | `mkcert -install` を実行してブラウザを再起動 |
 | ログイン後に別のポート／本番URLへ飛ぶ | `.env.local` の `NEXT_PUBLIC_*_URL` を手順4の値に修正して再起動 |
 | `git status` に触っていないファイルが大量に出る | 改行コードの問題。`git config --global core.autocrlf input` を設定して clone し直す |
-| `pnpm` が見つからない | PowerShell を開き直す。解決しない場合は `npm install -g pnpm@9.15.0` |
+| `pnpm` が見つからない | PowerShell を開き直す。解決しない場合は `npm install -g pnpm@10.34.6` |
 | ポート 3000〜3002 が使用中 | 手順6のプロセス終了コマンドを実行 |

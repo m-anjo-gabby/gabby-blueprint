@@ -1,25 +1,12 @@
 /** プレビュー可能なファイル拡張子のホワイトリスト */
-const PREVIEWABLE_EXTENSIONS = new Set([
-  'pdf',
-  'png',
-  'jpg',
-  'jpeg',
-  'gif',
-  'webp',
-  'svg',
-  'txt'
-]);
+const PREVIEWABLE_EXTENSIONS = new Set(['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'txt']);
 
 /**
  * ファイルがプレビュー（ブラウザ内表示）可能か判定する
  */
 export function isPreviewableFile(fileName: string, mimeType?: string): boolean {
   if (mimeType) {
-    if (
-      mimeType.startsWith('image/') ||
-      mimeType === 'application/pdf' ||
-      mimeType.startsWith('text/plain')
-    ) {
+    if (mimeType.startsWith('image/') || mimeType === 'application/pdf' || mimeType.startsWith('text/plain')) {
       return true;
     }
   }

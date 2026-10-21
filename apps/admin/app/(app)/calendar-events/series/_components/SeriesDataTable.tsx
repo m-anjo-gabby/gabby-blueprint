@@ -30,7 +30,12 @@ export function SeriesDataTable({ data }: SeriesDataTableProps) {
         pageCount={list.pageCount}
         page={list.page}
       />
-      <DataTable columns={createColumns(t)} data={list.rows} getRowId={(row) => row.series_id} emptyMessage={t('noSeries')} />
+      <DataTable
+        columns={createColumns(t)}
+        data={list.rows}
+        getRowId={(row) => row.series_id}
+        emptyMessage={t('noSeries')}
+      />
     </div>
   );
 }

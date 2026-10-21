@@ -1,7 +1,7 @@
 'use client';
 
-import { useLayoutEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { useLayoutEffect, useRef } from 'react';
 import { SCROLL_CONTAINER_ATTR } from '@/lib/scroll';
 
 /**

@@ -1,35 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, BellOff } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
+import { getNotificationDisplay } from '@gabby/lib/notification/display';
+import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
+import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { NOTICE_IMPORTANT_BADGE, NOTICE_TYPES, type NoticeType } from '@gabby/types/notice';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NOTICE_IMPORTANT_LABEL_EN, NOTICE_TYPE_LABEL_EN } from '@/constants/notice';
 import { cn } from '@/lib/utils';
-import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
-import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
-import { formatDateEn } from '@gabby/lib/date/dateEn';
-import { NOTICE_TYPES, NOTICE_IMPORTANT_BADGE, NoticeType } from '@gabby/types/notice';
-import { getNotificationDisplay } from '@gabby/lib/notification/display';
-import { NOTICE_TYPE_LABEL_EN, NOTICE_IMPORTANT_LABEL_EN } from '@/constants/notice';
 
-// Combines Notices (admin-broadcast announcements) and Notifications (system-triggered
-// personal events) behind a single bell. Data sources stay separate; only the entry
-// point and tab switching are unified.
+// お知らせ（アドミンが全体に出す連絡）と通知（システムが出す個人の出来事）を
+// 1つのベルにまとめる。データの取得元は別々のままで、入口と
+// タブの切り替えだけをまとめる。
 type CenterTab = 'notice' | 'notification';
 
-const UnreadDot = () => (
-  <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 mt-1" />
-);
+const UnreadDot = () => <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 mt-1" />;
 
 function TabCountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -85,9 +83,9 @@ export function NotificationCenterDropdown() {
     markBatchAsRead(unreadIds);
   };
 
-  // Prioritize whichever tab has unread items each time the panel is opened
-  // (only decided at the open transition, so a realtime update while browsing
-  // never yanks the tab out from under the user).
+  // パネルを開くたびに、未読のあるタブを先に出す
+  // （開いた時だけ決めるため、見ている間に Realtime の更新が来ても
+  // タブが勝手に切り替わらない）。
   const handleOpenChange = (open: boolean) => {
     if (!open) return;
     if (noticeUnreadCount > 0 && notificationUnreadCount === 0) {
@@ -100,7 +98,7 @@ export function NotificationCenterDropdown() {
   return (
     <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
-        {/* Bell icon trigger with combined (notice + notification) unread badge */}
+        {/* ベルのアイコンのボタンと、お知らせと通知を合わせた未読のバッジ */}
         <button
           id="notification-center-bell-button"
           aria-label="Notification Center"
@@ -134,29 +132,29 @@ export function NotificationCenterDropdown() {
           transition={{ duration: 0.15, ease: 'easeOut' }}
         >
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as CenterTab)}>
-            {/* ─── Header ──────────────────────────────────── */}
+            {/* 見出し */}
             <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-slate-50">
               <Bell size={14} className="text-slate-500 shrink-0" />
-              <span className="text-xs font-black text-slate-800 tracking-tight shrink-0">
-                Notification Center
-              </span>
+              <span className="text-xs font-black text-slate-800 tracking-tight shrink-0">Notification Center</span>
               <TabsList className="ml-auto h-8 p-0.5 bg-slate-100 rounded-full">
                 <TabsTrigger
                   value="notice"
                   className="text-[10px] font-black rounded-full px-2.5 py-1 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800 text-slate-500"
                 >
-                  Notices<TabCountBadge count={noticeUnreadCount} />
+                  Notices
+                  <TabCountBadge count={noticeUnreadCount} />
                 </TabsTrigger>
                 <TabsTrigger
                   value="notification"
                   className="text-[10px] font-black rounded-full px-2.5 py-1 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800 text-slate-500"
                 >
-                  Notifications<TabCountBadge count={notificationUnreadCount} />
+                  Notifications
+                  <TabCountBadge count={notificationUnreadCount} />
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            {/* ─── Notices tab ─────────────────────────────── */}
+            {/* お知らせのタブ */}
             <TabsContent value="notice" className="m-0">
               {noticeUnreadCount > 0 && (
                 <div className="flex justify-end px-4 pt-2 pb-1">
@@ -188,7 +186,7 @@ export function NotificationCenterDropdown() {
                   </div>
                 ) : (
                   <div className="p-2 space-y-1">
-                    {previewNotices.map(notice => (
+                    {previewNotices.map((notice) => (
                       <DropdownMenuItem asChild key={notice.notice_id} className="p-0 focus:bg-transparent">
                         <button
                           id={`notice-item-${notice.notice_id}`}
@@ -198,15 +196,11 @@ export function NotificationCenterDropdown() {
                           }}
                           className={cn(
                             'w-full text-left flex items-start gap-2.5 p-3 rounded-2xl transition-all hover:bg-slate-50 cursor-pointer outline-none block',
-                            !notice.is_read && 'bg-brand-50/50'
+                            !notice.is_read && 'bg-brand-50/50',
                           )}
                         >
                           <div className="mt-1">
-                            {!notice.is_read ? (
-                              <UnreadDot />
-                            ) : (
-                              <span className="inline-block w-1.5 h-1.5 shrink-0" />
-                            )}
+                            {!notice.is_read ? <UnreadDot /> : <span className="inline-block w-1.5 h-1.5 shrink-0" />}
                           </div>
 
                           <div className="flex-1 min-w-0">
@@ -214,7 +208,8 @@ export function NotificationCenterDropdown() {
                               <span
                                 className={cn(
                                   'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
-                                  NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ?? NOTICE_TYPES.INFO.badgeClass
+                                  NOTICE_TYPES[notice.notice_type as NoticeType]?.badgeClass ??
+                                    NOTICE_TYPES.INFO.badgeClass,
                                 )}
                               >
                                 {NOTICE_TYPE_LABEL_EN[notice.notice_type as NoticeType] ?? notice.notice_type}
@@ -223,7 +218,7 @@ export function NotificationCenterDropdown() {
                                 <span
                                   className={cn(
                                     'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border',
-                                    NOTICE_IMPORTANT_BADGE.badgeClass
+                                    NOTICE_IMPORTANT_BADGE.badgeClass,
                                   )}
                                 >
                                   {NOTICE_IMPORTANT_LABEL_EN}
@@ -234,7 +229,7 @@ export function NotificationCenterDropdown() {
                             <p
                               className={cn(
                                 'text-xs font-bold text-slate-700 truncate leading-snug',
-                                !notice.is_read && 'text-slate-900 font-black'
+                                !notice.is_read && 'text-slate-900 font-black',
                               )}
                             >
                               {notice.title}
@@ -252,7 +247,7 @@ export function NotificationCenterDropdown() {
               </div>
             </TabsContent>
 
-            {/* ─── Notifications tab ───────────────────────── */}
+            {/* 通知のタブ */}
             <TabsContent value="notification" className="m-0">
               {notificationUnreadCount > 0 && (
                 <div className="flex justify-end px-4 pt-2 pb-1">
@@ -298,7 +293,7 @@ export function NotificationCenterDropdown() {
                             }}
                             className={cn(
                               'w-full text-left flex items-start gap-2.5 p-3 rounded-2xl transition-all hover:bg-slate-50 cursor-pointer outline-none block',
-                              !notification.is_read && 'bg-brand-50/50'
+                              !notification.is_read && 'bg-brand-50/50',
                             )}
                           >
                             <div className="mt-1">
@@ -312,7 +307,7 @@ export function NotificationCenterDropdown() {
                             <div
                               className={cn(
                                 'flex items-center justify-center w-8 h-8 rounded-xl border shrink-0',
-                                display.badgeClass ?? 'bg-slate-50 text-slate-500 border-slate-100'
+                                display.badgeClass ?? 'bg-slate-50 text-slate-500 border-slate-100',
                               )}
                             >
                               <Icon size={14} />
@@ -322,7 +317,7 @@ export function NotificationCenterDropdown() {
                               <p
                                 className={cn(
                                   'text-xs font-bold text-slate-700 truncate leading-snug',
-                                  !notification.is_read && 'text-slate-900 font-black'
+                                  !notification.is_read && 'text-slate-900 font-black',
                                 )}
                               >
                                 {display.title}
@@ -344,7 +339,7 @@ export function NotificationCenterDropdown() {
             </TabsContent>
           </Tabs>
 
-          {/* ─── Footer (destination follows the active tab) ── */}
+          {/* 下部（移動先は開いているタブに合わせる） */}
           <div className="px-4 pb-4 pt-2 border-t border-slate-50">
             <DropdownMenuItem asChild className="p-0 border-none outline-none">
               <Link

@@ -1,33 +1,37 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { getCoachIntroVideoUrl } from '@gabby/lib/coachProfile/getCoachIntroVideoUrl';
-import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
-import {
-  uploadProfileIcon,
-  removeProfileIcon,
-  updateMyTimezone,
-  updateMyCoachProfile,
-  uploadCoachIntroVideo,
-  removeCoachIntroVideo,
-} from '@/actions/coachProfileAction';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { TimezoneMaster } from '@gabby/types/timezone';
-import { CountryMaster } from '@gabby/types/country';
-import { CoachMatchingStatus, CoachProfileFormValues, CoachProfileRecord } from '@gabby/types/coachProfile';
 import { getCoachMatchingMissingItems } from '@gabby/lib/coachProfile/matchingReadiness';
-import { getCoachProfileFormProgress } from '../_lib/profileCompleteness';
-import { MatchingStatusCard } from './MatchingStatusCard';
-import { AccountSummaryCard } from './AccountSummaryCard';
-import { PublicProfileForm } from './PublicProfileForm';
-import { LivePreviewPanel } from './LivePreviewPanel';
-import { MailSettingsCard } from './MailSettingsCard';
+import { getCountryFlagUrl } from '@gabby/lib/country/getCountryFlagUrl';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import type { MailSettings } from '@gabby/lib/mail/settingsActions';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import {
+  type CoachMatchingStatus,
+  type CoachProfileFormValues,
+  type CoachProfileRecord,
+} from '@gabby/types/coachProfile';
 import type { CoachRatingStats } from '@gabby/types/coachRating';
 import type { CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { type CountryMaster } from '@gabby/types/country';
+import { type TimezoneMaster } from '@gabby/types/timezone';
+import {
+  removeCoachIntroVideo,
+  removeProfileIcon,
+  updateMyCoachProfile,
+  updateMyTimezone,
+  uploadCoachIntroVideo,
+  uploadProfileIcon,
+} from '@/actions/coachProfileAction';
 import { MyRatingCard, toCoachRatingDisplay } from '@/components/rating/MyRatingCard';
+import { getCoachProfileFormProgress } from '../_lib/profileCompleteness';
+import { AccountSummaryCard } from './AccountSummaryCard';
+import { LivePreviewPanel } from './LivePreviewPanel';
+import { MailSettingsCard } from './MailSettingsCard';
+import { MatchingStatusCard } from './MatchingStatusCard';
+import { PublicProfileForm } from './PublicProfileForm';
 
 interface ProfileViewProps {
   userName: string;
@@ -38,13 +42,13 @@ interface ProfileViewProps {
   timezones: TimezoneMaster[];
   initialCoachProfile: CoachProfileRecord | null;
   countries: CountryMaster[];
-  /** Email notification settings (null if they could not be loaded) */
+  /** メールの通知の設定（読み込めなかった場合は null） */
   mailSettings: MailSettings | null;
-  /** Own rating summary (null if no ratings yet) */
+  /** 自分の評価の要約（評価がまだ無ければ null） */
   ratingStats: CoachRatingStats | null;
-  /** Specialties set by admins (read-only here) */
+  /** アドミンが設定した専門（ここでは見るだけ） */
   specialties: CoachSpecialtyTag[];
-  /** Whether the coach appears in the students' coach search (null if it could not be loaded) */
+  /** コーチが生徒のコーチ検索に出るか（読み込めなかった場合は null） */
   matchingStatus: CoachMatchingStatus | null;
 }
 
@@ -99,11 +103,11 @@ export function ProfileView({
   const [iconPath, setIconPath] = useState(initialIconPath);
   const [timezone, setTimezone] = useState(initialTimezone);
   const [coachProfileForm, setCoachProfileForm] = useState<CoachProfileFormValues>(
-    toCoachProfileFormValues(initialCoachProfile)
+    toCoachProfileFormValues(initialCoachProfile),
   );
   // 生徒の一覧に出るかは保存済みの値で決まるため、入力中のフォームとは別に保存済みの値を持つ
   const [savedCoachProfile, setSavedCoachProfile] = useState<CoachProfileFormValues>(
-    toCoachProfileFormValues(initialCoachProfile)
+    toCoachProfileFormValues(initialCoachProfile),
   );
   // Gabby Coach Since はアカウント作成日から自動設定される読み取り専用項目のため、フォームとは別に保持する
   const [coachSince, setCoachSince] = useState(initialCoachProfile?.coach_since ?? null);
@@ -115,7 +119,7 @@ export function ProfileView({
 
   const selectedCountry = useMemo(
     () => countries.find((c) => c.country_code === coachProfileForm.country_code) ?? null,
-    [countries, coachProfileForm.country_code]
+    [countries, coachProfileForm.country_code],
   );
 
   const handleUpload = async (blob: Blob) => {
@@ -177,7 +181,7 @@ export function ProfileView({
 
   const handleCoachProfileFieldChange = <K extends keyof CoachProfileFormValues>(
     field: K,
-    value: CoachProfileFormValues[K]
+    value: CoachProfileFormValues[K],
   ) => {
     setCoachProfileForm((prev) => ({ ...prev, [field]: value }));
   };

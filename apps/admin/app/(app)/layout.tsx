@@ -1,25 +1,21 @@
 import { redirect } from 'next/navigation';
-import UserStoreInitializer from '@gabby/lib/auth/UserStoreInitializer';
-import Header from '@/components/common/Header';
-import Sidebar from '@/components/common/Sidebar';
-import ToastContainer from '@gabby/lib/components/common/ToastContainer';
-import ConfirmContainer from '@gabby/lib/components/common/ConfirmContainer';
-import { UserAppMetadata } from '@gabby/lib/stores/useUserStore';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { UserStoreInitializer } from '@gabby/lib/auth/UserStoreInitializer';
+import { ConfirmContainer } from '@gabby/lib/components/common/ConfirmContainer';
+import { ToastContainer } from '@gabby/lib/components/common/ToastContainer';
 import { loadCommonShellData } from '@gabby/lib/shell/loadCommonShellData';
+import { type UserAppMetadata } from '@gabby/lib/stores/useUserStore';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { Header } from '@/components/common/Header';
 import { ShellDataLoader } from '@/components/common/ShellDataLoader';
+import { Sidebar } from '@/components/common/Sidebar';
 import { ADMIN_SHELL_DATA_OPTIONS } from '@/lib/shellData';
 
 /**
  * 管理者用 統合アプリケーションレイアウト
- * * 旧 AppLogicLayout (認証・State初期化) と 
+ * * 旧 AppLogicLayout (認証・State初期化) と
  * 旧 AdminLayout (サイドバー・デザイン構造) を統合。
  */
-export default async function AdminAppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AdminAppLayout({ children }: { children: React.ReactNode }) {
   // --- 旧 AppLogicLayout のロジック ---
   const user = await getAuthUser();
 
@@ -27,7 +23,7 @@ export default async function AdminAppLayout({
     redirect('/login');
   }
 
-  // 💡 user_type/roles に基づく詳細なアクセス制御は apps/admin/proxy.ts (Middleware) で
+  // user_type/roles に基づく詳細なアクセス制御は apps/admin/proxy.ts (Middleware) で
   // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。
 
   // ヘッダー・サイドバーの未読（通知・チャット）はサーバーで並列に取得し、await せず Promise のまま渡す
@@ -37,9 +33,11 @@ export default async function AdminAppLayout({
   return (
     <>
       {/* Zustandへのデータ流し込みとAuth監視 */}
-      <UserStoreInitializer user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }} />
+      <UserStoreInitializer
+        user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }}
+      />
       <ShellDataLoader data={shellData} />
-      
+
       {/* --- 旧 AdminLayout のデザイン構造 --- */}
       {/* ヘッダーエリア / サイドメニュー / メインエリアの3ペイン構成 */}
       <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
@@ -53,9 +51,7 @@ export default async function AdminAppLayout({
           {/* 右側: メインコンテンツ */}
           <div className="flex flex-col flex-1 min-w-0 relative">
             {/* スクロール可能なコンテンツエリア */}
-            <main className="flex-1 flex flex-col overflow-y-auto min-h-0 p-4 md:p-6 relative">
-              {children}
-            </main>
+            <main className="flex-1 flex flex-col overflow-y-auto min-h-0 p-4 md:p-6 relative">{children}</main>
           </div>
         </div>
       </div>

@@ -1,14 +1,14 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
 import type { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { getAdminSessionStatusBadge } from '@/constants/session';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { REPORTING_TIMEZONE } from '@gabby/lib/date/reporting';
-import { SESSION_STATUS } from '@gabby/types/session';
 import type { AdminSessionRecord } from '@gabby/types/adminLiveSession';
+import { SESSION_STATUS } from '@gabby/types/session';
+import type { ListColumnDef } from '@/components/list/listTable';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { getAdminSessionStatusBadge } from '@/constants/session';
 import { SessionOutcomeFlags } from '../../_components/SessionOutcomeFlags';
 
 type TableT = ReturnType<typeof useTranslations<'liveSessions.records'>>;
@@ -19,13 +19,15 @@ interface ColumnOptions {
   onCorrect: (record: AdminSessionRecord) => void;
 }
 
-export function createColumns(t: TableT, { tStatus, onCorrect }: ColumnOptions): ColumnDef<AdminSessionRecord>[] {
+export function createColumns(t: TableT, { tStatus, onCorrect }: ColumnOptions): ListColumnDef<AdminSessionRecord>[] {
   return [
     {
       accessorKey: 'start_datetime',
       header: t('startHeader'),
       cell: ({ row }) => (
-        <span className="whitespace-nowrap text-slate-600">{formatDateTimeByZone(row.original.start_datetime, REPORTING_TIMEZONE, false)}</span>
+        <span className="whitespace-nowrap text-slate-600">
+          {formatDateTimeByZone(row.original.start_datetime, REPORTING_TIMEZONE, false)}
+        </span>
       ),
     },
     {
@@ -52,7 +54,11 @@ export function createColumns(t: TableT, { tStatus, onCorrect }: ColumnOptions):
             <Badge variant="outline" className={`${badge.className} text-[10px] font-bold`}>
               {badge.label}
             </Badge>
-            <SessionOutcomeFlags conductedVia={record.conducted_via} outcomeMismatch={record.outcome_mismatch} isCorrected={record.is_corrected} />
+            <SessionOutcomeFlags
+              conductedVia={record.conducted_via}
+              outcomeMismatch={record.outcome_mismatch}
+              isCorrected={record.is_corrected}
+            />
           </div>
         );
       },
@@ -63,7 +69,13 @@ export function createColumns(t: TableT, { tStatus, onCorrect }: ColumnOptions):
       meta: { className: 'hidden lg:table-cell' },
       cell: ({ row }) => {
         const note = row.original.status_note ?? row.original.cancel_reason;
-        return note ? <p className="max-w-xs truncate text-xs text-slate-500" title={note}>{note}</p> : <span className="text-xs text-slate-300">-</span>;
+        return note ? (
+          <p className="max-w-xs truncate text-xs text-slate-500" title={note}>
+            {note}
+          </p>
+        ) : (
+          <span className="text-xs text-slate-300">-</span>
+        );
       },
     },
     {

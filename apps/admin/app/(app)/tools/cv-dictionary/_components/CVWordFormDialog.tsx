@@ -1,46 +1,42 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CheckCircle2, Edit, Languages, PlusCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { PART_OF_SPEECH_MAP, PART_OF_SPEECH_OPTIONS, type PartOfSpeechType } from '@gabby/types/colorVowel';
+import { upsertCVDictionaryEntry, type CVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { upsertCVDictionaryEntry, CVDictionaryEntry } from '@/actions/adminCVDictionaryAction';
-import { PlusCircle, CheckCircle2, Edit, Languages } from 'lucide-react';
-import { Alert } from '@/components/ui/alert';
-import { PART_OF_SPEECH_OPTIONS, PART_OF_SPEECH_MAP, type PartOfSpeechType } from '@gabby/types/colorVowel';
 
-// ============================================================
 // バリデーションスキーマ
-// ============================================================
 
 type FormT = ReturnType<typeof useTranslations<'tools.cvDictionary.formDialog'>>;
 
 function createEntrySchema(t: FormT) {
   return z.object({
-    word_en:                  z.string().min(1, t('errors.wordRequired')),
-    part_of_speech:           z.string().min(1, t('errors.posRequired')),
-    word_ja:                  z.string().min(1, t('errors.jaRequired')),
-    syllables:                z.string().optional(),
-    primary_stress_syllable:  z.string().optional(),
-    stress_vowel_spelling:    z.string().optional(),
-    cv_id:                    z.string().optional(),
-    phonetic_spelling:        z.string().optional(),
-    lemma:                    z.string().optional(),
+    word_en: z.string().min(1, t('errors.wordRequired')),
+    part_of_speech: z.string().min(1, t('errors.posRequired')),
+    word_ja: z.string().min(1, t('errors.jaRequired')),
+    syllables: z.string().min(1, t('errors.syllablesRequired')),
+    primary_stress_syllable: z.string().optional(),
+    stress_vowel_spelling: z.string().min(1, t('errors.stressVowelRequired')),
+    cv_id: z.string().min(1, t('errors.cvIdRequired')),
+    phonetic_spelling: z.string().optional(),
+    lemma: z.string().optional(),
   });
 }
 
 type EntryFormValues = z.infer<ReturnType<typeof createEntrySchema>>;
 
-// ============================================================
 // Props
-// ============================================================
 
 interface CVWordFormDialogProps {
   mode?: 'create' | 'edit';
@@ -50,16 +46,9 @@ interface CVWordFormDialogProps {
   onSuccess?: () => void;
 }
 
-// ============================================================
 // Component
-// ============================================================
 
-export function CVWordFormDialog({
-  mode = 'create',
-  initialData,
-  fixedWordEn,
-  onSuccess,
-}: CVWordFormDialogProps) {
+export function CVWordFormDialog({ mode = 'create', initialData, fixedWordEn, onSuccess }: CVWordFormDialogProps) {
   const t = useTranslations('tools.cvDictionary.formDialog');
   const entrySchema = useMemo(() => createEntrySchema(t), [t]);
   const [open, setOpen] = useState(false);
@@ -108,10 +97,10 @@ export function CVWordFormDialog({
         word_en: values.word_en,
         part_of_speech: values.part_of_speech,
         word_ja: values.word_ja,
-        syllables: values.syllables || null,
-        primary_stress_syllable: values.primary_stress_syllable ? Number(values.primary_stress_syllable) : null,
-        stress_vowel_spelling: values.stress_vowel_spelling || null,
-        cv_id: values.cv_id || null,
+        syllables: values.syllables,
+        primary_stress_syllable: values.primary_stress_syllable ? Number(values.primary_stress_syllable) : undefined,
+        stress_vowel_spelling: values.stress_vowel_spelling,
+        cv_id: values.cv_id,
         phonetic_spelling: values.phonetic_spelling || null,
         lemma: values.lemma?.trim() || null,
       });
@@ -155,173 +144,283 @@ export function CVWordFormDialog({
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
+              <>
+                <CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}
+              </>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
+              <>
+                <PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}
+              </>
             ) : (
-              <><Languages size={18} className="text-brand-400" /> {t('editTitle')}</>
+              <>
+                <Languages size={18} className="text-brand-400" /> {t('editTitle')}
+              </>
             )}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white max-h-[70vh] overflow-y-auto">
-
             {/* 英単語 */}
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="word_en" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">English Word</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-base font-bold text-slate-800 border border-slate-100">{field.value}</div>
-                  ) : (
-                    <FormControl>
-                      <Input {...field} placeholder="target" className="rounded-xl border-slate-200 font-bold" disabled={mode === 'edit' || !!fixedWordEn} />
-                    </FormControl>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="word_en"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      English Word
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-base font-bold text-slate-800 border border-slate-100">
+                        {field.value}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="target"
+                          className="rounded-xl border-slate-200 font-bold"
+                          disabled={mode === 'edit' || !!fixedWordEn}
+                        />
+                      </FormControl>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* 品詞 */}
-              <FormField control={form.control} name="part_of_speech" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Part of Speech</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-bold border border-slate-100">
-                      {PART_OF_SPEECH_MAP[field.value as PartOfSpeechType]?.adminLabel ?? field.value}
-                    </div>
-                  ) : (
-                    <Select onValueChange={field.onChange} value={field.value} disabled={mode === 'edit'}>
-                      <FormControl>
-                        <SelectTrigger className="rounded-xl border-slate-200">
-                          <SelectValue placeholder={t('posPlaceholder')} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {PART_OF_SPEECH_OPTIONS.map((p) => (
-                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="part_of_speech"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Part of Speech
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm font-bold border border-slate-100">
+                        {PART_OF_SPEECH_MAP[field.value as PartOfSpeechType]?.adminLabel ?? field.value}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} value={field.value} disabled={mode === 'edit'}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-slate-200">
+                            <SelectValue placeholder={t('posPlaceholder')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PART_OF_SPEECH_OPTIONS.map((p) => (
+                            <SelectItem key={p.value} value={p.value}>
+                              {p.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* 日本語訳 */}
-            <FormField control={form.control} name="word_ja" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('japaneseLabel')}</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-600 border border-slate-100">{field.value}</div>
-                ) : (
-                  <FormControl>
-                    <Input {...field} placeholder="標的、ターゲット" className="rounded-xl border-slate-200" />
-                  </FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="word_ja"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {t('japaneseLabel')}
+                  </FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-600 border border-slate-100">
+                      {field.value}
+                    </div>
+                  ) : (
+                    <FormControl>
+                      <Input {...field} placeholder="標的、ターゲット" className="rounded-xl border-slate-200" />
+                    </FormControl>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               {/* 音節 */}
-              <FormField control={form.control} name="syllables" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Syllables</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100">{field.value || '—'}</div>
-                  ) : (
-                    <FormControl>
-                      <Input {...field} placeholder="tar-get" className="rounded-xl border-slate-200 font-mono" />
-                    </FormControl>
-                  )}
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="syllables"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Syllables
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100">
+                        {field.value || '—'}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Input {...field} placeholder="tar-get" className="rounded-xl border-slate-200 font-mono" />
+                      </FormControl>
+                    )}
+                  </FormItem>
+                )}
+              />
 
               {/* 主強勢音節 */}
-              <FormField control={form.control} name="primary_stress_syllable" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Primary Stress #</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100">{field.value || '—'}</div>
-                  ) : (
-                    <FormControl>
-                      <Input {...field} type="number" min="1" placeholder="1" className="rounded-xl border-slate-200" />
-                    </FormControl>
-                  )}
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="primary_stress_syllable"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Primary Stress #
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100">
+                        {field.value || '—'}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          min="1"
+                          placeholder="1"
+                          className="rounded-xl border-slate-200"
+                        />
+                      </FormControl>
+                    )}
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               {/* ストレス母音スペリング */}
-              <FormField control={form.control} name="stress_vowel_spelling" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Stress Vowel Spelling</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100">{field.value || '—'}</div>
-                  ) : (
-                    <FormControl>
-                      <Input {...field} placeholder="a" className="rounded-xl border-slate-200 font-mono" />
-                    </FormControl>
-                  )}
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="stress_vowel_spelling"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Stress Vowel Spelling
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100">
+                        {field.value || '—'}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Input {...field} placeholder="a" className="rounded-xl border-slate-200 font-mono" />
+                      </FormControl>
+                    )}
+                  </FormItem>
+                )}
+              />
 
               {/* CV ID */}
-              <FormField control={form.control} name="cv_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CV Color ID</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100">{field.value || '—'}</div>
-                  ) : (
-                    <FormControl>
-                      <Input {...field} placeholder="olive_sock" className="rounded-xl border-slate-200 font-mono text-sm" />
-                    </FormControl>
-                  )}
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="cv_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      CV Color ID
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100">
+                        {field.value || '—'}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="olive_sock"
+                          className="rounded-xl border-slate-200 font-mono text-sm"
+                        />
+                      </FormControl>
+                    )}
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* 発音記号 */}
-            <FormField control={form.control} name="phonetic_spelling" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phonetic Spelling</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100 font-mono">{field.value || '—'}</div>
-                ) : (
-                  <FormControl>
-                    <Input {...field} placeholder="/ˈtɑːrɡɪt/" className="rounded-xl border-slate-200 font-mono" />
-                  </FormControl>
-                )}
-              </FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="phonetic_spelling"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Phonetic Spelling
+                  </FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100 font-mono">
+                      {field.value || '—'}
+                    </div>
+                  ) : (
+                    <FormControl>
+                      <Input {...field} placeholder="/ˈtɑːrɡɪt/" className="rounded-xl border-slate-200 font-mono" />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
+            />
 
             {/* 原形（語形変化した見出し語のみ） */}
-            <FormField control={form.control} name="lemma" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lemma</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100 font-mono">{field.value || '—'}</div>
-                ) : (
-                  <FormControl>
-                    <Input {...field} placeholder="launch" className="rounded-xl border-slate-200 font-mono" />
-                  </FormControl>
-                )}
-              </FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="lemma"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Lemma
+                  </FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium border border-slate-100 font-mono">
+                      {field.value || '—'}
+                    </div>
+                  ) : (
+                    <FormControl>
+                      <Input {...field} placeholder="launch" className="rounded-xl border-slate-200 font-mono" />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
+            />
 
             {/* アクションボタン */}
             <div className="pt-4 mt-2 border-t border-slate-100">
               {isConfirming ? (
                 <div className="space-y-4">
-                  <p className="text-xs font-bold text-center text-slate-400 uppercase tracking-tighter">Please confirm the details above</p>
-                  {serverError && <Alert variant="destructive" className="text-xs py-2">{serverError}</Alert>}
+                  <p className="text-xs font-bold text-center text-slate-400 uppercase tracking-tighter">
+                    Please confirm the details above
+                  </p>
+                  {serverError && (
+                    <Alert variant="destructive" className="text-xs py-2">
+                      {serverError}
+                    </Alert>
+                  )}
                   <div className="flex gap-3">
-                    <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>{t('back')}</Button>
-                    <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold" disabled={isSubmitting}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="flex-1 rounded-xl font-bold"
+                      onClick={() => setIsConfirming(false)}
+                      disabled={isSubmitting}
+                    >
+                      {t('back')}
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold"
+                      disabled={isSubmitting}
+                    >
                       {isSubmitting ? t('saving') : t('confirmButton')}
                     </Button>
                   </div>
@@ -330,7 +429,9 @@ export function CVWordFormDialog({
                 <Button
                   type="button"
                   className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11"
-                  onClick={async () => { if (await form.trigger()) setIsConfirming(true); }}
+                  onClick={async () => {
+                    if (await form.trigger()) setIsConfirming(true);
+                  }}
                 >
                   {t('reviewButton')}
                 </Button>

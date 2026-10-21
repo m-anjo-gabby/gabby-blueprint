@@ -1,23 +1,27 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import Papa from 'papaparse';
+import { AlertCircle, CheckCircle2, Download, FileUp, Loader2, RefreshCcw, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
-} from '@/components/ui/table';
+import Papa from 'papaparse';
+import { useRef, useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { 
-  Upload, AlertCircle, Loader2, CheckCircle2, FileUp, 
-  RefreshCcw, Download
-} from 'lucide-react';
+import { type SprintQuestionType } from '@gabby/types/sprint';
 import { bulkImportSprintQuestions } from '@/actions/adminSprintAction';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { SprintQuestionType, SprintQuestion } from '@gabby/types/sprint';
+
+/** TSV の1行（ヘッダー名 → 値） */
+type TsvRow = Partial<Record<string, string>>;
+
+/** 取り込む問題（教材・種別・レベルはサーバーアクション側で付ける） */
+type ImportQuestion = Parameters<typeof bulkImportSprintQuestions>[3][number];
+
+/** 検証済みの行。エラーの行は行番号（0始まり）とエラーの内容だけを持つ */
+type ImportRow = { isValid: true; question: ImportQuestion } | { isValid: false; index: number; error: string };
+
+type ImportErrorRow = Extract<ImportRow, { isValid: false }>;
 
 interface SprintBulkImportDialogProps {
   contentId: string;
@@ -26,7 +30,7 @@ interface SprintBulkImportDialogProps {
   onSuccess?: () => void;
 }
 
-// 💡 TSVヘッダーの定義
+// TSVヘッダーの定義
 const REQUIRED_HEADERS = [
   'seq_no',
   'tsv_group_id', // グループを識別するための仮の番号（Speed以外で必須）
@@ -36,27 +40,27 @@ const REQUIRED_HEADERS = [
   'question_ja',
   'answer_sentence_yes_en',
   'answer_sentence_yes_ja',
-  'answer_sentence_no_en',  // Speedでのみ必須、他は任意
-  'answer_sentence_no_ja'
+  'answer_sentence_no_en', // Speedでのみ必須、他は任意
+  'answer_sentence_no_ja',
 ];
 
 export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: SprintBulkImportDialogProps) {
   const t = useTranslations('contents.editor.sprint.bulkImportDialog');
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
-  const [data, setData] = useState<any[]>([]); 
+  const [data, setData] = useState<ImportRow[]>([]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
       handleReset();
     }
     setOpen(nextOpen);
-  }; 
+  };
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isSpeed = type === '0';
@@ -64,11 +68,11 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
 
   const processFile = (file: File) => {
     setLayoutError(null);
-    Papa.parse(file, {
+    Papa.parse<TsvRow>(file, {
       header: true,
-      delimiter: "\t", // 💡 タブ区切り (TSV) を明示
-      quoteChar: "",   // 💡 ダブルクォーテーションをフィールド囲み文字として処理しない
-      escapeChar: "",  // 💡 エスケープ文字の処理を無効化
+      delimiter: '\t', // タブ区切り (TSV) を明示
+      quoteChar: '', // ダブルクォーテーションをフィールド囲み文字として処理しない
+      escapeChar: '', // エスケープ文字の処理を無効化
       skipEmptyLines: true,
       error: (error) => {
         setLayoutError(t('tsvParseError', { message: error.message }));
@@ -76,7 +80,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
       },
       complete: (results) => {
         const headers = results.meta.fields || [];
-        const missing = REQUIRED_HEADERS.filter(h => !headers.includes(h));
+        const missing = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
 
         if (missing.length > 0) {
           setLayoutError(t('missingHeaders', { headers: missing.join(', ') }));
@@ -90,9 +94,9 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
         const masteryStatementMap = new Map<string, { en: string; ja: string }>();
 
         // 1周目のループ: バリデーション & Mastery用の共通Statement収集
-        const validatedRows = results.data.map((row: any, index: number) => {
+        const validatedRows = results.data.map((row, index) => {
           const error = validateRow(row, index);
-          
+
           const tsvGroupId = row.tsv_group_id?.trim();
           const statementEn = row.statement_en?.trim() || '';
           const statementJa = row.statement_ja?.trim() || '';
@@ -102,17 +106,12 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
             masteryStatementMap.set(tsvGroupId, { en: statementEn, ja: statementJa });
           }
 
-          return {
-            ...row,
-            index,
-            isValid: !error,
-            error: error || undefined
-          };
+          return { row, index, error };
         });
 
         // 2周目のループ: データの最終整形（UUIDの割り当て、MasteryのStatement伝播）
-        const finalPayload: any[] = validatedRows.map((row: any) => {
-          if (!row.isValid) return row;
+        const finalPayload: ImportRow[] = validatedRows.map(({ row, index, error }) => {
+          if (error) return { isValid: false, index, error };
 
           const tsvGroupId = row.tsv_group_id?.trim();
           let finalGroupId: string | null = null;
@@ -134,18 +133,21 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
             finalStatementJa = shared.ja;
           }
 
+          // question_en・answer_sentence_yes_en（Speedは answer_sentence_no_en も）は validateRow で空でないことを確認済み
           return {
-            seq_no: Number(row.seq_no),
-            group_id: finalGroupId,
-            statement_en: finalStatementEn,
-            statement_ja: finalStatementJa || null,
-            question_en: row.question_en?.trim(),
-            question_ja: row.question_ja?.trim() || null,
-            answer_sentence_yes_en: row.answer_sentence_yes_en?.trim(),
-            answer_sentence_yes_ja: row.answer_sentence_yes_ja?.trim() || null,
-            answer_sentence_no_en: isSpeed ? row.answer_sentence_no_en?.trim() : null,
-            answer_sentence_no_ja: isSpeed ? row.answer_sentence_no_ja?.trim() : null,
-            isValid: true
+            isValid: true,
+            question: {
+              seq_no: Number(row.seq_no),
+              group_id: finalGroupId,
+              statement_en: finalStatementEn,
+              statement_ja: finalStatementJa || null,
+              question_en: row.question_en?.trim() ?? '',
+              question_ja: row.question_ja?.trim() || null,
+              answer_sentence_yes_en: row.answer_sentence_yes_en?.trim() ?? '',
+              answer_sentence_yes_ja: row.answer_sentence_yes_ja?.trim() || null,
+              answer_sentence_no_en: isSpeed ? (row.answer_sentence_no_en?.trim() ?? null) : null,
+              answer_sentence_no_ja: isSpeed ? (row.answer_sentence_no_ja?.trim() ?? null) : null,
+            },
           };
         });
 
@@ -155,7 +157,7 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
     });
   };
 
-  const validateRow = (row: any, index: number): string | null => {
+  const validateRow = (row: TsvRow, index: number): string | null => {
     const lineNum = index + 2;
     const prefix = t('rowErrorPrefix', { line: lineNum });
 
@@ -186,18 +188,18 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
     setIsProcessing(true);
     try {
       // サーバーアクション側で content_id, question_type, difficulty_level を付与し既存のデータを全削除 (洗い替え)
-      const payload: Partial<SprintQuestion>[] = data.map(({ isValid, error, ...cleanData }) => cleanData);
+      const payload = data.flatMap((d) => (d.isValid ? [d.question] : []));
 
       const result = await bulkImportSprintQuestions(contentId, type, level, payload);
       if (result.success) {
-        showToast(t('toastImported', { count: data.length }), "success");
+        showToast(t('toastImported', { count: data.length }), 'success');
         setHasCompleted(true);
         onSuccess?.();
       } else {
-        showToast(result.message || t('toastSaveFailed'), "error");
+        showToast(result.message || t('toastSaveFailed'), 'error');
       }
-    } catch (error) {
-      showToast(t('toastSystemError'), "error");
+    } catch {
+      showToast(t('toastSystemError'), 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -210,12 +212,15 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const errorItems = data.filter(d => !d.isValid);
+  const errorItems = data.filter((d): d is ImportErrorRow => !d.isValid);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2 border-dashed border-slate-300 hover:bg-slate-50 transition-all font-bold h-8 text-xs">
+        <Button
+          variant="outline"
+          className="gap-2 border-dashed border-slate-300 hover:bg-slate-50 transition-all font-bold h-8 text-xs"
+        >
           <FileUp size={14} /> {t('button')}
         </Button>
       </DialogTrigger>
@@ -227,14 +232,16 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
           <div className="flex justify-between items-start">
             <div className="space-y-1">
               <DialogTitle className="text-2xl font-black flex items-center gap-2">
-                 <FileUp className="text-brand-400" size={24} />
-                 {hasCompleted ? t('titleComplete') : t('titleNormal')}
+                <FileUp className="text-brand-400" size={24} />
+                {hasCompleted ? t('titleComplete') : t('titleNormal')}
               </DialogTitle>
-              <p className="text-xs text-slate-400 font-medium">
-                {t('subtitle')}
-              </p>
+              <p className="text-xs text-slate-400 font-medium">{t('subtitle')}</p>
             </div>
-            <Button variant="outline" asChild className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white h-9 text-[11px] font-bold shrink-0">
+            <Button
+              variant="outline"
+              asChild
+              className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white h-9 text-[11px] font-bold shrink-0"
+            >
               <a href="/templates/bulk_sprint_sample.tsv" download>
                 <Download size={14} className="mr-2 text-brand-400" /> {t('downloadSample')}
               </a>
@@ -256,38 +263,66 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
           {data.length === 0 ? (
             <div
               className={cn(
-                "flex-1 border-3 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center p-12 gap-5 cursor-pointer transition-all duration-300",
-                isDragging ? "border-brand-500 bg-brand-50/50 scale-[0.98]" : "border-slate-100 bg-slate-50/30 hover:bg-slate-50 hover:border-slate-200"
+                'flex-1 border-3 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center p-12 gap-5 cursor-pointer transition-all duration-300',
+                isDragging
+                  ? 'border-brand-500 bg-brand-50/50 scale-[0.98]'
+                  : 'border-slate-100 bg-slate-50/30 hover:bg-slate-50 hover:border-slate-200',
               )}
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
               onDragLeave={() => setIsDragging(false)}
-              onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if(f) processFile(f); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const f = e.dataTransfer.files[0];
+                if (f) processFile(f);
+              }}
               onClick={() => fileInputRef.current?.click()}
             >
               <div className="p-8 bg-white rounded-full shadow-sm border border-slate-100">
-                <Upload className={cn("text-slate-300 transition-transform duration-500", isDragging && "scale-125 text-brand-500")} size={48} />
+                <Upload
+                  className={cn(
+                    'text-slate-300 transition-transform duration-500',
+                    isDragging && 'scale-125 text-brand-500',
+                  )}
+                  size={48}
+                />
               </div>
               <div className="text-center space-y-2">
                 <p className="text-base font-black text-slate-700">{t('dropzoneTitle')}</p>
                 <p className="text-xs text-slate-400 font-medium">{t('dropzoneHint')}</p>
               </div>
-              <input type="file" ref={fileInputRef} className="hidden" accept=".tsv" onChange={(e) => { const f = e.target.files?.[0]; if(f) processFile(f); }} />
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".tsv"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) processFile(f);
+                }}
+              />
             </div>
           ) : (
             <div className="flex-1 flex flex-col gap-8 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
               <div className="grid grid-cols-2 gap-6">
                 {[
-                  { label: "Total Questions", val: data.length, color: "text-slate-600" },
+                  { label: 'Total Questions', val: data.length, color: 'text-slate-600' },
                   {
-                    label: errorItems.length > 0 ? "Errors Found" : "Status",
-                    val: errorItems.length > 0 ? t('errorCountValue', { count: errorItems.length }) : "Clear",
-                    color: errorItems.length > 0 ? "text-rose-600" : "text-emerald-600",
-                    bg: errorItems.length > 0 ? "bg-rose-50" : "bg-emerald-50"
-                  }
+                    label: errorItems.length > 0 ? 'Errors Found' : 'Status',
+                    val: errorItems.length > 0 ? t('errorCountValue', { count: errorItems.length }) : 'Clear',
+                    color: errorItems.length > 0 ? 'text-rose-600' : 'text-emerald-600',
+                    bg: errorItems.length > 0 ? 'bg-rose-50' : 'bg-emerald-50',
+                  },
                 ].map((s, i) => (
-                  <div key={i} className={cn("p-5 rounded-3xl border border-slate-100 flex flex-col bg-slate-50/50", s.bg)}>
+                  <div
+                    key={i}
+                    className={cn('p-5 rounded-3xl border border-slate-100 flex flex-col bg-slate-50/50', s.bg)}
+                  >
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.label}</p>
-                    <p className={cn("text-3xl font-black tracking-tight", s.color)}>{s.val}</p>
+                    <p className={cn('text-3xl font-black tracking-tight', s.color)}>{s.val}</p>
                   </div>
                 ))}
               </div>
@@ -303,13 +338,17 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
                       <TableHeader className="bg-rose-50/50 sticky top-0 z-10 backdrop-blur-md">
                         <TableRow className="border-rose-100 hover:bg-transparent">
                           <TableHead className="w-24 text-[10px] font-black text-rose-700 uppercase">Row No</TableHead>
-                          <TableHead className="text-[10px] font-black text-rose-700 uppercase">Error Message</TableHead>
+                          <TableHead className="text-[10px] font-black text-rose-700 uppercase">
+                            Error Message
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {errorItems.map((item, i) => (
                           <TableRow key={i} className="hover:bg-rose-50/30 border-rose-50">
-                            <TableCell className="font-black text-slate-800">{t('rowLabel', { n: item.index + 2 })}</TableCell>
+                            <TableCell className="font-black text-slate-800">
+                              {t('rowLabel', { n: item.index + 2 })}
+                            </TableCell>
                             <TableCell className="text-rose-500 text-xs font-bold italic">{item.error}</TableCell>
                           </TableRow>
                         ))}
@@ -325,7 +364,8 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
                   <div className="space-y-2">
                     <p className="text-xl font-black text-slate-800 tracking-tight">Ready for Update!</p>
                     <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
-                      {t('readyBody')}<br />
+                      {t('readyBody')}
+                      <br />
                       {t('readyHint')}
                     </p>
                   </div>
@@ -336,11 +376,11 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
         </div>
 
         <div className="bg-slate-50 p-8 flex justify-between items-center border-t border-slate-200">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleReset} 
-            disabled={isProcessing || data.length === 0} 
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            disabled={isProcessing || data.length === 0}
             className="text-slate-400 hover:text-slate-600 font-bold hover:bg-slate-100 rounded-xl"
           >
             <RefreshCcw size={14} className="mr-2" /> {t('reset')}
@@ -364,7 +404,9 @@ export function SprintBulkImportDialog({ contentId, type, level, onSuccess }: Sp
                 disabled={isProcessing || data.length === 0 || errorItems.length > 0}
               >
                 {isProcessing ? (
-                  <><Loader2 className="animate-spin mr-2" size={18} /> Processing...</>
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={18} /> Processing...
+                  </>
                 ) : (
                   t('startImport')
                 )}

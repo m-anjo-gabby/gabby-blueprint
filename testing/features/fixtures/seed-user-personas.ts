@@ -15,20 +15,20 @@
  *   ライブのセッションは「スケジュール×開始日時」で重複を判定し、終了時刻を過ぎた回は再実行時に完了にする。
  *   チャットはメッセージが無いルームにだけ投入する。
  */
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { loadTestEnv, resolveTestEnvFromArgs } from "../../helpers/env.ts";
-import { createAdminClient } from "../../helpers/auth.ts";
-import { currentTermIndex, termOf } from "../../helpers/fixture-terms.ts";
-import { createFixtureKit, type ClientType } from "../../helpers/fixture-accounts.ts";
-import { createChatKit, type ChatMessageSeed } from "../../helpers/fixture-chat.ts";
-import { createLiveKit, type LiveCoach, type LiveScheduleSeed } from "./user-personas-live.ts";
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient } from '../../helpers/auth.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../helpers/env.ts';
+import { createFixtureKit, type ClientType } from '../../helpers/fixture-accounts.ts';
+import { createChatKit, type ChatMessageSeed } from '../../helpers/fixture-chat.ts';
+import { currentTermIndex, termOf } from '../../helpers/fixture-terms.ts';
+import { createLiveKit, type LiveCoach, type LiveScheduleSeed } from './user-personas-live.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);
 
 const PASSWORD_ENV = process.env.QA_LIVE_SESSION_TEST_PASSWORD;
 if (!PASSWORD_ENV) {
-  throw new Error("QA_LIVE_SESSION_TEST_PASSWORD が未設定です（testing/.env.local を確認してください）。");
+  throw new Error('QA_LIVE_SESSION_TEST_PASSWORD が未設定です（testing/.env.local を確認してください）。');
 }
 
 const admin: SupabaseClient = await createAdminClient();
@@ -37,8 +37,8 @@ const live = createLiveKit(admin, PASSWORD_ENV);
 const chat = createChatKit(admin);
 
 /** 学習履歴の起点（JST）。「投入時点で3か月前から継続している」状態を作るための固定日 */
-const HISTORY_START = "2026-07-01";
-const ACCESS_NOTE = "【QA固定】利用者ペルソナ";
+const HISTORY_START = '2026-07-01';
+const ACCESS_NOTE = '【QA固定】利用者ペルソナ';
 
 // ---------------------------------------------------------------------------
 // 日付（すべてJSTの暦日 'YYYY-MM-DD' で扱う）
@@ -83,8 +83,8 @@ const jitter = (rng: Rng, base: number): number => Math.max(1, Math.round(base *
 // ---------------------------------------------------------------------------
 // ペルソナ定義（testing/FIXTURES.md「利用者ペルソナ」と対応させる）
 // ---------------------------------------------------------------------------
-type TenantKey = "A" | "B" | "individual";
-type QuestionType = "0" | "4" | "5" | "6";
+type TenantKey = 'A' | 'B' | 'individual';
+type QuestionType = '0' | '4' | '5' | '6';
 
 interface Levels {
   speed: number;
@@ -94,12 +94,12 @@ interface Levels {
 }
 
 type Schedule =
-  | { kind: "daily" }
+  | { kind: 'daily' }
   /** 週1〜2日休む */
-  | { kind: "rest1to2" }
+  | { kind: 'rest1to2' }
   /** 決まった曜日だけ（0=日曜 … 6=土曜） */
-  | { kind: "weekdays"; days: number[] }
-  | { kind: "none" };
+  | { kind: 'weekdays'; days: number[] }
+  | { kind: 'none' };
 
 interface StudentPersona {
   id: string;
@@ -116,7 +116,7 @@ interface StudentPersona {
   slots: [number, number][];
   /** 1日に使う時間帯の数（省略時は全部） */
   slotsPerDay?: number;
-  favorites: "none" | "few" | "many";
+  favorites: 'none' | 'few' | 'many';
   /** 到達レベル（省略時は進捗行を作らない＝スプリント未経験） */
   levels?: Levels;
   /** レベルが上がった日（JST）と上がった後のレベル */
@@ -129,8 +129,8 @@ interface StudentPersona {
   live?: LivePersona;
 }
 
-type CoachKey = "C1" | "C2" | "C3";
-type LivePlanCode = "LIVE_WEEKLY1_3M" | "LIVE_WEEKLY2_3M";
+type CoachKey = 'C1' | 'C2' | 'C3';
+type LivePlanCode = 'LIVE_WEEKLY1_3M' | 'LIVE_WEEKLY2_3M';
 
 interface CoachPersona {
   id: string;
@@ -159,7 +159,7 @@ interface LivePersona {
   plan: LivePlanCode;
   slots: LiveSlotPersona[];
   /** キャンセルした回（コーチのローカル日付） */
-  cancellations?: { coach: CoachKey; date: string; by: "student" | "coach"; reason: string }[];
+  cancellations?: { coach: CoachKey; date: string; by: 'student' | 'coach'; reason: string }[];
 }
 
 /** プランの1枠あたりのセッション数（3か月契約の total_sessions を週あたりの回数で割った数） */
@@ -171,108 +171,217 @@ const ADVANCED: Levels = { speed: 7, structure: 6, builders: 4, mastery: 3 };
 
 const COACHES: Record<CoachKey, CoachPersona> = {
   C1: {
-    id: "COACH-01", seq: "01", name: "QAペルソナCOACH-01 Emily Carter（カナダ）", timezone: "America/Vancouver", countryCode: "CA",
-    availability: [{ days: [1, 2], start: "15:00:00", end: "18:00:00" }],
+    id: 'COACH-01',
+    seq: '01',
+    name: 'QAペルソナCOACH-01 Emily Carter（カナダ）',
+    timezone: 'America/Vancouver',
+    countryCode: 'CA',
+    availability: [{ days: [1, 2], start: '15:00:00', end: '18:00:00' }],
   },
   C2: {
-    id: "COACH-02", seq: "02", name: "QAペルソナCOACH-02 Michael Brooks（アメリカ）", timezone: "America/New_York", countryCode: "US",
-    availability: [{ days: [2], start: "18:00:00", end: "20:00:00" }, { days: [4], start: "08:00:00", end: "10:00:00" }],
+    id: 'COACH-02',
+    seq: '02',
+    name: 'QAペルソナCOACH-02 Michael Brooks（アメリカ）',
+    timezone: 'America/New_York',
+    countryCode: 'US',
+    availability: [
+      { days: [2], start: '18:00:00', end: '20:00:00' },
+      { days: [4], start: '08:00:00', end: '10:00:00' },
+    ],
   },
   C3: {
-    id: "COACH-03", seq: "03", name: "QAペルソナCOACH-03 佐藤 美咲（日本）", timezone: "Asia/Tokyo", countryCode: "JP",
-    availability: [{ days: [4], start: "19:00:00", end: "21:00:00" }, { days: [6], start: "10:00:00", end: "12:00:00" }],
+    id: 'COACH-03',
+    seq: '03',
+    name: 'QAペルソナCOACH-03 佐藤 美咲（日本）',
+    timezone: 'Asia/Tokyo',
+    countryCode: 'JP',
+    availability: [
+      { days: [4], start: '19:00:00', end: '21:00:00' },
+      { days: [6], start: '10:00:00', end: '12:00:00' },
+    ],
   },
 };
-const COACH_TENANT_NAME = "【QA固定】ペルソナ コーチ";
+const COACH_TENANT_NAME = '【QA固定】ペルソナ コーチ';
 
 const STUDENTS: StudentPersona[] = [
   {
-    id: "P01", seq: "01", name: "QAペルソナP01（毎日コツコツ・初級）", tenant: "A",
-    schedule: { kind: "daily" }, daily: { words: 5, phrases: 20, sprints: 5 },
-    slots: [[7, 8], [12, 13], [20, 22]], favorites: "few", levels: BEGINNER, scoreBase: 62,
+    id: 'P01',
+    seq: '01',
+    name: 'QAペルソナP01（毎日コツコツ・初級）',
+    tenant: 'A',
+    schedule: { kind: 'daily' },
+    daily: { words: 5, phrases: 20, sprints: 5 },
+    slots: [
+      [7, 8],
+      [12, 13],
+      [20, 22],
+    ],
+    favorites: 'few',
+    levels: BEGINNER,
+    scoreBase: 62,
   },
   {
-    id: "P02", seq: "02", name: "QAペルソナP02（夜型・中級）", tenant: "B",
-    schedule: { kind: "rest1to2" }, daily: { words: 10, phrases: 30, sprints: 8 },
-    slots: [[23, 24], [24, 25]], favorites: "many", levels: INTERMEDIATE, scoreBase: 74,
+    id: 'P02',
+    seq: '02',
+    name: 'QAペルソナP02（夜型・中級）',
+    tenant: 'B',
+    schedule: { kind: 'rest1to2' },
+    daily: { words: 10, phrases: 30, sprints: 8 },
+    slots: [
+      [23, 24],
+      [24, 25],
+    ],
+    favorites: 'many',
+    levels: INTERMEDIATE,
+    scoreBase: 74,
   },
   {
-    id: "P03", seq: "03", name: "QAペルソナP03（週末だけ・初級）", tenant: "A",
-    schedule: { kind: "weekdays", days: [6, 0] }, daily: { words: 5, phrases: 10, sprints: 3 },
-    slots: [[9, 11.5]], favorites: "none", levels: BEGINNER, scoreBase: 58,
+    id: 'P03',
+    seq: '03',
+    name: 'QAペルソナP03（週末だけ・初級）',
+    tenant: 'A',
+    schedule: { kind: 'weekdays', days: [6, 0] },
+    daily: { words: 5, phrases: 10, sprints: 3 },
+    slots: [[9, 11.5]],
+    favorites: 'none',
+    levels: BEGINNER,
+    scoreBase: 58,
   },
   {
     // レッスン（木曜19:00 JST、日本人コーチ）の前の火・水にまとめて学習する
-    id: "P04", seq: "04", name: "QAペルソナP04（レッスン中心・中級）", tenant: "B",
-    schedule: { kind: "weekdays", days: [2, 3] }, daily: { words: 10, phrases: 20, sprints: 5 },
-    slots: [[20, 22.5]], favorites: "few", levels: INTERMEDIATE, scoreBase: 72,
+    id: 'P04',
+    seq: '04',
+    name: 'QAペルソナP04（レッスン中心・中級）',
+    tenant: 'B',
+    schedule: { kind: 'weekdays', days: [2, 3] },
+    daily: { words: 10, phrases: 20, sprints: 5 },
+    slots: [[20, 22.5]],
+    favorites: 'few',
+    levels: INTERMEDIATE,
+    scoreBase: 72,
     live: {
-      plan: "LIVE_WEEKLY1_3M",
-      slots: [{ slotNo: 1, coach: "C3", dayOfWeek: 4, startTime: "19:00:00", endTime: "19:30:00" }],
-      cancellations: [{ coach: "C3", date: "2026-08-13", by: "student", reason: "お盆休みで帰省するため" }],
+      plan: 'LIVE_WEEKLY1_3M',
+      slots: [{ slotNo: 1, coach: 'C3', dayOfWeek: 4, startTime: '19:00:00', endTime: '19:30:00' }],
+      cancellations: [{ coach: 'C3', date: '2026-08-13', by: 'student', reason: 'お盆休みで帰省するため' }],
     },
   },
   {
     // 週2回（火曜朝 07:00 JST＝カナダのコーチ、木曜夜 21:00 JST＝アメリカのコーチ）で分担
-    id: "P05", seq: "05", name: "QAペルソナP05（熱心・上級・ビジネス英語）", tenant: "B",
-    schedule: { kind: "daily" }, daily: { words: 15, phrases: 40, sprints: 10 },
-    slots: [[6, 7.5], [21.5, 23.5]], favorites: "many", levels: ADVANCED, scoreBase: 82,
+    id: 'P05',
+    seq: '05',
+    name: 'QAペルソナP05（熱心・上級・ビジネス英語）',
+    tenant: 'B',
+    schedule: { kind: 'daily' },
+    daily: { words: 15, phrases: 40, sprints: 10 },
+    slots: [
+      [6, 7.5],
+      [21.5, 23.5],
+    ],
+    favorites: 'many',
+    levels: ADVANCED,
+    scoreBase: 82,
     live: {
-      plan: "LIVE_WEEKLY2_3M",
+      plan: 'LIVE_WEEKLY2_3M',
       slots: [
-        { slotNo: 1, coach: "C1", dayOfWeek: 1, startTime: "15:00:00", endTime: "15:30:00" },
-        { slotNo: 2, coach: "C2", dayOfWeek: 4, startTime: "08:00:00", endTime: "08:30:00" },
+        { slotNo: 1, coach: 'C1', dayOfWeek: 1, startTime: '15:00:00', endTime: '15:30:00' },
+        { slotNo: 2, coach: 'C2', dayOfWeek: 4, startTime: '08:00:00', endTime: '08:30:00' },
       ],
-      cancellations: [{ coach: "C2", date: "2026-09-17", by: "coach", reason: "Family emergency. Sorry for the short notice." }],
+      cancellations: [
+        { coach: 'C2', date: '2026-09-17', by: 'coach', reason: 'Family emergency. Sorry for the short notice.' },
+      ],
     },
   },
   {
-    id: "P06", seq: "06", name: "QAペルソナP06（始めたばかり）", tenant: "A",
-    schedule: { kind: "none" }, daily: { words: 0, phrases: 0, sprints: 0 },
-    slots: [], favorites: "none", scoreBase: 0, startsOnSeedDate: true,
+    id: 'P06',
+    seq: '06',
+    name: 'QAペルソナP06（始めたばかり）',
+    tenant: 'A',
+    schedule: { kind: 'none' },
+    daily: { words: 0, phrases: 0, sprints: 0 },
+    slots: [],
+    favorites: 'none',
+    scoreBase: 0,
+    startsOnSeedDate: true,
   },
   {
-    id: "P07", seq: "07", name: "QAペルソナP07（休眠中・初級）", tenant: "A",
-    schedule: { kind: "daily" }, activeUntil: "2026-07-31", daily: { words: 5, phrases: 10, sprints: 3 },
-    slots: [[20, 22]], favorites: "few", levels: BEGINNER, scoreBase: 60,
+    id: 'P07',
+    seq: '07',
+    name: 'QAペルソナP07（休眠中・初級）',
+    tenant: 'A',
+    schedule: { kind: 'daily' },
+    activeUntil: '2026-07-31',
+    daily: { words: 5, phrases: 10, sprints: 3 },
+    slots: [[20, 22]],
+    favorites: 'few',
+    levels: BEGINNER,
+    scoreBase: 60,
   },
   {
-    id: "P08", seq: "08", name: "QAペルソナP08（研修担当・モニター）", tenant: "B", roles: ["monitor"],
-    schedule: { kind: "weekdays", days: [2, 4] }, daily: { words: 5, phrases: 10, sprints: 3 },
-    slots: [[12, 13]], favorites: "none", levels: { speed: 3, structure: 3, builders: 2, mastery: 2 }, scoreBase: 70,
+    id: 'P08',
+    seq: '08',
+    name: 'QAペルソナP08（研修担当・モニター）',
+    tenant: 'B',
+    roles: ['monitor'],
+    schedule: { kind: 'weekdays', days: [2, 4] },
+    daily: { words: 5, phrases: 10, sprints: 3 },
+    slots: [[12, 13]],
+    favorites: 'none',
+    levels: { speed: 3, structure: 3, builders: 2, mastery: 2 },
+    scoreBase: 70,
   },
   {
     // 水曜朝 07:30 JST のレッスン。2026-08-12 からカナダのコーチ→アメリカのコーチへ交代
-    id: "P09", seq: "09", name: "QAペルソナP09（コーチ交代あり・初級）", tenant: "A",
-    schedule: { kind: "rest1to2" }, daily: { words: 5, phrases: 15, sprints: 3 },
-    slots: [[7, 8.5], [19, 21]], favorites: "few", levels: BEGINNER, scoreBase: 60,
+    id: 'P09',
+    seq: '09',
+    name: 'QAペルソナP09（コーチ交代あり・初級）',
+    tenant: 'A',
+    schedule: { kind: 'rest1to2' },
+    daily: { words: 5, phrases: 15, sprints: 3 },
+    slots: [
+      [7, 8.5],
+      [19, 21],
+    ],
+    favorites: 'few',
+    levels: BEGINNER,
+    scoreBase: 60,
     live: {
-      plan: "LIVE_WEEKLY1_3M",
+      plan: 'LIVE_WEEKLY1_3M',
       slots: [
-        { slotNo: 1, coach: "C1", dayOfWeek: 2, startTime: "15:30:00", endTime: "16:00:00", until: "2026-08-11" },
-        { slotNo: 1, coach: "C2", dayOfWeek: 2, startTime: "18:30:00", endTime: "19:00:00", from: "2026-08-12" },
+        { slotNo: 1, coach: 'C1', dayOfWeek: 2, startTime: '15:30:00', endTime: '16:00:00', until: '2026-08-11' },
+        { slotNo: 1, coach: 'C2', dayOfWeek: 2, startTime: '18:30:00', endTime: '19:00:00', from: '2026-08-12' },
       ],
     },
   },
   {
-    id: "P10", seq: "10", name: "QAペルソナP10 Alexander Maximilian Vandenberg-Yamamoto（伸び盛り・個人契約）", tenant: "individual",
-    schedule: { kind: "rest1to2" }, daily: { words: 10, phrases: 30, sprints: 8 },
-    slots: [[7, 9], [12, 13], [19, 21], [22, 25]], slotsPerDay: 2, favorites: "many",
+    id: 'P10',
+    seq: '10',
+    name: 'QAペルソナP10 Alexander Maximilian Vandenberg-Yamamoto（伸び盛り・個人契約）',
+    tenant: 'individual',
+    schedule: { kind: 'rest1to2' },
+    daily: { words: 10, phrases: 30, sprints: 8 },
+    slots: [
+      [7, 9],
+      [12, 13],
+      [19, 21],
+      [22, 25],
+    ],
+    slotsPerDay: 2,
+    favorites: 'many',
     levels: INTERMEDIATE,
     levelUps: [
-      { date: "2026-08-01", levels: { speed: 5, structure: 4 } },
-      { date: "2026-08-20", levels: { builders: 3 } },
-      { date: "2026-09-10", levels: { speed: 6, mastery: 3 } },
-      { date: "2026-09-25", levels: { speed: 7, structure: 5 } },
+      { date: '2026-08-01', levels: { speed: 5, structure: 4 } },
+      { date: '2026-08-20', levels: { builders: 3 } },
+      { date: '2026-09-10', levels: { speed: 6, mastery: 3 } },
+      { date: '2026-09-25', levels: { speed: 7, structure: 5 } },
     ],
     scoreBase: 70,
   },
 ];
 
 const TENANTS: Record<TenantKey, { name: string; clientType: ClientType; withLimitedContents: boolean }> = {
-  A: { name: "【QA固定】ペルソナ 法人A（共通教材のみ）", clientType: 1, withLimitedContents: false },
-  B: { name: "【QA固定】ペルソナ 法人B（専用教材あり）", clientType: 1, withLimitedContents: true },
-  individual: { name: "【QA固定】ペルソナ 個人", clientType: 2, withLimitedContents: false },
+  A: { name: '【QA固定】ペルソナ 法人A（共通教材のみ）', clientType: 1, withLimitedContents: false },
+  B: { name: '【QA固定】ペルソナ 法人B（専用教材あり）', clientType: 1, withLimitedContents: true },
+  individual: { name: '【QA固定】ペルソナ 個人', clientType: 2, withLimitedContents: false },
 };
 
 /** 法人Bに付与する限定公開教材から除く教材（実在の顧客専用のコーパス等） */
@@ -298,22 +407,22 @@ async function setupTenant(key: TenantKey): Promise<TenantContents> {
   if (generic.length === 0) throw new Error("汎用スプリント（metadata.sprint.sprint_type='0'）の教材がありません。");
 
   const { data: common, error } = await admin
-    .from("com_m_contents")
-    .select("content_id")
-    .eq("content_type", 0)
-    .eq("content_scope", 0)
-    .eq("delete_flg", "0")
-    .order("content_name");
+    .from('com_m_contents')
+    .select('content_id')
+    .eq('content_type', 0)
+    .eq('content_scope', 0)
+    .eq('status', 1)
+    .order('content_name');
   if (error) throw error;
   const wordContentIds = (common ?? []).map((c) => c.content_id as string);
 
   if (wordContentIds.length === 0) {
     const { data: fallback, error: fallbackErr } = await admin
-      .from("com_m_contents")
-      .select("content_id, content_name")
-      .eq("content_type", 0)
-      .eq("content_scope", 1)
-      .eq("delete_flg", "0");
+      .from('com_m_contents')
+      .select('content_id, content_name')
+      .eq('content_type', 0)
+      .eq('content_scope', 1)
+      .eq('status', 1);
     if (fallbackErr) throw fallbackErr;
     for (const c of fallback ?? []) {
       if (!FALLBACK_WORD_CONTENT.test(c.content_name as string)) continue;
@@ -325,12 +434,12 @@ async function setupTenant(key: TenantKey): Promise<TenantContents> {
   if (tenant.withLimitedContents) {
     // 単語帳(0)・ダイアログ(3)の限定公開教材を付与する（実在顧客専用のものは除く）
     const { data: limited, error: limitedErr } = await admin
-      .from("com_m_contents")
-      .select("content_id, content_name, content_type")
-      .in("content_type", [0, 3])
-      .eq("content_scope", 1)
-      .eq("delete_flg", "0")
-      .order("content_name");
+      .from('com_m_contents')
+      .select('content_id, content_name, content_type')
+      .in('content_type', [0, 3])
+      .eq('content_scope', 1)
+      .eq('status', 1)
+      .order('content_name');
     if (limitedErr) throw limitedErr;
     for (const c of limited ?? []) {
       if (EXCLUDED_LIMITED_CONTENT.test(c.content_name as string)) continue;
@@ -359,13 +468,13 @@ async function loadQuestions(contentId: string, type: QuestionType, level: numbe
   for (const lv of [level, level - 1, level + 1, level - 2, level + 2, 1, 0]) {
     if (lv < 0) continue;
     const { data, error } = await admin
-      .from("com_m_sprint_questions")
-      .select("question_id, group_id, seq_no")
-      .eq("content_id", contentId)
-      .eq("question_type", type)
-      .eq("difficulty_level", lv)
-      .order("group_id", { nullsFirst: false })
-      .order("seq_no")
+      .from('com_m_sprint_questions')
+      .select('question_id, group_id, seq_no')
+      .eq('content_id', contentId)
+      .eq('question_type', type)
+      .eq('difficulty_level', lv)
+      .order('group_id', { nullsFirst: false })
+      .order('seq_no')
       .limit(400);
     if (error) throw error;
     if (data && data.length > 0) {
@@ -378,21 +487,21 @@ async function loadQuestions(contentId: string, type: QuestionType, level: numbe
 
 async function loadPhraseIds(wordContentIds: string[]): Promise<string[]> {
   const { data: words, error } = await admin
-    .from("com_m_word")
-    .select("word_id")
-    .in("content_id", wordContentIds)
-    .eq("status", "live")
-    .order("frequency_rank", { nullsFirst: false })
+    .from('com_m_word')
+    .select('word_id')
+    .in('content_id', wordContentIds)
+    .eq('status', 'live')
+    .order('frequency_rank', { nullsFirst: false })
     .limit(300);
   if (error) throw error;
   const wordIds = (words ?? []).map((w) => w.word_id as string);
   const phraseIds: string[] = [];
   for (let i = 0; i < wordIds.length; i += 100) {
     const { data, error: phraseErr } = await admin
-      .from("com_m_phrase")
-      .select("phrase_id")
-      .in("word_id", wordIds.slice(i, i + 100))
-      .eq("status", "live");
+      .from('com_m_phrase')
+      .select('phrase_id')
+      .in('word_id', wordIds.slice(i, i + 100))
+      .eq('status', 'live');
     if (phraseErr) throw phraseErr;
     phraseIds.push(...(data ?? []).map((p) => p.phrase_id as string));
   }
@@ -403,10 +512,10 @@ async function loadPhraseIds(wordContentIds: string[]): Promise<string[]> {
 // 学習履歴の生成（DBに書く前の、あるべき姿）
 // ---------------------------------------------------------------------------
 const QUESTION_TYPES: { type: QuestionType; key: keyof Levels; weight: number }[] = [
-  { type: "0", key: "speed", weight: 4 },
-  { type: "4", key: "structure", weight: 3 },
-  { type: "5", key: "builders", weight: 2 },
-  { type: "6", key: "mastery", weight: 1 },
+  { type: '0', key: 'speed', weight: 4 },
+  { type: '4', key: 'structure', weight: 3 },
+  { type: '5', key: 'builders', weight: 2 },
+  { type: '6', key: 'mastery', weight: 1 },
 ];
 const TOTAL_TYPE_WEIGHT = QUESTION_TYPES.reduce((sum, t) => sum + t.weight, 0);
 
@@ -430,13 +539,13 @@ function levelsOn(p: StudentPersona, date: string): Levels {
 function isActive(p: StudentPersona, date: string): boolean {
   if (p.activeUntil && date > p.activeUntil) return false;
   switch (p.schedule.kind) {
-    case "none":
+    case 'none':
       return false;
-    case "daily":
+    case 'daily':
       return true;
-    case "weekdays":
+    case 'weekdays':
       return p.schedule.days.includes(dayOfWeek(date));
-    case "rest1to2": {
+    case 'rest1to2': {
       const rng = rngFor(`${p.id}:rest:${weekIndex(date)}`);
       const restDays = new Set<number>();
       const count = between(rng, 1, 2);
@@ -459,7 +568,7 @@ interface SprintRun {
   type: (typeof QUESTION_TYPES)[number];
   level: number;
   timeLimitSec: number;
-  answerType: "0" | "1";
+  answerType: '0' | '1';
   history: SprintHistoryItem[];
 }
 
@@ -486,9 +595,7 @@ function sessionTimesFor(p: StudentPersona, date: string, rng: Rng): Date[] {
   const count = Math.min(p.slotsPerDay ?? slots.length, slots.length);
   const chosen: [number, number][] = [];
   while (chosen.length < count) chosen.push(slots.splice(Math.floor(rng() * slots.length), 1)[0]);
-  return chosen
-    .map(([from, to]) => jstAt(date, from + rng() * (to - from)))
-    .sort((a, b) => a.getTime() - b.getTime());
+  return chosen.map(([from, to]) => jstAt(date, from + rng() * (to - from))).sort((a, b) => a.getTime() - b.getTime());
 }
 
 /** n を k 個に分ける（合計 n、0 を含みうる） */
@@ -531,7 +638,15 @@ async function generateHistory(p: StudentPersona, contents: TenantContents): Pro
           current.assessments += assessments;
           current.last = at;
         } else {
-          wordDayMap.set(key, { contentId, date: wordDate, words: words[s], phrases: phrases[s], assessments, first: at, last: at });
+          wordDayMap.set(key, {
+            contentId,
+            date: wordDate,
+            words: words[s],
+            phrases: phrases[s],
+            assessments,
+            first: at,
+            last: at,
+          });
         }
         at = new Date(at.getTime() + between(rng, 4, 10) * 60_000);
       }
@@ -547,9 +662,22 @@ async function generateHistory(p: StudentPersona, contents: TenantContents): Pro
           const skipped = rng() < 0.1;
           const assessed = !skipped && rng() < 0.6;
           const score = Math.round(Math.min(100, Math.max(20, scoreBase + (rng() - 0.5) * 30)));
-          return { question_id: q.question_id, group_id: q.group_id, seq_no: q.seq_no, is_skipped: skipped, assessment: assessed ? { total_score: score } : null };
+          return {
+            question_id: q.question_id,
+            group_id: q.group_id,
+            seq_no: q.seq_no,
+            is_skipped: skipped,
+            assessment: assessed ? { total_score: score } : null,
+          };
         });
-        sprintRuns.push({ at, type, level, timeLimitSec: pick(rng, [60, 90] as const), answerType: rng() < 0.5 ? "0" : "1", history });
+        sprintRuns.push({
+          at,
+          type,
+          level,
+          timeLimitSec: pick(rng, [60, 90] as const),
+          answerType: rng() < 0.5 ? '0' : '1',
+          history,
+        });
         at = new Date(at.getTime() + between(rng, 2, 4) * 60_000);
       }
     }
@@ -567,7 +695,12 @@ async function insertInChunks(table: string, rows: Record<string, unknown>[]): P
   }
 }
 
-async function upsertInChunks(table: string, rows: Record<string, unknown>[], onConflict: string, ignoreDuplicates: boolean): Promise<void> {
+async function upsertInChunks(
+  table: string,
+  rows: Record<string, unknown>[],
+  onConflict: string,
+  ignoreDuplicates: boolean,
+): Promise<void> {
   for (let i = 0; i < rows.length; i += 200) {
     const { error } = await admin.from(table).upsert(rows.slice(i, i + 200), { onConflict, ignoreDuplicates });
     if (error) throw error;
@@ -585,17 +718,34 @@ async function writeWordSummaries(userId: string, days: WordDay[]): Promise<void
     insert_date: d.first.toISOString(),
     update_date: d.last.toISOString(),
   }));
-  await upsertInChunks("self_t_word_summary", rows, "user_id,content_id,training_date", false);
+  await upsertInChunks('self_t_word_summary', rows, 'user_id,content_id,training_date', false);
 }
 
 async function writeSprints(userId: string, contentId: string, runs: SprintRun[]): Promise<number> {
   // 日次サマリー（教材×JSTの日付）
-  const summary = new Map<string, { date: string; questions: number; assessments: number; byType: Record<QuestionType, number>; first: Date; last: Date }>();
+  const summary = new Map<
+    string,
+    {
+      date: string;
+      questions: number;
+      assessments: number;
+      byType: Record<QuestionType, number>;
+      first: Date;
+      last: Date;
+    }
+  >();
   for (const run of runs) {
     const date = jstDateOf(run.at);
     const answered = run.history.filter((h) => !h.is_skipped).length;
     const assessed = run.history.filter((h) => h.assessment).length;
-    const s = summary.get(date) ?? { date, questions: 0, assessments: 0, byType: { "0": 0, "4": 0, "5": 0, "6": 0 }, first: run.at, last: run.at };
+    const s = summary.get(date) ?? {
+      date,
+      questions: 0,
+      assessments: 0,
+      byType: { '0': 0, '4': 0, '5': 0, '6': 0 },
+      first: run.at,
+      last: run.at,
+    };
     s.questions += answered;
     s.assessments += assessed;
     s.byType[run.type.type] += answered;
@@ -603,21 +753,21 @@ async function writeSprints(userId: string, contentId: string, runs: SprintRun[]
     summary.set(date, s);
   }
   await upsertInChunks(
-    "self_t_sprint_summary",
+    'self_t_sprint_summary',
     [...summary.values()].map((s) => ({
       user_id: userId,
       content_id: contentId,
       training_date: s.date,
       question_count: s.questions,
       assessment_count: s.assessments,
-      speed_count: s.byType["0"],
-      structure_count: s.byType["4"],
-      builders_count: s.byType["5"],
-      mastery_count: s.byType["6"],
+      speed_count: s.byType['0'],
+      structure_count: s.byType['4'],
+      builders_count: s.byType['5'],
+      mastery_count: s.byType['6'],
       insert_date: s.first.toISOString(),
       update_date: s.last.toISOString(),
     })),
-    "user_id,content_id,training_date",
+    'user_id,content_id,training_date',
     false,
   );
 
@@ -625,11 +775,11 @@ async function writeSprints(userId: string, contentId: string, runs: SprintRun[]
   const existing = new Set<number>();
   for (let page = 0; ; page++) {
     const { data, error } = await admin
-      .from("self_t_sprint")
-      .select("insert_date")
-      .eq("user_id", userId)
-      .gte("insert_date", jstAt(HISTORY_START, 0).toISOString())
-      .order("insert_date")
+      .from('self_t_sprint')
+      .select('insert_date')
+      .eq('user_id', userId)
+      .gte('insert_date', jstAt(HISTORY_START, 0).toISOString())
+      .order('insert_date')
       .range(page * 1000, page * 1000 + 999);
     if (error) throw error;
     for (const r of data ?? []) existing.add(new Date(r.insert_date as string).getTime());
@@ -639,7 +789,7 @@ async function writeSprints(userId: string, contentId: string, runs: SprintRun[]
     .filter((run) => !existing.has(run.at.getTime()))
     .map((run) => ({
       user_id: userId,
-      sprint_type: "0",
+      sprint_type: '0',
       content_id: contentId,
       question_type: run.type.type,
       answer_type: run.answerType,
@@ -651,13 +801,19 @@ async function writeSprints(userId: string, contentId: string, runs: SprintRun[]
       insert_date: run.at.toISOString(),
       update_date: run.at.toISOString(),
     }));
-  await insertInChunks("self_t_sprint", rows);
+  await insertInChunks('self_t_sprint', rows);
   return rows.length;
 }
 
 /** 週ごとのお気に入り登録（few: 週2〜3件、many: 週8〜12件）。学習した時刻に登録したことにする */
-async function writeFavorites(p: StudentPersona, userId: string, contents: TenantContents, phraseIds: string[], generated: GeneratedHistory): Promise<number> {
-  if (p.favorites === "none" || generated.sessionTimes.length === 0) return 0;
+async function writeFavorites(
+  p: StudentPersona,
+  userId: string,
+  contents: TenantContents,
+  phraseIds: string[],
+  generated: GeneratedHistory,
+): Promise<number> {
+  if (p.favorites === 'none' || generated.sessionTimes.length === 0) return 0;
 
   const timesByWeek = new Map<number, Date[]>();
   for (const t of generated.sessionTimes) {
@@ -667,14 +823,17 @@ async function writeFavorites(p: StudentPersona, userId: string, contents: Tenan
   const answeredByWeek = new Map<number, string[]>();
   for (const run of generated.sprintRuns) {
     const w = weekIndex(jstDateOf(run.at));
-    answeredByWeek.set(w, [...(answeredByWeek.get(w) ?? []), ...run.history.filter((h) => !h.is_skipped).map((h) => h.question_id)]);
+    answeredByWeek.set(w, [
+      ...(answeredByWeek.get(w) ?? []),
+      ...run.history.filter((h) => !h.is_skipped).map((h) => h.question_id),
+    ]);
   }
 
   const phraseRows: Record<string, unknown>[] = [];
   const questionRows: Record<string, unknown>[] = [];
   for (const [week, times] of timesByWeek) {
     const rng = rngFor(`${p.id}:fav:${week}`);
-    const count = p.favorites === "few" ? between(rng, 2, 3) : between(rng, 8, 12);
+    const count = p.favorites === 'few' ? between(rng, 2, 3) : between(rng, 8, 12);
     const answered = answeredByWeek.get(week) ?? [];
     for (let i = 0; i < count; i++) {
       const at = pick(rng, times).toISOString();
@@ -687,12 +846,15 @@ async function writeFavorites(p: StudentPersona, userId: string, contents: Tenan
   }
   // 単語帳（教材）のお気に入り: 最初の学習日にメインの単語帳を、many は汎用スプリントも
   const firstAt = generated.sessionTimes[0].toISOString();
-  const contentRows: Record<string, unknown>[] = [{ user_id: userId, content_id: contents.wordContentIds[0], insert_date: firstAt }];
-  if (p.favorites === "many") contentRows.push({ user_id: userId, content_id: contents.sprintContentId, insert_date: firstAt });
+  const contentRows: Record<string, unknown>[] = [
+    { user_id: userId, content_id: contents.wordContentIds[0], insert_date: firstAt },
+  ];
+  if (p.favorites === 'many')
+    contentRows.push({ user_id: userId, content_id: contents.sprintContentId, insert_date: firstAt });
 
-  await upsertInChunks("com_t_favorite_phrase", phraseRows, "user_id,phrase_id", true);
-  await upsertInChunks("com_t_favorite_sprint_question", questionRows, "user_id,question_id", true);
-  await upsertInChunks("com_t_favorite_contents", contentRows, "user_id,content_id", true);
+  await upsertInChunks('com_t_favorite_phrase', phraseRows, 'user_id,phrase_id', true);
+  await upsertInChunks('com_t_favorite_sprint_question', questionRows, 'user_id,question_id', true);
+  await upsertInChunks('com_t_favorite_contents', contentRows, 'user_id,content_id', true);
   return phraseRows.length + questionRows.length + contentRows.length;
 }
 
@@ -706,28 +868,36 @@ async function ensureLevels(p: StudentPersona, userId: string): Promise<void> {
   // トリガーは effective_at に現在時刻を入れる。過去へ付け替えた行と区別するため「今日以降」を対象にする
   const today = jstAt(TODAY, 0).toISOString();
   const { data: settled, error: settledErr } = await admin
-    .from("student_t_sprint_level_history")
-    .select("history_id")
-    .eq("user_id", userId)
-    .lt("effective_at", today)
+    .from('student_t_sprint_level_history')
+    .select('history_id')
+    .eq('user_id', userId)
+    .lt('effective_at', today)
     .limit(1);
   if (settledErr) throw settledErr;
   if (settled && settled.length > 0) return;
 
-  const toRow = (l: Levels) => ({ level_speed: l.speed, level_structure: l.structure, level_builders: l.builders, level_mastery: l.mastery, stage: l.speed });
+  const toRow = (l: Levels) => ({
+    level_speed: l.speed,
+    level_structure: l.structure,
+    level_builders: l.builders,
+    level_mastery: l.mastery,
+    stage: l.speed,
+  });
   const backdate = async (date: string): Promise<void> => {
     const { error } = await admin
-      .from("student_t_sprint_level_history")
+      .from('student_t_sprint_level_history')
       .update({ effective_at: jstAt(date, 10).toISOString() })
-      .eq("user_id", userId)
-      .gte("effective_at", today);
+      .eq('user_id', userId)
+      .gte('effective_at', today);
     if (error) throw error;
   };
 
-  const { error } = await admin.from("student_m_sprint_progress").upsert({ user_id: userId, ...toRow(p.levels) }, { onConflict: "user_id" });
+  const { error } = await admin
+    .from('student_m_sprint_progress')
+    .upsert({ user_id: userId, ...toRow(p.levels) }, { onConflict: 'user_id' });
   if (error) throw error;
   // 起点（レベル0の行と、0→起点レベルの引き上げ）を、起点のレベルだけの記録に置き換える
-  const { error: delErr } = await admin.from("student_t_sprint_level_history").delete().eq("user_id", userId);
+  const { error: delErr } = await admin.from('student_t_sprint_level_history').delete().eq('user_id', userId);
   if (delErr) throw delErr;
   const origin = QUESTION_TYPES.map((t) => ({
     user_id: userId,
@@ -737,11 +907,14 @@ async function ensureLevels(p: StudentPersona, userId: string): Promise<void> {
     change_kind: 0,
     effective_at: jstAt(HISTORY_START, 10).toISOString(),
   }));
-  const { error: originErr } = await admin.from("student_t_sprint_level_history").insert(origin);
+  const { error: originErr } = await admin.from('student_t_sprint_level_history').insert(origin);
   if (originErr) throw originErr;
   for (const up of p.levelUps ?? []) {
     if (up.date >= TODAY) continue;
-    const { error: upErr } = await admin.from("student_m_sprint_progress").update(toRow(levelsOn(p, up.date))).eq("user_id", userId);
+    const { error: upErr } = await admin
+      .from('student_m_sprint_progress')
+      .update(toRow(levelsOn(p, up.date)))
+      .eq('user_id', userId);
     if (upErr) throw upErr;
     await backdate(up.date);
   }
@@ -753,8 +926,8 @@ async function ensureLevels(p: StudentPersona, userId: string): Promise<void> {
  */
 async function ensureLevelManaged(p: StudentPersona, userId: string): Promise<void> {
   const { error } = await admin
-    .from("student_m_sprint_progress")
-    .upsert({ user_id: userId, level_managed: Boolean(p.live) }, { onConflict: "user_id" });
+    .from('student_m_sprint_progress')
+    .upsert({ user_id: userId, level_managed: Boolean(p.live) }, { onConflict: 'user_id' });
   if (error) throw error;
 }
 
@@ -775,55 +948,158 @@ async function seedPersonaChats(ids: Record<string, string>): Promise<void> {
   const rooms: ChatRoomSeed[] = [
     {
       // 日本人コーチとの日本語のやり取り
-      student: "P04", coach: "C3", unreadForStudent: 1,
+      student: 'P04',
+      coach: 'C3',
+      unreadForStudent: 1,
       script: [
-        { from: "C3", date: "2026-05-28", hour: 10, text: "はじめまして、コーチの佐藤です。木曜19時のレッスンでご一緒します。よろしくお願いします！" },
-        { from: "P04", date: "2026-05-28", hour: 21.5, text: "よろしくお願いします。会議で発言できるようになりたいです。" },
-        { from: "C3", date: "2026-06-05", hour: 9, text: "初回お疲れさまでした。今週は \"I'd like to add that...\" を使って、意見を付け足す練習をしてみましょう。" },
-        { from: "P04", date: "2026-08-10", hour: 20, text: "13日はお盆で帰省するため、レッスンをお休みします。" },
-        { from: "C3", date: "2026-08-10", hour: 22, text: "承知しました。良いお休みを！翌週また続きから進めましょう。" },
-        { from: "P04", date: "2026-09-24", hour: 21, text: "今日のレッスンで教わった言い回し、さっそく会議で使えました！" },
-        { from: "C3", date: "2026-09-25", hour: 8, text: "素晴らしいですね！次回はプレゼンの締めくくりの表現を扱います。" },
+        {
+          from: 'C3',
+          date: '2026-05-28',
+          hour: 10,
+          text: 'はじめまして、コーチの佐藤です。木曜19時のレッスンでご一緒します。よろしくお願いします！',
+        },
+        {
+          from: 'P04',
+          date: '2026-05-28',
+          hour: 21.5,
+          text: 'よろしくお願いします。会議で発言できるようになりたいです。',
+        },
+        {
+          from: 'C3',
+          date: '2026-06-05',
+          hour: 9,
+          text: '初回お疲れさまでした。今週は "I\'d like to add that..." を使って、意見を付け足す練習をしてみましょう。',
+        },
+        { from: 'P04', date: '2026-08-10', hour: 20, text: '13日はお盆で帰省するため、レッスンをお休みします。' },
+        {
+          from: 'C3',
+          date: '2026-08-10',
+          hour: 22,
+          text: '承知しました。良いお休みを！翌週また続きから進めましょう。',
+        },
+        {
+          from: 'P04',
+          date: '2026-09-24',
+          hour: 21,
+          text: '今日のレッスンで教わった言い回し、さっそく会議で使えました！',
+        },
+        {
+          from: 'C3',
+          date: '2026-09-25',
+          hour: 8,
+          text: '素晴らしいですね！次回はプレゼンの締めくくりの表現を扱います。',
+        },
       ],
     },
     {
-      student: "P05", coach: "C1",
+      student: 'P05',
+      coach: 'C1',
       script: [
-        { from: "C1", date: "2026-05-29", hour: 8, text: "Hi! I'm Emily, your coach for the Tuesday morning sessions. Looking forward to working with you!" },
-        { from: "P05", date: "2026-05-29", hour: 22, text: "Nice to meet you, Emily. I'd like to focus on negotiation and giving bad news politely." },
-        { from: "C1", date: "2026-07-06", hour: 23, text: "I've assigned a new dialogue: \"Delivering Bad News\". Please review session 1 before Tuesday." },
-        { from: "P05", date: "2026-07-07", hour: 6.5, text: "Got it. I've gone through the slides." },
-        { from: "C1", date: "2026-09-29", hour: 8, text: "Great progress today! Your softening phrases sounded very natural." },
+        {
+          from: 'C1',
+          date: '2026-05-29',
+          hour: 8,
+          text: "Hi! I'm Emily, your coach for the Tuesday morning sessions. Looking forward to working with you!",
+        },
+        {
+          from: 'P05',
+          date: '2026-05-29',
+          hour: 22,
+          text: "Nice to meet you, Emily. I'd like to focus on negotiation and giving bad news politely.",
+        },
+        {
+          from: 'C1',
+          date: '2026-07-06',
+          hour: 23,
+          text: 'I\'ve assigned a new dialogue: "Delivering Bad News". Please review session 1 before Tuesday.',
+        },
+        { from: 'P05', date: '2026-07-07', hour: 6.5, text: "Got it. I've gone through the slides." },
+        {
+          from: 'C1',
+          date: '2026-09-29',
+          hour: 8,
+          text: 'Great progress today! Your softening phrases sounded very natural.',
+        },
       ],
     },
     {
-      student: "P05", coach: "C2", unreadForStudent: 2,
+      student: 'P05',
+      coach: 'C2',
+      unreadForStudent: 2,
       script: [
-        { from: "C2", date: "2026-05-29", hour: 21, text: "Hi there! I'm Michael. I'll be your Thursday evening coach. See you soon!" },
-        { from: "P05", date: "2026-05-29", hour: 22.5, text: "Thanks, Michael. See you on Thursday!" },
-        { from: "C2", date: "2026-09-15", hour: 22, text: "I'm really sorry, but I have to cancel this Thursday's session due to a family emergency." },
-        { from: "P05", date: "2026-09-15", hour: 23, text: "No problem at all. I hope everything is okay." },
-        { from: "C2", date: "2026-09-30", hour: 22, text: "Thanks for your patience. For tomorrow, please prepare a short pitch about your company's strengths." },
-        { from: "C2", date: "2026-09-30", hour: 22.1, text: "We'll use the \"Explaining Competitive Advantages\" dialogue." },
+        {
+          from: 'C2',
+          date: '2026-05-29',
+          hour: 21,
+          text: "Hi there! I'm Michael. I'll be your Thursday evening coach. See you soon!",
+        },
+        { from: 'P05', date: '2026-05-29', hour: 22.5, text: 'Thanks, Michael. See you on Thursday!' },
+        {
+          from: 'C2',
+          date: '2026-09-15',
+          hour: 22,
+          text: "I'm really sorry, but I have to cancel this Thursday's session due to a family emergency.",
+        },
+        { from: 'P05', date: '2026-09-15', hour: 23, text: 'No problem at all. I hope everything is okay.' },
+        {
+          from: 'C2',
+          date: '2026-09-30',
+          hour: 22,
+          text: "Thanks for your patience. For tomorrow, please prepare a short pitch about your company's strengths.",
+        },
+        {
+          from: 'C2',
+          date: '2026-09-30',
+          hour: 22.1,
+          text: 'We\'ll use the "Explaining Competitive Advantages" dialogue.',
+        },
       ],
     },
     {
       // 交代前のコーチ（2026-08-11 まで）
-      student: "P09", coach: "C1",
+      student: 'P09',
+      coach: 'C1',
       script: [
-        { from: "C1", date: "2026-05-29", hour: 9, text: "Hello! I'm Emily. Let's enjoy learning English together every Wednesday morning!" },
-        { from: "P09", date: "2026-05-29", hour: 20, text: "よろしくお願いします。英語は初心者なので、ゆっくり話してもらえると助かります。" },
-        { from: "C1", date: "2026-08-05", hour: 9, text: "I have some news: from next week, Michael will be your coach. It was a pleasure working with you!" },
-        { from: "P09", date: "2026-08-05", hour: 20, text: "Thank you for everything, Emily!" },
+        {
+          from: 'C1',
+          date: '2026-05-29',
+          hour: 9,
+          text: "Hello! I'm Emily. Let's enjoy learning English together every Wednesday morning!",
+        },
+        {
+          from: 'P09',
+          date: '2026-05-29',
+          hour: 20,
+          text: 'よろしくお願いします。英語は初心者なので、ゆっくり話してもらえると助かります。',
+        },
+        {
+          from: 'C1',
+          date: '2026-08-05',
+          hour: 9,
+          text: 'I have some news: from next week, Michael will be your coach. It was a pleasure working with you!',
+        },
+        { from: 'P09', date: '2026-08-05', hour: 20, text: 'Thank you for everything, Emily!' },
       ],
     },
     {
       // 交代後のコーチ（2026-08-12 から）
-      student: "P09", coach: "C2", unreadForStudent: 1,
+      student: 'P09',
+      coach: 'C2',
+      unreadForStudent: 1,
       script: [
-        { from: "C2", date: "2026-08-12", hour: 9, text: "Hi! I'm Michael, your new coach. Emily told me about your goals. Let's keep going!" },
-        { from: "P09", date: "2026-08-12", hour: 20.5, text: "Nice to meet you, Michael. よろしくお願いします。" },
-        { from: "C2", date: "2026-09-23", hour: 9, text: "Nice work today! Try to use \"Could you...?\" when you ask for something this week." },
+        {
+          from: 'C2',
+          date: '2026-08-12',
+          hour: 9,
+          text: "Hi! I'm Michael, your new coach. Emily told me about your goals. Let's keep going!",
+        },
+        { from: 'P09', date: '2026-08-12', hour: 20.5, text: 'Nice to meet you, Michael. よろしくお願いします。' },
+        {
+          from: 'C2',
+          date: '2026-09-23',
+          hour: 9,
+          text: 'Nice work today! Try to use "Could you...?" when you ask for something this week.',
+        },
       ],
     },
   ];
@@ -832,13 +1108,17 @@ async function seedPersonaChats(ids: Record<string, string>): Promise<void> {
     const studentId = ids[room.student];
     const coachId = ids[room.coach];
     const roomId = await chat.ensureOneOnOneRoom(studentId, coachId);
-    const messages: ChatMessageSeed[] = room.script.map((m) => ({ from: ids[m.from], text: m.text, at: jstAt(m.date, m.hour) }));
+    const messages: ChatMessageSeed[] = room.script.map((m) => ({
+      from: ids[m.from],
+      text: m.text,
+      at: jstAt(m.date, m.hour),
+    }));
     const chatIds = await chat.seedMessages(roomId, messages);
     if (chatIds) {
       await chat.setLastRead(roomId, coachId, chatIds[chatIds.length - 1]);
       await chat.setLastRead(roomId, studentId, chatIds[chatIds.length - 1 - (room.unreadForStudent ?? 0)]);
     }
-    console.log(`チャット ${room.student}×${room.coach}: ${chatIds ? `${chatIds.length}件投入` : "投入済み"}`);
+    console.log(`チャット ${room.student}×${room.coach}: ${chatIds ? `${chatIds.length}件投入` : '投入済み'}`);
   }
 }
 
@@ -863,7 +1143,13 @@ const coachUsers = {} as Record<CoachKey, LiveCoach>;
 for (const key of Object.keys(COACHES) as CoachKey[]) {
   const c = COACHES[key];
   const email = `qa-p-coach-${c.seq}@gabby-qa-test.example`;
-  const id = await kit.ensureUser({ email, userType: "2", userName: c.name, clientId: coachClientId, timezone: c.timezone });
+  const id = await kit.ensureUser({
+    email,
+    userType: '2',
+    userName: c.name,
+    clientId: coachClientId,
+    timezone: c.timezone,
+  });
   await kit.ensureCoachProfile(id, c.countryCode);
   await live.ensureAvailabilities(id, c.timezone, c.availability);
   coachUsers[key] = { id, email, timezone: c.timezone };
@@ -878,7 +1164,11 @@ function countWeekdays(from: string, to: string, dow: number, cap: number): numb
 }
 
 /** ライブ契約: タームごとに契約・ライセンス・チケット、枠ごとにスケジュールとセッションを作り、過去の回を完了にする */
-async function ensureLive(p: StudentPersona, userId: string, clientId: string): Promise<{ created: number; completed: number }> {
+async function ensureLive(
+  p: StudentPersona,
+  userId: string,
+  clientId: string,
+): Promise<{ created: number; completed: number }> {
   const liveCfg = p.live;
   if (!liveCfg) return { created: 0, completed: 0 };
   let created = 0;
@@ -898,9 +1188,10 @@ async function ensureLive(p: StudentPersona, userId: string, clientId: string): 
       const endDate = slot.until && slot.until < termEnd ? slot.until : termEnd;
       if (startDate > endDate) continue;
       const used = usedBySlot.get(slot.slotNo) ?? 0;
-      const target = slot.until && slot.until < termEnd
-        ? countWeekdays(startDate, endDate, slot.dayOfWeek, SESSIONS_PER_SLOT - used)
-        : SESSIONS_PER_SLOT - used;
+      const target =
+        slot.until && slot.until < termEnd
+          ? countWeekdays(startDate, endDate, slot.dayOfWeek, SESSIONS_PER_SLOT - used)
+          : SESSIONS_PER_SLOT - used;
       usedBySlot.set(slot.slotNo, used + target);
       if (target <= 0) continue;
 
@@ -933,7 +1224,13 @@ for (const p of STUDENTS) {
   const contents = tenantContents.get(p.tenant);
   if (!contents) throw new Error(`顧客が未作成です: ${p.tenant}`);
   const email = `qa-p-student-${p.seq}@gabby-qa-test.example`;
-  const userId = await kit.ensureUser({ email, userType: "1", userName: p.name, clientId: contents.clientId, timezone: "Asia/Tokyo" });
+  const userId = await kit.ensureUser({
+    email,
+    userType: '1',
+    userName: p.name,
+    clientId: contents.clientId,
+    timezone: 'Asia/Tokyo',
+  });
   studentIds[p.id] = userId;
   for (const role of p.roles ?? []) await kit.ensureRole(userId, role);
   await kit.ensureLatestTermsAgreed(userId);
@@ -941,8 +1238,10 @@ for (const p of STUDENTS) {
   // ライセンス: 前期・当期（ライブ契約は ensureLive で作る。新規ペルソナは初回投入日から当期末まで）
   if (!p.live) {
     for (const term of p.startsOnSeedDate ? [termOf(CUR)] : terms) {
-      const contractId = await kit.ensureContract(contents.clientId, "BLUEPRINT_ONLY", term, 10);
-      const period = p.startsOnSeedDate ? { startIso: jstAt(TODAY, 0).toISOString(), endIso: term.endIso, label: `${term.label}（${TODAY}開始）` } : term;
+      const contractId = await kit.ensureContract(contents.clientId, 'BLUEPRINT_ONLY', term, 10);
+      const period = p.startsOnSeedDate
+        ? { startIso: jstAt(TODAY, 0).toISOString(), endIso: term.endIso, label: `${term.label}（${TODAY}開始）` }
+        : term;
       await kit.ensureLicense(userId, contractId, period, 1);
     }
   }
@@ -966,7 +1265,7 @@ for (const p of STUDENTS) {
     学習日数: new Set(generated.sessionTimes.map((t) => jstDateOf(t))).size,
     スプリント: `${generated.sprintRuns.length}回（追加 ${insertedRuns}）`,
     お気に入り登録数: favorites,
-    ライブ: p.live ? `セッション作成 ${liveResult.created} / 完了 ${liveResult.completed}` : "-",
+    ライブ: p.live ? `セッション作成 ${liveResult.created} / 完了 ${liveResult.completed}` : '-',
   });
   console.log(`- ${email} ${p.name}`);
 }
@@ -974,27 +1273,30 @@ for (const p of STUDENTS) {
 // --- ダイアログ課題（P05: ビジネス英語プロ） ---------------------------------
 {
   const studentId = studentIds.P05;
-  const julyAug = await live.completedSessionDates(studentId, coachUsers.C1.id, "2026-07-06", "2026-08-31");
+  const julyAug = await live.completedSessionDates(studentId, coachUsers.C1.id, '2026-07-06', '2026-08-31');
   const first = await live.ensureDialogueAssignment({
     studentId,
     coachId: coachUsers.C1.id,
-    contentNames: ["B2 Delivering Bad News", "B1-B2 Asking for and Receiving Direct Feedback"],
-    assignedDate: "2026-07-06",
+    contentNames: ['B2 Delivering Bad News', 'B1-B2 Asking for and Receiving Direct Feedback'],
+    assignedDate: '2026-07-06',
     completedDates: julyAug.slice(0, 6),
   });
-  const sept = await live.completedSessionDates(studentId, coachUsers.C2.id, "2026-09-01", TODAY);
+  const sept = await live.completedSessionDates(studentId, coachUsers.C2.id, '2026-09-01', TODAY);
   const second = await live.ensureDialogueAssignment({
     studentId,
     coachId: coachUsers.C2.id,
-    contentNames: ["Set B: Explaining Competitive Advantages", "B2 Describing Graphs and Charts"],
-    assignedDate: "2026-09-01",
+    contentNames: ['Set B: Explaining Competitive Advantages', 'B2 Describing Graphs and Charts'],
+    assignedDate: '2026-09-01',
     completedDates: sept.slice(0, 2),
   });
-  console.log(`ダイアログ課題（P05）: ${first ?? "教材なし"} / ${second ?? "教材なし"}`);
+  console.log(`ダイアログ課題（P05）: ${first ?? '教材なし'} / ${second ?? '教材なし'}`);
 }
 
 // --- チャット ----------------------------------------------------------------
-await seedPersonaChats({ ...studentIds, ...Object.fromEntries((Object.keys(coachUsers) as CoachKey[]).map((k) => [k, coachUsers[k].id])) });
+await seedPersonaChats({
+  ...studentIds,
+  ...Object.fromEntries((Object.keys(coachUsers) as CoachKey[]).map((k) => [k, coachUsers[k].id])),
+});
 
-console.log("\n=== 投入完了 ===");
+console.log('\n=== 投入完了 ===');
 console.table(summary);

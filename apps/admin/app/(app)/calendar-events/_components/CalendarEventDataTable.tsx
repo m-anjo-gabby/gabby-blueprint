@@ -6,8 +6,8 @@ import { ListSelectFilter } from '@/components/list/ListSelectFilter';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
 import { CALENDAR_EVENT_LIST_FILTERS } from '../_lib/list';
-import { CalendarEventTable } from './CalendarEventTable';
 import type { CalendarEventFormOptions } from './CalendarEventFormDialog';
+import { CalendarEventTable } from './CalendarEventTable';
 
 const EVENT_TYPE_OPTIONS = Object.entries(CALENDAR_EVENT_TYPES).map(([value, { label }]) => ({ value, label }));
 
@@ -28,7 +28,12 @@ export function CalendarEventDataTable({ data, totalCount, pageCount, formOption
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      >
         <ListSelectFilter
           label={t('typeHeader')}
           allLabel={t('allTypes')}

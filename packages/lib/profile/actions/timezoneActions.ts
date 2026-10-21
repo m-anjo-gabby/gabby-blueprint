@@ -1,10 +1,12 @@
 'use server';
 
-import { createServerClient } from '../../supabase/server';
+import { unstable_rethrow } from 'next/navigation';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { type GetTimezoneListResult, type UpdateTimezoneResult } from '@gabby/types/profile';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import { GetTimezoneListResult, UpdateTimezoneResult } from '@gabby/types/profile';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 
@@ -19,7 +21,7 @@ export async function getTimezoneListCore(): Promise<GetTimezoneListResult> {
     const { data, error } = await supabase
       .from('com_m_timezone')
       .select('*')
-      .eq('delete_flg', '0')
+      .eq('is_active', true)
       .order('sort_no', { ascending: true });
 
     if (error) {
@@ -29,7 +31,11 @@ export async function getTimezoneListCore(): Promise<GetTimezoneListResult> {
 
     return { success: true, timezones: data ?? [] };
   } catch (err) {
-    logger.error('profile:get_timezone_list_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('profile:get_timezone_list_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -51,7 +57,7 @@ export async function updateMyTimezoneCore(timezone: string): Promise<UpdateTime
       .from('com_m_timezone')
       .select('timezone')
       .eq('timezone', timezone)
-      .eq('delete_flg', '0')
+      .eq('is_active', true)
       .maybeSingle();
 
     if (masterError || !master) {
@@ -64,14 +70,22 @@ export async function updateMyTimezoneCore(timezone: string): Promise<UpdateTime
       .eq('id', user.id);
 
     if (updateError) {
-      logger.error('profile:update_timezone_failed', updateError.message, { ...ctx, err: updateError, userId: user.id });
+      logger.error('profile:update_timezone_failed', updateError.message, {
+        ...ctx,
+        err: updateError,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
     logger.info('profile:update_timezone_success', `Timezone updated: ${timezone}`, { ...ctx, userId: user.id });
     return { success: true, timezone };
   } catch (err) {
-    logger.error('profile:update_timezone_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('profile:update_timezone_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

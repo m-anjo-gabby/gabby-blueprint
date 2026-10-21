@@ -60,7 +60,7 @@ export interface PhraseRecord {
   audio_path: string | null;
   tts_ssml: string | null;
   tts_ssml_mode: 'auto' | 'manual';
-  tts_adjustments?: WordAdjustment[];
+  tts_adjustments?: TTSAdjustmentData | null;
   tts_status: TtsStatus;
   last_tts_date: string | null;
   status: WordStatus;
@@ -78,6 +78,9 @@ export interface TTSAdjustmentData {
   };
   words: WordAdjustment[];
 }
+
+/** TTS アセット（com_t_tts_asset）の調整内容。手動の SSML で作った場合は調整を持たない */
+export type TTSAssetAdjustments = TTSAdjustmentData | { isManual: true };
 
 // TTS用の単語ごとのカスタマイズ状態
 export interface WordAdjustment {
@@ -102,11 +105,11 @@ export interface WordAdjustment {
  * PhraseRecord を継承し、お気に入り状態やリレーション情報を付加
  */
 export interface PhraseItem extends PhraseRecord {
-  is_favorite: boolean;      // お気に入り状態 (旧 is_favorite_initial)
-  word_en?: string;          // 単語帳やリスト表示用
-  content_id?: string;       // コンテンツ切替用
-  content_name?: string;     // タブやラベル表示用
-  favorite_id?: string;      // お気に入り削除Actionに必要
+  is_favorite: boolean; // お気に入り状態 (旧 is_favorite_initial)
+  word_en?: string; // 単語帳やリスト表示用
+  content_id?: string; // コンテンツ切替用
+  content_name?: string; // タブやラベル表示用
+  favorite_id?: string; // お気に入り削除Actionに必要
 }
 
 /**
@@ -139,22 +142,4 @@ export type FavoritePhraseItem = Pick<PhraseRecord, (typeof FAVORITE_PHRASE_COLU
   word_en: string;
   content_id: string;
   content_name: string;
-};
-
-/**
- * サーバーアクションからの生レスポンス型 (Join結果)
- */
-export type FavoriteResponse = {
-  favorite_id: string;
-  phrase_id: string;
-  insert_date: string;
-  com_m_phrase: Pick<PhraseRecord, (typeof FAVORITE_PHRASE_COLUMNS)[number]> & {
-    com_m_word: {
-      word_en: string;
-      com_m_contents: {
-        content_id: string;
-        content_name: string;
-      };
-    };
-  };
 };

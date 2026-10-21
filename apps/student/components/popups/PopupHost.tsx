@@ -1,7 +1,7 @@
 'use client';
 
-import { Fragment, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { Fragment, useState } from 'react';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { NoticePopupDialog } from '@/components/common/NoticePopupDialog';
 import { POPUP_SCOPES, useAutoPopups, type PopupId } from './useAutoPopups';
@@ -38,9 +38,7 @@ export function PopupHost({ hasPendingGate }: PopupHostProps) {
 
   if (hasPendingGate) return null;
 
-  const selectedNotice = selectedNoticeId
-    ? notices.find((n) => n.notice_id === selectedNoticeId)
-    : undefined;
+  const selectedNotice = selectedNoticeId ? notices.find((n) => n.notice_id === selectedNoticeId) : undefined;
   if (selectedNotice) {
     return (
       <NoticePopupDialog

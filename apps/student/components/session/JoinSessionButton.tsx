@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Clock, TriangleAlert, Video } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState, useTransition } from 'react';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { checkLiveSessionJoinable } from '@/actions/videoSessionAction';
@@ -12,9 +12,14 @@ import { cn } from '@/lib/utils';
 const EARLY_JOIN_MINUTES = Math.round(LIVE_SESSION_EARLY_JOIN_BEFORE_MS / 60000);
 
 const formatAvailableAt = (iso: string, timeZone: string) =>
-  new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(
-    new Date(iso)
-  );
+  new Intl.DateTimeFormat('ja-JP', {
+    timeZone,
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
 
 interface JoinSessionButtonProps {
   sessionId: string;
@@ -49,18 +54,31 @@ export function JoinSessionButton({ sessionId, startDatetime, className }: JoinS
         router.push(roomPath);
         return;
       }
-      setNotice(result.status === 'too_early' ? `${formatAvailableAt(result.availableAt, timezone)}から入室できます。` : result.message);
+      setNotice(
+        result.status === 'too_early'
+          ? `${formatAvailableAt(result.availableAt, timezone)}から入室できます。`
+          : result.message,
+      );
     });
   };
 
   return (
     <div className={className}>
-      <Button type="button" onClick={handleClick} pending={isPending} icon={<Video size={16} />} className="w-full sm:w-auto sm:min-w-40">
+      <Button
+        type="button"
+        onClick={handleClick}
+        pending={isPending}
+        icon={<Video size={16} />}
+        className="w-full sm:w-auto sm:min-w-40"
+      >
         入室する
       </Button>
       <p
         role={notice ? 'alert' : undefined}
-        className={cn('mt-2 flex items-center gap-1 text-xs', notice ? 'font-semibold text-amber-700' : 'text-ink-muted')}
+        className={cn(
+          'mt-2 flex items-center gap-1 text-xs',
+          notice ? 'font-semibold text-amber-700' : 'text-ink-muted',
+        )}
       >
         {notice ? <TriangleAlert size={12} className="shrink-0" /> : <Clock size={12} className="shrink-0" />}
         {notice ?? `開始${EARLY_JOIN_MINUTES}分前から入室できます`}

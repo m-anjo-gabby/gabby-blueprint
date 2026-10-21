@@ -23,7 +23,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 export async function getCroppedImageBlob(
   imageSrc: string,
   cropAreaPixels: CropAreaPixels,
-  outputSize = 256
+  outputSize = 256,
 ): Promise<Blob> {
   const image = await loadImage(imageSrc);
   const canvas = document.createElement('canvas');
@@ -42,7 +42,7 @@ export async function getCroppedImageBlob(
     0,
     0,
     outputSize,
-    outputSize
+    outputSize,
   );
 
   return new Promise((resolve, reject) => {

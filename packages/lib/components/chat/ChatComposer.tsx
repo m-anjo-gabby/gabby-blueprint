@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { FileText, Loader2, Paperclip, Send, X } from 'lucide-react';
-import { useToast } from '../../hooks/useToast';
-import { useHydrated } from '../../hooks/useHydrated';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type ChatMessage } from '@gabby/types/chat';
 import { sendChatMessage } from '../../chat/actions/messageActions';
 import { formatFileSize } from '../../chat/formatFileSize';
+import { useHydrated } from '../../hooks/useHydrated';
+import { useToast } from '../../hooks/useToast';
 import { useChatDraft, useChatDraftStore } from '../../stores/useChatDraftStore';
 import { cn } from '../../utils';
-import { ChatMessage } from '@gabby/types/chat';
 import { useChatUi } from './ChatUiContext';
 
 interface ChatComposerProps {
@@ -56,7 +56,11 @@ function ComposerIconButton({
   variant,
   className,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { pending: boolean; icon: React.ReactNode; variant: 'primary' | 'ghost' }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  pending: boolean;
+  icon: React.ReactNode;
+  variant: 'primary' | 'ghost';
+}) {
   return (
     <button
       type="button"
@@ -66,7 +70,7 @@ function ComposerIconButton({
         variant === 'primary'
           ? 'bg-brand text-white hover:bg-brand-strong disabled:bg-line disabled:text-ink-subtle'
           : 'text-ink-muted hover:bg-canvas hover:text-ink disabled:opacity-50',
-        className
+        className,
       )}
       {...props}
     >
@@ -120,8 +124,8 @@ export function ChatComposer({ roomId, onSent, isUploading, onAddFiles }: ChatCo
     setIsSending(true);
     try {
       const res = await sendChatMessage({ roomId, message: text.trim(), attachments });
-      if (!res.success || !res.data) {
-        showToast(res.error || labels.sendFailed, 'error');
+      if (!res.success) {
+        showToast(labels.sendFailed, 'error');
         return;
       }
       clearDraft(roomId);

@@ -1,18 +1,16 @@
+import { HelpCircle, PowerOff, RefreshCw, Smartphone, XSquare } from 'lucide-react';
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { HelpCircle, RefreshCw, XSquare, Smartphone, PowerOff } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface AudioTroubleshootingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export const AudioTroubleshootingDialog: React.FC<AudioTroubleshootingDialogProps> = ({ open, onOpenChange }) => {
+export function AudioTroubleshootingDialog({ open, onOpenChange }: AudioTroubleshootingDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-md rounded-panel p-6 bg-white border border-line/60 shadow-2xl"
-      >
+      <DialogContent className="max-w-md rounded-panel p-6 bg-white border border-line/60 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-ink flex items-center gap-2 select-none">
             <HelpCircle className="w-5 h-5 text-brand-500" />
@@ -47,7 +45,8 @@ export const AudioTroubleshootingDialog: React.FC<AudioTroubleshootingDialogProp
               <div>
                 <h4 className="font-bold text-ink text-xs select-none">3. ブラウザアプリを「強制終了」して再起動</h4>
                 <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
-                  Safari や Chrome アプリ自体を、端末の下から上へスワイプして強制終了（タスクキル）し、ブラウザアプリを起動し直してください。
+                  Safari や Chrome
+                  アプリ自体を、端末の下から上へスワイプして強制終了（タスクキル）し、ブラウザアプリを起動し直してください。
                 </p>
               </div>
             </div>
@@ -65,4 +64,4 @@ export const AudioTroubleshootingDialog: React.FC<AudioTroubleshootingDialogProp
       </DialogContent>
     </Dialog>
   );
-};
+}

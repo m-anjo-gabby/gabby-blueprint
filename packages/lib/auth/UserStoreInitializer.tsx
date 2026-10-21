@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { createBrowserClient } from '../supabase/client';
-import { UserAppMetadata, useUserStore } from '../stores/useUserStore';
 import { clientLogger } from '../logger/client';
+import { useUserStore, type UserAppMetadata } from '../stores/useUserStore';
+import { createBrowserClient } from '../supabase/client';
 
 /**
  * UserStoreInitializer の Props
@@ -13,7 +13,8 @@ export interface UserStoreInitializerProps {
   user: {
     id: string;
     email?: string;
-    app_metadata?: any;
+    /** JWT の app_metadata（DB のフックが user_type・roles を入れる） */
+    app_metadata?: unknown;
   };
 }
 
@@ -24,11 +25,11 @@ export interface UserStoreInitializerProps {
  * 2. クライアントサイドで DB (com_m_user) から詳細なプロフィールを取得して補完
  * 3. 認証状態の変化（ログアウト等）をリッスンし、ストアの状態を自動同期
  */
-export default function UserStoreInitializer({ user }: UserStoreInitializerProps) {
+export function UserStoreInitializer({ user }: UserStoreInitializerProps) {
   // 共通ストアから更新関数を取得
   const setUser = useUserStore((state) => state.setUser);
   const supabase = createBrowserClient();
-  
+
   // React.StrictMode 等による二重実行を防ぎ、初回マウント時のみ処理するためのフラグ
   const initialized = useRef(false);
 
@@ -38,11 +39,11 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
       // 画面のチラつきを防ぐため、まずはサーバーから届いている情報をストアにセットします。
       setUser({
         id: user.id,
-        user_id: 0,           // 詳細取得までの仮値
-        user_name: '...',    // ローディング表示用
+        user_id: 0, // 詳細取得までの仮値
+        user_name: '...', // ローディング表示用
         icon_path: null,
         email: user.email,
-        locale_id: 'ja',      // DBデフォルト値
+        locale_id: 'ja', // DBデフォルト値
         timezone: 'Asia/Tokyo', // DBデフォルト値
         app_metadata: (user.app_metadata as UserAppMetadata) || { user_type: '1', roles: [] },
       });
@@ -77,7 +78,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
           user_name: profile.user_name ?? '',
           icon_path: profile.icon_path,
           email: user.email,
-          locale_id: profile.locale_id,
+          locale_id: profile.locale_id ?? 'ja',
           timezone: profile.timezone,
           app_metadata: (user.app_metadata as UserAppMetadata) || { user_type: '1', roles: [] },
         });
@@ -92,7 +93,9 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
 
     // --- Step 3: 認証イベントの監視 ---
     // 別タブでのログアウトやセッション切れを検知し、ストアをクリアします。
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
       // 'INITIAL_SESSION' 等、SIGNED_OUT以外のイベントでの session 一時null化により
       // 取得済みのユーザー情報（user_name等）が誤って消去されるのを防ぐため、
       // 明示的なサインアウトのみをクリア条件とする。
@@ -105,7 +108,7 @@ export default function UserStoreInitializer({ user }: UserStoreInitializerProps
     return () => {
       subscription.unsubscribe();
     };
-  }, [user.id, user.email, setUser, supabase]);
+  }, [user.id, user.email, user.app_metadata, setUser, supabase]);
 
   // このコンポーネントはロジック専用のため、何もレンダリングしません。
   return null;

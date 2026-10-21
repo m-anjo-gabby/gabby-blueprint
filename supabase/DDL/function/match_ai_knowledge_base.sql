@@ -27,8 +27,7 @@ AS $$
         k.metadata,
         1 - (k.embedding <=> _query_embedding) AS similarity
     FROM public.com_m_ai_knowledge_base k
-    WHERE k.delete_flg = '0'
-      AND k.embedding IS NOT NULL
+    WHERE k.embedding IS NOT NULL
       AND (_source_type IS NULL OR k.source_type = _source_type)
       AND 1 - (k.embedding <=> _query_embedding) >= _match_threshold
     ORDER BY k.embedding <=> _query_embedding ASC

@@ -1,10 +1,13 @@
 'use server';
 
+import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { SessionPayRate } from '@gabby/types/monthlyReport';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import type { ActionResult } from '@gabby/types/action';
+import { type SessionPayRate } from '@gabby/types/monthlyReport';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 
@@ -13,6 +16,7 @@ const logger = createLogger('admin');
 const SESSION_PAY_RATE_ID = '00000000-0000-0000-0000-000000000001';
 
 export async function getSessionPayRate(): Promise<SessionPayRate | null> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -28,15 +32,15 @@ export async function getSessionPayRate(): Promise<SessionPayRate | null> {
   return data;
 }
 
-export async function updateSessionPayRate(
-  input: SessionPayRate
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function updateSessionPayRate(input: SessionPayRate): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   if (!(input.rate_amount >= 0)) {
-    return { success: false, message: '単価には0以上の数値を指定してください。' };
+    return { success: false, message: t('paymentSettings.errors.invalidRate') };
   }
   if (!input.currency_code.trim()) {
-    return { success: false, message: '通貨コードを指定してください。' };
+    return { success: false, message: t('paymentSettings.errors.currencyRequired') };
   }
 
   const supabase = createAdminClient();
@@ -51,7 +55,7 @@ export async function updateSessionPayRate(
 
   if (error) {
     logger.error('admin:update_session_pay_rate_failed', error.message, { ...ctx, err: error });
-    return { success: false, message: 'セッション単価の更新に失敗しました。' };
+    return { success: false, message: t('paymentSettings.errors.rateUpdateFailed') };
   }
 
   revalidatePath('/payment-settings');

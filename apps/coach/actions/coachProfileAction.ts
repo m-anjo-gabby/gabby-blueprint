@@ -1,29 +1,43 @@
 'use server';
 
-import { getMyProfileCore } from '@gabby/lib/profile/actions/profileActions';
-import { uploadProfileIconCore, removeProfileIconCore } from '@gabby/lib/profile/actions/profileIconActions';
-import { getTimezoneListCore, updateMyTimezoneCore } from '@gabby/lib/profile/actions/timezoneActions';
-import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
-import { getCoachSpecialtyCodesCore, getCoachSpecialtyListCore } from '@gabby/lib/coachSpecialty/actions/coachSpecialtyActions';
+import {
+  removeCoachIntroVideoCore,
+  uploadCoachIntroVideoCore,
+} from '@gabby/lib/coachProfile/actions/coachIntroVideoActions';
+import {
+  getCoachMatchingStatusCore,
+  updateMyAcceptingStudentsCore,
+} from '@gabby/lib/coachProfile/actions/coachMatchingStatusActions';
+import {
+  getMyCoachProfileCore,
+  updateMyCoachProfileCore,
+  updateMyCoachZoomSettingsCore,
+} from '@gabby/lib/coachProfile/actions/coachProfileActions';
+import {
+  getCoachSpecialtyCodesCore,
+  getCoachSpecialtyListCore,
+} from '@gabby/lib/coachSpecialty/actions/coachSpecialtyActions';
 import { toCoachSpecialtyTags } from '@gabby/lib/coachSpecialty/tags';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
-import { getMyCoachProfileCore, updateMyCoachProfileCore, updateMyCoachZoomSettingsCore } from '@gabby/lib/coachProfile/actions/coachProfileActions';
-import { uploadCoachIntroVideoCore, removeCoachIntroVideoCore } from '@gabby/lib/coachProfile/actions/coachIntroVideoActions';
-import { getCoachMatchingStatusCore, updateMyAcceptingStudentsCore } from '@gabby/lib/coachProfile/actions/coachMatchingStatusActions';
+import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { ProfileIconErrorCode, MyProfile, UpdateTimezoneErrorCode } from '@gabby/types/profile';
-import { TimezoneMaster } from '@gabby/types/timezone';
-import { CountryMaster } from '@gabby/types/country';
-import { CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { getMyProfileCore } from '@gabby/lib/profile/actions/profileActions';
+import { removeProfileIconCore, uploadProfileIconCore } from '@gabby/lib/profile/actions/profileIconActions';
+import { getTimezoneListCore, updateMyTimezoneCore } from '@gabby/lib/profile/actions/timezoneActions';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import type { ActionResult } from '@gabby/types/action';
 import {
-  CoachProfileErrorCode,
-  CoachProfileFormValues,
-  CoachProfileRecord,
-  CoachIntroVideoErrorCode,
-  CoachMatchingStatus,
-  CoachZoomSettingsFormValues,
+  type CoachIntroVideoErrorCode,
+  type CoachMatchingStatus,
+  type CoachProfileErrorCode,
+  type CoachProfileFormValues,
+  type CoachProfileRecord,
+  type CoachZoomSettingsFormValues,
 } from '@gabby/types/coachProfile';
+import { type CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { type CountryMaster } from '@gabby/types/country';
+import { type MyProfile, type ProfileIconErrorCode, type UpdateTimezoneErrorCode } from '@gabby/types/profile';
+import { type TimezoneMaster } from '@gabby/types/timezone';
 
 const logger = createLogger('coach');
 
@@ -62,7 +76,7 @@ const TIMEZONE_ERROR_MESSAGES_EN: Record<UpdateTimezoneErrorCode, string> = {
 };
 
 /**
- * Fetches the current coach's own profile information
+ * ログイン中のコーチのプロフィールを取得する
  */
 export async function getMyProfile(): Promise<MyProfile | null> {
   const result = await getMyProfileCore();
@@ -75,11 +89,9 @@ export async function getMyProfile(): Promise<MyProfile | null> {
 }
 
 /**
- * Uploads a new profile icon image
+ * プロフィールのアイコンの画像をアップロードする
  */
-export async function uploadProfileIcon(
-  formData: FormData
-): Promise<{ success: true; iconPath: string } | { success: false; message: string }> {
+export async function uploadProfileIcon(formData: FormData): Promise<ActionResult<{ iconPath: string }>> {
   const ctx = await getLogContext();
   const result = await uploadProfileIconCore(formData);
 
@@ -93,9 +105,9 @@ export async function uploadProfileIcon(
 }
 
 /**
- * Removes the current profile icon image
+ * プロフィールのアイコンの画像を削除する
  */
-export async function removeProfileIcon(): Promise<{ success: true } | { success: false; message: string }> {
+export async function removeProfileIcon(): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await removeProfileIconCore();
 
@@ -109,7 +121,7 @@ export async function removeProfileIcon(): Promise<{ success: true } | { success
 }
 
 /**
- * Fetches the selectable timezone list
+ * 選べるタイムゾーンの一覧を取得する
  */
 export async function getTimezoneList(): Promise<TimezoneMaster[]> {
   const result = await getTimezoneListCore();
@@ -122,11 +134,9 @@ export async function getTimezoneList(): Promise<TimezoneMaster[]> {
 }
 
 /**
- * Updates the current coach's own timezone
+ * ログイン中のコーチのタイムゾーンを更新する
  */
-export async function updateMyTimezone(
-  timezone: string
-): Promise<{ success: true; timezone: string } | { success: false; message: string }> {
+export async function updateMyTimezone(timezone: string): Promise<ActionResult<{ timezone: string }>> {
   const ctx = await getLogContext();
   const result = await updateMyTimezoneCore(timezone);
 
@@ -140,7 +150,7 @@ export async function updateMyTimezone(
 }
 
 /**
- * Fetches the current coach's specialties (set by admins only; read-only for coaches)
+ * ログイン中のコーチの専門を取得する（アドミンだけが設定し、コーチは見るだけ）
  */
 export async function getMyCoachSpecialties(): Promise<CoachSpecialtyTag[]> {
   const user = await getAuthUser();
@@ -159,7 +169,7 @@ export async function getMyCoachSpecialties(): Promise<CoachSpecialtyTag[]> {
 }
 
 /**
- * Fetches the selectable country (nationality) list
+ * 選べる国（国籍）の一覧を取得する
  */
 export async function getCountryList(): Promise<CountryMaster[]> {
   const result = await getCountryListCore();
@@ -172,7 +182,7 @@ export async function getCountryList(): Promise<CountryMaster[]> {
 }
 
 /**
- * Fetches the current coach's own public profile (visible to students)
+ * ログイン中のコーチの公開プロフィール（生徒に見えるもの）を取得する
  */
 export async function getMyCoachProfile(): Promise<CoachProfileRecord | null> {
   const result = await getMyCoachProfileCore();
@@ -185,11 +195,11 @@ export async function getMyCoachProfile(): Promise<CoachProfileRecord | null> {
 }
 
 /**
- * Updates the current coach's own public profile
+ * ログイン中のコーチの公開プロフィールを更新する
  */
 export async function updateMyCoachProfile(
-  values: CoachProfileFormValues
-): Promise<{ success: true; profile: CoachProfileRecord } | { success: false; message: string }> {
+  values: CoachProfileFormValues,
+): Promise<ActionResult<{ profile: CoachProfileRecord }>> {
   const ctx = await getLogContext();
   const result = await updateMyCoachProfileCore(values);
 
@@ -203,7 +213,7 @@ export async function updateMyCoachProfile(
 }
 
 /**
- * Fetches whether the current coach appears in the students' coach search (missing items, accepting, paused by admins)
+ * ログイン中のコーチが生徒のコーチ検索に出るかを取得する（足りない項目・受付の可否・アドミンによる停止）
  */
 export async function getMyCoachMatchingStatus(): Promise<CoachMatchingStatus | null> {
   const user = await getAuthUser();
@@ -219,11 +229,11 @@ export async function getMyCoachMatchingStatus(): Promise<CoachMatchingStatus | 
 }
 
 /**
- * Turns accepting new students on or off for the current coach
+ * ログイン中のコーチの新しい生徒の受付を切り替える
  */
 export async function updateMyAcceptingStudents(
-  acceptingStudents: boolean
-): Promise<{ success: true; acceptingStudents: boolean } | { success: false; message: string }> {
+  acceptingStudents: boolean,
+): Promise<ActionResult<{ acceptingStudents: boolean }>> {
   const result = await updateMyAcceptingStudentsCore(acceptingStudents);
   if (!result.success) {
     return { success: false, message: COACH_PROFILE_ERROR_MESSAGES_EN[result.errorCode] };
@@ -232,11 +242,11 @@ export async function updateMyAcceptingStudents(
 }
 
 /**
- * Updates the current coach's live session video call URL (Zoom)
+ * ログイン中のコーチのライブセッションのビデオ通話の URL（Zoom）を更新する
  */
 export async function updateMyCoachZoomSettings(
-  values: CoachZoomSettingsFormValues
-): Promise<{ success: true; profile: CoachProfileRecord } | { success: false; message: string }> {
+  values: CoachZoomSettingsFormValues,
+): Promise<ActionResult<{ profile: CoachProfileRecord }>> {
   const ctx = await getLogContext();
   const result = await updateMyCoachZoomSettingsCore(values);
 
@@ -250,11 +260,9 @@ export async function updateMyCoachZoomSettings(
 }
 
 /**
- * Uploads a new coach introduction video
+ * コーチの紹介動画をアップロードする
  */
-export async function uploadCoachIntroVideo(
-  formData: FormData
-): Promise<{ success: true; introVideoPath: string } | { success: false; message: string }> {
+export async function uploadCoachIntroVideo(formData: FormData): Promise<ActionResult<{ introVideoPath: string }>> {
   const ctx = await getLogContext();
   const result = await uploadCoachIntroVideoCore(formData);
 
@@ -268,9 +276,9 @@ export async function uploadCoachIntroVideo(
 }
 
 /**
- * Removes the current coach introduction video
+ * コーチの紹介動画を削除する
  */
-export async function removeCoachIntroVideo(): Promise<{ success: true } | { success: false; message: string }> {
+export async function removeCoachIntroVideo(): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await removeCoachIntroVideoCore();
 

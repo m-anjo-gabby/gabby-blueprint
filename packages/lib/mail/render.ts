@@ -3,7 +3,7 @@
  * メールの HTML 版・テキスト版の組み立て（送信はしない）
  *
  * 各メールの件名・中身は templates/ の build〜Mail が MailContent として返し、ここで HTML 版・テキスト版にする。
- * 💡 送信処理（actions/*、core.ts）は 'server-only' でサーバー専用にしているため、
+ * 送信処理（actions/*、core.ts）は 'server-only' でサーバー専用にしているため、
  * 文面の検証（testing/unit/*.test.ts、Node で実行）から読み込めるよう、組み立て処理だけをここに分けている。
  * API キー等の秘密情報を参照する処理はこのファイルに置かないこと。
  */

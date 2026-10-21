@@ -1,22 +1,22 @@
 'use client';
 
-import { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Languages, Loader2, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Card } from '@/components/ui/card';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { clientLogger } from '@gabby/lib/logger/client';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 
 interface TranslateResult {
   translation: string;
   explanation?: string;
 }
 
-export default function TranslatePlayground() {
+export function TranslatePlayground() {
   const t = useTranslations('tools.aiPlayground.translate');
   const [inputText, setInputText] = useState('');
   const [includeExplanation, setIncludeExplanation] = useState(true);
@@ -57,9 +57,7 @@ export default function TranslatePlayground() {
       <div className="p-8 space-y-6">
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-              English Text
-            </Label>
+            <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">English Text</Label>
           </div>
           <Textarea
             value={inputText}

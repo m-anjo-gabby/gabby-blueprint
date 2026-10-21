@@ -1,8 +1,5 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
   ArrowRight,
   CheckCircle2,
@@ -23,25 +20,29 @@ import {
   Video,
   VideoOff,
 } from 'lucide-react';
-import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
-import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
 import { useLiveSessionPresence } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionPresence';
 import { useLiveSessionRoomOrchestration } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionRoomOrchestration';
-import { useFullscreen } from '@gabby/lib/hooks/useFullscreen';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { useZoomDevicePreview } from '@gabby/lib/zoom/hooks/useZoomDevicePreview';
+import { useZoomVideoSession } from '@gabby/lib/zoom/hooks/useZoomVideoSession';
+import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 import { recordCallJoin, recordCallLeave, recordChatMessage } from '@/actions/videoSessionAction';
 import { ImmersiveNotice, noticeActionClass } from '@/components/shell/ImmersiveNotice';
 import { ImmersiveBody, ImmersivePanel } from '@/components/shell/PageFrames';
-import type { LiveSessionRoomAccess } from '@gabby/types/liveSessionRoom';
 
-interface Props {
+interface LiveSessionRoomViewProps {
   access: LiveSessionRoomAccess;
 }
 
 type RoomPhase = 'preview' | 'in-call' | 'ended';
 
-export function LiveSessionRoomView({ access }: Props) {
+export function LiveSessionRoomView({ access }: LiveSessionRoomViewProps) {
   const router = useRouter();
   const preview = useZoomDevicePreview();
   const {
@@ -95,11 +96,12 @@ export function LiveSessionRoomView({ access }: Props) {
     recordChatMessage,
   });
 
+  // プレビューは条件がそろった時に1回だけ始める（preview の参照の変化で始め直さない。二重の開始は previewRequested で防ぐ）
+  const startPreview = useEffectEvent((canvas: HTMLCanvasElement) => preview.startPreview(canvas));
   useEffect(() => {
     if (phase !== 'preview' || previewRequested.current || !previewCanvasRef.current) return;
     previewRequested.current = true;
-    preview.startPreview(previewCanvasRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    startPreview(previewCanvasRef.current);
   }, [phase]);
 
   useEffect(() => {
@@ -123,24 +125,28 @@ export function LiveSessionRoomView({ access }: Props) {
   }, [isJoined, trackSelf]);
 
   // コーチ側が（制限時間到達 or 手動操作で）通話を終了させた場合、専用の終了画面へ遷移する
-  useEffect(() => {
-    if (!wasEndedByHost || phase !== 'in-call') return;
+  // コーチが終了した時に1回だけ退室の処理をする（関数の参照の変化では動かさない）
+  const leaveEndedByHost = useEffectEvent(() => {
     clearSessionTimers();
     untrackSelf();
     recordLeaveIfNeeded();
     setPhase('ended');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    if (!wasEndedByHost || phase !== 'in-call') return;
+    leaveEndedByHost();
   }, [wasEndedByHost, phase]);
 
+  // 退室の後片付けは画面を離れる時だけ行う（関数の参照が変わっても途中で退室しない）
+  const cleanupOnLeave = useEffectEvent(() => {
+    preview.stopPreview();
+    clearSessionTimers();
+    untrackSelf();
+    recordLeaveIfNeeded();
+    leave();
+  });
   useEffect(() => {
-    return () => {
-      preview.stopPreview();
-      clearSessionTimers();
-      untrackSelf();
-      recordLeaveIfNeeded();
-      leave();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => cleanupOnLeave();
   }, []);
 
   const handleStartCall = async () => {
@@ -167,7 +173,7 @@ export function LiveSessionRoomView({ access }: Props) {
     const confirmed = await showConfirm(
       'セッションを終了しますか？',
       '通話が終了し、退室します。この操作は取り消せません。',
-      { variant: 'danger', isModal: false, confirmText: '退室する' }
+      { variant: 'danger', isModal: false, confirmText: '退室する' },
     );
     if (!confirmed) return;
 
@@ -206,70 +212,72 @@ export function LiveSessionRoomView({ access }: Props) {
 
         <ImmersiveBody className="flex flex-col items-center justify-center bg-canvas/50 p-5 sm:p-8 gap-4">
           <div className="w-full max-w-md mx-auto flex flex-col items-center gap-4">
-          <div className="relative w-full aspect-video rounded-control overflow-hidden bg-ink shadow-sm">
-            <canvas ref={previewCanvasRef} className="w-full h-full object-cover" />
-            {!preview.isCameraOn && (
-              <div className="absolute inset-0 flex items-center justify-center text-ink-muted">
-                <VideoOff size={28} />
+            <div className="relative w-full aspect-video rounded-control overflow-hidden bg-ink shadow-sm">
+              <canvas ref={previewCanvasRef} className="w-full h-full object-cover" />
+              {!preview.isCameraOn && (
+                <div className="absolute inset-0 flex items-center justify-center text-ink-muted">
+                  <VideoOff size={28} />
+                </div>
+              )}
+            </div>
+
+            <div className="w-full flex items-center gap-2">
+              <div className="flex-1 h-1.5 rounded-full bg-canvas overflow-hidden">
+                <div
+                  className="h-full bg-rose-500 transition-all duration-100"
+                  style={{ width: `${Math.min(100, preview.micVolume)}%` }}
+                />
+              </div>
+              <span className="text-[11px] font-bold text-ink-subtle shrink-0">マイク入力</span>
+            </div>
+
+            {preview.errorMessage && (
+              <div className="text-center">
+                <p className="text-xs font-semibold text-rose-500">
+                  カメラ・マイクへのアクセスに失敗しました。ブラウザの権限設定をご確認ください。
+                </p>
+                <p className="text-[11px] text-rose-400 mt-0.5">{preview.errorMessage}</p>
               </div>
             )}
-          </div>
 
-          <div className="w-full flex items-center gap-2">
-            <div className="flex-1 h-1.5 rounded-full bg-canvas overflow-hidden">
-              <div
-                className="h-full bg-rose-500 transition-all duration-100"
-                style={{ width: `${Math.min(100, preview.micVolume)}%` }}
-              />
-            </div>
-            <span className="text-[11px] font-bold text-ink-subtle shrink-0">マイク入力</span>
-          </div>
-
-          {preview.errorMessage && (
-            <div className="text-center">
-              <p className="text-xs font-semibold text-rose-500">
-                カメラ・マイクへのアクセスに失敗しました。ブラウザの権限設定をご確認ください。
+            {!isCoachPresent && (
+              <p className="text-xs font-semibold text-ink-subtle text-center">
+                {access.peerName}コーチの入室を待機しています。入室が確認でき次第、参加できます。
               </p>
-              <p className="text-[11px] text-rose-400 mt-0.5">{preview.errorMessage}</p>
+            )}
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={preview.toggleMic}
+                disabled={!preview.isPreviewing}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isMicOn ? 'bg-white border border-line text-ink-muted hover:bg-canvas shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
+              >
+                {preview.isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
+              </button>
+              <button
+                onClick={() => previewCanvasRef.current && preview.toggleCamera(previewCanvasRef.current)}
+                disabled={!preview.isPreviewing}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isCameraOn ? 'bg-white border border-line text-ink-muted hover:bg-canvas shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
+              >
+                {preview.isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
+              </button>
+              <button
+                onClick={() => previewCanvasRef.current && preview.toggleBlur(previewCanvasRef.current)}
+                disabled={!preview.isPreviewing || !preview.isCameraOn}
+                title="背景をぼかす"
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white border border-line text-ink-muted hover:bg-canvas shadow-sm'}`}
+              >
+                <Sparkles size={18} />
+              </button>
             </div>
-          )}
-
-          {!isCoachPresent && (
-            <p className="text-xs font-semibold text-ink-subtle text-center">
-              {access.peerName}コーチの入室を待機しています。入室が確認でき次第、参加できます。
-            </p>
-          )}
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={preview.toggleMic}
-              disabled={!preview.isPreviewing}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isMicOn ? 'bg-white border border-line text-ink-muted hover:bg-canvas shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
-            >
-              {preview.isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
-            </button>
-            <button
-              onClick={() => previewCanvasRef.current && preview.toggleCamera(previewCanvasRef.current)}
-              disabled={!preview.isPreviewing}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isCameraOn ? 'bg-white border border-line text-ink-muted hover:bg-canvas shadow-sm' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
-            >
-              {preview.isCameraOn ? <Video size={18} /> : <VideoOff size={18} />}
-            </button>
-            <button
-              onClick={() => previewCanvasRef.current && preview.toggleBlur(previewCanvasRef.current)}
-              disabled={!preview.isPreviewing || !preview.isCameraOn}
-              title="背景をぼかす"
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${preview.isBlurOn ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white border border-line text-ink-muted hover:bg-canvas shadow-sm'}`}
-            >
-              <Sparkles size={18} />
-            </button>
-          </div>
           </div>
         </ImmersiveBody>
 
         <div className="px-5 py-4 sm:py-5 border-t border-line/60 shrink-0 bg-white space-y-2">
           {preview.isPreviewing && isCoachPresent && (
-            <p className="text-[11px] text-ink-subtle text-center">カメラとマイクの準備ができたら、下のボタンで参加してください</p>
+            <p className="text-[11px] text-ink-subtle text-center">
+              カメラとマイクの準備ができたら、下のボタンで参加してください
+            </p>
           )}
           <button
             onClick={handleStartCall}
@@ -301,16 +309,12 @@ export function LiveSessionRoomView({ access }: Props) {
   }
 
   return (
-    <div
-      ref={roomContainerRef}
-      className="fixed inset-0 z-40 flex flex-col bg-ink overflow-hidden"
-    >
+    <div ref={roomContainerRef} className="fixed inset-0 z-40 flex flex-col bg-ink overflow-hidden">
       <div className="shrink-0 flex items-center justify-between px-5 py-3 bg-ink/80 border-b border-ink">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-ink-soft overflow-hidden flex items-center justify-center text-ink-subtle shrink-0">
             {peerIconUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
+              <ExternalImage src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
             ) : (
               <User size={16} />
             )}
@@ -372,8 +376,7 @@ export function LiveSessionRoomView({ access }: Props) {
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
                   <div className="w-14 h-14 rounded-full bg-ink-soft overflow-hidden flex items-center justify-center text-ink-subtle shrink-0">
                     {peerIconUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
+                      <ExternalImage src={peerIconUrl} alt={access.peerName} className="w-full h-full object-cover" />
                     ) : (
                       <User size={24} />
                     )}
@@ -404,7 +407,9 @@ export function LiveSessionRoomView({ access }: Props) {
                   chatMessages.map((msg) => (
                     <div key={msg.id} className={`text-[11px] ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                       <span className="font-bold text-ink-subtle mr-1.5">{msg.senderName}</span>
-                      <span className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-ink-soft text-line'}`}>
+                      <span
+                        className={`inline-block px-2 py-1 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-ink-soft text-line'}`}
+                      >
                         {msg.message}
                       </span>
                     </div>
@@ -443,7 +448,9 @@ export function LiveSessionRoomView({ access }: Props) {
                 chatMessages.map((msg) => (
                   <div key={msg.id} className={`text-xs ${msg.isSelf ? 'text-right' : 'text-left'}`}>
                     <p className="font-bold text-ink-subtle text-[11px]">{msg.senderName}</p>
-                    <p className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-ink text-line'}`}>
+                    <p
+                      className={`inline-block mt-0.5 px-2.5 py-1.5 rounded-lg ${msg.isSelf ? 'bg-brand text-white' : 'bg-ink text-line'}`}
+                    >
                       {msg.message}
                     </p>
                   </div>

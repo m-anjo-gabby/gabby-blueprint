@@ -1,11 +1,11 @@
 'use client';
 
 import { BookOpen, LayoutDashboard, Zap } from 'lucide-react';
-import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { PillTabs, type PillTabItem } from '@/components/shell/PillTabs';
+import { ShellPageHeader } from '@/components/shell/ShellPage';
+import type { MonitorQuery, MonitorViewType } from './monitorQuery';
 import { MonitorToggle } from './MonitorToggle';
 import { useMonitorNavigation } from './useMonitorNavigation';
-import type { MonitorQuery, MonitorViewType } from './monitorQuery';
 
 const VIEW_TABS: readonly PillTabItem<MonitorViewType>[] = [
   { value: 'overview', label: '受講生サマリー', icon: LayoutDashboard },

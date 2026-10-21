@@ -1,4 +1,5 @@
 import { GraduationCap } from 'lucide-react';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { cn } from '@/lib/utils';
 
@@ -18,12 +19,11 @@ export function CoachAvatar({ iconPath, size, className }: CoachAvatarProps) {
       style={{ width: size, height: size }}
       className={cn(
         'flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-soft text-brand-500',
-        className
+        className,
       )}
     >
       {iconUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={iconUrl} alt="" className="h-full w-full object-cover" />
+        <ExternalImage src={iconUrl} alt="" className="h-full w-full object-cover" />
       ) : (
         <GraduationCap size={Math.round(size * 0.5)} />
       )}

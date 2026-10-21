@@ -1,44 +1,45 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { BellOff } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
+import { BellOff } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFetchOnMount } from '@gabby/lib/hooks/useFetchOnMount';
-import { NoticeCard } from './_components/NoticeCard';
+import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { InboxListSkeleton, InboxPageLayout } from '@/components/common/InboxPageParts';
+import { NoticeCard } from './_components/NoticeCard';
 
 export default function NoticePage() {
   const searchParams = useSearchParams();
   const focusId = searchParams.get('focus');
 
   const { notices, isLoading, fetchNotices, markAsRead } = useNoticeStore();
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() =>
-    focusId ? new Set([focusId]) : new Set()
-  );
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => (focusId ? new Set([focusId]) : new Set()));
 
-  // Always fetch the latest data on mount, and show the skeleton until that fetch completes
-  // (never flash a stale list left in the store, or an empty state before the first fetch)
+  // 開くたびに最新を取得し、取得が終わるまで骨組みを出す
+  // （ストアに残った古い一覧や、最初の取得の前の「0件」を一瞬も出さない）
   const isReady = useFetchOnMount(fetchNotices, isLoading);
 
-  const handleToggleNotice = useCallback((noticeId: string, isRead: boolean) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(noticeId)) {
-        next.delete(noticeId);
-      } else {
-        next.add(noticeId);
+  const handleToggleNotice = useCallback(
+    (noticeId: string, isRead: boolean) => {
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(noticeId)) {
+          next.delete(noticeId);
+        } else {
+          next.add(noticeId);
+        }
+        return next;
+      });
+
+      if (!isRead) {
+        markAsRead(noticeId);
       }
-      return next;
-    });
+    },
+    [markAsRead],
+  );
 
-    if (!isRead) {
-      markAsRead(noticeId);
-    }
-  }, [markAsRead]);
-
-  // Scroll to the focused card if a `focus` query param is present
+  // クエリに `focus` があれば、そのカードまでスクロールする
   const scrolledRef = useRef(false);
   useEffect(() => {
     if (!focusId || !isReady || scrolledRef.current) return;
@@ -63,13 +64,11 @@ export default function NoticePage() {
             <BellOff size={22} />
           </div>
           <p className="text-sm font-bold text-slate-500">No notices yet</p>
-          <p className="text-[11px] text-slate-400 mt-1.5">
-            You&apos;ll see announcements from the team here.
-          </p>
+          <p className="text-[11px] text-slate-400 mt-1.5">You&apos;ll see announcements from the team here.</p>
         </motion.div>
       ) : (
         <div className="space-y-3 pb-6">
-          {notices.map(notice => (
+          {notices.map((notice) => (
             <NoticeCard
               key={notice.notice_id}
               notice={notice}

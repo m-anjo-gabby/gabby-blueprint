@@ -1,9 +1,9 @@
 'use client';
 
-import { useId, type InputHTMLAttributes, type ReactNode } from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound, Loader2, Mail } from 'lucide-react';
+import Link from 'next/link';
+import { useId, type InputHTMLAttributes, type ReactNode } from 'react';
 
 /**
  * 認証画面（ログイン・パスワード忘れ・再設定・招待）の共通レイアウト部品
@@ -137,7 +137,10 @@ export function EmailField({ label, ...props }: { label: string } & InputHTMLAtt
 export function FormError({ message }: { message: string | null | undefined }) {
   if (!message) return null;
   return (
-    <div role="alert" className="p-3 rounded-lg bg-rose-50 border border-rose-100 flex items-center gap-2 text-rose-600">
+    <div
+      role="alert"
+      className="p-3 rounded-lg bg-rose-50 border border-rose-100 flex items-center gap-2 text-rose-600"
+    >
       <AlertCircle className="w-4 h-4 shrink-0" aria-hidden />
       <span className="text-xs font-medium">{message}</span>
     </div>

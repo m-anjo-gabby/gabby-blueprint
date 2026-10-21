@@ -1,5 +1,5 @@
 ---------------------------------------------
--- enqueue_notification_mail: アプリ内通知（com_t_notification）の登録をきっかけに、通知メールを送信待ちに積む (2026-10-05 追加)
+-- enqueue_notification_mail: アプリ内通知（com_t_notification）の登録をきっかけに、通知メールを送信待ちに積む
 ---------------------------------------------
 -- 【方式】
 -- 予約・キャンセル・マッチング・チャット等の出来事は、すべてアプリ内通知として com_t_notification に登録される
@@ -54,7 +54,7 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    SELECT user_type INTO v_user_type FROM public.com_m_user WHERE id = NEW.user_id AND delete_flg = '0';
+    SELECT user_type INTO v_user_type FROM public.com_m_user WHERE id = NEW.user_id AND status = 1;
     IF v_user_type IS NULL OR v_user_type NOT IN ('1', '2') THEN
         RETURN NULL;
     END IF;

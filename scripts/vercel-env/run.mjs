@@ -19,18 +19,27 @@
 //   --prune              定義に無い変数（管理対象外）も削除する
 //   --force              --pull で既存の値ファイルを上書きする
 
+import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
-import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import { APPS, ENVIRONMENTS, VERCEL_TEAM_ID } from './environments.mjs';
-import { MANIFEST, LOCAL, UNSET, SYSTEM_KEY_PATTERN } from './manifest.mjs';
 import {
-  buildAppEnvFile, buildExampleFile, buildValuesFile, diffProject, displayValue, isLocalSpec,
-  normalizeTargets, resolveDesired, sha256, specFor, validateValue,
+  buildAppEnvFile,
+  buildExampleFile,
+  buildValuesFile,
+  diffProject,
+  displayValue,
+  isLocalSpec,
+  normalizeTargets,
+  resolveDesired,
+  sha256,
+  specFor,
+  validateValue,
 } from './lib.mjs';
+import { LOCAL, MANIFEST, SYSTEM_KEY_PATTERN, UNSET } from './manifest.mjs';
 
 const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TOOL_DIR, '../..');
@@ -43,22 +52,37 @@ const API = 'https://api.vercel.com';
 // ---------------------------------------------------------------------------
 function parseArgs(argv) {
   const opts = { env: undefined, mode: 'plan', apps: [...APPS], prune: false, force: false };
-  const modes = { '--init': 'init', '--pull': 'pull', '--check': 'check', '--plan': 'plan', '--apply': 'apply',
-    '--write-app-env': 'write-app-env', '--write-examples': 'write-examples' };
+  const modes = {
+    '--init': 'init',
+    '--pull': 'pull',
+    '--check': 'check',
+    '--plan': 'plan',
+    '--apply': 'apply',
+    '--write-app-env': 'write-app-env',
+    '--write-examples': 'write-examples',
+  };
   let modeCount = 0;
   for (const arg of argv) {
     if (arg.startsWith('--env=')) opts.env = arg.slice('--env='.length);
-    else if (arg.startsWith('--apps=')) opts.apps = arg.slice('--apps='.length).split(',').map((s) => s.trim());
+    else if (arg.startsWith('--apps='))
+      opts.apps = arg
+        .slice('--apps='.length)
+        .split(',')
+        .map((s) => s.trim());
     else if (arg === '--prune') opts.prune = true;
     else if (arg === '--force') opts.force = true;
-    else if (modes[arg]) { opts.mode = modes[arg]; modeCount += 1; }
-    else fail(`不明なオプションです: ${arg}`);
+    else if (modes[arg]) {
+      opts.mode = modes[arg];
+      modeCount += 1;
+    } else fail(`不明なオプションです: ${arg}`);
   }
   if (modeCount > 1) fail('--init / --pull / --check / --plan / --apply / --write-* は1つだけ指定してください。');
   for (const app of opts.apps) if (!APPS.includes(app)) fail(`--apps には ${APPS.join(' / ')} を指定してください。`);
   if (opts.mode === 'write-examples') return opts;
-  if (!ENVIRONMENTS[opts.env]) fail(`--env には ${Object.keys(ENVIRONMENTS).join(' / ')} のいずれかを指定してください。`);
-  if (opts.mode === 'write-app-env' && opts.env !== 'staging') fail('--write-app-env は staging だけで使えます（本番の秘密の値をアプリのフォルダに置かないため）。');
+  if (!ENVIRONMENTS[opts.env])
+    fail(`--env には ${Object.keys(ENVIRONMENTS).join(' / ')} のいずれかを指定してください。`);
+  if (opts.mode === 'write-app-env' && opts.env !== 'staging')
+    fail('--write-app-env は staging だけで使えます（本番の秘密の値をアプリのフォルダに置かないため）。');
   return opts;
 }
 
@@ -69,14 +93,21 @@ function fail(message) {
 
 function ask(question) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => rl.question(question, (answer) => { rl.close(); resolve(answer.trim()); }));
+  return new Promise((resolve) =>
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    }),
+  );
 }
 
 /** 入力内容を表示しない入力（トークン用） */
 function askSecret(question) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    rl._writeToOutput = (s) => { if (s.includes(question)) rl.output.write(s); };
+    rl._writeToOutput = (s) => {
+      if (s.includes(question)) rl.output.write(s);
+    };
     rl.on('close', () => resolve(''));
     rl.question(question, (answer) => {
       resolve(answer.trim());
@@ -100,7 +131,10 @@ function readEnvFile(file) {
 
 function loadValues(env) {
   const values = readEnvFile(valuesPath(env));
-  if (!values) fail(`${rel(valuesPath(env))} がありません。--init（新規）または --pull（Vercel から取り込み）で作成してください。`);
+  if (!values)
+    fail(
+      `${rel(valuesPath(env))} がありません。--init（新規）または --pull（Vercel から取り込み）で作成してください。`,
+    );
   return values;
 }
 
@@ -179,8 +213,10 @@ async function loadProject(client, app, target) {
   try {
     project = await client.getProject(target.project);
   } catch (error) {
-    if (error.status === 404) fail(`Vercel のプロジェクト ${target.project}（${app}）が見つかりません。environments.mjs を確認してください。`);
-    if (error.status === 401 || error.status === 403) fail(`Vercel のアクセストークンが無効か、権限がありません（${error.message}）。`);
+    if (error.status === 404)
+      fail(`Vercel のプロジェクト ${target.project}（${app}）が見つかりません。environments.mjs を確認してください。`);
+    if (error.status === 401 || error.status === 403)
+      fail(`Vercel のアクセストークンが無効か、権限がありません（${error.message}）。`);
     throw error;
   }
   const all = await client.listEnv(project.id);
@@ -237,7 +273,9 @@ function init(env) {
  * 任意の値（検証用の上書き等）は手元の確認のためのものが多いため写さない。
  */
 function copyFromEnvLocal(values) {
-  const locals = Object.fromEntries(APPS.map((a) => [a, readEnvFile(path.join(REPO_ROOT, 'apps', a, '.env.local')) ?? {}]));
+  const locals = Object.fromEntries(
+    APPS.map((a) => [a, readEnvFile(path.join(REPO_ROOT, 'apps', a, '.env.local')) ?? {}]),
+  );
   const copied = [];
   const conflicts = [];
   for (const def of MANIFEST) {
@@ -278,7 +316,11 @@ function checkDev() {
   for (const app of APPS) {
     const file = path.join(REPO_ROOT, 'apps', app, '.env.local');
     const local = readEnvFile(file);
-    if (!local) { console.log(`\n== ${app}: ${rel(file)} がありません`); hasError = true; continue; }
+    if (!local) {
+      console.log(`\n== ${app}: ${rel(file)} がありません`);
+      hasError = true;
+      continue;
+    }
     const errors = [];
     const warnings = [];
     for (const def of MANIFEST.filter((d) => !d.removed && d.apps.includes(app))) {
@@ -288,7 +330,10 @@ function checkDev() {
       else if (spec === UNSET && value !== undefined) warnings.push(`${def.key}: dev では設定しない変数です`);
       else if (typeof spec === 'function' || (!isLocalSpec(spec) && spec !== UNSET)) {
         const expected = typeof spec === 'function' ? spec({ env: 'dev', app, config }) : spec;
-        if (value !== expected) warnings.push(`${def.key}: ${displayValue(def, value ?? '（なし）')}（定義では ${displayValue(def, expected)}）`);
+        if (value !== expected)
+          warnings.push(
+            `${def.key}: ${displayValue(def, value ?? '（なし）')}（定義では ${displayValue(def, expected)}）`,
+          );
       }
       if (value !== undefined) {
         const problem = validateValue(def, value, { supabaseRef: config.supabaseRef });
@@ -313,7 +358,10 @@ function checkDev() {
 // ---------------------------------------------------------------------------
 function writeAppEnv(env, apps) {
   const { desired, errors } = resolveDesired({ env, config: ENVIRONMENTS[env], values: loadValues(env) });
-  if (errors.length > 0) { printErrors('値ファイルに問題があります:', errors); process.exit(1); }
+  if (errors.length > 0) {
+    printErrors('値ファイルに問題があります:', errors);
+    process.exit(1);
+  }
   for (const app of apps) {
     const file = path.join(REPO_ROOT, 'apps', app, `.env.${env}`);
     writeFileSync(file, buildAppEnvFile({ app, env, desired: desired[app] }), 'utf8');
@@ -327,7 +375,8 @@ function writeAppEnv(env, apps) {
 async function pull(env, opts) {
   const config = ENVIRONMENTS[env];
   const existing = readEnvFile(valuesPath(env));
-  if (existing && !opts.force) fail(`${rel(valuesPath(env))} は既にあります。上書きする場合は --force を付けてください。`);
+  if (existing && !opts.force)
+    fail(`${rel(valuesPath(env))} は既にあります。上書きする場合は --force を付けてください。`);
   const client = createClient(await getToken(env, existing));
 
   /** key → app → 値（読み出せない場合は null） */
@@ -347,9 +396,10 @@ async function pull(env, opts) {
   }
 
   // Sensitive で読み出せない値は、staging だけ手元の控え（apps/*/.env.staging）から補う
-  const appFiles = env === 'staging'
-    ? Object.fromEntries(APPS.map((a) => [a, readEnvFile(path.join(REPO_ROOT, 'apps', a, '.env.staging')) ?? {}]))
-    : {};
+  const appFiles =
+    env === 'staging'
+      ? Object.fromEntries(APPS.map((a) => [a, readEnvFile(path.join(REPO_ROOT, 'apps', a, '.env.staging')) ?? {}]))
+      : {};
 
   const values = { VERCEL_TOKEN: existing?.VERCEL_TOKEN ?? '' };
   const notes = {};
@@ -364,12 +414,16 @@ async function pull(env, opts) {
       // 補うのは「Vercel にあるが読み出せない」値だけ（Vercel に無い値は補わない。控えにはテスト用の上書きがあるため）
       if (v === null) {
         const local = appFiles[app]?.[def.key];
-        if (local) { v = local; from = `apps/${app}/.env.staging`; }
+        if (local) {
+          v = local;
+          from = `apps/${app}/.env.staging`;
+        }
       }
       if (v) candidates.set(v, [...(candidates.get(v) ?? []), `${app}(${from})`]);
     }
     if (candidates.size === 0) {
-      if (perApp && [...perApp.values()].some((v) => v === null)) notes[def.key] = 'Vercel に Sensitive で登録されており読み出せません。値を確認して記入してください';
+      if (perApp && [...perApp.values()].some((v) => v === null))
+        notes[def.key] = 'Vercel に Sensitive で登録されており読み出せません。値を確認して記入してください';
       report.push(`${def.key}: ${perApp ? '読み出せないため空欄' : 'Vercel に無いため空欄'}`);
       continue;
     }
@@ -383,7 +437,8 @@ async function pull(env, opts) {
   writeValues(env, values, notes);
   console.log(`作成: ${rel(valuesPath(env))}（値は表示しません）`);
   if (report.length > 0) printErrors('確認が必要な変数:', report);
-  if (unmanaged.length > 0) printErrors('定義（manifest.mjs）に無い変数（定義に追加するか、--prune で削除）:', unmanaged);
+  if (unmanaged.length > 0)
+    printErrors('定義（manifest.mjs）に無い変数（定義に追加するか、--prune で削除）:', unmanaged);
   console.log('\n次に --check で値ファイルを確かめ、--plan で Vercel との差分を確認してください。');
 }
 
@@ -391,10 +446,17 @@ async function pull(env, opts) {
 // --plan / --apply
 // ---------------------------------------------------------------------------
 const ACTION_LABEL = {
-  add: '+ 追加', update: '~ 変更', recreate: '~ 作り直し', delete: '- 削除', unmanaged: '? 管理外',
+  add: '+ 追加',
+  update: '~ 変更',
+  recreate: '~ 作り直し',
+  delete: '- 削除',
+  unmanaged: '? 管理外',
 };
 const REASON_LABEL = {
-  unset: 'この環境では設定しない定義', 'not-for-app': 'このアプリでは使わない定義', removed: '廃止した変数', unmanaged: '定義に無い変数',
+  unset: 'この環境では設定しない定義',
+  'not-for-app': 'このアプリでは使わない定義',
+  removed: '廃止した変数',
+  unmanaged: '定義に無い変数',
 };
 
 function describeChange(c) {
@@ -433,17 +495,23 @@ async function plan(env, opts) {
     const target = config.vercel[app];
     const { project, records } = await loadProject(client, app, target);
     const { changes, warnings } = diffProject({
-      desired: desired[app], records, targets: target.targets, known, stateHashes: state[project.name] ?? {},
+      desired: desired[app],
+      records,
+      targets: target.targets,
+      known,
+      stateHashes: state[project.name] ?? {},
     });
     const active = changes.filter((c) => c.action !== 'unmanaged' || opts.prune);
-    const unchanged = [...desired[app].values()].filter((d) => d.value !== undefined).length
-      - changes.filter((c) => ['add', 'update', 'recreate'].includes(c.action)).length;
+    const unchanged =
+      [...desired[app].values()].filter((d) => d.value !== undefined).length -
+      changes.filter((c) => ['add', 'update', 'recreate'].includes(c.action)).length;
 
     console.log(`\n== ${app} → ${project.name}（${target.targets.join(', ')}）`);
     for (const c of changes) {
       const label = c.action === 'unmanaged' && opts.prune ? '- 削除' : ACTION_LABEL[c.action];
       console.log(`  ${label.padEnd(8, '　')} ${c.key.padEnd(42)} ${describeChange(c)}`);
-      if (c.shared && c.action !== 'delete') console.log(`  ${''.padEnd(8, '　')} ${''.padEnd(42)} ※ ${c.shared.join(', ')} にも同じ値が反映されます`);
+      if (c.shared && c.action !== 'delete')
+        console.log(`  ${''.padEnd(8, '　')} ${''.padEnd(42)} ※ ${c.shared.join(', ')} にも同じ値が反映されます`);
     }
     console.log(`  変更なし ${unchanged}件`);
     for (const w of warnings) console.log(`  [確認] ${w}`);
@@ -451,7 +519,8 @@ async function plan(env, opts) {
   }
 
   const total = projects.reduce((n, p) => n + p.changes.length, 0);
-  const notes = projects.flatMap((p) => p.changes)
+  const notes = projects
+    .flatMap((p) => p.changes)
     .filter((c) => ['add', 'update', 'recreate'].includes(c.action) && c.def?.note)
     .map((c) => `${c.key}: ${c.def.note}`);
   if (total === 0) {
@@ -465,7 +534,9 @@ async function plan(env, opts) {
   }
 
   if (config.confirmWord) {
-    const typed = await ask(`\n${config.label}に ${total}件を反映します。確認のため "${config.confirmWord}" と入力してください: `);
+    const typed = await ask(
+      `\n${config.label}に ${total}件を反映します。確認のため "${config.confirmWord}" と入力してください: `,
+    );
     if (typed !== config.confirmWord) fail('入力が一致しないため中止しました。');
   } else {
     const answer = await ask(`\n${config.label}に ${total}件を反映しますか？ (y/N): `);
@@ -490,7 +561,11 @@ async function apply(env, client, projects, state) {
   try {
     for (const { app, project, changes } of projects) {
       // 追加・変更を先に、削除を後に行う
-      const ordered = [...changes].sort((a, b) => Number(a.action === 'delete' || a.action === 'unmanaged') - Number(b.action === 'delete' || b.action === 'unmanaged'));
+      const ordered = [...changes].sort(
+        (a, b) =>
+          Number(a.action === 'delete' || a.action === 'unmanaged') -
+          Number(b.action === 'delete' || b.action === 'unmanaged'),
+      );
       for (const c of ordered) {
         const entry = { app, project: project.name, key: c.key, action: c.action };
         log.push(entry);
@@ -519,7 +594,9 @@ async function apply(env, client, projects, state) {
   } catch (error) {
     console.log('失敗');
     const file = writeLog(env, log);
-    fail(`${error.message}\n  ここまでの記録: ${rel(file)}\n  原因を直して同じコマンドを再実行すると、残りの差分だけを反映します。`);
+    fail(
+      `${error.message}\n  ここまでの記録: ${rel(file)}\n  原因を直して同じコマンドを再実行すると、残りの差分だけを反映します。`,
+    );
   }
   const file = writeLog(env, log);
   console.log(`\nすべて反映しました（記録: ${rel(file)}）。`);
@@ -531,12 +608,18 @@ async function apply(env, client, projects, state) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   switch (opts.mode) {
-    case 'write-examples': return writeExamples();
-    case 'init': return init(opts.env);
-    case 'check': return check(opts.env);
-    case 'write-app-env': return writeAppEnv(opts.env, opts.apps);
-    case 'pull': return pull(opts.env, opts);
-    default: return plan(opts.env, opts);
+    case 'write-examples':
+      return writeExamples();
+    case 'init':
+      return init(opts.env);
+    case 'check':
+      return check(opts.env);
+    case 'write-app-env':
+      return writeAppEnv(opts.env, opts.apps);
+    case 'pull':
+      return pull(opts.env, opts);
+    default:
+      return plan(opts.env, opts);
   }
 }
 

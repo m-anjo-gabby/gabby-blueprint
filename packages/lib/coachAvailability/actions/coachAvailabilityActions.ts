@@ -1,18 +1,20 @@
 'use server';
 
-import { createServerClient } from '../../supabase/server';
+import { unstable_rethrow } from 'next/navigation';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import {
+  type AddCoachAvailabilityResult,
+  type CoachAvailabilityFormValues,
+  type CoachAvailabilitySlot,
+  type ConfirmAvailabilityResult,
+  type DeleteCoachAvailabilityResult,
+  type GetAvailabilityConfirmedAtResult,
+  type GetCoachAvailabilityResult,
+} from '@gabby/types/coachAvailability';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import {
-  CoachAvailabilityFormValues,
-  CoachAvailabilitySlot,
-  GetCoachAvailabilityResult,
-  AddCoachAvailabilityResult,
-  DeleteCoachAvailabilityResult,
-  GetAvailabilityConfirmedAtResult,
-  ConfirmAvailabilityResult,
-} from '@gabby/types/coachAvailability';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 
@@ -35,18 +37,22 @@ export async function getMyAvailabilityCore(): Promise<GetCoachAvailabilityResul
       .from('com_m_coach_availability')
       .select('*')
       .eq('coach_id', user.id)
-      .eq('delete_flg', '0')
       .order('day_of_week', { ascending: true })
       .order('start_time', { ascending: true });
 
     if (error) {
-      logger.error('coachAvailability:get_my_availability_failed', error.message, { ...ctx, err: error, userId: user.id });
+      logger.error('coachAvailability:get_my_availability_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, slots: (data ?? []) as CoachAvailabilitySlot[] };
   } catch (err) {
-    logger.error('coachAvailability:get_my_availability_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coachAvailability:get_my_availability_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -64,18 +70,25 @@ export async function getCoachAvailabilityByUserIdCore(coachId: string): Promise
       .from('com_m_coach_availability')
       .select('*')
       .eq('coach_id', coachId)
-      .eq('delete_flg', '0')
       .order('day_of_week', { ascending: true })
       .order('start_time', { ascending: true });
 
     if (error) {
-      logger.error('coachAvailability:get_by_coach_id_failed', error.message, { ...ctx, err: error, payload: { coachId } });
+      logger.error('coachAvailability:get_by_coach_id_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { coachId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, slots: (data ?? []) as CoachAvailabilitySlot[] };
   } catch (err) {
-    logger.error('coachAvailability:get_by_coach_id_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coachAvailability:get_by_coach_id_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -93,10 +106,7 @@ export async function addAvailabilityCore(values: CoachAvailabilityFormValues): 
     const user = await getAuthUser();
     if (!user) return { success: false, errorCode: 'unauthorized' };
 
-    if (
-      values.day_of_week < 0 || values.day_of_week > 6 ||
-      !isValidTimeRange(values.start_time, values.end_time)
-    ) {
+    if (values.day_of_week < 0 || values.day_of_week > 6 || !isValidTimeRange(values.start_time, values.end_time)) {
       return { success: false, errorCode: 'invalid_input' };
     }
 
@@ -112,20 +122,28 @@ export async function addAvailabilityCore(values: CoachAvailabilityFormValues): 
       .single();
 
     if (error || !data) {
-      logger.error('coachAvailability:add_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id });
+      logger.error('coachAvailability:add_failed', error?.message ?? 'No row inserted', {
+        ...ctx,
+        err: error,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'db_insert_failed' };
     }
 
     logger.info('coachAvailability:add_success', 'Coach availability slot added', { ...ctx, userId: user.id });
     return { success: true, slot: data as CoachAvailabilitySlot };
   } catch (err) {
-    logger.error('coachAvailability:add_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coachAvailability:add_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
- * ログイン中コーチ自身の空き時間を1件削除する（論理削除。ポータル共通）
+ * ログイン中コーチ自身の空き時間を1件削除する（ポータル共通）
  */
 export async function deleteAvailabilityCore(availabilityId: string): Promise<DeleteCoachAvailabilityResult> {
   const ctx = await getLogContext();
@@ -137,19 +155,28 @@ export async function deleteAvailabilityCore(availabilityId: string): Promise<De
 
     const { error } = await supabase
       .from('com_m_coach_availability')
-      .update({ delete_flg: '1', update_date: new Date().toISOString() })
+      .delete()
       .eq('availability_id', availabilityId)
       .eq('coach_id', user.id);
 
     if (error) {
-      logger.error('coachAvailability:delete_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { availabilityId } });
+      logger.error('coachAvailability:delete_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { availabilityId },
+      });
       return { success: false, errorCode: 'db_delete_failed' };
     }
 
     logger.info('coachAvailability:delete_success', 'Coach availability slot removed', { ...ctx, userId: user.id });
     return { success: true };
   } catch (err) {
-    logger.error('coachAvailability:delete_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coachAvailability:delete_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -178,7 +205,8 @@ export async function getMyAvailabilityConfirmedAtCore(): Promise<GetAvailabilit
 
     return { success: true, confirmedAt: data?.availability_confirmed_at ?? null };
   } catch (err) {
-    logger.error('coachAvailability:get_confirmed_at_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coachAvailability:get_confirmed_at_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -198,14 +226,25 @@ export async function confirmMyAvailabilityCore(): Promise<ConfirmAvailabilityRe
     const { data, error } = await supabase.rpc('confirm_my_coach_availability');
 
     if (error || !data) {
-      logger.error('coachAvailability:confirm_failed', error?.message ?? 'No timestamp returned', { ...ctx, err: error, userId: user.id });
+      logger.error('coachAvailability:confirm_failed', error?.message ?? 'No timestamp returned', {
+        ...ctx,
+        err: error,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'db_update_failed' };
     }
 
-    logger.info('coachAvailability:confirm_success', 'Coach availability confirmed without changes', { ...ctx, userId: user.id });
+    logger.info('coachAvailability:confirm_success', 'Coach availability confirmed without changes', {
+      ...ctx,
+      userId: user.id,
+    });
     return { success: true, confirmedAt: data as string };
   } catch (err) {
-    logger.error('coachAvailability:confirm_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('coachAvailability:confirm_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

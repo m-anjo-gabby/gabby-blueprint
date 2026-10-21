@@ -49,7 +49,8 @@ export async function searchKnowledgeBase({
   const supabase = createAdminClient();
 
   const { data, error } = await supabase.rpc(MATCH_FUNCTION, {
-    _query_embedding: queryEmbedding,
+    // pgvector の引数は文字列の表現（'[0.1,0.2,...]'）で渡す
+    _query_embedding: JSON.stringify(queryEmbedding),
     _source_type: sourceType ?? null,
     _match_count: matchCount,
     _match_threshold: matchThreshold,

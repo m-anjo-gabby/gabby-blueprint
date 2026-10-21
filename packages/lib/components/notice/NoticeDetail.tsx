@@ -1,11 +1,11 @@
 'use client';
 
 import type { NoticeItem } from '@gabby/types/notice';
-import { getNoticeImageUrl } from '../../notice/links';
 import type { NoticeLabels } from '../../notice/labels';
-import { NoticeMarkdown } from './NoticeMarkdown';
+import { getNoticeImageUrl } from '../../notice/links';
 import { NoticeAttachmentList } from './NoticeAttachmentList';
 import { NoticeCtaLink, NoticeImage } from './NoticeCta';
+import { NoticeMarkdown } from './NoticeMarkdown';
 
 export interface NoticeDetailProps {
   notice: NoticeItem;
@@ -24,7 +24,14 @@ export interface NoticeDetailProps {
  * お知らせの全文（見出し画像・本文・行動ボタン・添付ファイル）。
  * お知らせ一覧のカードを開いた中身と、ポップアップの「続きを読む」で共通。
  */
-export function NoticeDetail({ notice, labels, imageUrl, onCtaClick, preview = false, includeImageAndCta = true }: NoticeDetailProps) {
+export function NoticeDetail({
+  notice,
+  labels,
+  imageUrl,
+  onCtaClick,
+  preview = false,
+  includeImageAndCta = true,
+}: NoticeDetailProps) {
   const src = imageUrl !== undefined ? imageUrl : getNoticeImageUrl(notice.image_path);
   return (
     // 行動ボタンの幅は画面幅ではなく置かれた枠の幅で決める（アドミンのプレビューのスマホ枠でも実物と同じに見えるように）
@@ -32,7 +39,13 @@ export function NoticeDetail({ notice, labels, imageUrl, onCtaClick, preview = f
       {includeImageAndCta && <NoticeImage src={src} />}
       <NoticeMarkdown content={notice.content} />
       {includeImageAndCta && (
-        <NoticeCtaLink notice={notice} labels={labels} onClick={onCtaClick} preview={preview} className="h-11 w-full @md:w-auto" />
+        <NoticeCtaLink
+          notice={notice}
+          labels={labels}
+          onClick={onCtaClick}
+          preview={preview}
+          className="h-11 w-full @md:w-auto"
+        />
       )}
       <NoticeAttachmentList attachments={notice.attachments} labels={labels.attachments} preview={preview} />
     </div>

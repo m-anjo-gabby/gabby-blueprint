@@ -1,7 +1,7 @@
-import { cache } from 'react';
 import { notFound, redirect } from 'next/navigation';
-import { getUserById } from '@/actions/adminUserAction';
+import { cache } from 'react';
 import type { UserRecord } from '@gabby/types/user';
+import { getUserById } from '@/actions/adminUserAction';
 import { getUserDetailPath, isUserDetailTabAvailable, type UserDetailTab } from './tabs';
 
 /** ユーザー1件（layout と各タブで同じ取得を1回にまとめる） */

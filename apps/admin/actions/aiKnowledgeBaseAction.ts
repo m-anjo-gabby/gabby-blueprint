@@ -1,19 +1,27 @@
 'use server';
 
-import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { upsertKnowledgeEntry, deleteKnowledgeEntry, type KnowledgeSourceType } from '@gabby/lib/ai';
+import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
+import { unstable_rethrow } from 'next/navigation';
+import {
+  deleteKnowledgeEntry as deleteKnowledgeEntryCore,
+  upsertKnowledgeEntry,
+  type KnowledgeBaseEntry,
+  type KnowledgeSourceType,
+} from '@gabby/lib/ai';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { ilikeAny } from '@gabby/lib/supabase/ilike';
+import type { ActionResult } from '@gabby/types/action';
+import { ADMIN_OR_CONTENT_MANAGER, requireAdminRole } from '@/lib/adminAuth';
 import { toRange, type ListParams, type ListResult } from '@/lib/list';
 
 const logger = createLogger('admin');
 const TOOL_PATH = '/tools/ai-knowledge-base';
 
-// ============================================================
 // 型定義
-// ============================================================
 
 export interface KnowledgeEntry {
   knowledge_id: string;
@@ -25,17 +33,19 @@ export interface KnowledgeEntry {
   update_date: string;
 }
 
-// ============================================================
 // 取得系
-// ============================================================
 
 /**
  * ナレッジ一覧の取得（サーバーサイドページネーション）。
  * 本文全文を含むがembeddingベクトル自体は返さない。
  */
 export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<ListResult<KnowledgeEntry>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
-  const { q, filters: { type: sourceType } } = params;
+  const {
+    q,
+    filters: { type: sourceType },
+  } = params;
   try {
     const supabase = await createAdminClient();
     const [from, to] = toRange(params);
@@ -43,7 +53,6 @@ export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<L
     let query = supabase
       .from('com_m_ai_knowledge_base')
       .select('knowledge_id, source_type, title, body, metadata, embedding_model, update_date', { count: 'exact' })
-      .eq('delete_flg', '0')
       .order('update_date', { ascending: false })
       .order('knowledge_id', { ascending: true }) // 同順位の並びを一意に固定し、range(LIMIT/OFFSET)でのページ間の重複・欠落を防ぐ
       .range(from, to);
@@ -65,25 +74,30 @@ export async function getKnowledgeEntries(params: ListParams<'type'>): Promise<L
 
     return { rows: data as KnowledgeEntry[], totalCount: count || 0 };
   } catch (err) {
-    logger.error('aiKb:list_unexpected', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { sourceType } });
+    unstable_rethrow(err);
+    logger.error('aiKb:list_unexpected', getErrorMessage(err, 'Unknown'), {
+      ...ctx,
+      err,
+      payload: { sourceType },
+    });
     return { rows: [], totalCount: 0 };
   }
 }
 
-// ============================================================
 // 更新系
-// ============================================================
 
 /**
  * ナレッジの新規登録/更新。
  * 本文からEmbeddingを再生成してcom_m_ai_knowledge_baseへ保存する（packages/lib/ai）。
  */
-export async function saveKnowledgeEntryAction(payload: {
+export async function saveKnowledgeEntry(payload: {
   knowledgeId?: string;
   sourceType: KnowledgeSourceType;
   title: string;
   body: string;
-}) {
+}): Promise<ActionResult<{ message: string; data: KnowledgeBaseEntry }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const entry = await upsertKnowledgeEntry({
@@ -100,27 +114,35 @@ export async function saveKnowledgeEntryAction(payload: {
     });
 
     revalidatePath(TOOL_PATH);
-    return { success: true, message: '保存しました', data: entry };
+    return { success: true, message: t('common.results.saved'), data: entry };
   } catch (err) {
-    logger.error('aiKb:save_failed', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload });
-    return { success: false, message: '保存に失敗しました' };
+    unstable_rethrow(err);
+    logger.error('aiKb:save_failed', getErrorMessage(err, 'Unknown'), { ...ctx, err, payload });
+    return { success: false, message: t('common.errors.saveFailed') };
   }
 }
 
 /**
  * ナレッジの論理削除
  */
-export async function deleteKnowledgeEntryAction(knowledgeId: string) {
+export async function deleteKnowledgeEntry(knowledgeId: string): Promise<ActionResult<{ message: string }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
-    await deleteKnowledgeEntry(knowledgeId);
+    await deleteKnowledgeEntryCore(knowledgeId);
 
     logger.info('aiKb:delete_success', `Knowledge entry deleted: ${knowledgeId}`, { ...ctx, payload: { knowledgeId } });
 
     revalidatePath(TOOL_PATH);
-    return { success: true, message: '削除しました' };
+    return { success: true, message: t('common.results.deleted') };
   } catch (err) {
-    logger.error('aiKb:delete_failed', err instanceof Error ? err.message : 'Unknown', { ...ctx, err, payload: { knowledgeId } });
-    return { success: false, message: '削除に失敗しました' };
+    unstable_rethrow(err);
+    logger.error('aiKb:delete_failed', getErrorMessage(err, 'Unknown'), {
+      ...ctx,
+      err,
+      payload: { knowledgeId },
+    });
+    return { success: false, message: t('common.errors.deleteFailed') };
   }
 }

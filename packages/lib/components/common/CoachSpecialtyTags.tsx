@@ -1,5 +1,5 @@
 import { AudioLines } from 'lucide-react';
-import { CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { type CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
 import { cn } from '../../utils';
 
 export interface CoachSpecialtyTagsProps {
@@ -30,7 +30,7 @@ export function CoachSpecialtyTags({ tags, highlightCodes, className }: CoachSpe
           key={tag.code}
           className={cn(
             'inline-flex items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[11px] font-bold text-white transition-opacity',
-            isDimmed(tag.code) && 'opacity-40'
+            isDimmed(tag.code) && 'opacity-40',
           )}
         >
           <AudioLines size={11} aria-hidden />
@@ -42,7 +42,7 @@ export function CoachSpecialtyTags({ tags, highlightCodes, className }: CoachSpe
           key={tag.code}
           className={cn(
             'rounded-full border border-brand-100 bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-brand-strong transition-opacity',
-            isDimmed(tag.code) && 'opacity-40'
+            isDimmed(tag.code) && 'opacity-40',
           )}
         >
           {tag.label}

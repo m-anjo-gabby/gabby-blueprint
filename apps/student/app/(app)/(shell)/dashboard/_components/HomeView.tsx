@@ -1,33 +1,33 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useNow } from '@gabby/lib/hooks/useNow';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getHourInZone } from '@gabby/lib/date/date';
-import { useToast } from '@gabby/lib/hooks/useToast';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
+import { useNow } from '@gabby/lib/hooks/useNow';
 import { useRefreshOnRestoredRender } from '@gabby/lib/hooks/useRefreshOnRestoredRender';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { clientLogger } from '@gabby/lib/logger/client';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import type { ResumeContentResponse } from '@gabby/types/training';
-import type { TrainingLifetimeStats } from '@/actions/performanceAction';
-import type { MyPlan } from '@/actions/dashboardAction';
 import { clearResumeContent } from '@/actions/contentAction';
+import type { MyPlan } from '@/actions/dashboardAction';
+import type { TrainingLifetimeStats } from '@/actions/performanceAction';
 import { cn } from '@/lib/utils';
 import { resolveTodayFocus } from '../_lib/todayFocus';
 import { buildCurrentWeek, resolveStreakDays, type TrainingActivity } from '../_lib/weeklyActivity';
-import { TodayDateLine } from './TodayDateLine';
+import { CoachAssignmentsCard } from './CoachAssignmentsCard';
+import { ContinueCard } from './ContinueCard';
 import { HOME_LAYOUT } from './HomeCard';
 import { HomeHeaderSkeleton, WeeklyActivityCardSkeleton } from './HomeSkeleton';
-import { TodayFocusCard } from './TodayFocusCard';
-import { ContinueCard } from './ContinueCard';
-import { WeeklyActivityCard } from './WeeklyActivityCard';
 import { LifetimeStatsCard } from './LifetimeStatsCard';
-import { CoachAssignmentsCard } from './CoachAssignmentsCard';
 import { PlanCard } from './PlanCard';
-import { clientLogger } from '@gabby/lib/logger/client';
+import { TodayDateLine } from './TodayDateLine';
+import { TodayFocusCard } from './TodayFocusCard';
+import { WeeklyActivityCard } from './WeeklyActivityCard';
 
 interface HomeViewProps {
   assignments: DialogueAssignmentSummary[];
@@ -112,7 +112,7 @@ export function HomeView({
 
   // 「今日やること」に出した項目は補助カード側では重複表示しない
   const otherAssignments = pendingAssignments.filter(
-    (a) => !(focus.kind === 'assignment' && focus.assignment.assignment_id === a.assignment_id)
+    (a) => !(focus.kind === 'assignment' && focus.assignment.assignment_id === a.assignment_id),
   );
   const week = nowMs !== null ? buildCurrentWeek(activities, timezone, nowMs) : null;
   const streakDays = nowMs !== null ? resolveStreakDays(lifetimeStats, timezone, nowMs) : 0;
@@ -171,7 +171,9 @@ export function HomeView({
 
         {/* 途中の教材の再開（主役に出ていない場合）とコーチからの課題。両方あるときは半分ずつ、片方だけなら全幅 */}
         {(showContinue || showAssignments) && (
-          <div className={cn('grid grid-cols-1 gap-4 lg:col-span-3', showContinue && showAssignments && 'lg:grid-cols-2')}>
+          <div
+            className={cn('grid grid-cols-1 gap-4 lg:col-span-3', showContinue && showAssignments && 'lg:grid-cols-2')}
+          >
             {showContinue && <ContinueCard resume={resume} onClear={handleClearResume} />}
             {showAssignments && <CoachAssignmentsCard assignments={otherAssignments} />}
           </div>

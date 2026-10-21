@@ -19,7 +19,9 @@ Font.register({
 // - 区切りの間に空文字を挟むのは、react-pdf が分割位置にハイフン(-)を描くのを避けるため。
 // - 句読点・閉じ括弧等は直前の文字とまとめ、行頭に来ないようにする（簡易的な禁則処理）。
 const CJK_PATTERN = /[\u3000-\u30ff\u3400-\u9fff\uff00-\uffef]/;
-const NO_LINE_START = new Set(Array.from('、。，．,.・：；？！?!）」』】〕〉》ーぁぃぅぇぉっゃゅょァィゥェォッャュョ…'));
+const NO_LINE_START = new Set(
+  Array.from('、。，．,.・：；？！?!）」』】〕〉》ーぁぃぅぇぉっゃゅょァィゥェォッャュョ…'),
+);
 
 function splitCjkWord(word: string): string[] {
   const units: string[] = [];

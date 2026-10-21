@@ -3,15 +3,11 @@
 // NOTE: ZoomVideo.createLocalAudioTrack/createLocalVideoTrackは、client.join()前に
 // マイク/カメラをプレビューするための専用API（@zoom/videosdk 2.5.0の型定義で確認済み）。
 // セッションのclientインスタンスとは独立して動作する。
+import type { LocalAudioTrack, LocalVideoTrack } from '@zoom/videosdk';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { clientLogger } from '../../logger/client';
 import { ensureZoomClientInitialized } from '../client';
 import { describeZoomError } from '../errors';
-import { clientLogger } from '../../logger/client';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LocalAudioTrack = any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LocalVideoTrack = any;
 
 const VOLUME_POLL_INTERVAL_MS = 200;
 // LocalAudioTrack.getCurrentVolume()の戻り値スケールはSDKの型定義に明記されていない。
@@ -67,37 +63,40 @@ export function useZoomDevicePreview(): UseZoomDevicePreviewResult {
     }
   }, []);
 
-  const startPreview = useCallback(async (previewElement: HTMLCanvasElement) => {
-    setErrorMessage(null);
-    try {
-      // 仮想背景（ぼかし）付きのローカルプレビューはclient.init()が完了していないと失敗するため、
-      // トラック生成前に必ずクライアント初期化を待つ（join()前でもセッションには接続しない）
-      await ensureZoomClientInitialized();
-      const { default: ZoomVideo } = await import('@zoom/videosdk');
+  const startPreview = useCallback(
+    async (previewElement: HTMLCanvasElement) => {
+      setErrorMessage(null);
+      try {
+        // 仮想背景（ぼかし）付きのローカルプレビューはclient.init()が完了していないと失敗するため、
+        // トラック生成前に必ずクライアント初期化を待つ（join()前でもセッションには接続しない）
+        await ensureZoomClientInitialized();
+        const { default: ZoomVideo } = await import('@zoom/videosdk');
 
-      const videoTrack = ZoomVideo.createLocalVideoTrack();
-      videoTrackRef.current = videoTrack;
-      await videoTrack.start(previewElement);
-      setIsCameraOn(true);
+        const videoTrack = ZoomVideo.createLocalVideoTrack();
+        videoTrackRef.current = videoTrack;
+        await videoTrack.start(previewElement);
+        setIsCameraOn(true);
 
-      // 入室前はマイクをミュート状態で開始する（SDK仕様。入力レベル計測自体はミュート中も可能）
-      const audioTrack = ZoomVideo.createLocalAudioTrack();
-      audioTrackRef.current = audioTrack;
-      await audioTrack.start();
-      setIsMicOn(false);
+        // 入室前はマイクをミュート状態で開始する（SDK仕様。入力レベル計測自体はミュート中も可能）
+        const audioTrack = ZoomVideo.createLocalAudioTrack();
+        audioTrackRef.current = audioTrack;
+        await audioTrack.start();
+        setIsMicOn(false);
 
-      clearVolumePolling();
-      volumeIntervalRef.current = setInterval(() => {
-        setMicVolume(normalizeMicVolume(audioTrackRef.current?.getCurrentVolume() ?? 0));
-      }, VOLUME_POLL_INTERVAL_MS);
+        clearVolumePolling();
+        volumeIntervalRef.current = setInterval(() => {
+          setMicVolume(normalizeMicVolume(audioTrackRef.current?.getCurrentVolume() ?? 0));
+        }, VOLUME_POLL_INTERVAL_MS);
 
-      setIsPreviewing(true);
-    } catch (err) {
-      const { detail, message } = describeZoomError(err);
-      clientLogger.error('liveRoom:start_device_preview_failed', message, { payload: { detail } });
-      setErrorMessage(message);
-    }
-  }, [clearVolumePolling]);
+        setIsPreviewing(true);
+      } catch (err) {
+        const { detail, message } = describeZoomError(err);
+        clientLogger.error('liveRoom:start_device_preview_failed', message, { payload: { detail } });
+        setErrorMessage(message);
+      }
+    },
+    [clearVolumePolling],
+  );
 
   const stopPreview = useCallback(async () => {
     clearVolumePolling();
@@ -140,7 +139,7 @@ export function useZoomDevicePreview(): UseZoomDevicePreviewResult {
       }
       setIsCameraOn((prev) => !prev);
     },
-    [isCameraOn, isBlurOn]
+    [isCameraOn, isBlurOn],
   );
 
   const toggleBlur = useCallback(
@@ -160,7 +159,7 @@ export function useZoomDevicePreview(): UseZoomDevicePreviewResult {
         setErrorMessage(message);
       }
     },
-    [isBlurOn, isCameraOn]
+    [isBlurOn, isCameraOn],
   );
 
   useEffect(() => clearVolumePolling, [clearVolumePolling]);

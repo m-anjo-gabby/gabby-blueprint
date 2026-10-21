@@ -1,17 +1,19 @@
 // packages/lib/mail/actions/sendAccountMail.ts
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { USER_TYPES } from '@gabby/types/user';
+import { createLogger } from '../../logger';
 import { sendCore } from '../core';
-import { renderMail } from '../render';
 import type { MailContent, MailLanguage } from '../layout/document';
+import { renderMail } from '../render';
 import { buildAdminInviteMail } from '../templates/AdminInviteEmailTemplate';
 import { buildCoachInviteMail } from '../templates/CoachInviteEmailTemplate';
 import { buildStudentInviteMail } from '../templates/InviteEmailTemplate';
 import { buildPasswordResetMail } from '../templates/PasswordResetEmailTemplate';
-import { createLogger } from '../../logger';
 
 /*
- * 🔒 アカウント関連のメール（招待・パスワード再設定）を組み立てて Resend 経由ですぐ送る。
+ * アカウント関連のメール（招待・パスワード再設定）を組み立てて Resend 経由ですぐ送る。
  * 送信待ち（dispatch/）を通らず、配信停止の対象外。
  */
 
@@ -20,9 +22,12 @@ const logger = createLogger('mail');
 /** 招待リンクの有効期限（日数）。招待の新規送信・再送の期限と、メール本文の期限表記で共通 */
 export const INVITATION_EXPIRES_DAYS = 3;
 
-export type AccountMailResult = { success: boolean; error?: string };
+export interface AccountMailResult {
+  success: boolean;
+  error?: string;
+}
 
-async function sendAccountMail({
+export async function sendAccountMail({
   to,
   kind,
   mail,
@@ -43,16 +48,38 @@ async function sendAccountMail({
     logger.info(`mail:${logName}_success`, `${label}を送信しました: ${to}`, { payload: { messageId: data?.id } });
     return { success: true };
   } catch (err) {
-    logger.error(`mail:${logName}_failed`, err instanceof Error ? err.message : 'Unknown error', { err, payload: { to } });
-    return { success: false, error: err instanceof Error ? err.message : 'メール送信中に予期せぬエラーが発生しました。' };
+    unstable_rethrow(err);
+    logger.error(`mail:${logName}_failed`, getErrorMessage(err), {
+      err,
+      payload: { to },
+    });
+    return {
+      success: false,
+      error: getErrorMessage(err, 'メール送信中に予期せぬエラーが発生しました。'),
+    };
   }
 }
 
 /** ユーザー種別ごとの招待メール（管理者: 日英併記 / コーチ: 英語 / 生徒: 日本語） */
 const INVITATIONS = {
-  [USER_TYPES.ADMIN]: { kind: 'account_invite_admin', build: buildAdminInviteMail, logName: 'send_admin_invitation', label: '管理者招待メール' },
-  [USER_TYPES.COACH]: { kind: 'account_invite_coach', build: buildCoachInviteMail, logName: 'send_coach_invitation', label: 'コーチ招待メール' },
-  [USER_TYPES.STUDENT]: { kind: 'account_invite_student', build: buildStudentInviteMail, logName: 'send_invitation', label: '招待メール' },
+  [USER_TYPES.ADMIN]: {
+    kind: 'account_invite_admin',
+    build: buildAdminInviteMail,
+    logName: 'send_admin_invitation',
+    label: '管理者招待メール',
+  },
+  [USER_TYPES.COACH]: {
+    kind: 'account_invite_coach',
+    build: buildCoachInviteMail,
+    logName: 'send_coach_invitation',
+    label: 'コーチ招待メール',
+  },
+  [USER_TYPES.STUDENT]: {
+    kind: 'account_invite_student',
+    build: buildStudentInviteMail,
+    logName: 'send_invitation',
+    label: '招待メール',
+  },
 } as const;
 
 /** 招待メールを送る（ユーザー種別に合わせたテンプレート・文言。種別が無い・不明な場合は生徒向け） */
@@ -71,7 +98,9 @@ export async function sendInvitationEmail({
   expiresDays?: number;
 }): Promise<AccountMailResult> {
   const invitation =
-    userType === USER_TYPES.ADMIN || userType === USER_TYPES.COACH ? INVITATIONS[userType] : INVITATIONS[USER_TYPES.STUDENT];
+    userType === USER_TYPES.ADMIN || userType === USER_TYPES.COACH
+      ? INVITATIONS[userType]
+      : INVITATIONS[USER_TYPES.STUDENT];
   return sendAccountMail({
     to,
     kind: invitation.kind,

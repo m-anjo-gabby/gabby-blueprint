@@ -18,14 +18,14 @@
  *     （排他制約がuser_id単位で独立していることの確認用。生徒Bの既存ライセンスとの
  *     偶発的な重複を避けるため、生徒Aとは意図的に無関係な期間にする）。
  */
-import { loadTestEnv, resolveTestEnvFromArgs } from "../../../helpers/env.ts";
-import { createAdminClient } from "../../../helpers/auth.ts";
-import { addDays } from "../../../helpers/dates.ts";
+import { createAdminClient } from '../../../helpers/auth.ts';
+import { addDays } from '../../../helpers/dates.ts';
+import { loadTestEnv, resolveTestEnvFromArgs } from '../../../helpers/env.ts';
 
 const env = resolveTestEnvFromArgs();
 loadTestEnv(env);
 
-const TAG = process.argv.find((a) => a.startsWith("--tag="))?.split("=")[1] ?? "auto";
+const TAG = process.argv.find((a) => a.startsWith('--tag='))?.split('=')[1] ?? 'auto';
 
 const admin = await createAdminClient();
 const TODAY = new Date();
@@ -35,9 +35,13 @@ console.log(`\n=== ライセンス管理見直し②シナリオ投入: env=${en
 const CLIENT_NAME = `【QAテスト】ライセンス管理見直し検証（${TAG}）`;
 
 async function ensureClient(name: string): Promise<string> {
-  const { data: existing } = await admin.from("com_m_client").select("client_id").eq("client_name", name).maybeSingle();
+  const { data: existing } = await admin.from('com_m_client').select('client_id').eq('client_name', name).maybeSingle();
   if (existing) return existing.client_id as string;
-  const { data, error } = await admin.from("com_m_client").insert({ client_name: name, client_type: 1, industry_type: 1 }).select("client_id").single();
+  const { data, error } = await admin
+    .from('com_m_client')
+    .insert({ client_name: name, client_type: 1, industry_type: 1 })
+    .select('client_id')
+    .single();
   if (error) throw error;
   return data.client_id as string;
 }
@@ -56,16 +60,23 @@ async function findAuthUserByEmail(email: string): Promise<string | undefined> {
 async function ensureUser(email: string, userName: string, clientId: string): Promise<string> {
   let userId = await findAuthUserByEmail(email);
   if (!userId) {
-    const { data, error } = await admin.auth.admin.createUser({ email, password: `${TAG}-Dummy#Pass1`, email_confirm: true });
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password: `${TAG}-Dummy#Pass1`,
+      email_confirm: true,
+    });
     if (error) throw error;
     userId = data.user.id;
   }
-  const { error: updErr } = await admin.from("com_m_user").update({ client_id: clientId, user_type: "1", user_name: userName }).eq("id", userId);
+  const { error: updErr } = await admin
+    .from('com_m_user')
+    .update({ client_id: clientId, user_type: '1', user_name: userName })
+    .eq('id', userId);
   if (updErr) throw updErr;
   return userId;
 }
 
-type Plan = {
+interface Plan {
   plan_id: string;
   plan_name: string;
   plan_name_en: string;
@@ -73,20 +84,30 @@ type Plan = {
   weekly_frequency: number | null;
   total_sessions: number | null;
   has_dialogue_practice: boolean;
-};
+}
 
 async function getPlan(planCode: string): Promise<Plan> {
-  const { data, error } = await admin.from("com_m_contract_plan").select("*").eq("plan_code", planCode).single();
+  const { data, error } = await admin.from('com_m_contract_plan').select('*').eq('plan_code', planCode).single();
   if (error) throw error;
   return data as Plan;
 }
 
-async function ensureContract(params: { clientId: string; plan: Plan; startDate: Date; endDate: Date; note: string }): Promise<string> {
-  const { data: existing } = await admin.from("com_m_contract").select("contract_id").eq("note", params.note).maybeSingle();
+async function ensureContract(params: {
+  clientId: string;
+  plan: Plan;
+  startDate: Date;
+  endDate: Date;
+  note: string;
+}): Promise<string> {
+  const { data: existing } = await admin
+    .from('com_m_contract')
+    .select('contract_id')
+    .eq('note', params.note)
+    .maybeSingle();
   if (existing) return existing.contract_id as string;
 
   const { data, error } = await admin
-    .from("com_m_contract")
+    .from('com_m_contract')
     .insert({
       client_id: params.clientId,
       plan_name: params.plan.plan_name,
@@ -103,23 +124,28 @@ async function ensureContract(params: { clientId: string; plan: Plan; startDate:
       has_dialogue_practice: params.plan.has_dialogue_practice,
       note: params.note,
     })
-    .select("contract_id")
+    .select('contract_id')
     .single();
   if (error) throw error;
   return data.contract_id as string;
 }
 
-async function ensureActiveLicense(params: { contractId: string; userId: string; startDate: Date; endDate: Date }): Promise<string> {
+async function ensureActiveLicense(params: {
+  contractId: string;
+  userId: string;
+  startDate: Date;
+  endDate: Date;
+}): Promise<string> {
   const { data: existing } = await admin
-    .from("com_t_user_license")
-    .select("license_id")
-    .eq("contract_id", params.contractId)
-    .eq("user_id", params.userId)
+    .from('com_t_user_license')
+    .select('license_id')
+    .eq('contract_id', params.contractId)
+    .eq('user_id', params.userId)
     .maybeSingle();
   if (existing) return existing.license_id as string;
 
   const { data, error } = await admin
-    .from("com_t_user_license")
+    .from('com_t_user_license')
     .insert({
       contract_id: params.contractId,
       user_id: params.userId,
@@ -127,17 +153,25 @@ async function ensureActiveLicense(params: { contractId: string; userId: string;
       start_date: params.startDate.toISOString(),
       end_date: params.endDate.toISOString(),
     })
-    .select("license_id")
+    .select('license_id')
     .single();
   if (error) throw error;
   return data.license_id as string;
 }
 
 const clientId = await ensureClient(CLIENT_NAME);
-const plan = await getPlan("BLUEPRINT_ONLY");
+const plan = await getPlan('BLUEPRINT_ONLY');
 
-const studentAId = await ensureUser(`${TAG}-license-student-a@gabby-qa-test.example`, `【QAテスト】生徒A(${TAG})`, clientId);
-const studentBId = await ensureUser(`${TAG}-license-student-b@gabby-qa-test.example`, `【QAテスト】生徒B(${TAG})`, clientId);
+const studentAId = await ensureUser(
+  `${TAG}-license-student-a@gabby-qa-test.example`,
+  `【QAテスト】生徒A(${TAG})`,
+  clientId,
+);
+const studentBId = await ensureUser(
+  `${TAG}-license-student-b@gabby-qa-test.example`,
+  `【QAテスト】生徒B(${TAG})`,
+  clientId,
+);
 
 // 生徒A: 現行ターム（90日前〜30日後）+ 次ターム（現行の終了日翌日〜120日後、期間は重ならない）
 const currentStart = addDays(TODAY, -90);
@@ -185,7 +219,7 @@ const licenseB1Id = await ensureActiveLicense({
   endDate: studentBEnd,
 });
 
-console.log("投入完了:");
+console.log('投入完了:');
 console.log({
   clientId,
   studentAId,

@@ -14,7 +14,7 @@
 |---|---|---|---|
 | 生徒 | ホーム（今週のトレーニング・これまでの歩み） | `student` `/dashboard` | 月次の記録（今週分）、通算値（`student_m_training_lifetime_stats`）。画面仕様: [dashboard.md](../../../../docs/screens/student/dashboard.md) |
 | 生徒 | トレーニング記録 | `student` `/training/performance` | 月次の記録（`get_user_training_performance`）。画面仕様: [performance.md](../../../../docs/screens/student/training/performance.md) |
-| 生徒 | 単語帳の履歴・スプリントの履歴 | `student` `/training/word/history`, `/training/sprint/history` | 月次の記録（`getUserWordHistoryAction`・`getUserSprintHistoryAction`）。画面仕様: [word-history.md](../../../../docs/screens/student/training/word-history.md)、[sprint-history.md](../../../../docs/screens/student/training/sprint-history.md) |
+| 生徒 | 単語帳の履歴・スプリントの履歴 | `student` `/training/word/history`, `/training/sprint/history` | 月次の記録（`getUserWordHistory`・`getUserSprintHistory`）。画面仕様: [word-history.md](../../../../docs/screens/student/training/word-history.md)、[sprint-history.md](../../../../docs/screens/student/training/sprint-history.md) |
 | 生徒 | 通知センター | `student` ヘッダーのベル | 達成の通知（`notify_training_milestone`）。画面仕様: [notification.md](../../../../docs/screens/student/notification.md) |
 | 生徒（モニター） | モニター | `student` `/monitor` | 日次の記録（対象生徒・期間で絞る）。仕様: [monitoring/student-monitor-dashboard.md](../monitoring/student-monitor-dashboard.md) |
 | アドミン | トレーニングレポート | `admin` `/training-reports` | 日次の記録（ライセンス期間で絞る。`get_training_report_data`） |
@@ -51,7 +51,7 @@
    - トレーニング日数: 1a〜1cのいずれかがある日の数。
    - 発話回数: 1a〜1cの発話評価数の合計。
    - スプリントの回数・回答数: 1cだけ（ドリルは含まない。画面に注記あり）。
-   - 月の範囲: 1a・1bは日付（`training_date`）で、1cは実施日時を**表示時点の**生徒のタイムゾーンの日付にして絞る（`get_user_training_performance`・`getUserSprintHistoryAction`）。
+   - 月の範囲: 1a・1bは日付（`training_date`）で、1cは実施日時を**表示時点の**生徒のタイムゾーンの日付にして絞る（`get_user_training_performance`・`getUserSprintHistory`）。
      月の指定（`?month=`）が無いときは、生徒のタイムゾーンでの今月（`apps/student/lib/userTimezone.ts`）。
 7. モニター・トレーニングレポートは1a〜1cの記録を対象生徒・期間で絞って集計する。期間は**日本時間**で区切る
    （集計期間のタイムゾーン。アプリ側 `packages/lib/date/reporting.ts`、DB側 `public.reporting_timezone()`。日本時間以外で区切る必要が出たらここを顧客ごとの設定に置き換える）。
@@ -83,7 +83,7 @@
 - 内部関数・トリガー: `update_training_lifetime_stats`（外部から実行不可）, `sync_sprint_session_lifetime_stats`（`self_t_sprint` の INSERT）, `notify_training_milestone`（`student_m_training_lifetime_stats` の更新）
 - テーブル: `self_t_word_summary`, `self_t_sprint_summary`, `self_t_sprint`, `student_m_training_lifetime_stats`, `com_t_notification`
 - 実装参照:
-  - 記録: `apps/student/actions/wordAction.ts`（`reportWordProgress`）、`apps/student/actions/sprintAction.ts`（`reportSprintProgress`・`createSprintScoreAction`）
+  - 記録: `apps/student/actions/wordAction.ts`（`reportWordProgress`）、`apps/student/actions/sprintAction.ts`（`reportSprintProgress`・`createSprintScore`）
   - 月次: `apps/student/actions/performanceAction.ts`、`apps/student/app/(app)/(shell)/training/performance/_components/TrainingPerformance.tsx`
   - ホーム: `apps/student/app/(app)/(shell)/dashboard/_lib/weeklyActivity.ts`（今週・連続日数の表示判定）、`milestones.ts`（節目）
   - 日付の変換: `packages/lib/date/date.ts`（`toIsoDateInZone`・`formatZonedDate`。日付だけの値は変換しない）、生徒のタイムゾーン: `apps/student/lib/userTimezone.ts`

@@ -1,11 +1,11 @@
 'use client';
 
-import { useTransition } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { Button } from '@/components/ui/button';
+import { deleteCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { deleteCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
+import { Button } from '@/components/ui/button';
 
 /** シリーズの削除（各回は単発のイベントとして残る）。削除後はシリーズの一覧へ戻る */
 export function DeleteSeriesButton({ seriesId, title }: { seriesId: string; title: string }) {

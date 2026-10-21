@@ -1,14 +1,7 @@
----------------------------------------------
--- 権限チェック共通ヘルパー関数: 2名の当事者本人のいずれか または アドミン (2026-09-15 追加)
----------------------------------------------
--- 【背景】
--- cancel_session()・check_session_conflict()は「呼び出し者が対象のコーチ・生徒
--- どちらでもなければ、アドミンでない限り拒否する」という同一パターンを持つが、
--- cancel_session()は判定結果（＝アドミンによる代理操作かどうか）を後続のチケット
--- 返還ルール・通知文言の分岐にそのまま使うため、単純な例外送出だけのヘルパー
--- （fn_assert_actor_or_admin）では表現できない。本関数は判定結果をboolean
--- （is_admin_proxy）として返すことで、両方のニーズに対応する。
----------------------------------------------
+-- 権限の確認の共通の関数: 2名の当事者本人のどちらか または システム管理者
+-- どちらの当事者でもなく、システム管理者（is_system_admin()）でもなければ例外を投げる。
+-- 戻り値は「当事者でない＝システム管理者の代理の操作か」で、cancel_session がチケットの返還・通知の文言の分岐に使う。
+-- service_role（サーバー）・JWT の無い呼び出しは user_type が NULL のため通す（fn_assert_actor_or_admin と同じ）。
 CREATE OR REPLACE FUNCTION public.fn_assert_dual_actor_or_admin(
     p_actor_id_1 uuid,
     p_actor_id_2 uuid,
@@ -23,7 +16,7 @@ DECLARE
     v_is_neither_actor boolean;
 BEGIN
     v_is_neither_actor := (auth.uid() IS DISTINCT FROM p_actor_id_1 AND auth.uid() IS DISTINCT FROM p_actor_id_2);
-    IF v_is_neither_actor AND public.get_jwt_user_type() <> '0' THEN
+    IF v_is_neither_actor AND public.get_jwt_user_type() IS NOT NULL AND NOT public.is_system_admin() THEN
         RAISE EXCEPTION '%', p_message;
     END IF;
     RETURN v_is_neither_actor;

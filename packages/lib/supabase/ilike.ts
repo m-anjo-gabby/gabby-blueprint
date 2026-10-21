@@ -16,6 +16,11 @@ export function containsPattern(term: string): string {
   return `%${escapeLike(term)}%`;
 }
 
+/** `.ilike(column, pattern)` 用の「完全一致（大文字小文字を区別しない）」パターン。メールアドレスの照合等 */
+export function exactPattern(term: string): string {
+  return escapeLike(term);
+}
+
 /**
  * 複数の列のどれかに部分一致する `.or()` 用の条件。
  * 例: `query.or(ilikeAny(['user_name', 'email'], q))`

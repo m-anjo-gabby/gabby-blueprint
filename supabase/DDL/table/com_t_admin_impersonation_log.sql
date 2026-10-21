@@ -11,7 +11,7 @@
 CREATE TABLE public.com_t_admin_impersonation_log (
     impersonation_id         uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     admin_id                 uuid         REFERENCES auth.users(id) ON DELETE SET NULL,
-    target_user_id           uuid         REFERENCES public.com_m_user(id),
+    target_user_id           uuid         REFERENCES public.com_m_user(id) ON DELETE SET NULL,
     reason                   text         NOT NULL,
     requested_at             timestamp with time zone NOT NULL DEFAULT now(),
     redeemed_at              timestamp with time zone,

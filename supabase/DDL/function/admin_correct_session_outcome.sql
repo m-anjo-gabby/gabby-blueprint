@@ -1,5 +1,5 @@
 ---------------------------------------------
--- ライブセッションの実施結果の修正RPC（アドミン） (2026-10-14 追加)
+-- ライブセッションの実施結果の修正RPC（アドミン）
 -- 前提: function/fn_session_outcome_evidence.sql, function/fn_apply_session_outcome.sql,
 --       function/fn_assert_actor_or_admin.sql の作成が完了していること。
 ---------------------------------------------

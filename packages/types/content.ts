@@ -24,20 +24,26 @@ export const TAG_TYPES = {
 export const CONTENT_SCOPES = {
   0: { label: '共通', value: 0 },
   1: { label: '限定', value: 1 },
-  9: { label: '非公開', value: 9 },
 } as const;
+
+// 公開状態（com_m_contents.status。新規作成時は非公開）
+export const CONTENT_STATUS = {
+  UNPUBLISHED: 0,
+  PUBLISHED: 1,
+} as const;
+export type ContentStatus = (typeof CONTENT_STATUS)[keyof typeof CONTENT_STATUS];
 
 /**
  * CEFRレベル定義
  * 色分けは Tailwind のカラークラス名を指定
  */
 export const CEFR_CONFIG = {
-  'A1': { id: 'a1', label: 'A1', color: 'blue',  description: 'Beginner' },
-  'A2': { id: 'a2', label: 'A2', color: 'cyan',  description: 'Elementary' },
-  'B1': { id: 'b1', label: 'B1', color: 'emerald', description: 'Intermediate' },
-  'B2': { id: 'b2', label: 'B2', color: 'lime',   description: 'Upper Intermediate' },
-  'C1': { id: 'c1', label: 'C1', color: 'orange', description: 'Advanced' },
-  'C2': { id: 'c2', label: 'C2', color: 'rose',   description: 'Proficiency' },
+  A1: { id: 'a1', label: 'A1', color: 'blue', description: 'Beginner' },
+  A2: { id: 'a2', label: 'A2', color: 'cyan', description: 'Elementary' },
+  B1: { id: 'b1', label: 'B1', color: 'emerald', description: 'Intermediate' },
+  B2: { id: 'b2', label: 'B2', color: 'lime', description: 'Upper Intermediate' },
+  C1: { id: 'c1', label: 'C1', color: 'orange', description: 'Advanced' },
+  C2: { id: 'c2', label: 'C2', color: 'rose', description: 'Proficiency' },
 } as const;
 
 /**
@@ -63,7 +69,6 @@ export interface ContentTag {
   tag_name: string;
   tag_type: TagType;
   seq_no: number;
-  delete_flg: '0' | '1';
   insert_date: string;
   update_date: string;
 }
@@ -99,13 +104,13 @@ export interface MetadataCefr {
  */
 export interface MetadataSprint {
   sprint_type: '0' | '1'; // '0':汎用スプリント, '1':コーパススプリント
-  theme: string;           // 教材テーマ (例: "現在形で、5～8単語で構成されたフレーズ")
-  has_level: boolean;      // レベル概念の有無 ('0'汎用は true, '1'コーパスは false )
+  theme: string; // 教材テーマ (例: "現在形で、5～8単語で構成されたフレーズ")
+  has_level: boolean; // レベル概念の有無 ('0'汎用は true, '1'コーパスは false )
   supported_types: {
-    speed: boolean;        // '0': Speed の有効フラグ
-    builders: boolean;     // '5': Builders の有効フラグ
-    structure: boolean;    // '4': Structure の有効フラグ
-    mastery: boolean;      // '6': Mastery の有効フラグ
+    speed: boolean; // '0': Speed の有効フラグ
+    builders: boolean; // '5': Builders の有効フラグ
+    structure: boolean; // '4': Structure の有効フラグ
+    mastery: boolean; // '6': Mastery の有効フラグ
   };
 }
 
@@ -132,7 +137,7 @@ export interface ContentRecord {
   // セット分類ID（現状ダイアログプラクティス content_type=3 のみで使用。1:Beginner, 2:Intermediate, 3:Advanced, 4:Corpus）
   category_id: number | null;
   metadata: ContentMetadata;
-  delete_flg: '0' | '1';
+  status: ContentStatus;
   insert_date: string;
   update_date: string;
 }
@@ -175,6 +180,6 @@ export const LIBRALY_TABS = [
     .sort((a, b) => (a.order < 0 ? Infinity : a.order) - (b.order < 0 ? Infinity : b.order))
     .map(({ type }) => ({
       id: String(type.value), // Tabsのvalueはstringが扱いやすいため
-      label: type.label
-    }))
+      label: type.label,
+    })),
 ];

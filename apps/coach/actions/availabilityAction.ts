@@ -1,18 +1,19 @@
 'use server';
 
 import {
-  getMyAvailabilityCore,
   addAvailabilityCore,
+  confirmMyAvailabilityCore,
   deleteAvailabilityCore,
   getMyAvailabilityConfirmedAtCore,
-  confirmMyAvailabilityCore,
+  getMyAvailabilityCore,
 } from '@gabby/lib/coachAvailability/actions/coachAvailabilityActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import type { ActionResult } from '@gabby/types/action';
 import {
-  CoachAvailabilityErrorCode,
-  CoachAvailabilityFormValues,
-  CoachAvailabilitySlot,
+  type CoachAvailabilityErrorCode,
+  type CoachAvailabilityFormValues,
+  type CoachAvailabilitySlot,
 } from '@gabby/types/coachAvailability';
 
 const logger = createLogger('coach');
@@ -27,7 +28,7 @@ const AVAILABILITY_ERROR_MESSAGES_EN: Record<CoachAvailabilityErrorCode, string>
 };
 
 /**
- * Fetches the current coach's own weekly availability slots
+ * ログイン中のコーチの毎週の空き時間を取得する
  */
 export async function getMyAvailability(): Promise<CoachAvailabilitySlot[]> {
   const result = await getMyAvailabilityCore();
@@ -40,11 +41,11 @@ export async function getMyAvailability(): Promise<CoachAvailabilitySlot[]> {
 }
 
 /**
- * Adds a new weekly availability slot
+ * 毎週の空き時間を1件追加する
  */
 export async function addAvailability(
-  values: CoachAvailabilityFormValues
-): Promise<{ success: true; slot: CoachAvailabilitySlot } | { success: false; message: string }> {
+  values: CoachAvailabilityFormValues,
+): Promise<ActionResult<{ slot: CoachAvailabilitySlot }>> {
   const ctx = await getLogContext();
   const result = await addAvailabilityCore(values);
 
@@ -58,11 +59,9 @@ export async function addAvailability(
 }
 
 /**
- * Removes an availability slot
+ * 空き時間を1件削除する
  */
-export async function deleteAvailability(
-  availabilityId: string
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function deleteAvailability(availabilityId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await deleteAvailabilityCore(availabilityId);
 
@@ -76,7 +75,7 @@ export async function deleteAvailability(
 }
 
 /**
- * Fetches when the current coach last confirmed their availability (null if never)
+ * ログイン中のコーチが空き時間を最後に確認した日時を取得する（未確認なら null）
  */
 export async function getMyAvailabilityConfirmedAt(): Promise<string | null> {
   const result = await getMyAvailabilityConfirmedAtCore();
@@ -89,9 +88,9 @@ export async function getMyAvailabilityConfirmedAt(): Promise<string | null> {
 }
 
 /**
- * Confirms the current availability without changes (resets the 14-day review reminder)
+ * 空き時間を変えずに確認済みにする（14日ごとの見直しのリマインダーを止める）
  */
-export async function confirmAvailability(): Promise<{ success: true; confirmedAt: string } | { success: false; message: string }> {
+export async function confirmAvailability(): Promise<ActionResult<{ confirmedAt: string }>> {
   const ctx = await getLogContext();
   const result = await confirmMyAvailabilityCore();
 

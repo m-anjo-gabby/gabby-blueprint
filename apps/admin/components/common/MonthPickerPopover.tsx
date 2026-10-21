@@ -1,11 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-const MONTH_KEYS = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12'];
+const MONTH_KEYS = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm11', 'm12'] as const;
+
+/** 月（1〜12）の表示名の翻訳キー（common.monthPicker.months） */
+export function monthKey(month: number): (typeof MONTH_KEYS)[number] {
+  return MONTH_KEYS[month - 1];
+}
 
 export function MonthPickerPopover({
   currentMonth,

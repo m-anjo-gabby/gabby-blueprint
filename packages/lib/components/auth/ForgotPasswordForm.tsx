@@ -1,10 +1,19 @@
 'use client';
 
-import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
 import { SubmitButton } from '../common/SubmitButton';
-import { AuthBackLink, AuthHeading, AuthLinkButton, AuthPage, AuthStatus, AuthStep, EmailField, FormError } from './AuthLayout';
+import {
+  AuthBackLink,
+  AuthHeading,
+  AuthLinkButton,
+  AuthPage,
+  AuthStatus,
+  AuthStep,
+  EmailField,
+  FormError,
+} from './AuthLayout';
 import type { ForgotPasswordLabels, FormAuthAction } from './types';
 
 interface ForgotPasswordFormProps {
@@ -24,7 +33,7 @@ export function ForgotPasswordForm({ action, labels }: ForgotPasswordFormProps) 
   const handleSubmit = async (formData: FormData) => {
     setError(null);
     const result = await action(formData);
-    if (result?.error) setError(result.error);
+    if (result && !result.success) setError(result.message);
     else setSent(true);
   };
 

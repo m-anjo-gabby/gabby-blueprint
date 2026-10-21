@@ -20,7 +20,7 @@
 - スプリントは、4種別（Speed・Builders・Structure・Mastery）すべてに音声付きの問題がある教材を使う（環境によって公開範囲が違うため、名前ではなく問題の有無で選ぶ）。
 - 発話評価ONのスプリントは、選択画面でマイクの許可（getUserMedia）が必要。
 - E2E では実際のマイク・音声認識を使えないため、テスト用の認識方式（fake。参照文または指定の文字起こしを返す）に切り替える。
-  fake は本番以外のビルドで `window.__gabbyFakeSpeech` を設定した場合だけ使われるため、dev でのみ検証する（[CONVENTIONS.md](../../CONVENTIONS.md) 2章、`KJ-2026-1003-04`）。
+  fake は本番以外のビルドで `window.__gabbyFakeSpeech` を設定した場合だけ使われるため、dev でのみ検証する（[CONVENTIONS.md](../../CONVENTIONS.md) 2章）。
 
 ## フロー（正常系）
 

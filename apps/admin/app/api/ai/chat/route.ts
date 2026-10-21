@@ -1,12 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { unstable_rethrow } from 'next/navigation';
+import { NextResponse, type NextRequest } from 'next/server';
 import {
-  streamChatResponse,
-  searchKnowledgeBase,
   formatKnowledgeMatchesAsContext,
+  searchKnowledgeBase,
+  streamChatResponse,
   type ChatMessage,
   type KnowledgeSourceType,
 } from '@gabby/lib/ai';
 import { createLogger } from '@gabby/lib/logger';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { ADMIN_OR_CONTENT_MANAGER, checkAdminRoleForRoute } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 
@@ -27,6 +30,8 @@ export interface KnowledgeSourceRef {
 }
 
 export async function POST(request: NextRequest) {
+  const { denied } = await checkAdminRoleForRoute(ADMIN_OR_CONTENT_MANAGER);
+  if (denied) return denied;
   try {
     const body: ChatRequestBody = await request.json();
 
@@ -49,8 +54,9 @@ export async function POST(request: NextRequest) {
           sources = matches.map((m) => ({ title: m.title, similarity: m.similarity }));
         }
       } catch (ragError) {
+        unstable_rethrow(ragError);
         // RAG検索の失敗はチャット自体を止めず、コンテキストなしで継続する
-        const message = ragError instanceof Error ? ragError.message : 'Unknown error';
+        const message = getErrorMessage(ragError);
         logger.warn('aiChat:rag_search_failed', message, { err: ragError });
       }
     }
@@ -67,7 +73,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    unstable_rethrow(error);
+    const message = getErrorMessage(error);
     logger.error('aiChat:request_failed', message, { err: error });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

@@ -22,11 +22,10 @@ export interface CountryMaster {
   name_ja: string;
   icon_path: string | null;
   sort_no: number;
-  delete_flg: string;
+  is_active: boolean; // 使用中（国の選択肢に出す）
   insert_date: string;
   update_date: string;
 }
 
 export type GetCountryListResult =
-  | { success: true; countries: CountryMaster[] }
-  | { success: false; errorCode: 'unexpected_error' };
+  { success: true; countries: CountryMaster[] } | { success: false; errorCode: 'unexpected_error' };

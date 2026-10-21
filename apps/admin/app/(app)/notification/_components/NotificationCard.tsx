@@ -1,11 +1,12 @@
 'use client';
 
 import { Bell } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useLocale } from 'next-intl';
+import { formatZonedDate, formatZonedDateJapanese } from '@gabby/lib/date/date';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { formatZonedDateJapanese } from '@gabby/lib/date/date';
-import { NotificationItem } from '@gabby/types/notification';
 import { getNotificationDisplay } from '@gabby/lib/notification/display';
+import { type NotificationItem } from '@gabby/types/notification';
+import { cn } from '@/lib/utils';
 
 interface NotificationCardProps {
   notification: NotificationItem;
@@ -14,8 +15,9 @@ interface NotificationCardProps {
 
 export function NotificationCard({ notification, onOpen }: NotificationCardProps) {
   const timezone = useTimezone();
+  const locale = useLocale() === 'en' ? 'en' : 'ja';
 
-  const display = getNotificationDisplay(notification, 'ja');
+  const display = getNotificationDisplay(notification, locale);
   const Icon = display.icon ?? Bell;
 
   return (
@@ -23,9 +25,7 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
     <article
       className={cn(
         'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all',
-        !notification.is_read
-          ? 'border-brand-200 shadow-brand-100/60'
-          : 'border-slate-100'
+        !notification.is_read ? 'border-brand-200 shadow-brand-100/60' : 'border-slate-100',
       )}
     >
       <button
@@ -43,26 +43,26 @@ export function NotificationCard({ notification, onOpen }: NotificationCardProps
         <div
           className={cn(
             'flex items-center justify-center w-9 h-9 rounded-xl border shrink-0',
-            display.badgeClass ?? 'bg-slate-50 text-slate-500 border-slate-100'
+            display.badgeClass ?? 'bg-slate-50 text-slate-500 border-slate-100',
           )}
         >
           <Icon size={16} />
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className={cn(
-            'text-sm leading-snug truncate',
-            notification.is_read
-              ? 'font-bold text-slate-600'
-              : 'font-black text-slate-900'
-          )}>
+          <p
+            className={cn(
+              'text-sm leading-snug truncate',
+              notification.is_read ? 'font-bold text-slate-600' : 'font-black text-slate-900',
+            )}
+          >
             {display.title}
           </p>
-          <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">
-            {display.body}
-          </p>
+          <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">{display.body}</p>
           <p className="text-[10px] text-slate-400 mt-2 font-bold">
-            {formatZonedDateJapanese(notification.occurred_at, timezone)}
+            {locale === 'en'
+              ? formatZonedDate(notification.occurred_at, timezone)
+              : formatZonedDateJapanese(notification.occurred_at, timezone)}
           </p>
         </div>
       </button>

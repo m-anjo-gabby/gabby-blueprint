@@ -34,7 +34,8 @@ const PLACEHOLDER_MISSING = process.argv.includes('--placeholder-missing');
 const BUCKET = 'terms';
 const CHANGE_NOTE = '旧Storage(termsバケット)からの移行分';
 const MISSING_CHANGE_NOTE = '旧Storage(termsバケット)からの移行時に本文ファイルが存在しなかったため注記のみ登録';
-const MISSING_CONTENT = '> この版の本文は、旧保存領域からの移行時に本文ファイルが存在しなかったため移行できませんでした。';
+const MISSING_CONTENT =
+  '> この版の本文は、旧保存領域からの移行時に本文ファイルが存在しなかったため移行できませんでした。';
 
 const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

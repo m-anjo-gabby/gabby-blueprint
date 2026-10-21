@@ -1,13 +1,16 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { USER_TYPES } from '@gabby/types/user';
-import { createAdminClient } from '../../supabase/admin';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { USER_STATUS, USER_TYPES } from '@gabby/types/user';
 import { createLogger } from '../../logger';
-import { MailSendError, sendCore } from '../core';
 import { getPortalBaseUrl } from '../../navigation/portalUrl';
+import { createAdminClient } from '../../supabase/admin';
+import { MailSendError, sendCore } from '../core';
 import { buildUnsubscribeUrl, getUnsubscribeSecret, unsubscribeHeaders } from '../unsubscribe/token';
-import { MAIL_TYPES, type MailCategory, type MailType } from './registry';
-import type { MailHandlerRegistry, MailLinks, MailOutboxRow, MailRecipient } from './types';
+import { groupSessionReminderHandler } from './handlers/groupSessionReminder';
+import { liveSessionReminderHandler } from './handlers/liveSessionReminder';
+import { notificationHandler } from './handlers/notification';
 import {
   classifySendError,
   isAllowedRecipient,
@@ -18,9 +21,8 @@ import {
   resolveRecipientLanguage,
   type MailDispatchMode,
 } from './policy';
-import { groupSessionReminderHandler } from './handlers/groupSessionReminder';
-import { notificationHandler } from './handlers/notification';
-import { liveSessionReminderHandler } from './handlers/liveSessionReminder';
+import { MAIL_TYPES, type MailCategory, type MailType } from './registry';
+import type { MailHandlerRegistry, MailLinks, MailOutboxRow, MailRecipient } from './types';
 
 const logger = createLogger('mail');
 
@@ -81,11 +83,11 @@ type LoadedRecipient = Omit<MailRecipient, 'language' | 'timezoneName'> & {
 async function loadRecipient(admin: SupabaseClient, userId: string): Promise<LoadedRecipient | null> {
   const { data: user, error } = await admin
     .from('com_m_user')
-    .select('user_type, user_name, timezone, delete_flg, zone:com_m_timezone(short_name_ja, short_name_en)')
+    .select('user_type, user_name, timezone, status, zone:com_m_timezone(short_name_ja, short_name_en)')
     .eq('id', userId)
     .maybeSingle();
   if (error) throw new Error(`recipient_fetch_failed: ${error.message}`);
-  if (!user || user.delete_flg !== '0') return null;
+  if (!user || user.status !== USER_STATUS.ACTIVE) return null;
 
   // 多対1の結合は1件のオブジェクトで返る（型の推論は配列になるため両方を受ける）
   const zone = Array.isArray(user.zone) ? user.zone[0] : user.zone;
@@ -125,7 +127,12 @@ function buildLinks(recipient: MailRecipient, category: MailCategory): MailLinks
   return {
     portal,
     settingsUrl: portal('/profile'),
-    unsubscribeUrl: buildUnsubscribeUrl({ portalBaseUrl: base, userId: recipient.userId, category, secret: getUnsubscribeSecret() }),
+    unsubscribeUrl: buildUnsubscribeUrl({
+      portalBaseUrl: base,
+      userId: recipient.userId,
+      category,
+      secret: getUnsubscribeSecret(),
+    }),
   };
 }
 
@@ -134,7 +141,7 @@ async function processRow(
   row: MailOutboxRow,
   nowMs: number,
   target: DispatchTarget,
-  waitForSendSlot: () => Promise<void>
+  waitForSendSlot: () => Promise<void>,
 ): Promise<RowOutcome> {
   const skip = async (reason: string): Promise<RowOutcome> => {
     await updateRow(admin, row.mail_id, { status: 'SKIPPED', last_error: reason });
@@ -163,7 +170,8 @@ async function processRow(
     const built = await HANDLERS[mailType]({ admin, row, recipient, nowMs, links });
     if ('skip' in built) return await skip(built.skip);
     if (isUndeliverableAddress(recipient.email)) return await skip('undeliverable_address');
-    if (!isAllowedRecipient(recipient.email, target.mode, target.allowlist)) return await skip('recipient_not_allowlisted');
+    if (!isAllowedRecipient(recipient.email, target.mode, target.allowlist))
+      return await skip('recipient_not_allowlisted');
 
     await waitForSendSlot();
     const result = await sendCore({
@@ -184,7 +192,8 @@ async function processRow(
     });
     return 'sent';
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    unstable_rethrow(err);
+    const message = getErrorMessage(err);
     const action = classifySendError(err instanceof MailSendError ? err.code : null);
     logger.error('mail:dispatch_row_failed', message, {
       payload: { mailId: row.mail_id, mailType: row.mail_type, attempts: row.attempts, action: action.kind },
@@ -192,7 +201,11 @@ async function processRow(
 
     if (action.kind === 'sent') {
       // 同じ重複防止キーで送信済み（前回の送信の結果を記録できなかった行）。送り直さずに送信済みとする
-      await updateRow(admin, row.mail_id, { status: 'SENT', sent_at: new Date().toISOString(), last_error: 'already_sent' });
+      await updateRow(admin, row.mail_id, {
+        status: 'SENT',
+        sent_at: new Date().toISOString(),
+        last_error: 'already_sent',
+      });
       return 'sent';
     }
     if (action.kind === 'defer') {
@@ -239,7 +252,16 @@ export async function dispatchMail(): Promise<DispatchSummary> {
     mode: resolveDispatchMode(process.env.MAIL_DISPATCH_MODE),
     allowlist: parseAllowlist(process.env.MAIL_DISPATCH_RECIPIENT_ALLOWLIST),
   };
-  const summary: DispatchSummary = { mode: target.mode, enqueued: 0, claimed: 0, sent: 0, skipped: 0, retried: 0, deferred: 0, failed: 0 };
+  const summary: DispatchSummary = {
+    mode: target.mode,
+    enqueued: 0,
+    claimed: 0,
+    sent: 0,
+    skipped: 0,
+    retried: 0,
+    deferred: 0,
+    failed: 0,
+  };
 
   const { data: enqueued, error: enqueueError } = await admin.rpc('enqueue_scheduled_mails');
   if (enqueueError) logger.error('mail:dispatch_enqueue_failed', enqueueError.message, { err: enqueueError });

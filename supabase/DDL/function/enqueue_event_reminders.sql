@@ -1,5 +1,5 @@
 ---------------------------------------------
--- enqueue_event_reminders: イベント（グループセッション）のリマインダーメールを送信待ちに登録する (2026-10-05 追加)
+-- enqueue_event_reminders: イベント（グループセッション）のリマインダーメールを送信待ちに登録する
 ---------------------------------------------
 -- 【呼び出し元】
 -- 時刻で送るメールの登録のまとめ役 enqueue_scheduled_mails（enqueue_live_session_reminders.sql）経由で、
@@ -39,7 +39,6 @@ BEGIN
          AND NOW() < e.start_datetime - l.lead_to
         WHERE e.event_type = 'GROUP_SESSION'
           AND e.is_published = TRUE
-          AND e.delete_flg = '0'
     ),
     recipients AS (
         SELECT d.calendar_event_id, d.lead_key, p.user_id
@@ -57,7 +56,7 @@ BEGIN
            r.calendar_event_id::text || ':' || r.lead_key,
            jsonb_build_object('calendar_event_id', r.calendar_event_id, 'lead', r.lead_key)
     FROM recipients r
-    JOIN public.com_m_user u ON u.id = r.user_id AND u.delete_flg = '0'
+    JOIN public.com_m_user u ON u.id = r.user_id AND u.status = 1
     ON CONFLICT (user_id, mail_type, dedup_key) DO NOTHING;
 
     GET DIAGNOSTICS v_count = ROW_COUNT;

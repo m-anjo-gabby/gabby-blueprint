@@ -2,8 +2,8 @@
 'use client';
 
 import * as React from 'react';
-import { useColorVowelLookup } from './ColorVowelLookupProvider';
 import { cn } from '@/lib/utils';
+import { useColorVowelLookup } from './ColorVowelLookupProvider';
 
 export interface LookupTextProps {
   /** 表示する英文テキスト */
@@ -17,11 +17,7 @@ export interface LookupTextProps {
 /**
  * 英文テキストを単語単位に分割し、単語タップで Color Vowel 辞書検索ツールチップを呼ぶコンポーネント。
  */
-export function LookupText({
-  text,
-  className,
-  as: Component = 'p',
-}: LookupTextProps) {
+export function LookupText({ text, className, as: Component = 'p' }: LookupTextProps) {
   const { openTooltip, activeWordKey } = useColorVowelLookup();
   const instanceId = React.useId();
 
@@ -41,11 +37,7 @@ export function LookupText({
     return result;
   }, [text]);
 
-  const handleWordClick = (
-    e: React.MouseEvent<HTMLSpanElement>,
-    wordContent: string,
-    wordKey: string
-  ) => {
+  const handleWordClick = (e: React.MouseEvent<HTMLSpanElement>, wordContent: string, wordKey: string) => {
     e.stopPropagation();
     const cleaned = wordContent.replace(/^[.,!?;:"'()]+|[.,!?;:"'()]+$/g, '').trim();
     if (!cleaned) return;
@@ -74,7 +66,7 @@ export function LookupText({
               'inline-block cursor-pointer rounded px-[1.5px] transition-colors',
               isActive
                 ? 'bg-brand-100 text-brand-deep font-semibold'
-                : 'hover:bg-brand-50/80 hover:text-brand-900 active:bg-brand-100'
+                : 'hover:bg-brand-50/80 hover:text-brand-900 active:bg-brand-100',
             )}
           >
             {token.content}

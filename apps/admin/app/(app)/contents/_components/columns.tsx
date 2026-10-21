@@ -1,16 +1,17 @@
 'use client';
 
-import Link from 'next/link';
-import type { ColumnDef } from '@tanstack/react-table';
+import { ArrowRight, Building2, Globe, Lock, Pencil, Plus } from 'lucide-react';
 import type { useTranslations } from 'next-intl';
-import { ArrowRight, Building2, EyeOff, Globe, Lock, Pencil, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import { CONTENT_SCOPES, CONTENT_STATUS, CONTENT_TYPES, type Content, type ContentType } from '@gabby/types/content';
+import { InactiveBadge } from '@/components/common/InactiveBadge';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { type Content, type ContentType, CONTENT_TYPES, CONTENT_SCOPES } from '@gabby/types/content';
-import { getContentTypeConfig } from '@gabby/lib/content/ui';
+import { ContentAccessDialog } from './ContentAccessDialog';
 import { ContentFormDialog } from './ContentFormDialog';
 import { ContentTagDialog } from './ContentTagDialog';
-import { ContentAccessDialog } from './ContentAccessDialog';
 
 type TableT = ReturnType<typeof useTranslations<'contents.dataTable'>>;
 
@@ -18,40 +19,41 @@ type TableT = ReturnType<typeof useTranslations<'contents.dataTable'>>;
  * 種別ごとのエディタ導線設定（ビデオ(1)はエディタ未実装のため定義しない）。
  * 色・アイコンは種別バッジと同じく getContentTypeConfig（全アプリ共通の分類色）から取得する。
  */
-const EDITOR_LABEL_KEYS: Partial<Record<ContentType, "word" | "sprint" | "dialogue">> = {
-  0: "word",
-  2: "sprint",
-  3: "dialogue",
+const EDITOR_LABEL_KEYS: Partial<Record<ContentType, 'word' | 'sprint' | 'dialogue'>> = {
+  0: 'word',
+  2: 'sprint',
+  3: 'dialogue',
 };
 
 function getEditorHref(content: Content): string {
   if (content.content_type === 2) {
     const questionType = content.metadata?.question_type;
-    return `/contents/${content.content_id}?type=${typeof questionType === "string" ? questionType : "0"}`;
+    return `/contents/${content.content_id}?type=${typeof questionType === 'string' ? questionType : '0'}`;
   }
   return `/contents/${content.content_id}`;
 }
 
-export function createColumns(t: TableT): ColumnDef<Content>[] {
+export function createColumns(t: TableT): ListColumnDef<Content>[] {
   return [
     {
-      accessorKey: "content_name",
+      accessorKey: 'content_name',
       header: t('nameHeader'),
       cell: ({ row }) => (
         <div className="flex flex-col gap-0.5 py-1">
           {/* エディタがある種別は教材名からも遷移できるようにする（操作列ボタンの補助導線） */}
-          {EDITOR_LABEL_KEYS[row.original.content_type] ? (
-            <Link
-              href={getEditorHref(row.original)}
-              className="text-sm font-bold text-slate-900 leading-tight w-fit hover:text-brand hover:underline underline-offset-2 transition-colors"
-            >
-              {row.original.content_name}
-            </Link>
-          ) : (
-            <span className="text-sm font-bold text-slate-900 leading-tight">
-              {row.original.content_name}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {EDITOR_LABEL_KEYS[row.original.content_type] ? (
+              <Link
+                href={getEditorHref(row.original)}
+                className="text-sm font-bold text-slate-900 leading-tight w-fit hover:text-brand hover:underline underline-offset-2 transition-colors"
+              >
+                {row.original.content_name}
+              </Link>
+            ) : (
+              <span className="text-sm font-bold text-slate-900 leading-tight">{row.original.content_name}</span>
+            )}
+            {row.original.status === CONTENT_STATUS.UNPUBLISHED && <InactiveBadge label={t('unpublishedBadge')} />}
+          </div>
           {row.original.content_name_en && (
             <span className="text-[11px] text-slate-500 italic truncate max-w-[200px]">
               {row.original.content_name_en}
@@ -64,7 +66,7 @@ export function createColumns(t: TableT): ColumnDef<Content>[] {
       ),
     },
     {
-      accessorKey: "content_type",
+      accessorKey: 'content_type',
       header: t('typeHeader'),
       cell: ({ row }) => {
         const type = row.original.content_type;
@@ -79,7 +81,7 @@ export function createColumns(t: TableT): ColumnDef<Content>[] {
       },
     },
     {
-      accessorKey: "content_scope",
+      accessorKey: 'content_scope',
       header: t('scopeHeader'),
       cell: ({ row }) => {
         const content = row.original;
@@ -89,9 +91,8 @@ export function createColumns(t: TableT): ColumnDef<Content>[] {
         const isAlert = scope === 1 && clients.length === 0;
 
         const styles = {
-          0: { icon: <Globe size={11} />, text: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
-          1: { icon: <Lock size={11} />, text: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
-          9: { icon: <EyeOff size={11} />, text: "text-slate-500", bg: "bg-slate-100", border: "border-slate-200" },
+          0: { icon: <Globe size={11} />, text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+          1: { icon: <Lock size={11} />, text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
         }[scope];
 
         // 限定(1)の場合のみ、全体をダイアログのトリガーにする
@@ -102,12 +103,16 @@ export function createColumns(t: TableT): ColumnDef<Content>[] {
                 {/* 左側：公開状況の塊 */}
                 <div className="flex flex-col gap-1 min-w-32.5">
                   {/* 上段：限定バッジ（状態を示すことに専念） */}
-                  <div className={`
+                  <div
+                    className={`
                     flex items-center gap-1.5 px-2 py-0.5 rounded-full border transition-all w-fit
                     ${isAlert ? 'bg-rose-50 border-rose-100' : 'bg-amber-50 border-amber-100 group-hover/access:bg-amber-100 group-hover/access:border-amber-300'}
-                  `}>
+                  `}
+                  >
                     <Lock size={11} className={`${isAlert ? 'text-rose-500' : 'text-amber-600'} opacity-70`} />
-                    <span className={`text-[10px] font-black tracking-tight ${isAlert ? 'text-rose-600' : 'text-amber-600'}`}>
+                    <span
+                      className={`text-[10px] font-black tracking-tight ${isAlert ? 'text-rose-600' : 'text-amber-600'}`}
+                    >
                       {config?.label}
                     </span>
                   </div>
@@ -133,56 +138,59 @@ export function createColumns(t: TableT): ColumnDef<Content>[] {
                 </div>
 
                 {/* 右側：アクションボタン（未設定ならPlus、設定済みならPencil） */}
-                <div className={`
+                <div
+                  className={`
                   flex items-center justify-center w-6 h-6 rounded-xl shadow-sm transition-all duration-300 group-hover/access:scale-105 group-hover/access:shadow-md
-                  ${isAlert 
-                    ? "bg-rose-50 text-rose-500 border border-rose-100 group-hover/access:bg-rose-600 group-hover/access:text-white group-hover/access:border-rose-600" 
-                    : "bg-amber-50 text-amber-600 border border-amber-100 group-hover/access:bg-amber-600 group-hover/access:text-white group-hover/access:border-amber-600"
+                  ${
+                    isAlert
+                      ? 'bg-rose-50 text-rose-500 border border-rose-100 group-hover/access:bg-rose-600 group-hover/access:text-white group-hover/access:border-rose-600'
+                      : 'bg-amber-50 text-amber-600 border border-amber-100 group-hover/access:bg-amber-600 group-hover/access:text-white group-hover/access:border-amber-600'
                   }
-                `}>
-                  {isAlert ? (
-                    <Plus size={16} strokeWidth={3} />
-                  ) : (
-                    <Pencil size={14} strokeWidth={2.5} />
-                  )}
+                `}
+                >
+                  {isAlert ? <Plus size={16} strokeWidth={3} /> : <Pencil size={14} strokeWidth={2.5} />}
                 </div>
               </div>
             </ContentAccessDialog>
           );
         }
 
-        // 共通・非公開は従来通り（クリック不可）
+        // 共通はクリック不可
         return (
           <div className="flex flex-col gap-1.5 min-w-[140px]">
-            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border w-fit ${styles.bg} ${styles.border}`}>
+            <div
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full border w-fit ${styles.bg} ${styles.border}`}
+            >
               <span className="opacity-70">{styles.icon}</span>
-              <span className={`text-[10px] font-black tracking-tight ${styles.text}`}>
-                {config?.label}
-              </span>
+              <span className={`text-[10px] font-black tracking-tight ${styles.text}`}>{config?.label}</span>
             </div>
           </div>
         );
       },
     },
     {
-      id: "tags",
+      id: 'tags',
       header: t('tagsHeader'),
       cell: ({ row }) => {
         // row.original は Content 型
         const content = row.original;
-      
+
         return (
           <div className="flex items-center gap-2 flex-wrap max-w-[250px]">
             {/* content を丸ごと渡すことで、内部で content_id や現在の tags を参照可能
-            */}
+             */}
             <ContentTagDialog content={content} />
           </div>
         );
       },
     },
     {
-      id: "actions",
-      header: () => <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('actionsHeader')}</div>,
+      id: 'actions',
+      header: () => (
+        <div className="text-right px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          {t('actionsHeader')}
+        </div>
+      ),
       cell: ({ row }) => {
         const editorLabelKey = EDITOR_LABEL_KEYS[row.original.content_type];
         const { icon: TypeIcon, theme } = getContentTypeConfig(row.original.content_type);
@@ -193,7 +201,12 @@ export function createColumns(t: TableT): ColumnDef<Content>[] {
 
             {/* 中身（単語・問題・セッション）のエディタ画面へ。未対応種別は列を揃えるため空枠を置く */}
             {editorLabelKey ? (
-              <Button variant="outline" size="sm" asChild className={`h-8 min-w-38 justify-between gap-2 px-3 font-bold text-xs shadow-sm transition-colors ${theme.chip} ${theme.chipHover}`}>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className={`h-8 min-w-38 justify-between gap-2 px-3 font-bold text-xs shadow-sm transition-colors ${theme.chip} ${theme.chipHover}`}
+              >
                 <Link href={getEditorHref(row.original)}>
                   <span className="flex items-center gap-1.5">
                     <TypeIcon size={13} />

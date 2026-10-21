@@ -1,15 +1,15 @@
-import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
-import { QUESTION_TYPES } from '@gabby/types/sprint';
+import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import type { CompanyProfile } from '@gabby/types/companyProfile';
+import { QUESTION_TYPES } from '@gabby/types/sprint';
 import type { TrainingReportData } from '@gabby/types/trainingReport';
 import {
-  SPRINT_TYPE_ORDER,
   computeSnapshotStage,
   daysInMonth,
   formatLevel,
   formatMonthLabel,
   formatPeriodLength,
   formatReportDate,
+  SPRINT_TYPE_ORDER,
 } from '@/lib/trainingReport/format';
 import { PDF_FONT_FAMILY } from './registerFonts';
 
@@ -33,7 +33,14 @@ const COLOR = {
 };
 
 const styles = StyleSheet.create({
-  page: { paddingTop: 28, paddingBottom: 50, paddingHorizontal: 36, fontSize: 9, fontFamily: PDF_FONT_FAMILY, color: COLOR.text },
+  page: {
+    paddingTop: 28,
+    paddingBottom: 50,
+    paddingHorizontal: 36,
+    fontSize: 9,
+    fontFamily: PDF_FONT_FAMILY,
+    color: COLOR.text,
+  },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
   logo: { width: 100 },
   issuerBlock: { alignItems: 'flex-end' },
@@ -53,7 +60,14 @@ const styles = StyleSheet.create({
   titleSub: { fontSize: 9, color: '#c9d4f2', marginTop: 2 },
   titleAccent: { height: 3, backgroundColor: COLOR.gold, width: 56, marginTop: 5, marginBottom: 10 },
   section: { marginBottom: 11 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'baseline', borderLeftWidth: 3, borderLeftColor: COLOR.brand, paddingLeft: 6, marginBottom: 6 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    borderLeftWidth: 3,
+    borderLeftColor: COLOR.brand,
+    paddingLeft: 6,
+    marginBottom: 6,
+  },
   sectionTitle: { fontSize: 11, fontWeight: 700, color: COLOR.brand },
   sectionTitleEn: { fontSize: 8, color: COLOR.muted, marginLeft: 6 },
   infoGrid: { borderWidth: 1, borderColor: COLOR.line, borderRadius: 3 },
@@ -62,7 +76,12 @@ const styles = StyleSheet.create({
   infoLabel: { width: 90, backgroundColor: COLOR.panel, paddingVertical: 4, paddingHorizontal: 8, color: COLOR.muted },
   infoValue: { flex: 1, paddingVertical: 4, paddingHorizontal: 8, fontWeight: 700 },
   table: { borderWidth: 1, borderColor: COLOR.line, borderRadius: 3 },
-  tableHeaderRow: { flexDirection: 'row', backgroundColor: COLOR.brandSoft, borderBottomWidth: 1, borderBottomColor: COLOR.line },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: COLOR.brandSoft,
+    borderBottomWidth: 1,
+    borderBottomColor: COLOR.line,
+  },
   tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: COLOR.line },
   tableRowLast: { flexDirection: 'row' },
   rowHead: { width: 110, paddingVertical: 4, paddingHorizontal: 8, color: COLOR.muted },
@@ -84,13 +103,41 @@ const styles = StyleSheet.create({
   monthCell: { flex: 1, paddingVertical: 4, textAlign: 'right', paddingRight: 8 },
   monthHeadLabel: { width: 70, paddingVertical: 4, paddingHorizontal: 8, fontWeight: 700, color: COLOR.brand },
   monthHeadBar: { flex: 2, paddingVertical: 4, fontWeight: 700, color: COLOR.brand },
-  monthHeadCell: { flex: 1, paddingVertical: 4, textAlign: 'right', paddingRight: 8, fontWeight: 700, color: COLOR.brand },
-  placeholder: { backgroundColor: COLOR.panel, borderRadius: 3, paddingVertical: 8, paddingHorizontal: 10, color: COLOR.muted },
+  monthHeadCell: {
+    flex: 1,
+    paddingVertical: 4,
+    textAlign: 'right',
+    paddingRight: 8,
+    fontWeight: 700,
+    color: COLOR.brand,
+  },
+  placeholder: {
+    backgroundColor: COLOR.panel,
+    borderRadius: 3,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    color: COLOR.muted,
+  },
   commentBlock: { marginBottom: 8 },
   commentHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   commentCoach: { fontWeight: 700 },
-  commentDraft: { marginLeft: 6, fontSize: 7.5, color: COLOR.draft, borderWidth: 1, borderColor: COLOR.draft, borderRadius: 2, paddingHorizontal: 4, paddingVertical: 1 },
-  commentBody: { backgroundColor: COLOR.panel, borderRadius: 3, paddingVertical: 8, paddingHorizontal: 10, lineHeight: 1.25 },
+  commentDraft: {
+    marginLeft: 6,
+    fontSize: 7.5,
+    color: COLOR.draft,
+    borderWidth: 1,
+    borderColor: COLOR.draft,
+    borderRadius: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  commentBody: {
+    backgroundColor: COLOR.panel,
+    borderRadius: 3,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    lineHeight: 1.25,
+  },
   footer: {
     position: 'absolute',
     bottom: 22,
@@ -149,7 +196,9 @@ export function TrainingReportDocument({ data, issuer, logoSrc, issuedAt }: Trai
           {issuer && (
             <View style={styles.issuerBlock}>
               {issuer.company_name_ja && <Text style={styles.issuerNameJa}>{issuer.company_name_ja}</Text>}
-              <Text style={issuer.company_name_ja ? styles.issuerName : styles.issuerNameJa}>{issuer.company_name}</Text>
+              <Text style={issuer.company_name_ja ? styles.issuerName : styles.issuerNameJa}>
+                {issuer.company_name}
+              </Text>
               {/* 行ごとに独立したTextにして右端を揃える（InvoiceDocument.tsxの同じ処理のコメント参照） */}
               {issuer.address.split('\n').map((line, index) => (
                 <Text key={index} style={styles.issuerAddress}>
@@ -183,7 +232,8 @@ export function TrainingReportDocument({ data, issuer, logoSrc, issuedAt }: Trai
             <View style={styles.infoRowLast}>
               <Text style={styles.infoLabel}>期間</Text>
               <Text style={styles.infoValue}>
-                {formatReportDate(data.start_date)} 〜 {formatReportDate(data.end_date)}（{formatPeriodLength(data.start_date, data.end_date)}）
+                {formatReportDate(data.start_date)} 〜 {formatReportDate(data.end_date)}（
+                {formatPeriodLength(data.start_date, data.end_date)}）
               </Text>
             </View>
           </View>
@@ -213,7 +263,9 @@ export function TrainingReportDocument({ data, issuer, logoSrc, issuedAt }: Trai
             </View>
             <View style={styles.tableRowLast}>
               <Text style={styles.rowHeadStrong}>
-                {isBeforeEnd ? `現在（${formatReportDate(issuedAt.toISOString())}）` : `終了時（${formatReportDate(data.end_date)}）`}
+                {isBeforeEnd
+                  ? `現在（${formatReportDate(issuedAt.toISOString())}）`
+                  : `終了時（${formatReportDate(data.end_date)}）`}
               </Text>
               {SPRINT_TYPE_ORDER.map((type) => (
                 <Text key={type} style={styles.cellStrong}>
@@ -249,7 +301,10 @@ export function TrainingReportDocument({ data, issuer, logoSrc, issuedAt }: Trai
               {data.monthly.map((row, index) => {
                 const ratio = Math.min(1, row.active_days / daysInMonth(row.month));
                 return (
-                  <View key={row.month} style={index === data.monthly.length - 1 ? styles.tableRowLast : styles.tableRow}>
+                  <View
+                    key={row.month}
+                    style={index === data.monthly.length - 1 ? styles.tableRowLast : styles.tableRow}
+                  >
                     <Text style={styles.monthCellLabel}>{formatMonthLabel(row.month)}</Text>
                     <View style={styles.barCell}>
                       <View style={styles.barTrack}>

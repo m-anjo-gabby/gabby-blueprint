@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { Layers } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { getCalendarEventList, getCoachesFilter } from '@/actions/adminCalendarEventAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -36,7 +36,12 @@ export default async function CalendarEventsPage({ searchParams }: { searchParam
           </>
         }
       />
-      <CalendarEventDataTable data={rows} totalCount={totalCount} pageCount={toPageCount(totalCount)} formOptions={formOptions} />
+      <CalendarEventDataTable
+        data={rows}
+        totalCount={totalCount}
+        pageCount={toPageCount(totalCount)}
+        formOptions={formOptions}
+      />
     </div>
   );
 }

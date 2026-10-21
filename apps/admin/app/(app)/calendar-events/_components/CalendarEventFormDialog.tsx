@@ -1,32 +1,32 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { AlertCircle, CheckCircle2, Edit, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { upsertCalendarEvent, CalendarEventFormData } from '@/actions/adminCalendarEventAction';
 import Link from 'next/link';
-import { AlertCircle, PlusCircle, CheckCircle2, Edit } from 'lucide-react';
-import { Alert } from '@/components/ui/alert';
+import { useMemo, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { z } from 'zod';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import {
-  CalendarEventItem,
-  CalendarEventType,
-  CalendarEventTargetType,
-  CalendarEventCoachOption,
   CALENDAR_EVENT_TYPES,
+  type CalendarEventCoachOption,
+  type CalendarEventItem,
+  type CalendarEventTargetType,
+  type CalendarEventType,
 } from '@gabby/types/calendarEvent';
-import { ClientOption } from '@gabby/types/client';
-import { CalendarEventCoachPicker } from './CalendarEventCoachPicker';
+import { type ClientOption } from '@gabby/types/client';
+import { upsertCalendarEvent, type CalendarEventFormData } from '@/actions/adminCalendarEventAction';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { todayJstDateStr, utcToJstParts } from '../_lib/jst';
+import { CalendarEventCoachPicker } from './CalendarEventCoachPicker';
 
 const EVENT_TYPE_KEYS = Object.keys(CALENDAR_EVENT_TYPES) as [CalendarEventType, ...CalendarEventType[]];
 const TARGET_TYPE_KEYS: [CalendarEventTargetType, ...CalendarEventTargetType[]] = ['ALL', 'CLIENT', 'COACH'];
@@ -64,7 +64,7 @@ function createCalendarEventSchema(t: FormT) {
         if (!v.has_end || !v.end_date || !v.end_time) return true;
         return `${v.end_date}T${v.end_time}` > `${v.start_date}T${v.start_time}`;
       },
-      { message: t('errors.endAfterStart'), path: ['end_date'] }
+      { message: t('errors.endAfterStart'), path: ['end_date'] },
     );
 }
 
@@ -103,7 +103,11 @@ const DEFAULT_VALUES: CalendarEventFormValues = {
 /**
  * カレンダーイベント（グループセッション・メンテナンス等）登録・編集用ダイアログ
  */
-export function CalendarEventFormDialog({ mode = 'create', initialData, options: { clients, coaches } }: CalendarEventFormDialogProps) {
+export function CalendarEventFormDialog({
+  mode = 'create',
+  initialData,
+  options: { clients, coaches },
+}: CalendarEventFormDialogProps) {
   const t = useTranslations('calendarEvents.formDialog');
   const calendarEventSchema = useMemo(() => createCalendarEventSchema(t), [t]);
   const TARGET_TYPE_LABEL: Record<CalendarEventTargetType, string> = {
@@ -115,7 +119,6 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
   const [isConfirming, setIsConfirming] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const { showToast } = useToast();
-
 
   const getInitialValues = (data?: CalendarEventItem): CalendarEventFormValues => {
     if (!data || mode === 'create') return DEFAULT_VALUES;
@@ -145,9 +148,9 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
   });
 
   const { isSubmitting } = form.formState;
-  const hasEnd = form.watch('has_end');
-  const targetType = form.watch('target_type');
-  const eventType = form.watch('event_type');
+  const hasEnd = useWatch({ control: form.control, name: 'has_end' });
+  const targetType = useWatch({ control: form.control, name: 'target_type' });
+  const eventType = useWatch({ control: form.control, name: 'event_type' });
   const rsvpRequired = CALENDAR_EVENT_TYPES[eventType].rsvpRequired;
 
   const onSubmit = async (values: CalendarEventFormValues) => {
@@ -179,7 +182,7 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
       } else {
         setServerError(result.message || t('toastGenericFailed'));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('toastSystemError'));
     }
   };
@@ -199,7 +202,11 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
             <PlusCircle size={16} /> {t('createButton')}
           </Button>
         ) : (
-          <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
             <Edit size={14} /> {t('editButton')}
           </Button>
         )}
@@ -234,7 +241,9 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
                 name="event_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('eventTypeLabel')}</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('eventTypeLabel')}
+                    </FormLabel>
                     {/* シリーズの回はグループセッションのまま（種別を変えられない） */}
                     {isConfirming || initialData?.series ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
@@ -292,12 +301,20 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('titleLabel')}</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {t('titleLabel')}
+                  </FormLabel>
                   {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                      {field.value}
+                    </div>
                   ) : (
                     <FormControl>
-                      <Input {...field} placeholder={t('titlePlaceholder')} className="bg-white rounded-xl border-slate-200" />
+                      <Input
+                        {...field}
+                        placeholder={t('titlePlaceholder')}
+                        className="bg-white rounded-xl border-slate-200"
+                      />
                     </FormControl>
                   )}
                   <FormMessage />
@@ -311,7 +328,9 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('descriptionLabel')}</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {t('descriptionLabel')}
+                  </FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 whitespace-pre-wrap">
                       {field.value || t('none')}
@@ -333,9 +352,13 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
                 name="start_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('startDateLabel')}</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('startDateLabel')}
+                    </FormLabel>
                     {isConfirming ? (
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">
+                        {field.value}
+                      </div>
                     ) : (
                       <FormControl>
                         <Input {...field} type="date" className="bg-white rounded-xl border-slate-200" />
@@ -350,9 +373,13 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
                 name="start_time"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('startTimeLabel')}</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('startTimeLabel')}
+                    </FormLabel>
                     {isConfirming ? (
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">
+                        {field.value}
+                      </div>
                     ) : (
                       <FormControl>
                         <Input {...field} type="time" className="bg-white rounded-xl border-slate-200" />
@@ -387,9 +414,13 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
                   name="end_date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('endDateLabel')}</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {t('endDateLabel')}
+                      </FormLabel>
                       {isConfirming ? (
-                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">
+                          {field.value}
+                        </div>
                       ) : (
                         <FormControl>
                           <Input {...field} type="date" className="bg-white rounded-xl border-slate-200" />
@@ -404,9 +435,13 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
                   name="end_time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('endTimeLabel')}</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {t('endTimeLabel')}
+                      </FormLabel>
                       {isConfirming ? (
-                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">
+                          {field.value}
+                        </div>
                       ) : (
                         <FormControl>
                           <Input {...field} type="time" className="bg-white rounded-xl border-slate-200" />
@@ -425,14 +460,20 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
               name="location_url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('locationUrlLabel')}</FormLabel>
+                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {t('locationUrlLabel')}
+                  </FormLabel>
                   {isConfirming ? (
                     <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-mono text-slate-700 break-all">
                       {field.value || t('none')}
                     </div>
                   ) : (
                     <FormControl>
-                      <Input {...field} placeholder={t('locationUrlPlaceholder')} className="bg-white rounded-xl border-slate-200 font-mono" />
+                      <Input
+                        {...field}
+                        placeholder={t('locationUrlPlaceholder')}
+                        className="bg-white rounded-xl border-slate-200 font-mono"
+                      />
                     </FormControl>
                   )}
                   <FormDescription className="text-[11px] text-slate-400">{t('locationUrlHint')}</FormDescription>
@@ -477,7 +518,9 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
                 name="target_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('targetTypeLabel')}</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('targetTypeLabel')}
+                    </FormLabel>
                     {isConfirming ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                         {TARGET_TYPE_LABEL[field.value]}
@@ -509,7 +552,9 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
                   name="client_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('targetClientLabel')}</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {t('targetClientLabel')}
+                      </FormLabel>
                       {isConfirming ? (
                         <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                           {clients.find((c) => c.client_id === field.value)?.client_name ?? field.value}
@@ -535,7 +580,6 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
                   )}
                 />
               )}
-
             </div>
 
             {/* --- 担当コーチ（グループセッションのみ） --- */}
@@ -545,21 +589,27 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
                 name="coach_ids"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('coachesLabel')}</FormLabel>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('coachesLabel')}
+                    </FormLabel>
                     {isConfirming ? (
                       <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
                         {field.value.length > 0
-                          ? field.value.map((id) => coaches.find((c) => c.coach_id === id)?.user_name || t('coachesUnnamed')).join(', ')
+                          ? field.value
+                              .map((id) => coaches.find((c) => c.coach_id === id)?.user_name || t('coachesUnnamed'))
+                              .join(', ')
                           : t('coachesNotSet')}
                       </div>
                     ) : (
                       <FormControl>
-                        <CalendarEventCoachPicker coaches={coaches} selectedIds={field.value} onChange={field.onChange} />
+                        <CalendarEventCoachPicker
+                          coaches={coaches}
+                          selectedIds={field.value}
+                          onChange={field.onChange}
+                        />
                       </FormControl>
                     )}
-                    <FormDescription className="text-[11px] text-slate-400">
-                      {t('coachesHint')}
-                    </FormDescription>
+                    <FormDescription className="text-[11px] text-slate-400">{t('coachesHint')}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -598,7 +648,10 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
                     {t('confirmQuestion', { action: mode === 'create' ? t('actionCreate') : t('actionUpdate') })}
                   </p>
                   {serverError && (
-                    <Alert variant="destructive" className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600">
+                    <Alert
+                      variant="destructive"
+                      className="py-2 flex items-center gap-2 text-xs border-none bg-rose-50 text-rose-600"
+                    >
                       <AlertCircle size={14} />
                       {serverError}
                     </Alert>
@@ -613,7 +666,11 @@ export function CalendarEventFormDialog({ mode = 'create', initialData, options:
                     >
                       {t('no')}
                     </Button>
-                    <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg" disabled={isSubmitting}>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg"
+                      disabled={isSubmitting}
+                    >
                       {isSubmitting ? t('processing') : t('yesConfirm')}
                     </Button>
                   </div>

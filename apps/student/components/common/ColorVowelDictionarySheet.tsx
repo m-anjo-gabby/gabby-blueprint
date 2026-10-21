@@ -1,9 +1,12 @@
 // apps\student\components\common\ColorVowelDictionarySheet.tsx
 'use client';
 
-import * as React from 'react';
-import Image from 'next/image';
 import { BookA, Loader2, SearchX, TriangleAlert, Volume2 } from 'lucide-react';
+import Image from 'next/image';
+import * as React from 'react';
+import { ipaToPhonemes, type Phoneme } from '@gabby/lib/colorVowel/phonemes';
+import { getColorVowelBorderColor, getPartOfSpeechLabel, type ColorVowelDicResult } from '@gabby/types/colorVowel';
+import { Button } from '@/components/ui/button';
 import {
   Drawer,
   DrawerCloseButton,
@@ -12,10 +15,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { type ColorVowelDicResult, getPartOfSpeechLabel, getColorVowelBorderColor } from '@gabby/types/colorVowel';
-import { ipaToPhonemes, type Phoneme } from '@gabby/lib/colorVowel/phonemes';
 import { cn } from '@/lib/utils';
 
 export type DictionaryLookupStatus = 'loading' | 'done' | 'error';
@@ -80,9 +80,7 @@ export function ColorVowelDictionarySheet({
   );
 }
 
-// -----------------------------------------------------------------------
 // 品詞の切り替え
-// -----------------------------------------------------------------------
 
 function PartOfSpeechTabs({
   results,
@@ -106,7 +104,7 @@ function PartOfSpeechTabs({
             onClick={() => onSelect(r.partOfSpeech)}
             className={cn(
               'shrink-0 rounded-full px-4 py-1.5 text-xs font-bold transition-colors',
-              selected ? 'bg-brand text-white' : 'bg-canvas text-ink-soft hover:bg-line/60'
+              selected ? 'bg-brand text-white' : 'bg-canvas text-ink-soft hover:bg-line/60',
             )}
           >
             {getPartOfSpeechLabel(r.partOfSpeech)}
@@ -117,9 +115,7 @@ function PartOfSpeechTabs({
   );
 }
 
-// -----------------------------------------------------------------------
 // 見出し（強勢のある母音の綴りに Color Vowel の色で下線を引き、その真下に Color Vowel のアイコンを置く）
-// -----------------------------------------------------------------------
 
 /** アイコン（42px）と下線の間隔の分、見出しの下に空ける余白。骨組みと共有する */
 const HEADWORD_ICON_SPACE = 'pb-14';
@@ -159,7 +155,13 @@ function StressMark({ text, color, vowel }: { text: string; color: string; vowel
         {text}
       </span>
       <span className="pointer-events-none absolute left-1/2 top-full mt-2 flex size-[42px] -translate-x-1/2 items-center justify-center overflow-hidden">
-        <Image src={vowel.vowelImageUrl} alt={`${vowel.cvName} のアイコン`} width={42} height={42} className="object-contain" />
+        <Image
+          src={vowel.vowelImageUrl}
+          alt={`${vowel.cvName} のアイコン`}
+          width={42}
+          height={42}
+          className="object-contain"
+        />
       </span>
     </span>
   );
@@ -190,9 +192,7 @@ function StressedWord({ result, color }: { result: ColorVowelDicResult; color: s
   );
 }
 
-// -----------------------------------------------------------------------
 // 音素表記（強勢のある母音だけ Color Vowel の色で下線）
-// -----------------------------------------------------------------------
 
 function PhonemeNotation({ phonemes, color }: { phonemes: Phoneme[]; color: string }) {
   return (
@@ -219,9 +219,7 @@ function PhonemeNotation({ phonemes, color }: { phonemes: Phoneme[]; color: stri
   );
 }
 
-// -----------------------------------------------------------------------
 // エントリ
-// -----------------------------------------------------------------------
 
 function EntryView({
   result,
@@ -242,7 +240,10 @@ function EntryView({
     <article>
       <div className="flex flex-col items-center text-center">
         <p className="text-[11px] font-bold text-ink-muted">{getPartOfSpeechLabel(result.partOfSpeech)}</p>
-        <h3 ref={headwordRef} className={cn('mt-2 max-w-full break-words text-4xl font-bold tracking-tight text-ink', HEADWORD_ICON_SPACE)}>
+        <h3
+          ref={headwordRef}
+          className={cn('mt-2 max-w-full break-words text-4xl font-bold tracking-tight text-ink', HEADWORD_ICON_SPACE)}
+        >
           <StressedWord result={result} color={color} />
         </h3>
         <div className="mt-1 min-h-6">{phonemes && <PhonemeNotation phonemes={phonemes} color={color} />}</div>
@@ -274,7 +275,11 @@ function EntryView({
 
       <section className="mt-6 border-t border-line pt-4">
         <h4 className="flex items-center gap-2 text-sm font-bold text-ink">
-          <span className="size-3 shrink-0 rounded-full ring-1 ring-line" style={{ backgroundColor: color }} aria-hidden />
+          <span
+            className="size-3 shrink-0 rounded-full ring-1 ring-line"
+            style={{ backgroundColor: color }}
+            aria-hidden
+          />
           {result.vowel.cvName} の発音
         </h4>
         <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-soft">{result.vowel.description}</p>
@@ -303,10 +308,16 @@ function AudioButton({
       aria-pressed={playing}
       // 再生中（読み込み中を含む）はスピナー。スプリント結果の英文の再生ボタン（PhraseAudioHeader）と同じ表示にする。
       // 再タップで停止できるよう pending（押せなくなる）は使わない
-      icon={playing ? <Loader2 className="animate-spin text-brand" aria-hidden /> : <Volume2 className="text-brand" aria-hidden />}
+      icon={
+        playing ? (
+          <Loader2 className="animate-spin text-brand" aria-hidden />
+        ) : (
+          <Volume2 className="text-brand" aria-hidden />
+        )
+      }
       className={cn(
         'h-12 rounded-control border-line bg-surface font-bold text-ink shadow-none hover:bg-canvas',
-        playing && 'border-brand-200 bg-brand-50 text-brand-deep hover:bg-brand-50'
+        playing && 'border-brand-200 bg-brand-50 text-brand-deep hover:bg-brand-50',
       )}
     >
       {label}
@@ -314,9 +325,7 @@ function AudioButton({
   );
 }
 
-// -----------------------------------------------------------------------
 // 検索中・見つからない・エラー
-// -----------------------------------------------------------------------
 
 /** EntryView と同じ枠・高さの骨組み。見出しはタップした単語を先に出す */
 function EntrySkeleton({ word }: { word: string }) {
@@ -326,7 +335,13 @@ function EntrySkeleton({ word }: { word: string }) {
     <div aria-busy="true" aria-label="検索中">
       <div className="flex flex-col items-center text-center">
         <Skeleton className="h-3.5 w-10" />
-        <h3 ref={headwordRef} className={cn('relative mt-2 max-w-full break-words text-4xl font-bold tracking-tight text-ink-subtle', HEADWORD_ICON_SPACE)}>
+        <h3
+          ref={headwordRef}
+          className={cn(
+            'relative mt-2 max-w-full break-words text-4xl font-bold tracking-tight text-ink-subtle',
+            HEADWORD_ICON_SPACE,
+          )}
+        >
           {word}
           <Skeleton className="absolute bottom-1.5 left-1/2 size-[42px] -translate-x-1/2 rounded-full" />
         </h3>

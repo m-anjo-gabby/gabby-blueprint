@@ -14,6 +14,7 @@
 | アドミン | 契約管理 | `admin` `/contracts` | 顧客（`clientId`） | サーバー |
 | アドミン | プランマスタ管理 | `admin` `/contracts/plans` | なし | 全件・ブラウザ |
 | アドミン | ユーザー管理 | `admin` `/users` | 区分（`userType`）・顧客（`clientId`） | サーバー |
+| アドミン | Webトライアル申込 | `admin` `/trial-applications` | 状態（`status` = `invited` / `registered` / `expired`）・業種（`occupation`） | サーバー |
 | アドミン | 教材管理 | `admin` `/contents` | 種別（`type`） | サーバー |
 | アドミン | タグ管理 | `admin` `/contents/tags` | 種別（`type`） | 全件・ブラウザ |
 | アドミン | お知らせ管理 | `admin` `/notice` | 種別（`type`） | サーバー |
@@ -59,7 +60,7 @@
 - 実装参照: `apps/admin/components/list/`（`useListQuery` / `ListToolbar` / `DataTable` / `ListSelectFilter` / `ClientFilter` / `DeleteConfirmDialog`）、
   `apps/admin/lib/list.ts`（`parseListParams` / `toRange` / `toPageCount` / `paginateLocally`）、`packages/lib/supabase/ilike.ts`（`containsPattern` / `ilikeAny`）
 - 一覧のサーバーアクション: 各画面の `apps/admin/actions/*`（`ListParams` を受け取り `ListResult<T>` を返す）
-- 規約: `CLAUDE.md`「管理画面の一覧（admin）」
+- 規約: `docs/UI-ADMIN.md`「管理画面の一覧（admin）」
 
 ## E2Eテストケース候補
 
@@ -72,5 +73,5 @@
 | 中 | ブラウザの戻る | タイムゾーン一覧（全件・ブラウザ）で検索後に戻ると、検索前の一覧・空の検索欄に戻る | 済 |
 | 中 | サーバーで絞る一覧の絞り込み | カレンダーイベント一覧で公開状態を「公開中」にすると URL に載り、下書きの行が無い | 済 |
 | 中 | 詳細の中の一覧 | お知らせの既読状況で検索・クリアし、お知らせ一覧へ戻れる | 済 |
-| 中 | 表示後にブラウザから取りに行かない | ダッシュボード・顧客・ユーザー・カレンダーイベントを開いた時、ブラウザからサーバーアクションを呼ばない（シェルの未読・件数とダイアログの選択肢はサーバーで取得）。通知の画面は開くたびの取り直しの1回だけ（`e2e/tests/admin/shell-data.spec.ts`） | 済 |
+| 中 | 表示後にブラウザから取りに行かない | ダッシュボード・顧客・ユーザー・カレンダーイベントを開いた時、ブラウザからサーバーアクションを呼ばない（シェルの未読・件数とダイアログの選択肢はサーバーで取得）。通知の画面は、画面内の移動で開いた時の取り直しの1回だけ（直接開いた時はレイアウトが取得した通知を使う。`e2e/tests/admin/shell-data.spec.ts`） | 済 |
 | 低 | 不正な URL の条件 | #2〜#4 | 未 |

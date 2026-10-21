@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
-import type { ColumnDef } from '@tanstack/react-table';
-import type { useTranslations } from 'next-intl';
 import { Edit, FileText, ShieldCheck, Trash2 } from 'lucide-react';
+import type { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import type { TermListItem } from '@gabby/types/term';
+import type { ListColumnDef } from '@/components/list/listTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { TermListItem } from '@gabby/types/term';
 
 type TableT = ReturnType<typeof useTranslations<'terms.table'>>;
 
@@ -16,7 +16,7 @@ interface ColumnOptions {
   onDelete: (term: TermListItem) => void;
 }
 
-export function createColumns(t: TableT, { termTypeLabel, onDelete }: ColumnOptions): ColumnDef<TermListItem>[] {
+export function createColumns(t: TableT, { termTypeLabel, onDelete }: ColumnOptions): ListColumnDef<TermListItem>[] {
   return [
     {
       accessorKey: 'term_type',
@@ -37,7 +37,9 @@ export function createColumns(t: TableT, { termTypeLabel, onDelete }: ColumnOpti
       accessorKey: 'version_name',
       header: t('versionHeader'),
       cell: ({ row }) => (
-        <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-600">{row.original.version_name}</span>
+        <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-600">
+          {row.original.version_name}
+        </span>
       ),
     },
     {
@@ -72,7 +74,9 @@ export function createColumns(t: TableT, { termTypeLabel, onDelete }: ColumnOpti
     {
       accessorKey: 'published_date',
       header: t('publishedDateHeader'),
-      cell: ({ row }) => <span className="font-mono text-[12px] font-medium text-slate-500">{row.original.published_date}</span>,
+      cell: ({ row }) => (
+        <span className="font-mono text-[12px] font-medium text-slate-500">{row.original.published_date}</span>
+      ),
     },
     {
       id: 'actions',

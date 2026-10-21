@@ -1,34 +1,35 @@
 'use server';
 
-import {
-  getMyLiveSessionTicketsCore,
-  getMyLiveSessionContractsCore,
-  getMySlotStatusCore,
-  getCoachBrowseListCore,
-  getMyBookableTicketsCore,
-  getMyLiveSessionOverviewCore,
-  createMatchingRequestCore,
-  getMatchingSlotOptionsCore,
-  withdrawMatchingRequestCore,
-} from '@gabby/lib/matching/actions/matchingActions';
-import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
 import { getCoachSpecialtyListCore } from '@gabby/lib/coachSpecialty/actions/coachSpecialtyActions';
+import { getCountryListCore } from '@gabby/lib/country/actions/countryActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
-  BookableTicketSlot,
-  CoachBrowseItem,
-  CreateMatchingRequestInput,
-  LiveSessionContractSummary,
-  LiveSessionOverview,
-  LiveSessionTicketSummary,
-  MatchingRequestErrorCode,
-  MatchingSlotOption,
-  SlotStatusItem,
+  createMatchingRequestCore,
+  getCoachBrowseListCore,
+  getMatchingSlotOptionsCore,
+  getMyBookableTicketsCore,
+  getMyLiveSessionContractsCore,
+  getMyLiveSessionOverviewCore,
+  getMyLiveSessionTicketsCore,
+  getMySlotStatusCore,
+  withdrawMatchingRequestCore,
+} from '@gabby/lib/matching/actions/matchingActions';
+import type { ActionResult } from '@gabby/types/action';
+import { type DayOfWeek } from '@gabby/types/coachAvailability';
+import { type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { type CountryMaster } from '@gabby/types/country';
+import {
+  type BookableTicketSlot,
+  type CoachBrowseItem,
+  type CreateMatchingRequestInput,
+  type LiveSessionContractSummary,
+  type LiveSessionOverview,
+  type LiveSessionTicketSummary,
+  type MatchingRequestErrorCode,
+  type MatchingSlotOption,
+  type SlotStatusItem,
 } from '@gabby/types/matching';
-import { CountryMaster } from '@gabby/types/country';
-import { CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
-import { DayOfWeek } from '@gabby/types/coachAvailability';
 
 const logger = createLogger('student');
 
@@ -38,7 +39,8 @@ const MATCHING_ERROR_MESSAGES_JA: Record<MatchingRequestErrorCode, string> = {
   not_eligible: 'この操作を行う権限がありません。',
   slot_already_requested: 'この枠は既にマッチング済み、または承認待ちのリクエストがあります。',
   schedule_conflict: 'この時間帯はコーチの既存の予約と重複しています。別の時間帯をお選びください。',
-  insufficient_bookable: 'この時間帯は、契約期間内に予約できる回数が足りません（コーチの他の予定や他の方のリクエストと重なる回が多いため）。別の時間帯をお選びください。',
+  insufficient_bookable:
+    'この時間帯は、契約期間内に予約できる回数が足りません（コーチの他の予定や他の方のリクエストと重なる回が多いため）。別の時間帯をお選びください。',
   not_pending: 'このリクエストは既にコーチが対応済みです。画面を更新してご確認ください。',
   expired: 'このリクエストは回答期限（24時間）を過ぎたため、既に無効になっています。画面を更新してご確認ください。',
   db_insert_failed: 'リクエストの送信に失敗しました。',
@@ -73,10 +75,10 @@ export async function getMySlotStatus(ticketId: string): Promise<SlotStatusItem[
 }
 
 /**
- * マッチング可能なコーチの一覧を取得
+ * 指定したチケット（契約）で申請できるコーチの一覧を取得
  */
-export async function getCoachBrowseList(): Promise<CoachBrowseItem[]> {
-  const result = await getCoachBrowseListCore();
+export async function getCoachBrowseList(ticketId: string): Promise<CoachBrowseItem[]> {
+  const result = await getCoachBrowseListCore(ticketId);
   if (!result.success) {
     const ctx = await getLogContext();
     logger.error('student:get_coach_list_failed', result.errorCode, ctx);
@@ -156,8 +158,8 @@ export async function getMyBookableTickets(): Promise<BookableTicketSlot[]> {
  * マッチングリクエストを送信する
  */
 export async function createMatchingRequest(
-  input: CreateMatchingRequestInput
-): Promise<{ success: true; requestId: string; expiresAt: string | null } | { success: false; message: string }> {
+  input: CreateMatchingRequestInput,
+): Promise<ActionResult<{ requestId: string; expiresAt: string | null }>> {
   const ctx = await getLogContext();
   const result = await createMatchingRequestCore(input);
 
@@ -177,8 +179,8 @@ export async function getMatchingSlotOptions(
   ticketId: string,
   coachId: string,
   slotNo: number,
-  candidates: { day_of_week: DayOfWeek; start_time: string }[]
-): Promise<{ success: true; options: MatchingSlotOption[] } | { success: false; message: string }> {
+  candidates: { day_of_week: DayOfWeek; start_time: string }[],
+): Promise<ActionResult<{ options: MatchingSlotOption[] }>> {
   const result = await getMatchingSlotOptionsCore(ticketId, coachId, slotNo, candidates);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -191,9 +193,7 @@ export async function getMatchingSlotOptions(
 /**
  * 承認待ちの自分のマッチングリクエストを取り下げる（宛先のコーチにアプリ内で通知される）
  */
-export async function withdrawMatchingRequest(
-  requestId: string
-): Promise<{ success: true } | { success: false; message: string }> {
+export async function withdrawMatchingRequest(requestId: string): Promise<ActionResult> {
   const ctx = await getLogContext();
   const result = await withdrawMatchingRequestCore(requestId);
 

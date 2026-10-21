@@ -51,7 +51,7 @@
 ## 実装参照（エンジニア向け）
 
 - `apps/admin/app/(app)/tools/ai-playground/page.tsx`
-- `apps/admin/app/(app)/tools/ai-playground/_components/AIPlaygroundTabs.tsx`
+- `apps/admin/app/(app)/tools/ai-playground/_components/AiPlaygroundTabs.tsx`
 - `apps/admin/app/(app)/tools/ai-playground/_components/ChatPlayground.tsx`
 - `apps/admin/app/(app)/tools/ai-playground/_components/TranslatePlayground.tsx`
 - APIルート: `/api/ai/chat`（ストリーミング応答、RAG検索結果は`X-Knowledge-Sources`ヘッダーで返す）,

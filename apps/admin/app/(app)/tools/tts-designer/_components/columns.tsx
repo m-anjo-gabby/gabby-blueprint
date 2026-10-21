@@ -1,11 +1,11 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
-import { format } from 'date-fns';
 import { Calendar, Download, FileAudio, Headphones, Loader2, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import type { TTSAssetListItem } from '@/actions/adminTTSAction';
+import type { ListColumnDef } from '@/components/list/listTable';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface ColumnOptions {
   /** 再生中・ダウンロード中の音声の ID（usePlayAudioSpeech） */
@@ -21,7 +21,13 @@ const fileNameOf = (asset: TTSAssetListItem) => asset.audio_path?.split('/').pop
 /** 音声ファイル名（ダウンロード時の名前にも使う） */
 export const downloadNameOf = (asset: TTSAssetListItem) => fileNameOf(asset) ?? `tts_${asset.asset_id}`;
 
-export function createColumns({ playingId, downloadingId, onPlay, onDownload, onDelete }: ColumnOptions): ColumnDef<TTSAssetListItem>[] {
+export function createColumns({
+  playingId,
+  downloadingId,
+  onPlay,
+  onDownload,
+  onDelete,
+}: ColumnOptions): ListColumnDef<TTSAssetListItem>[] {
   return [
     {
       accessorKey: 'raw_text',
@@ -31,7 +37,9 @@ export function createColumns({ playingId, downloadingId, onPlay, onDownload, on
           <div className="truncate text-sm font-bold text-slate-900" title={row.original.raw_text}>
             {row.original.raw_text}
           </div>
-          <div className="mt-0.5 truncate text-[10px] italic text-slate-400">{row.original.comment || 'No comment'}</div>
+          <div className="mt-0.5 truncate text-[10px] italic text-slate-400">
+            {row.original.comment || 'No comment'}
+          </div>
         </div>
       ),
     },
@@ -58,7 +66,7 @@ export function createColumns({ playingId, downloadingId, onPlay, onDownload, on
                     'h-7 w-22 justify-start gap-1.5 rounded-lg border px-2',
                     isPlaying
                       ? 'border-brand-200 bg-brand-50 text-brand shadow-sm'
-                      : 'border-transparent text-brand-500 hover:border-slate-100 hover:bg-brand-50 hover:text-brand-strong'
+                      : 'border-transparent text-brand-500 hover:border-slate-100 hover:bg-brand-50 hover:text-brand-strong',
                   )}
                 >
                   {isPlaying ? <Loader2 size={12} className="animate-spin" /> : <Headphones size={12} />}
@@ -86,7 +94,7 @@ export function createColumns({ playingId, downloadingId, onPlay, onDownload, on
       cell: ({ row }) => (
         <div className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
           <Calendar size={12} className="opacity-30" />
-          {format(new Date(row.original.created_at), 'MM/dd HH:mm')}
+          {formatDateTimeByZone(row.original.created_at, 'UTC', false)}
         </div>
       ),
     },

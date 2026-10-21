@@ -49,8 +49,12 @@ export function startSpeechAssessment(options: SpeechAssessmentOptions): SpeechA
 
   let latest: AnalysisResult = analyzePhrase('', targetText, mainWords);
   let done = false;
-  let resolveResult: (value: AnalysisResult | null) => void = () => { /* 下で差し替え */ };
-  const result = new Promise<AnalysisResult | null>((resolve) => { resolveResult = resolve; });
+  let resolveResult: (value: AnalysisResult | null) => void = () => {
+    /* 下で差し替え */
+  };
+  const result = new Promise<AnalysisResult | null>((resolve) => {
+    resolveResult = resolve;
+  });
 
   const timers = new Set<ReturnType<typeof setTimeout>>();
   let countdown: ReturnType<typeof setInterval> | null = null;
@@ -79,7 +83,9 @@ export function startSpeechAssessment(options: SpeechAssessmentOptions): SpeechA
   recognition = getSpeechRecognizer().start(
     { lang: 'en-US', referenceText: targetText },
     {
-      onStart: () => { if (!done) onListening?.(); },
+      onStart: () => {
+        if (!done) onListening?.();
+      },
       onError: () => finish(),
       onTranscript: (heard, isFinal) => {
         if (done) return;

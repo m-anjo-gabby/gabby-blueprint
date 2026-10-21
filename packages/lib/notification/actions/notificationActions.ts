@@ -1,10 +1,13 @@
 'use server';
 
-import { createServerClient } from '@gabby/lib/supabase/server';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { NotificationItem } from '@gabby/types/notification';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
+import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
+import { type NotificationItem } from '@gabby/types/notification';
 
 const logger = createLogger('common');
 
@@ -12,16 +15,12 @@ const logger = createLogger('common');
  * ログインユーザー宛の通知一覧を取得する（最新発生順）。
  * RLSにより自身(user_id = auth.uid())の行のみが返る。
  */
-export async function getNotificationsAction(): Promise<{
-  success: boolean;
-  data: NotificationItem[];
-  error?: string;
-}> {
+export async function getNotifications(): Promise<CoreResult<{ data: NotificationItem[] }, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, data: [], error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { data, error } = await supabase
       .from('com_t_notification')
@@ -31,20 +30,24 @@ export async function getNotificationsAction(): Promise<{
 
     if (error) {
       logger.error('notification:get_all_failed', error.message, { ...ctx, err: error });
-      return { success: false, data: [], error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true, data: (data || []) as NotificationItem[] };
   } catch (err) {
-    logger.error('notification:get_all_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
-    return { success: false, data: [], error: 'Unexpected error' };
+    unstable_rethrow(err);
+    logger.error('notification:get_all_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * 未読件数を取得（ヘッダーバッジ用）
  */
-export async function getUnreadNotificationCountAction(): Promise<number> {
+export async function getUnreadNotificationCount(): Promise<number> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
@@ -63,7 +66,11 @@ export async function getUnreadNotificationCountAction(): Promise<number> {
 
     return count ?? 0;
   } catch (err) {
-    logger.error('notification:unread_count_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('notification:unread_count_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return 0;
   }
 }
@@ -71,15 +78,12 @@ export async function getUnreadNotificationCountAction(): Promise<number> {
 /**
  * 指定の通知を既読にする
  */
-export async function markNotificationAsReadAction(notificationId: string): Promise<{
-  success: boolean;
-  error?: string;
-}> {
+export async function markNotificationAsRead(notificationId: string): Promise<CoreResult<object, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { error } = await supabase
       .from('com_t_notification')
@@ -89,28 +93,29 @@ export async function markNotificationAsReadAction(notificationId: string): Prom
 
     if (error) {
       logger.error('notification:mark_read_failed', error.message, { ...ctx, err: error });
-      return { success: false, error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('notification:mark_read_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
-    return { success: false, error: 'Unexpected error' };
+    unstable_rethrow(err);
+    logger.error('notification:mark_read_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * 未読の通知をまとめて既読にする
  */
-export async function markAllNotificationsAsReadAction(): Promise<{
-  success: boolean;
-  error?: string;
-}> {
+export async function markAllNotificationsAsRead(): Promise<CoreResult<object, BasicErrorCode>> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    if (!user) return { success: false, errorCode: 'unauthorized' };
 
     const { error } = await supabase
       .from('com_t_notification')
@@ -120,12 +125,16 @@ export async function markAllNotificationsAsReadAction(): Promise<{
 
     if (error) {
       logger.error('notification:mark_all_read_failed', error.message, { ...ctx, err: error });
-      return { success: false, error: error.message };
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('notification:mark_all_read_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
-    return { success: false, error: 'Unexpected error' };
+    unstable_rethrow(err);
+    logger.error('notification:mark_all_read_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }

@@ -1,10 +1,10 @@
 'use client';
 
+import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
 import { Badge } from '@/components/ui/badge';
 import { TrainingReportEntry } from './TrainingReportEntry';
-import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
 
-interface Props {
+interface TrainingReportContractRowProps {
   studentId: string;
   contract: StudentLiveSessionContractSummary;
   contractLabel: string;
@@ -18,7 +18,14 @@ interface Props {
  * 場合は分担コーチのfinalized済みレポートも並ぶ（TrainingReportCard/TrainingReportHistoryListで共用）。
  * 各レポートはダイアログではなくこの場でアコーディオン展開して編集する。
  */
-export function TrainingReportContractRow({ studentId, contract, contractLabel, reports, myId, onSaved }: Props) {
+export function TrainingReportContractRow({
+  studentId,
+  contract,
+  contractLabel,
+  reports,
+  myId,
+  onSaved,
+}: TrainingReportContractRowProps) {
   const myReport = reports.find((r) => r.coach_id === myId) ?? null;
   const otherReports = reports.filter((r) => r.coach_id !== myId);
 
@@ -34,9 +41,22 @@ export function TrainingReportContractRow({ studentId, contract, contractLabel, 
       </div>
 
       <div className="space-y-1.5">
-        <TrainingReportEntry studentId={studentId} ticketId={contract.ticket_id} report={myReport} isMine onSaved={onSaved} />
+        <TrainingReportEntry
+          studentId={studentId}
+          ticketId={contract.ticket_id}
+          report={myReport}
+          isMine
+          onSaved={onSaved}
+        />
         {otherReports.map((report) => (
-          <TrainingReportEntry key={report.report_id} studentId={studentId} ticketId={contract.ticket_id} report={report} isMine={false} onSaved={onSaved} />
+          <TrainingReportEntry
+            key={report.report_id}
+            studentId={studentId}
+            ticketId={contract.ticket_id}
+            report={report}
+            isMine={false}
+            onSaved={onSaved}
+          />
         ))}
       </div>
     </li>

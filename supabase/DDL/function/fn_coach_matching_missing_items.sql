@@ -1,5 +1,5 @@
 ---------------------------------------------
--- コーチがマッチング対象になるために足りない項目 (2026-10-11 追加)
+-- コーチがマッチング対象になるために足りない項目
 -- 前提: table/com_m_coach_profile.sql, table/com_m_user.sql（icon_path）, table/com_m_coach_availability.sql
 ---------------------------------------------
 -- 【背景】
@@ -38,7 +38,7 @@ AS $$
         CASE WHEN NULLIF(btrim(p.introduction, E' \t\r\n　'), '') IS NULL THEN 'introduction' END,
         CASE WHEN NOT EXISTS (
             SELECT 1 FROM public.com_m_coach_availability a
-            WHERE a.coach_id = p.user_id AND a.delete_flg = '0'
+            WHERE a.coach_id = p.user_id
         ) THEN 'availability' END
     ], NULL)
     FROM public.com_m_coach_profile p

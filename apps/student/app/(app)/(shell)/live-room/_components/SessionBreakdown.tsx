@@ -1,5 +1,5 @@
-import { cn } from '@/lib/utils';
 import type { LiveSessionOverview } from '@gabby/types/matching';
+import { cn } from '@/lib/utils';
 
 // 「コーチ未選択」の回は、まだ日時の枠自体が無いことを斜線で表す（色はトークンのみ使用）
 const HATCHED_CLASS = 'bg-[repeating-linear-gradient(135deg,var(--color-line)_0_3px,transparent_3px_6px)]';
@@ -26,7 +26,12 @@ function buildSegments(overview: LiveSessionOverview, isCurrent: boolean, adjust
   if (!isCurrent) {
     return [
       ...done,
-      { key: 'missed', label: '未実施', count: overview.scheduled_count + overview.unbooked_count + overview.unassigned_count, className: 'bg-line' },
+      {
+        key: 'missed',
+        label: '未実施',
+        count: overview.scheduled_count + overview.unbooked_count + overview.unassigned_count,
+        className: 'bg-line',
+      },
     ];
   }
   const adjusting = Math.min(adjustingCount, overview.unbooked_count);
@@ -34,7 +39,13 @@ function buildSegments(overview: LiveSessionOverview, isCurrent: boolean, adjust
     ...done,
     { key: 'scheduled', label: '予約済み', count: overview.scheduled_count, className: 'bg-brand-300', always: true },
     { key: 'adjusting', label: '調整中', count: adjusting, className: 'bg-brand-100' },
-    { key: 'unbooked', label: '未予約', count: overview.unbooked_count - adjusting, className: 'bg-line', always: true },
+    {
+      key: 'unbooked',
+      label: '未予約',
+      count: overview.unbooked_count - adjusting,
+      className: 'bg-line',
+      always: true,
+    },
     { key: 'unassigned', label: 'コーチ未選択', count: overview.unassigned_count, className: HATCHED_CLASS },
   ];
 }
@@ -51,7 +62,10 @@ interface SessionBreakdownProps {
 /** 契約の回数の内訳バーと凡例（ライブセッション管理の「契約の状況」と、ホームのライブセッションのカードで共有する） */
 export function SessionBreakdown({ overview, isCurrent, adjustingCount, className }: SessionBreakdownProps) {
   const segments = buildSegments(overview, isCurrent, adjustingCount);
-  const barTotal = Math.max(overview.total_sessions, segments.reduce((sum, s) => sum + s.count, 0));
+  const barTotal = Math.max(
+    overview.total_sessions,
+    segments.reduce((sum, s) => sum + s.count, 0),
+  );
 
   return (
     <div className={className}>
@@ -63,7 +77,11 @@ export function SessionBreakdown({ overview, isCurrent, adjustingCount, classNam
         {segments
           .filter((s) => s.count > 0)
           .map((s) => (
-            <div key={s.key} className={cn('h-full', s.className)} style={{ width: `${(s.count / barTotal) * 100}%` }} />
+            <div
+              key={s.key}
+              className={cn('h-full', s.className)}
+              style={{ width: `${(s.count / barTotal) * 100}%` }}
+            />
           ))}
       </div>
 

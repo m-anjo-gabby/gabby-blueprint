@@ -1,6 +1,6 @@
-import { getUserTrainingPerformanceAction } from "@/actions/performanceAction";
-import { TrainingPerformance } from "./_components/TrainingPerformance";
-import { resolveTargetMonth } from "@/lib/userTimezone";
+import { getUserTrainingPerformance } from '@/actions/performanceAction';
+import { resolveTargetMonth } from '@/lib/userTimezone';
+import { TrainingPerformance } from './_components/TrainingPerformance';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,12 +18,12 @@ export default async function TrainingLogPage({ searchParams }: PageProps) {
   const targetMonth = await resolveTargetMonth(month);
 
   // 単語・スプリントの統合実績を取得（スタッツ・カレンダー生成のソースになります）
-  const res = await getUserTrainingPerformanceAction(targetMonth);
+  const res = await getUserTrainingPerformance(targetMonth);
 
   return (
-    <TrainingPerformance 
-      initialData={res.data || { words: [], sprint_sessions: [], sprint_drills: [] }} 
-      targetMonth={targetMonth} 
+    <TrainingPerformance
+      initialData={res.success ? res.data : { words: [], sprint_sessions: [], sprint_drills: [] }}
+      targetMonth={targetMonth}
     />
   );
 }

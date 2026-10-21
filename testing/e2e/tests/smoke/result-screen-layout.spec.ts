@@ -1,6 +1,6 @@
-import { storageStatePath } from "../../support/personas.ts";
-import { expect, mainNav, navTab, test } from "../../support/studentApp.ts";
-import { openSprintResultFromHistory, previousMonthInJst } from "../../support/sprintHistory.ts";
+import { storageStatePath } from '../../support/personas.ts';
+import { openSprintResultFromHistory, previousMonthInJst } from '../../support/sprintHistory.ts';
+import { expect, mainNav, navTab, test } from '../../support/studentApp.ts';
 
 /**
  * スモーク: 結果画面のレイアウト出し分け（docs/screens/student/training/sprint-result.md、
@@ -10,68 +10,68 @@ import { openSprintResultFromHistory, previousMonthInJst } from "../../support/s
  * 閲覧のみ（DBは変更しない）。
  */
 
-test.describe("スプリント結果画面", () => {
-  test.use({ storageState: storageStatePath("liveStudent") });
+test.describe('スプリント結果画面', () => {
+  test.use({ storageState: storageStatePath('liveStudent') });
 
-  test("履歴から開くとナビ付きの画面で表示され、戻るで該当月・該当セッションの履歴へ戻る", async ({ page }) => {
+  test('履歴から開くとナビ付きの画面で表示され、戻るで該当月・該当セッションの履歴へ戻る', async ({ page }) => {
     const month = previousMonthInJst();
     const sprintId = await openSprintResultFromHistory(page, month);
 
-    await expect(page.getByRole("heading", { level: 1, name: "スプリント結果" })).toBeVisible();
-    await expect(navTab(page, "トレーニング")).toHaveAttribute("aria-current", "page");
-    await expect(page.getByRole("button", { name: "全て再生" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "リトライ", exact: true })).toHaveAttribute(
-      "href",
-      /^\/training\/sprint\/play\?mode=sprint&/
+    await expect(page.getByRole('heading', { level: 1, name: 'スプリント結果' })).toBeVisible();
+    await expect(navTab(page, 'トレーニング')).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('button', { name: '全て再生' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'リトライ', exact: true })).toHaveAttribute(
+      'href',
+      /^\/training\/sprint\/play\?mode=sprint&/,
     );
 
-    await page.getByRole("link", { name: "戻る" }).click();
+    await page.getByRole('link', { name: '戻る' }).click();
     await page.waitForURL(/\/training\/sprint\/history\?/);
     const url = new URL(page.url());
-    expect(url.searchParams.get("month")).toBe(month);
-    expect(url.searchParams.get("focus")).toBe(sprintId);
+    expect(url.searchParams.get('month')).toBe(month);
+    expect(url.searchParams.get('focus')).toBe(sprintId);
     await expect(page.locator(`#session-${sprintId}`)).toBeVisible();
   });
 
-  test("実施直後の結果URLはナビなしの没入画面で表示され、戻る先はスプリント選択になる", async ({ page }) => {
+  test('実施直後の結果URLはナビなしの没入画面で表示され、戻る先はスプリント選択になる', async ({ page }) => {
     const sprintId = await openSprintResultFromHistory(page, previousMonthInJst());
 
     await page.goto(`/training/sprint/result/${sprintId}`);
-    await expect(page.getByText("スプリント結果", { exact: true })).toBeVisible();
+    await expect(page.getByText('スプリント結果', { exact: true })).toBeVisible();
     await expect(mainNav(page)).toHaveCount(0);
 
-    await expect(page.getByRole("link", { name: "スプリント選択に戻る" })).toHaveAttribute(
-      "href",
-      /^\/training\/sprint\/play\?mode=sprint&sprint_type=\d+&content_id=[0-9a-f-]{36}$/
+    await expect(page.getByRole('link', { name: 'スプリント選択に戻る' })).toHaveAttribute(
+      'href',
+      /^\/training\/sprint\/play\?mode=sprint&sprint_type=\d+&content_id=[0-9a-f-]{36}$/,
     );
-    await expect(page.getByRole("link", { name: "ホームに戻る" })).toHaveAttribute("href", "/dashboard");
+    await expect(page.getByRole('link', { name: 'ホームに戻る' })).toHaveAttribute('href', '/dashboard');
     // 操作ボタンは履歴側と同じ（全て再生・リトライ）。没入画面では下部に置く
-    await expect(page.getByRole("button", { name: "全て再生" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "リトライ", exact: true })).toHaveAttribute(
-      "href",
-      /^\/training\/sprint\/play\?mode=sprint&/
+    await expect(page.getByRole('button', { name: '全て再生' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'リトライ', exact: true })).toHaveAttribute(
+      'href',
+      /^\/training\/sprint\/play\?mode=sprint&/,
     );
   });
 });
 
-test.describe("ライブセッション結果画面", () => {
-  test.use({ storageState: storageStatePath("liveStudent") });
+test.describe('ライブセッション結果画面', () => {
+  test.use({ storageState: storageStatePath('liveStudent') });
 
-  test("実施済みセッションの結果はナビ付きの画面で表示され、戻るでライブセッション画面へ戻る", async ({ page }) => {
-    await page.goto("/live-room");
+  test('実施済みセッションの結果はナビ付きの画面で表示され、戻るでライブセッション画面へ戻る', async ({ page }) => {
+    await page.goto('/live-room');
     // 履歴は1本スクロールの末尾にあり、実施済みの行だけが結果画面へのリンクになる（キャンセル行はリンクなし）
-    await expect(page.getByRole("heading", { level: 2, name: "履歴" })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '履歴' })).toBeVisible();
 
     const resultLink = page.locator('a[href^="/live-room/sessions/"][href$="/result"]').first();
-    test.skip((await resultLink.count()) === 0, "固定アカウントに実施済みセッションが無い");
+    test.skip((await resultLink.count()) === 0, '固定アカウントに実施済みセッションが無い');
 
     await resultLink.click();
     await page.waitForURL(/\/live-room\/sessions\/[0-9a-f-]{36}\/result$/);
-    await expect(page.getByRole("heading", { level: 1, name: "セッション結果" })).toBeVisible();
-    await expect(navTab(page, "ライブ")).toHaveAttribute("aria-current", "page");
-    await expect(page.getByRole("heading", { level: 2, name: "宿題" })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'セッション結果' })).toBeVisible();
+    await expect(navTab(page, 'ライブ')).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { level: 2, name: '宿題' })).toBeVisible();
 
-    await page.getByRole("button", { name: "戻る" }).click();
+    await page.getByRole('button', { name: '戻る' }).click();
     await page.waitForURL(/\/live-room$/);
   });
 });

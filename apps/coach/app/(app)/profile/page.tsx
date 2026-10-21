@@ -1,17 +1,17 @@
 // apps/coach/app/(app)/profile/page.tsx
+import { USER_TYPES } from '@gabby/types/user';
 import {
+  getCountryList,
+  getMyCoachMatchingStatus,
+  getMyCoachProfile,
+  getMyCoachSpecialties,
   getMyProfile,
   getTimezoneList,
-  getMyCoachProfile,
-  getCountryList,
-  getMyCoachSpecialties,
-  getMyCoachMatchingStatus,
 } from '@/actions/coachProfileAction';
-import { getMyMailSettings } from '@/actions/mailSettingAction';
 import { getMyCoachRatingStats } from '@/actions/coachRatingAction';
-import { USER_TYPES } from '@gabby/types/user';
-import { ProfileView } from './_components/ProfileView';
+import { getMyMailSettings } from '@/actions/mailSettingAction';
 import { ProfilePageHeader } from '@/components/common/ToolPageSkeletons';
+import { ProfileView } from './_components/ProfileView';
 
 const USER_TYPE_LABELS_EN: Record<string, string> = {
   [USER_TYPES.ADMIN]: 'Administrator',
@@ -20,16 +20,17 @@ const USER_TYPE_LABELS_EN: Record<string, string> = {
 };
 
 export default async function ProfilePage() {
-  const [profile, timezones, coachProfile, countries, mailSettings, ratingStats, specialties, matchingStatus] = await Promise.all([
-    getMyProfile(),
-    getTimezoneList(),
-    getMyCoachProfile(),
-    getCountryList(),
-    getMyMailSettings(),
-    getMyCoachRatingStats(),
-    getMyCoachSpecialties(),
-    getMyCoachMatchingStatus(),
-  ]);
+  const [profile, timezones, coachProfile, countries, mailSettings, ratingStats, specialties, matchingStatus] =
+    await Promise.all([
+      getMyProfile(),
+      getTimezoneList(),
+      getMyCoachProfile(),
+      getCountryList(),
+      getMyMailSettings(),
+      getMyCoachRatingStats(),
+      getMyCoachSpecialties(),
+      getMyCoachMatchingStatus(),
+    ]);
 
   if (!profile) {
     return (

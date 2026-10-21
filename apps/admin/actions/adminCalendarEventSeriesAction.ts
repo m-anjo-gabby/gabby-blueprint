@@ -1,16 +1,22 @@
 'use server';
 
-import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import type { ActionResult } from '@gabby/types/action';
 import {
   CALENDAR_EVENT_TYPES,
-  CalendarEventItem,
-  CalendarEventSeriesItem,
-  CalendarEventSeriesSummary,
-  CalendarEventTargetType,
+  type CalendarEventItem,
+  type CalendarEventSeriesItem,
+  type CalendarEventSeriesSummary,
+  type CalendarEventTargetType,
 } from '@gabby/types/calendarEvent';
+import type { Json } from '@gabby/types/db';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { getCalendarEvents } from './adminCalendarEventAction';
 
 const logger = createLogger('admin');
@@ -52,12 +58,14 @@ function jstDateTimeToUtcIso(dateStr: string, timeStr: string): string | null {
  * シリーズの一覧（回の数・これからの直近の回の開始日時つき。新しく作ったものから）
  */
 export async function getCalendarEventSeriesList(): Promise<CalendarEventSeriesItem[]> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('com_m_calendar_event_series')
-    .select('series_id, event_type, title, description, insert_date, update_date, sessions:com_m_calendar_event(start_datetime, delete_flg)')
-    .eq('delete_flg', '0')
+    .select(
+      'series_id, event_type, title, description, insert_date, update_date, sessions:com_m_calendar_event(start_datetime)',
+    )
     .order('insert_date', { ascending: false });
 
   if (error) {
@@ -67,8 +75,11 @@ export async function getCalendarEventSeriesList(): Promise<CalendarEventSeriesI
 
   const nowIso = new Date().toISOString();
   return (data ?? []).map(({ sessions, ...series }) => {
-    const active = (sessions ?? []).filter((s) => s.delete_flg === '0');
-    const upcoming = active.map((s) => s.start_datetime).filter((start) => start >= nowIso).sort();
+    const active = sessions ?? [];
+    const upcoming = active
+      .map((s) => s.start_datetime)
+      .filter((start) => start >= nowIso)
+      .sort();
     return {
       ...series,
       session_count: active.length,
@@ -81,15 +92,15 @@ export async function getCalendarEventSeriesList(): Promise<CalendarEventSeriesI
  * シリーズの詳細（シリーズと、属する回を開始日時の順に）
  */
 export async function getCalendarEventSeries(
-  seriesId: string
+  seriesId: string,
 ): Promise<{ series: CalendarEventSeriesSummary | null; sessions: CalendarEventItem[] }> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('com_m_calendar_event_series')
     .select('series_id, title, description')
     .eq('series_id', seriesId)
-    .eq('delete_flg', '0')
     .maybeSingle();
   if (error) {
     logger.error('calendarEventSeries:get_failed', error.message, { ...ctx, err: error, payload: { seriesId } });
@@ -97,15 +108,19 @@ export async function getCalendarEventSeries(
   }
   if (!data) return { series: null, sessions: [] };
 
-  const sessions = (await getCalendarEvents({ seriesId })).sort((a, b) => a.start_datetime.localeCompare(b.start_datetime));
+  const sessions = (await getCalendarEvents({ seriesId })).sort((a, b) =>
+    a.start_datetime.localeCompare(b.start_datetime),
+  );
   return { series: data, sessions };
 }
 
 /** シリーズ名・説明の更新（作成は createCalendarEventSeries で回とあわせて行う） */
 export async function updateCalendarEventSeries(
   seriesId: string,
-  formData: CalendarEventSeriesFormData
-): Promise<{ success: true } | { success: false; message: string }> {
+  formData: CalendarEventSeriesFormData,
+): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -118,42 +133,61 @@ export async function updateCalendarEventSeries(
       })
       .eq('series_id', seriesId);
     if (error) {
-      logger.error('calendarEventSeries:update_failed', error.message, { ...ctx, err: error, payload: { seriesId, ...formData } });
-      return { success: false, message: error.message };
+      logger.error('calendarEventSeries:update_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { seriesId, ...formData },
+      });
+      return { success: false, message: t('common.errors.unexpected') };
     }
     logger.info('calendarEventSeries:update_success', `Calendar event series updated: ${seriesId}`, ctx);
     revalidatePath(SERIES_PATH, 'layout');
     revalidatePath('/calendar-events');
     return { success: true };
   } catch (error) {
-    logger.error('calendarEventSeries:update_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('calendarEventSeries:update_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
 /**
  * シリーズの削除。属する回は削除せず、単発のイベントとして残す（series_id は ON DELETE SET NULL で外れる）
  */
-export async function deleteCalendarEventSeries(seriesId: string): Promise<{ success: true } | { success: false; message: string }> {
+export async function deleteCalendarEventSeries(seriesId: string): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
     const { error } = await supabase.from('com_m_calendar_event_series').delete().eq('series_id', seriesId);
     if (error) {
       logger.error('calendarEventSeries:delete_failed', error.message, { ...ctx, err: error, payload: { seriesId } });
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
-    logger.info('calendarEventSeries:delete_success', 'Calendar event series deleted', { ...ctx, payload: { seriesId } });
+    logger.info('calendarEventSeries:delete_success', 'Calendar event series deleted', {
+      ...ctx,
+      payload: { seriesId },
+    });
     revalidatePath(SERIES_PATH, 'layout');
     revalidatePath('/calendar-events');
     return { success: true };
   } catch (error) {
-    logger.error('calendarEventSeries:delete_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('calendarEventSeries:delete_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
-type SessionPayload = Record<string, unknown>;
+interface SessionPayload {
+  [key: string]: Json;
+}
 
 /**
  * 入力（日本時間）の回を RPC に渡す形にする。日時・内容が不正な行があれば null。
@@ -189,12 +223,14 @@ function buildSessionPayloads(common: SeriesSessionCommon, rows: SeriesSessionRo
 export async function createCalendarEventSeries(
   series: CalendarEventSeriesFormData,
   common: SeriesSessionCommon,
-  rows: SeriesSessionRow[]
-): Promise<{ success: true; seriesId: string } | { success: false; message: string }> {
+  rows: SeriesSessionRow[],
+): Promise<ActionResult<{ seriesId: string }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const sessions = buildSessionPayloads(common, rows);
-    if (!series.title.trim() || !sessions) return { success: false, message: 'invalid_input' };
+    if (!series.title.trim() || !sessions) return { success: false, message: t('common.errors.invalidInput') };
 
     const supabase = createAdminClient();
     const { data, error } = await supabase.rpc('admin_create_calendar_event_series', {
@@ -208,15 +244,23 @@ export async function createCalendarEventSeries(
         err: error,
         payload: { title: series.title, count: rows.length },
       });
-      return { success: false, message: error?.message ?? 'create_failed' };
+      return { success: false, message: t('common.errors.unexpected') };
     }
-    logger.info('calendarEventSeries:create_success', `Calendar event series created with ${rows.length} sessions: ${data}`, ctx);
+    logger.info(
+      'calendarEventSeries:create_success',
+      `Calendar event series created with ${rows.length} sessions: ${data}`,
+      ctx,
+    );
     revalidatePath(SERIES_PATH, 'layout');
     revalidatePath('/calendar-events');
     return { success: true, seriesId: data };
   } catch (error) {
-    logger.error('calendarEventSeries:create_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('calendarEventSeries:create_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
@@ -226,12 +270,14 @@ export async function createCalendarEventSeries(
 export async function addCalendarEventSeriesSessions(
   seriesId: string,
   common: SeriesSessionCommon,
-  rows: SeriesSessionRow[]
-): Promise<{ success: true; count: number } | { success: false; message: string }> {
+  rows: SeriesSessionRow[],
+): Promise<ActionResult<{ count: number }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const sessions = buildSessionPayloads(common, rows);
-    if (!sessions) return { success: false, message: 'invalid_session' };
+    if (!sessions) return { success: false, message: t('common.errors.invalidInput') };
 
     const supabase = createAdminClient();
     const { data, error } = await supabase.rpc('admin_add_calendar_event_series_sessions', {
@@ -239,16 +285,24 @@ export async function addCalendarEventSeriesSessions(
       p_sessions: sessions,
     });
     if (error) {
-      logger.error('calendarEventSeries:add_sessions_failed', error.message, { ...ctx, err: error, payload: { seriesId, count: rows.length } });
-      return { success: false, message: error.message };
+      logger.error('calendarEventSeries:add_sessions_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { seriesId, count: rows.length },
+      });
+      return { success: false, message: t('common.errors.unexpected') };
     }
     const count = Array.isArray(data) ? data.length : 0;
-    logger.info('calendarEventSeries:add_sessions_success', `Added ${count} sessions`, { ...ctx, payload: { seriesId, count } });
+    logger.info('calendarEventSeries:add_sessions_success', `Added ${count} sessions`, {
+      ...ctx,
+      payload: { seriesId, count },
+    });
     revalidatePath(SERIES_PATH, 'layout');
     revalidatePath('/calendar-events');
     return { success: true, count };
   } catch (error) {
-    logger.error('calendarEventSeries:add_sessions_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('calendarEventSeries:add_sessions_unexpected', getErrorMessage(error), { ...ctx, err: error });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

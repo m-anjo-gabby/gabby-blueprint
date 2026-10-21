@@ -1,6 +1,6 @@
 'use client';
 
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import type { ClientOption } from '@gabby/types/client';
 import type { ContractDetail } from '@gabby/types/contract';
 import { ClientFilter } from '@/components/list/ClientFilter';
@@ -19,16 +19,24 @@ interface ContractDataTableProps {
 
 export function ContractDataTable({ data, totalCount, pageCount, clients }: ContractDataTableProps) {
   const t = useTranslations('contracts.table');
-  const locale = useLocale();
   const query = useListQuery(CONTRACT_LIST_FILTERS);
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
-        <ClientFilter clients={clients} value={query.filters.clientId} onChange={(value) => query.setFilter('clientId', value)} />
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      >
+        <ClientFilter
+          clients={clients}
+          value={query.filters.clientId}
+          onChange={(value) => query.setFilter('clientId', value)}
+        />
       </ListToolbar>
       <DataTable
-        columns={createColumns(t, locale)}
+        columns={createColumns(t)}
         data={data}
         getRowId={(row) => row.contract_id}
         emptyMessage={t('noData')}

@@ -1,24 +1,20 @@
-import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { getStudentOverview, getStudentUpcomingSession } from '@/actions/studentAction';
-import { getTimezoneNameMap } from '@gabby/lib/timezone/timezoneNames';
+import { Suspense } from 'react';
 import { pickTimezoneName } from '@gabby/lib/date/timezone';
+import { getTimezoneNameMap } from '@gabby/lib/timezone/timezoneNames';
+import { getStudentOverview, getStudentUpcomingSession } from '@/actions/studentAction';
+import {
+  CoachNotesSection,
+  DialoguePracticeSection,
+  LessonSprintSection,
+  LiveSessionHistorySection,
+  preloadOverviewSections,
+  TrainingReportSection,
+} from './_components/OverviewSections';
 import { OVERVIEW_GRID_CLASS, OverviewCardSkeleton } from './_components/OverviewSkeletons';
 import { StudentOverviewHeader } from './_components/StudentOverviewHeader';
-import {
-  LiveSessionHistorySection,
-  LessonSprintSection,
-  DialoguePracticeSection,
-  CoachNotesSection,
-  TrainingReportSection,
-  preloadOverviewSections,
-} from './_components/OverviewSections';
 
-export default async function StudentOverviewPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function StudentOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   // 各カードの取得をヘッダー用の取得と同時に開始する（カードの描画時は開始済みの取得の結果を使う）
   preloadOverviewSections(id);
@@ -37,7 +33,12 @@ export default async function StudentOverviewPage({
     <div className="space-y-6">
       <StudentOverviewHeader
         profile={overview.profile}
-        timezoneName={pickTimezoneName(overview.profile.timezone, timezoneNames.get(overview.profile.timezone), 'display', 'en')}
+        timezoneName={pickTimezoneName(
+          overview.profile.timezone,
+          timezoneNames.get(overview.profile.timezone),
+          'display',
+          'en',
+        )}
         upcomingSession={upcomingSession}
       />
 

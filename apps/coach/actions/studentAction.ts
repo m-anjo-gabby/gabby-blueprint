@@ -1,37 +1,38 @@
 'use server';
 
 import {
-  getAssignedStudentsCore,
-  getStudentOverviewCore,
-  getStudentUpcomingSessionCore,
-  getStudentLiveSessionShortfallsCore,
-  getStudentLiveSessionContractsCore,
-  getStudentSessionsByTicketCore,
-  getStudentNotesCore,
-  getSelfTrainingWeekSummaryCore,
   addCoachStudentNoteCore,
-  getContractTrainingReportsCore,
-  saveContractTrainingReportDraftCore,
   finalizeContractTrainingReportCore,
-  updateStudentSprintLevelCore,
   forceStageUpStudentCore,
+  getAssignedStudentsCore,
+  getContractTrainingReportsCore,
+  getSelfTrainingWeekSummaryCore,
+  getStudentLiveSessionContractsCore,
+  getStudentLiveSessionShortfallsCore,
+  getStudentNotesCore,
+  getStudentOverviewCore,
+  getStudentSessionsByTicketCore,
+  getStudentUpcomingSessionCore,
+  saveContractTrainingReportDraftCore,
+  updateStudentSprintLevelCore,
 } from '@gabby/lib/coachStudent/actions/coachStudentActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import type { ActionResult } from '@gabby/types/action';
 import {
-  AssignedStudentSummary,
-  StudentOverviewProfile,
-  StudentSessionHistoryItem,
-  LiveSessionShortfallItem,
-  StudentLiveSessionContractSummary,
-  CoachSessionListItem,
-  CoachStudentNote,
-  ContractTrainingReport,
-  CoachStudentErrorCode,
-  StudentSprintProgress,
-  SelfTrainingWeekSummary,
+  type AssignedStudentSummary,
+  type CoachSessionListItem,
+  type CoachStudentErrorCode,
+  type CoachStudentNote,
+  type ContractTrainingReport,
+  type LiveSessionShortfallItem,
+  type SelfTrainingWeekSummary,
+  type StudentLiveSessionContractSummary,
+  type StudentOverviewProfile,
+  type StudentSessionHistoryItem,
+  type StudentSprintProgress,
 } from '@gabby/types/coachStudent';
-import { SprintQuestionType } from '@gabby/types/sprint';
+import { type SprintQuestionType } from '@gabby/types/sprint';
 
 const logger = createLogger('coach');
 
@@ -44,7 +45,7 @@ const COACH_STUDENT_ERROR_MESSAGES_EN: Record<CoachStudentErrorCode, string> = {
 };
 
 /**
- * Fetches students currently assigned to the logged-in coach
+ * ログイン中のコーチが担当している生徒を取得する
  */
 export async function getAssignedStudents(): Promise<AssignedStudentSummary[]> {
   const result = await getAssignedStudentsCore();
@@ -57,11 +58,11 @@ export async function getAssignedStudents(): Promise<AssignedStudentSummary[]> {
 }
 
 /**
- * Fetches the Student Overview header data (basic info + sprint progress) for one student
+ * 生徒の概要の上部（基本の情報とスプリントの進み具合）を1人分取得する
  */
 export async function getStudentOverview(
-  studentId: string
-): Promise<{ success: true; profile: StudentOverviewProfile } | { success: false; message: string }> {
+  studentId: string,
+): Promise<ActionResult<{ profile: StudentOverviewProfile }>> {
   const result = await getStudentOverviewCore(studentId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -72,8 +73,8 @@ export async function getStudentOverview(
 }
 
 /**
- * Fetches the list of live-session contracts (tickets) this student has ever held
- * (current and past), for the Live Sessions card's contract switcher.
+ * その生徒がこれまでに持ったライブセッションの契約（チケット）の一覧を取得する
+ * （今と過去。ライブセッションのカードの契約の切り替えに使う）。
  */
 export async function getStudentLiveSessionContracts(studentId: string): Promise<StudentLiveSessionContractSummary[]> {
   const result = await getStudentLiveSessionContractsCore(studentId);
@@ -86,9 +87,9 @@ export async function getStudentLiveSessionContracts(studentId: string): Promise
 }
 
 /**
- * Fetches every session under the given contract (ticket), regardless of which coach ran it —
- * used by the Live Sessions card so a coach can see the full curriculum for a shared/handed-over
- * contract, not just their own sessions.
+ * その契約（チケット）のセッションを、どのコーチが担当したかに関わらずすべて取得する。
+ * ライブセッションのカードで、共有・引き継ぎの契約でも、自分の担当分だけでなく
+ * カリキュラムの全体を見られるようにするため。
  */
 export async function getStudentSessionsByTicket(studentId: string, ticketId: string): Promise<CoachSessionListItem[]> {
   const result = await getStudentSessionsByTicketCore(studentId, ticketId);
@@ -101,11 +102,11 @@ export async function getStudentSessionsByTicket(studentId: string, ticketId: st
 }
 
 /**
- * Fetches the next session with this student that is still scheduled and hasn't ended yet
- * (used to decide which session_id "Start Live Session"/"End Lesson" should target — deliberately
- * a dedicated, tightly-filtered query rather than derived from the per-contract session list,
- * since that list can omit the nearest upcoming session once enough future sessions have been
- * pre-generated for a long contract).
+ * この生徒との次のセッション（予定のままで、まだ終わっていないもの）を取得する
+ * （「ライブセッションを始める」「レッスンを終える」がどの session_id を対象にするかを決めるのに使う。
+ * 契約ごとのセッションの一覧から求めず、絞り込んだ専用の取得にしている。
+ * 長い契約で先のセッションが十分に作られると、その一覧から一番近いセッションが
+ * 漏れることがあるため）。
  */
 export async function getStudentUpcomingSession(studentId: string): Promise<StudentSessionHistoryItem | null> {
   const result = await getStudentUpcomingSessionCore(studentId);
@@ -118,9 +119,9 @@ export async function getStudentUpcomingSession(studentId: string): Promise<Stud
 }
 
 /**
- * Fetches live session shortfalls (contracted sessions that couldn't all be scheduled,
- * typically because the matching request was approved partway through the license period)
- * for this coach's schedules with the given student.
+ * ライブセッションの不足（契約した回数のうち予定に入れられなかったもの。
+ * 多くはライセンスの期間の途中でマッチングの依頼を承認した場合）を、
+ * このコーチとその生徒の予定について取得する。
  */
 export async function getStudentLiveSessionShortfalls(studentId: string): Promise<LiveSessionShortfallItem[]> {
   const result = await getStudentLiveSessionShortfallsCore(studentId);
@@ -133,7 +134,7 @@ export async function getStudentLiveSessionShortfalls(studentId: string): Promis
 }
 
 /**
- * Fetches this coach's private notes about the given student
+ * その生徒についての、このコーチの非公開のメモを取得する
  */
 export async function getStudentNotes(studentId: string): Promise<CoachStudentNote[]> {
   const result = await getStudentNotesCore(studentId);
@@ -145,12 +146,17 @@ export async function getStudentNotes(studentId: string): Promise<CoachStudentNo
   return result.notes;
 }
 
-const DEFAULT_SELF_TRAINING_WEEK_SUMMARY: SelfTrainingWeekSummary = { days: 7, active_days: 0, total_questions: 0, total_assessments: 0 };
+const DEFAULT_SELF_TRAINING_WEEK_SUMMARY: SelfTrainingWeekSummary = {
+  days: 7,
+  active_days: 0,
+  total_questions: 0,
+  total_assessments: 0,
+};
 
 /**
- * Fetches a summary (active days / total questions / total speaking assessments) of this
- * student's self-training activity over the last `days` days. Used by the session prep/execution
- * hub so a coach can check recent self-training activity without leaving the page.
+ * その生徒の直近 `days` 日の自主トレーニングの要約（実施日数・問題数・発話の評価の回数）を
+ * 取得する。セッションの準備・実施の画面で、コーチが画面を離れずに
+ * 最近の自主トレーニングを確かめるのに使う。
  */
 export async function getSelfTrainingWeekSummary(studentId: string, days = 7): Promise<SelfTrainingWeekSummary> {
   const result = await getSelfTrainingWeekSummaryCore(studentId, days);
@@ -163,12 +169,12 @@ export async function getSelfTrainingWeekSummary(studentId: string, days = 7): P
 }
 
 /**
- * Adds a private coach note for the given student
+ * その生徒についての、コーチの非公開のメモを足す
  */
 export async function addCoachStudentNote(
   studentId: string,
-  noteText: string
-): Promise<{ success: true; note: CoachStudentNote } | { success: false; message: string }> {
+  noteText: string,
+): Promise<ActionResult<{ note: CoachStudentNote }>> {
   const result = await addCoachStudentNoteCore(studentId, noteText);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -179,8 +185,8 @@ export async function addCoachStudentNote(
 }
 
 /**
- * Fetches every training report visible to the logged-in coach for this student
- * (own drafts + finalized reports from any coach assigned to this student).
+ * その生徒について、ログイン中のコーチが見られるトレーニングレポートをすべて取得する
+ * （自分の下書きと、その生徒の担当のコーチの確定したレポート）。
  */
 export async function getContractTrainingReports(studentId: string): Promise<ContractTrainingReport[]> {
   const result = await getContractTrainingReportsCore(studentId);
@@ -193,14 +199,14 @@ export async function getContractTrainingReports(studentId: string): Promise<Con
 }
 
 /**
- * Saves (creates or updates) the logged-in coach's own draft training report comment
- * for the given contract (ticket)
+ * ログイン中のコーチの、その契約（チケット）のトレーニングレポートの下書きのコメントを
+ * 保存する（作成または更新）
  */
 export async function saveContractTrainingReportDraft(
   ticketId: string,
   studentId: string,
-  commentText: string
-): Promise<{ success: true; report: ContractTrainingReport } | { success: false; message: string }> {
+  commentText: string,
+): Promise<ActionResult<{ report: ContractTrainingReport }>> {
   const result = await saveContractTrainingReportDraftCore(ticketId, studentId, commentText);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -211,11 +217,11 @@ export async function saveContractTrainingReportDraft(
 }
 
 /**
- * Finalizes the logged-in coach's own training report. Once finalized it can no longer be edited.
+ * ログイン中のコーチのトレーニングレポートを確定する。確定した後は編集できない。
  */
 export async function finalizeContractTrainingReport(
-  reportId: string
-): Promise<{ success: true; report: ContractTrainingReport } | { success: false; message: string }> {
+  reportId: string,
+): Promise<ActionResult<{ report: ContractTrainingReport }>> {
   const result = await finalizeContractTrainingReportCore(reportId);
   if (!result.success) {
     const ctx = await getLogContext();
@@ -226,20 +232,19 @@ export async function finalizeContractTrainingReport(
 }
 
 type UpdateSprintProgressActionResult =
-  | { success: true; progress: StudentSprintProgress }
-  | { success: false; message: string };
+  { success: true; progress: StudentSprintProgress } | { success: false; message: string };
 
 function resolveSprintProgressErrorMessage(errorCode: CoachStudentErrorCode, invalidInputMessage: string): string {
   return errorCode === 'invalid_input' ? invalidInputMessage : COACH_STUDENT_ERROR_MESSAGES_EN[errorCode];
 }
 
 /**
- * Raises a single question type's level for the given student (level-up only, never down)
+ * その生徒の問題種別1つのレベルを上げる（上げるだけで、下げない）
  */
 export async function updateStudentSprintLevel(
   studentId: string,
   questionType: SprintQuestionType,
-  newLevel: number
+  newLevel: number,
 ): Promise<UpdateSprintProgressActionResult> {
   const result = await updateStudentSprintLevelCore(studentId, questionType, newLevel);
   if (!result.success) {
@@ -247,19 +252,22 @@ export async function updateStudentSprintLevel(
     logger.error('coach:update_student_sprint_level_failed', result.errorCode, ctx);
     return {
       success: false,
-      message: resolveSprintProgressErrorMessage(result.errorCode, 'Please select a level higher than the current one.'),
+      message: resolveSprintProgressErrorMessage(
+        result.errorCode,
+        'Please select a level higher than the current one.',
+      ),
     };
   }
   return { success: true, progress: result.progress };
 }
 
 /**
- * Forces the given student's stage up to targetStage. Question types that already meet the
- * requirement keep their current level; unmet ones are raised to the minimum required level.
+ * その生徒のステージを targetStage まで上げる。条件を満たしている問題種別は
+ * 今のレベルのまま、満たしていない問題種別は必要な最低のレベルまで上げる。
  */
 export async function forceStageUpStudent(
   studentId: string,
-  targetStage: number
+  targetStage: number,
 ): Promise<UpdateSprintProgressActionResult> {
   const result = await forceStageUpStudentCore(studentId, targetStage);
   if (!result.success) {
@@ -267,7 +275,10 @@ export async function forceStageUpStudent(
     logger.error('coach:force_stage_up_student_failed', result.errorCode, ctx);
     return {
       success: false,
-      message: resolveSprintProgressErrorMessage(result.errorCode, 'Please select a stage higher than the current one.'),
+      message: resolveSprintProgressErrorMessage(
+        result.errorCode,
+        'Please select a stage higher than the current one.',
+      ),
     };
   }
   return { success: true, progress: result.progress };

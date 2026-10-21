@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
-import { toIsoMonthInZone } from '@gabby/lib/date/date';
 import { isMonthParam } from '@gabby/lib/calendar/monthGridRange';
+import { toIsoMonthInZone } from '@gabby/lib/date/date';
 import { getMyProfile } from '@/actions/studentProfileAction';
 import { CalendarBoard } from './_components/CalendarBoard';
 import { CalendarMonthSection } from './_components/CalendarMonthSection';
@@ -18,7 +18,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       <CalendarPageHeader />
 
       {/* 月を切り替えると key が変わり、日付の枠を残したまま予定だけを骨組みにして取り直す */}
-      <Suspense key={month} fallback={<CalendarBoard month={month} initialSessions={null} initialEvents={null} bookableSlots={null} />}>
+      <Suspense
+        key={month}
+        fallback={<CalendarBoard month={month} initialSessions={null} initialEvents={null} bookableSlots={null} />}
+      >
         <CalendarMonthSection month={month} />
       </Suspense>
     </>

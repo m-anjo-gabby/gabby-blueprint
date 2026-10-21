@@ -1,14 +1,16 @@
-"use server";
+'use server';
 
-import { createServerClient } from "@gabby/lib/supabase/server";
-import { ContentItem, ContentRecord, ContentTagSummary } from "@gabby/types/content";
-import { ResumeContentResponse, ResumeMetadata } from "@gabby/types/training";
-import { createLogger } from "@gabby/lib/logger";
-import { getLogContext } from "@gabby/lib/logger/context";
-import { getMyDialogueAssignments } from "./dialogueAction";
-import { toggleFavoriteRow } from "@/lib/favoriteToggle";
-import type { FavoriteToggleResult } from "@/constants/favorites";
+import { unstable_rethrow } from 'next/navigation';
+import { createLogger } from '@gabby/lib/logger';
+import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
+import { CONTENT_STATUS, type ContentItem, type ContentRecord, type ContentTagSummary } from '@gabby/types/content';
+import { type ResumeContentResponse, type ResumeMetadata } from '@gabby/types/training';
+import type { FavoriteToggleResult } from '@/constants/favorites';
+import { toggleFavoriteRow } from '@/lib/favoriteToggle';
+import { getMyDialogueAssignments } from './dialogueAction';
 
 const logger = createLogger('student');
 
@@ -31,9 +33,7 @@ function mapContentRow(c: ContentRow): ContentItem {
   return {
     ...c,
     is_favorite: (c.is_favorite?.[0]?.count || 0) > 0,
-    display_tags: c.tags
-      ?.map((t) => t.tag)
-      .filter((t): t is ContentTagSummary => t !== null) || []
+    display_tags: c.tags?.map((t) => t.tag).filter((t): t is ContentTagSummary => t !== null) || [],
   };
 }
 
@@ -49,13 +49,12 @@ export async function getAllContent(): Promise<ContentItem[]> {
     const { data, error } = await supabase
       .from('com_m_contents')
       .select(CONTENT_SELECT)
-      .eq('delete_flg', '0')
-      .neq('content_scope', 9)
+      .eq('status', CONTENT_STATUS.PUBLISHED)
       .neq('content_type', 3)
       .order('seq_no', { ascending: true });
 
     if (error) {
-      logger.error("content:get_all_failed", error.message, { ...ctx, err: error });
+      logger.error('content:get_all_failed', error.message, { ...ctx, err: error });
       return [];
     }
 
@@ -70,23 +69,27 @@ export async function getAllContent(): Promise<ContentItem[]> {
     const { data: dialogueData, error: dialogueError } = await supabase
       .from('com_m_contents')
       .select(CONTENT_SELECT)
-      .eq('delete_flg', '0')
-      .in('content_id', assignments.map(a => a.content_id));
+      .eq('status', CONTENT_STATUS.PUBLISHED)
+      .in(
+        'content_id',
+        assignments.map((a) => a.content_id),
+      );
 
     if (dialogueError) {
-      logger.error("content:get_all_dialogue_failed", dialogueError.message, { ...ctx, err: dialogueError });
+      logger.error('content:get_all_dialogue_failed', dialogueError.message, { ...ctx, err: dialogueError });
       return normalContents;
     }
 
-    const assignmentIdByContentId = new Map(assignments.map(a => [a.content_id, a.assignment_id]));
-    const dialogueContents = (dialogueData || []).map(c => ({
+    const assignmentIdByContentId = new Map(assignments.map((a) => [a.content_id, a.assignment_id]));
+    const dialogueContents = (dialogueData || []).map((c) => ({
       ...mapContentRow(c),
       assignment_id: assignmentIdByContentId.get(c.content_id),
     }));
 
     return [...normalContents, ...dialogueContents];
   } catch (err) {
-    logger.error("content:get_all_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('content:get_all_unexpected', getErrorMessage(err), { ...ctx, err });
     return [];
   }
 }
@@ -103,37 +106,47 @@ export async function toggleContentFavorite(contentId: string, isFavorite: boole
  * metadata は ResumeMetadata (WordResumeMetadata | VideoResumeMetadata) を想定
  */
 export async function saveResumeContent<T extends ResumeMetadata>(
-  contentId: string, 
-  itemId: string, 
-  metadata: T
-) {
+  contentId: string,
+  itemId: string,
+  metadata: T,
+): Promise<void> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
     // upsertにより、ユーザーごとに1件のみの再開情報を維持
-    const { error } = await supabase
-      .from('com_t_resume_contents')
-      .upsert({
+    const { error } = await supabase.from('com_t_resume_contents').upsert(
+      {
         user_id: user.id,
         content_id: contentId,
         item_id: itemId,
         metadata: metadata, // JSONBとして保存
-        update_date: new Date().toISOString()
-      }, {
-        onConflict: 'user_id' // user_idが衝突したら更新
-      });
+        update_date: new Date().toISOString(),
+      },
+      {
+        onConflict: 'user_id', // user_idが衝突したら更新
+      },
+    );
 
     if (error) {
-      logger.error("training:save_resume_failed", error.message, { ...ctx, err: error, payload: { contentId, itemId } });
+      logger.error('training:save_resume_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { contentId, itemId },
+      });
       throw new Error(`栞の保存に失敗しました: ${error.message}`);
     }
 
-    logger.info("training:save_resume_success", "Resume point saved", { ...ctx, payload: { contentId, itemId } });
+    logger.info('training:save_resume_success', 'Resume point saved', { ...ctx, payload: { contentId, itemId } });
   } catch (err) {
-    logger.error("training:save_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId, itemId } });
+    unstable_rethrow(err);
+    logger.error('training:save_resume_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { contentId, itemId },
+    });
     throw err;
   }
 }
@@ -141,26 +154,27 @@ export async function saveResumeContent<T extends ResumeMetadata>(
 /**
  * 再開地点を削除する (栞を抜く)
  */
-export async function clearResumeContent() {
+export async function clearResumeContent(): Promise<void> {
   const ctx = await getLogContext();
   try {
     const supabase = await createServerClient();
     const user = await getAuthUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error('Unauthorized');
 
-    const { error } = await supabase
-      .from('com_t_resume_contents')
-      .delete()
-      .eq('user_id', user.id);
+    const { error } = await supabase.from('com_t_resume_contents').delete().eq('user_id', user.id);
 
     if (error) {
-      logger.error("training:clear_resume_failed", error.message, { ...ctx, err: error });
+      logger.error('training:clear_resume_failed', error.message, { ...ctx, err: error });
       throw new Error(`栞の削除に失敗しました: ${error.message}`);
     }
 
-    logger.info("training:clear_resume_success", "Resume point cleared", ctx);
+    logger.info('training:clear_resume_success', 'Resume point cleared', ctx);
   } catch (err) {
-    logger.error("training:clear_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('training:clear_resume_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     throw err;
   }
 }
@@ -186,16 +200,21 @@ export async function takeResumeContent(contentId: string): Promise<string | nul
       .maybeSingle();
 
     if (error) {
-      logger.error("training:take_resume_failed", error.message, { ...ctx, err: error, payload: { contentId } });
+      logger.error('training:take_resume_failed', error.message, { ...ctx, err: error, payload: { contentId } });
       return null;
     }
 
     if (data) {
-      logger.info("training:take_resume_success", "Resume point consumed", { ...ctx, payload: { contentId } });
+      logger.info('training:take_resume_success', 'Resume point consumed', { ...ctx, payload: { contentId } });
     }
     return data?.item_id ?? null;
   } catch (err) {
-    logger.error("training:take_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err, payload: { contentId } });
+    unstable_rethrow(err);
+    logger.error('training:take_resume_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+      payload: { contentId },
+    });
     return null;
   }
 }
@@ -212,7 +231,8 @@ export async function getLatestResumeContent(): Promise<ResumeContentResponse | 
 
     const { data, error } = await supabase
       .from('com_t_resume_contents')
-      .select(`
+      .select(
+        `
         user_id,
         content_id,
         item_id,
@@ -225,12 +245,13 @@ export async function getLatestResumeContent(): Promise<ResumeContentResponse | 
           content_label,
           metadata
         )
-      `)
+      `,
+      )
       .eq('user_id', user.id)
       .maybeSingle();
 
     if (error) {
-      logger.error("training:get_resume_failed", error.message, { ...ctx, err: error });
+      logger.error('training:get_resume_failed', error.message, { ...ctx, err: error });
       return null;
     }
 
@@ -239,14 +260,21 @@ export async function getLatestResumeContent(): Promise<ResumeContentResponse | 
     // 参照先コンテンツがRLS/論理削除等で不可視になった場合、com_m_contentsはnullで返る
     // （content_id自体はFKで維持されるため、レコードは残るがJOIN結果のみnullになる）
     if (!data.com_m_contents) {
-      logger.warn("training:get_resume_orphaned", "Resume content is no longer accessible; clearing stale bookmark", { ...ctx, payload: { contentId: data.content_id } });
+      logger.warn('training:get_resume_orphaned', 'Resume content is no longer accessible; clearing stale bookmark', {
+        ...ctx,
+        payload: { contentId: data.content_id },
+      });
       await supabase.from('com_t_resume_contents').delete().eq('user_id', user.id);
       return null;
     }
 
-    return data as unknown as ResumeContentResponse;
+    return data;
   } catch (err) {
-    logger.error("training:get_resume_unexpected", err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('training:get_resume_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return null;
   }
 }

@@ -33,7 +33,25 @@ CREATE TABLE ...       ← 定義（schema.mjs が実DBから生成する。手�
   トリガー・RLS・既定と違う権限）から生成します。列の意味は `COMMENT ON` に書くため、コメントも
   リリーススクリプトで変更します。
 
+## テーブル設計の規約
+
+新しいテーブル・列を作る時は、次にそろえます（既存の例外は直さずに残してよい）。
+
+| 項目 | 規約 |
+|---|---|
+| 登録・更新日時 | 列名は `insert_date` / `update_date`（`timestamp with time zone NOT NULL DEFAULT now()`）。更新日時の列を持つテーブルには `trg_set_update_date`（`set_update_date()` の BEFORE UPDATE トリガー）を付ける。アプリ・RPC で書き忘れても DB が更新する |
+| 区分値の列 | 値の一覧を CHECK 制約で持つ（`chk_<テーブル>_<列>`）。値の意味は列のコメントと `packages/types` の定数に書き、3つをそろえる（アプリの DB の型は CHECK 制約の値の型になるため、定数とずれると型チェックで分かる。「アプリの DB の型」参照）。値が今後増える前提でフリーテキストにする列（イベント種別等）は、その旨をコメントに書いて CHECK を付けない |
+| 区分値の型 | 新しい区分値は `smallint`（例: `status`）。既存の文字列の区分値（`user_type` の `'0'`〜`'2'`、`sprint_type`・`question_type` 等）は型を変えずに CHECK で守る |
+| 状態・削除 | 論理削除の列を作らない。業務の段階は `status`、選択肢の出し分けは `is_active`（`docs/DATA-DELETION.md`） |
+| 外部キー | `ON DELETE` を必ず書く（`RESTRICT` / `CASCADE` / `SET NULL`。`docs/DATA-DELETION.md` §3）。一覧・RLS で絞り込む列や、親の削除の判定で参照される列には索引を付ける（「誰が操作したか」だけの列は不要） |
+| 写しの列 | 他のテーブルの値を写す場合は、契約時点の内容を残す等の理由をコメントに書く（理由の無い写しは作らない） |
+| 権限 | anon（未ログイン）にはテーブルへの書き込みの権限を付けない（既定の権限で外している）。未ログインの画面の書き込みはサーバーの service_role で行う。参照の権限と RLS は通常どおり書く（RLS は全テーブルで有効にする）。RLS で行を見せる相手に見せない列（アドミンだけが使う管理用の列等）があるときは、authenticated の参照の権限を列単位にして外す（例: `com_m_contract` の `contract_name`・`note`。アドミンは service_role で読む）。その表に列を足したら、見せる列であれば列の GRANT にも加える |
+| ファイルの列 | Storage のパスを持つ列は、行の削除で消すファイルになる（`docs/DATA-DELETION.md` §1）。バケット名とパスの形を列のコメントに書く |
+
 ## 変更の手順
+
+リリーススクリプトは、リリース単位（開発ブランチ）ごとに1ファイルにまとめる（例: `supabase/release/20260904_feature-20260904-dev_release.sql`）。
+Supabase CLI の `supabase/migrations/` は使っておらず、日時付きの migration のファイルは作らない。
 
 1. リリーススクリプト（`supabase/release/<リリース>.sql`）に、変更の差分（ALTER 等）とその理由を書く
 2. dev に適用する（`node supabase/release/run.mjs <file> --env=dev --sections=pending`）
@@ -45,7 +63,12 @@ CREATE TABLE ...       ← 定義（schema.mjs が実DBから生成する。手�
    `-- @end-schema` の2行）を書いてから実行します。
 4. 設計メモを今の形に合わせて直す（列の意味の変更・新しい書き込みの経路・RLS の変更・呼び出し側が守ること等、
    ルールが変わった場合。古くなった記述は消す）
-5. リリーススクリプト・正本・アプリの変更を同じコミットにする
+5. アプリの DB の型を作り直し、型チェックで影響を確認する（「アプリの DB の型」参照）
+   ```
+   node supabase/release/types.mjs --env=dev --write
+   pnpm typecheck
+   ```
+6. リリーススクリプト・正本・型・アプリの変更を同じコミットにする
 
 テーブルを削除した場合は、正本のファイルも削除します（`--check` が「実DBに無いテーブル」として知らせます）。
 
@@ -66,11 +89,46 @@ CREATE TABLE ...       ← 定義（schema.mjs が実DBから生成する。手�
 node supabase/release/schema.mjs --env=dev --check
 ```
 
-正本の定義と dev の実際の定義が違うテーブルを表示します（違いがあれば終了コード 1）。
+正本の定義と dev の実際の定義が違うテーブルと、「関数の権限」に合わない SECURITY DEFINER の関数
+（`search_path` の固定が無い・anon が実行できる）を表示します（どちらかがあれば終了コード 1）。
 リリース前や、リリーススクリプトを dev に適用した後に実行します。`--env=staging` / `prod` で
 他の環境と正本を比べることもできます（未リリースの変更がある間は差分が出るのが正常です）。
+
+## アプリの DB の型
+
+Supabase のクライアント（`packages/lib/supabase/*`）は、DB の型で問い合わせの列名・値・戻り値を型チェックする。
+
+| ファイル | 中身 | 書き方 |
+|---|---|---|
+| `packages/types/database.ts` | 実DBから生成した型。区分値の列は CHECK 制約の値の型（例: `status: 1 | 2 | 3`）、RPC の引数は NULL を渡せる型にしている | `node supabase/release/types.mjs --env=dev --write` で作り直す（手で編集しない）。`--check` で実DBとの差の有無を確かめる |
+| `packages/types/db.ts` | 生成では分からない列だけを上書きした、アプリが使う `Database`。行の型は `TableRow<'表'>`・`TableInsert<'表'>` 等で参照する | JSON の列の中身・ビューの NOT NULL の列・範囲の CHECK の列・jsonb を返す RPC を書く。DB の実際の形だけを書き、画面の都合の型は書かない |
+
+- テーブル・ビュー・関数を変えたら、dev に適用した後に `types.mjs --write` で作り直す（「変更の手順」の5）。
+- ビュー・関数を変えて列が増減した場合は、`db.ts` の上書きも合わせて直す（存在しない列名を書くと、その表を使う箇所で型エラーになる）。
+- CHECK 制約の無い区分値の列は `db.ts` で型を書いている（コメントの一覧）。CHECK 制約を付けたら `db.ts` から消す。
 
 ## 関数・ビュー・Storage（function/ view/ storage/）
 
 `CREATE OR REPLACE` で全体を書いたファイルを、変更のたびに書き直します（追記はしません）。
 先頭のコメントには、テーブルと同じく今有効なルールだけを書きます。
+
+- 関数の引数（シグネチャ）を変える場合は、リリーススクリプトで `DROP FUNCTION IF EXISTS <旧シグネチャ>` を書いてから
+  `CREATE OR REPLACE FUNCTION` で作る（Postgres は引数の違う同名の関数を別に残すため、呼び出しが曖昧になる）。
+- 単一のテーブルで済む単純な INSERT・UPDATE は、サーバーアクションから直接書いてよい（RPC にしない）。
+  複数のテーブルにまたがる処理、1つのトランザクションでそろえる必要がある処理、RLS を越えた認可の判定が要る処理は、
+  SECURITY DEFINER の関数（RPC）にする。
+
+### 関数の権限
+
+SECURITY DEFINER の関数は所有者の権限で RLS を通らずに動くため、次をそろえます（入口全体の考え方は `docs/SECURITY.md`）。
+
+| 項目 | 決まり |
+|---|---|
+| `search_path` | `SET search_path = public` で固定する（呼び出し側が作ったスキーマの同名の表・関数を使わせない）。トリガーの関数も同じ |
+| 実行の権限 | 作成の後に `REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC, anon` を書き、呼ばせる相手だけに `GRANT EXECUTE`（`authenticated` / `service_role`）。サーバーだけから呼ぶ関数は `authenticated` からも外す。anon には与えない（未ログインの処理はサーバーの service_role から呼ぶ）。トリガーの関数は直接呼べないため不要 |
+| 呼び出し元の確認 | `authenticated` が実行できる関数は、中で `auth.uid()`・`auth.jwt()` か、それを使う共通の関数（`get_jwt_user_type()`・`is_system_admin()`・`get_jwt_client_id()`・`fn_assert_actor_or_admin()`・`private.get_monitor_client_id()` 等）で、呼び出し元が対象を扱ってよいかを確かめる |
+| admin の権利 | admin の利用者には教材担当（`roles` が `content_manager` だけ）もいるため、関数・RLS で admin に許す操作は `is_system_admin()`（`user_type` が `'0'` で JWT の `roles` に `admin`）で判定し、`get_jwt_user_type() = '0'` だけで許さない。教材担当にも開く表（チャット・TTS の音声・AI のナレッジ）だけは `get_jwt_user_type() = '0'` で判定する |
+| 内部の共通の関数 | 他の関数の中からだけ呼ぶものは `private` スキーマに置き、`authenticated` にも実行させない |
+
+正本のファイルの書き忘れは単体テスト（`testing/unit/ddl-function-security.test.ts`）、実DBの状態は `schema.mjs --check`（「ずれの確認」）で止めます。
+確かめずに `authenticated` に実行させる関数を作る場合は、テストの `UNCHECKED_CALLER` に理由とともに書きます。

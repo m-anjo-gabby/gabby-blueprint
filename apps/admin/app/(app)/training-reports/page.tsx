@@ -1,10 +1,10 @@
-import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 import { PageSkeleton } from '@gabby/lib/components/common/PageSkeleton';
 import { currentReportingMonth } from '@gabby/lib/date/reporting';
 import { MonthSwitcher } from '@/components/common/MonthSwitcher';
-import { TrainingReportSection } from './_components/TrainingReportSection';
 import { PageHeader } from '@/components/common/PageHeader';
+import { TrainingReportSection } from './_components/TrainingReportSection';
 
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 

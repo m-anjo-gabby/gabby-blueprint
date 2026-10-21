@@ -10,8 +10,8 @@
 CREATE TABLE public.com_t_user_session_ticket_history (
     history_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     ticket_id                uuid         NOT NULL,
-    contract_id              uuid         REFERENCES public.com_m_contract(contract_id),
-    user_id                  uuid         REFERENCES public.com_m_user(id),
+    contract_id              uuid         REFERENCES public.com_m_contract(contract_id) ON DELETE RESTRICT,
+    user_id                  uuid         REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     action                   text         NOT NULL,
     sessions_delta           smallint     NOT NULL,
     used_sessions_after      smallint     NOT NULL,
@@ -37,10 +37,8 @@ CREATE INDEX idx_session_ticket_history_user ON public.com_t_user_session_ticket
 
 ALTER TABLE public.com_t_user_session_ticket_history ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view relevant session ticket history" ON public.com_t_user_session_ticket_history FOR SELECT TO authenticated
+CREATE POLICY "Users can view their own session ticket history" ON public.com_t_user_session_ticket_history FOR SELECT TO authenticated
 USING (
-    user_id = auth.uid() OR (contract_id IN ( SELECT com_m_contract.contract_id
-       FROM public.com_m_contract
-      WHERE com_m_contract.client_id = public.get_jwt_client_id()))
+    user_id = auth.uid()
 );
 -- @end-schema

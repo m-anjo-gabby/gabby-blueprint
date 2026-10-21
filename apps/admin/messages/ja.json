@@ -7,6 +7,7 @@
     "back": "戻る",
     "save": "保存",
     "loading": "読込中...",
+    "reload": "再読み込み",
     "systemError": "システムエラーが発生しました。",
     "networkError": "通信エラーが発生しました",
     "guestFallback": "Guest",
@@ -55,7 +56,33 @@
     },
     "monthLabel": "{year}年{month}月",
     "prevMonth": "前月",
-    "nextMonth": "翌月"
+    "nextMonth": "翌月",
+    "errors": {
+      "unexpected": "予期せぬエラーが発生しました",
+      "sessionExpired": "セッションが切れています。再度ログインしてください。",
+      "fileRequired": "ファイルが選択されていません",
+      "uploadFailed": "アップロードに失敗しました",
+      "saveFailed": "保存に失敗しました",
+      "deleteFailed": "削除に失敗しました",
+      "invalidInput": "入力内容を確認してください",
+      "loadFailed": "読み込めませんでした。再読み込みしてください。"
+    },
+    "results": {
+      "registered": "登録しました",
+      "deleted": "削除しました",
+      "saved": "保存しました",
+      "audioUpdated": "音声を更新しました"
+    },
+    "fallback": {
+      "contract": "不明な契約",
+      "plan": "不明なプラン"
+    },
+    "userType": {
+      "admin": "管理者",
+      "student": "生徒",
+      "coach": "コーチ",
+      "unknown": "不明"
+    }
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -63,6 +90,7 @@
     "contracts": "契約管理",
     "liveSessions": "ライブセッション管理",
     "users": "ユーザー管理",
+    "trialApplications": "Webトライアル申込",
     "terms": "規約管理",
     "timezones": "タイムゾーン管理",
     "contents": "教材管理",
@@ -226,7 +254,9 @@
       "actions": "操作",
       "searchPlaceholder": "検索語句を入力...",
       "noData": "データが見つかりませんでした。",
-      "allUserTypes": "すべての区分"
+      "allUserTypes": "すべての区分",
+      "statusWithdrawn": "退会済み",
+      "statusSuspended": "停止中"
     },
     "detail": {
       "backToList": "ユーザー管理へ戻る",
@@ -251,7 +281,36 @@
         "userId": "ユーザーID",
         "copyId": "ユーザーIDをコピー",
         "lastSignIn": "最終ログイン",
-        "neverSignedIn": "未ログイン"
+        "neverSignedIn": "未ログイン",
+        "accountActionsTitle": "アカウントの操作"
+      },
+      "account": {
+        "activeNote": "利用中です。停止するとログインできなくなります（データはそのまま残り、再開できます）。",
+        "suspendedNote": "停止中です。ログインできません。",
+        "withdrawnNote": "退会済みです。個人情報は消去済みで、セッション・学習等の記録だけが「退会済みユーザー」として残っています。",
+        "suspend": "利用を停止する",
+        "resume": "利用を再開する",
+        "suspendConfirmTitle": "利用を停止しますか？",
+        "suspendConfirmBody": "このユーザーはログインできなくなります。ライセンス・予定はそのまま残ります（必要に応じてライセンスの停止・セッションのキャンセルを別に行ってください）。",
+        "toastSuspended": "利用を停止しました",
+        "toastResumed": "利用を再開しました",
+        "toastWithdrawn": "退会の処理が完了しました",
+        "toastFailed": "処理に失敗しました",
+        "withdrawTitle": "退会（個人情報の消去）",
+        "withdrawDescription": "利用規約に基づく削除の申し出に対応します。この操作は取り消せません。",
+        "withdraw": "退会させる",
+        "withdrawConfirmTitle": "退会させますか？（取り消せません）",
+        "withdrawConfirmLead": "このユーザーの個人情報を消去し、ログインのアカウントを削除します。",
+        "withdrawErased": "消えるもの: 氏名・メールアドレス・正式氏名・プロフィール画像・コーチのプロフィール・お気に入り・通知・メールの記録・宿題・コーチのメモ",
+        "withdrawKept": "残るもの（「退会済みユーザー」として）: セッション・チケット・ライセンス・評価・研修レポート・学習の記録・チャットの本文",
+        "withdrawPrecondition": "有効なライセンス・今後のセッション・回答待ちの申請・稼働中の定期予定がある場合は、先に停止・キャンセルしてください。",
+        "withdrawInputLabel": "確認のため、ユーザーの表示名を入力してください",
+        "withdrawErrors": {
+          "active_license": "有効なライセンスがあります。先にライセンスを停止してください",
+          "scheduled_session": "今後のセッションがあります。先にキャンセルしてください",
+          "active_matching": "回答待ちの申請または稼働中の定期予定があります。先に終了してください",
+          "name_mismatch": "表示名が一致しません"
+        }
       }
     },
     "form": {
@@ -507,6 +566,32 @@
       "sourceLegacy": "移行データ",
       "sourceInitial": "初期値",
       "unknownStudent": "（不明）"
+    },
+    "errors": {
+      "reasonRequired": "理由の入力は必須です",
+      "adminInfoFailed": "管理者情報の取得に失敗しました。再ログイン後にお試しください",
+      "userNotFound": "対象ユーザーが見つかりませんでした",
+      "impersonateRoleOnly": "生徒・コーチアカウントのみ代理ログインできます",
+      "authUserNotFound": "対象ユーザーの認証情報が見つかりませんでした",
+      "auditLogFailed": "監査ログの記録に失敗しました",
+      "loginLinkFailed": "ログインリンクの発行に失敗しました",
+      "portalUrlMissing": "ポータルのURL設定が見つかりませんでした",
+      "invalidLevel": "レベルの値が不正です。",
+      "levelUpdateFailed": "レベルの更新に失敗しました。",
+      "invalidStage": "ステージの値が不正です。",
+      "sameStage": "現在と同じステージが指定されています。",
+      "stageUpdateFailed": "ステージの更新に失敗しました。",
+      "levelManagedFailed": "レベル管理の設定に失敗しました。",
+      "emailExists": "登録済みメールです。",
+      "emailInviting": "招待中（本登録前）のメールアドレスです。招待メールを再送してください。",
+      "createDataFailed": "データの作成に失敗しました。",
+      "inviteMailFailed": "招待メールの送信に失敗しました",
+      "createAccountFailed": "アカウントの作成に失敗しました。",
+      "invitationNotFound": "対象の招待データが見つからないか、既に登録が完了しています。",
+      "resendFailed": "メールの再送に失敗しました。",
+      "authUpdateFailed": "認証情報の更新に失敗しました",
+      "userUpdateFailed": "ユーザー情報の更新に失敗しました",
+      "createInvitationFailed": "招待データの作成に失敗しました"
     }
   },
   "paymentSettings": {
@@ -518,13 +603,26 @@
     "rateAmountLabel": "単価",
     "currencyCodeLabel": "通貨コード",
     "saveRate": "単価を保存",
-    "toastRateUpdated": "セッション単価を更新しました"
+    "toastRateUpdated": "セッション単価を更新しました",
+    "errors": {
+      "invalidRate": "単価には0以上の数値を指定してください。",
+      "currencyRequired": "通貨コードを指定してください。",
+      "rateUpdateFailed": "セッション単価の更新に失敗しました。"
+    }
   },
   "notification": {
     "title": "通知",
     "subtitle": "システムから届いた通知の一覧です。",
     "itemsLabel": "件",
-    "empty": "現在通知はありません"
+    "empty": "現在通知はありません",
+    "dropdown": {
+      "bellLabel": "通知",
+      "title": "通知",
+      "unreadBadge": "{count} 未読",
+      "markAllRead": "すべて既読にする",
+      "empty": "通知はありません",
+      "viewAll": "すべて見る →"
+    }
   },
   "profile": {
     "page": {
@@ -564,6 +662,14 @@
       "submitLabel": "パスワードを更新",
       "submitLoadingLabel": "更新中...",
       "backToDashboard": "ダッシュボードに戻る"
+    },
+    "errors": {
+      "fileTooLarge": "ファイルサイズは5MBまでです。",
+      "invalidImageType": "PNG・JPEG・WebP形式の画像のみアップロードできます。",
+      "iconUploadFailed": "画像のアップロードに失敗しました。",
+      "profileUpdateFailed": "プロフィールの更新に失敗しました。",
+      "timezoneUnavailable": "選択されたタイムゾーンは利用できません。",
+      "timezoneUpdateFailed": "タイムゾーンの更新に失敗しました。"
     }
   },
   "clients": {
@@ -583,7 +689,8 @@
       "industryNotSet": "未設定",
       "registeredDateHeader": "登録日",
       "searchPlaceholder": "顧客名で検索...",
-      "noData": "顧客データが見つかりませんでした。"
+      "noData": "顧客データが見つかりませんでした。",
+      "endedBadge": "取引終了"
     },
     "form": {
       "createButton": "新規登録",
@@ -614,7 +721,40 @@
       "toastCreated": "顧客を登録しました",
       "toastUpdated": "顧客を更新しました",
       "toastGenericFailed": "処理に失敗しました",
-      "toastSystemError": "システムエラーが発生しました"
+      "toastSystemError": "システムエラーが発生しました",
+      "statusLabel": "取引状態",
+      "statusActive": "取引中",
+      "statusEnded": "取引終了"
+    },
+    "purge": {
+      "title": "顧客の削除（関連するデータをすべて削除）",
+      "description": "テスト・営業用デモ・誤って作った顧客を、所属するユーザー・契約・記録ごと削除します。この操作は取り消せません。",
+      "button": "顧客を削除する",
+      "confirmTitle": "顧客をすべてのデータごと削除しますか？（取り消せません）",
+      "confirmLead": "次のデータが削除されます。",
+      "confirmNote": "実際の顧客の取引を終える場合は、削除ではなく「取引状態」を取引終了にしてください。",
+      "inputLabel": "確認のため、顧客名を入力してください",
+      "toastPurged": "顧客を削除しました",
+      "counts": {
+        "students": "生徒",
+        "coaches": "コーチ",
+        "invitations": "招待中",
+        "contracts": "契約",
+        "licenses": "ライセンス",
+        "sessions": "セッション",
+        "trainings": "学習の記録",
+        "chat_messages": "チャットのメッセージ",
+        "notices": "お知らせ",
+        "calendar_events": "イベント"
+      },
+      "errors": {
+        "protected_client": "この顧客（初期テナント・Webトライアル）は削除できません",
+        "has_admin": "管理者が所属しているため削除できません",
+        "linked_to_other_client": "他の顧客のユーザーとのセッション・担当関係等があるため削除できません",
+        "client_not_found": "顧客が見つかりません",
+        "name_mismatch": "顧客名が一致しません",
+        "unexpected": "削除に失敗しました"
+      }
     }
   },
   "timezones": {
@@ -630,12 +770,14 @@
       "currentTimeHeader": "現地の現在日時",
       "actionsHeader": "操作",
       "deleteDialogTitle": "タイムゾーンの削除",
-      "deleteDialogBody": "「<bold>{name}</bold>」を削除してもよろしいですか？ 既にこのタイムゾーンを設定しているユーザーには影響しませんが、選択肢からは表示されなくなります。",
+      "deleteDialogBody": "「<bold>{name}</bold>」を削除してもよろしいですか？ この操作は取り消せません。ユーザー等が使っているタイムゾーンは削除できないため、編集で「使用中」をオフにしてください。",
       "deleteConfirm": "削除する",
       "searchPlaceholder": "タイムゾーン名、表示名称で検索...",
       "noData": "タイムゾーンデータが見つかりませんでした。",
       "toastDeleted": "タイムゾーンを削除しました",
-      "toastDeleteFailed": "削除に失敗しました"
+      "toastDeleteFailed": "削除に失敗しました",
+      "inactiveBadge": "使用停止",
+      "toastInUse": "ユーザー等が使っているため削除できません。編集で「使用中」をオフにしてください"
     },
     "form": {
       "createButton": "新規登録",
@@ -675,7 +817,10 @@
       "toastCreated": "タイムゾーンを登録しました",
       "toastUpdated": "タイムゾーンを更新しました",
       "toastGenericFailed": "処理に失敗しました",
-      "toastSystemError": "システムエラーが発生しました"
+      "toastSystemError": "システムエラーが発生しました",
+      "isActiveLabel": "使用中",
+      "isActiveOn": "タイムゾーンの選択肢に表示します",
+      "isActiveOff": "使用停止。選択肢に表示しません（設定済みのユーザーはそのまま使えます）"
     }
   },
   "terms": {
@@ -997,6 +1142,11 @@
       "recordButton": "記録",
       "correctButton": "修正",
       "noData": "該当する記録はありません"
+    },
+    "errors": {
+      "slotTaken": "この枠には既にリクエストまたはマッチングが存在します",
+      "usedUpBeforeCoachChange": "この枠は、コーチ交代前のセッションで契約の回数を使い切っているため、マッチングできません",
+      "noBookableSessions": "このコーチの指定の時間帯は、契約期間内に予約できる回がありません（全ての回が他の予定と重なっています）"
     }
   },
   "monthlyReports": {
@@ -1054,6 +1204,12 @@
     },
     "invoiceButton": {
       "button": "請求書(INVOICE)PDF"
+    },
+    "errors": {
+      "fetchFailed": "レポートの取得に失敗しました。",
+      "unfinishedSessions": "終了処理未実施のセッションが残っているため承認できません。先に該当セッションの終了処理を完了してください。",
+      "approveFailed": "承認に失敗しました。",
+      "unapproveFailed": "承認の取消しに失敗しました。"
     }
   },
   "notice": {
@@ -1201,6 +1357,17 @@
       "ctaClicked": "ボタンを押した",
       "ctaRateOfRead": "既読の{rate}%",
       "ctaClickedAtHeader": "ボタンを押した日時 (JST)"
+    },
+    "errors": {
+      "invalidDisplayMode": "表示方法が正しくありません",
+      "coachHomeNotAllowed": "コーチ向けのお知らせでは「ホームのカード」を選べません",
+      "ctaBothRequired": "行動ボタンは文言とリンク先を両方入力してください",
+      "ctaLabelTooLong": "行動ボタンの文言は{max}文字以内で入力してください",
+      "ctaUrlInvalid": "行動ボタンのリンク先は「/」で始まるアプリ内の画面か「https://」で始まるURLを入力してください",
+      "invalidPublishStart": "有効な公開開始日時を入力してください",
+      "imageRequired": "画像が選択されていません",
+      "imageType": "画像はPNG・JPEG・WebPのいずれかを選んでください",
+      "imageTooLarge": "画像は2MB以下のファイルを選んでください"
     }
   },
   "calendarEvents": {
@@ -1281,7 +1448,8 @@
       "allTypes": "すべての種別",
       "allStatuses": "すべての公開状態",
       "toastDeleted": "カレンダーイベントを削除しました",
-      "toastDeleteFailed": "削除に失敗しました"
+      "toastDeleteFailed": "削除に失敗しました",
+      "toastDeleteHeld": "開催済みのイベントは削除できません。参加の記録を残すため、編集で非公開にしてください"
     },
     "formDialog": {
       "createButton": "新規登録",
@@ -1416,6 +1584,10 @@
         "clientRequired": "対象の顧客を選択してください"
       },
       "searchPlaceholder": "シリーズ名で検索..."
+    },
+    "errors": {
+      "invalidStartDatetime": "開始日時が不正です",
+      "titleAndBodyRequired": "タイトルと本文は必須です"
     }
   },
   "chat": {
@@ -1535,6 +1707,21 @@
       "toastDeleteFailed": "メッセージの削除に失敗しました",
       "deleteTooltip": "削除する",
       "yesterdayLabel": "昨日"
+    },
+    "errors": {
+      "unauthorized": "セッションが切れています。再度ログインしてください。",
+      "forbidden": "この操作を行う権限がありません",
+      "not_found": "対象が見つかりませんでした",
+      "invalid_input": "入力内容を確認してください",
+      "two_users_required": "異なる2人のユーザーを選択してください",
+      "room_name_required": "ルーム名を入力してください",
+      "participants_required": "参加者を2人以上選択してください",
+      "invalid_members": "この組み合わせの参加者ではルームを作成できません",
+      "min_participants": "グループルームの参加者をこれ以上減らせません",
+      "already_member": "このユーザーは既に参加しています",
+      "not_member": "このユーザーはこのルームに参加していません",
+      "not_group_room": "参加者を管理できるのはグループルームだけです",
+      "unexpected_error": "予期せぬエラーが発生しました"
     }
   },
   "contracts": {
@@ -1701,10 +1888,12 @@
         "searchPlaceholder": "プラン名、コードで検索...",
         "noData": "プランデータが見つかりませんでした。",
         "deleteDialogTitle": "プランの削除",
-        "deleteDialogBody": "プラン「<bold>{name}</bold>」を削除してもよろしいですか？既にこのプランを選択して作成された契約には影響しません（選択肢から消えるのみです）。",
+        "deleteDialogBody": "「<bold>{name}</bold>」を削除してもよろしいですか？ この操作は取り消せません。契約で使われているプランは削除できないため、編集で「販売中」をオフにしてください。",
         "deleteConfirm": "削除する",
         "toastDeleted": "プランを削除しました",
-        "toastDeleteFailed": "削除に失敗しました"
+        "toastDeleteFailed": "削除に失敗しました",
+        "inactiveBadge": "販売終了",
+        "toastInUse": "契約で使われているため削除できません。編集で「販売中」をオフにしてください"
       },
       "formDialog": {
         "createButton": "新規登録",
@@ -1750,8 +1939,32 @@
         "toastCreated": "プランを登録しました",
         "toastUpdated": "プランを更新しました",
         "toastGenericFailed": "処理に失敗しました",
-        "toastSystemError": "システムエラーが発生しました"
+        "toastSystemError": "システムエラーが発生しました",
+        "isActiveLabel": "販売中",
+        "isActiveOn": "契約の作成でプランの選択肢に表示します",
+        "isActiveOff": "販売終了。選択肢に表示しません（作成済みの契約には影響しません）"
       }
+    },
+    "errors": {
+      "overlapLicense": "このユーザーは既に期間が重なるライセンス「{contractName}」（{start}〜{end}）を保有しているため割当できません",
+      "duplicateContractName": "この顧客には同じ契約名の契約が既に存在します。別の契約名を入力してください",
+      "planNotFound": "選択されたプランが見つかりませんでした",
+      "licenseCheckFailed": "既存ライセンスの確認に失敗しました",
+      "maxBelowAssigned": "既に{count}件のライセンスが割り当てられているため、上限をそれ未満に変更できません",
+      "licenseOutsidePeriod": "既存のライセンス期間が新しい契約期間からはみ出すため、契約期間を変更できません（対象ライセンスの期間を先に調整してください）",
+      "contractCheckFailed": "契約情報の確認に失敗しました",
+      "hasLicenses": "ライセンスが割り当てられているため削除できません",
+      "hasLicenseHistory": "過去にライセンス発行の実績があるため、この契約は削除できません",
+      "contractNotFound": "対象の契約情報が見つかりませんでした",
+      "licenseWithinContract": "ライセンス期間は契約期間内で指定してください",
+      "assignmentCheckFailed": "割当状況の確認に失敗しました",
+      "limitReached": "上限数に達しているため追加できません",
+      "concurrentAssign": "同時に別の操作でライセンスが登録されたため、この期間には割当できません。最新の状態を確認してやり直してください。",
+      "licenseNotFound": "対象のライセンスが見つかりませんでした",
+      "startAfterEnd": "開始日は終了日以前を指定してください",
+      "concurrentUpdate": "同時に別の操作でライセンスが登録・変更されたため、この期間には設定できません。最新の状態を確認してやり直してください。",
+      "allUsersOverlap": "対象ユーザーは全員、期間が重複する既存のライセンスを保有しているため割当できません",
+      "concurrentBulkAssign": "同時に別の操作でライセンスが登録されたため、一括割当に失敗しました。対象ユーザーを見直し再実行してください。"
     }
   },
   "tools": {
@@ -1882,7 +2095,10 @@
         "errors": {
           "wordRequired": "英単語は必須です",
           "posRequired": "品詞を選択してください",
-          "jaRequired": "日本語訳は必須です"
+          "jaRequired": "日本語訳は必須です",
+          "syllablesRequired": "音節は必須です",
+          "stressVowelRequired": "下線を引く母音の綴りは必須です",
+          "cvIdRequired": "Color Vowel を選択してください"
         }
       },
       "bulkImportDialog": {
@@ -1944,6 +2160,14 @@
         "confirmBody": "<bold>{count}</bold> 件の音声ファイルを生成します。既存の音声は上書きされます。",
         "errorDialogTitle": "処理完了（エラーあり）",
         "errorDialogBody": "一括生成が完了しましたが、一部にエラーがありました。"
+      },
+      "errors": {
+        "invalidEntry": "不正なデータが含まれています: {word} ({partOfSpeech})"
+      }
+    },
+    "ttsDesigner": {
+      "results": {
+        "assetSaved": "資産を保存しました"
       }
     }
   },
@@ -1967,7 +2191,8 @@
         "word": "単語を編集",
         "sprint": "問題を編集",
         "dialogue": "セッションを編集"
-      }
+      },
+      "unpublishedBadge": "非公開"
     },
     "formDialog": {
       "createButton": "新規登録",
@@ -2023,7 +2248,10 @@
         "sprintThemeRequired": "コーパススプリントの場合はテーマを入力してください",
         "sprintSupportRequired": "少なくとも1つの問題種別を有効にしてください",
         "dialogueCategoryRequired": "セット分類を選択してください"
-      }
+      },
+      "statusLabel": "公開状態",
+      "statusPublished": "公開",
+      "statusUnpublished": "非公開"
     },
     "accessDialog": {
       "toastFetchFailed": "データ取得に失敗しました",
@@ -2225,6 +2453,7 @@
           "errorWordEnEmpty": "単語(word_en)が空です。",
           "errorWordJaEmpty": "和訳(word_ja)が空です。",
           "errorRankInvalid": "ランクに数値以外が入力されています: \"{value}\"",
+          "errorPhraseTypeInvalid": "フレーズ種別は1〜5で入力してください: \"{value}\"",
           "toastImported": "{count}件の単語を処理しました",
           "toastSaveFailed": "保存中にエラーが発生しました",
           "toastSystemError": "システムエラーが発生しました",
@@ -2338,7 +2567,8 @@
           "deleteDialogTitle": "セッションを削除しますか？",
           "deleteDialogHint": "この操作は取り消せません。",
           "cancelButton": "キャンセル",
-          "deleteConfirmButton": "削除する"
+          "deleteConfirmButton": "削除する",
+          "deleteInUse": "進捗・会話の記録があるため削除できません"
         },
         "sessionFormDialog": {
           "createButton": "セッション追加",
@@ -2361,6 +2591,14 @@
           }
         }
       }
+    },
+    "errors": {
+      "sessionNoInUse": "このセッション番号は既に使用されています",
+      "duplicateSeqNo": "表示順 (Seq No) が重複しています。",
+      "invalidLevel": "移動先のレベルが正しくありません",
+      "noQuestionsSelected": "問題が選択されていません",
+      "questionsNotFound": "対象の問題が見つかりませんでした",
+      "sameLevel": "移動先が現在と同じレベルです"
     }
   },
   "companyProfiles": {
@@ -2395,7 +2633,6 @@
     "toastUpdated": "会社情報を更新しました",
     "toastLogoUpdated": "ロゴ画像を更新しました",
     "errors": {
-      "forbidden": "この操作を行う権限がありません。",
       "invalidCompany": "対象の法人が正しくありません。",
       "required": "会社名（英語）と住所は必須です。",
       "updateFailed": "会社情報の更新に失敗しました。",
@@ -2433,5 +2670,32 @@
     },
     "pdfButton": "PDF",
     "downloadFailed": "レポートの作成に失敗しました。時間をおいて再度お試しください。"
+  },
+  "trialApplications": {
+    "page": {
+      "title": "Webトライアル申込",
+      "subtitle": "Webトライアルの申込と、本登録（パスワード設定）の状況を確認します"
+    },
+    "dataTable": {
+      "searchPlaceholder": "氏名・ローマ字・メールで検索",
+      "appliedAtHeader": "申込日時",
+      "applyCount": "{count}回目の申込",
+      "nameHeader": "氏名",
+      "occupationHeader": "業種・職業",
+      "referralHeader": "知ったきっかけ",
+      "allOccupations": "すべての業種",
+      "locationHeader": "国・都市 / タイムゾーン",
+      "messageHeader": "ご要望・ご質問",
+      "statusHeader": "状態",
+      "allStatuses": "すべての状態",
+      "status": {
+        "invited": "招待中",
+        "registered": "登録済み",
+        "expired": "期限切れ"
+      },
+      "acceptedAt": "本登録 {date}",
+      "expiresAt": "期限 {date}",
+      "noData": "申込はありません"
+    }
   }
 }

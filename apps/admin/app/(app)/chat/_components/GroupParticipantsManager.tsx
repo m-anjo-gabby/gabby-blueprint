@@ -1,19 +1,21 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Loader2, Trash2, UserPlus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useTranslations } from 'next-intl';
+import { useMemo, useState } from 'react';
+import { addChatRoomMember, getChatRoomTargetUsers, removeChatRoomMember } from '@gabby/lib/chat/actions/roomActions';
 import { ChatAvatar } from '@gabby/lib/components/chat/ChatAvatar';
-import { getUserTypeLabel, USER_TYPES, UserType } from '@gabby/types/user';
-import { ChatRoomMemberSummary, ChatTargetUser } from '@gabby/types/chat';
-import { ClientOption } from '@gabby/types/client';
-import { getChatRoomTargetUsers, addChatRoomMember, removeChatRoomMember } from '@gabby/lib/chat/actions/roomActions';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type ChatRoomMemberSummary, type ChatTargetUser } from '@gabby/types/chat';
+import { type ClientOption } from '@gabby/types/client';
+import { USER_TYPES, type UserType } from '@gabby/types/user';
 import { getClientsFilter } from '@/actions/adminClientAction';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { UserTypeLabel } from '@/components/common/UserTypeLabel';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useChatErrorMessage } from './useChatErrorMessage';
 
 const SELECTABLE_USER_TYPES: UserType[] = [USER_TYPES.ADMIN, USER_TYPES.STUDENT, USER_TYPES.COACH];
 const MIN_GROUP_ROOM_MEMBERS = 2;
@@ -32,6 +34,7 @@ interface GroupParticipantsManagerProps {
 export function GroupParticipantsManager({ roomId, members, onChanged }: GroupParticipantsManagerProps) {
   const t = useTranslations('chat.manageParticipantsDialog');
   const tCommon = useTranslations('chat.common');
+  const chatErrorMessage = useChatErrorMessage();
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
@@ -54,7 +57,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
       if (usersRes.success) {
         setCandidateUsers(usersRes.data);
       } else {
-        showToast(usersRes.error || t('toastUsersFetchFailed'), 'error');
+        showToast(chatErrorMessage(usersRes.errorCode, t('toastUsersFetchFailed')), 'error');
       }
       setClients(clientsRes);
     } finally {
@@ -78,7 +81,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
           value: u.id,
           label: `${u.user_name || tCommon('unnamed')}${u.client_id ? ` - ${clientNameById.get(u.client_id) || tCommon('unknownClient')}` : ''}`,
         })),
-    [candidateUsers, currentMemberIds, addUserType, addClientId, clientNameById, tCommon]
+    [candidateUsers, currentMemberIds, addUserType, addClientId, clientNameById, tCommon],
   );
 
   const handleAdd = async () => {
@@ -86,8 +89,8 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
     setIsAdding(true);
     try {
       const res = await addChatRoomMember({ roomId, userId: addUserId });
-      if (!res.success || !res.member) {
-        showToast(res.error || t('toastAddFailed'), 'error');
+      if (!res.success) {
+        showToast(chatErrorMessage(res.errorCode, t('toastAddFailed')), 'error');
         return;
       }
       setAddUserId('');
@@ -106,7 +109,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
     const ok = await showConfirm(
       t('removeConfirmTitle'),
       t('removeConfirmBody', { name: member.user_name || tCommon('unnamed') }),
-      { variant: 'danger', isModal: true }
+      { variant: 'danger', isModal: true },
     );
     if (!ok) return;
 
@@ -114,7 +117,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
     try {
       const res = await removeChatRoomMember({ roomId, userId: member.user_id });
       if (!res.success) {
-        showToast(res.error || t('toastRemoveFailed'), 'error');
+        showToast(chatErrorMessage(res.errorCode, t('toastRemoveFailed')), 'error');
         return;
       }
       onChanged();
@@ -140,7 +143,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{member.user_name || tCommon('unnamed')}</p>
                 <p className="truncate text-[11px] text-ink-subtle">
-                  {getUserTypeLabel(member.user_type)}
+                  <UserTypeLabel type={member.user_type} />
                   {member.client_name ? ` · ${member.client_name}` : ''}
                 </p>
               </div>
@@ -177,7 +180,7 @@ export function GroupParticipantsManager({ roomId, members, onChanged }: GroupPa
             <TabsList className="grid w-full grid-cols-3">
               {SELECTABLE_USER_TYPES.map((type) => (
                 <TabsTrigger key={type} value={type} disabled={isLoadingCandidates}>
-                  {getUserTypeLabel(type)}
+                  <UserTypeLabel type={type} />
                 </TabsTrigger>
               ))}
             </TabsList>

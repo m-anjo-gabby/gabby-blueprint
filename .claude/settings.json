@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(node supabase/release/run.mjs *--env=staging*)",
+      "Bash(node supabase/release/run.mjs *--env=prod*)",
+      "Bash(pnpm vercel-env *--env=staging*)",
+      "Bash(pnpm vercel-env *--env=prod*)",
+      "Bash(node scripts/vercel-env/run.mjs *--env=staging*)",
+      "Bash(node scripts/vercel-env/run.mjs *--env=prod*)",
+      "Bash(*workflow run*staging*)",
+      "Bash(*workflow run*production*)",
+      "Bash(git push*--force*)",
+      "Bash(git push* -f*)",
+      "Bash(git push* main*)",
+      "Bash(git push* staging*)",
+      "PowerShell(node supabase/release/run.mjs *--env=staging*)",
+      "PowerShell(node supabase/release/run.mjs *--env=prod*)",
+      "PowerShell(pnpm vercel-env *--env=staging*)",
+      "PowerShell(pnpm vercel-env *--env=prod*)",
+      "PowerShell(*workflow run*staging*)",
+      "PowerShell(*workflow run*production*)",
+      "PowerShell(git push*--force*)",
+      "PowerShell(git push* main*)",
+      "PowerShell(git push* staging*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-and-lint.mjs\"",
+            "timeout": 60,
+            "statusMessage": "Prettier・ESLint で確認しています"
+          }
+        ]
+      }
+    ]
+  }
+}

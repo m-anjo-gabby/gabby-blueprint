@@ -1,4 +1,4 @@
-import type { NotificationType, NotificationText } from './notification';
+import type { NotificationText, NotificationType } from './notification';
 
 /**
  * 通知の英語の表示テキスト（コーチ向け。コーチアプリの通知センターと、コーチ宛ての通知メールで共有する）。
@@ -123,6 +123,17 @@ export const NOTIFICATION_MESSAGE_BUILDERS_EN: Record<
           title: 'Review your availability',
           body: 'It has been 2 weeks since your last review. Please check your times are still right (daylight saving time can shift them).',
         },
+  TRIAL_APPLIED: (payload) => ({
+    title: payload.kind === 'reapply' ? 'Web trial re-application' : 'Web trial application',
+    body: `${String(payload.applicant_name_en ?? payload.applicant_name ?? '')}: ${TRIAL_APPLIED_NOTE_EN[String(payload.kind)] ?? 'A new web trial application was received.'}`,
+  }),
+};
+
+const TRIAL_APPLIED_NOTE_EN: Record<string, string> = {
+  new: 'A new web trial application was received.',
+  reapply: 'Applied again before setting a password. The invitation was re-issued.',
+  registered: 'Applied with an already registered address. A login guide was sent.',
+  invited: 'Applied with an address that has another active invitation. Please follow up individually.',
 };
 
 /** Formats payload.report_month ("YYYY-MM-DD" etc.) as "Month YYYY" for notification body text */

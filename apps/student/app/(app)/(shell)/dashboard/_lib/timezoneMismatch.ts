@@ -1,3 +1,5 @@
+import { unstable_rethrow } from 'next/navigation';
+
 /**
  * タイムゾーン設定と端末（ブラウザ）のタイムゾーンのずれ判定。
  * ホームの日付行で、設定の誤りに気づけるようにするために使う。
@@ -7,7 +9,8 @@
 export const getDeviceTimezone = (): string | null => {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-  } catch {
+  } catch (thrown) {
+    unstable_rethrow(thrown);
     return null;
   }
 };
@@ -29,9 +32,11 @@ export const hasTimezoneMismatch = (settingZone: string, deviceZone: string, now
   if (settingZone === deviceZone) return false;
   try {
     const now = new Date(nowMs);
-    const format = (timeZone: string) => new Intl.DateTimeFormat('en-US', { ...LOCAL_TIME_FORMAT, timeZone }).format(now);
+    const format = (timeZone: string) =>
+      new Intl.DateTimeFormat('en-US', { ...LOCAL_TIME_FORMAT, timeZone }).format(now);
     return format(settingZone) !== format(deviceZone);
-  } catch {
+  } catch (thrown) {
+    unstable_rethrow(thrown);
     // 未知のタイムゾーン名などで判定できない場合は、誤警告を避けて表示しない
     return false;
   }

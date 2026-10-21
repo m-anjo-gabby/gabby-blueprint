@@ -1,16 +1,12 @@
 import { notFound } from 'next/navigation';
-import { getStudentOverview } from '@/actions/studentAction';
 import { getLessonSprintHistoryPage } from '@/actions/lessonSprintAction';
-import { LessonSprintHistoryList } from './_components/LessonSprintHistoryList';
+import { getStudentOverview } from '@/actions/studentAction';
 import { StudentChildPageHeader } from '../../../_components/StudentsSkeletons';
+import { LessonSprintHistoryList } from './_components/LessonSprintHistoryList';
 
 const HISTORY_PAGE_SIZE = 20;
 
-export default async function LessonSprintHistoryPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function LessonSprintHistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const overview = await getStudentOverview(id);
 
@@ -22,7 +18,12 @@ export default async function LessonSprintHistoryPage({
 
   return (
     <div className="space-y-6">
-      <StudentChildPageHeader studentId={id} title="Live Sprint History" studentName={overview.profile.user_name} className="max-w-2xl" />
+      <StudentChildPageHeader
+        studentId={id}
+        title="Live Sprint History"
+        studentName={overview.profile.user_name}
+        className="max-w-2xl"
+      />
 
       <div className="max-w-2xl mx-auto">
         <LessonSprintHistoryList

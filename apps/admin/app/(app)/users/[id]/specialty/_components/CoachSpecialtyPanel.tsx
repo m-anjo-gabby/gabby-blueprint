@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
 import { Save } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
+import { useState, useTransition } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { COACH_SPECIALTY_FIELD_MAX, type CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
+import { setCoachSpecialties, type CoachSpecialtySettings } from '@/actions/adminCoachSpecialtyAction';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { COACH_SPECIALTY_FIELD_MAX, CoachSpecialtyMaster } from '@gabby/types/coachSpecialty';
-import { setCoachSpecialties, type CoachSpecialtySettings } from '@/actions/adminCoachSpecialtyAction';
 
-interface Props {
+interface CoachSpecialtyPanelProps {
   coachId: string;
   settings: CoachSpecialtySettings;
 }
@@ -18,7 +18,7 @@ interface Props {
  * コーチの専門の設定（アドミンのみ）。分野は COACH_SPECIALTY_FIELD_MAX 個まで、
  * 得意分野（発音プロ）は別枠で上限に数えない。保存はコーチ1人分をまとめて置き換える。
  */
-export function CoachSpecialtyPanel({ coachId, settings }: Props) {
+export function CoachSpecialtyPanel({ coachId, settings }: CoachSpecialtyPanelProps) {
   const t = useTranslations('users.specialty');
   const tCommon = useTranslations('common');
   const locale = useLocale();
@@ -47,8 +47,10 @@ export function CoachSpecialtyPanel({ coachId, settings }: Props) {
       const result = await setCoachSpecialties(coachId, [...selected]);
       if (!result.success) {
         showToast(
-          result.errorCode === 'too_many_fields' ? t('errorTooMany', { max: COACH_SPECIALTY_FIELD_MAX }) : t('errorSave'),
-          'error'
+          result.errorCode === 'too_many_fields'
+            ? t('errorTooMany', { max: COACH_SPECIALTY_FIELD_MAX })
+            : t('errorSave'),
+          'error',
         );
         return;
       }
@@ -63,7 +65,9 @@ export function CoachSpecialtyPanel({ coachId, settings }: Props) {
         key={specialty.specialty_code}
         htmlFor={id}
         className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
-          disabled ? 'cursor-not-allowed border-slate-100 text-slate-300' : 'cursor-pointer border-slate-200 text-slate-700 hover:bg-slate-50'
+          disabled
+            ? 'cursor-not-allowed border-slate-100 text-slate-300'
+            : 'cursor-pointer border-slate-200 text-slate-700 hover:bg-slate-50'
         }`}
       >
         <Checkbox

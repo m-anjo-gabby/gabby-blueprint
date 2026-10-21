@@ -34,7 +34,7 @@ export function NoticeMeta({ notice, labels, size = 'md', className }: NoticeMet
       <span
         className={cn(
           'flex shrink-0 items-center justify-center rounded-control bg-brand-soft text-brand',
-          size === 'md' ? 'size-10' : 'size-8'
+          size === 'md' ? 'size-10' : 'size-8',
         )}
       >
         <TypeIcon size={size === 'md' ? 20 : 16} aria-hidden />
@@ -46,7 +46,9 @@ export function NoticeMeta({ notice, labels, size = 'md', className }: NoticeMet
           {labels.formatDate(notice.published_at, timezone)}
         </span>
         {notice.is_important && (
-          <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">{labels.important}</span>
+          <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">
+            {labels.important}
+          </span>
         )}
       </p>
     </div>

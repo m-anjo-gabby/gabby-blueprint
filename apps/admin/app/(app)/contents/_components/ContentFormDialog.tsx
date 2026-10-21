@@ -1,25 +1,34 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { CheckCircle2, Edit, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { z } from 'zod';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import {
+  CEFR_CONFIG,
+  CONTENT_SCOPES,
+  CONTENT_STATUS,
+  CONTENT_TYPES,
+  type Content,
+  type ContentScope,
+  type ContentStatus,
+  type ContentType,
+} from '@gabby/types/content';
+import { DIALOGUE_CATEGORIES, type DialogueCategory } from '@gabby/types/dialogue';
+import { SPRINT_TYPES } from '@gabby/types/sprint';
+import { upsertContent, type ContentUpsertInput } from '@/actions/adminContentAction';
 import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { PlusCircle, Edit, CheckCircle2 } from 'lucide-react';
-import { Content, CONTENT_SCOPES, CONTENT_TYPES, ContentScope, ContentType, CEFR_CONFIG } from '@gabby/types/content';
-import { QUESTION_TYPES, SPRINT_TYPES } from '@gabby/types/sprint';
-import { DIALOGUE_CATEGORIES, DialogueCategory } from '@gabby/types/dialogue';
-import { upsertContent } from '@/actions/adminContentAction';
-import { useRouter } from 'next/navigation';
+import { Textarea } from '@/components/ui/textarea';
 
 /**
  * --- 1. スキーマ定義 ---
@@ -32,6 +41,7 @@ function createContentSchema(t: FormT) {
     content_name_en: z.string().optional(),
     content_type: z.string().min(1, t('errors.typeRequired')),
     content_scope: z.string().min(1, t('errors.scopeRequired')),
+    status: z.string(),
     content_label: z.string().min(1, t('errors.labelRequired')),
     seq_no: z.string().min(1, t('errors.seqRequired')),
     difficulty_level: z.string().min(1, t('errors.difficultyRequired')),
@@ -85,7 +95,12 @@ function createContentSchema(t: FormT) {
         }
 
         // 少なくとも一つの問題種別が選択されているかチェック
-        if (!data.sprint_support_speed && !data.sprint_support_builders && !data.sprint_support_structure && !data.sprint_support_mastery) {
+        if (
+          !data.sprint_support_speed &&
+          !data.sprint_support_builders &&
+          !data.sprint_support_structure &&
+          !data.sprint_support_mastery
+        ) {
           ctx.addIssue({
             code: 'custom',
             message: t('errors.sprintSupportRequired'),
@@ -108,7 +123,8 @@ const DEFAULT_VALUES: ContentFormValues = {
   content_name: '',
   content_name_en: '',
   content_type: '0',
-  content_scope: '9',
+  content_scope: '0',
+  status: String(CONTENT_STATUS.UNPUBLISHED),
   content_label: '',
   seq_no: '1',
   difficulty_level: '1',
@@ -135,13 +151,14 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
   const getInitialValues = (data?: Content): ContentFormValues => {
     if (!data || mode === 'create') return DEFAULT_VALUES;
-    
+
     const sprintMeta = data.metadata?.sprint;
     return {
       content_name: data.content_name,
       content_name_en: data.content_name_en || '',
       content_type: String(data.content_type),
       content_scope: String(data.content_scope),
+      status: String(data.status),
       content_label: data.content_label,
       seq_no: String(data.seq_no),
       difficulty_level: String(data.difficulty_level || 1),
@@ -165,8 +182,8 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
   });
 
   const { isSubmitting } = form.formState;
-  const currentContentType = form.watch('content_type');
-  const currentSprintType = form.watch('sprint_type');
+  const currentContentType = useWatch({ control: form.control, name: 'content_type' });
+  const currentSprintType = useWatch({ control: form.control, name: 'sprint_type' });
 
   // 種別が変わったときにスプリント用の値をリセット・制御するためのEffect
   useEffect(() => {
@@ -186,7 +203,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       const selectedCefr = cefrKey ? CEFR_CONFIG[cefrKey] : undefined;
 
       const isSprint = values.content_type === '2';
-      
+
       // スプリントメタデータの構築
       let sprintMetadata = undefined;
       if (isSprint && values.sprint_type !== 'none') {
@@ -201,7 +218,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
               builders: values.sprint_support_builders,
               structure: values.sprint_support_structure,
               mastery: values.sprint_support_mastery,
-            }
+            },
           };
         } else {
           // 汎用スプリント ('0') の場合は固定値をセット
@@ -214,21 +231,23 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
               builders: true,
               structure: true,
               mastery: true,
-            }
+            },
           };
         }
       }
 
       const isDialogue = values.content_type === '3';
 
-      const payload: Partial<Content> = {
+      const payload: ContentUpsertInput = {
         content_name: values.content_name,
         content_name_en: values.content_name_en?.trim() || null,
         content_type: Number(values.content_type) as ContentType,
         content_scope: Number(values.content_scope) as ContentScope,
-        category_id: isDialogue && values.dialogue_category && values.dialogue_category !== 'none'
-          ? Number(values.dialogue_category)
-          : null,
+        status: Number(values.status) as ContentStatus,
+        category_id:
+          isDialogue && values.dialogue_category && values.dialogue_category !== 'none'
+            ? Number(values.dialogue_category)
+            : null,
         content_label: values.content_label,
         seq_no: Number(values.seq_no),
         difficulty_level: Number(values.difficulty_level || 1),
@@ -246,8 +265,8 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
       const result = await upsertContent(payload);
 
-      if (result.success && result.data) {
-        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), "success");
+      if (result.success) {
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success');
         setOpen(false);
         if (mode === 'create') {
           router.push(`/contents/${result.data.content_id}`);
@@ -255,7 +274,7 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
       } else {
         setServerError(result.message || t('serverErrorDefault'));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('systemError'));
     }
   };
@@ -271,7 +290,14 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild onClick={() => { setIsConfirming(false); setServerError(null); form.reset(getInitialValues(initialData)); }}>
+      <DialogTrigger
+        asChild
+        onClick={() => {
+          setIsConfirming(false);
+          setServerError(null);
+          form.reset(getInitialValues(initialData));
+        }}
+      >
         {mode === 'create' ? (
           <Button className="gap-2 font-bold shadow-sm bg-brand hover:bg-brand-strong text-white border-none">
             <PlusCircle size={16} /> {t('createButton')}
@@ -293,11 +319,17 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
         <DialogHeader className="p-6 bg-slate-900 text-white border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
+              <>
+                <CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}
+              </>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
+              <>
+                <PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}
+              </>
             ) : (
-              <><Edit size={18} className="text-brand-400" /> {t('editTitle')}</>
+              <>
+                <Edit size={18} className="text-brand-400" /> {t('editTitle')}
+              </>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -306,117 +338,209 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
           <form onSubmit={form.handleSubmit(onSubmit)} className="bg-white flex-1 flex flex-col overflow-hidden">
             <div className="p-6 space-y-4 flex-1 overflow-y-auto">
               {serverError && (
-                <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-xl font-medium">{serverError}</div>
+                <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-xl font-medium">
+                  {serverError}
+                </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 {/* 教材名称 */}
-                <FormField control={form.control} name="content_name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameLabel')}</FormLabel>
-                    {isConfirming ? (
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
-                    ) : (
-                      <FormControl><Input {...field} placeholder={t('namePlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="content_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {t('nameLabel')}
+                      </FormLabel>
+                      {isConfirming ? (
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                          {field.value}
+                        </div>
+                      ) : (
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder={t('namePlaceholder')}
+                            className="bg-white rounded-xl border-slate-200"
+                          />
+                        </FormControl>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {/* 教材名称（英語） */}
-                <FormField control={form.control} name="content_name_en" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('nameEnLabel')}</FormLabel>
-                    {isConfirming ? (
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value || '-'}</div>
-                    ) : (
-                      <FormControl><Input {...field} placeholder={t('namePlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>
-                    )}
-                    <FormDescription className="text-[11px] text-slate-400">
-                      {t('nameEnDescription')}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="content_name_en"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {t('nameEnLabel')}
+                      </FormLabel>
+                      {isConfirming ? (
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                          {field.value || '-'}
+                        </div>
+                      ) : (
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder={t('namePlaceholder')}
+                            className="bg-white rounded-xl border-slate-200"
+                          />
+                        </FormControl>
+                      )}
+                      <FormDescription className="text-[11px] text-slate-400">{t('nameEnDescription')}</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 {/* 種別 */}
-                <FormField control={form.control} name="content_type" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('typeLabel')}</FormLabel>
-                    {isConfirming ? (
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                        {CONTENT_TYPES[Number(field.value) as ContentType]?.label}
-                      </div>
-                    ) : (
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={mode === 'edit'}>
-                        <FormControl><SelectTrigger className="bg-white rounded-xl border-slate-200"><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {Object.entries(CONTENT_TYPES).map(([val, info]) => (
-                            <SelectItem key={val} value={val}>{info.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </FormItem>
-                )} />
-
-                {/* 公開範囲 */}
-                <FormField control={form.control} name="content_scope" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('scopeLabel')}</FormLabel>
-                    {isConfirming ? (
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                        {CONTENT_SCOPES[Number(field.value) as ContentScope]?.label}
-                      </div>
-                    ) : (
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger className="bg-white rounded-xl border-slate-200"><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {Object.entries(CONTENT_SCOPES).map(([val, info]) => (
-                            <SelectItem key={val} value={val}>{info.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </FormItem>
-                )} />
-              </div>
-
-              {/* --- ダイアログプラクティス選択時のみ表示する特化セクション --- */}
-              {currentContentType === '3' && (
-                <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-100/80 space-y-4">
-                  <FormField control={form.control} name="dialogue_category" render={({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">{t('dialogueCategoryLabel')}</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="content_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {t('typeLabel')}
+                      </FormLabel>
                       {isConfirming ? (
-                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-brand-100 text-slate-700 font-medium">
-                          {field.value && field.value !== 'none'
-                            ? DIALOGUE_CATEGORIES[Number(field.value) as DialogueCategory]?.label
-                            : t('dialogueCategoryUnselected')}
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                          {CONTENT_TYPES[Number(field.value) as ContentType]?.label}
                         </div>
                       ) : (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={mode === 'edit'}>
                           <FormControl>
-                            <SelectTrigger className="bg-white rounded-xl border-slate-200 focus:border-brand-500 focus:ring-brand-500">
-                              <SelectValue placeholder={t('dialogueCategoryPlaceholder')} />
+                            <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                              <SelectValue />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="none">{t('dialogueCategoryNoneOption')}</SelectItem>
-                            {Object.values(DIALOGUE_CATEGORIES).map((category) => (
-                              <SelectItem key={category.value} value={String(category.value)}>{category.label}</SelectItem>
+                            {Object.entries(CONTENT_TYPES).map(([val, info]) => (
+                              <SelectItem key={val} value={val}>
+                                {info.label}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       )}
-                      <FormDescription className="text-[11px] text-slate-400">
-                        {t('dialogueCategoryDescription')}
-                      </FormDescription>
-                      <FormMessage />
                     </FormItem>
-                  )} />
+                  )}
+                />
+
+                {/* 公開範囲 */}
+                <FormField
+                  control={form.control}
+                  name="content_scope"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {t('scopeLabel')}
+                      </FormLabel>
+                      {isConfirming ? (
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                          {CONTENT_SCOPES[Number(field.value) as ContentScope]?.label}
+                        </div>
+                      ) : (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.entries(CONTENT_SCOPES).map(([val, info]) => (
+                              <SelectItem key={val} value={val}>
+                                {info.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* 公開状態（新規作成時は非公開。使わなくなった教材も削除せずに非公開にする） */}
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('statusLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                        {field.value === String(CONTENT_STATUS.PUBLISHED)
+                          ? t('statusPublished')
+                          : t('statusUnpublished')}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={String(CONTENT_STATUS.UNPUBLISHED)}>{t('statusUnpublished')}</SelectItem>
+                          <SelectItem value={String(CONTENT_STATUS.PUBLISHED)}>{t('statusPublished')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )}
+              />
+
+              {/* --- ダイアログプラクティス選択時のみ表示する特化セクション --- */}
+              {currentContentType === '3' && (
+                <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-100/80 space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="dialogue_category"
+                    render={({ field }) => (
+                      <FormItem className="w-full">
+                        <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">
+                          {t('dialogueCategoryLabel')}
+                        </FormLabel>
+                        {isConfirming ? (
+                          <div className="p-3 bg-white rounded-xl text-sm border-2 border-brand-100 text-slate-700 font-medium">
+                            {field.value && field.value !== 'none'
+                              ? DIALOGUE_CATEGORIES[Number(field.value) as DialogueCategory]?.label
+                              : t('dialogueCategoryUnselected')}
+                          </div>
+                        ) : (
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-white rounded-xl border-slate-200 focus:border-brand-500 focus:ring-brand-500">
+                                <SelectValue placeholder={t('dialogueCategoryPlaceholder')} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">{t('dialogueCategoryNoneOption')}</SelectItem>
+                              {Object.values(DIALOGUE_CATEGORIES).map((category) => (
+                                <SelectItem key={category.value} value={String(category.value)}>
+                                  {category.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <FormDescription className="text-[11px] text-slate-400">
+                          {t('dialogueCategoryDescription')}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               )}
 
@@ -424,117 +548,186 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
               {currentContentType === '2' && (
                 <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-100/80 space-y-4">
                   {/* スプリント種別 */}
-                  <FormField control={form.control} name="sprint_type" render={({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">{t('sprintTypeLabel')}</FormLabel>
-                      {isConfirming ? (
-                        <div className="p-3 bg-white rounded-xl text-sm border-2 border-brand-100 text-slate-700 font-medium">
-                          {field.value && field.value !== 'none' ? SPRINT_TYPES[field.value as keyof typeof SPRINT_TYPES]?.label : t('sprintTypeUnselected')}
-                        </div>
-                      ) : (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-white rounded-xl border-slate-200 focus:border-brand-500 focus:ring-brand-500">
-                              <SelectValue placeholder={t('sprintTypePlaceholder')} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">{t('sprintTypeNoneOption')}</SelectItem>
-                            {Object.values(SPRINT_TYPES).map((sprint) => (
-                              <SelectItem key={sprint.value} value={sprint.value}>{sprint.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+                  <FormField
+                    control={form.control}
+                    name="sprint_type"
+                    render={({ field }) => (
+                      <FormItem className="w-full">
+                        <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">
+                          {t('sprintTypeLabel')}
+                        </FormLabel>
+                        {isConfirming ? (
+                          <div className="p-3 bg-white rounded-xl text-sm border-2 border-brand-100 text-slate-700 font-medium">
+                            {field.value && field.value !== 'none'
+                              ? SPRINT_TYPES[field.value as keyof typeof SPRINT_TYPES]?.label
+                              : t('sprintTypeUnselected')}
+                          </div>
+                        ) : (
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-white rounded-xl border-slate-200 focus:border-brand-500 focus:ring-brand-500">
+                                <SelectValue placeholder={t('sprintTypePlaceholder')} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">{t('sprintTypeNoneOption')}</SelectItem>
+                              {Object.values(SPRINT_TYPES).map((sprint) => (
+                                <SelectItem key={sprint.value} value={sprint.value}>
+                                  {sprint.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   {/* コーパススプリント ('1') 選択時のみ、追加の管理項目群を動的に展開 */}
                   {currentSprintType === '1' && (
                     <div className="pt-2 border-t border-brand-100/50 space-y-4 animate-in fade-in duration-200">
-                      
                       {/* テーマ入力 */}
-                      <FormField control={form.control} name="sprint_theme" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">{t('sprintThemeLabel')}</FormLabel>
-                          {isConfirming ? (
-                            <div className="p-3 bg-white rounded-xl text-sm border-2 border-brand-100 text-slate-700 font-bold whitespace-pre-wrap">{field.value || '-'}</div>
-                          ) : (
-                            <FormControl>
-                              <Textarea {...field} placeholder={t('sprintThemePlaceholder')} className="resize-none bg-white rounded-xl border-slate-200 min-h-[80px]" />
-                            </FormControl>
-                          )}
-                          <FormMessage />
-                        </FormItem>
-                      )} />
+                      <FormField
+                        control={form.control}
+                        name="sprint_theme"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">
+                              {t('sprintThemeLabel')}
+                            </FormLabel>
+                            {isConfirming ? (
+                              <div className="p-3 bg-white rounded-xl text-sm border-2 border-brand-100 text-slate-700 font-bold whitespace-pre-wrap">
+                                {field.value || '-'}
+                              </div>
+                            ) : (
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder={t('sprintThemePlaceholder')}
+                                  className="resize-none bg-white rounded-xl border-slate-200 min-h-[80px]"
+                                />
+                              </FormControl>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
                       {/* レベル有無の制御 (Switch) */}
-                      <FormField control={form.control} name="sprint_has_level" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-xl border border-brand-100 bg-white p-3 shadow-sm">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">{t('sprintHasLevelLabel')}</FormLabel>
-                            <FormDescription className="text-[11px] text-slate-400">
-                              {t('sprintHasLevelDescription')}
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            {isConfirming ? (
-                              <div className="text-sm font-bold text-slate-700">{field.value ? t('sprintHasLevelYes') : t('sprintHasLevelNo')}</div>
-                            ) : (
-                              <Switch checked={field.value} onCheckedChange={field.onChange} />
-                            )}
-                          </FormControl>
-                        </FormItem>
-                      )} />
+                      <FormField
+                        control={form.control}
+                        name="sprint_has_level"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-xl border border-brand-100 bg-white p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-xs font-bold text-brand uppercase tracking-wider">
+                                {t('sprintHasLevelLabel')}
+                              </FormLabel>
+                              <FormDescription className="text-[11px] text-slate-400">
+                                {t('sprintHasLevelDescription')}
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              {isConfirming ? (
+                                <div className="text-sm font-bold text-slate-700">
+                                  {field.value ? t('sprintHasLevelYes') : t('sprintHasLevelNo')}
+                                </div>
+                              ) : (
+                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                              )}
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
 
                       {/* 対応問題種別 (Checkboxグループ) */}
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-brand uppercase tracking-wider block">{t('sprintSupportLabel')}</label>
+                        <label className="text-xs font-bold text-brand uppercase tracking-wider block">
+                          {t('sprintSupportLabel')}
+                        </label>
                         <div className="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border border-brand-100 shadow-sm">
-                          
                           {/* Speed */}
-                          <FormField control={form.control} name="sprint_support_speed" render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
-                              <FormControl>
-                                <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isConfirming} />
-                              </FormControl>
-                              <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">UG Speed</FormLabel>
-                            </FormItem>
-                          )} />
+                          <FormField
+                            control={form.control}
+                            name="sprint_support_speed"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    disabled={isConfirming}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">
+                                  UG Speed
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
 
                           {/* Builders */}
-                          <FormField control={form.control} name="sprint_support_builders" render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
-                              <FormControl>
-                                <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isConfirming} />
-                              </FormControl>
-                              <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">UG Builders</FormLabel>
-                            </FormItem>
-                          )} />
+                          <FormField
+                            control={form.control}
+                            name="sprint_support_builders"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    disabled={isConfirming}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">
+                                  UG Builders
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
 
                           {/* Structure */}
-                          <FormField control={form.control} name="sprint_support_structure" render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
-                              <FormControl>
-                                <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isConfirming} />
-                              </FormControl>
-                              <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">UG Structure</FormLabel>
-                            </FormItem>
-                          )} />
+                          <FormField
+                            control={form.control}
+                            name="sprint_support_structure"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    disabled={isConfirming}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">
+                                  UG Structure
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
 
                           {/* Mastery */}
-                          <FormField control={form.control} name="sprint_support_mastery" render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
-                              <FormControl>
-                                <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isConfirming} />
-                              </FormControl>
-                              <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">UG Mastery</FormLabel>
-                            </FormItem>
-                          )} />
+                          <FormField
+                            control={form.control}
+                            name="sprint_support_mastery"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    disabled={isConfirming}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium text-slate-700 cursor-pointer">
+                                  UG Mastery
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
                         </div>
                       </div>
-
                     </div>
                   )}
                 </div>
@@ -543,77 +736,142 @@ export function ContentFormDialog({ mode = 'create', initialData }: ContentFormD
               {/* CEFR レベル & 表示順 の2カラム横並び配置 */}
               <div className="grid grid-cols-2 gap-4">
                 {/* CEFR レベル */}
-                <FormField control={form.control} name="cefr_id" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('cefrLabel')}</FormLabel>
-                    {isConfirming ? (
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
-                        {field.value && field.value !== 'none' ? field.value.toUpperCase() : t('cefrUnset')}
-                      </div>
-                    ) : (
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger className="bg-white rounded-xl border-slate-200"><SelectValue placeholder={t('cefrNoneOption')} /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">{t('cefrNoneOption')}</SelectItem>
-                          {Object.values(CEFR_CONFIG).map((cefr) => (
-                            <SelectItem key={cefr.id} value={cefr.id.toLowerCase()}>{cefr.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="cefr_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {t('cefrLabel')}
+                      </FormLabel>
+                      {isConfirming ? (
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700 font-medium">
+                          {field.value && field.value !== 'none' ? field.value.toUpperCase() : t('cefrUnset')}
+                        </div>
+                      ) : (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white rounded-xl border-slate-200">
+                              <SelectValue placeholder={t('cefrNoneOption')} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">{t('cefrNoneOption')}</SelectItem>
+                            {Object.values(CEFR_CONFIG).map((cefr) => (
+                              <SelectItem key={cefr.id} value={cefr.id.toLowerCase()}>
+                                {cefr.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </FormItem>
+                  )}
+                />
 
                 {/* 表示順 */}
-                <FormField control={form.control} name="seq_no" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('seqLabel')}</FormLabel>
-                    {isConfirming ? (
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">{field.value}</div>
-                    ) : (
-                      <FormControl><Input {...field} type="number" className="bg-white rounded-xl border-slate-200" /></FormControl>
-                    )}
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="seq_no"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {t('seqLabel')}
+                      </FormLabel>
+                      {isConfirming ? (
+                        <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 text-slate-700">
+                          {field.value}
+                        </div>
+                      ) : (
+                        <FormControl>
+                          <Input {...field} type="number" className="bg-white rounded-xl border-slate-200" />
+                        </FormControl>
+                      )}
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {/* 管理ラベル */}
-              <FormField control={form.control} name="content_label" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('labelLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">{field.value}</div>
-                  ) : (
-                    <FormControl><Input {...field} placeholder={t('labelPlaceholder')} className="bg-white rounded-xl border-slate-200" /></FormControl>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="content_label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('labelLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 font-bold text-slate-700">
+                        {field.value}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder={t('labelPlaceholder')}
+                          className="bg-white rounded-xl border-slate-200"
+                        />
+                      </FormControl>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* 説明・解析根拠 */}
-              <FormField control={form.control} name="description" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('descriptionLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-xs border-2 border-slate-100 min-h-[60px] whitespace-pre-wrap text-slate-600">{field.value || '-'}</div>
-                  ) : (
-                    <FormControl><Textarea {...field} className="resize-none bg-white rounded-xl border-slate-200 min-h-[80px]" /></FormControl>
-                  )}
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {t('descriptionLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-xs border-2 border-slate-100 min-h-[60px] whitespace-pre-wrap text-slate-600">
+                        {field.value || '-'}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          className="resize-none bg-white rounded-xl border-slate-200 min-h-[80px]"
+                        />
+                      </FormControl>
+                    )}
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* フッターアクション */}
             <div className="p-6 pt-4 border-t border-slate-100">
               {isConfirming ? (
                 <div className="flex gap-3">
-                  <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold text-slate-400" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>{t('noButton')}</Button>
-                  <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold" disabled={isSubmitting}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex-1 rounded-xl font-bold text-slate-400"
+                    onClick={() => setIsConfirming(false)}
+                    disabled={isSubmitting}
+                  >
+                    {t('noButton')}
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold"
+                    disabled={isSubmitting}
+                  >
                     {isSubmitting ? t('processing') : t('confirmButton')}
                   </Button>
                 </div>
               ) : (
-                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md" onClick={() => form.trigger().then(valid => valid && setIsConfirming(true))}>
+                <Button
+                  type="button"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 shadow-md"
+                  onClick={() => form.trigger().then((valid) => valid && setIsConfirming(true))}
+                >
                   {t('confirmDetailsButton')}
                 </Button>
               )}

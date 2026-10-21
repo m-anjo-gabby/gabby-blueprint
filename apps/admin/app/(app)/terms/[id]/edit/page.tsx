@@ -1,19 +1,15 @@
 // apps/admin/app/(app)/terms/[id]/edit/page.tsx
 import { getTranslations } from 'next-intl/server';
-import { getTermDetail } from "@/actions/adminTermAction";
-import { TermEditor } from "./_components/TermEditor";
-import { notFound } from "next/navigation";
-import { PageHeader } from '@/components/common/PageHeader';
-import type { TermDetail } from '@gabby/types/term';
+import { notFound, unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
+import type { TermDetail } from '@gabby/types/term';
+import { getTermDetail } from '@/actions/adminTermAction';
+import { PageHeader } from '@/components/common/PageHeader';
+import { TermEditor } from './_components/TermEditor';
 
 const logger = createLogger('admin');
 
-export default async function TermEditPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function TermEditPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('terms.editPage');
   const tCommon = await getTranslations('terms.common');
   const { id } = await params;
@@ -23,6 +19,7 @@ export default async function TermEditPage({
   try {
     term = await getTermDetail(id);
   } catch (error) {
+    unstable_rethrow(error);
     // データ取得中にエラーが発生した場合
     logger.error('term:get_term_detail_failed', 'Failed to load term data', { err: error });
     return (
@@ -42,7 +39,9 @@ export default async function TermEditPage({
       <PageHeader
         back={{ href: '/terms', label: t('backToList') }}
         title={t('editTitle', { version: term.version_name })}
-        description={t('subtitle', { termType: term.term_type === "TERMS" ? tCommon('termTypeTerms') : tCommon('termTypePrivacy') })}
+        description={t('subtitle', {
+          termType: term.term_type === 'TERMS' ? tCommon('termTypeTerms') : tCommon('termTypePrivacy'),
+        })}
       />
 
       {/* 保存後はリビジョン履歴が更新されるため、最新リビジョンIDをkeyにして編集状態を初期化する */}

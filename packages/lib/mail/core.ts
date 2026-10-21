@@ -12,7 +12,7 @@ export class MailSendError extends Error {
   constructor(
     message: string,
     readonly code: string | null,
-    readonly statusCode: number | null
+    readonly statusCode: number | null,
   ) {
     super(message);
     this.name = 'MailSendError';
@@ -42,10 +42,20 @@ interface SendCoreParams extends RenderedEmail {
 const DEFAULT_FROM_AUTH = 'Gabby Academy <noreply@mail.gabbyacademy.com>';
 
 /**
- * 🛠️ メール送信の共通基盤（コア）関数
+ * メール送信の共通基盤（コア）関数
  * HTML 版とテキスト版（render.ts で同じ元データから作ったもの）の両方を送る。
  */
-export async function sendCore({ to, subject, html, text, sender = 'auth', headers, kind, mailId, idempotencyKey }: SendCoreParams) {
+export async function sendCore({
+  to,
+  subject,
+  html,
+  text,
+  sender = 'auth',
+  headers,
+  kind,
+  mailId,
+  idempotencyKey,
+}: SendCoreParams) {
   if (!resend) {
     throw new MailSendError('mail:core: RESEND_API_KEY が環境変数に定義されていません。', 'missing_api_key', null);
   }
@@ -70,7 +80,7 @@ export async function sendCore({ to, subject, html, text, sender = 'auth', heade
         ...(envTag ? [{ name: 'env', value: envTag }] : []),
       ],
     },
-    idempotencyKey ? { idempotencyKey } : undefined
+    idempotencyKey ? { idempotencyKey } : undefined,
   );
 
   if (error) {

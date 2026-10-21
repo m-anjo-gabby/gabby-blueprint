@@ -1,11 +1,14 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
 import { z } from 'zod';
-import { createServerClient } from '@gabby/lib/supabase/server';
+import { getCoachMatchingStatusCore } from '@gabby/lib/coachProfile/actions/coachMatchingStatusActions';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { getCoachMatchingStatusCore } from '@gabby/lib/coachProfile/actions/coachMatchingStatusActions';
-import { CoachMatchingStatus } from '@gabby/types/coachProfile';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createServerClient } from '@gabby/lib/supabase/server';
+import { type CoachMatchingStatus } from '@gabby/types/coachProfile';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 
@@ -23,6 +26,7 @@ const setSuspensionInput = z.object({
  * コーチが生徒の「専属コーチを探す」に出るかどうかの内訳（足りない項目・本人の受付・休止とその理由）。取得に失敗した場合は null。
  */
 export async function getCoachMatchingStatus(coachId: string): Promise<CoachMatchingStatus | null> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const result = await getCoachMatchingStatusCore(coachId);
   return result.success ? result.status : null;
 }
@@ -34,8 +38,9 @@ export async function getCoachMatchingStatus(coachId: string): Promise<CoachMatc
 export async function setCoachMatchingSuspension(
   coachId: string,
   suspended: boolean,
-  note: string | null
+  note: string | null,
 ): Promise<SetCoachMatchingSuspensionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const parsed = setSuspensionInput.safeParse({ coachId, suspended, note });
   if (!parsed.success) return { success: false };
@@ -49,7 +54,11 @@ export async function setCoachMatchingSuspension(
       p_note: parsed.data.note,
     });
     if (error) {
-      logger.error('coach_matching:admin_set_suspension_failed', error.message, { ...ctx, err: error, payload: { coachId } });
+      logger.error('coach_matching:admin_set_suspension_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { coachId },
+      });
       return { success: false };
     }
 
@@ -59,7 +68,8 @@ export async function setCoachMatchingSuspension(
     });
     return { success: true };
   } catch (err) {
-    logger.error('coach_matching:admin_set_suspension_unexpected', err instanceof Error ? err.message : 'Unknown error', {
+    unstable_rethrow(err);
+    logger.error('coach_matching:admin_set_suspension_unexpected', getErrorMessage(err), {
       ...ctx,
       err,
       payload: { coachId },

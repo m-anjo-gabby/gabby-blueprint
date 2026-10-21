@@ -1,13 +1,13 @@
 import { CheckCircle2, ExternalLink } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import type { DialogueAssignmentSessionView } from '@gabby/types/dialogue';
+import { Badge } from '@/components/ui/badge';
 
-interface Props {
+interface DialogueSessionRowProps {
   session: DialogueAssignmentSessionView;
 }
 
 // 生徒用：進捗表示と教材リンクのみの読み取り専用行（完了操作・コーチメモはコーチ側の機能のため表示しない）
-export function DialogueSessionRow({ session }: Props) {
+export function DialogueSessionRow({ session }: DialogueSessionRowProps) {
   return (
     <div className="space-y-2 rounded-card border border-line bg-surface p-4 sm:p-5">
       <div className="flex items-center justify-between gap-2">

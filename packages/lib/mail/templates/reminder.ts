@@ -44,11 +44,15 @@ export function formatReminderSchedule({
   const end = endIso ? new Date(endIso) : null;
   const zone = formatZoneLabel({ timeZone, name: zoneName, at: start, language });
   if (language === 'ja') {
-    const date = new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(start);
+    const date = new Intl.DateTimeFormat('ja-JP', { timeZone, month: 'long', day: 'numeric', weekday: 'short' }).format(
+      start,
+    );
     const time = new Intl.DateTimeFormat('ja-JP', { timeZone, hour: '2-digit', minute: '2-digit' });
     return `${date} ${time.format(start)}〜${end ? time.format(end) : ''}（${zone}）`;
   }
-  const date = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' }).format(start);
+  const date = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' }).format(
+    start,
+  );
   const time = new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', minute: '2-digit' });
   return `${date}, ${time.format(start)}${end ? ` – ${time.format(end)}` : ''} (${zone})`;
 }

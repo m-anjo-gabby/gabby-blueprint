@@ -1,8 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
-import { NextResponse, type NextRequest } from 'next/server';
 import type { User } from '@supabase/supabase-js';
-import type { UserType } from '@gabby/types/user';
+import { NextResponse, type NextRequest } from 'next/server';
 import { createLogger, type createRequestLogger } from '@gabby/lib/logger';
+import type { UserType } from '@gabby/types/user';
 import { buildLoginPath, RETURN_TO_PARAM, sanitizeReturnTo } from './auth/returnTo';
 import { IMPERSONATION_REQUEST_HEADER_ADMIN_ID, IMPERSONATION_REQUEST_HEADER_ID } from './impersonation';
 import { CLIENT_LOG_PATH } from './logger/client';
@@ -13,7 +13,12 @@ export type ProxyLogger = ReturnType<typeof createRequestLogger>;
  * proxy が付けて、Server Action・Server Component 側（getLogContext）が信用するヘッダー。
  * proxy が付けない場合（未ログイン・代理ログインでない等）にブラウザから送られた値が素通りしないよう、入口で必ず除く。
  */
-const PROXY_TRUSTED_HEADERS = ['x-user-id', 'x-request-id', IMPERSONATION_REQUEST_HEADER_ID, IMPERSONATION_REQUEST_HEADER_ADMIN_ID];
+const PROXY_TRUSTED_HEADERS = [
+  'x-user-id',
+  'x-request-id',
+  IMPERSONATION_REQUEST_HEADER_ID,
+  IMPERSONATION_REQUEST_HEADER_ADMIN_ID,
+];
 
 function withoutTrustedHeaders(source: Headers): Headers {
   const headers = new Headers(source);
@@ -25,6 +30,8 @@ export async function createSupabaseProxy(req: NextRequest) {
   let res = NextResponse.next({
     request: { headers: withoutTrustedHeaders(req.headers) },
   });
+  // 認証の Cookie を書く応答を CDN 等にキャッシュさせないヘッダー（Supabase は最初の書き込みでだけ渡すため、作り直した応答にも付け直す）
+  const authCacheHeaders: Record<string, string> = {};
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,15 +39,15 @@ export async function createSupabaseProxy(req: NextRequest) {
     {
       cookies: {
         getAll: () => req.cookies.getAll(),
-        setAll: (cookiesToSet) => {
+        setAll: (cookiesToSet, headers) => {
           cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
           res = NextResponse.next({ request: { headers: withoutTrustedHeaders(req.headers) } });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            res.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options));
+          Object.assign(authCacheHeaders, headers);
+          Object.entries(authCacheHeaders).forEach(([key, value]) => res.headers.set(key, value));
         },
       },
-    }
+    },
   );
 
   // getUser() は Supabase Auth サーバーとの通信を伴い JWT を検証するため、
@@ -52,14 +59,10 @@ export async function createSupabaseProxy(req: NextRequest) {
     const { data } = await supabase.auth.getUser();
     user = data.user;
   } catch (err) {
-    createLogger('common').error(
-      'proxy:auth_check_failed',
-      'supabase.auth.getUser() failed in proxy',
-      {
-        path: req.nextUrl.pathname,
-        err,
-      }
-    );
+    createLogger('common').error('proxy:auth_check_failed', 'supabase.auth.getUser() failed in proxy', {
+      path: req.nextUrl.pathname,
+      err,
+    });
   }
 
   const userType = user?.app_metadata?.user_type as UserType | undefined;
@@ -123,7 +126,7 @@ export function redirectAndClearSession(req: NextRequest, path: string): NextRes
  */
 export function isDefaultPublicRoute(
   pathname: string,
-  options?: { extraExactPaths?: string[]; extraPrefixes?: string[] }
+  options?: { extraExactPaths?: string[]; extraPrefixes?: string[] },
 ): boolean {
   const loginPath = '/login';
   // CLIENT_LOG_PATH: ブラウザのログの受け口。エラー画面は未ログインでも出るため公開する（受け口側で大きさ・回数を制限）
@@ -145,7 +148,7 @@ export function logPageView(
   user: User | null,
   pathname: string,
   isPublicRoute: boolean,
-  options?: { appLabel?: string; payload?: Record<string, unknown> }
+  options?: { appLabel?: string; payload?: Record<string, unknown> },
 ): void {
   const isPageAccess = req.method === 'GET';
   const isPrefetch = req.headers.get('purpose') === 'prefetch' || !!req.headers.get('x-nextjs-data');

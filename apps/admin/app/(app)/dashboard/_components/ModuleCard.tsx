@@ -1,17 +1,17 @@
 // apps/admin/app/(app)/dashboard/_components/ModuleCard.tsx
-import Link from 'next/link';
 import { ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 import type { DashboardModuleSummary } from '@/actions/adminDashboardAction';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { DASHBOARD_MODULE_CONFIG } from './moduleConfig';
 
-type Props = {
+interface ModuleCardProps {
   summary: DashboardModuleSummary;
-};
+}
 
-export default async function ModuleCard({ summary }: Props) {
+export async function ModuleCard({ summary }: ModuleCardProps) {
   const config = DASHBOARD_MODULE_CONFIG[summary.key];
   const Icon = config.icon;
   const hasAlert = summary.alertCount > 0;
@@ -36,16 +36,17 @@ export default async function ModuleCard({ summary }: Props) {
 
           <div className="mt-6 pt-4 border-t border-slate-100 flex items-end justify-between gap-2">
             <div>
-              <span className="text-2xl font-black text-slate-900 tabular-nums">
-                {summary.count.toLocaleString()}
-              </span>
+              <span className="text-2xl font-black text-slate-900 tabular-nums">{summary.count.toLocaleString()}</span>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1.5">
                 {t('countLabel')}
               </span>
             </div>
 
             {hasAlert ? (
-              <Badge variant="outline" className="shrink-0 text-amber-700 bg-amber-50 border-amber-200 font-bold whitespace-nowrap">
+              <Badge
+                variant="outline"
+                className="shrink-0 text-amber-700 bg-amber-50 border-amber-200 font-bold whitespace-nowrap"
+              >
                 {tDashboard('alertBadge', { label: t('alertLabel'), count: summary.alertCount })}
               </Badge>
             ) : (

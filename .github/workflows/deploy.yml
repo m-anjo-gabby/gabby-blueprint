@@ -42,6 +42,8 @@ on:
 
 permissions:
   contents: read
+  # デプロイするコミットの CI の結果を読む
+  actions: read
 
 env:
   # gabbys-projects（scripts/vercel-env/environments.mjs の VERCEL_TEAM_ID）
@@ -53,6 +55,7 @@ jobs:
     outputs:
       apps: ${{ steps.check.outputs.apps }}
       ref: ${{ steps.check.outputs.ref }}
+      sha: ${{ steps.ci.outputs.sha }}
     steps:
       - id: check
         env:
@@ -102,6 +105,34 @@ jobs:
           echo "apps=[$(IFS=,; echo "${apps[*]}")]" >> "$GITHUB_OUTPUT"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
 
+      # デプロイするコミットの CI（ci.yml）が成功しているかを確かめる。staging・本番は失敗・実行中なら止め、
+      # dev は確認用のため警告だけにする。確かめたコミットそのものをデプロイする（確かめた後にブランチが進んでも変えない）
+      - id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          REF: ${{ steps.check.outputs.ref }}
+        run: |
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$REF" --jq .sha)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          read -r status conclusion url < <(gh run list -R "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$sha" --limit 1 \
+            --json status,conclusion,url --jq '.[0] // {} | "\(.status // "none") \(.conclusion // "none") \(.url // "-")"')
+          if [ "$status" = "completed" ] && [ "$conclusion" = "success" ]; then
+            echo "CI は成功しています: $url"
+            exit 0
+          fi
+          case "$status" in
+            none) reason="このコミット（${sha:0:8}）の CI の実行が見つかりません" ;;
+            completed) reason="このコミット（${sha:0:8}）の CI が成功していません（$conclusion）: $url" ;;
+            *) reason="このコミット（${sha:0:8}）の CI がまだ終わっていません（$status）。終わってから実行し直してください: $url" ;;
+          esac
+          if [ "$ENVIRONMENT" = "dev" ]; then
+            echo "::warning::$reason"
+          else
+            echo "::error::$reason"
+            exit 1
+          fi
+
   deploy:
     needs: prepare
     runs-on: ubuntu-latest
@@ -114,9 +145,14 @@ jobs:
       group: deploy-${{ inputs.environment }}-${{ matrix.app }}
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.prepare.outputs.ref }}
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      # Vercel CLI を動かす Node（ビルドは Vercel 側で各アプリの engines の版を使う）
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
 
       # プロジェクトは scripts/vercel-env/environments.mjs の vercel と対応する
       - name: Resolve project

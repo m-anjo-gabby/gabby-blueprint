@@ -24,11 +24,14 @@ CREATE TABLE public.com_m_contents (
     description              text,
     content_label            text         NOT NULL,
     metadata                 jsonb        NOT NULL DEFAULT '{}'::jsonb,
-    delete_flg               text         NOT NULL DEFAULT '0'::text,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     content_name_en          text,
-    category_id              smallint
+    category_id              smallint,
+    status                   smallint     NOT NULL DEFAULT 0,
+    CONSTRAINT chk_contents_scope CHECK (content_scope = ANY (ARRAY[0, 1])),
+    CONSTRAINT chk_contents_status CHECK (status = ANY (ARRAY[0, 1])),
+    CONSTRAINT chk_contents_type CHECK (content_type = ANY (ARRAY[0, 1, 2, 3]))
 );
 
 COMMENT ON TABLE public.com_m_contents IS 'コンテンツ管理マスタ';
@@ -42,18 +45,20 @@ COMMENT ON COLUMN public.com_m_contents.recommend IS 'おすすめ';
 COMMENT ON COLUMN public.com_m_contents.description IS 'コンテンツ説明・解析根拠';
 COMMENT ON COLUMN public.com_m_contents.content_label IS 'コンテンツラベル';
 COMMENT ON COLUMN public.com_m_contents.metadata IS 'メタデータ（タグなど）';
-COMMENT ON COLUMN public.com_m_contents.delete_flg IS '論理削除フラグ';
 COMMENT ON COLUMN public.com_m_contents.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_contents.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_contents.content_name_en IS 'コンテンツ名称（英語版・任意。コーチ向け画面で使用し、未入力時はcontent_nameにフォールバックする）';
 COMMENT ON COLUMN public.com_m_contents.category_id IS 'セット分類ID（現状ダイアログプラクティスのみで使用。1:Beginner, 2:Intermediate, 3:Advanced, 4:Corpus）。他コンテンツ種別では未使用のためNULL';
+COMMENT ON COLUMN public.com_m_contents.status IS '公開状態 1:公開 0:非公開（新規作成時は非公開）';
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_contents FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_contents ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view common or assigned corpora" ON public.com_m_contents FOR SELECT TO authenticated
 USING (
-    delete_flg = '0'::text AND content_scope <> 9 AND (content_scope = 0 OR (EXISTS ( SELECT 1
+    status = 1 AND (content_scope = 0 OR (EXISTS ( SELECT 1
        FROM public.com_m_contents_access a
-      WHERE a.content_id = com_m_contents.content_id AND a.client_id = public.get_jwt_client_id() AND a.delete_flg = '0'::text)) OR public.is_coach_content_accessible(content_id))
+      WHERE a.content_id = com_m_contents.content_id AND a.client_id = public.get_jwt_client_id())) OR public.is_coach_content_accessible(content_id))
 );
 -- @end-schema

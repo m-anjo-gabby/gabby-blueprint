@@ -1,11 +1,11 @@
+import { getAvailableDialogueContents, getStudentDialogueAssignments } from '@/actions/dialogueAction';
+import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
 import { getRecentSessionHomework } from '@/actions/sessionHomeworkAction';
 import { getSelfTrainingWeekSummary } from '@/actions/studentAction';
-import { getLessonSprintHistory } from '@/actions/lessonSprintAction';
-import { getStudentDialogueAssignments, getAvailableDialogueContents } from '@/actions/dialogueAction';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buildLiveSessionHubHref } from '@/lib/liveSession/context';
-import { LessonSprintHistoryRow } from '../../../_components/LessonSprintHistoryRow';
 import { DialoguePracticeCard } from '../../../_components/DialoguePracticeCard';
+import { LessonSprintHistoryRow } from '../../../_components/LessonSprintHistoryRow';
 import { LastHomeworkList } from './LastHomeworkList';
 
 /*
@@ -95,7 +95,10 @@ export async function HubSelfTraining({ studentId }: { studentId: string }) {
         ) : (
           <div className="flex items-center gap-6">
             <div>
-              <p className="text-xl font-black text-slate-800">{summary.active_days}<span className="text-xs font-semibold text-slate-400">/{summary.days} days</span></p>
+              <p className="text-xl font-black text-slate-800">
+                {summary.active_days}
+                <span className="text-xs font-semibold text-slate-400">/{summary.days} days</span>
+              </p>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active</p>
             </div>
             <div>

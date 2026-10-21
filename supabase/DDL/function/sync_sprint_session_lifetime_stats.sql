@@ -14,7 +14,7 @@ DECLARE
 BEGIN
   SELECT COALESCE(timezone, 'Asia/Tokyo') INTO v_user_timezone
   FROM public.com_m_user
-  WHERE id = NEW.user_id AND delete_flg = '0';
+  WHERE id = NEW.user_id;
 
   v_local_date := (NEW.insert_date AT TIME ZONE v_user_timezone)::date;
 

@@ -1,18 +1,18 @@
 import { create } from 'zustand';
-import { Toast } from '../..//types/toast';
+import { type Toast } from '../..//types/toast';
 
 /**
  * トースト通知の状態管理を行うStore
  * Zustandを使用し、アプリ全域から通知を表示・削除できる
  */
-type ToastStore = {
+interface ToastStore {
   // 表示中のトーストリスト
   toasts: Toast[];
   // トーストを表示する（メッセージとタイプを指定、3秒後に自動消去）
   addToast: (message: string, type?: Toast['type']) => number;
   // 手動でトーストを削除する
   removeToast: (id: number) => void;
-};
+}
 
 let idCounter = 0;
 

@@ -1,23 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { LogIn, Loader2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2, LogIn } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { USER_TYPES, type UserRecord } from '@gabby/types/user';
 import { startImpersonation } from '@/actions/adminImpersonationAction';
-import { UserRecord, USER_TYPES } from '@gabby/types/user';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
-interface Props {
+interface ImpersonateButtonProps {
   user: UserRecord;
   /** 狭い画面ではアイコンだけにする（一覧の操作列用） */
   compact?: boolean;
@@ -27,7 +20,7 @@ interface Props {
  * 障害対応・問合せ調査のため、対象ユーザーとして生徒／コーチポータルへ代理ログインするボタン。
  * 理由の入力を必須とし、実行内容は監査ログ(com_t_admin_impersonation_log)に記録される。
  */
-export function ImpersonateButton({ user, compact = false }: Props) {
+export function ImpersonateButton({ user, compact = false }: ImpersonateButtonProps) {
   const t = useTranslations('users.impersonate');
   const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
@@ -48,7 +41,7 @@ export function ImpersonateButton({ user, compact = false }: Props) {
     setLoading(true);
     try {
       const result = await startImpersonation(user.id, reason);
-      if (result.success && result.url) {
+      if (result.success) {
         // ユーザー種別ごとに固定のウィンドウ名を指定し、同一種別への連続代理ログインは
         // 既存タブを再利用させる（生徒⇔コーチは別タブで共存可能なまま維持する）。
         // window.opener は意図的に切り離さない。切り離すと別オリジンの生徒／コーチポータルを
@@ -97,9 +90,7 @@ export function ImpersonateButton({ user, compact = false }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              {t('reasonLabel')}
-            </label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('reasonLabel')}</label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}

@@ -1,7 +1,8 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { z } from 'zod';
-import { createLogger, extractIpFromRequest, type LogService } from './index';
 import { getLogContext } from './context';
+import { createLogger, extractIpFromRequest, type LogService } from './index';
 
 /**
  * ブラウザのログ（packages/lib/logger/client.ts）の受け口。各アプリの app/api/client-log/route.ts で使う。
@@ -13,7 +14,10 @@ const MAX_BODY_LENGTH = 16_000;
 const RATE_LIMIT_PER_MINUTE = 60;
 
 const bodySchema = z.object({
-  event: z.string().max(100).regex(/^[a-z][A-Za-z0-9]*:[a-z0-9_]+$/),
+  event: z
+    .string()
+    .max(100)
+    .regex(/^[a-z][A-Za-z0-9]*:[a-z0-9_]+$/),
   level: z.enum(['info', 'warn', 'error']),
   message: z.string().max(1000),
   path: z.string().max(300).optional(),
@@ -54,7 +58,8 @@ export function createClientLogHandler(service: LogService) {
     let json: unknown;
     try {
       json = JSON.parse(text);
-    } catch {
+    } catch (thrown) {
+      unstable_rethrow(thrown);
       return new Response(null, { status: 400 });
     }
     const parsed = bodySchema.safeParse(json);

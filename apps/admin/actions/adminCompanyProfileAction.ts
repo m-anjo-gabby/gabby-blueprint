@@ -1,40 +1,33 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
-import { createAdminClient } from '@gabby/lib/supabase/admin';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { revalidatePath } from 'next/cache';
+import { COMPANY_PROFILE_SELECT } from '@gabby/lib/companyProfile/fetchCompanyProfile';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
-import { COMPANY_PROFILE_SELECT } from '@gabby/lib/companyProfile/fetchCompanyProfile';
-import { USER_TYPES } from '@gabby/types/user';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import type { ActionResult } from '@gabby/types/action';
 import {
   COMPANY_CODE_ORDER,
   COMPANY_LOGO_BUCKET,
-  CompanyCode,
-  CompanyProfile,
   isCompanyCode,
+  type CompanyCode,
+  type CompanyProfile,
 } from '@gabby/types/companyProfile';
+import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 
 const PAGE_PATH = '/company-profiles';
-
-type ActionResult = { success: true } | { success: false; message: string };
 
 export type CompanyProfileInput = Pick<
   CompanyProfile,
   'company_name' | 'company_name_ja' | 'address' | 'tax_registration_number'
 >;
 
-/** service_role で書き込むため、呼び出し元が管理者であることをここでも確認する */
-async function isAdmin(): Promise<boolean> {
-  const user = await getAuthUser();
-  return user?.app_metadata?.user_type === USER_TYPES.ADMIN;
-}
-
 /** 会社情報（法人ごと）を画面の表示順で取得する。取得に失敗した場合はnull */
 export async function getCompanyProfiles(): Promise<CompanyProfile[] | null> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const supabase = createAdminClient();
   const { data, error } = await supabase.from('com_m_company_profile').select(COMPANY_PROFILE_SELECT);
@@ -47,10 +40,13 @@ export async function getCompanyProfiles(): Promise<CompanyProfile[] | null> {
   return COMPANY_CODE_ORDER.flatMap((code) => rows.filter((row) => row.company_code === code));
 }
 
-export async function updateCompanyProfile(companyCode: CompanyCode, input: CompanyProfileInput): Promise<ActionResult> {
+export async function updateCompanyProfile(
+  companyCode: CompanyCode,
+  input: CompanyProfileInput,
+): Promise<ActionResult> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const t = await getTranslations('companyProfiles.errors');
-  if (!(await isAdmin())) return { success: false, message: t('forbidden') };
   if (!isCompanyCode(companyCode)) return { success: false, message: t('invalidCompany') };
 
   const companyName = input.company_name.trim();
@@ -72,7 +68,11 @@ export async function updateCompanyProfile(companyCode: CompanyCode, input: Comp
     .eq('company_code', companyCode);
 
   if (error) {
-    logger.error('admin:update_company_profile_failed', error.message, { ...ctx, err: error, payload: { companyCode } });
+    logger.error('admin:update_company_profile_failed', error.message, {
+      ...ctx,
+      err: error,
+      payload: { companyCode },
+    });
     return { success: false, message: t('updateFailed') };
   }
 
@@ -86,11 +86,11 @@ export async function updateCompanyProfile(companyCode: CompanyCode, input: Comp
  */
 export async function uploadCompanyLogo(
   companyCode: CompanyCode,
-  file: File
-): Promise<{ success: true; logoPath: string } | { success: false; message: string }> {
+  file: File,
+): Promise<ActionResult<{ logoPath: string }>> {
+  await requireAdminRole(SYSTEM_ADMIN_ONLY);
   const ctx = await getLogContext();
   const t = await getTranslations('companyProfiles.errors');
-  if (!(await isAdmin())) return { success: false, message: t('forbidden') };
   if (!isCompanyCode(companyCode)) return { success: false, message: t('invalidCompany') };
   if (!file || file.size === 0) {
     return { success: false, message: t('logoRequired') };
@@ -105,7 +105,11 @@ export async function uploadCompanyLogo(
     contentType: file.type || 'image/png',
   });
   if (uploadError) {
-    logger.error('admin:upload_company_logo_failed', uploadError.message, { ...ctx, err: uploadError, payload: { companyCode } });
+    logger.error('admin:upload_company_logo_failed', uploadError.message, {
+      ...ctx,
+      err: uploadError,
+      payload: { companyCode },
+    });
     return { success: false, message: t('logoUploadFailed') };
   }
 
@@ -114,7 +118,11 @@ export async function uploadCompanyLogo(
     .update({ logo_path: path, update_date: new Date().toISOString() })
     .eq('company_code', companyCode);
   if (updateError) {
-    logger.error('admin:update_logo_path_failed', updateError.message, { ...ctx, err: updateError, payload: { companyCode } });
+    logger.error('admin:update_logo_path_failed', updateError.message, {
+      ...ctx,
+      err: updateError,
+      payload: { companyCode },
+    });
     return { success: false, message: t('logoPathFailed') };
   }
 

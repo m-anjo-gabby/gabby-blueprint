@@ -1,17 +1,26 @@
 'use server';
 
-import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
-import { DialogueSession } from '@gabby/types/dialogue';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { isInUseError } from '@gabby/lib/supabase/pgErrors';
+import type { ActionResult, BasicErrorCode, CoreResult } from '@gabby/types/action';
+import { type DialogueSession } from '@gabby/types/dialogue';
+import { ADMIN_OR_CONTENT_MANAGER, requireAdminRole } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 
 /**
  * 指定教材（ダイアログプラクティスのセット）配下のセッション明細一覧を取得する
  */
-export async function getDialogueSessions(contentId: string): Promise<DialogueSession[]> {
+export async function getDialogueSessions(
+  contentId: string,
+): Promise<CoreResult<{ data: DialogueSession[] }, BasicErrorCode>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -20,18 +29,22 @@ export async function getDialogueSessions(contentId: string): Promise<DialogueSe
       .from('com_m_dialogue_session')
       .select('*')
       .eq('content_id', contentId)
-      .eq('delete_flg', '0')
       .order('session_no', { ascending: true });
 
     if (error) {
       logger.error('dialogue:get_sessions_failed', error.message, { ...ctx, err: error, payload: { contentId } });
-      return [];
+      return { success: false, errorCode: 'unexpected_error' };
     }
 
-    return (data || []) as DialogueSession[];
+    return { success: true, data: (data || []) as DialogueSession[] };
   } catch (error) {
-    logger.error('dialogue:get_sessions_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { contentId } });
-    return [];
+    unstable_rethrow(error);
+    logger.error('dialogue:get_sessions_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { contentId },
+    });
+    return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
@@ -49,7 +62,11 @@ interface UpsertDialogueSessionPayload {
 /**
  * ダイアログプラクティス セッション明細の登録・更新 (Upsert)
  */
-export async function upsertDialogueSession(payload: UpsertDialogueSessionPayload) {
+export async function upsertDialogueSession(
+  payload: UpsertDialogueSessionPayload,
+): Promise<ActionResult<{ data: DialogueSession }>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
@@ -67,7 +84,7 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
     };
 
     let query;
-    if (isEdit) {
+    if (payload.dialogue_session_id) {
       query = supabase
         .from('com_m_dialogue_session')
         .update(dataToSave)
@@ -75,11 +92,7 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
         .select()
         .single();
     } else {
-      query = supabase
-        .from('com_m_dialogue_session')
-        .insert([dataToSave])
-        .select()
-        .single();
+      query = supabase.from('com_m_dialogue_session').insert([dataToSave]).select().single();
     }
 
     const { data, error } = await query;
@@ -88,9 +101,9 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
       logger.error('dialogue:upsert_session_failed', error.message, { ...ctx, err: error, payload });
       // UNIQUE(content_id, session_no) 制約違反を分かりやすいメッセージに変換
       if (error.code === '23505') {
-        return { success: false, message: 'このセッション番号は既に使用されています' };
+        return { success: false, message: t('contents.errors.sessionNoInUse') };
       }
-      return { success: false, message: error.message };
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
     logger.info('dialogue:upsert_session_success', `Dialogue session ${isEdit ? 'updated' : 'created'}`, {
@@ -101,38 +114,60 @@ export async function upsertDialogueSession(payload: UpsertDialogueSessionPayloa
     revalidatePath(`/contents/${payload.content_id}`);
     return { success: true, data: data as DialogueSession };
   } catch (error) {
-    logger.error('dialogue:upsert_session_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('dialogue:upsert_session_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload,
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }
 
 /**
- * ダイアログプラクティス セッション明細の論理削除
+ * ダイアログプラクティス セッション明細の削除（誤登録の取り消し）。
+ * 進捗・会話ログがあるセッションは外部キー（RESTRICT）で止まる
  */
-export async function deleteDialogueSession(dialogueSessionId: string, contentId: string) {
+export async function deleteDialogueSession(
+  dialogueSessionId: string,
+  contentId: string,
+): Promise<ActionResult<object, 'in_use'>> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
+  const t = await getTranslations();
   const ctx = await getLogContext();
   try {
     const supabase = createAdminClient();
 
     const { error } = await supabase
       .from('com_m_dialogue_session')
-      .update({
-        delete_flg: '1',
-        update_date: new Date().toISOString(),
-      })
+      .delete()
       .eq('dialogue_session_id', dialogueSessionId);
 
     if (error) {
-      logger.error('dialogue:delete_session_failed', error.message, { ...ctx, err: error, payload: { dialogueSessionId } });
-      return { success: false, message: error.message };
+      if (isInUseError(error))
+        return { success: false, errorCode: 'in_use' as const, message: t('common.errors.unexpected') };
+      logger.error('dialogue:delete_session_failed', error.message, {
+        ...ctx,
+        err: error,
+        payload: { dialogueSessionId },
+      });
+      return { success: false, message: t('common.errors.unexpected') };
     }
 
-    logger.info('dialogue:delete_session_success', 'Dialogue session logically deleted', { ...ctx, payload: { dialogueSessionId } });
+    logger.info('dialogue:delete_session_success', 'Dialogue session deleted', {
+      ...ctx,
+      payload: { dialogueSessionId },
+    });
 
     revalidatePath(`/contents/${contentId}`);
     return { success: true };
   } catch (error) {
-    logger.error('dialogue:delete_session_unexpected', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error, payload: { dialogueSessionId } });
-    return { success: false, message: '予期せぬエラーが発生しました' };
+    unstable_rethrow(error);
+    logger.error('dialogue:delete_session_unexpected', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+      payload: { dialogueSessionId },
+    });
+    return { success: false, message: t('common.errors.unexpected') };
   }
 }

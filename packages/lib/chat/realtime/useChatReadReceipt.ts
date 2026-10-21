@@ -11,7 +11,7 @@ import { createBrowserClient } from '@gabby/lib/supabase/client';
 export function useChatReadReceipt(
   roomId: string,
   counterpartUserId: string | null,
-  onRead: (lastReadChatId: string) => void
+  onRead: (lastReadChatId: string) => void,
 ) {
   const onReadRef = useRef(onRead);
   useEffect(() => {
@@ -32,7 +32,7 @@ export function useChatReadReceipt(
           if (row.user_id === counterpartUserId && row.last_read_chat_id) {
             onReadRef.current(row.last_read_chat_id);
           }
-        }
+        },
       )
       .subscribe();
 

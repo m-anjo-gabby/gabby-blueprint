@@ -1,9 +1,14 @@
 // apps/admin/actions/adminDashboardAction.ts
 'use server';
 
-import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { createAdminClient } from '@gabby/lib/supabase/admin';
+import { CLIENT_STATUS } from '@gabby/types/client';
+import { CONTENT_STATUS } from '@gabby/types/content';
+import { ADMIN_OR_CONTENT_MANAGER, requireAdminRole } from '@/lib/adminAuth';
 
 const logger = createLogger('admin');
 
@@ -27,6 +32,7 @@ const DEFAULT_MODULE_ORDER: DashboardModuleKey[] = ['clients', 'contracts', 'use
  * allowedKeys を渡した場合、権限のないモジュールのクエリ自体を発行しない（サイドバーの表示権限と揃える）。
  */
 export async function getDashboardSummary(allowedKeys?: DashboardModuleKey[]): Promise<DashboardModuleSummary[]> {
+  await requireAdminRole(ADMIN_OR_CONTENT_MANAGER);
   const keys = allowedKeys && allowedKeys.length > 0 ? allowedKeys : DEFAULT_MODULE_ORDER;
   const supabase = createAdminClient();
   const now = new Date();
@@ -44,13 +50,16 @@ export async function getDashboardSummary(allowedKeys?: DashboardModuleKey[]): P
   return Promise.all(keys.map((key) => fetchers[key]()));
 }
 
-async function getClientsSummary(supabase: ReturnType<typeof createAdminClient>, nowIso: string): Promise<DashboardModuleSummary> {
+async function getClientsSummary(
+  supabase: ReturnType<typeof createAdminClient>,
+  nowIso: string,
+): Promise<DashboardModuleSummary> {
   const ctx = await getLogContext();
   try {
     const { count: totalCount, error: totalError } = await supabase
       .from('com_m_client')
       .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0');
+      .eq('status', CLIENT_STATUS.ACTIVE);
 
     if (totalError) throw totalError;
 
@@ -72,12 +81,19 @@ async function getClientsSummary(supabase: ReturnType<typeof createAdminClient>,
       alertCount,
     };
   } catch (error) {
-    logger.error('dashboard:get_clients_summary_failed', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    unstable_rethrow(error);
+    logger.error('dashboard:get_clients_summary_failed', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+    });
     return { key: 'clients', count: 0, alertCount: 0 };
   }
 }
 
-async function getContractsSummary(supabase: ReturnType<typeof createAdminClient>, soonIso: string): Promise<DashboardModuleSummary> {
+async function getContractsSummary(
+  supabase: ReturnType<typeof createAdminClient>,
+  soonIso: string,
+): Promise<DashboardModuleSummary> {
   const ctx = await getLogContext();
   try {
     // 稼働中判定・期限切迫判定・ライセンス超過判定をまとめて行うため、有効契約(status=1)の必要カラムのみ取得
@@ -101,7 +117,11 @@ async function getContractsSummary(supabase: ReturnType<typeof createAdminClient
       alertCount: alertIds.size,
     };
   } catch (error) {
-    logger.error('dashboard:get_contracts_summary_failed', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    unstable_rethrow(error);
+    logger.error('dashboard:get_contracts_summary_failed', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+    });
     return { key: 'contracts', count: 0, alertCount: 0 };
   }
 }
@@ -130,7 +150,11 @@ async function getUsersSummary(supabase: ReturnType<typeof createAdminClient>): 
       alertCount: pendingCount || 0,
     };
   } catch (error) {
-    logger.error('dashboard:get_users_summary_failed', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    unstable_rethrow(error);
+    logger.error('dashboard:get_users_summary_failed', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+    });
     return { key: 'users', count: 0, alertCount: 0 };
   }
 }
@@ -140,16 +164,14 @@ async function getContentsSummary(supabase: ReturnType<typeof createAdminClient>
   try {
     const { count: totalCount, error: totalError } = await supabase
       .from('com_m_contents')
-      .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0');
+      .select('*', { count: 'exact', head: true });
 
     if (totalError) throw totalError;
 
     const { count: privateCount, error: privateError } = await supabase
       .from('com_m_contents')
       .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0')
-      .eq('content_scope', 9);
+      .eq('status', CONTENT_STATUS.UNPUBLISHED);
 
     if (privateError) throw privateError;
 
@@ -159,18 +181,24 @@ async function getContentsSummary(supabase: ReturnType<typeof createAdminClient>
       alertCount: privateCount || 0,
     };
   } catch (error) {
-    logger.error('dashboard:get_contents_summary_failed', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    unstable_rethrow(error);
+    logger.error('dashboard:get_contents_summary_failed', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+    });
     return { key: 'contents', count: 0, alertCount: 0 };
   }
 }
 
-async function getNoticeSummary(supabase: ReturnType<typeof createAdminClient>, nowIso: string): Promise<DashboardModuleSummary> {
+async function getNoticeSummary(
+  supabase: ReturnType<typeof createAdminClient>,
+  nowIso: string,
+): Promise<DashboardModuleSummary> {
   const ctx = await getLogContext();
   try {
     const { count: publishedCount, error: publishedError } = await supabase
       .from('com_m_notice')
       .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0')
       .eq('is_published', true);
 
     if (publishedError) throw publishedError;
@@ -178,7 +206,6 @@ async function getNoticeSummary(supabase: ReturnType<typeof createAdminClient>, 
     const { count: draftCount, error: draftError } = await supabase
       .from('com_m_notice')
       .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0')
       .eq('is_published', false);
 
     if (draftError) throw draftError;
@@ -186,7 +213,6 @@ async function getNoticeSummary(supabase: ReturnType<typeof createAdminClient>, 
     const { count: expiredButPublishedCount, error: expiredError } = await supabase
       .from('com_m_notice')
       .select('*', { count: 'exact', head: true })
-      .eq('delete_flg', '0')
       .eq('is_published', true)
       .lt('expired_at', nowIso);
 
@@ -198,7 +224,11 @@ async function getNoticeSummary(supabase: ReturnType<typeof createAdminClient>, 
       alertCount: (draftCount || 0) + (expiredButPublishedCount || 0),
     };
   } catch (error) {
-    logger.error('dashboard:get_notice_summary_failed', error instanceof Error ? error.message : 'Unknown error', { ...ctx, err: error });
+    unstable_rethrow(error);
+    logger.error('dashboard:get_notice_summary_failed', getErrorMessage(error), {
+      ...ctx,
+      err: error,
+    });
     return { key: 'notice', count: 0, alertCount: 0 };
   }
 }

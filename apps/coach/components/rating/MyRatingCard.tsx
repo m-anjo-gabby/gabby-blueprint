@@ -1,9 +1,9 @@
 import { Star } from 'lucide-react';
-import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
-import { Skeleton } from '@/components/ui/skeleton';
 import { formatRatingValue } from '@gabby/lib/coachRating/format';
-import type { CoachRatingStats } from '@gabby/types/coachRating';
+import { StarRatingDisplay } from '@gabby/lib/components/common/StarRating';
 import type { CoachProfileRatingDisplay } from '@gabby/types/coachProfile';
+import type { CoachRatingStats } from '@gabby/types/coachRating';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ratingAriaLabel = (value: number) => `${formatRatingValue(value)} out of 5`;
 const formatRatingCount = (count: number) => `${count} ${count === 1 ? 'rating' : 'ratings'}`;
@@ -61,7 +61,9 @@ export function MyRatingCard({ stats }: { stats: CoachRatingStats | null }) {
         {/* 骨組み（数値の並び）と同じ高さを取り、読み込み後に周りが動かないようにする */}
         <div className="min-h-20">
           <p className="text-sm text-slate-500">No ratings yet.</p>
-          <p className="mt-1 text-xs text-slate-400">Students rate their coach once per contract, near the end of the contract.</p>
+          <p className="mt-1 text-xs text-slate-400">
+            Students rate their coach once per contract, near the end of the contract.
+          </p>
         </div>
       </div>
     );
@@ -74,7 +76,9 @@ export function MyRatingCard({ stats }: { stats: CoachRatingStats | null }) {
         <div>
           <p className="text-[11px] font-bold text-slate-400">Overall</p>
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-3xl font-bold text-slate-900 tabular-nums">{formatRatingValue(stats.overallAvg)}</span>
+            <span className="text-3xl font-bold text-slate-900 tabular-nums">
+              {formatRatingValue(stats.overallAvg)}
+            </span>
             <StarRatingDisplay value={stats.overallAvg} size={18} label={ratingAriaLabel(stats.overallAvg)} />
           </div>
           <p className="mt-1 text-xs text-slate-400">{formatRatingCount(stats.ratingCount)}</p>

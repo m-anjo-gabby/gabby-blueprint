@@ -80,7 +80,7 @@ export function detectPhoneticConfusion(target: string, heard: string): Phonetic
   const h = normalize(heard);
   if (!t || !h || t === h) return undefined;
 
-  return PHONETIC_CONFUSION_RULES.find(rule => {
+  return PHONETIC_CONFUSION_RULES.find((rule) => {
     const [a, b] = rule.pair;
     return substitutedMatches(t, h, a, b) || substitutedMatches(t, h, b, a);
   });

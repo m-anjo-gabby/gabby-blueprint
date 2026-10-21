@@ -1,7 +1,7 @@
-// 📄 packages/lib/navigation/student-path.ts
+// packages/lib/navigation/student-path.ts
 
-import { ContentItem } from '@gabby/types/content';
-import { ResumeContentResponse } from '@gabby/types/training';
+import { type ContentItem } from '@gabby/types/content';
+import { type ResumeContentResponse } from '@gabby/types/training';
 
 /**
  * 1. 通常のライブラリやおすすめ等から遷移する場合 (新規オープン)
@@ -21,7 +21,7 @@ export const getTrainingPath = (content: ContentItem): string => {
     const sprintMeta = content.metadata?.sprint;
     const sprintType = sprintMeta?.sprint_type ?? '0';
 
-    // 🏎️ levelはReady画面側で動的に選ばせるため、URLからは除外
+    // levelはReady画面側で動的に選ばせるため、URLからは除外
     // mode=sprint と type を指定して、Ready画面の初期状態を制御する
     return `/training/sprint/play?mode=sprint&type=${type}&content_id=${contentId}&sprint_type=${sprintType}`;
   }

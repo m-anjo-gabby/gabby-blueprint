@@ -1,16 +1,16 @@
 'use client';
 
-import Link from 'next/link';
 import { ChevronRight, CircleAlert, Hourglass } from 'lucide-react';
+import Link from 'next/link';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import type { SessionListItem } from '@gabby/types/session';
 import type { LiveSessionOverview } from '@gabby/types/matching';
-import { Skeleton } from '@/components/ui/skeleton';
-import { SessionCoachHeading, SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
-import { JoinSessionButton } from '@/components/session/JoinSessionButton';
+import type { SessionListItem } from '@gabby/types/session';
 import { SessionBreakdown } from '@/app/(app)/(shell)/live-room/_components/SessionBreakdown';
-import { HomeCard } from './HomeCard';
+import { JoinSessionButton } from '@/components/session/JoinSessionButton';
+import { SessionCoachHeading, SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { HomeCard } from './HomeCard';
 
 /**
  * ライブセッションで生徒の対応が必要なこと（ホームではライブセッション管理等への導線だけを出す）。
@@ -83,10 +83,14 @@ export function LiveSessionCard({ nextSession, overview, isCurrent, adjustingCou
                   'group flex items-center gap-3 rounded-control border px-3 py-2.5 text-sm font-semibold transition-colors',
                   action.tone === 'waiting'
                     ? 'border-line bg-canvas text-ink-soft hover:border-ink-subtle/40'
-                    : 'border-brand-100 bg-brand-soft text-brand-strong hover:border-brand-200'
+                    : 'border-brand-100 bg-brand-soft text-brand-strong hover:border-brand-200',
                 )}
               >
-                {action.tone === 'waiting' ? <Hourglass size={16} className="shrink-0" /> : <CircleAlert size={16} className="shrink-0" />}
+                {action.tone === 'waiting' ? (
+                  <Hourglass size={16} className="shrink-0" />
+                ) : (
+                  <CircleAlert size={16} className="shrink-0" />
+                )}
                 <span className="flex-1">{action.label}</span>
                 <ChevronRight size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
               </Link>
@@ -106,7 +110,12 @@ export function LiveSessionCard({ nextSession, overview, isCurrent, adjustingCou
                   <span className="text-lg">{overview.completed_count}</span>
                   <span className="text-sm font-normal text-ink-muted">/ {overview.total_sessions}回</span>
                 </p>
-                <SessionBreakdown overview={overview} isCurrent={isCurrent} adjustingCount={adjustingCount} className="mt-3" />
+                <SessionBreakdown
+                  overview={overview}
+                  isCurrent={isCurrent}
+                  adjustingCount={adjustingCount}
+                  className="mt-3"
+                />
               </>
             ) : (
               <p className="mt-2 text-sm text-ink-muted">契約の状況を取得できませんでした。</p>

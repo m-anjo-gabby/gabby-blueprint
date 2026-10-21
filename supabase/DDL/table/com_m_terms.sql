@@ -30,14 +30,16 @@ COMMENT ON COLUMN public.com_m_terms.update_date IS '更新日時';
 
 CREATE INDEX idx_m_terms_type_published ON public.com_m_terms (term_type, published_date DESC);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_terms FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_m_terms ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can manage terms" ON public.com_m_terms FOR ALL TO authenticated
 USING (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 )
 WITH CHECK (
-    public.get_jwt_user_type() = '0'::text
+    public.is_system_admin()
 );
 
 CREATE POLICY "Terms are viewable by everyone" ON public.com_m_terms FOR SELECT TO public

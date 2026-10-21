@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useState } from 'react';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { CoachStudentNote } from '@gabby/types/coachStudent';
 
-interface Props {
+interface CoachNoteEntryProps {
   note: CoachStudentNote;
 }
 
@@ -15,7 +15,7 @@ interface Props {
  * TrainingReportEntryと違い編集操作は持たず、折りたたみ時は内容の1行プレビュー、
  * 展開時は全文+登録日時を表示するだけのシンプルな構成にする。
  */
-export function CoachNoteEntry({ note }: Props) {
+export function CoachNoteEntry({ note }: CoachNoteEntryProps) {
   const timezone = useTimezone();
   const [isExpanded, setIsExpanded] = useState(false);
 

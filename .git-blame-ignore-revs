@@ -1,0 +1,8 @@
+# git blame で無視するコミット（書式だけの一括変更）。
+# 手元: git config blame.ignoreRevsFile .git-blame-ignore-revs（GitHub の blame は自動で読む）
+# Prettier で JS/TS のコードを一括整形する
+433da62bceda502b04732ae52c3e75b31f804dae
+# import の一括の並び替え（@ianvs/prettier-plugin-sort-imports）
+0dae33a022d062481e9f319bcc69c66cce8820f0
+# CSS の一括整形
+eb61b7141b28a4923b7730ce3fc46f25809be7c9

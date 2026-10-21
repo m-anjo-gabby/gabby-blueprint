@@ -1,18 +1,23 @@
 'use client';
 
 import { Zap } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserAvatar } from '@/components/common/UserAvatar';
+import {
+  formatAcquiredSprintLevelLabel,
+  formatSprintLevelLabel,
+  isSprintLevelNotReached,
+  resolveCoachContentName,
+} from '@gabby/lib';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { formatAcquiredSprintLevelLabel, formatSprintLevelLabel, isSprintLevelNotReached, resolveCoachContentName } from '@gabby/lib';
-import { SPRINT_LEVEL_NOT_REACHED } from '../../_components/sprintLevelLabels';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
+import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
+import { UserAvatar } from '@/components/common/UserAvatar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { SPRINT_LEVEL_NOT_REACHED } from '../../_components/sprintLevelLabels';
 
-interface Props {
+interface StudentSnapshotPanelProps {
   profile: StudentOverviewProfile;
   lessonSprints: LessonSprintHistoryListItem[];
   highlightedType: SprintQuestionType;
@@ -20,7 +25,7 @@ interface Props {
 
 const TYPE_ORDER = Object.values(QUESTION_TYPES).sort((a, b) => a.seq_no - b.seq_no);
 
-export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }: Props) {
+export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }: StudentSnapshotPanelProps) {
   const timezone = useTimezone();
   const { sprint_progress } = profile;
   const recentSprints = lessonSprints.slice(0, 3);
@@ -51,7 +56,7 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
                   key={type.value}
                   className={cn(
                     'flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs',
-                    isCurrentSelection ? 'bg-brand-50 border border-brand-100' : 'border border-transparent'
+                    isCurrentSelection ? 'bg-brand-50 border border-brand-100' : 'border border-transparent',
                   )}
                 >
                   <span className={cn('font-semibold', isCurrentSelection ? 'text-brand-strong' : 'text-slate-500')}>
@@ -61,7 +66,7 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
                     className={cn(
                       'whitespace-nowrap tabular-nums',
                       notReached ? 'text-[11px] font-semibold' : 'font-bold',
-                      isCurrentSelection ? 'text-brand-strong' : notReached ? 'text-slate-400' : 'text-slate-700'
+                      isCurrentSelection ? 'text-brand-strong' : notReached ? 'text-slate-400' : 'text-slate-700',
                     )}
                   >
                     {levelLabel}
@@ -84,15 +89,21 @@ export function StudentSnapshotPanel({ profile, lessonSprints, highlightedType }
               {recentSprints.map((item) => {
                 const typeLabel = QUESTION_TYPES[item.question_type as SprintQuestionType]?.label ?? item.question_type;
                 return (
-                  <li key={item.lesson_sprint_id} className="px-3 py-2 rounded-xl border border-slate-100 bg-slate-50/60">
+                  <li
+                    key={item.lesson_sprint_id}
+                    className="px-3 py-2 rounded-xl border border-slate-100 bg-slate-50/60"
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-slate-700 truncate">{resolveCoachContentName(item)}</span>
+                      <span className="text-xs font-semibold text-slate-700 truncate">
+                        {resolveCoachContentName(item)}
+                      </span>
                       <span className="text-[11px] font-black text-brand bg-brand-50 rounded-full px-2 py-0.5 shrink-0">
                         {item.average_score !== null ? `${item.average_score}/5` : '—'}
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-400 mt-0.5">
-                      {typeLabel} · {formatSprintLevelLabel(item.question_type, item.difficulty_level)} · {item.time_limit_sec}s · {formatDateTimeEn(item.insert_date, timezone)}
+                      {typeLabel} · {formatSprintLevelLabel(item.question_type, item.difficulty_level)} ·{' '}
+                      {item.time_limit_sec}s · {formatDateTimeEn(item.insert_date, timezone)}
                     </p>
                   </li>
                 );

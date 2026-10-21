@@ -1,24 +1,26 @@
 'use server';
 
-import { createServerClient } from '../../supabase/server';
-import { createLogger } from '../../logger';
-import type { LogContext } from '../../logger';
-import { getLogContext } from '../../logger/context';
-import { getStudentAvailableContentIds, hasCoachStudentRelationship } from './coachStudentActions';
-import {
-  DialogueAssignmentSummary,
-  DialogueCategory,
-  DialogueContentSummary,
-  GetAvailableDialogueContentsResult,
-  AssignDialogueContentResult,
-  UnassignDialogueContentResult,
-  GetStudentDialogueAssignmentsResult,
-  UpdateDialogueSessionProgressInput,
-  UpdateDialogueSessionProgressResult,
-  LogSessionDialogueOpenInput,
-  LogSessionDialogueOpenResult,
-} from '@gabby/types/dialogue';
+import { unstable_rethrow } from 'next/navigation';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import {
+  DIALOGUE_ASSIGNMENT_STATUS,
+  type AssignDialogueContentResult,
+  type DialogueAssignmentSummary,
+  type DialogueCategory,
+  type DialogueContentSummary,
+  type GetAvailableDialogueContentsResult,
+  type GetStudentDialogueAssignmentsResult,
+  type LogSessionDialogueOpenInput,
+  type LogSessionDialogueOpenResult,
+  type UnassignDialogueContentResult,
+  type UpdateDialogueSessionProgressInput,
+  type UpdateDialogueSessionProgressResult,
+} from '@gabby/types/dialogue';
+import { createLogger, type LogContext } from '../../logger';
+import { getLogContext } from '../../logger/context';
+import { createServerClient } from '../../supabase/server';
+import { getStudentAvailableContentIds, hasCoachStudentRelationship } from './coachStudentActions';
 
 const logger = createLogger('common');
 
@@ -51,7 +53,11 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
 
     const availableIds = await getStudentAvailableContentIds(supabase, studentId, DIALOGUE_CONTENT_TYPE);
     if (!availableIds) {
-      logger.error('dialogue:get_available_content_ids_failed', 'RPC get_student_available_content_ids failed', { ...ctx, userId: user.id, payload: { studentId } });
+      logger.error('dialogue:get_available_content_ids_failed', 'RPC get_student_available_content_ids failed', {
+        ...ctx,
+        userId: user.id,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (availableIds.size === 0) {
@@ -63,13 +69,16 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
       .select('content_id, content_name, content_name_en, category_id')
       .in('content_id', [...availableIds])
       .eq('content_type', DIALOGUE_CONTENT_TYPE)
-      .eq('delete_flg', '0')
       .order('category_id', { ascending: true })
       .order('seq_no', { ascending: true })
       .order('content_id', { ascending: true }); // 同順位（seq_noの重複）の並びを固定する
 
     if (contentsError) {
-      logger.error('dialogue:get_contents_failed', contentsError.message, { ...ctx, err: contentsError, userId: user.id });
+      logger.error('dialogue:get_contents_failed', contentsError.message, {
+        ...ctx,
+        err: contentsError,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -82,11 +91,14 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
     const { data: sessions, error: sessionsError } = await supabase
       .from('com_m_dialogue_session')
       .select('content_id, session_no, coach_slides_link')
-      .in('content_id', contentIds)
-      .eq('delete_flg', '0');
+      .in('content_id', contentIds);
 
     if (sessionsError) {
-      logger.error('dialogue:get_contents_session_count_failed', sessionsError.message, { ...ctx, err: sessionsError, userId: user.id });
+      logger.error('dialogue:get_contents_session_count_failed', sessionsError.message, {
+        ...ctx,
+        err: sessionsError,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -110,19 +122,23 @@ export async function getAvailableDialogueContentsCore(studentId: string): Promi
 
     return { success: true, contents: result };
   } catch (err) {
-    logger.error('dialogue:get_contents_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('dialogue:get_contents_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
 
 /**
  * コーチが担当生徒にダイアログ教材セットを割り当てる。
- * 過去に割り当てて解除済み(delete_flg='1')の行があれば再割当として復活させる
+ * 過去に割り当てて解除済み(status=0)の行があれば再割当として復活させる
  * （部分ユニークインデックスidx_dialogue_assignment_unique_activeとの整合のため）。
  */
 export async function assignDialogueContentCore(
   studentId: string,
-  contentId: string
+  contentId: string,
 ): Promise<AssignDialogueContentResult> {
   const ctx = await getLogContext();
 
@@ -138,7 +154,11 @@ export async function assignDialogueContentCore(
     // 対象生徒のテナントで公開されていない教材（他テナント限定・非公開等）の割当を拒否する
     const availableIds = await getStudentAvailableContentIds(supabase, studentId, DIALOGUE_CONTENT_TYPE);
     if (!availableIds) {
-      logger.error('dialogue:assign_available_content_ids_failed', 'RPC get_student_available_content_ids failed', { ...ctx, userId: user.id, payload: { studentId, contentId } });
+      logger.error('dialogue:assign_available_content_ids_failed', 'RPC get_student_available_content_ids failed', {
+        ...ctx,
+        userId: user.id,
+        payload: { studentId, contentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!availableIds.has(contentId)) {
@@ -147,18 +167,23 @@ export async function assignDialogueContentCore(
 
     const { data: existing, error: existingError } = await supabase
       .from('com_t_dialogue_assignment')
-      .select('assignment_id, delete_flg')
+      .select('assignment_id, status')
       .eq('student_id', studentId)
       .eq('content_id', contentId)
       .maybeSingle();
 
     if (existingError) {
-      logger.error('dialogue:assign_lookup_failed', existingError.message, { ...ctx, err: existingError, userId: user.id, payload: { studentId, contentId } });
+      logger.error('dialogue:assign_lookup_failed', existingError.message, {
+        ...ctx,
+        err: existingError,
+        userId: user.id,
+        payload: { studentId, contentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     if (existing) {
-      if (existing.delete_flg === '0') {
+      if (existing.status === DIALOGUE_ASSIGNMENT_STATUS.ASSIGNED) {
         // 既に割当済み。冪等に成功扱いとする
         return { success: true, assignment_id: existing.assignment_id };
       }
@@ -166,7 +191,7 @@ export async function assignDialogueContentCore(
       const { error: reactivateError } = await supabase
         .from('com_t_dialogue_assignment')
         .update({
-          delete_flg: '0',
+          status: DIALOGUE_ASSIGNMENT_STATUS.ASSIGNED,
           assigned_by_coach_id: user.id,
           assigned_date: today(),
           update_date: new Date().toISOString(),
@@ -174,7 +199,12 @@ export async function assignDialogueContentCore(
         .eq('assignment_id', existing.assignment_id);
 
       if (reactivateError) {
-        logger.error('dialogue:assign_reactivate_failed', reactivateError.message, { ...ctx, err: reactivateError, userId: user.id, payload: { studentId, contentId } });
+        logger.error('dialogue:assign_reactivate_failed', reactivateError.message, {
+          ...ctx,
+          err: reactivateError,
+          userId: user.id,
+          payload: { studentId, contentId },
+        });
         return { success: false, errorCode: 'unexpected_error' };
       }
 
@@ -192,14 +222,24 @@ export async function assignDialogueContentCore(
       .single();
 
     if (error || !data) {
-      logger.error('dialogue:assign_failed', error?.message ?? 'No row inserted', { ...ctx, err: error, userId: user.id, payload: { studentId, contentId } });
+      logger.error('dialogue:assign_failed', error?.message ?? 'No row inserted', {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { studentId, contentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
-    logger.info('dialogue:assign_success', 'Dialogue content assigned', { ...ctx, userId: user.id, payload: { studentId, contentId, assignmentId: data.assignment_id } });
+    logger.info('dialogue:assign_success', 'Dialogue content assigned', {
+      ...ctx,
+      userId: user.id,
+      payload: { studentId, contentId, assignmentId: data.assignment_id },
+    });
     return { success: true, assignment_id: data.assignment_id };
   } catch (err) {
-    logger.error('dialogue:assign_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('dialogue:assign_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -225,7 +265,12 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
       .maybeSingle();
 
     if (fetchError) {
-      logger.error('dialogue:unassign_lookup_failed', fetchError.message, { ...ctx, err: fetchError, userId: user.id, payload: { assignmentId } });
+      logger.error('dialogue:unassign_lookup_failed', fetchError.message, {
+        ...ctx,
+        err: fetchError,
+        userId: user.id,
+        payload: { assignmentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!assignment) {
@@ -243,7 +288,12 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
       .limit(1);
 
     if (progressCheckError) {
-      logger.error('dialogue:unassign_progress_check_failed', progressCheckError.message, { ...ctx, err: progressCheckError, userId: user.id, payload: { assignmentId } });
+      logger.error('dialogue:unassign_progress_check_failed', progressCheckError.message, {
+        ...ctx,
+        err: progressCheckError,
+        userId: user.id,
+        payload: { assignmentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (completedProgress && completedProgress.length > 0) {
@@ -252,17 +302,23 @@ export async function unassignDialogueContentCore(assignmentId: string): Promise
 
     const { error } = await supabase
       .from('com_t_dialogue_assignment')
-      .update({ delete_flg: '1', update_date: new Date().toISOString() })
+      .update({ status: DIALOGUE_ASSIGNMENT_STATUS.UNASSIGNED, update_date: new Date().toISOString() })
       .eq('assignment_id', assignmentId);
 
     if (error) {
-      logger.error('dialogue:unassign_failed', error.message, { ...ctx, err: error, userId: user.id, payload: { assignmentId } });
+      logger.error('dialogue:unassign_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { assignmentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('dialogue:unassign_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('dialogue:unassign_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -275,18 +331,25 @@ async function fetchDialogueAssignmentSummaries(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   studentId: string,
   userId: string,
-  ctx: LogContext
+  ctx: LogContext,
 ): Promise<GetStudentDialogueAssignmentsResult> {
   try {
     const { data: assignments, error: assignmentsError } = await supabase
       .from('com_t_dialogue_assignment')
-      .select('assignment_id, content_id, assigned_by_coach_id, assigned_date, com_m_contents(content_name, content_name_en, category_id)')
+      .select(
+        'assignment_id, content_id, assigned_by_coach_id, assigned_date, com_m_contents(content_name, content_name_en, category_id)',
+      )
       .eq('student_id', studentId)
-      .eq('delete_flg', '0')
+      .eq('status', DIALOGUE_ASSIGNMENT_STATUS.ASSIGNED)
       .order('assigned_date', { ascending: false });
 
     if (assignmentsError) {
-      logger.error('dialogue:get_assignments_failed', assignmentsError.message, { ...ctx, err: assignmentsError, userId, payload: { studentId } });
+      logger.error('dialogue:get_assignments_failed', assignmentsError.message, {
+        ...ctx,
+        err: assignmentsError,
+        userId,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -301,11 +364,15 @@ async function fetchDialogueAssignmentSummaries(
       .from('com_m_dialogue_session')
       .select(DIALOGUE_SESSION_SELECT)
       .in('content_id', contentIds)
-      .eq('delete_flg', '0')
       .order('session_no', { ascending: true });
 
     if (sessionsError) {
-      logger.error('dialogue:get_assignments_sessions_failed', sessionsError.message, { ...ctx, err: sessionsError, userId, payload: { studentId } });
+      logger.error('dialogue:get_assignments_sessions_failed', sessionsError.message, {
+        ...ctx,
+        err: sessionsError,
+        userId,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -315,7 +382,12 @@ async function fetchDialogueAssignmentSummaries(
       .in('assignment_id', assignmentIds);
 
     if (progressError) {
-      logger.error('dialogue:get_assignments_progress_failed', progressError.message, { ...ctx, err: progressError, userId, payload: { studentId } });
+      logger.error('dialogue:get_assignments_progress_failed', progressError.message, {
+        ...ctx,
+        err: progressError,
+        userId,
+        payload: { studentId },
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -325,7 +397,10 @@ async function fetchDialogueAssignmentSummaries(
       sessionsByContent.get(s.content_id)!.push(s);
     });
 
-    const progressByKey = new Map<string, { is_completed: boolean; completed_date: string | null; notes: string | null }>();
+    const progressByKey = new Map<
+      string,
+      { is_completed: boolean; completed_date: string | null; notes: string | null }
+    >();
     (progressRows ?? []).forEach((p) => {
       progressByKey.set(`${p.assignment_id}:${p.dialogue_session_id}`, {
         is_completed: p.is_completed,
@@ -372,7 +447,11 @@ async function fetchDialogueAssignmentSummaries(
 
     return { success: true, assignments: result };
   } catch (err) {
-    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('dialogue:get_assignments_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -380,7 +459,9 @@ async function fetchDialogueAssignmentSummaries(
 /**
  * 【コーチ用】指定生徒に割り当てられているダイアログ教材セットと、セッション別の進捗をまとめて取得する
  */
-export async function getStudentDialogueAssignmentsCore(studentId: string): Promise<GetStudentDialogueAssignmentsResult> {
+export async function getStudentDialogueAssignmentsCore(
+  studentId: string,
+): Promise<GetStudentDialogueAssignmentsResult> {
   const ctx = await getLogContext();
 
   try {
@@ -394,7 +475,11 @@ export async function getStudentDialogueAssignmentsCore(studentId: string): Prom
 
     return await fetchDialogueAssignmentSummaries(supabase, studentId, user.id, ctx);
   } catch (err) {
-    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('dialogue:get_assignments_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -414,7 +499,11 @@ export async function getMyDialogueAssignmentsCore(): Promise<GetStudentDialogue
 
     return await fetchDialogueAssignmentSummaries(supabase, user.id, user.id, ctx);
   } catch (err) {
-    logger.error('dialogue:get_assignments_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('dialogue:get_assignments_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -425,7 +514,7 @@ export async function getMyDialogueAssignmentsCore(): Promise<GetStudentDialogue
  * メモ編集では上書きしない（既存の完了日を保持する）。
  */
 export async function updateDialogueSessionProgressCore(
-  input: UpdateDialogueSessionProgressInput
+  input: UpdateDialogueSessionProgressInput,
 ): Promise<UpdateDialogueSessionProgressResult> {
   const ctx = await getLogContext();
 
@@ -441,7 +530,12 @@ export async function updateDialogueSessionProgressCore(
       .maybeSingle();
 
     if (assignmentError) {
-      logger.error('dialogue:update_progress_lookup_failed', assignmentError.message, { ...ctx, err: assignmentError, userId: user.id, payload: input });
+      logger.error('dialogue:update_progress_lookup_failed', assignmentError.message, {
+        ...ctx,
+        err: assignmentError,
+        userId: user.id,
+        payload: input,
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!assignment) {
@@ -459,38 +553,52 @@ export async function updateDialogueSessionProgressCore(
       .maybeSingle();
 
     if (existingProgressError) {
-      logger.error('dialogue:update_progress_existing_lookup_failed', existingProgressError.message, { ...ctx, err: existingProgressError, userId: user.id, payload: input });
+      logger.error('dialogue:update_progress_existing_lookup_failed', existingProgressError.message, {
+        ...ctx,
+        err: existingProgressError,
+        userId: user.id,
+        payload: input,
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     const completedDate = input.is_completed
-      ? (existingProgress?.is_completed ? existingProgress.completed_date : today())
+      ? existingProgress?.is_completed
+        ? existingProgress.completed_date
+        : today()
       : null;
     const trimmedNotes = input.notes?.trim() ?? '';
 
-    const { error } = await supabase
-      .from('com_t_dialogue_session_progress')
-      .upsert(
-        {
-          assignment_id: input.assignment_id,
-          dialogue_session_id: input.dialogue_session_id,
-          is_completed: input.is_completed,
-          completed_date: completedDate,
-          notes: trimmedNotes.length > 0 ? trimmedNotes : null,
-          updated_by_coach_id: user.id,
-          update_date: new Date().toISOString(),
-        },
-        { onConflict: 'assignment_id,dialogue_session_id' }
-      );
+    const { error } = await supabase.from('com_t_dialogue_session_progress').upsert(
+      {
+        assignment_id: input.assignment_id,
+        dialogue_session_id: input.dialogue_session_id,
+        is_completed: input.is_completed,
+        completed_date: completedDate,
+        notes: trimmedNotes.length > 0 ? trimmedNotes : null,
+        updated_by_coach_id: user.id,
+        update_date: new Date().toISOString(),
+      },
+      { onConflict: 'assignment_id,dialogue_session_id' },
+    );
 
     if (error) {
-      logger.error('dialogue:update_progress_failed', error.message, { ...ctx, err: error, userId: user.id, payload: input });
+      logger.error('dialogue:update_progress_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: input,
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
     return { success: true };
   } catch (err) {
-    logger.error('dialogue:update_progress_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('dialogue:update_progress_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }
@@ -502,7 +610,9 @@ export async function updateDialogueSessionProgressCore(
  * updateDialogueSessionProgressCoreが別途管理する）。誤クリック・開き直し等も含めてそのまま
  * 追記するため、重複排除や更新は行わない。
  */
-export async function logSessionDialogueOpenCore(input: LogSessionDialogueOpenInput): Promise<LogSessionDialogueOpenResult> {
+export async function logSessionDialogueOpenCore(
+  input: LogSessionDialogueOpenInput,
+): Promise<LogSessionDialogueOpenResult> {
   const ctx = await getLogContext();
 
   try {
@@ -517,7 +627,12 @@ export async function logSessionDialogueOpenCore(input: LogSessionDialogueOpenIn
       .maybeSingle();
 
     if (assignmentError) {
-      logger.error('dialogue:log_open_assignment_lookup_failed', assignmentError.message, { ...ctx, err: assignmentError, userId: user.id, payload: input });
+      logger.error('dialogue:log_open_assignment_lookup_failed', assignmentError.message, {
+        ...ctx,
+        err: assignmentError,
+        userId: user.id,
+        payload: input,
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
     if (!assignment) {
@@ -527,14 +642,12 @@ export async function logSessionDialogueOpenCore(input: LogSessionDialogueOpenIn
       return { success: false, errorCode: 'forbidden' };
     }
 
-    const { error } = await supabase
-      .from('com_t_session_dialogue_log')
-      .insert({
-        session_id: input.session_id,
-        assignment_id: input.assignment_id,
-        dialogue_session_id: input.dialogue_session_id,
-        opened_by_coach_id: user.id,
-      });
+    const { error } = await supabase.from('com_t_session_dialogue_log').insert({
+      session_id: input.session_id,
+      assignment_id: input.assignment_id,
+      dialogue_session_id: input.dialogue_session_id,
+      opened_by_coach_id: user.id,
+    });
 
     if (error) {
       logger.error('dialogue:log_open_failed', error.message, { ...ctx, err: error, userId: user.id, payload: input });
@@ -543,7 +656,8 @@ export async function logSessionDialogueOpenCore(input: LogSessionDialogueOpenIn
 
     return { success: true };
   } catch (err) {
-    logger.error('dialogue:log_open_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('dialogue:log_open_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

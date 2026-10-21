@@ -15,12 +15,9 @@ interface ContentLoadingProps {
   subtitle?: string;
 }
 
-export function ContentLoading({
-  title = 'Preparing your session',
-  subtitle,
-}: ContentLoadingProps) {
+export function ContentLoading({ title = 'Preparing your session', subtitle }: ContentLoadingProps) {
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-canvas flex items-center justify-center p-6 z-50"
       role="status"
       aria-live="polite"
@@ -30,13 +27,13 @@ export function ContentLoading({
         {/* スピナーアニメーションエリア */}
         <div className="relative w-20 h-20 mx-auto">
           <div className="absolute inset-0 border-4 border-brand-100 rounded-control" />
-          <motion.div 
+          <motion.div
             className="absolute inset-0 border-4 border-brand border-t-transparent rounded-control"
             animate={{ rotate: 360 }}
             transition={{
               repeat: Infinity,
               duration: 1,
-              ease: 'linear'
+              ease: 'linear',
             }}
           />
           <div className="absolute inset-0 flex items-center justify-center text-brand">
@@ -46,22 +43,16 @@ export function ContentLoading({
 
         {/* テキスト & プログレスバーバーエリア */}
         <div className="space-y-3">
-          <h2 className="text-xl font-bold text-ink tracking-tight">
-            {title}
-          </h2>
-          {subtitle && (
-            <p className="text-sm font-medium text-ink-muted">
-              {subtitle}
-            </p>
-          )}
+          <h2 className="text-xl font-bold text-ink tracking-tight">{title}</h2>
+          {subtitle && <p className="text-sm font-medium text-ink-muted">{subtitle}</p>}
           <div className="w-48 h-1 bg-line rounded-full overflow-hidden mx-auto mt-4 relative">
-            <motion.div 
+            <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: '100%' }}
-              transition={{ 
-                repeat: Infinity, 
-                duration: 1.5, 
-                ease: 'easeInOut' 
+              transition={{
+                repeat: Infinity,
+                duration: 1.5,
+                ease: 'easeInOut',
               }}
               className="absolute top-0 bottom-0 left-0 w-full bg-brand"
             />

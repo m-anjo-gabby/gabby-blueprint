@@ -2,8 +2,8 @@
 
 import { useLayoutEffect } from 'react';
 import { applyCommonShellData, setCommonShellStoresLoading } from '@gabby/lib/shell/commonShellStores';
-import { useRequestsStore } from '@/stores/useRequestsStore';
 import type { CoachShellData } from '@/lib/shellData';
+import { useRequestsStore } from '@/stores/useRequestsStore';
 
 const OPTIONS = { includeChat: true } as const;
 

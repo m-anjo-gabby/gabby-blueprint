@@ -1,27 +1,26 @@
 // apps/admin/app/(app)/notice/[id]/edit/page.tsx
 import { getTranslations } from 'next-intl/server';
-import { getNoticeById } from "@/actions/adminNoticeAction";
-import { NoticeEditor } from "../../_components/NoticeEditor";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from 'next/navigation';
 import { createLogger } from '@gabby/lib/logger';
+import { getClientsFilter } from '@/actions/adminClientAction';
+import { getNoticeById } from '@/actions/adminNoticeAction';
+import { NoticeEditor } from '../../_components/NoticeEditor';
 
 const logger = createLogger('admin');
 
-export default async function NoticeEditPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function NoticeEditPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('notice.editor');
   const { id } = await params;
 
   let notice;
+  let clientOptions;
   try {
-    notice = await getNoticeById(id);
+    [notice, clientOptions] = await Promise.all([getNoticeById(id), getClientsFilter()]);
     if (!notice) {
       notFound();
     }
   } catch (error) {
+    unstable_rethrow(error);
     logger.error('notice:get_notice_detail_failed', 'Failed to load notice data', { err: error });
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] text-rose-600">
@@ -34,6 +33,7 @@ export default async function NoticeEditPage({
   return (
     <NoticeEditor
       mode="edit"
+      clientOptions={clientOptions}
       initialData={{
         notice_id: notice.notice_id,
         target_type: notice.target_type,

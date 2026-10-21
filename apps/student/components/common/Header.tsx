@@ -1,41 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import * as Dialog from '@radix-ui/react-dialog'; // Radix UI Dialogをインポート
+
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertCircle, ChevronDown, FileText, Loader2, Lock, LogOut, UserIcon } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { 
-  LogOut, 
-  UserIcon, 
-  AlertCircle, 
-  Lock, 
-  FileText,
-  ChevronDown, 
-  Loader2
-} from 'lucide-react';
-import * as Dialog from "@radix-ui/react-dialog"; // Radix UI Dialogをインポート
+import { useState } from 'react';
 import { focusDialogContent } from '@gabby/lib/components/common/dialogFocus';
-import { motion, AnimatePresence } from 'framer-motion';
-
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { clientLogger } from '@gabby/lib/logger/client';
+import { reloadTo } from '@gabby/lib/navigation/reloadTo';
+import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import type { TermDocument } from '@gabby/types/term';
+import { signOut } from '@/actions/authAction';
+import { getLatestTerms } from '@/actions/termAction';
 // Shadcn UI Components
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { signOut } from '@/actions/authAction';
-import { getLatestTerms } from '@/actions/termAction';
-import { TermsAgreementModal } from './TermsAgreementModal';
-import type { TermDocument } from '@gabby/types/term';
 import { NotificationCenterDropdown } from './NotificationCenterDropdown';
-import { clientLogger } from '@gabby/lib/logger/client';
+import { TermsAgreementModal } from './TermsAgreementModal';
 
-
-export default function Header() {
+export function Header() {
   const user = useUserStore((state) => state.user);
   const profileIconUrl = getProfileIconUrl(user?.icon_path);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -57,7 +49,7 @@ export default function Header() {
       await signOut();
       // 重要: router.push ではなく window.location.href を使用します。
       // これによりページが完全にリロードされ、Zustandの全メモリキャッシュ(UserAのデータ)が破棄されます。
-      window.location.href = '/login';
+      reloadTo('/login');
     } catch (error) {
       clientLogger.error('auth:sign_out_failed', 'Logout failed', { err: error });
       setIsSigningOut(false);
@@ -68,22 +60,21 @@ export default function Header() {
   return (
     <>
       <header className="h-14 md:h-16 bg-white/70 backdrop-blur-xl border-b border-line/50 px-4 md:px-6 flex items-center justify-between sticky top-0 z-50 shrink-0">
-        
-        {/* 👑 ロゴエリア（クリックでダッシュボードへ遷移）。PCではサイドナビ側にロゴを表示するため非表示 */}
-        <Link 
-          href="/dashboard" 
+        {/* ロゴエリア（クリックでダッシュボードへ遷移）。PCではサイドナビ側にロゴを表示するため非表示 */}
+        <Link
+          href="/dashboard"
           className="flex md:invisible items-center hover:opacity-80 transition-opacity cursor-pointer select-none"
         >
-          <Image 
-            src="/logo-01.png" 
-            alt="Gabby Logo" 
-            width={120} 
-            height={32} 
+          <Image
+            src="/logo-01.png"
+            alt="Gabby Logo"
+            width={120}
+            height={32}
             className="h-7 md:h-8 w-auto object-contain"
-            priority 
+            priority
           />
         </Link>
-        
+
         {/* ユーザー操作エリア */}
         {/* 通知ベルとアカウントメニューは高さ40pxの同じ丸枠で揃える */}
         <div className="flex items-center gap-2.5">
@@ -98,8 +89,7 @@ export default function Header() {
               >
                 <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-sm text-brand-500 overflow-hidden shrink-0">
                   {profileIconUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
+                    <ExternalImage src={profileIconUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <UserIcon size={18} />
                   )}
@@ -118,32 +108,33 @@ export default function Header() {
               <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-canvas border border-line text-ink-subtle overflow-hidden shrink-0">
                   {profileIconUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profileIconUrl} alt="" className="w-full h-full object-cover" />
+                    <ExternalImage src={profileIconUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <UserIcon size={18} />
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-ink truncate">
-                    {user?.user_name || user?.email?.split('@')[0]}
-                  </p>
-                  {user?.email && (
-                    <p className="text-[11px] font-medium text-ink-subtle truncate">{user.email}</p>
-                  )}
+                  <p className="text-xs font-bold text-ink truncate">{user?.user_name || user?.email?.split('@')[0]}</p>
+                  {user?.email && <p className="text-[11px] font-medium text-ink-subtle truncate">{user.email}</p>}
                 </div>
               </div>
 
               <DropdownMenuSeparator className="mb-1 border-line/70" />
 
               <DropdownMenuItem asChild>
-                <Link href="/profile" className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-canvas">
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-canvas"
+                >
                   <UserIcon size={14} /> プロフィール
                 </Link>
               </DropdownMenuItem>
 
               <DropdownMenuItem asChild>
-                <Link href="/profile/password" className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-canvas">
+                <Link
+                  href="/profile/password"
+                  className="flex items-center gap-2 text-xs font-bold text-ink-soft cursor-pointer hover:bg-canvas"
+                >
                   <Lock size={14} /> パスワード変更
                 </Link>
               </DropdownMenuItem>
@@ -157,11 +148,11 @@ export default function Header() {
               >
                 <FileText size={14} /> 利用規約
               </DropdownMenuItem>
-              
+
               <DropdownMenuSeparator className="my-1 border-line/70" />
-              
-              <DropdownMenuItem 
-                onClick={() => setShowLogoutConfirm(true)} 
+
+              <DropdownMenuItem
+                onClick={() => setShowLogoutConfirm(true)}
                 className="flex items-center gap-2 text-xs font-bold text-rose-500 cursor-pointer hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-600"
               >
                 <LogOut size={14} /> ログアウト
@@ -178,24 +169,21 @@ export default function Header() {
             <Dialog.Portal>
               {/* 背景オーバーレイ */}
               <Dialog.Overlay asChild>
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-[110]"
                 />
               </Dialog.Overlay>
-              
+
               {/* ダイアログ本体 */}
-              <Dialog.Content 
-                asChild 
-                onOpenAutoFocus={focusDialogContent}
-              >
-                <motion.div 
+              <Dialog.Content asChild onOpenAutoFocus={focusDialogContent}>
+                <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ type: "spring", damping: 25, stiffness: 400 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 400 }}
                   className="fixed left-[50%] top-[50%] z-[111] w-[calc(100%-2rem)] max-w-[280px] translate-x-[-50%] translate-y-[-50%] outline-none bg-white rounded-panel shadow-2xl p-6 text-center"
                 >
                   <div className="flex justify-center mb-4">
@@ -203,10 +191,8 @@ export default function Header() {
                       <AlertCircle size={24} />
                     </div>
                   </div>
-                  
-                  <Dialog.Title className="text-sm font-bold text-ink mb-2">
-                    ログアウトしますか？
-                  </Dialog.Title>
+
+                  <Dialog.Title className="text-sm font-bold text-ink mb-2">ログアウトしますか？</Dialog.Title>
                   <Dialog.Description className="text-[11px] text-ink-muted mb-6">
                     ログイン画面に戻ります。
                   </Dialog.Description>
@@ -241,14 +227,13 @@ export default function Header() {
       )}
 
       {/* 利用規約・プライバシーポリシー表示（参照モード） */}
-      <TermsAgreementModal 
+      <TermsAgreementModal
         userId={user?.id || ''}
         terms={terms}
         mode="reference"
         isOpen={showTermsModal}
         onClose={() => setShowTermsModal(false)}
       />
-
     </>
   );
 }

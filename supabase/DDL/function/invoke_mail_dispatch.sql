@@ -1,5 +1,5 @@
 ---------------------------------------------
--- invoke_mail_dispatch: メールの送信処理（admin の /api/cron/mail-dispatch）を呼び出す＋5分ごとのジョブ (2026-10-05 追加)
+-- invoke_mail_dispatch: メールの送信処理（admin の /api/cron/mail-dispatch）を呼び出す＋5分ごとのジョブ
 ---------------------------------------------
 -- 【方式】
 -- 送信処理は Next.js（admin アプリ）の Route Handler で、メールの文面（React のテンプレート）を
@@ -10,7 +10,7 @@
 --      リマインダー）の後、送る時刻が来た送信待ち
 --      （チャットの10分後・失敗の再試行・取りこぼし）がある時だけ呼ぶ（invoke_mail_dispatch_if_due）
 -- 別に、pg_cron の毎日のジョブ 'mail-daily-report'（09:00 JST）が、運営向けのメール配信の日次の要約を
--- task=daily_report で呼ぶ（2026-10-06 追加。送る相手は admin の環境変数 MAIL_OPS_ALERT_TO。問題が無い日も「異常なし」で毎日送り、届くこと自体を送信処理の生存確認にする）。
+-- task=daily_report で呼ぶ（送る相手は admin の環境変数 MAIL_OPS_ALERT_TO。問題が無い日も「異常なし」で毎日送り、届くこと自体を送信処理の生存確認にする）。
 --
 -- 【接続先の設定（環境ごとに1回、手作業）】
 -- 送信処理のURLと秘密のキーは Supabase Vault に保存する（リポジトリには置かない）。
@@ -23,7 +23,7 @@
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;
 
--- p_body: 送信処理に渡す JSON（{"task":"daily_report"} で日次の要約。既定は送信処理）(2026-10-06 引数を追加)
+-- p_body: 送信処理に渡す JSON（{"task":"daily_report"} で日次の要約。既定は送信処理）
 DROP FUNCTION IF EXISTS private.invoke_mail_dispatch();
 
 CREATE OR REPLACE FUNCTION private.invoke_mail_dispatch(p_body jsonb DEFAULT '{}'::jsonb)

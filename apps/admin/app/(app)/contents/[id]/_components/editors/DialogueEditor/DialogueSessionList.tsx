@@ -1,12 +1,10 @@
 'use client';
 
+import { AlertCircle, ExternalLink, Layout, StickyNote, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import { ExternalLink, Trash2, AlertCircle, Layout, StickyNote } from 'lucide-react';
-import { DialogueSession } from '@gabby/types/dialogue';
-import { deleteDialogueSession } from '@/actions/adminDialogueAction';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { type DialogueSession } from '@gabby/types/dialogue';
+import { deleteDialogueSession } from '@/actions/adminDialogueAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +16,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { DialogueSessionFormDialog } from './DialogueSessionFormDialog';
 
 interface DialogueSessionListProps {
@@ -35,6 +35,8 @@ export function DialogueSessionList({ sessions, contentId, onUpdate }: DialogueS
     if (res.success) {
       showToast(t('deleted'), 'success');
       onUpdate();
+    } else if (res.errorCode === 'in_use') {
+      showToast(t('deleteInUse'), 'error');
     } else {
       showToast(res.message || t('deleteFailed'), 'error');
     }
@@ -45,12 +47,17 @@ export function DialogueSessionList({ sessions, contentId, onUpdate }: DialogueS
       <div className="p-6 space-y-4 max-w-4xl mx-auto pb-32">
         {sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-20 border-2 border-dashed border-slate-200 rounded-[40px] bg-white/50 text-slate-400 gap-4">
-            <div className="p-4 bg-white rounded-full shadow-sm"><Layout size={32} className="text-slate-200" /></div>
+            <div className="p-4 bg-white rounded-full shadow-sm">
+              <Layout size={32} className="text-slate-200" />
+            </div>
             <p className="text-sm font-bold">{t('emptyState')}</p>
           </div>
         ) : (
           sessions.map((s) => (
-            <div key={s.dialogue_session_id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div
+              key={s.dialogue_session_id}
+              className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden"
+            >
               <div className="p-5 flex gap-5">
                 {/* 左：セッション番号 */}
                 <div className="flex flex-col items-center shrink-0">
@@ -89,7 +96,11 @@ export function DialogueSessionList({ sessions, contentId, onUpdate }: DialogueS
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50"
+                      >
                         <Trash2 size={16} />
                       </Button>
                     </AlertDialogTrigger>
@@ -135,9 +146,7 @@ function SlideLink({
   link: string | null;
   accent: 'brand' | 'emerald';
 }) {
-  const colorClasses = accent === 'brand'
-    ? 'bg-brand-50/50 border-brand-100'
-    : 'bg-emerald-50/50 border-emerald-100';
+  const colorClasses = accent === 'brand' ? 'bg-brand-50/50 border-brand-100' : 'bg-emerald-50/50 border-emerald-100';
   const labelClasses = accent === 'brand' ? 'text-brand-500' : 'text-emerald-500';
 
   return (

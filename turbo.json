@@ -3,7 +3,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/**", "!$TURBO_ROOT$/packages/**/node_modules/**"],
+      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**"]
     },
     "dev": {
       "cache": false,
@@ -13,8 +14,9 @@
       "cache": false,
       "persistent": true
     },
-    "lint": {
-      "dependsOn": ["^lint"]
+    "typecheck": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/**", "!$TURBO_ROOT$/packages/**/node_modules/**"],
+      "outputs": []
     }
   }
 }

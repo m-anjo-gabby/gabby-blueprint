@@ -1,51 +1,59 @@
 // apps\admin\app\(app)\contents\[id]\_components\editors\SprintEditor\index.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { Filter, Loader2, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { QUESTION_TYPES, SprintQuestionType, SprintQuestion } from '@gabby/types/sprint';
-import { Content } from '@gabby/types/content';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRefetchOnChange } from '@gabby/lib/hooks/useRefetchOnChange';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type Content } from '@gabby/types/content';
+import { QUESTION_TYPES, type SprintQuestion, type SprintQuestionType } from '@gabby/types/sprint';
 import { getSprintQuestionsByFilter } from '@/actions/adminSprintAction';
-import { SprintQuestionList } from './SprintQuestionList';
-import { SprintQuestionFormDialog } from './SprintQuestionFormDialog';
-import { Loader2, Filter, Zap } from 'lucide-react';
+import { LoadErrorSection } from '@/components/common/LoadErrorSection';
 import { Badge } from '@/components/ui/badge';
-import { SprintTTSBulkDialog } from './SprintTTSBulkDialog';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SPRINT_EDITOR_INITIAL_LEVEL } from '../../../_lib/editorDefaults';
 import { SprintBulkImportDialog } from './SprintBulkImportDialog';
+import { SprintQuestionFormDialog } from './SprintQuestionFormDialog';
+import { SprintQuestionList } from './SprintQuestionList';
+import { SprintTTSBulkDialog } from './SprintTTSBulkDialog';
 
 interface SprintEditorProps {
   contentId: string;
-  initialType?: SprintQuestionType;
+  initialType: SprintQuestionType;
   content: Content;
+  /** ページでサーバー取得した、initialType・レベル1の問題の一覧（null は取得の失敗） */
+  initialQuestions: SprintQuestion[] | null;
 }
 
-export function SprintEditor({ contentId, initialType, content }: SprintEditorProps) {
+export function SprintEditor({ contentId, initialType, content, initialQuestions }: SprintEditorProps) {
   const t = useTranslations('contents.editor.sprint.index');
-  const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialType || '0');
-  const [selectedLevel, setSelectedLevel] = useState<string>('1');
-  const [questions, setQuestions] = useState<SprintQuestion[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const tCommon = useTranslations('common');
+  const { showToast } = useToast();
+  const [selectedType, setSelectedType] = useState<SprintQuestionType>(initialType);
+  const [selectedLevel, setSelectedLevel] = useState<string>(String(SPRINT_EDITOR_INITIAL_LEVEL));
+  const [questions, setQuestions] = useState<SprintQuestion[]>(initialQuestions ?? []);
+  const [isLoadFailed, setIsLoadFailed] = useState(initialQuestions === null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchQuestions = useCallback(async () => {
     try {
       setIsLoading(true);
-      // 💡 修正: DDLの変更に伴い、将来的な拡張も見据えて contentId も含めてアクションに渡せるように口を確保します。
-      // 現状の汎用フィルタ用アクションのシグネチャに合わせて取得
-      const data = await getSprintQuestionsByFilter(contentId, selectedType, Number(selectedLevel));
-      setQuestions(data);
+      const res = await getSprintQuestionsByFilter(contentId, selectedType, Number(selectedLevel));
+      if (res.success) {
+        setQuestions(res.data);
+        setIsLoadFailed(false);
+      } else {
+        showToast(tCommon('errors.loadFailed'), 'error');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [contentId, selectedType, selectedLevel]);
+  }, [contentId, selectedType, selectedLevel, showToast, tCommon]);
 
-  useEffect(() => {
-    // 💡 修正: 不要なマイクロタスクを排除し、useEffect の標準パターンに則って
-    // 安全かつシンプルにフェッチ関数を呼び出します。
-    fetchQuestions();
-  }, [fetchQuestions]);
+  // 種別・レベルを選び直した時だけ取り直す。開いた時の一覧はページで取得する
+  useRefetchOnChange(`${selectedType}:${selectedLevel}`, fetchQuestions);
 
   const sprintMeta = useMemo(() => content.metadata?.sprint, [content]);
 
@@ -64,7 +72,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
     if (!supportedTypes) {
       return Object.values(QUESTION_TYPES);
     }
-    return Object.values(QUESTION_TYPES).filter(t => {
+    return Object.values(QUESTION_TYPES).filter((t) => {
       if (t.value === '0') return supportedTypes.speed;
       if (t.value === '4') return supportedTypes.structure;
       if (t.value === '5') return supportedTypes.builders;
@@ -76,7 +84,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
   // 選択可能な種別やレベル概念の変更による状態の整合性確保
   useEffect(() => {
     if (availableTypes.length > 0) {
-      const isCurrentAvailable = availableTypes.some(t => t.value === selectedType);
+      const isCurrentAvailable = availableTypes.some((t) => t.value === selectedType);
       if (!isCurrentAvailable) {
         const fallbackType = availableTypes[0].value;
         setSelectedType(fallbackType);
@@ -90,10 +98,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
   const typeMeta = QUESTION_TYPES[selectedType];
   const levels = useMemo(() => {
     if (!hasLevel) return ['1'];
-    return Array.from(
-      { length: typeMeta.maxLevel - typeMeta.minLevel + 1 },
-      (_, i) => String(typeMeta.minLevel + i)
-    );
+    return Array.from({ length: typeMeta.maxLevel - typeMeta.minLevel + 1 }, (_, i) => String(typeMeta.minLevel + i));
   }, [typeMeta, hasLevel]);
 
   return (
@@ -107,25 +112,30 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
             </h2>
             <div className="flex items-center gap-3">
               {/* 種別選択 */}
-              <Select value={selectedType} onValueChange={(v) => {
-                setIsLoading(true);
-                const nextType = v as SprintQuestionType;
-                setSelectedType(nextType);
-                setSelectedLevel(hasLevel ? String(QUESTION_TYPES[nextType].minLevel) : '1');
-              }}>
+              <Select
+                value={selectedType}
+                onValueChange={(v) => {
+                  setIsLoading(true);
+                  const nextType = v as SprintQuestionType;
+                  setSelectedType(nextType);
+                  setSelectedLevel(hasLevel ? String(QUESTION_TYPES[nextType].minLevel) : '1');
+                }}
+              >
                 <SelectTrigger className="w-[180px] h-10 bg-slate-50 border-slate-200 font-bold rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {availableTypes.map(t => (
-                    <SelectItem key={t.value} value={t.value} className="font-medium">{t.label}</SelectItem>
+                  {availableTypes.map((t) => (
+                    <SelectItem key={t.value} value={t.value} className="font-medium">
+                      {t.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               {/* レベル選択 */}
-              <Select 
-                value={selectedLevel} 
+              <Select
+                value={selectedLevel}
                 onValueChange={(v) => {
                   setIsLoading(true);
                   setSelectedLevel(v);
@@ -136,7 +146,7 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {levels.map(l => (
+                  {levels.map((l) => (
                     <SelectItem key={l} value={l} className="font-mono">
                       {l === '0' ? 'Basic' : `Level ${l}`}
                     </SelectItem>
@@ -149,28 +159,31 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
           <div className="h-10 w-px bg-slate-200 hidden sm:block mt-6" />
 
           <div className="mt-6 flex flex-col justify-end">
-             <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-brand-50 text-brand border-brand-100 font-black">
-                  {questions.length} Questions
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-brand-50 text-brand border-brand-100 font-black">
+                {questions.length} Questions
+              </Badge>
+              {selectedType !== '0' && (
+                <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-100 font-black">
+                  {new Set(questions.map((q) => q.group_id)).size} Groups
                 </Badge>
-                {selectedType !== '0' && (
-                   <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-100 font-black">
-                    {new Set(questions.map(q => q.group_id)).size} Groups
-                  </Badge>
-                )}
-             </div>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="mt-6 flex items-center gap-2">
           {/* 一括音声生成ボタン */}
-          <SprintTTSBulkDialog 
-            questions={questions} 
-            type={selectedType} 
-            level={Number(selectedLevel)} 
+          <SprintTTSBulkDialog
+            questions={questions}
+            type={selectedType}
+            level={Number(selectedLevel)}
             onComplete={fetchQuestions}
           >
-            <Button variant="outline" className="border-brand-100 text-brand font-bold h-10 rounded-xl gap-2 hover:bg-brand-50">
+            <Button
+              variant="outline"
+              className="border-brand-100 text-brand font-bold h-10 rounded-xl gap-2 hover:bg-brand-50"
+            >
               <Zap size={16} className="text-amber-500" fill="currentColor" />
               {t('bulkAudioButton')}
             </Button>
@@ -185,11 +198,11 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
           />
 
           {/* 新規追加フォーム */}
-          <SprintQuestionFormDialog 
-            mode="create" 
-            type={selectedType} 
-            level={Number(selectedLevel)} 
-            onSuccess={fetchQuestions} 
+          <SprintQuestionFormDialog
+            mode="create"
+            type={selectedType}
+            level={Number(selectedLevel)}
+            onSuccess={fetchQuestions}
             contentId={contentId}
           />
         </div>
@@ -197,13 +210,21 @@ export function SprintEditor({ contentId, initialType, content }: SprintEditorPr
 
       {/* リストエリア */}
       <div className="flex-1 overflow-hidden">
-        {isLoading ? (
+        {isLoadFailed ? (
+          <LoadErrorSection className="m-6" />
+        ) : isLoading ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-300">
             <Loader2 className="animate-spin" size={32} />
             <span className="text-sm font-medium italic">Loading questions...</span>
           </div>
         ) : (
-          <SprintQuestionList questions={questions} type={selectedType} onUpdate={fetchQuestions} contentId={contentId} hasLevel={hasLevel} />
+          <SprintQuestionList
+            questions={questions}
+            type={selectedType}
+            onUpdate={fetchQuestions}
+            contentId={contentId}
+            hasLevel={hasLevel}
+          />
         )}
       </div>
     </div>

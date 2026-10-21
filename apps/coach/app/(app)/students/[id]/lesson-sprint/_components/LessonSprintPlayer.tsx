@@ -1,32 +1,60 @@
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ArrowRight,
+  ChartSpline,
+  CheckCircle2,
+  ChevronLeft,
+  ClipboardCheck,
+  Info,
+  Loader2,
+  Megaphone,
+  Pause,
+  Play,
+  StickyNote,
+  Timer,
+} from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Timer, Pause, Play, StickyNote, Loader2, Megaphone, ArrowRight, Info, CheckCircle2, ClipboardCheck, ChartSpline } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@gabby/lib/hooks/useToast';
+import {
+  getSprintTitle,
+  resolveSprintHasLevel,
+  SPRINT_NOTE_FOOTER_EN,
+  SPRINT_NOTES_EN,
+  SPRINT_THEMES_EN,
+  tokenizeWordsWithPunctuation,
+} from '@gabby/lib';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
-import { tokenizeWordsWithPunctuation, getSprintTitle, resolveSprintHasLevel, SPRINT_NOTES_EN, SPRINT_NOTE_FOOTER_EN, SPRINT_THEMES_EN } from '@gabby/lib';
-import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
-import { useLessonSprintCountdown, useAutoRedirectCountdown } from '../_hooks/useLessonSprintTimers';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { DEFAULT_LESSON_SPRINT_SCORE, type LessonSprintHistoryItem } from '@gabby/types/lessonSprint';
 import { createLessonSprintResult } from '@/actions/lessonSprintAction';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
+import { useAutoRedirectCountdown, useLessonSprintCountdown } from '../_hooks/useLessonSprintTimers';
 import { ScoreButtons } from './ScoreButtons';
-import { WordHighlightAnswer } from './WordHighlightAnswer';
 import { SprintThemeDialog } from './SprintThemeDialog';
-import type { LessonSprintHistoryItem } from '@gabby/types/lessonSprint';
-import { DEFAULT_LESSON_SPRINT_SCORE } from '@gabby/types/lessonSprint';
+import { WordHighlightAnswer } from './WordHighlightAnswer';
 
-interface Props {
+interface LessonSprintPlayerProps {
   studentId: string;
   sessionId: string | null;
   onExit: () => void;
   onComplete: (lessonSprintId: string) => void;
 }
 
-export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }: Props) {
+export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }: LessonSprintPlayerProps) {
   const { showToast } = useToast();
-  const { session, config, contentName, contentMetadata, commitScoreResult, toggleWordHighlight, setSessionNote, resetStore } = useLessonSprintStore();
+  const {
+    session,
+    config,
+    contentName,
+    contentMetadata,
+    commitScoreResult,
+    toggleWordHighlight,
+    setSessionNote,
+    resetStore,
+  } = useLessonSprintStore();
   const { currentIndex, questions, currentHighlightedWords, sessionNote } = session;
 
   const [isSaving, setIsSaving] = useState(false);
@@ -46,7 +74,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
 
   const courseTitle = useMemo(
     () => getSprintTitle(config.questionType || '0', Number(config.level), hasLevel),
-    [config.questionType, config.level, hasLevel]
+    [config.questionType, config.level, hasLevel],
   );
 
   const answerText = useMemo(() => {
@@ -74,55 +102,64 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
     });
   }, []);
 
-  const handleSave = useCallback(async (pausedDurationSec: number) => {
-    if (isPersistedRef.current) return;
-    isPersistedRef.current = true;
-    setIsSaving(true);
+  const handleSave = useCallback(
+    async (pausedDurationSec: number) => {
+      if (isPersistedRef.current) return;
+      isPersistedRef.current = true;
+      setIsSaving(true);
 
-    const { config: latestConfig } = useLessonSprintStore.getState();
-    const history = buildHistory();
+      const { config: latestConfig } = useLessonSprintStore.getState();
+      const history = buildHistory();
 
-    const isMissing = (v: string | null | undefined) => v === null || v === undefined || v === '';
-    if (isMissing(latestConfig.contentId) || isMissing(latestConfig.questionType) || isMissing(latestConfig.answerType) || isMissing(latestConfig.sprintType)) {
-      showToast('Missing sprint configuration. Could not save.', 'error');
+      const isMissing = (v: string | null | undefined) => v === null || v === undefined || v === '';
+      if (
+        isMissing(latestConfig.contentId) ||
+        isMissing(latestConfig.questionType) ||
+        isMissing(latestConfig.answerType) ||
+        isMissing(latestConfig.sprintType)
+      ) {
+        showToast('Missing sprint configuration. Could not save.', 'error');
+        setIsSaving(false);
+        onExit();
+        return;
+      }
+
+      const evaluated = history.filter((h) => !h.is_skipped && h.score !== null);
+
+      // 🆕 完了ダイアログの結果先出しプレビュー。保存API完了を待たず、確定済みの内訳をこの時点で表示に反映する
+      const avgScore =
+        evaluated.length > 0
+          ? Math.round((evaluated.reduce((sum, h) => sum + (h.score ?? 0), 0) / evaluated.length) * 10) / 10
+          : null;
+      setCompletionStats({ answered: history.length, avgScore });
+
+      const result = await createLessonSprintResult({
+        student_id: studentId,
+        session_id: sessionId,
+        sprint_type: latestConfig.sprintType,
+        content_id: latestConfig.contentId,
+        question_type: latestConfig.questionType,
+        answer_type: latestConfig.answerType,
+        difficulty_level: Number(latestConfig.level),
+        time_limit_sec: latestConfig.timeLimitSec,
+        total_answered: history.length,
+        total_evaluated: evaluated.length,
+        paused_duration_sec: pausedDurationSec,
+        session_note: useLessonSprintStore.getState().session.sessionNote.trim() || null,
+        history,
+      });
+
       setIsSaving(false);
-      onExit();
-      return;
-    }
+      if (!result.success) {
+        showToast(result.message, 'error');
+        onExit();
+        return;
+      }
 
-    const evaluated = history.filter((h) => !h.is_skipped && h.score !== null);
-
-    // 🆕 完了ダイアログの結果先出しプレビュー。保存API完了を待たず、確定済みの内訳をこの時点で表示に反映する
-    const avgScore = evaluated.length > 0
-      ? Math.round((evaluated.reduce((sum, h) => sum + (h.score ?? 0), 0) / evaluated.length) * 10) / 10
-      : null;
-    setCompletionStats({ answered: history.length, avgScore });
-
-    const result = await createLessonSprintResult({
-      student_id: studentId,
-      session_id: sessionId,
-      sprint_type: latestConfig.sprintType,
-      content_id: latestConfig.contentId,
-      question_type: latestConfig.questionType,
-      answer_type: latestConfig.answerType,
-      difficulty_level: Number(latestConfig.level),
-      time_limit_sec: latestConfig.timeLimitSec,
-      total_answered: history.length,
-      total_evaluated: evaluated.length,
-      paused_duration_sec: pausedDurationSec,
-      session_note: useLessonSprintStore.getState().session.sessionNote.trim() || null,
-      history,
-    });
-
-    setIsSaving(false);
-    if (!result.success) {
-      showToast(result.message, 'error');
-      onExit();
-      return;
-    }
-
-    setResultId(result.lessonSprintId);
-  }, [studentId, sessionId, showToast, onExit, buildHistory]);
+      setResultId(result.lessonSprintId);
+    },
+    [studentId, sessionId, showToast, onExit, buildHistory],
+  );
 
   const handleGoToResult = useCallback(() => {
     if (!resultId) return;
@@ -133,19 +170,25 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
   // 完了ダイアログ表示中、数秒後に自動で結果画面へ遷移する
   useAutoRedirectCountdown(!!resultId, handleGoToResult);
 
-  const handleTimeUp = useCallback(() => {
-    const state = useLessonSprintStore.getState().session;
-    if (!state.isActive) return;
-    const current = state.questions[state.currentIndex];
-    const alreadyCommitted = current && state.sessionResults.some((r) => r.questionId === current.question_id);
-    if (current && !alreadyCommitted) {
-      commitScoreResult(current.question_id, DEFAULT_LESSON_SPRINT_SCORE);
-    }
-    void handleSave(pausedSecondsRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [commitScoreResult]);
+  const handleTimeUp = useCallback(
+    (pausedSeconds: number) => {
+      const state = useLessonSprintStore.getState().session;
+      if (!state.isActive) return;
+      const current = state.questions[state.currentIndex];
+      const alreadyCommitted = current && state.sessionResults.some((r) => r.questionId === current.question_id);
+      if (current && !alreadyCommitted) {
+        commitScoreResult(current.question_id, DEFAULT_LESSON_SPRINT_SCORE);
+      }
+      void handleSave(pausedSeconds);
+    },
+    [commitScoreResult, handleSave],
+  );
 
-  const { secondsLeft, isPaused, togglePause, pausedSecondsRef } = useLessonSprintCountdown(config.timeLimitSec, handleTimeUp, hasStarted);
+  const { secondsLeft, isPaused, togglePause, pausedSecondsRef } = useLessonSprintCountdown(
+    config.timeLimitSec,
+    handleTimeUp,
+    hasStarted,
+  );
 
   const requestExit = useExitConfirmFlow({
     confirmTitle: 'Quit Live Sprint?',
@@ -194,7 +237,9 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
                 onClick={togglePause}
                 className={cn(
                   'h-10 w-10 flex items-center justify-center rounded-xl border active:scale-95 cursor-pointer transition-all shrink-0',
-                  isPaused ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-slate-100 border-transparent text-slate-700 hover:bg-slate-200/80'
+                  isPaused
+                    ? 'bg-amber-50 border-amber-200 text-amber-600'
+                    : 'bg-slate-100 border-transparent text-slate-700 hover:bg-slate-200/80',
                 )}
                 title={isPaused ? 'Resume timer' : 'Pause timer'}
               >
@@ -218,10 +263,13 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
               <div
                 className={cn(
                   'absolute top-0 left-0 h-full rounded-full',
-                  isPaused ? 'bg-slate-300' :
-                  isCritical ? 'bg-gradient-to-r from-rose-500 to-rose-600' :
-                  isWarning ? 'bg-gradient-to-r from-amber-400 to-amber-500' :
-                  'bg-gradient-to-r from-brand-500 to-brand'
+                  isPaused
+                    ? 'bg-slate-300'
+                    : isCritical
+                      ? 'bg-gradient-to-r from-rose-500 to-rose-600'
+                      : isWarning
+                        ? 'bg-gradient-to-r from-amber-400 to-amber-500'
+                        : 'bg-gradient-to-r from-brand-500 to-brand',
                 )}
                 style={{ width: `${progressPercent}%`, transition: 'width 1s linear' }}
               />
@@ -229,18 +277,20 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
             <div
               className={cn(
                 'shrink-0 flex items-center gap-1 font-mono text-xs font-black tracking-tight tabular-nums text-slate-700 bg-white border rounded-full px-2 py-0.5 shadow-sm',
-                isCritical ? 'border-rose-200' : isWarning ? 'border-amber-200' : 'border-slate-200'
+                isCritical ? 'border-rose-200' : isWarning ? 'border-amber-200' : 'border-slate-200',
               )}
             >
               <Timer
                 size={11}
                 className={cn(
                   isCritical && !isPaused && 'animate-pulse',
-                  isCritical ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-brand-500'
+                  isCritical ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-brand-500',
                 )}
                 strokeWidth={3}
               />
-              <span>{secondsLeft}s{isPaused && ' · Paused'}</span>
+              <span>
+                {secondsLeft}s{isPaused && ' · Paused'}
+              </span>
             </div>
           </div>
         </div>
@@ -261,9 +311,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
                   </p>
                 </div>
 
-                {!isCorpus && (
-                  <p className="text-xs text-slate-400 text-center">{SPRINT_NOTE_FOOTER_EN}</p>
-                )}
+                {!isCorpus && <p className="text-xs text-slate-400 text-center">{SPRINT_NOTE_FOOTER_EN}</p>}
               </div>
             </div>
 
@@ -284,9 +332,7 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
             {/* メイン: 問題表示エリア */}
             <div className="flex-1 flex flex-col p-6 overflow-y-auto overscroll-contain">
               <div className="w-full max-w-2xl mx-auto flex flex-col gap-5">
-                <div className="text-xs font-bold text-slate-400 text-center">
-                  Question {currentIndex + 1}
-                </div>
+                <div className="text-xs font-bold text-slate-400 text-center">Question {currentIndex + 1}</div>
 
                 {currentQuestion?.statement_en && !isSpeedMode && (
                   <div className="bg-brand-50/60 border border-brand-100 rounded-2xl p-4 text-center">
@@ -386,27 +432,38 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
               <div className="flex items-center justify-center gap-x-5 py-1 select-none">
                 <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
                   <ClipboardCheck size={13} strokeWidth={2.5} className="text-brand-500 shrink-0" />
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">Answered</span>
-                  <span className="text-sm font-black text-slate-800 font-mono leading-none">{completionStats.answered}</span>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">
+                    Answered
+                  </span>
+                  <span className="text-sm font-black text-slate-800 font-mono leading-none">
+                    {completionStats.answered}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 h-5 whitespace-nowrap">
                   <ChartSpline size={13} strokeWidth={2.5} className="text-amber-500 shrink-0" />
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">Avg Score</span>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none">
+                    Avg Score
+                  </span>
                   <span className="text-sm font-black text-slate-800 font-mono leading-none">
                     {completionStats.avgScore === null ? (
                       <span className="text-slate-400 font-normal">-</span>
                     ) : (
-                      <>{completionStats.avgScore}<span className="text-[10px] font-medium text-slate-400 ml-0.5 font-sans">/5</span></>
+                      <>
+                        {completionStats.avgScore}
+                        <span className="text-[10px] font-medium text-slate-400 ml-0.5 font-sans">/5</span>
+                      </>
                     )}
                   </span>
                 </div>
               </div>
             )}
 
-            <div className={cn(
-              'space-y-2.5 transition-all duration-500 transform',
-              resultId ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
-            )}>
+            <div
+              className={cn(
+                'space-y-2.5 transition-all duration-500 transform',
+                resultId ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none',
+              )}
+            >
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -415,7 +472,11 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
                 className="w-full h-12 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 group cursor-pointer bg-brand hover:bg-brand-strong active:scale-[0.98] shadow-md shadow-brand/10 text-white border-none"
               >
                 <span>View Results</span>
-                <ArrowRight size={14} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
+                <ArrowRight
+                  size={14}
+                  strokeWidth={2.5}
+                  className="group-hover:translate-x-0.5 transition-transform duration-200"
+                />
               </button>
 
               {/* 自動遷移の演出：薄い自動進行バーで示す */}

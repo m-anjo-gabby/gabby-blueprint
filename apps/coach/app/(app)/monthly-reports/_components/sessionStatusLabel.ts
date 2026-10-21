@@ -1,7 +1,7 @@
-import { MonthlyReportSession } from '@gabby/types/monthlyReport';
-import { SESSION_STATUS, COMPLETION_RESULT, CANCEL_CATEGORY } from '@gabby/types/session';
+import { type MonthlyReportSession } from '@gabby/types/monthlyReport';
+import { CANCEL_CATEGORY, COMPLETION_RESULT, SESSION_STATUS } from '@gabby/types/session';
 
-/** Short English label for a session's status, for the Monthly Report detail dialog */
+/** 月次のレポートの詳細のダイアログに出す、セッションの状態の短い英語のラベル */
 export function sessionStatusLabel(session: MonthlyReportSession): string {
   if (session.status === SESSION_STATUS.SCHEDULED) {
     return session.is_unresolved ? 'Not finalized yet' : 'Scheduled';

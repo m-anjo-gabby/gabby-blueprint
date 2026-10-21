@@ -1,12 +1,12 @@
 'use client';
 
-import { Fragment } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ShellPageHeader } from '@/components/shell/ShellPage';
+import { Fragment } from 'react';
 import { PillTabs } from '@/components/shell/PillTabs';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
+import { ShellPageHeader } from '@/components/shell/ShellPage';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FAVORITE_KINDS, FAVORITE_KIND_IDS, buildKindPills, parseFavoriteKind } from './favoriteKinds';
+import { buildKindPills, FAVORITE_KIND_IDS, FAVORITE_KINDS, parseFavoriteKind } from './favoriteKinds';
 import { FAVORITES_HEADER, getFavoriteGridClass } from './FavoriteKindSection';
 
 const KIND_PILLS = buildKindPills();

@@ -1,10 +1,14 @@
 import { getMyAvailability, getMyAvailabilityConfirmedAt } from '@/actions/availabilityAction';
 import { getTimezoneList } from '@/actions/coachProfileAction';
-import { AvailabilityView } from './_components/AvailabilityView';
 import { AvailabilityPageHeader } from '@/components/common/ToolPageSkeletons';
+import { AvailabilityView } from './_components/AvailabilityView';
 
 export default async function AvailabilityPage() {
-  const [slots, confirmedAt, timezones] = await Promise.all([getMyAvailability(), getMyAvailabilityConfirmedAt(), getTimezoneList()]);
+  const [slots, confirmedAt, timezones] = await Promise.all([
+    getMyAvailability(),
+    getMyAvailabilityConfirmedAt(),
+    getTimezoneList(),
+  ]);
 
   return (
     <div className="space-y-6">

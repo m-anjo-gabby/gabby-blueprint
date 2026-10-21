@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { NOTICE_TYPES, type AdminNoticeListItem } from '@gabby/types/notice';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import { NOTICE_TYPES, type AdminNoticeListItem } from '@gabby/types/notice';
 import { deleteNotice } from '@/actions/adminNoticeAction';
 import { DataTable } from '@/components/list/DataTable';
+import { DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
 import { ListSelectFilter } from '@/components/list/ListSelectFilter';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
-import { DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
 import { NOTICE_LIST_FILTERS } from '../_lib/list';
 import { createColumns } from './columns';
 
@@ -45,7 +45,12 @@ export function NoticeDataTable({ data, totalCount, pageCount }: NoticeDataTable
 
   return (
     <div>
-      <ListToolbar query={query} searchPlaceholder={t('searchPlaceholder')} totalCount={totalCount} pageCount={pageCount}>
+      <ListToolbar
+        query={query}
+        searchPlaceholder={t('searchPlaceholder')}
+        totalCount={totalCount}
+        pageCount={pageCount}
+      >
         <ListSelectFilter
           label={t('typeHeader')}
           allLabel={t('allTypes')}

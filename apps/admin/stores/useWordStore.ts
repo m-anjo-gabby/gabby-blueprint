@@ -1,6 +1,6 @@
 // src/stores/useWordStore.ts
-import { WordRecord } from '@gabby/types/word';
 import { create } from 'zustand';
+import { type WordRecord } from '@gabby/types/word';
 
 interface WordState {
   lastUpdated: number; // 単語情報変化を特定する時刻

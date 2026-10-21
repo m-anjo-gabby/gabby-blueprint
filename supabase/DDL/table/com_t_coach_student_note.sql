@@ -24,6 +24,7 @@ COMMENT ON COLUMN public.com_t_coach_student_note.note_text IS 'メモ本文';
 COMMENT ON COLUMN public.com_t_coach_student_note.insert_date IS '登録日時';
 
 CREATE INDEX idx_coach_student_note_lookup ON public.com_t_coach_student_note (coach_id, student_id, insert_date DESC);
+CREATE INDEX idx_coach_student_note_student ON public.com_t_coach_student_note (student_id);
 
 ALTER TABLE public.com_t_coach_student_note ENABLE ROW LEVEL SECURITY;
 
@@ -34,6 +35,6 @@ WITH CHECK (
 
 CREATE POLICY "Coaches can view their own student notes" ON public.com_t_coach_student_note FOR SELECT TO authenticated
 USING (
-    coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    coach_id = auth.uid() OR public.is_system_admin()
 );
 -- @end-schema

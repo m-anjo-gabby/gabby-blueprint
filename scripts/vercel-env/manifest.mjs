@@ -88,6 +88,14 @@ export const MANIFEST = [
     value: { default: ({ config }) => config.urls.student },
   },
   {
+    key: 'NEXT_PUBLIC_ADMIN_URL',
+    apps: ['student'],
+    group: 'サイトURL',
+    description: '管理画面の URL（Webトライアルの申込をサポート窓口へ知らせるメールの、申込一覧へのリンク）',
+    validate: 'https-url',
+    value: { default: ({ config }) => config.urls.admin },
+  },
+  {
     key: 'NEXT_PUBLIC_COACH_URL',
     apps: ['admin'],
     group: 'サイトURL',
@@ -152,7 +160,8 @@ export const MANIFEST = [
     key: 'CRON_SECRET',
     apps: ['admin'],
     group: 'Resend（メール送信）',
-    description: 'メール送信処理（/api/cron/mail-dispatch）の秘密のキー（Supabase Vault の mail_dispatch_secret と同じ値）',
+    description:
+      'メール送信処理（/api/cron/mail-dispatch）の秘密のキー（Supabase Vault の mail_dispatch_secret と同じ値）',
     secret: true,
     generate: true,
     validate: 'random-secret',
@@ -180,7 +189,8 @@ export const MANIFEST = [
     key: 'RESEND_WEBHOOK_SECRET',
     apps: ['admin'],
     group: 'Resend（メール送信）',
-    description: 'Resend の Webhook（/api/webhooks/resend。メールの到達状況）の Signing Secret。未設定なら Webhook を受け付けない',
+    description:
+      'Resend の Webhook（/api/webhooks/resend。メールの到達状況）の Signing Secret。未設定なら Webhook を受け付けない',
     secret: true,
     validate: /^whsec_/,
     value: { default: LOCAL, dev: OPTIONAL },
@@ -195,10 +205,49 @@ export const MANIFEST = [
     value: { default: LOCAL, dev: OPTIONAL, staging: OPTIONAL },
   },
   {
+    key: 'MAIL_TRIAL_APPLICATION_TO',
+    apps: ['student'],
+    group: 'Resend（メール送信）',
+    description:
+      'Webトライアルの申込を知らせるメールの宛先（カンマ区切り。本番はサポート窓口 support@gabbyacademy.com。dev・staging は書いた場合だけ送る。未設定なら送らない（管理者へのアプリ内の通知は送る））',
+    validate: 'email-list',
+    value: { default: OPTIONAL, prod: LOCAL },
+  },
+  // ---------------------------------------------------------------- Webトライアル
+  {
+    key: 'TRIAL_APPLICATION_ENABLED',
+    apps: ['student'],
+    group: 'Webトライアル',
+    description:
+      'Webトライアルの申込（/trial）を受け付けるか（true / false）。false・未設定なら /trial・/trial/complete は 404、申込のアクションも受け付けない。本番は試験運用の間 false',
+    validate: ['true', 'false'],
+    value: { default: 'true', prod: 'false' },
+    note: '本番で受付を始めるときは prod を true に変えて --apply し、デプロイし直す（コーポレートサイトのリンクの差し替えと同じ時期に）',
+  },
+  // ---------------------------------------------------------------- Cloudflare Turnstile（CAPTCHA）
+  {
+    key: 'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
+    apps: ['student'],
+    group: 'Cloudflare Turnstile',
+    description:
+      'Webトライアルの申込フォーム（/trial）の CAPTCHA のサイトキー。dev・staging・手元は Cloudflare のテスト用キー（常に通る）。本番は Cloudflare の Turnstile で blueprint.gabbyacademy.com 用に作ったキー',
+    value: { default: '1x00000000000000000000AA', prod: LOCAL },
+  },
+  {
+    key: 'TURNSTILE_SECRET_KEY',
+    apps: ['student'],
+    group: 'Cloudflare Turnstile',
+    description:
+      'Turnstile の秘密鍵（サーバーでの検証用。未設定なら申込を受け付けない）。dev・staging・手元はテスト用の鍵（常に通る）',
+    secret: true,
+    value: { default: '1x0000000000000000000000000000000AA', prod: LOCAL },
+  },
+  {
     key: 'MAIL_UNSUBSCRIBE_SECRET',
     apps: ['admin', 'student', 'coach'],
     group: 'Resend（メール送信）',
-    description: 'メールのログイン不要の配信停止リンクの署名鍵（3アプリで同じ値。未設定なら配信停止リンク・List-Unsubscribe を付けない）',
+    description:
+      'メールのログイン不要の配信停止リンクの署名鍵（3アプリで同じ値。未設定なら配信停止リンク・List-Unsubscribe を付けない）',
     secret: true,
     generate: true,
     validate: 'random-secret',
@@ -209,7 +258,8 @@ export const MANIFEST = [
     key: 'MAIL_LOGO_URL',
     apps: ['admin', 'student', 'coach'],
     group: 'Resend（メール送信）',
-    description: 'メールのロゴ画像の URL（未設定なら本番 https://blueprint.gabbyacademy.com/mail-logo.png）。本番に未反映の画像を試す環境だけ指定',
+    description:
+      'メールのロゴ画像の URL（未設定なら本番 https://blueprint.gabbyacademy.com/mail-logo.png）。本番に未反映の画像を試す環境だけ指定',
     validate: 'https-url',
     value: {
       default: UNSET,

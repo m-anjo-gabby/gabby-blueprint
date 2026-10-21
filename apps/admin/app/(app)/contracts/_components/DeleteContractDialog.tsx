@@ -1,7 +1,12 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { AlertCircle, ShieldAlert, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type ContractDetail } from '@gabby/types/contract';
+import { deleteContract, purgeContractWithHistory } from '@/actions/adminContractAction';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,20 +17,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Trash2, AlertCircle, ShieldAlert } from 'lucide-react'
-import { useTranslations } from 'next-intl'
-import { useToast } from '@gabby/lib/hooks/useToast'
-import { deleteContract, purgeContractWithHistory } from '@/actions/adminContractAction'
-import { ContractDetail } from '@gabby/types/contract'
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
-interface Props {
-  contract: ContractDetail
+interface DeleteContractDialogProps {
+  contract: ContractDetail;
 }
 
-type Stage = 'confirm' | 'blocked_by_history' | 'confirm_purge'
+type Stage = 'confirm' | 'blocked_by_history' | 'confirm_purge';
 
 /**
  * 契約削除の確認ダイアログ
@@ -36,62 +36,62 @@ type Stage = 'confirm' | 'blocked_by_history' | 'confirm_purge'
  * 「履歴含めて完全に削除する」エスカレーションを提示する。誤操作防止のため、
  * 対象の契約名を入力させてから実行させる。
  */
-export function DeleteContractDialog({ contract }: Props) {
-  const t = useTranslations('contracts.deleteDialog')
-  const [open, setOpen] = useState(false)
-  const [stage, setStage] = useState<Stage>('confirm')
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [confirmText, setConfirmText] = useState('')
-  const { showToast } = useToast()
-  const router = useRouter()
+export function DeleteContractDialog({ contract }: DeleteContractDialogProps) {
+  const t = useTranslations('contracts.deleteDialog');
+  const [open, setOpen] = useState(false);
+  const [stage, setStage] = useState<Stage>('confirm');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const { showToast } = useToast();
+  const router = useRouter();
 
-  const hasAssignments = contract.current_assigned_count > 0
-  const isConfirmTextValid = confirmText === contract.contract_name
+  const hasAssignments = contract.current_assigned_count > 0;
+  const isConfirmTextValid = confirmText === contract.contract_name;
 
   const resetAndClose = () => {
-    setOpen(false)
-    setStage('confirm')
-    setConfirmText('')
-  }
+    setOpen(false);
+    setStage('confirm');
+    setConfirmText('');
+  };
 
   const handleDelete = async () => {
-    setIsProcessing(true)
+    setIsProcessing(true);
     try {
-      const result = await deleteContract(contract.contract_id)
+      const result = await deleteContract(contract.contract_id);
       if (result.success) {
-        showToast(t('toastDeleted'), 'success')
-        resetAndClose()
-        router.refresh()
-      } else if (result.reason === 'has_history') {
-        setStage('blocked_by_history')
+        showToast(t('toastDeleted'), 'success');
+        resetAndClose();
+        router.refresh();
+      } else if (result.errorCode === 'has_history') {
+        setStage('blocked_by_history');
       } else {
-        showToast(result.message || t('toastDeleteFailed'), 'error')
+        showToast(result.message || t('toastDeleteFailed'), 'error');
       }
     } catch {
-      showToast(t('toastNetworkError'), 'error')
+      showToast(t('toastNetworkError'), 'error');
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
   const handlePurge = async () => {
-    if (!isConfirmTextValid) return
-    setIsProcessing(true)
+    if (!isConfirmTextValid) return;
+    setIsProcessing(true);
     try {
-      const result = await purgeContractWithHistory(contract.contract_id)
+      const result = await purgeContractWithHistory(contract.contract_id);
       if (result.success) {
-        showToast(t('toastPurged'), 'success')
-        resetAndClose()
-        router.refresh()
+        showToast(t('toastPurged'), 'success');
+        resetAndClose();
+        router.refresh();
       } else {
-        showToast(result.message || t('toastDeleteFailed'), 'error')
+        showToast(result.message || t('toastDeleteFailed'), 'error');
       }
     } catch {
-      showToast(t('toastNetworkError'), 'error')
+      showToast(t('toastNetworkError'), 'error');
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={(next) => !isProcessing && (next ? setOpen(true) : resetAndClose())}>
@@ -121,13 +121,16 @@ export function DeleteContractDialog({ contract }: Props) {
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex gap-3 sm:justify-center mt-6">
-            <AlertDialogCancel disabled={isProcessing} className="flex-1 h-12 rounded-2xl border-none bg-slate-100 text-slate-500 font-bold hover:bg-slate-200">
+            <AlertDialogCancel
+              disabled={isProcessing}
+              className="flex-1 h-12 rounded-2xl border-none bg-slate-100 text-slate-500 font-bold hover:bg-slate-200"
+            >
               {t('cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
-                e.preventDefault()
-                handleDelete()
+                e.preventDefault();
+                handleDelete();
               }}
               disabled={isProcessing}
               className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg shadow-rose-100 border-none"
@@ -152,7 +155,10 @@ export function DeleteContractDialog({ contract }: Props) {
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex gap-3 sm:justify-center mt-6">
-            <AlertDialogCancel disabled={isProcessing} className="flex-1 h-12 rounded-2xl border-none bg-slate-100 text-slate-500 font-bold hover:bg-slate-200">
+            <AlertDialogCancel
+              disabled={isProcessing}
+              className="flex-1 h-12 rounded-2xl border-none bg-slate-100 text-slate-500 font-bold hover:bg-slate-200"
+            >
               {t('close')}
             </AlertDialogCancel>
             <Button
@@ -174,9 +180,12 @@ export function DeleteContractDialog({ contract }: Props) {
               <ShieldAlert size={32} />
             </div>
             <div className="text-center space-y-2">
-              <AlertDialogTitle className="text-xl font-black text-slate-800">{t('purgeConfirmTitle')}</AlertDialogTitle>
+              <AlertDialogTitle className="text-xl font-black text-slate-800">
+                {t('purgeConfirmTitle')}
+              </AlertDialogTitle>
               <AlertDialogDescription className="text-xs font-medium text-slate-500 leading-relaxed text-left">
-                {t('purgeConfirmIntro', { name: contract.contract_name })}<span className="font-bold text-rose-600">{t('purgeDeleteAll')}</span>
+                {t('purgeConfirmIntro', { name: contract.contract_name })}
+                <span className="font-bold text-rose-600">{t('purgeDeleteAll')}</span>
                 <ul className="list-disc list-inside mt-2 space-y-0.5">
                   <li>{t('purgeItemContract')}</li>
                   <li>{t('purgeItemLicenses')}</li>
@@ -205,15 +214,18 @@ export function DeleteContractDialog({ contract }: Props) {
               type="button"
               variant="ghost"
               disabled={isProcessing}
-              onClick={() => { setConfirmText(''); setStage('blocked_by_history') }}
+              onClick={() => {
+                setConfirmText('');
+                setStage('blocked_by_history');
+              }}
               className="flex-1 h-12 rounded-2xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200"
             >
               {t('back')}
             </Button>
             <AlertDialogAction
               onClick={(e) => {
-                e.preventDefault()
-                handlePurge()
+                e.preventDefault();
+                handlePurge();
               }}
               disabled={isProcessing || !isConfirmTextValid}
               className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg shadow-rose-100 border-none disabled:opacity-40"
@@ -224,5 +236,5 @@ export function DeleteContractDialog({ contract }: Props) {
         </AlertDialogContent>
       )}
     </AlertDialog>
-  )
+  );
 }

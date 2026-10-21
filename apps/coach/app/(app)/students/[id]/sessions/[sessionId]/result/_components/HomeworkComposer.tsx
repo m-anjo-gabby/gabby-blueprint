@@ -1,26 +1,32 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
 import { BookOpen, CircleSlash, FileText, Loader2, MessageSquareText, Paperclip, Send, Undo2, X } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { HomeworkViewedStatus } from '@/components/session/HomeworkViewedStatus';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { formatFileSize } from '@gabby/lib/chat/formatFileSize';
 import { linkifyText } from '@gabby/lib/chat/linkifyText';
-import { createSessionHomework, addHomeworkComment, setSessionHomeworkNotNeeded, uploadSessionHomeworkAttachment } from '@/actions/sessionHomeworkAction';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useToast } from '@gabby/lib/hooks/useToast';
 import { getSessionHomeworkAttachmentUrl } from '@gabby/lib/sessionHomework/actions/homeworkAttachmentActions';
 import {
   HOMEWORK_ATTACHMENT_MAX_SIZE,
-  PendingHomeworkAttachment,
-  SessionHomeworkAttachment,
-  SessionHomeworkEntry,
+  type PendingHomeworkAttachment,
+  type SessionHomeworkAttachment,
+  type SessionHomeworkEntry,
 } from '@gabby/types/sessionHomework';
+import {
+  addHomeworkComment,
+  createSessionHomework,
+  setSessionHomeworkNotNeeded,
+  uploadSessionHomeworkAttachment,
+} from '@/actions/sessionHomeworkAction';
+import { HomeworkViewedStatus } from '@/components/session/HomeworkViewedStatus';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 
-interface Props {
+interface HomeworkComposerProps {
   sessionId: string;
   initialHomework: SessionHomeworkEntry | null;
   /** 実施済み(status=COMPLETED)の回か。「今回は宿題なし」はこの場合だけ選べる */
@@ -29,7 +35,7 @@ interface Props {
   initialNotNeeded: boolean;
 }
 
-export function HomeworkComposer({ sessionId, initialHomework, isCompleted, initialNotNeeded }: Props) {
+export function HomeworkComposer({ sessionId, initialHomework, isCompleted, initialNotNeeded }: HomeworkComposerProps) {
   const [homework, setHomework] = useState(initialHomework);
   const [notNeeded, setNotNeeded] = useState(initialNotNeeded);
 
@@ -41,7 +47,12 @@ export function HomeworkComposer({ sessionId, initialHomework, isCompleted, init
         ) : notNeeded ? (
           <HomeworkNotNeededNotice sessionId={sessionId} onUndone={() => setNotNeeded(false)} />
         ) : (
-          <HomeworkCreateForm sessionId={sessionId} canSkip={isCompleted} onCreated={setHomework} onSkipped={() => setNotNeeded(true)} />
+          <HomeworkCreateForm
+            sessionId={sessionId}
+            canSkip={isCompleted}
+            onCreated={setHomework}
+            onSkipped={() => setNotNeeded(true)}
+          />
         )}
       </CardContent>
     </Card>
@@ -186,11 +197,19 @@ function HomeworkCreateForm({
       {pendingAttachments.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {pendingAttachments.map((a) => (
-            <div key={a.file_path} className="flex items-center gap-1.5 bg-slate-100 rounded-lg pl-2 pr-1 py-1 text-xs text-slate-600">
+            <div
+              key={a.file_path}
+              className="flex items-center gap-1.5 bg-slate-100 rounded-lg pl-2 pr-1 py-1 text-xs text-slate-600"
+            >
               <FileText size={13} className="shrink-0" />
               <span className="max-w-40 truncate">{a.file_name}</span>
               <span className="text-slate-400 shrink-0">{formatFileSize(a.file_size)}</span>
-              <button type="button" onClick={() => handleRemovePending(a.file_path)} className="text-slate-400 hover:text-rose-500 shrink-0 p-0.5" title="Remove">
+              <button
+                type="button"
+                onClick={() => handleRemovePending(a.file_path)}
+                className="text-slate-400 hover:text-rose-500 shrink-0 p-0.5"
+                title="Remove"
+              >
                 <X size={13} />
               </button>
             </div>
@@ -200,7 +219,16 @@ function HomeworkCreateForm({
 
       <div className="flex items-center justify-between gap-2">
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-        <Button pending={isUploading} icon={<Paperclip size={16} />} type="button" aria-label="Attach files" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()} />
+        <Button
+          pending={isUploading}
+          icon={<Paperclip size={16} />}
+          type="button"
+          aria-label="Attach files"
+          variant="outline"
+          size="icon"
+          disabled={busy}
+          onClick={() => fileInputRef.current?.click()}
+        />
 
         <div className="flex items-center gap-2">
           {canSkip && (
@@ -216,7 +244,14 @@ function HomeworkCreateForm({
               No homework this time
             </Button>
           )}
-          <Button pending={isPosting} icon={<Send size={16} />} type="button" disabled={!text.trim() || busy} onClick={handlePost} className="gap-1.5">
+          <Button
+            pending={isPosting}
+            icon={<Send size={16} />}
+            type="button"
+            disabled={!text.trim() || busy}
+            onClick={handlePost}
+            className="gap-1.5"
+          >
             Post Homework
           </Button>
         </div>
@@ -310,9 +345,13 @@ function PostedHomework({
             </span>
             <p className="text-xs font-bold text-slate-700">Instructions</p>
           </div>
-          <p className="text-[10px] font-bold text-slate-400 shrink-0">{formatDateTimeEn(homework.insert_date, timezone)}</p>
+          <p className="text-[10px] font-bold text-slate-400 shrink-0">
+            {formatDateTimeEn(homework.insert_date, timezone)}
+          </p>
         </div>
-        <p className="text-sm text-slate-700 whitespace-pre-wrap wrap-break-word">{linkifyText(homework.homework_text)}</p>
+        <p className="text-sm text-slate-700 whitespace-pre-wrap wrap-break-word">
+          {linkifyText(homework.homework_text)}
+        </p>
         {homework.attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">
             {homework.attachments.map((attachment) => (
@@ -334,11 +373,19 @@ function PostedHomework({
         {pendingAttachments.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {pendingAttachments.map((a) => (
-              <div key={a.file_path} className="flex items-center gap-1.5 bg-slate-100 rounded-lg pl-2 pr-1 py-1 text-xs text-slate-600">
+              <div
+                key={a.file_path}
+                className="flex items-center gap-1.5 bg-slate-100 rounded-lg pl-2 pr-1 py-1 text-xs text-slate-600"
+              >
                 <FileText size={13} className="shrink-0" />
                 <span className="max-w-40 truncate">{a.file_name}</span>
                 <span className="text-slate-400 shrink-0">{formatFileSize(a.file_size)}</span>
-                <button type="button" onClick={() => handleRemovePending(a.file_path)} className="text-slate-400 hover:text-rose-500 shrink-0 p-0.5" title="Remove">
+                <button
+                  type="button"
+                  onClick={() => handleRemovePending(a.file_path)}
+                  className="text-slate-400 hover:text-rose-500 shrink-0 p-0.5"
+                  title="Remove"
+                >
                   <X size={13} />
                 </button>
               </div>
@@ -348,7 +395,16 @@ function PostedHomework({
 
         <div className="flex items-center gap-2">
           <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-          <Button pending={isUploading} icon={<Paperclip size={16} />} type="button" aria-label="Attach files" variant="outline" size="icon" disabled={busy} onClick={() => fileInputRef.current?.click()} />
+          <Button
+            pending={isUploading}
+            icon={<Paperclip size={16} />}
+            type="button"
+            aria-label="Attach files"
+            variant="outline"
+            size="icon"
+            disabled={busy}
+            onClick={() => fileInputRef.current?.click()}
+          />
 
           <Textarea
             value={commentText}
@@ -358,7 +414,15 @@ function PostedHomework({
             disabled={busy}
           />
 
-          <Button pending={isSendingComment} icon={<Send size={16} />} type="button" aria-label="Send comment" size="icon" disabled={(!commentText.trim() && pendingAttachments.length === 0) || busy} onClick={handleSendComment} />
+          <Button
+            pending={isSendingComment}
+            icon={<Send size={16} />}
+            type="button"
+            aria-label="Send comment"
+            size="icon"
+            disabled={(!commentText.trim() && pendingAttachments.length === 0) || busy}
+            onClick={handleSendComment}
+          />
         </div>
       </div>
 
@@ -367,9 +431,16 @@ function PostedHomework({
           <p className="text-xs text-slate-400 italic">No follow-up comments yet.</p>
         ) : (
           homework.comments.map((comment) => (
-            <div key={comment.comment_id} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3 space-y-2">
+            <div
+              key={comment.comment_id}
+              className="rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-3 space-y-2"
+            >
               <p className="text-[10px] font-bold text-slate-400">{formatDateTimeEn(comment.insert_date, timezone)}</p>
-              {comment.comment_text && <p className="text-sm text-slate-700 whitespace-pre-wrap wrap-break-word">{linkifyText(comment.comment_text)}</p>}
+              {comment.comment_text && (
+                <p className="text-sm text-slate-700 whitespace-pre-wrap wrap-break-word">
+                  {linkifyText(comment.comment_text)}
+                </p>
+              )}
               {comment.attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {comment.attachments.map((attachment) => (
@@ -414,14 +485,18 @@ function HomeworkAttachmentView({ attachment }: { attachment: SessionHomeworkAtt
   if (isImage) {
     return (
       <a href={url} target="_blank" rel="noopener noreferrer">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt={attachment.file_name} className="max-w-60 max-h-60 rounded-lg object-cover" />
+        <ExternalImage src={url} alt={attachment.file_name} className="max-w-60 max-h-60 rounded-lg object-cover" />
       </a>
     );
   }
 
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-brand underline underline-offset-2">
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 text-xs text-brand underline underline-offset-2"
+    >
       <FileText size={16} className="shrink-0" />
       <span className="truncate">{attachment.file_name}</span>
       <span className="text-[10px] opacity-70 shrink-0">{formatFileSize(attachment.file_size)}</span>

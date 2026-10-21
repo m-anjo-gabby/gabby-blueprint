@@ -31,6 +31,11 @@ export const CALENDAR_EVENT_TYPES = {
 >;
 export type CalendarEventType = keyof typeof CALENDAR_EVENT_TYPES;
 
+/** 画面・URL から受け取った値がイベント種別か */
+export function isCalendarEventType(value: unknown): value is CalendarEventType {
+  return typeof value === 'string' && Object.hasOwn(CALENDAR_EVENT_TYPES, value);
+}
+
 /** 終了時刻を持たないイベントの、開催中とみなす長さ（参加の受付・「開催中」の表示に使う） */
 export const CALENDAR_EVENT_DEFAULT_DURATION_MS = 60 * 60 * 1000;
 
@@ -40,10 +45,12 @@ export type CalendarEventPhase = 'upcoming' | 'live' | 'ended';
 /** イベントの開催状況を判定する（終了時刻が無い場合は開始から CALENDAR_EVENT_DEFAULT_DURATION_MS で終了とみなす） */
 export function getCalendarEventPhase(
   event: Pick<CalendarEventItem, 'start_datetime' | 'end_datetime'>,
-  nowMs: number
+  nowMs: number,
 ): CalendarEventPhase {
   const startMs = new Date(event.start_datetime).getTime();
-  const endMs = event.end_datetime ? new Date(event.end_datetime).getTime() : startMs + CALENDAR_EVENT_DEFAULT_DURATION_MS;
+  const endMs = event.end_datetime
+    ? new Date(event.end_datetime).getTime()
+    : startMs + CALENDAR_EVENT_DEFAULT_DURATION_MS;
   if (nowMs < startMs) return 'upcoming';
   if (nowMs < endMs) return 'live';
   return 'ended';
@@ -101,7 +108,6 @@ export interface CalendarEventItem {
   client_id: string | null;
   rsvp_enabled: boolean;
   is_published: boolean;
-  delete_flg: string;
   insert_date: string;
   update_date: string;
   // 結合フィールド（生徒/コーチ向けクエリでのみ計算。com_t_calendar_event_participantから結合）

@@ -5,9 +5,9 @@ import {
   type SessionActionTarget,
 } from '@gabby/lib/components/common/SessionActionDialog';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import type { SessionListItem } from '@gabby/types/session';
 import { cancelSession, checkSessionConflict } from '@/actions/sessionAction';
 import { COACH_SESSION_ACTION_LABELS } from '@/constants/sessionActionDialog';
-import type { SessionListItem } from '@gabby/types/session';
 
 export type { SessionActionTarget };
 
@@ -18,9 +18,9 @@ interface SessionActionDialogProps {
 }
 
 /**
- * Session cancel dialog (thin Coach-portal adapter).
- * The actual UI/logic lives in packages/lib/components/common/SessionActionDialog; this file
- * only injects the English copy (constants/sessionActionDialog) and the coach's server actions.
+ * セッションのキャンセルのダイアログ（コーチのポータル用の薄い包み）。
+ * 画面と処理は packages/lib/components/common/SessionActionDialog にあり、このファイルは
+ * 英語の文言（constants/sessionActionDialog）とコーチのサーバーアクションを渡すだけ。
  */
 export function SessionActionDialog({ target, onClose, onResolved }: SessionActionDialogProps) {
   return (

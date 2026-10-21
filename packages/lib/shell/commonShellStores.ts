@@ -16,14 +16,20 @@ import type { CommonShellData, CommonShellDataOptions } from './shellDataTypes';
  * ヘッダー・ナビ・画面の各部品は表示時（useEffect）にストアの fetch を呼ぶため、それより先に（useLayoutEffect で）
  * 取得中にしておき、同じ取得をブラウザから重ねて呼ばせない（各ストアの fetch は取得中は何もしない）。
  */
-export function setCommonShellStoresLoading(isLoading: boolean, { includeChat, includeNotices = true }: CommonShellDataOptions) {
+export function setCommonShellStoresLoading(
+  isLoading: boolean,
+  { includeChat, includeNotices = true }: CommonShellDataOptions,
+) {
   if (includeChat) useChatStore.setState({ isLoading });
   if (includeNotices) useNoticeStore.setState({ isLoading });
   useNotificationStore.setState({ isLoading });
 }
 
 /** 取得できた項目は反映し、取得できなかった項目だけブラウザから取り直す（先に取得中を解除してから呼ぶ） */
-export function applyCommonShellData(d: CommonShellData | null, { includeChat, includeNotices = true }: CommonShellDataOptions) {
+export function applyCommonShellData(
+  d: CommonShellData | null,
+  { includeChat, includeNotices = true }: CommonShellDataOptions,
+) {
   if (includeChat) {
     if (d?.rooms) useChatStore.getState().applyRooms(d.rooms);
     else void useChatStore.getState().fetchRooms(true);

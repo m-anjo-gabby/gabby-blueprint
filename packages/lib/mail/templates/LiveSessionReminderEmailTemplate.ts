@@ -1,7 +1,7 @@
+import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../../liveSessionRoom/constants';
 import type { MailBlock, MailContent, MailLocale } from '../layout/document';
 import { buildNotifyMail, type NotifyMailLinks } from './notifyMail';
 import { reminderSubject, type ReminderLead } from './reminder';
-import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS } from '../../liveSessionRoom/constants';
 
 /** 入室できるのは開始の何分前からか（通話画面の判定と同じ値） */
 const EARLY_JOIN_MINUTES = LIVE_SESSION_EARLY_JOIN_BEFORE_MS / 60000;
@@ -70,7 +70,8 @@ export function buildLiveSessionReminderMail({
   ];
   if (actionUrl) blocks.push({ kind: 'button', label: copy.action[lead], href: actionUrl });
   if (lead === '1h') blocks.push({ kind: 'paragraph', text: copy.joinNote, small: true, muted: true, center: true });
-  if (copy.cancelNote && lead === '24h') blocks.push({ kind: 'paragraph', text: copy.cancelNote, small: true, muted: true });
+  if (copy.cancelNote && lead === '24h')
+    blocks.push({ kind: 'paragraph', text: copy.cancelNote, small: true, muted: true });
 
   return buildNotifyMail({
     language,

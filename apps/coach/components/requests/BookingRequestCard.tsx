@@ -1,32 +1,44 @@
 'use client';
 
-import { useState } from 'react';
 import { Check, X } from 'lucide-react';
+import { useState } from 'react';
+import { toIsoDateInZone } from '@gabby/lib/date/date';
+import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { type IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { SESSION_BOOKING_REQUEST_STATUS } from '@gabby/types/session';
+import { approveSessionBookingRequest, rejectSessionBookingRequest } from '@/actions/sessionAction';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { formatDateEn, formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
-import { approveSessionBookingRequest, rejectSessionBookingRequest } from '@/actions/sessionAction';
-import { SESSION_BOOKING_REQUEST_STATUS } from '@gabby/types/session';
-import { IncomingSessionBookingRequestItem } from '@gabby/types/coachInbox';
+import { Textarea } from '@/components/ui/textarea';
 import { RequestKindTag } from './RequestKindTag';
 
 const STATUS_BADGE: Record<number, { label: string; className: string }> = {
-  [SESSION_BOOKING_REQUEST_STATUS.PENDING]: { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  [SESSION_BOOKING_REQUEST_STATUS.APPROVED]: { label: 'Approved', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  [SESSION_BOOKING_REQUEST_STATUS.REJECTED]: { label: 'Rejected', className: 'bg-rose-50 text-rose-700 border-rose-200' },
-  [SESSION_BOOKING_REQUEST_STATUS.WITHDRAWN]: { label: 'Withdrawn', className: 'bg-slate-100 text-slate-600 border-slate-200' },
+  [SESSION_BOOKING_REQUEST_STATUS.PENDING]: {
+    label: 'Pending',
+    className: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  [SESSION_BOOKING_REQUEST_STATUS.APPROVED]: {
+    label: 'Approved',
+    className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
+  [SESSION_BOOKING_REQUEST_STATUS.REJECTED]: {
+    label: 'Rejected',
+    className: 'bg-rose-50 text-rose-700 border-rose-200',
+  },
+  [SESSION_BOOKING_REQUEST_STATUS.WITHDRAWN]: {
+    label: 'Withdrawn',
+    className: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
 };
 
 interface BookingRequestCardProps {
@@ -52,7 +64,7 @@ export function BookingRequestCard({ request, onResolved, onDateHover }: Booking
     const ok = await showConfirm(
       'Approve this booking request?',
       `This will book a new session with ${request.student_name} on ${formatDateTimeEn(request.requested_start_datetime, timezone)}.`,
-      { variant: 'info', confirmText: 'Approve', cancelText: 'Cancel' }
+      { variant: 'info', confirmText: 'Approve', cancelText: 'Cancel' },
     );
     if (!ok) return;
 
@@ -78,7 +90,10 @@ export function BookingRequestCard({ request, onResolved, onDateHover }: Booking
         showToast(result.message, 'error');
         return;
       }
-      onResolved(request.request_id, { status: SESSION_BOOKING_REQUEST_STATUS.REJECTED, reject_reason: rejectReason.trim() || null });
+      onResolved(request.request_id, {
+        status: SESSION_BOOKING_REQUEST_STATUS.REJECTED,
+        reject_reason: rejectReason.trim() || null,
+      });
       setShowRejectDialog(false);
       setRejectReason('');
       showToast('Request rejected.', 'success');
@@ -97,7 +112,9 @@ export function BookingRequestCard({ request, onResolved, onDateHover }: Booking
         <div>
           <RequestKindTag kind="booking" />
           <p className="text-sm font-black text-slate-800 mt-1.5">{request.student_name}</p>
-          <p className="text-[11px] font-bold text-slate-600 mt-1">{formatDateTimeEn(request.requested_start_datetime, timezone)}</p>
+          <p className="text-[11px] font-bold text-slate-600 mt-1">
+            {formatDateTimeEn(request.requested_start_datetime, timezone)}
+          </p>
           <p className="text-[10px] text-slate-400 mt-1">Requested {formatDateEn(request.insert_date, timezone)}</p>
           {request.reason && (
             <div className="rounded-xl border border-slate-100 bg-slate-50 px-2.5 py-2 mt-1.5">
@@ -106,18 +123,29 @@ export function BookingRequestCard({ request, onResolved, onDateHover }: Booking
             </div>
           )}
         </div>
-        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}>
+        <span
+          className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ${badge.className}`}
+        >
           {badge.label}
         </span>
       </div>
 
       {request.status === SESSION_BOOKING_REQUEST_STATUS.REJECTED && request.reject_reason && (
-        <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{request.reject_reason}</p>
+        <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">
+          {request.reject_reason}
+        </p>
       )}
 
       {isPending && (
         <div className="flex items-center gap-2 pt-1">
-          <Button pending={isApproving} icon={<Check size={14} />} type="button" size="sm" onClick={handleApprove} disabled={isApproving || isRejecting}>
+          <Button
+            pending={isApproving}
+            icon={<Check size={14} />}
+            type="button"
+            size="sm"
+            onClick={handleApprove}
+            disabled={isApproving || isRejecting}
+          >
             Approve
           </Button>
           <Button

@@ -31,6 +31,7 @@ COMMENT ON COLUMN public.com_t_session_chat.sender_role IS '送信者の役割 (
 COMMENT ON COLUMN public.com_t_session_chat.message IS 'メッセージ本文';
 COMMENT ON COLUMN public.com_t_session_chat.created_at IS '送信日時（サーバー確定）';
 
+CREATE INDEX idx_session_chat_sender ON public.com_t_session_chat (sender_user_id);
 CREATE INDEX idx_session_chat_session ON public.com_t_session_chat (session_id, created_at);
 
 ALTER TABLE public.com_t_session_chat ENABLE ROW LEVEL SECURITY;
@@ -46,6 +47,6 @@ CREATE POLICY "Involved users can view session chat" ON public.com_t_session_cha
 USING (
     (EXISTS ( SELECT 1
        FROM public.com_t_session s
-      WHERE s.session_id = com_t_session_chat.session_id AND (s.coach_id = auth.uid() OR s.student_id = auth.uid()))) OR public.get_jwt_user_type() = '0'::text
+      WHERE s.session_id = com_t_session_chat.session_id AND (s.coach_id = auth.uid() OR s.student_id = auth.uid()))) OR public.is_system_admin()
 );
 -- @end-schema

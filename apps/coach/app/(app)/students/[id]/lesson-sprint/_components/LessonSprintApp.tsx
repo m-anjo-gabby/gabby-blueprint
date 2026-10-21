@@ -1,17 +1,17 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LessonSprintSetup } from './LessonSprintSetup';
-import { LessonSprintPlayer } from './LessonSprintPlayer';
+import { useState } from 'react';
+import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
+import type { LessonSprintContentSummary, LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
+import type { SprintQuestion } from '@gabby/types/sprint';
 import { ImmersiveShell } from '@/components/common/ImmersiveShell';
 import { withLiveSessionParam } from '@/lib/liveSession/context';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
-import type { LessonSprintContentSummary, LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
-import type { SprintQuestion } from '@gabby/types/sprint';
-import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
+import { LessonSprintPlayer } from './LessonSprintPlayer';
+import { LessonSprintSetup } from './LessonSprintSetup';
 
-interface Props {
+interface LessonSprintAppProps {
   studentId: string;
   /** 実施中のライブセッション (com_t_session.session_id)。ハブ画面経由でない単独実施の場合はnull */
   sessionId: string | null;
@@ -20,12 +20,12 @@ interface Props {
   contents: LessonSprintContentSummary[];
 }
 
-export function LessonSprintApp({ studentId, sessionId, profile, lessonSprints, contents }: Props) {
+export function LessonSprintApp({ studentId, sessionId, profile, lessonSprints, contents }: LessonSprintAppProps) {
   const router = useRouter();
   // 「Repeat Same Settings」（結果画面）から遷移してきた場合、既にセッションが開始済みのことがあるため、
   // マウント時点のストア状態を見て初期ビューを決める（常に'selecting'から始めない）。
-  const [view, setView] = useState<'selecting' | 'playing'>(
-    () => (useLessonSprintStore.getState().session.isActive ? 'playing' : 'selecting')
+  const [view, setView] = useState<'selecting' | 'playing'>(() =>
+    useLessonSprintStore.getState().session.isActive ? 'playing' : 'selecting',
   );
   const { startSession, resetStore } = useLessonSprintStore();
 
@@ -40,7 +40,7 @@ export function LessonSprintApp({ studentId, sessionId, profile, lessonSprints, 
   };
 
   const handleComplete = (lessonSprintId: string) => {
-    // 🚀 store のリセットはプレイヤー側の完了ダイアログ遷移時（handleGoToResult）で行う。
+    // store のリセットはプレイヤー側の完了ダイアログ遷移時（handleGoToResult）で行う。
     // ここで先にリセットすると、まだ画面遷移が完了する前にヘッダーのタイトル等が
     // 初期値（Speed）へ一瞬切り替わって見えるノイズが発生するため。
     // ハブ発の実施(sessionIdあり)であれば、結果画面へもその文脈を引き継ぎ、没入表示＋

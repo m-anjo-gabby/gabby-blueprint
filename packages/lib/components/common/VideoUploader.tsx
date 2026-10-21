@@ -1,7 +1,7 @@
 'use client';
 
+import { Film, Loader2, Trash2, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { Film, Trash2, Loader2, Upload } from 'lucide-react';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
 
 export interface VideoUploaderLabels {
@@ -109,9 +109,7 @@ export function VideoUploader({
         )}
       </div>
 
-      {validationError && (
-        <p className="text-xs font-bold text-rose-500">{validationError}</p>
-      )}
+      {validationError && <p className="text-xs font-bold text-rose-500">{validationError}</p>}
 
       <div className="flex items-center gap-3">
         <button

@@ -1,6 +1,6 @@
-import type { CoachRatingItem, CoachRatingStats } from '@gabby/types/coachRating';
-import type { CoachProfileRatingDisplay } from '@gabby/types/coachProfile';
 import { formatRatingValue } from '@gabby/lib/coachRating/format';
+import type { CoachProfileRatingDisplay } from '@gabby/types/coachProfile';
+import type { CoachRatingItem, CoachRatingStats } from '@gabby/types/coachRating';
 
 /** コーチ評価の項目（評価ダイアログの並び順）。項目は移行元システムと同じ3項目 */
 export const COACH_RATING_ITEMS: { key: CoachRatingItem; label: string; description: string }[] = [

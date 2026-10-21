@@ -37,16 +37,16 @@
 -- @schema public.com_t_session
 CREATE TABLE public.com_t_session (
     session_id               uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    schedule_id              uuid         NOT NULL REFERENCES public.com_m_lesson_schedule(schedule_id) ON DELETE CASCADE,
-    ticket_id                uuid         NOT NULL REFERENCES public.com_t_user_session_ticket(ticket_id),
-    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id),
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id),
+    schedule_id              uuid         NOT NULL REFERENCES public.com_m_lesson_schedule(schedule_id) ON DELETE RESTRICT,
+    ticket_id                uuid         NOT NULL REFERENCES public.com_t_user_session_ticket(ticket_id) ON DELETE RESTRICT,
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     start_datetime           timestamp with time zone NOT NULL,
     end_datetime             timestamp with time zone NOT NULL,
     status                   smallint     NOT NULL DEFAULT 1,
-    rescheduled_from         uuid         REFERENCES public.com_t_session(session_id),
+    rescheduled_from         uuid         REFERENCES public.com_t_session(session_id) ON DELETE SET NULL,
     cancel_reason            text,
-    cancelled_by             uuid         REFERENCES public.com_m_user(id),
+    cancelled_by             uuid         REFERENCES public.com_m_user(id) ON DELETE SET NULL,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     status_note              text,
@@ -96,12 +96,14 @@ CREATE INDEX idx_session_student ON public.com_t_session (student_id, start_date
 CREATE INDEX idx_session_ticket ON public.com_t_session (ticket_id);
 CREATE UNIQUE INDEX uq_session_schedule_datetime ON public.com_t_session (schedule_id, start_datetime) WHERE status = 1;
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_session FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_session ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Involved users can view sessions" ON public.com_t_session FOR SELECT TO authenticated
 USING (
     student_id = auth.uid() OR coach_id = auth.uid() OR (EXISTS ( SELECT 1
        FROM public.com_m_coach_student_relationship r
-      WHERE r.student_id = com_t_session.student_id AND r.coach_id = auth.uid())) OR public.get_jwt_user_type() = '0'::text
+      WHERE r.student_id = com_t_session.student_id AND r.coach_id = auth.uid())) OR public.is_system_admin()
 );
 -- @end-schema

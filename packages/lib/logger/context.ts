@@ -1,7 +1,8 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { headers } from 'next/headers';
+import { IMPERSONATION_REQUEST_HEADER_ADMIN_ID, IMPERSONATION_REQUEST_HEADER_ID } from '../impersonation';
 import type { LogContext } from './index';
-import { IMPERSONATION_REQUEST_HEADER_ID, IMPERSONATION_REQUEST_HEADER_ADMIN_ID } from '../impersonation';
 
 /**
  * Middleware (proxy-base) でセットされたカスタムヘッダーから
@@ -29,9 +30,8 @@ export async function getLogContext(): Promise<LogContext> {
     // 「誰が代理で操作したか」をログに残せるよう相関情報を付与する
     const impersonationId = h.get(IMPERSONATION_REQUEST_HEADER_ID);
     const impersonationAdminId = h.get(IMPERSONATION_REQUEST_HEADER_ADMIN_ID);
-    const impersonation = impersonationId && impersonationAdminId
-      ? { id: impersonationId, adminId: impersonationAdminId }
-      : undefined;
+    const impersonation =
+      impersonationId && impersonationAdminId ? { id: impersonationId, adminId: impersonationAdminId } : undefined;
 
     return {
       userId: userId ?? 'system',
@@ -39,7 +39,8 @@ export async function getLogContext(): Promise<LogContext> {
       requestId: requestId ?? undefined,
       ...(impersonation ? { impersonation } : {}),
     };
-  } catch {
+  } catch (thrown) {
+    unstable_rethrow(thrown);
     // Server Actions 以外（ビルド時や Edge Runtime 以外の特殊な文脈）でのフォールバック
     return { userId: 'system' };
   }

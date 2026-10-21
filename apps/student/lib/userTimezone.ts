@@ -1,8 +1,9 @@
+import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { cache } from 'react';
-import { createServerClient } from '@gabby/lib/supabase/server';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { toIsoMonthInZone } from '@gabby/lib/date/date';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '@gabby/lib/supabase/server';
 
 const DEFAULT_TIMEZONE = 'Asia/Tokyo';
 
@@ -17,7 +18,8 @@ export const getMyTimezone = cache(async (): Promise<string> => {
     const supabase = await createServerClient();
     const { data } = await supabase.from('com_m_user').select('timezone').eq('id', user.id).single();
     return data?.timezone || DEFAULT_TIMEZONE;
-  } catch {
+  } catch (thrown) {
+    unstable_rethrow(thrown);
     return DEFAULT_TIMEZONE;
   }
 });

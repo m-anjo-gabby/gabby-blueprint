@@ -1,3 +1,5 @@
+import type { ActionResult } from '@gabby/types/action';
+
 /**
  * お気に入りの登録上限（1人・種別ごと）。
  * DBのトリガー（supabase/DDL/function/fn_check_favorite_limit.sql の v_limit）と同じ値にすること。
@@ -13,14 +15,13 @@ export const FAVORITE_LIMIT_MESSAGE = `お気に入りは${FAVORITE_LIMIT.toLoca
 export const FAVORITE_UPDATE_ERROR_MESSAGE = '更新できませんでした。通信環境を確認してください';
 
 /**
- * お気に入り登録・解除の結果。
+ * お気に入り登録・解除の結果。上限超過は errorCode: 'limit'。
  * Server Action で投げた例外のメッセージは本番環境ではクライアントに渡らないため、上限超過は戻り値で返す。
  */
-export type FavoriteToggleResult = { ok: true } | { ok: false; reason: 'limit' | 'error' };
+export type FavoriteToggleResult = ActionResult<object, 'limit'>;
 
 /** 通信失敗等で Server Action 自体が例外になった場合の結果（呼び出し側で .catch に渡す） */
-export const FAVORITE_TOGGLE_NETWORK_ERROR: FavoriteToggleResult = { ok: false, reason: 'error' };
-
-export function getFavoriteToggleErrorMessage(result: Extract<FavoriteToggleResult, { ok: false }>): string {
-  return result.reason === 'limit' ? FAVORITE_LIMIT_MESSAGE : FAVORITE_UPDATE_ERROR_MESSAGE;
-}
+export const FAVORITE_TOGGLE_NETWORK_ERROR: FavoriteToggleResult = {
+  success: false,
+  message: FAVORITE_UPDATE_ERROR_MESSAGE,
+};

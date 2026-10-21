@@ -1,9 +1,9 @@
-import Link from 'next/link';
 import { ArrowRight, CalendarCheck } from 'lucide-react';
-import { getMySessions } from '@/actions/sessionAction';
+import Link from 'next/link';
 import { toIsoDateInZone } from '@gabby/lib/date/date';
-import { SESSION_STATUS } from '@gabby/types/session';
 import { LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
+import { SESSION_STATUS } from '@gabby/types/session';
+import { getMySessions } from '@/actions/sessionAction';
 import { DashboardPanelCard, PanelRowList, PanelRowsSkeleton } from './DashboardPanelCard';
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -38,7 +38,7 @@ export function TodaysSessionsPanelSkeleton() {
  * サーバーで取得して区画単位で表示する（ブラウザでの後追い取得は、表示後の往復が増えるうえ、
  * 画面共通のサーバーアクション（通知件数等）の後ろに並んで待たされるため行わない）。
  */
-export default async function TodaysSessionsPanel({ timezone }: { timezone: string }) {
+export async function TodaysSessionsPanel({ timezone }: { timezone: string }) {
   const now = new Date();
   // 実施中（開始済みだがまだEnd Session前）のセッションはgetMySessionsCore側の区間重複判定
   // （end_datetime基準）で取りこぼされずに取得できる。ここでの下限の広げ幅は、終了直後の
@@ -52,7 +52,11 @@ export default async function TodaysSessionsPanel({ timezone }: { timezone: stri
   // クエリの下限は取りこぼし防止のために広めに取っているため、ここで正確な条件に絞り直す。
   const nowMs = now.getTime();
   const next24hSessions = data
-    .filter((s) => s.status === SESSION_STATUS.SCHEDULED && new Date(s.end_datetime).getTime() + LIVE_SESSION_END_AFTER_MS >= nowMs)
+    .filter(
+      (s) =>
+        s.status === SESSION_STATUS.SCHEDULED &&
+        new Date(s.end_datetime).getTime() + LIVE_SESSION_END_AFTER_MS >= nowMs,
+    )
     .sort((a, b) => a.start_datetime.localeCompare(b.start_datetime));
   const nextSessionId = next24hSessions[0]?.session_id;
 

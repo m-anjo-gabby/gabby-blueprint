@@ -1,18 +1,20 @@
 'use server';
 
-import { createServerClient } from '../../supabase/server';
+import { unstable_rethrow } from 'next/navigation';
+import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
+import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import {
+  COMPLETION_RESULT,
+  SESSION_STATUS,
+  type CoachLiveSessionShortfallItem,
+  type CoachSessionTasksSummary,
+  type GetCoachSessionTasksResult,
+  type MissingHomeworkTask,
+  type UnfinalizedSessionTask,
+} from '@gabby/types/session';
 import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
-import {
-  CoachLiveSessionShortfallItem,
-  COMPLETION_RESULT,
-  CoachSessionTasksSummary,
-  GetCoachSessionTasksResult,
-  MissingHomeworkTask,
-  SESSION_STATUS,
-  UnfinalizedSessionTask,
-} from '@gabby/types/session';
-import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { createServerClient } from '../../supabase/server';
 
 const logger = createLogger('common');
 
@@ -20,7 +22,11 @@ const logger = createLogger('common');
 // 直近の実施分のみを対象にする（終了予定時刻超過タスクは実施記録の正確性に関わるため期限を設けない）。
 const MISSING_HOMEWORK_LOOKBACK_DAYS = 14;
 
-type ScheduleShortfallRpcRow = { expected_sessions: number; actual_sessions: number; shortfall: number };
+interface ScheduleShortfallRpcRow {
+  expected_sessions: number;
+  actual_sessions: number;
+  shortfall: number;
+}
 
 /**
  * ダッシュボードの"Session Tasks"パネル向けに、コーチが対応すべき3種類の項目を横断して取得する。
@@ -70,7 +76,7 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
       logger.error(
         'session:get_coach_tasks_failed',
         unfinalizedError?.message ?? candidateError?.message ?? scheduleError?.message ?? 'unknown error',
-        { ...ctx, err: unfinalizedError, userId: user.id }
+        { ...ctx, err: unfinalizedError, userId: user.id },
       );
       return { success: false, errorCode: 'unexpected_error' };
     }
@@ -79,12 +85,14 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
     // 配列ではなく単一オブジェクト(またはnull)として返す（1宿題=1セッションの1:1関係）。
     // 生成済みDB型定義がこのUNIQUE制約適用前のもの（配列型）である間はas unknownで橋渡しする。
     const missingHomeworkRows = (candidateRows ?? []).filter((row) => {
-      const attached = row.com_t_session_homework as unknown as { homework_id: string } | null;
+      const attached = row.com_t_session_homework;
       return !attached;
     });
 
     const shortfallResults = await Promise.all(
-      (schedules ?? []).map((schedule) => supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single())
+      (schedules ?? []).map((schedule) =>
+        supabase.rpc('fn_schedule_shortfall', { p_schedule_id: schedule.schedule_id }).single(),
+      ),
     );
 
     const shortfallCandidates = (schedules ?? [])
@@ -102,7 +110,9 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
         const row = data as ScheduleShortfallRpcRow;
         return row.shortfall > 0 ? { schedule, row } : null;
       })
-      .filter((v): v is { schedule: NonNullable<typeof schedules>[number]; row: ScheduleShortfallRpcRow } => v !== null);
+      .filter(
+        (v): v is { schedule: NonNullable<typeof schedules>[number]; row: ScheduleShortfallRpcRow } => v !== null,
+      );
 
     // 3クエリ分のstudent_idをまとめて1回で解決する
     const studentIds = new Set<string>();
@@ -110,12 +120,17 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
     for (const r of missingHomeworkRows) studentIds.add(r.student_id);
     for (const { schedule } of shortfallCandidates) studentIds.add(schedule.student_id);
 
-    const { data: students, error: studentsError } = studentIds.size > 0
-      ? await supabase.from('com_m_user').select('id, user_name').in('id', Array.from(studentIds))
-      : { data: [] as { id: string; user_name: string | null }[], error: null };
+    const { data: students, error: studentsError } =
+      studentIds.size > 0
+        ? await supabase.from('com_m_user').select('id, user_name').in('id', Array.from(studentIds))
+        : { data: [] as { id: string; user_name: string | null }[], error: null };
 
     if (studentsError) {
-      logger.error('session:get_coach_tasks_students_failed', studentsError.message, { ...ctx, err: studentsError, userId: user.id });
+      logger.error('session:get_coach_tasks_students_failed', studentsError.message, {
+        ...ctx,
+        err: studentsError,
+        userId: user.id,
+      });
       return { success: false, errorCode: 'unexpected_error' };
     }
 
@@ -152,7 +167,11 @@ export async function getCoachSessionTasksCore(): Promise<GetCoachSessionTasksRe
     const tasks: CoachSessionTasksSummary = { unfinalizedSessions, missingHomeworkSessions, shortfalls };
     return { success: true, tasks };
   } catch (err) {
-    logger.error('session:get_coach_tasks_unexpected', err instanceof Error ? err.message : 'Unknown error', { ...ctx, err });
+    unstable_rethrow(err);
+    logger.error('session:get_coach_tasks_unexpected', getErrorMessage(err), {
+      ...ctx,
+      err,
+    });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

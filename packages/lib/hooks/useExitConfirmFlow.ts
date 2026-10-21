@@ -1,7 +1,7 @@
 'use client';
 
-import { useConfirm } from './useConfirm';
 import { clientLogger } from '../logger/client';
+import { useConfirm } from './useConfirm';
 
 export interface UseExitConfirmFlowOptions {
   /** true を返した場合、確認ダイアログを出さずに離脱処理全体を中断する（例: 自動再生中は離脱不可 等） */

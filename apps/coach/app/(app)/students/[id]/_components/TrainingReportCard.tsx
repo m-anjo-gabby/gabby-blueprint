@@ -1,16 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { FileText } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import { formatDateEn } from '@gabby/lib/date/dateEn';
 import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrainingReportContractRow } from './TrainingReportContractRow';
 
-interface Props {
+interface TrainingReportCardProps {
   studentId: string;
   /** 表示対象の契約一覧。直近5件に絞る等のスコープ判断は呼び出し側(page.tsx)で行う */
   contracts: StudentLiveSessionContractSummary[];
@@ -21,7 +21,7 @@ export function contractSummaryLabel(contract: StudentLiveSessionContractSummary
   return `${contract.plan_name_en} · ${formatDateEn(contract.start_date, timezone)} – ${formatDateEn(contract.end_date, timezone)}`;
 }
 
-export function TrainingReportCard({ studentId, contracts, initialReports }: Props) {
+export function TrainingReportCard({ studentId, contracts, initialReports }: TrainingReportCardProps) {
   const timezone = useTimezone();
   const myId = useUserStore((state) => state.user?.id);
   const [reports, setReports] = useState<ContractTrainingReport[]>(initialReports);
@@ -54,7 +54,9 @@ export function TrainingReportCard({ studentId, contracts, initialReports }: Pro
             <FileText size={14} className="text-slate-400" />
             Training Reports
           </CardTitle>
-          <p className="text-[11px] text-slate-400">Visible to coaches assigned to this student. Locked once finalized.</p>
+          <p className="text-[11px] text-slate-400">
+            Visible to coaches assigned to this student. Locked once finalized.
+          </p>
         </div>
         <Link
           href={`/students/${studentId}/training-reports`}

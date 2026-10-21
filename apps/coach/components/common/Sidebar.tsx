@@ -1,21 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  X, ChevronRight,
-  PanelLeftClose, PanelLeftOpen, ChevronDown,
-} from 'lucide-react';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useEffect, useState } from 'react';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
+import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { COACH_NAV_CONFIG, type NavGroup, type NavItem, type NavLeaf } from '@/lib/navigation';
 import { useRequestsStore } from '@/stores/useRequestsStore';
-import { COACH_NAV_CONFIG, type NavItem, type NavLeaf, type NavGroup } from '@/lib/navigation';
 
-// ============================================================
 // サブコンポーネント
-// ============================================================
 
 interface LeafItemProps {
   item: NavLeaf;
@@ -39,15 +34,18 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
         className={`
           flex items-center rounded-xl transition-all duration-200 text-sm font-bold
           ${isCollapsed ? 'justify-center py-3 px-0' : isChild ? 'justify-between px-3 py-2.5' : 'justify-between px-4 py-3'}
-          ${isActive
-            ? 'bg-brand-50 text-brand-strong'
-            : isChild
-              ? 'hover:bg-slate-50 hover:text-slate-800'
-              : 'hover:bg-slate-50 hover:text-slate-800'
+          ${
+            isActive
+              ? 'bg-brand-50 text-brand-strong'
+              : isChild
+                ? 'hover:bg-slate-50 hover:text-slate-800'
+                : 'hover:bg-slate-50 hover:text-slate-800'
           }
         `}
       >
-        <div className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center gap-0' : 'justify-start gap-3'}`}>
+        <div
+          className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center gap-0' : 'justify-start gap-3'}`}
+        >
           <span className="relative shrink-0">
             <Icon
               size={isChild ? 15 : 18}
@@ -65,13 +63,13 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
               </span>
             )}
           </span>
-          <span className={`
+          <span
+            className={`
             flex items-center gap-2 transition-all duration-300 ease-in-out overflow-hidden
             ${isCollapsed ? 'max-w-0 opacity-0 ml-0' : isChild ? 'max-w-36 opacity-100 ml-0' : 'max-w-40 opacity-100 ml-3'}
-          `}>
-            <span className={`text-sm font-bold whitespace-nowrap ${isChild ? 'text-[13px]' : ''}`}>
-              {item.label}
-            </span>
+          `}
+          >
+            <span className={`text-sm font-bold whitespace-nowrap ${isChild ? 'text-[13px]' : ''}`}>{item.label}</span>
           </span>
         </div>
         {isActive && !isCollapsed && <ChevronRight size={14} className="text-brand-400" />}
@@ -87,8 +85,6 @@ function LeafItem({ item, isCollapsed, isActive, onClick, isChild = false, badge
     </li>
   );
 }
-
-// ------------------------------------------------------------
 
 interface GroupItemProps {
   item: NavGroup;
@@ -179,11 +175,9 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
   );
 }
 
-// ============================================================
 // メインコンポーネント
-// ============================================================
 
-export default function Sidebar() {
+export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
   const user = useUserStore((state) => state.user);
@@ -211,20 +205,21 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile overlay (toggled from the header hamburger button) */}
+      {/* モバイルの覆い（ヘッダーのハンバーガーのボタンで開閉する） */}
       {isOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden" onClick={closeMobileSidebar} />
       )}
 
       {/* サイドバー本体 */}
-      <aside className={`
+      <aside
+        className={`
         fixed inset-y-0 left-0 z-40 bg-white text-slate-600 flex flex-col transition-all duration-300 ease-in-out border-r border-slate-100
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:inset-auto
         ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}
-      `}>
-
-        {/* Top bar: close button on mobile only */}
+      `}
+      >
+        {/* 上部: 閉じるボタン（モバイルだけ） */}
         <div className="h-16 px-4 border-b border-slate-100 shrink-0 flex items-center lg:hidden">
           <button
             onClick={closeMobileSidebar}
@@ -256,13 +251,15 @@ export default function Sidebar() {
                 isCollapsed={isCollapsed}
                 isActive={pathname.startsWith(item.href)}
                 onClick={closeMobileSidebar}
-                badge={item.href === '/chat' ? totalUnreadCount : item.href === '/calendar' ? pendingRequestCount : undefined}
+                badge={
+                  item.href === '/chat' ? totalUnreadCount : item.href === '/calendar' ? pendingRequestCount : undefined
+                }
               />
             );
           })}
         </nav>
 
-        {/* Footer: persistent desktop collapse toggle */}
+        {/* 下部: PC の折りたたみの切り替え（常に出す） */}
         <div className="hidden lg:flex items-center justify-center h-12 border-t border-slate-100 shrink-0">
           <button
             onClick={toggleCollapse}

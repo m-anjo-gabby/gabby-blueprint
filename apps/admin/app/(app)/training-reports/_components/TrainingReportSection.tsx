@@ -1,5 +1,5 @@
-import { getTranslations } from 'next-intl/server';
 import { FileArchive, FileText } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { formatToJstDate } from '@gabby/lib/date/date';
 import type { TrainingReportTarget } from '@gabby/types/trainingReport';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -37,16 +37,19 @@ export async function TrainingReportSection({ yearMonth }: { yearMonth: string }
 
   if (!result) {
     return (
-      <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{t('fetchFailed')}</div>
+      <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        {t('fetchFailed')}
+      </div>
     );
   }
   const { targets, fetchedAt: now } = result;
   if (targets.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-200 py-12 text-center text-sm text-slate-400">{t('empty')}</div>
+      <div className="rounded-lg border border-dashed border-slate-200 py-12 text-center text-sm text-slate-400">
+        {t('empty')}
+      </div>
     );
   }
-
 
   return (
     <div className="space-y-6">
@@ -98,12 +101,15 @@ export async function TrainingReportSection({ yearMonth }: { yearMonth: string }
                         </span>
                       </TableCell>
                       <TableCell>
-                        <CommentStatus target={row} labels={{
-                          notApplicable: t('comment.notApplicable'),
-                          none: t('comment.none'),
-                          draft: t('comment.draft', { count: row.draft_comment_count }),
-                          finalized: t('comment.finalized', { count: row.finalized_comment_count }),
-                        }} />
+                        <CommentStatus
+                          target={row}
+                          labels={{
+                            notApplicable: t('comment.notApplicable'),
+                            none: t('comment.none'),
+                            draft: t('comment.draft', { count: row.draft_comment_count }),
+                            finalized: t('comment.finalized', { count: row.finalized_comment_count }),
+                          }}
+                        />
                       </TableCell>
                       <TableCell className="text-right">
                         <ReportDownloadButton
@@ -143,7 +149,9 @@ function CommentStatus({
   return (
     <span className="flex flex-wrap gap-1">
       {target.finalized_comment_count > 0 && (
-        <span className="rounded px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700">{labels.finalized}</span>
+        <span className="rounded px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700">
+          {labels.finalized}
+        </span>
       )}
       {target.draft_comment_count > 0 && (
         <span className="rounded px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">{labels.draft}</span>

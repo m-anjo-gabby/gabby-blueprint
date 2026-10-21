@@ -1,21 +1,21 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle, Mail, Save } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useTranslations } from 'next-intl';
-import { AlertCircle, Mail, Save } from 'lucide-react';
+import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import type { ClientOption } from '@gabby/types/client';
+import type { RoleDefinition, UserRecord } from '@gabby/types/user';
+import { resendInvite, updateUser } from '@/actions/adminUserAction';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { useConfirm } from '@gabby/lib/hooks/useConfirm';
-import { resendInvite, updateUser } from '@/actions/adminUserAction';
-import type { RoleDefinition, UserRecord } from '@gabby/types/user';
-import type { ClientOption } from '@gabby/types/client';
 import { UserBasicFields } from '../../_components/UserBasicFields';
 import { createUserBaseSchema, isRegisteredUser, toUserBaseValues, type UserBaseValues } from '../../_lib/userSchema';
 
-interface Props {
+interface UserBasicInfoFormProps {
   user: UserRecord;
   clients: ClientOption[];
   roles: RoleDefinition[];
@@ -25,7 +25,7 @@ interface Props {
  * 基本情報の編集（詳細画面の基本情報タブ）。入力欄は新規登録ダイアログと共通（UserBasicFields）。
  * 種別・所属顧客の変更は影響が大きいため、その場合だけ確認を挟む。招待中のユーザーは編集できず、招待メールの再送だけを行う。
  */
-export function UserBasicInfoForm({ user, clients, roles }: Props) {
+export function UserBasicInfoForm({ user, clients, roles }: UserBasicInfoFormProps) {
   const t = useTranslations('users.form');
   const tDetail = useTranslations('users.detail.basic');
   const tCommon = useTranslations('common');
@@ -78,7 +78,9 @@ export function UserBasicInfoForm({ user, clients, roles }: Props) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-        {isInviting && <p className="rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-700">{tDetail('invitingNote')}</p>}
+        {isInviting && (
+          <p className="rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-700">{tDetail('invitingNote')}</p>
+        )}
 
         <UserBasicFields clients={clients} roles={roles} disabled={isInviting} emailLocked />
 
@@ -91,7 +93,13 @@ export function UserBasicInfoForm({ user, clients, roles }: Props) {
 
         <div className="flex justify-end">
           {isInviting ? (
-            <Button type="button" variant="outline" pending={isResending} icon={<Mail size={14} />} onClick={handleResendInvite}>
+            <Button
+              type="button"
+              variant="outline"
+              pending={isResending}
+              icon={<Mail size={14} />}
+              onClick={handleResendInvite}
+            >
               {t('resendInvite')}
             </Button>
           ) : (

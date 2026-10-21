@@ -1,18 +1,18 @@
 'use client';
 
-import { GraduationCap, Briefcase, MessageSquare, Sparkles } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { VideoUploader } from '@gabby/lib/components/common/VideoUploader';
-import { CoachProfileFormValues } from '@gabby/types/coachProfile';
-import { CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { Briefcase, GraduationCap, MessageSquare, Sparkles } from 'lucide-react';
 import { CoachSpecialtyTags } from '@gabby/lib/components/common/CoachSpecialtyTags';
-import { CountryMaster } from '@gabby/types/country';
+import { VideoUploader } from '@gabby/lib/components/common/VideoUploader';
+import { type CoachProfileFormValues } from '@gabby/types/coachProfile';
+import { type CoachSpecialtyTag } from '@gabby/types/coachSpecialty';
+import { type CountryMaster } from '@gabby/types/country';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { CoachProfileFormProgress } from '../_lib/profileCompleteness';
 import { ProfileFieldGroup } from './ProfileFieldGroup';
 import { ProfileTextAreaField } from './ProfileTextAreaField';
-import type { CoachProfileFormProgress } from '../_lib/profileCompleteness';
 
 /**
  * 自由記述の項目グループ定義。同じ形（見出しアイコン + テキストエリアの並び）の項目を
@@ -65,7 +65,7 @@ interface PublicProfileFormProps {
   form: CoachProfileFormValues;
   onFieldChange: <K extends keyof CoachProfileFormValues>(field: K, value: CoachProfileFormValues[K]) => void;
   coachSinceLabel: string | null;
-  /** Specialties set by admins (read-only) */
+  /** アドミンが設定した専門（見るだけ） */
   specialties: CoachSpecialtyTag[];
   introVideoUrl: string | null;
   introVideoPath: string | null;
@@ -73,7 +73,7 @@ interface PublicProfileFormProps {
   onRemoveIntroVideo: () => Promise<void>;
   onSave: () => void;
   isSaving: boolean;
-  /** Required fields filled in this card (everything except the introduction video) */
+  /** このカードで入力する必須の項目（紹介動画を除くすべて） */
   formProgress: CoachProfileFormProgress;
 }
 
@@ -145,7 +145,9 @@ export function PublicProfileForm({
                   max={60}
                   className="pr-10"
                   value={form.teaching_years ?? ''}
-                  onChange={(e) => onFieldChange('teaching_years', e.target.value === '' ? null : Number(e.target.value))}
+                  onChange={(e) =>
+                    onFieldChange('teaching_years', e.target.value === '' ? null : Number(e.target.value))
+                  }
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
                   yrs

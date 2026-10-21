@@ -17,7 +17,7 @@ CREATE TABLE public.com_m_color_vowel_dictionary (
     syllables                character varying(100) NOT NULL,
     primary_stress_syllable  smallint     NOT NULL DEFAULT 1,
     stress_vowel_spelling    character varying(20) NOT NULL,
-    cv_id                    character varying(50) NOT NULL REFERENCES public.com_m_color_vowel(cv_id) ON DELETE CASCADE,
+    cv_id                    character varying(50) NOT NULL REFERENCES public.com_m_color_vowel(cv_id) ON DELETE RESTRICT,
     phonetic_spelling        text,
     audio_path               text,
     tts_ssml                 text,
@@ -26,11 +26,13 @@ CREATE TABLE public.com_m_color_vowel_dictionary (
     tts_status               smallint     NOT NULL DEFAULT 0,
     last_tts_date            timestamp with time zone,
     status                   text         NOT NULL DEFAULT 'live'::text,
-    delete_flg               smallint     NOT NULL DEFAULT 0,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     lemma                    text,
-    CONSTRAINT unique_word_and_pos UNIQUE (word_en, part_of_speech)
+    CONSTRAINT unique_word_and_pos UNIQUE (word_en, part_of_speech),
+    CONSTRAINT chk_cv_dictionary_status CHECK (status = ANY (ARRAY['live'::text, 'pending'::text])),
+    CONSTRAINT chk_cv_dictionary_tts_ssml_mode CHECK (tts_ssml_mode = ANY (ARRAY['auto'::text, 'manual'::text])),
+    CONSTRAINT chk_cv_dictionary_tts_status CHECK (tts_status = ANY (ARRAY[0, 1, 2, 9]))
 );
 
 COMMENT ON TABLE public.com_m_color_vowel_dictionary IS 'Color Vowel辞書マスタ';
@@ -50,17 +52,18 @@ COMMENT ON COLUMN public.com_m_color_vowel_dictionary.tts_adjustments IS 'TTS用
 COMMENT ON COLUMN public.com_m_color_vowel_dictionary.tts_status IS '音声生成ステータス（0:未生成, 1:生成済, 2:要再生成, 9:エラー）';
 COMMENT ON COLUMN public.com_m_color_vowel_dictionary.last_tts_date IS '最終音声生成日時';
 COMMENT ON COLUMN public.com_m_color_vowel_dictionary.status IS '公開ステータス';
-COMMENT ON COLUMN public.com_m_color_vowel_dictionary.delete_flg IS '削除フラグ（0:有効, 1:削除）';
 COMMENT ON COLUMN public.com_m_color_vowel_dictionary.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_color_vowel_dictionary.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_color_vowel_dictionary.lemma IS '原形（例: launched → launch）。見出し語が原形そのものの場合はNULL';
 
-CREATE INDEX idx_com_m_cv_dictionary_lookup ON public.com_m_color_vowel_dictionary (lower(word_en), part_of_speech, status) WHERE delete_flg = 0;
+CREATE INDEX idx_com_m_cv_dictionary_lookup ON public.com_m_color_vowel_dictionary (lower(word_en), part_of_speech, status);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_m_color_vowel_dictionary FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_m_color_vowel_dictionary ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view active dictionary records" ON public.com_m_color_vowel_dictionary FOR SELECT TO authenticated
 USING (
-    status = 'live'::text AND delete_flg = 0
+    status = 'live'::text
 );
 -- @end-schema

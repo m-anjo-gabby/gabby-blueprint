@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
 import { motion, type Easing } from 'framer-motion';
+import React from 'react';
 import { cn } from '@/lib/utils';
 
 export interface CircularProgressRingProps {
@@ -34,7 +34,7 @@ export interface CircularProgressRingProps {
  * 色分けや中央表示内容など、画面ごとに異なる「状態」のロジックは呼び出し側に残し、
  * ここでは一切持たない（children経由でコンポジションする）。
  */
-export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
+export function CircularProgressRing({
   size,
   viewBoxSize,
   radius,
@@ -47,7 +47,7 @@ export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
   transitionEase = 'linear',
   className,
   children,
-}) => {
+}: CircularProgressRingProps) {
   const circumference = 2 * Math.PI * radius;
   const clampedProgress = Math.max(0, Math.min(1, progress));
   const strokeDashoffset = circumference * (1 - clampedProgress);
@@ -57,7 +57,14 @@ export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
   return (
     <div className={cn('relative flex items-center justify-center', className)} style={{ width: size, height: size }}>
       <svg className="w-full h-full transform -rotate-90" viewBox={`0 0 ${vb} ${vb}`}>
-        <circle cx={center} cy={center} r={radius} className={trackClassName} strokeWidth={strokeWidth} fill={trackFill} />
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          className={trackClassName}
+          strokeWidth={strokeWidth}
+          fill={trackFill}
+        />
         <motion.circle
           cx={center}
           cy={center}
@@ -71,9 +78,7 @@ export const CircularProgressRing: React.FC<CircularProgressRingProps> = ({
           strokeLinecap="round"
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        {children}
-      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
     </div>
   );
-};
+}

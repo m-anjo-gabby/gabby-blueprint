@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useToast } from '../../hooks/useToast';
-import { uploadChatAttachment } from '../../chat/actions/attachmentActions';
-import { useChatDraftStore } from '../../stores/useChatDraftStore';
 import { CHAT_ATTACHMENT_MAX_SIZE } from '@gabby/types/chat';
+import { uploadChatAttachment } from '../../chat/actions/attachmentActions';
+import { useToast } from '../../hooks/useToast';
+import { useChatDraftStore } from '../../stores/useChatDraftStore';
 import type { ChatLabels } from './ChatUiContext';
 
 /**
@@ -42,8 +42,12 @@ export function useChatAttachmentUpload(roomId: string, labels: ChatLabels) {
           const formData = new FormData();
           formData.append('file', file);
           const uploadRes = await uploadChatAttachment(roomId, formData);
-          if (!uploadRes.success || !uploadRes.attachment) {
-            showToast(uploadRes.message || labels.uploadFailed(file.name), 'error');
+          if (!uploadRes.success) {
+            const message =
+              uploadRes.errorCode === 'file_too_large'
+                ? labels.fileTooLarge(file.name)
+                : labels.uploadFailed(file.name);
+            showToast(message, 'error');
             continue;
           }
           const uploaded = uploadRes.attachment;
@@ -55,7 +59,7 @@ export function useChatAttachmentUpload(roomId: string, labels: ChatLabels) {
         setIsUploading(false);
       }
     },
-    [roomId, labels, setDraft, showToast]
+    [roomId, labels, setDraft, showToast],
   );
 
   return { isUploading, addFiles };

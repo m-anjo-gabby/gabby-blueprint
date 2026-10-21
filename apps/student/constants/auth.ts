@@ -1,5 +1,5 @@
-import type { AuthLabels } from '@gabby/lib/components/auth/types';
 import { AUTH_ERROR_MESSAGES_JA } from '@gabby/lib/auth/errors';
+import type { AuthLabels } from '@gabby/lib/components/auth/types';
 
 /** 認証画面（ログイン・パスワード忘れ・再設定・招待）の文言 */
 export const AUTH_LABELS: AuthLabels = {

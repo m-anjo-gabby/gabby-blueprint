@@ -10,8 +10,8 @@
  * TS定数辞書）への追加だけで済み、本ユニオン自体の変更は不要。com_t_session の
  * ような構造的に異なる新テーブルが増えた場合のみ、ユニオンメンバーを1つ増やす。
  */
-import { SessionListItem } from './session';
-import { CalendarEventItem } from './calendarEvent';
+import { type CalendarEventItem } from './calendarEvent';
+import { type SessionListItem } from './session';
 
 export type CalendarItem =
   | { kind: 'session'; date: string /* YYYY-MM-DD, viewer timezone */; data: SessionListItem }

@@ -14,11 +14,11 @@
 CREATE TABLE public.com_t_dialogue_session_progress (
     progress_id              uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
     assignment_id            uuid         NOT NULL REFERENCES public.com_t_dialogue_assignment(assignment_id) ON DELETE CASCADE,
-    dialogue_session_id      uuid         NOT NULL REFERENCES public.com_m_dialogue_session(dialogue_session_id),
+    dialogue_session_id      uuid         NOT NULL REFERENCES public.com_m_dialogue_session(dialogue_session_id) ON DELETE RESTRICT,
     is_completed             boolean      NOT NULL DEFAULT false,
     completed_date           date,
     notes                    text,
-    updated_by_coach_id      uuid         NOT NULL REFERENCES public.com_m_user(id),
+    updated_by_coach_id      uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT com_t_dialogue_session_progre_assignment_id_dialogue_sessio_key UNIQUE (assignment_id, dialogue_session_id)
@@ -36,6 +36,9 @@ COMMENT ON COLUMN public.com_t_dialogue_session_progress.insert_date IS '登録�
 COMMENT ON COLUMN public.com_t_dialogue_session_progress.update_date IS '更新日時';
 
 CREATE INDEX idx_dialogue_session_progress_assignment ON public.com_t_dialogue_session_progress (assignment_id);
+CREATE INDEX idx_dialogue_session_progress_session ON public.com_t_dialogue_session_progress (dialogue_session_id);
+
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_dialogue_session_progress FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
 
 ALTER TABLE public.com_t_dialogue_session_progress ENABLE ROW LEVEL SECURITY;
 
@@ -44,7 +47,7 @@ USING (
     (EXISTS ( SELECT 1
        FROM public.com_t_dialogue_assignment a
          JOIN public.com_m_coach_student_relationship r ON r.student_id = a.student_id
-      WHERE a.assignment_id = com_t_dialogue_session_progress.assignment_id AND r.coach_id = auth.uid())) OR public.get_jwt_user_type() = '0'::text
+      WHERE a.assignment_id = com_t_dialogue_session_progress.assignment_id AND r.coach_id = auth.uid())) OR public.is_system_admin()
 )
 WITH CHECK (
     updated_by_coach_id = auth.uid() AND (EXISTS ( SELECT 1

@@ -1,15 +1,15 @@
 'use client';
 
+import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
 import { useShellNavContext } from '@/components/shell/ShellNavContext';
-import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { WEEKDAY_LABELS } from '../_lib/weeklyActivity';
-import { HOME_LAYOUT, HeroBackdrop, HomeCard } from './HomeCard';
+import { HeroBackdrop, HOME_LAYOUT, HomeCard } from './HomeCard';
+import { HomeEventCardSkeleton } from './HomeEventCard';
 import { LIFETIME_ITEMS, LIFETIME_LAYOUT, LifetimeBlock } from './LifetimeStatsCard';
 import { LiveSessionCardSkeleton } from './LiveSessionCard';
-import { HomeEventCardSkeleton } from './HomeEventCard';
 import { PlanCardSkeleton } from './PlanCard';
 
 /*
@@ -40,7 +40,10 @@ function HeroBar({ className }: { className?: string }) {
 /** 主役カード「今日やること」の骨組み（面は本番と同じブランドのグラデーション） */
 export function TodayFocusCardSkeleton() {
   return (
-    <section aria-hidden className="relative flex h-full flex-col overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 shadow-md shadow-brand/15">
+    <section
+      aria-hidden
+      className="relative flex h-full flex-col overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 shadow-md shadow-brand/15"
+    >
       <HeroBackdrop />
       <div className="relative flex h-4 items-center">
         <HeroBar className="h-3 w-28" />

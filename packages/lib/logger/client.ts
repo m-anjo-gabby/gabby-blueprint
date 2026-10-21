@@ -52,25 +52,37 @@ function send(body: ClientLogBody): void {
   if (typeof window === 'undefined') return;
   try {
     const json = JSON.stringify(body);
-    const sent = typeof navigator.sendBeacon === 'function'
-      && navigator.sendBeacon(CLIENT_LOG_PATH, new Blob([json], { type: 'application/json' }));
+    const sent =
+      typeof navigator.sendBeacon === 'function' &&
+      navigator.sendBeacon(CLIENT_LOG_PATH, new Blob([json], { type: 'application/json' }));
     if (!sent) {
       void fetch(CLIENT_LOG_PATH, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: json,
         keepalive: true,
-      }).catch(() => { /* 送信の失敗は無視する */ });
+      }).catch(() => {
+        /* 送信の失敗は無視する */
+      });
     }
   } catch {
     /* 送信の失敗は無視する */
   }
 }
 
-function printToConsole(level: ClientLogLevel | 'debug', event: LogEventName, message: string, context?: ClientLogContext): void {
+function printToConsole(
+  level: ClientLogLevel | 'debug',
+  event: LogEventName,
+  message: string,
+  context?: ClientLogContext,
+): void {
   if (!isDev) return;
   // eslint-disable-next-line no-console -- 開発中の表示はここに集約する（docs/LOGGING.md）
-  console[level](`[${event}] ${message}`, ...(context?.err !== undefined ? [context.err] : []), ...(context?.payload ? [context.payload] : []));
+  console[level](
+    `[${event}] ${message}`,
+    ...(context?.err !== undefined ? [context.err] : []),
+    ...(context?.payload ? [context.payload] : []),
+  );
 }
 
 function report(level: ClientLogLevel, event: LogEventName, message: string, context?: ClientLogContext): void {
@@ -87,7 +99,8 @@ function report(level: ClientLogLevel, event: LogEventName, message: string, con
 }
 
 export const clientLogger = {
-  debug: (event: LogEventName, message: string, context?: ClientLogContext) => printToConsole('debug', event, message, context),
+  debug: (event: LogEventName, message: string, context?: ClientLogContext) =>
+    printToConsole('debug', event, message, context),
   info: (event: LogEventName, message: string, context?: ClientLogContext) => report('info', event, message, context),
   warn: (event: LogEventName, message: string, context?: ClientLogContext) => report('warn', event, message, context),
   error: (event: LogEventName, message: string, context?: ClientLogContext) => report('error', event, message, context),

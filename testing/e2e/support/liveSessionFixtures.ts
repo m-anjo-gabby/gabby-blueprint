@@ -1,12 +1,12 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { signInAsRole, signOutRole } from "../../helpers/auth.ts";
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { signInAsRole, signOutRole } from '../../helpers/auth.ts';
 import {
-  DISPOSABLE_EMAIL_DOMAIN,
   createDisposableCoach,
   createDisposableStudent,
+  DISPOSABLE_EMAIL_DOMAIN,
   grantLiveLicense,
   type AuthFixture,
-} from "./authFixtures.ts";
+} from './authFixtures.ts';
 
 /**
  * ライブセッション（専属コーチの申請・実施）のE2E用の使い捨てデータ。
@@ -43,11 +43,11 @@ export async function createPendingMatchingRequest(f: AuthFixture, password: str
   const studentEmail = `${f.tag}-student@${DISPOSABLE_EMAIL_DOMAIN}`;
   const studentName = `E2E生徒 ${f.tag}`;
   const studentId = await createDisposableStudent(f, { email: studentEmail, password, userName: studentName });
-  await f.admin.from("com_m_user").update({ timezone: "Asia/Tokyo" }).eq("id", studentId);
+  await f.admin.from('com_m_user').update({ timezone: 'Asia/Tokyo' }).eq('id', studentId);
   const now = Date.now();
   const { ticketId } = await grantLiveLicense(f, studentId, {
-    planCode: "LIVE_WEEKLY1_3M",
-    label: "live",
+    planCode: 'LIVE_WEEKLY1_3M',
+    label: 'live',
     start: new Date(now - DAY_MS),
     end: new Date(now + 90 * DAY_MS),
   });
@@ -58,28 +58,39 @@ export async function createPendingMatchingRequest(f: AuthFixture, password: str
     email: coachEmail,
     password,
     userName: coachName,
-    timezone: "Asia/Tokyo",
-    availability: [{ dayOfWeek: 5, startTime: "10:00:00", endTime: "13:00:00" }],
+    timezone: 'Asia/Tokyo',
+    availability: [{ dayOfWeek: 5, startTime: '10:00:00', endTime: '13:00:00' }],
   });
 
   const studentClient = await signInAsRole(studentEmail, password);
   const { data: request, error } = await studentClient
-    .from("com_t_matching_request")
+    .from('com_t_matching_request')
     .insert({
       ticket_id: ticketId,
       student_id: studentId,
       coach_id: coachId,
       slot_no: 1,
       requested_day_of_week: 5,
-      requested_start_time: "20:00:00",
-      requested_end_time: "20:25:00",
-      requested_timezone: "Asia/Tokyo",
+      requested_start_time: '20:00:00',
+      requested_end_time: '20:25:00',
+      requested_timezone: 'Asia/Tokyo',
     })
-    .select("request_id")
+    .select('request_id')
     .single();
   if (error || !request) throw new Error(`申請の登録に失敗しました: ${error?.message}`);
 
-  return { studentId, studentName, studentEmail, coachId, coachName, coachEmail, password, ticketId, requestId: request.request_id, studentClient };
+  return {
+    studentId,
+    studentName,
+    studentEmail,
+    coachId,
+    coachName,
+    coachEmail,
+    password,
+    ticketId,
+    requestId: request.request_id,
+    studentClient,
+  };
 }
 
 /**
@@ -89,12 +100,16 @@ export async function createPendingMatchingRequest(f: AuthFixture, password: str
 export async function approveMatchingRequest(f: AuthFixture, pair: LivePair): Promise<string> {
   const coachClient = await signInAsRole(pair.coachEmail, pair.password);
   try {
-    const { error } = await coachClient.rpc("approve_matching_request", { p_request_id: pair.requestId });
+    const { error } = await coachClient.rpc('approve_matching_request', { p_request_id: pair.requestId });
     if (error) throw new Error(`申請の承認に失敗しました: ${error.message}`);
   } finally {
     await signOutRole(coachClient);
   }
-  const { data: schedule, error } = await f.admin.from("com_m_lesson_schedule").select("schedule_id").eq("ticket_id", pair.ticketId).single();
+  const { data: schedule, error } = await f.admin
+    .from('com_m_lesson_schedule')
+    .select('schedule_id')
+    .eq('ticket_id', pair.ticketId)
+    .single();
   if (error || !schedule) throw new Error(`定期スケジュールが見つかりません: ${error?.message}`);
   return schedule.schedule_id;
 }
@@ -123,50 +138,98 @@ export async function prepareLiveSessionDay(
   f: AuthFixture,
   pair: LivePair,
   scheduleId: string,
-  options: { studentMinutesInCall?: number } = {}
+  options: { studentMinutesInCall?: number } = {},
 ): Promise<LiveSessionDay> {
   const { admin } = f;
   const now = Date.now();
-  const base = { schedule_id: scheduleId, ticket_id: pair.ticketId, student_id: pair.studentId, coach_id: pair.coachId };
+  const base = {
+    schedule_id: scheduleId,
+    ticket_id: pair.ticketId,
+    student_id: pair.studentId,
+    coach_id: pair.coachId,
+  };
 
   const previous = await createCompletedSessionWithHomework(f, pair, scheduleId, { daysAgo: 7 });
 
   const start = now - 21 * MINUTE_MS;
   const { data: current, error: currentError } = await admin
-    .from("com_t_session")
-    .insert({ ...base, start_datetime: new Date(start).toISOString(), end_datetime: new Date(start + LESSON_MS).toISOString(), status: 1 })
-    .select("session_id")
+    .from('com_t_session')
+    .insert({
+      ...base,
+      start_datetime: new Date(start).toISOString(),
+      end_datetime: new Date(start + LESSON_MS).toISOString(),
+      status: 1,
+    })
+    .select('session_id')
     .single();
   if (currentError || !current) throw new Error(`今回のセッションの作成に失敗しました: ${currentError?.message}`);
   const studentMinutesInCall = options.studentMinutesInCall ?? 21;
   const studentJoinedAt = Math.max(start, now - studentMinutesInCall * MINUTE_MS);
-  const { error: callLogError } = await admin.from("com_t_session_call_log").insert([
-    { session_id: current.session_id, user_id: pair.coachId, role: "coach", joined_at: new Date(start).toISOString() },
+  const { error: callLogError } = await admin.from('com_t_session_call_log').insert([
+    {
+      session_id: current.session_id,
+      user_id: pair.coachId,
+      role: 'coach',
+      joined_at: new Date(start).toISOString(),
+    },
     ...(studentMinutesInCall > 0
-      ? [{ session_id: current.session_id, user_id: pair.studentId, role: "student", joined_at: new Date(studentJoinedAt).toISOString() }]
+      ? [
+          {
+            session_id: current.session_id,
+            user_id: pair.studentId,
+            role: 'student',
+            joined_at: new Date(studentJoinedAt).toISOString(),
+          },
+        ]
       : []),
   ]);
   if (callLogError) throw new Error(`入退室ログの作成に失敗しました: ${callLogError.message}`);
 
   const { data: sprintContent } = await admin
-    .from("com_m_contents").select("content_id").eq("content_type", 2).eq("delete_flg", "0").limit(1).single();
+    .from('com_m_contents')
+    .select('content_id')
+    .eq('content_type', 2)
+    .eq('status', 1)
+    .limit(1)
+    .single();
   const isoDate = (t: number) => new Date(t).toISOString().slice(0, 10);
-  const { error: summaryError } = await admin.from("self_t_sprint_summary").insert([
-    { user_id: pair.studentId, content_id: sprintContent!.content_id, training_date: isoDate(now), question_count: 12, assessment_count: 5 },
-    { user_id: pair.studentId, content_id: sprintContent!.content_id, training_date: isoDate(now - DAY_MS), question_count: 8, assessment_count: 3 },
+  const { error: summaryError } = await admin.from('self_t_sprint_summary').insert([
+    {
+      user_id: pair.studentId,
+      content_id: sprintContent!.content_id,
+      training_date: isoDate(now),
+      question_count: 12,
+      assessment_count: 5,
+    },
+    {
+      user_id: pair.studentId,
+      content_id: sprintContent!.content_id,
+      training_date: isoDate(now - DAY_MS),
+      question_count: 8,
+      assessment_count: 3,
+    },
   ]);
   if (summaryError) throw new Error(`自主トレーニングの実績の作成に失敗しました: ${summaryError.message}`);
 
   const { data: room, error: roomError } = await admin
-    .from("com_t_chat_room_user").select("room_id").eq("user_id", pair.studentId).limit(1).single();
+    .from('com_t_chat_room_user')
+    .select('room_id')
+    .eq('user_id', pair.studentId)
+    .limit(1)
+    .single();
   if (roomError || !room) throw new Error(`チャットルームが見つかりません: ${roomError?.message}`);
   const studentMessage = `Hi coach, see you in today's session! (${f.tag})`;
   const { error: chatError } = await pair.studentClient
-    .from("com_t_chat")
-    .insert({ room_id: room.room_id, sender_user_id: pair.studentId, message: studentMessage, message_type: "TEXT" });
+    .from('com_t_chat')
+    .insert({ room_id: room.room_id, sender_user_id: pair.studentId, message: studentMessage, message_type: 'TEXT' });
   if (chatError) throw new Error(`生徒のチャット送信に失敗しました: ${chatError.message}`);
 
-  return { sessionId: current.session_id, previousSessionId: previous.sessionId, previousHomework: previous.homeworkText, studentMessage };
+  return {
+    sessionId: current.session_id,
+    previousSessionId: previous.sessionId,
+    previousHomework: previous.homeworkText,
+    studentMessage,
+  };
 }
 
 /**
@@ -176,12 +239,12 @@ export async function createCompletedSessionWithHomework(
   f: AuthFixture,
   pair: LivePair,
   scheduleId: string,
-  options: { daysAgo: number }
+  options: { daysAgo: number },
 ): Promise<{ sessionId: string; homeworkText: string }> {
   const { admin } = f;
   const start = Date.now() - options.daysAgo * DAY_MS;
   const { data: session, error: sessionError } = await admin
-    .from("com_t_session")
+    .from('com_t_session')
     .insert({
       schedule_id: scheduleId,
       ticket_id: pair.ticketId,
@@ -192,14 +255,19 @@ export async function createCompletedSessionWithHomework(
       status: 2,
       completion_result: 1,
     })
-    .select("session_id")
+    .select('session_id')
     .single();
   if (sessionError || !session) throw new Error(`実施済みのセッションの作成に失敗しました: ${sessionError?.message}`);
   const homeworkText = `Review the meeting phrases from the session ${options.daysAgo} days ago (${f.tag}).`;
   const { data: homework, error: homeworkError } = await admin
-    .from("com_t_session_homework")
-    .insert({ session_id: session.session_id, coach_id: pair.coachId, student_id: pair.studentId, homework_text: homeworkText })
-    .select("homework_id")
+    .from('com_t_session_homework')
+    .insert({
+      session_id: session.session_id,
+      coach_id: pair.coachId,
+      student_id: pair.studentId,
+      homework_text: homeworkText,
+    })
+    .select('homework_id')
     .single();
   if (homeworkError || !homework) throw new Error(`宿題の作成に失敗しました: ${homeworkError?.message}`);
   return { sessionId: session.session_id, homeworkText };
@@ -209,7 +277,12 @@ export async function createCompletedSessionWithHomework(
  * 終了予定を過ぎても実施予定のまま残ったセッション（通話の記録なし）を作る。外部のZoomで実施した場合等の End Session の対象になる。
  * 複数作る場合は2時間ずつずらす（1件目は45分前に終了予定）。
  */
-export async function createStaleSessions(f: AuthFixture, pair: LivePair, scheduleId: string, count: number): Promise<string[]> {
+export async function createStaleSessions(
+  f: AuthFixture,
+  pair: LivePair,
+  scheduleId: string,
+  count: number,
+): Promise<string[]> {
   const now = Date.now();
   const rows = Array.from({ length: count }, (_, i) => {
     const start = now - 70 * MINUTE_MS - i * 120 * MINUTE_MS;
@@ -223,7 +296,7 @@ export async function createStaleSessions(f: AuthFixture, pair: LivePair, schedu
       status: 1,
     };
   });
-  const { data, error } = await f.admin.from("com_t_session").insert(rows).select("session_id");
+  const { data, error } = await f.admin.from('com_t_session').insert(rows).select('session_id');
   if (error || !data) throw new Error(`終了予定を過ぎたセッションの作成に失敗しました: ${error?.message}`);
   return data.map((r) => r.session_id);
 }

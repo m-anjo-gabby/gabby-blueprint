@@ -19,11 +19,11 @@
 -- @schema public.com_t_coach_monthly_report_approval
 CREATE TABLE public.com_t_coach_monthly_report_approval (
     approval_id              uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id),
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     report_month             date         NOT NULL,
     status                   smallint     NOT NULL DEFAULT 1,
     session_count_snapshot   jsonb,
-    approved_by              uuid         REFERENCES public.com_m_user(id),
+    approved_by              uuid         REFERENCES public.com_m_user(id) ON DELETE SET NULL,
     approved_at              timestamp with time zone,
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
@@ -48,10 +48,12 @@ COMMENT ON COLUMN public.com_t_coach_monthly_report_approval.rate_currency IS 'æ
 
 CREATE INDEX idx_coach_monthly_report_approval_coach ON public.com_t_coach_monthly_report_approval (coach_id, report_month);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.com_t_coach_monthly_report_approval FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.com_t_coach_monthly_report_approval ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coach and admin can view monthly report approval" ON public.com_t_coach_monthly_report_approval FOR SELECT TO authenticated
 USING (
-    coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    coach_id = auth.uid() OR public.is_system_admin()
 );
 -- @end-schema

@@ -1,25 +1,25 @@
 'use client';
 
-import { useMemo, useTransition } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useMemo, useTransition } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTranslations } from 'next-intl';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import type { CalendarEventCoachOption } from '@gabby/types/calendarEvent';
 import type { ClientOption } from '@gabby/types/client';
-import { cn } from '@/lib/utils';
+import { createCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { createCalendarEventSeries } from '@/actions/adminCalendarEventSeriesAction';
+import { cn } from '@/lib/utils';
 import { SeriesSessionsFields } from '../../_components/SeriesSessionsFields';
 import {
-  refineSeriesSessions,
   createSeriesSessionsShape,
+  refineSeriesSessions,
   toSeriesSessionsPayload,
   type SeriesSessionsValues,
 } from '../../_lib/seriesSessions';
@@ -52,7 +52,7 @@ export function SeriesCreateForm({ initialValues, cancelHref, coaches, clients }
           ...createSeriesSessionsShape(t),
         })
         .superRefine(refineSeriesSessions(t)),
-    [t]
+    [t],
   );
   const router = useRouter();
   const { showToast } = useToast();
@@ -64,7 +64,11 @@ export function SeriesCreateForm({ initialValues, cancelHref, coaches, clients }
   const onSubmit = (values: SeriesCreateValues) => {
     startTransition(async () => {
       const { common, rows } = toSeriesSessionsPayload(values);
-      const result = await createCalendarEventSeries({ title: values.title, description: values.description }, common, rows);
+      const result = await createCalendarEventSeries(
+        { title: values.title, description: values.description },
+        common,
+        rows,
+      );
       if (!result.success) {
         showToast(t('toastCreateFailed'), 'error');
         return;

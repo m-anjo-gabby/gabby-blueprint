@@ -78,6 +78,7 @@ Write-Step '1. ツールのインストール'
 # ---------------------------------------------------------------------------
 $tools = @(
   @{ Command = 'git';    Id = 'Git.Git';                    Name = 'Git' }
+  @{ Command = 'gh';     Id = 'GitHub.cli';                 Name = 'GitHub CLI（Deploy の実行・CI の確認）' }
   @{ Command = 'node';   Id = 'OpenJS.NodeJS.LTS';          Name = 'Node.js LTS' }
   @{ Command = 'mkcert'; Id = 'FiloSottile.mkcert';         Name = 'mkcert（ローカルHTTPS証明書）' }
   @{ Command = 'code';   Id = 'Microsoft.VisualStudioCode'; Name = 'VSCode' }
@@ -103,8 +104,10 @@ if ($missingTools.Count -gt 0) {
 }
 
 $nodeVersion = [version]((& node -v).TrimStart('v'))
-if ($nodeVersion -lt [version]'20.10.0') {
-  throw "Node.js $nodeVersion は古いため使えません（20.10 以上が必要）。winget upgrade OpenJS.NodeJS.LTS で更新してください。"
+# clone 前に確認するため定数で持つ。.nvmrc（package.json の engines・Vercel・GitHub Actions と同じメジャー版）とそろえる
+$nodeMajor = 24
+if ($nodeVersion.Major -ne $nodeMajor) {
+  throw "Node.js $nodeVersion は使えません（$nodeMajor 系が必要）。Node.js $nodeMajor 系の LTS をインストールしてください。"
 }
 Write-Ok "Node.js $nodeVersion"
 
@@ -126,6 +129,19 @@ foreach ($key in $gitSettings.Keys) {
     Invoke-Native 'git' @('config', '--global', $key, $wanted)
     Write-Ok "$key = $wanted"
   }
+}
+
+# GitHub CLI にログインし、git の認証にも使う（clone のサインインを兼ねる。ブラウザで認証する）
+# 未ログインの場合は stderr に出て終了コード 1 になる（$ErrorActionPreference = 'Stop' で止まらないよう try で包む）
+$ghLoggedIn = try { & gh auth status 2>$null | Out-Null; $LASTEXITCODE -eq 0 } catch { $false }
+if ($ghLoggedIn) {
+  Write-Skip 'GitHub CLI のログイン'
+} elseif (Confirm-Action 'GitHub CLI にログインしますか？（ブラウザが開きます）' -Yes:$Yes) {
+  Invoke-Native 'gh' @('auth', 'login', '--hostname', 'github.com', '--git-protocol', 'https', '--web')
+  Invoke-Native 'gh' @('auth', 'setup-git')
+  Write-Ok 'GitHub CLI にログインしました。'
+} else {
+  Write-Warn 'GitHub CLI に未ログインのまま続けます（後で gh auth login を実行してください）。'
 }
 
 # ---------------------------------------------------------------------------
@@ -174,6 +190,9 @@ Write-Info 'pnpm install を実行しています（初回は数分かかりま�
 Push-Location $RepoPath
 try { Invoke-Native 'pnpm' @('install', '--frozen-lockfile') } finally { Pop-Location }
 Write-Ok '依存パッケージをインストールしました。'
+
+# 書式だけの一括変更（.git-blame-ignore-revs）を git blame で飛ばす
+Invoke-Native 'git' @('-C', $RepoPath, 'config', 'blame.ignoreRevsFile', '.git-blame-ignore-revs')
 
 # ---------------------------------------------------------------------------
 Write-Step '5. 環境ファイル等の展開'

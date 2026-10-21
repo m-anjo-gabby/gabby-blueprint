@@ -1,5 +1,5 @@
-import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTransition } from 'react';
 import { buildMonitorHref, type MonitorQuery } from './monitorQuery';
 
 /**

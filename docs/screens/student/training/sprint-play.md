@@ -123,8 +123,8 @@
 - `apps/student/app/(app)/training/sprint/play/_components/SprintDrillPlayerControls.tsx`,
   `SprintFeedback.tsx`, `QuestionCard.tsx`, `ExitProcessingOverlay.tsx`
 - `apps/student/stores/useSprintStore.ts`（Zustandによるセッション状態の一元管理）
-- `apps/student/actions/sprintAction.ts`（`getSprintQuestionsAction`, `getLastSprintSessionAction`,
-  `getContentAction`, `getSprintProgressAction`, `createSprintScoreAction`）
+- `apps/student/actions/sprintAction.ts`（`getSprintQuestions`, `getLastSprintSession`,
+  `getContent`, `getSprintProgress`, `createSprintScore`）
 - `packages/types/sprint.ts`（`QUESTION_TYPES`: UG Speed/UG Builders/UG Structure/UG Mastery、
   `SPRINT_TIME_OPTIONS`: 60/90/120/150秒）
 - `packages/lib/audio/react/useSpeakingPlayer.ts`（単語帳と共通の再生→発話プレイヤー。`runTurn` で基本文→質問文→チャイム→発話評価、中断は AbortSignal）

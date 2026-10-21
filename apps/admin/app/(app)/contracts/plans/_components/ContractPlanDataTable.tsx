@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import type { ContractPlan } from '@gabby/types/contract';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import type { ContractPlan } from '@gabby/types/contract';
 import { deleteContractPlan } from '@/actions/adminContractAction';
 import { DataTable } from '@/components/list/DataTable';
-import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
+import { boldChunks, DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
 import { paginateLocally } from '@/lib/list';
@@ -33,6 +33,8 @@ export function ContractPlanDataTable({ data }: ContractPlanDataTableProps) {
       const result = await deleteContractPlan(plan.plan_id);
       if (result.success) {
         showToast(t('toastDeleted'), 'success');
+      } else if (result.errorCode === 'in_use') {
+        showToast(t('toastInUse'), 'error');
       } else {
         showToast(result.message || t('toastDeleteFailed'), 'error');
       }

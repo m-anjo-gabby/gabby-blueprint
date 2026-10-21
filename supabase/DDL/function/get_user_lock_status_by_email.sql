@@ -22,7 +22,7 @@ BEGIN
     FROM public.com_m_user u
     JOIN auth.users a ON u.id = a.id
     WHERE a.email = p_email 
-      AND u.delete_flg = '0'
+      AND u.status = 1
     LIMIT 1;
 END;
 $$;

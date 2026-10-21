@@ -1,6 +1,5 @@
 ---------------------------------------------
--- 候補提案の却下/取り下げ応答RPC (2026-09-15 追加、reject_session_booking_request/
--- decline_session_reschedule_proposalsを統合)
+-- 候補提案の却下/取り下げ応答RPC（振替候補・自由予約リクエストの共通）
 -- 前提: table/com_t_session_slot_proposal.sql, function/fn_assert_actor_or_admin.sql の
 --       作成が完了していること。
 ---------------------------------------------
@@ -18,7 +17,7 @@
 -- UIは特定の候補を選ばせず「まとめて却下」ボタンのみを提示するため、グループの先頭要素の
 -- proposal_idを渡す想定）、本関数側でsource_session_id単位のグルーピングを解決する。
 --
--- 【通知メールに申請の日時を載せる (2026-10-06追加)】
+-- 【通知メールに申請の日時を載せる】
 -- 通知メールに申請した日時（開始〜終了）と理由を載せるため、payload に proposal_id を含める。
 ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.reject_slot_proposal(p_proposal_id uuid, p_reason text DEFAULT NULL)

@@ -14,10 +14,10 @@
 -- @schema public.lesson_t_sprint
 CREATE TABLE public.lesson_t_sprint (
     lesson_sprint_id         uuid         DEFAULT gen_random_uuid() PRIMARY KEY,
-    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
-    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE CASCADE,
+    coach_id                 uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
+    student_id               uuid         NOT NULL REFERENCES public.com_m_user(id) ON DELETE RESTRICT,
     sprint_type              text         NOT NULL,
-    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE CASCADE,
+    content_id               uuid         NOT NULL REFERENCES public.com_m_contents(content_id) ON DELETE RESTRICT,
     question_type            text         NOT NULL,
     answer_type              text         NOT NULL,
     difficulty_level         smallint     NOT NULL,
@@ -30,6 +30,7 @@ CREATE TABLE public.lesson_t_sprint (
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     session_id               uuid         REFERENCES public.com_t_session(session_id) ON DELETE SET NULL,
+    CONSTRAINT chk_lesson_sprint_types CHECK ((sprint_type = ANY (ARRAY['0'::text, '1'::text])) AND (question_type = ANY (ARRAY['0'::text, '4'::text, '5'::text, '6'::text])) AND (answer_type = ANY (ARRAY['0'::text, '1'::text]))),
     CONSTRAINT lesson_t_sprint_answered_history_is_array CHECK (jsonb_typeof(answered_history) = 'array'::text)
 );
 
@@ -57,11 +58,13 @@ CREATE INDEX idx_lesson_t_sprint_content_id ON public.lesson_t_sprint (content_i
 CREATE INDEX idx_lesson_t_sprint_session ON public.lesson_t_sprint (session_id, insert_date);
 CREATE INDEX idx_lesson_t_sprint_student ON public.lesson_t_sprint (student_id, insert_date DESC);
 
+CREATE TRIGGER trg_set_update_date BEFORE UPDATE ON public.lesson_t_sprint FOR EACH ROW EXECUTE FUNCTION public.set_update_date('update_date');
+
 ALTER TABLE public.lesson_t_sprint ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Coaches can manage lesson sprints they ran" ON public.lesson_t_sprint FOR ALL TO authenticated
 USING (
-    coach_id = auth.uid() OR public.get_jwt_user_type() = '0'::text
+    coach_id = auth.uid() OR public.is_system_admin()
 )
 WITH CHECK (
     coach_id = auth.uid() AND (session_id IS NULL OR (EXISTS ( SELECT 1

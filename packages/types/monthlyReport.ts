@@ -1,4 +1,4 @@
-import { SessionStatus, CompletionResult, CancelCategory } from './session';
+import { type CancelCategory, type CompletionResult, type SessionStatus } from './session';
 
 /**
  * ----------------------------------------------
@@ -11,18 +11,14 @@ import { SessionStatus, CompletionResult, CancelCategory } from './session';
  */
 
 export type MonthlyReportErrorCode =
-  | 'unauthorized'
-  | 'forbidden'
-  | 'invalid_input'
-  | 'not_actionable'
-  | 'unresolved_sessions_exist'
-  | 'unexpected_error';
+  'unauthorized' | 'forbidden' | 'invalid_input' | 'not_actionable' | 'unresolved_sessions_exist' | 'unexpected_error';
 
 export const MONTHLY_REPORT_APPROVAL_STATUS = {
   UNAPPROVED: 1,
   APPROVED: 2,
 } as const;
-export type MonthlyReportApprovalStatus = typeof MONTHLY_REPORT_APPROVAL_STATUS[keyof typeof MONTHLY_REPORT_APPROVAL_STATUS];
+export type MonthlyReportApprovalStatus =
+  (typeof MONTHLY_REPORT_APPROVAL_STATUS)[keyof typeof MONTHLY_REPORT_APPROVAL_STATUS];
 
 /** get_coach_monthly_sessions の1行分（グリッド描画・詳細モーダル両方で使う生データ） */
 export interface MonthlyReportSession {
@@ -78,13 +74,9 @@ export interface CoachMonthlyReport {
 }
 
 export type GetCoachMonthlyReportResult =
-  | { success: true; report: CoachMonthlyReport }
-  | { success: false; errorCode: MonthlyReportErrorCode };
+  { success: true; report: CoachMonthlyReport } | { success: false; errorCode: MonthlyReportErrorCode };
 
-export type ApproveCoachMonthlyReportResult =
-  | { success: true }
-  | { success: false; errorCode: MonthlyReportErrorCode };
+export type ApproveCoachMonthlyReportResult = { success: true } | { success: false; errorCode: MonthlyReportErrorCode };
 
 export type RevokeCoachMonthlyReportApprovalResult =
-  | { success: true }
-  | { success: false; errorCode: MonthlyReportErrorCode };
+  { success: true } | { success: false; errorCode: MonthlyReportErrorCode };

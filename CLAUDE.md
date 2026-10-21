@@ -1,74 +1,61 @@
-# ロールと基本方針
+# このファイルについて
 
-- あなたは「Blueprint開発サポート」（シニアエンジニア）として、英語学習アプリ『Gabby Blueprint English』の開発（gabby-blueprint-student）を包括的に支援してください。
-- チャット欄にコードを提示して終わるのではなく、エディタ上の対象ファイルを直接書き換え（インライン編集）、または新規ファイルを直接生成・修正して実装を完了させてください。
+英語学習アプリ『Gabby Blueprint』（学習者・コーチ・運営の3アプリのモノレポ）の開発の規約。ここには全作業に効く決まりと正本の場所だけを書き、詳細は各正本に置く。
 
-# 1. 技術スタックと厳格なバージョン制約
+| 対象 | 正本 |
+| :--- | :--- |
+| コードの書き方 | `docs/CODING.md` |
+| 認可・入口の守り方 | `docs/SECURITY.md` |
+| 画面の作り方 | `docs/UI.md`（全アプリ共通）/ `docs/UI-ADMIN.md` / `docs/UI-STUDENT.md` |
+| ログ | `docs/LOGGING.md` |
+| 依存パッケージ・版 | `docs/DEPENDENCIES.md` |
+| データの削除 | `docs/DATA-DELETION.md` |
+| テーブル設計・DDL | `supabase/DDL/README.md` |
+| リリース | `docs/RELEASE.md` |
+| テスト | `testing/CONVENTIONS.md` / `testing/e2e/CONVENTIONS.md` |
+| 環境変数 | `scripts/vercel-env/README.md` |
 
-package.jsonの依存関係に基づき、以下の技術スタックを完全に遵守してください。
+# 1. 技術スタックとバージョン
 
-- フロントエンド: Next.js 16.1.6 (App Router前提) / React 19.2.3 / TypeScript 5.x
-  - 型安全性を徹底し、anyは原則禁止。適切なInterface・型定義を行い、ESLintルールに準拠させること。
-  - React 19 / Next.js 16 の最新API（Server Actions、新しいHooks、React Compiler等）を考慮したコードを生成すること。
-- スタイリング・UI: Tailwind CSS v4 / @tailwindcss/postcss / framer-motion 12.x / lucide-react
-  - shadcn/uiの設計思想に基づき、Radix UI（Alert-Dialog, Dialog, Dropdown-Menu, Label, Popover, Progress, Scroll-Area, Select, Slider, Slot, Switch, Tabs, vaul等）、clsx、tailwind-mergeを組み合わせたコンポーネント設計を行うこと。
-  - アニメーションには framer-motion を使用すること。
-- バックエンド・インフラ: Supabase (@supabase/ssr v0.8.0, @supabase/supabase-js v2.94.0)
-  - 効率的なデータ管理、認証（Auth）、Edge Functionsを実装すること。
+版の数字の正本は `pnpm-workspace.yaml` の `catalog`（Node.js は `.nvmrc`、pnpm は `package.json` の `packageManager`）。ここにはメジャー版と方針だけを書く。版の決め方・更新の流れ・据え置いているメジャー版は `docs/DEPENDENCIES.md` が正本。パッケージを追加する場合は `--save-catalog` で catalog に入れる（各 `package.json` は `"catalog:"` で参照する）。
+
+- 実行環境: Node.js 24 / pnpm 10（Turborepo）
+- フロントエンド: Next.js 16 (App Router前提) / React 19 / TypeScript 6
+  - 型安全性を徹底し、`any` は使わない（ESLint でエラー）。外から来る値（URL・CSV・`catch` の値等）は `unknown` や判定関数（`isUserType` 等）で確かめてから使う。
+  - 3アプリとも React Compiler を有効にしている（`next.config.ts` の `reactCompiler`）。react-hook-form の値の購読は `form.watch` ではなく `useWatch` を使う。
+- スタイリング・UI: Tailwind CSS v4 / @tailwindcss/postcss / framer-motion 14 / lucide-react 1
+  - 基本の部品は shadcn/ui の方式（Radix UI ＋ clsx・tailwind-merge）で各アプリの `components/ui` に置き、画面はそれを使う。2つ以上のアプリで使う部品は `packages/lib/components` に置く。
+  - アニメーションは framer-motion で書く。
+- バックエンド・インフラ: Supabase（@supabase/ssr 0.12 / @supabase/supabase-js 2）。Auth・Postgres（RLS・RPC）・Storage・Realtime を使い、Edge Functions は使っていない（定期処理は pg_cron から admin の Route Handler を呼ぶ）。
+  - クライアント（`packages/lib/supabase/*`）は DB の型（`packages/types/db.ts`。実DBから生成した `database.ts` に、JSON の列等を上書きしたもの）で問い合わせを型検査する。行の型は画面ごとに手で書かず `TableRow<'表'>` / `TableInsert<'表'>` / `ViewRow<'ビュー'>` から作る。テーブル・関数を変えたら `node supabase/release/types.mjs --env=dev --write` で作り直す（`supabase/DDL/README.md`「アプリの DB の型」）。
 - フォーム・バリデーション: react-hook-form (v7) / zod (v4) / @hookform/resolvers (v5)
-- データ表示: @tanstack/react-table (v8) / react-resizable-panels
+- データ表示: @tanstack/react-table (v9) / react-resizable-panels
 - ユーティリティ: date-fns (v4) / papaparse (v5)
 
 # 2. 特定機能の実装仕様
 
-- 英語学習（単語帳・フレーズ）機能:
-  - 音声読み上げ（TTS）および文字起こし（STT）の実装には、Web Speech API および Azure Speech SDK (`microsoft-cognitiveservices-speech-sdk` v1.48.0) を使用した最適な実装パターンを提示すること。
-- 状態管理:
-  - グローバルな状態管理には `zustand` (v5.0.11) を、コンポーネント単位や局所的な管理には React Context または React標準の State を適切に使い分けること。
-- リッチテキスト・マークダウン:
-  - マークダウンの描画には `react-markdown` (v10) および `remark-gfm` (v4) を使用すること。
+- 音声（読み上げ・聞き取り・発話の評価）:
+  - 教材の音声は admin で Azure Speech（`packages/lib/azure/tts.ts`）で事前に作って保存し、student は保存した音声を再生する（無い場合は Web Speech の読み上げ）。
+  - 聞き取りは Web Speech API を `packages/lib/audio/core`（共有の AudioContext・発話の区間の確保・認識器の差し替え。E2E では偽の認識器）経由で使い、画面から直接呼ばない。発話の評価は `analyzePhrase`（`packages/lib/assessment/`）。自主トレーニングは無料の範囲（Web Speech）で行い、有料の評価サービスはスピーキングテストに限って検討する。
+- 状態管理: アプリ全体で共有する状態（シェルの未読・件数等）は `zustand` のストア、画面内だけの状態は React の state / Context で持つ。画面のデータは開くたびにサーバーで取得し、原則として画面をまたいでブラウザに持ち越さない。
+- マークダウンの描画は `react-markdown` ＋ `remark-gfm`。
 
 # 3. コード品質と設計原則
 
 - クリーンコード: DRY原則（Don't Repeat Yourself）を徹底し、関心の分離（Separation of Concerns）を意識したコンポーネント設計を行うこと。
-- 命名規則: 簡潔かつ直感的な名称（例: 'fetchUser', 'SubmitButton'）を使用し、プロジェクト全体で一貫性を保つこと。
+- コーディング規約: 書式・命名・ファイル構成・型・エラーの返し方・コメントは `docs/CODING.md` が正本。書式は Prettier（`pnpm format`）に任せる。サーバーアクションは `ActionResult`（`packages/types/action.ts`）を返し、失敗の `message` はアプリの言語の文言にする（admin は next-intl。DB・例外の本文を入れずログに残す）。共通部分の `*Core` は `errorCode` だけを返す。admin のアクションは先頭で `requireAdminRole`（`apps/admin/lib/adminAuth.ts`）を呼び、サーバー側の `catch` は先頭で `unstable_rethrow` を呼ぶ（どちらも単体テストで検査）。コメントは日本語の常体で「なぜ」を書き、変更の経緯・絵文字・区切り線・コメントアウトしたコードを残さない。
+- 認可（全アプリ共通）: 正本は `docs/SECURITY.md`。サーバーアクションは公開の画面のパスからも呼べるため、proxy に頼らず各アクションで守る。service_role（`createAdminClient`）を使う処理は、先に `getAuthUser()` と対象への権利（参加者・当事者・本人）を確かめる。公開のパスを増やす場合は、ログインの代わりの守り方（秘密の値・署名・CAPTCHA 等）を決める。SECURITY DEFINER の関数は `search_path` の固定・PUBLIC と anon からの `REVOKE`・呼び出し元の確認をそろえる（`supabase/DDL/README.md`「関数の権限」。どれも単体テストで検査）。
 - 共通化: 複数アプリ（admin/coach/student）にまたがるロジック・型定義は `packages/types` や `packages/lib` に集約し、アプリごとの重複実装を避けること。
-- ブランド色（全アプリ共通）: 画面・共通UIのブランド色は `brand` / `brand-strong` / `brand-soft` / `brand-N`（および `gold`）トークンで書き、パレット名（`indigo-*` 等）を直接書かない。色の実体は `packages/lib/styles/brand-theme.css`（コーポレートカラー #0e3196 基準）で一元定義し、各アプリの `app/globals.css` から読み込む。アプリごとにテーマカラーを変える場合は、そのアプリの `globals.css` で同名トークンを上書きする。coach/admin の shadcn 標準ボタン（`--primary`）は黒系のままとし、ブランド色はアクセントに限定する。青・紫等の分類色・状態色（タグ種別・ステータスバッジ等）はブランド色とは別扱い。
-- ローディング表示（全アプリ共通）: 基本の考え方は「**画面の枠は本物、データに依存する部分だけを区画単位の骨組みにする**」。ページ見出し・タブ・検索欄・フィルター・データに依存しないメニューや案内は即座に本物を描き、カード・一覧・表などデータで中身が決まる区画だけを骨組みにする。骨組みは本番と同じ枠・グリッド・高さで描き、骨組み→本番の切り替えが「中身が埋まるだけ」になるようにする（形の違う骨組みはちらつきの原因になる）。次の4種類に分けて実装する。部品は `packages/lib/components/common/`（`Skeleton` / `PageSkeleton`・`CardSkeleton`・`LoadingScreen`）に集約し、各アプリは `RouteLoading`（admin/coach は `components/common/`、student は `components/shell/`）経由で使う。スケルトンの色は `brand-theme.css` の `skeleton` トークン。
-  - A. 画面遷移: サーバーで取得する画面は、遷移直後に骨組みを出すため `loading.tsx` を置く。Next.js（PPR無効）の先読みは最初の `loading.tsx` で止まるため、画面のフォルダ（その画面の `layout.tsx` と同じ階層）に置くと、layout の枠（`ContentFrame` の幅等）を先に描いたうえで中に骨組みが出る。ルートグループ直下の `loading.tsx` は、自前の `loading.tsx` を持たない画面の予備として残す（layout の外に出るため枠の幅は `frame` で指定する）。`layout.tsx` を持たない中間のフォルダ（例: student `training/`）には `loading.tsx` を置かない。置くと外からの遷移で先読みがそこで止まり、配下の画面の layout と `loading.tsx` が使われない（配下の各画面に置く）。中身は次のどちらか。
-    - 汎用: `<RouteLoading variant=... />` の1行。形が汎用の型（list / cards / table / chat）に近い画面用。
-    - 画面専用: 形が汎用の型と違う（列数・主役カード・固定ヘッダー等）画面や、毎日開く入口の画面は、画面の隣に `_components/XxxSkeleton.tsx` を作る（student は `RouteSkeleton` で包む）。見出し・タブ等は本物の部品で描き、グリッドの定義は本番と定数で共有する（例: student `dashboard/_components/HomeSkeleton.tsx` と `HOME_LAYOUT`、`library/_components/LibrarySkeleton.tsx`）。カード1枚の骨組みはカード部品の隣に置いて使い回す（例: student `components/common/ContentCardSkeleton.tsx`）。画面の大半がデータに依存しない場合は、別の骨組みを書かず本番の部品を「データ無し（`null`）＝読み込み中」で描けるようにする（例: student `TrainingPerformance`・`WordHistoryView`、`StatTile` / `CountBadge` の `null`）。本番の構成を変えたら骨組みも合わせて直す。student はシェル内の全画面を画面専用にする。
-    - 1つの `loading.tsx` が複数の画面を受け持つフォルダ（外からの遷移では子の画面でも親フォルダの `loading.tsx` が出る。例: student `profile/`・`live-room/`・`training/sprint/history/`、coach `students/`）は、`usePathname` で骨組みを出し分ける。
-    - ページを直接開いた・再読み込みした直後は、最も外側の `loading.tsx` が先に表示される。coach は `(app)/loading.tsx` も `CoachRouteSkeleton`（`components/common/`）で表示中のパスから各画面の骨組みを出す。student は `(app)/loading.tsx` を `AppRouteLoading`（没入画面は全画面の読み込み表示、シェルの画面は本物のシェル＋画面の骨組み）、`(shell)/loading.tsx` を `ShellRouteSkeleton`（`components/shell/ShellRouteSkeleton.tsx`）にする。画面を追加したらこれらの対応表にも加え、student の没入画面は `constants/navigation.ts` の `isImmersivePath` にも加える。student は `proxy.ts` の `VALID_STUDENT_ROUTES`（許可リスト。無いパスはホームへ転送される）にも加える。
-    - student のシェルの画面の枠の幅は `constants/shellLayout.ts` の `SHELL_CONTENT_WIDTH` で定義し、各 `layout.tsx` と骨組みで共有する。ナビ項目の表示可否（ライブ契約・モニター）は `(app)/layout.tsx` で取得して `ShellNavProvider` で渡す（外側の骨組みの段階から本物のナビを出すため。`(shell)/layout.tsx` では取得を待たない）。`ContentFrame` には表示時のアニメーションを付けない（骨組みの枠から本番の枠へ置き換わるたびに再生され、ちらついて見える）。
-    - Header/Sidebar を覆う没入表示（coach の `ImmersiveShell`：セッションハブ・Live Sprint 等）の画面は、骨組みも同じ没入表示で描く（通常の枠の骨組みを挟むと Header/Sidebar が一瞬現れて消える）。例: coach `students/[id]/_components/LiveSessionSkeletons.tsx`。
-    - 骨組み→本番の切り替えは「その場で置き換える」。本番側の初回表示でフェードイン（`initial={{ opacity: 0 }}`）や `AnimatePresence mode="wait"` を使わない（一瞬空白になる）。一覧のカードのアニメーションは `AnimatePresence initial={false}` にする。
-    - クライアント側でストアから取得する画面（student のお知らせ・通知）は `useFetchOnMount`（`packages/lib/hooks/`）で「開いてからの取得が終わるまで骨組み」にする（ストアに残った古い一覧や「0件」を一瞬出さない）。月切替など画面内の再取得でも、枠を残して中身だけを骨組みにする（例: student `CalendarMonthCard`）。
-    - `loading.tsx` は**そのフォルダ直下の区間が切り替わる遷移でしか表示されない**（Next.jsの仕様）ため、一覧→詳細など複数の子を行き来するフォルダにも置く。新しい子ルート・詳細画面を追加したら、親フォルダに `loading.tsx` があるか確認する。
-  - 初期表示に必要なデータを、表示後にブラウザからサーバーアクションで取りに行かない（`useEffect` での取得等）。サーバーアクションはブラウザから1つずつ順番に実行されるため、表示後の往復が増えるうえ他の取得も後ろに並ばされ、海外のユーザーほど遅くなる。画面のデータはサーバーで取得して区画単位で表示し（B）、アプリシェル（ヘッダー・サイドバー）の未読・件数はレイアウトでサーバー取得した Promise を await せずに渡してストアに流し込む（例: coach・admin の `lib/shellData.ts` と `components/common/ShellDataLoader.tsx`。各ストアの `apply…` で反映する）。サーバーとブラウザの両方で使う定数（取得する項目の設定等）は `'use client'` のファイルに置かない（サーバー側からはクライアント部品の参照になり、値として読めない。型エラーにもならない）。利用者の操作をきっかけにした取得（ダイアログを開いた時の選択肢・入力中の候補・ボタンでの再読み込み等）と、Realtime・定期的な取り直しによる更新はこのルールの対象外（ただし、一覧の各行に置く部品が画面を開いた時点でそれぞれ取得すると行の数だけ順番待ちが積み重なるため、選択肢は画面でサーバー取得して渡すか、開いた時に取得する）。
-  - B. 画面内の区画単位の遅延表示: 独立した区画（カード）が並び、区画ごとに取得の重さが違う画面は、ページで全件を `await` せずカード・区画ごとの async コンポーネントに分けて `<Suspense fallback={<CardSkeleton />}>` で包む（例: coach `students/[id]/page.tsx`）。区画の骨組みは本番の区画と同じ枠・高さにし、区画の並び（列数・幅）は遅れて届くデータで変わらないようにする（変わると後から出た区画が周りを押し動かす）。判定に複数の取得を使うなど区画同士でデータが連動する場合は、同じ `Suspense` にまとめる。1種類のデータを一覧する画面は、区画に分けず A の画面専用の骨組み（一覧部分だけ骨組み）で足りる。複数区画で同じ取得を使う場合は React の `cache()` で1回にまとめる。クライアント部品が画面全体を持つ場合は、区画を `ReactNode` の差し込み口にしてサーバー側で `Suspense` を渡す（例: coach `sessions/[sessionId]/page.tsx`）。月切替・検索などURLのクエリだけが変わる遷移では `loading.tsx` が出ないため、結果の区画を条件ごとに `key` を変えた `<Suspense>` で包む（例: admin/coach `monthly-reports/page.tsx`）か、切替操作側で `useTransition` の `isPending` を表示する（例: `useMonthNavigator`）。
-  - C. 操作中: ボタンの処理中表示は各アプリの `Button` の `pending` プロップ（先頭アイコンは `icon` プロップで渡すと処理中はスピナーに置き換わる）（フォーム送信は `useFormStatus`、それ以外は `useTransition` の `isPending` を渡す）を使い、`Loader2` の個別実装は新規に増やさない。既存の個別実装は、その画面を改修するついでに置き換える。
-  - D. 没入画面（ドリル・ライブ通話等）の準備中表示は画面専用の実装を許可する。遷移中の汎用表示は `LoadingScreen`（student は `ImmersiveLoading`）。
-- ダイアログ・シートを開いた時のフォーカス（全アプリ共通）: 開いただけで中の要素（×ボタン等）にフォーカスの枠が出ないよう、各アプリの `components/ui`（dialog / alert-dialog / sheet / drawer）の Content は `onOpenAutoFocus` の既定を `focusDialogContent`（`packages/lib/components/common/dialogFocus.ts`。枠そのものにフォーカスする）にしている。画面ごとに `onOpenAutoFocus={(e) => e.preventDefault()}` を書かない。Radix の Dialog を直接使う場合も `onOpenAutoFocus={focusDialogContent}` を渡す。開いた時に特定の要素へフォーカスが必要な場合（入力が主のダイアログ等）だけ、その要素に `autoFocus` を付ける。
-- チャット画面（全アプリ共通）: admin/coach/student のチャットは2ペイン（左: ルーム一覧 / 右: ルーム、狭い画面では一覧とルームを切り替え）で、部品は `packages/lib/components/chat/`（`ChatSplitLayout` / `ChatRoomListPane` / `ChatTimeline` / `ChatComposer` 等）に集約する。各アプリは `chat/layout.tsx` で `ChatSplitLayout` を置き、文言（`ChatLabels`）と2ペインにする画面幅（`CHAT_SPLIT_BREAKPOINT`、`constants/chat.ts`）だけを渡す。アプリ固有の機能（admin の査閲・ルーム作成・参加者管理・顧客フィルター）は `toolbar` / `headerAction` / `headerActions` の差し込み口で足し、共通部品を複製しない。ルームへのリンクは `packages/lib/chat/links.ts`（アプリ内は `getChatRoomPath`、メール等アプリ外からは宛先ユーザーのポータルで組み立てる `getChatRoomUrl`）で作る。未ログインで保護された画面を開いた場合は、proxy が `/login?next=<元のパス>` へ転送し、ログイン後に元の画面へ戻す（`packages/lib/auth/returnTo.ts`。戻り先は必ず `sanitizeReturnTo` を通す）。
-- 管理画面の一覧（admin）: 検索・絞り込み・ページ送りのある一覧は `apps/admin/components/list/`（`useListQuery` / `ListToolbar` / `DataTable` / `ListSelectFilter` / `ClientFilter` / 行の削除の確認 `DeleteConfirmDialog`）と `apps/admin/lib/list.ts` で作り、画面ごとに検索欄・ページ送り・表の外枠・削除の確認を書かない（検索の無い表を単独で置く場合は `DataTable` の `standalone`）。admin の画面の見出しは `components/common/PageHeader.tsx`（親画面へ戻る場合は `back`、見つからない場合の表示は `BackLink`）で統一する（エディタの上部バー等、作業用の固定バーは除く）。条件の正本は URL のクエリ（`q` = 検索語、`page` = ページ、ほかは画面ごとの絞り込み。絞り込みのクエリ名は画面の `_lib/` に `XXX_LIST_FILTERS` として置き、page.tsx と一覧の両方から使う）で、条件を変えたら1ページ目に戻し、「条件をクリア」で全条件を外す。構成は `page.tsx`（`parseListParams` で条件を読み、取得して `PageHeader` と一覧を描く）・`_components/XxxDataTable.tsx`（`useListQuery` ＋ `ListToolbar` ＋ `DataTable`）・`_components/columns.tsx`（`createColumns(t, …)`）・`loading.tsx` に分ける。一覧のサーバーアクションは `ListParams` を受け取り `ListResult<T>`（`rows` / `totalCount`）を返し、範囲は `toRange`、検索語は `packages/lib/supabase/ilike.ts`（`containsPattern` / `ilikeAny`）で条件に入れる（入力をそのまま `.or()` / `.ilike()` に埋め込まない）。件数の少ないマスタを全件取得してブラウザで絞る一覧は `useListQuery(…, { shallow: true })` と `paginateLocally` を使う。tanstack の表のオブジェクトは React Compiler に表示を使い回されるため子部品へ渡さない（`DataTable` に `columns` と `data` を渡す）。
-- ログ（全アプリ共通）: 規約は `docs/LOGGING.md` が正本。サーバーは `createLogger(service)`（`packages/lib/logger/`）、ブラウザは `clientLogger`（`logger/client.ts`。`/api/client-log` へ `sendBeacon` で送る。ログの送信に Server Action を使わない）を使い、`console.*` は使わない（ESLint の `no-console`）。イベント名は `<domain>:<action>_<outcome>`（outcome は `success` / `failed` / `unexpected` / `denied`）。エラーは `err` にエラーそのものを渡し（`error.message` だけを渡さない）、文脈の型（`LogContext`）に無い値は `payload` に入れる。氏名・本文等の個人情報は `payload` に入れない。監査・業務の履歴はログではなく DB に残す。
+- ブランド色（全アプリ共通）: 画面・共通UIのブランド色は `brand` / `brand-strong` / `brand-soft` / `brand-N`（および `gold`）トークンで書き、パレット名（`indigo-*` 等）を直接書かない。詳細は `docs/UI.md`「ブランド色」。
+- 画面の作り方: 正本は `docs/UI.md`（全アプリ共通: ブランド色・ローディング表示・初期表示のデータ取得・ダイアログのフォーカス・チャット）、`docs/UI-ADMIN.md`（admin: 一覧・next-intl）、`docs/UI-STUDENT.md`（student: UI実装規約）。各アプリと `packages/lib` の `CLAUDE.md` が読み込むため、そのファイルを触ると自動で読まれる。要点: 画面の枠は本物にし、データに依存する区画だけを本番と同じ形の骨組みにする。初期表示に必要なデータは表示後にブラウザからサーバーアクションで取りに行かず、サーバーで取得する。
+- ログ（全アプリ共通）: 規約は `docs/LOGGING.md` が正本。サーバーは `createLogger(service)`、ブラウザは `clientLogger` を使い、`console.*` は使わない（ESLint の `no-console`）。イベント名は `<domain>:<action>_<outcome>`。エラーは `err` にエラーそのものを渡す。氏名・本文等の個人情報は `payload` に入れない。監査・業務の履歴はログではなく DB に残す。
 - 環境変数（全アプリ共通）: アプリの環境変数は `scripts/vercel-env/manifest.mjs` が正本（使うアプリ・環境ごとの値の決め方・秘密かどうか）。`process.env` で新しい変数を使う場合や、使わなくなった場合は同じタスクで定義を追加・廃止（`removed: true`）し、`pnpm vercel-env --write-examples` で `apps/*/.env.example` を作り直す（`.env.example` を直接編集しない）。staging・本番への反映は Vercel の画面ではなく `pnpm vercel-env --env=<staging|prod> --apply` で行い、リリースで追加・変更する変数はリリーススクリプト冒頭の手順にも書く。詳細は `scripts/vercel-env/README.md`。
-- 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラーがない状態にしてから完了とすること。
-- `apps/student` のUI実装規約:
-  - 色・角丸は `apps/student/app/globals.css` のデザイントークン（`brand-*` / `gold` / `ink-*` / `line` / `canvas` / `surface`、`rounded-panel` / `rounded-card` / `rounded-control`）で指定し、パレット名（`indigo-*` / `slate-*` 等）や任意値（`rounded-[32px]` 等）を直接書かない。機能ごとの色分けはせず、emerald/amber/rose は成功・警告・エラー等の状態表示に限定する。例外として教材種別・トレーニング指標・CEFRレベルは分類色として扱う。教材種別とトレーニング指標の色は `packages/lib/content/ui.ts` の `getContentTypeConfig()` / `getTrainingMetricConfig()` だけで定義し、アイコンのマスやアイコン単体など小さな部位に限って使う（カードの枠・ボタン・文字には付けない）。指標の色は所属するトレーニングの色を引き継ぐ（単語・フレーズ＝単語帳のsky、タイムアタック・ドリル＝スプリントのorange、種別をまたぐ発話評価＝薄いローズ）。実施日数などの分類でない指標は、ブランド色かグレーで表示する。
-  - ブランド色はコーポレートカラー #0e3196（`brand` = `brand-700`）を基準にした段階色。明るさが要る所（進捗バー・フォーカス・濃い面上のアイコン）は `brand-500` を使う。ヒーロー面は `bg-brand-hero`（明るい青→#0e3196のグラデーション）を使い、`brand-deep` は重く見えるため面には使わず文字色に限定する。`gold`（#ffd700）はコーポレートサイトの強調色で、料金ページへのCTA・「おすすめ」・達成演出に限定して少量使い、文字色や警告表示には使わない。
-  - 文字は日本語表記を基本とし、最小サイズは11px。`font-black` と英語の大文字ラベル（`uppercase` + 広い字間）は使わない。
-  - 画面はアプリシェル（`app/(app)/(shell)/`、常設ナビあり）と没入画面（`app/(app)` 直下、ナビなし）に分ける。基準は「利用者が連続した作業の最中か」で、ドリル実施・結果、ライブ通話は没入画面、一覧・学習記録・履歴・課題確認・チャットなど「見る・選ぶ・振り返る・やり取りする」画面はシェルに置く（URLを変えずに移す場合は `(shell)/training/...` のようにルートグループ側へ置く）。ナビ項目は `constants/navigation.ts` のみで定義する。
-  - シェル内の画面は、各 `layout.tsx` で `ContentFrame`（`components/shell/PageFrames.tsx`、`width` = narrow / medium / wide / full）を使い、ページ内の見出しは `components/shell/ShellPage.tsx` の `ShellPageHeader`（検索・タブ・月切替などは `children` に渡すと上部に固定表示）で統一する。`ShellPageHeader` の `back` は、親画面が1つに決まる場合は固定の遷移先（表示中の月などはURLで引き継ぐ）、入口が複数あり親が決まらない場合だけ `{ history: 代替先 }` を使う（子画面から固定の遷移先で開かれる画面に `{ history }` を使うと戻るがループする）。スクロールはシェルの `<main>` に任せ、画面内に「スマホ型の浮いたパネル」や内側だけのスクロール領域を作らない（例外: チャットの2ペインは `ContentFrame` の `fill` で表示領域の高さいっぱいに広げ、一覧とタイムラインを別々にスクロールさせる。モバイルでヘッダー・ボトムタブを隠す画面は `constants/navigation.ts` の `isMobileFocusPath` で定義する）。`PanelFrame` は没入画面専用。
-  - ページ全体（document）はスクロールさせない。スクロールするのはシェルの `<main>` と没入画面の本文（`ImmersiveBody`）だけにする（`(app)/layout.tsx` の外枠を `h-dvh` で固定。100vh は iOS Safari でツールバー分だけ表示領域より高く、ページ全体がずれて見出しが見切れる）。スクロール領域には `data-scroll-container` を付け、要素へ寄せる自動スクロールは `scrollIntoView` ではなく `scrollIntoContainer`（`lib/scroll.ts`、上部の固定段 `data-scroll-sticky` の下を基準にする）を使う（`scrollIntoView` はページ全体や没入画面の土台まで動かす）。
-  - 没入画面は、`layout.tsx` で `PanelFrame` を使い、各画面の最上位を `ImmersivePanel`（`components/shell/PageFrames.tsx`）にする。モバイルでは画面いっぱいに表示し（角丸・枠・影なし）、`sm` 以上では角丸のパネルとして浮かせる。画面ごとに `fixed inset-0` の外枠や角丸・影・最大幅を書かない。教材なし・エラー・開始待ち・終了後などの状態表示は `ImmersiveNotice`（`components/shell/ImmersiveNotice.tsx`、操作ボタンには `noticeActionClass()` を付ける）で統一する。新しいトレーニング種別を追加するときも同じ構成にする。
+- 完了条件: TypeScript/TSXファイルを変更した際は、確認を取らずに対象ファイルへ `tsc --noEmit` と `eslint` を自動的に実行し、エラー・警告がない状態にしてから完了とすること（Claude Code ではプロジェクトの設定 `.claude/settings.json` のフックが、ファイルを書くたびにそのファイルへ Prettier と ESLint を実行し、指摘を返す。tsc は対象外のため別に実行する。staging・本番に影響するコマンド（リリーススクリプト・環境変数の反映・Deploy・main/staging への push）は同じ設定で毎回確認を求める。lint は警告も失敗にしている。書式は `prettier --check`。全体は `pnpm check` で、GitHub Actions の `CI` も同じ内容を push のたびに実行する）。`packages/lib` の画面・DB に依らない処理を作った・変えた場合は、同じ作業で単体テストも足す（`testing/unit/README.md`）。
 
 # 4. コミュニケーション・トーン
 
-- プロフェッショナルかつ効率的なシニアエンジニアとしての口調（〜してください、〜します）を維持してください。
-- 回答は技術的に正確かつ簡潔にまとめ、複数ステップがある場合は箇条書きや番号付きリストで構造化すること。
-- 『Gabby Blueprint English』（英語学習アプリ）のユーザー体験（UX）向上に繋がる、建設的で前向きなアドバイスを必要に応じて付加すること。
+- 回答は日本語の敬体（〜してください、〜します）で、技術的に正確かつ簡潔にまとめる。複数ステップがある場合は箇条書きや番号付きリストで構造化する。
+- 依頼の範囲を守る。範囲外で気づいた問題（不具合・利用者の体験を損なう点等）は、直さずに報告する。
 
 # 5. モノレポ構造と アプリ別 UI 言語方針
 
@@ -84,13 +71,7 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
 ### 実装ルール
 
 1. **`apps/admin`: next-intl による多言語対応**
-   - ロケール判定は Cookie（`NEXT_LOCALE`）ベースで行い、URLパスにロケールプレフィックス（`/ja/...` `/en/...`）は付与しない。既存の認証・RBACルーティング（`apps/admin/proxy.ts`）はこの方式では変更不要。
-   - リクエストごとのロケール解決・メッセージ読み込みは `apps/admin/i18n/request.ts`（`getRequestConfig`）に集約する。
-   - 翻訳文言は `apps/admin/messages/{ja,en}.json` に、機能・画面単位の名前空間（`common` / `nav` / `login` / `dashboard` / `users` 等、`app/(app)/<dir>` のディレクトリ名に対応）で追加する。新規画面を対応させる際は同じ命名規則を踏襲する。
-   - Client Component では `useTranslations()` / `useLocale()`、Server Component では `next-intl/server` の `getTranslations()` / `getLocale()` を使用する。
-   - Zodバリデーションメッセージ等、コンポーネント外（モジュールスコープ）で定義していたスキーマは `createXxxSchema(t)` のようなファクトリ関数に変換し、コンポーネント内で `useMemo` して生成する（`UserFormDialog.tsx` を参照）。
-   - DBから取得する動的な文字列（例: `com_m_role.role_name` などロール表示名、`USER_TYPE_MAP`/`getUserTypeLabel` 等 `packages/types` 由来の列挙ラベル）は翻訳カタログの対象外（`packages/types` は coach/student からも参照されるため変更しない。別途対応が必要な既知の課題）。
-   - `apps/admin` 以外（`coach`/`student`）は本ルールの対象外。将来的に展開する場合は改めて計画する。
+   - ロケールの解決・翻訳文言の置き場所と名前空間・キーの型・スキーマのファクトリ化・翻訳の対象外の詳細は `docs/UI-ADMIN.md`「多言語対応（next-intl）」。
 
 2. **`apps/coach` / `apps/student`: テキストの直接記述 (No i18n Libraries)**
    - 多言語切り替えライブラリは導入しません。
@@ -103,8 +84,9 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
 # 6. データ主体テスト・dev環境接続時の注意
 
 - データ主体テスト・回帰テストの技術規約とナレッジは `testing/CONVENTIONS.md` /
-  `testing/TEST-JUDGEMENT-GUIDE.md` に集約する。テスト自動化に着手する際は必ず参照し、
-  新しい気づき・失敗事例は `TEST-JUDGEMENT-GUIDE.md` に追記すること。
+  `testing/TEST-JUDGEMENT-GUIDE.md` に集約する。テスト自動化に着手する際は `TEST-JUDGEMENT-GUIDE.md` 1章（判断基準）の
+  関係する分類を読む。新しい気づき・失敗事例は同ファイルの「気づきの育て方」に従い、記録するだけでなく、仕組み・規約へ移せるものは移し、
+  古くなった事例は消す。
 - E2E（Playwright、`testing/playwright.config.ts`）は `testing/e2e/CONVENTIONS.md` に従う。特に実行時は
   8章「トークン消費を抑える運用」（要約だけ読む・失敗分だけ再実行・画像より `error-context.md` を優先）を守り、
   dev サーバーは自前で起動せず Playwright の `webServer` に任せる。
@@ -114,17 +96,12 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
   報告で「未文書化」として一言触れること。
 - devのSupabase接続情報は各アプリの `apps/{admin,coach,student}/.env.local` を使用すること。
   リポジトリ直下の `.env.local` は現在死んでいるプロジェクトを指しており使用しない。
-- `supabase/release/` 配下のリリーススクリプトは、着手前に必ず対象RPCの存在確認
-  （ダミー引数でのRPC呼び出し等）を行い、未反映のstepがないか確認してから進めること。
-  反映済みの前提で進めると、途中の関数だけ反映されていて手戻りが発生する。
-- SECURITY DEFINER関数を認証済みユーザーの代わりに呼ぶ場合、service_role（管理者権限）では
-  auth.uid()がNULLになり、`本人 OR admin` 系の認可チェックが意図せず素通りする（＝誤った
-  分岐に入る）ことがある。テストスクリプトから業務ロジックRPCを呼ぶ際は、実際にサインインした
-  各ロールのJWTを使うこと。
-- **テストデータの後始末**: データ主体テストで作成したテストデータ（ユーザー・契約・セッション等）は、
-  原則としてテスト完了後に削除すること。ただし、ブラウザでの手動確認など、ユーザーが明示的に
-  「データを残してほしい」と指示した場合はこの限りではなく、削除しない。残したデータの期限は
-  そのブランチが次の段階へマージされるまで（アカウントの選び方・命名・後始末は `testing/FIXTURES.md`
+- `supabase/release/` のリリーススクリプトに依る作業・テストは、着手前に対象の RPC の存在を確かめ（ダミーの引数での呼び出し等）、
+  未反映の step がないか確かめる（途中の関数だけが反映された状態で進めると手戻りになる。`testing/CONVENTIONS.md` 4章）。
+- テストスクリプトから業務ロジックの RPC を呼ぶ場合は、実際にサインインした各ロールの JWT を使う。service_role では
+  `auth.uid()` が NULL になり、「本人 OR admin」等の認可の分岐を素通りする（`testing/CONVENTIONS.md` 3章）。
+- **テストデータの後始末**: データ主体テストで作ったデータは、テストの完了後に削除する。ユーザーが手動の確認等のために
+  「残してほしい」と指示した場合だけ残し、期限はそのブランチが次の段階へマージされるまで（`testing/FIXTURES.md`
   「アカウントの種類と使い分け」が正本）。
 
 # 7. データ更新・DBスキーマ管理の規約
@@ -132,28 +109,16 @@ package.jsonの依存関係に基づき、以下の技術スタックを完全�
 - **データ更新の経路**: 業務データの変更はサーバー側（Server Component / Server Actions
   `'use server'`）からのみ行い、クライアントコンポーネント（`'use client'`）から直接
   INSERT/UPDATE/DELETEは行わない（認証画面等、ケースによる例外はあり得る）。
-- **RPC(SECURITY DEFINER関数)が必要なケース**: サーバーアクション内で完結する単純な単一テーブルの
-  INSERT/UPDATE（例: `supabase.from('com_m_notice').update(...)`）はRPC化せず直接呼び出してよい。
-  複数テーブルにまたがる処理、トランザクションとしての一貫性が必要な処理、RLSの範囲を越えた
-  認可判定が必要な処理は、SECURITY DEFINER関数（RPC）として実装すること。
-- **ログイン中のユーザーの取得**: サーバーアクション・Server Component・Route Handler では
-  `supabase.auth.getUser()` を直接呼ばず、`getAuthUser()`（`packages/lib/supabase/authUser.ts`）を使う。
-  各リクエストは入口の `proxy.ts` で `auth.getUser()`（Auth サーバーへの問い合わせ。失効したセッションも弾く）を
-  通過済みのため、リクエスト内では `auth.getClaims()` による手元の JWT 検証＋`cache()` で1回にまとめる
-  （処理ごとに Auth サーバーへ問い合わせると、順番待ちの1段目が毎回増える）。入口の `proxy-base.ts` と
-  認証そのもの（ログイン・パスワード変更等の `packages/lib/auth/core.ts`）は `auth.getUser()` のままにする。
-- RPCのシグネチャを変更する場合は、`DROP FUNCTION IF EXISTS`で旧シグネチャを明示的に削除してから
-  `CREATE OR REPLACE FUNCTION`で新シグネチャを作成すること（Postgresの関数オーバーロードの
-  曖昧性を避けるため）。
-- **DDL/DMLの管理**: テーブル・Function単位の正本は `supabase/DDL/` 配下（`table/`, `function/`等）
-  に保存する。実際にデータベースへ適用するスクリプトは、リリース単位（開発ブランチ）ごとに
-  `supabase/release/` 配下へ1ファイルにまとめて管理する
-  （例: `supabase/release/20260904_feature-20260904-dev_release.sql`）。
-  これはSupabase CLIの`supabase/migrations/`によるmigration機能とは連動させておらず、
-  実質的にmigrationファイルと同義のものとして扱う。新規のタイムスタンプ付きmigrationファイルは
-  作成しないこと。
-- **正本は「今の形」だけを持つ**（詳細は `supabase/DDL/README.md`）。正本に「追加パッチ」等の変更の差分や
-  日付付きの経緯を追記しない（差分と理由はリリーススクリプト、経緯は git の履歴）。テーブルの定義
-  （`-- @schema` 〜 `-- @end-schema` の間）は手で書かず、リリーススクリプトを dev に適用した後に
-  `node supabase/release/schema.mjs --env=dev --write <table>` で実DBから生成する。マーカーの外の設計メモには
-  今有効なルールだけを書き、テーブルの変更でルールが変わった場合は同じタスクで設計メモも更新する（古くなった記述は消す）。関数は `CREATE OR REPLACE` の全体を書き直す。
+- **ログイン中のユーザーの取得**: サーバーアクション・Server Component・Route Handler では `supabase.auth.getUser()` を
+  直接呼ばず、`getAuthUser()`（`packages/lib/supabase/authUser.ts`）を使う（理由と例外は `docs/SECURITY.md` 1章）。
+- **DB を変える作業**（テーブル・関数・ビュー・Storage）は、着手前に `supabase/DDL/README.md` を読む。要点:
+  - 正本（`supabase/DDL/`）は今の形だけを持ち、差分と理由はリリーススクリプト、経緯は git の履歴に置く。
+    適用するスクリプトは開発ブランチごとに `supabase/release/` の1ファイルにまとめる（`supabase/migrations/` は使わない）。
+  - テーブルの定義（`-- @schema` 〜 `-- @end-schema`）は手で書かず、dev に適用した後に `schema.mjs` で実DBから生成する。
+  - 単一のテーブルで済む単純な更新はサーバーアクションから直接書き、複数のテーブル・トランザクション・RLS を越えた認可が要る処理は
+    SECURITY DEFINER の関数（RPC）にする。関数の引数を変える場合は旧シグネチャを `DROP FUNCTION IF EXISTS` してから作る。
+- **削除の規約**: 正本は `docs/DATA-DELETION.md`。論理削除（`delete_flg`）は使わず、残すものは `status` / `is_active`、
+  消すものは物理削除にする。外部キーは全件で `RESTRICT` / `CASCADE` / `SET NULL` を明示する。個人情報を持つテーブル・
+  顧客に属するテーブルを追加したら、同じタスクで退会（`fn_withdraw_user`）・顧客単位の一括削除（`fn_purge_client`）と規約の表を直す。
+- **リリース作業**: staging・本番へのリリース（マージ → DB のリリーススクリプト → 環境変数 → GitHub Actions の `Deploy`）は
+  `docs/RELEASE.md` が正本。Claude が進める場合は `.claude/skills/release` に従い、終わったら同スキルの `HISTORY.md` に記録とつまずきを残す。

@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page } from '@playwright/test';
 
 /**
  * 画面の Supabase Realtime の購読状況を見張る（ページを開く前に呼ぶ）。
@@ -15,10 +15,10 @@ import { expect, type Page } from "@playwright/test";
  */
 export function watchRealtime(page: Page) {
   const subscribed = new Set<string>();
-  page.on("websocket", (ws) => {
-    ws.on("framereceived", (frame) => {
+  page.on('websocket', (ws) => {
+    ws.on('framereceived', (frame) => {
       const payload = String(frame.payload);
-      if (!payload.includes("Subscribed to PostgreSQL")) return;
+      if (!payload.includes('Subscribed to PostgreSQL')) return;
       const topic = payload.match(/"realtime:([^"]+)"/)?.[1];
       if (topic) subscribed.add(topic);
     });

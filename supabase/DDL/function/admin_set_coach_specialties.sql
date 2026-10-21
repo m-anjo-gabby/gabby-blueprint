@@ -1,5 +1,5 @@
 ---------------------------------------------
--- アドミンによるコーチの専門の設定RPC (2026-10-11 追加)
+-- アドミンによるコーチの専門の設定RPC
 -- 前提: table/com_m_coach_specialty.sql, table/com_m_coach_specialty_assignment.sql の作成が完了していること。
 ---------------------------------------------
 -- admin のユーザー管理 → コーチの「専門」ダイアログで使う。コーチ1人分の専門を、渡したコードの集合に置き換える
@@ -24,7 +24,7 @@ DECLARE
     v_invalid text;
     v_field_count integer;
 BEGIN
-    IF COALESCE(public.get_jwt_user_type(), '') <> '0' THEN
+    IF NOT public.is_system_admin() THEN
         RAISE EXCEPTION 'NOT_AUTHORIZED: only admins can set coach specialties';
     END IF;
 
@@ -41,7 +41,7 @@ BEGIN
     FROM unnest(v_codes) AS c
     WHERE NOT EXISTS (
         SELECT 1 FROM public.com_m_coach_specialty s
-        WHERE s.specialty_code = c AND s.delete_flg = '0'
+        WHERE s.specialty_code = c AND s.is_active
     )
     LIMIT 1;
     IF v_invalid IS NOT NULL THEN

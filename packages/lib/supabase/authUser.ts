@@ -1,6 +1,6 @@
 import 'server-only';
-import { cache } from 'react';
 import type { UserAppMetadata } from '@supabase/supabase-js';
+import { cache } from 'react';
 import { createServerClient } from './server';
 
 /** リクエスト内の処理が使うログイン中のユーザー（JWT のクレームから組み立てる） */

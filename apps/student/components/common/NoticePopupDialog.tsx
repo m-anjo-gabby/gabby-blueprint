@@ -1,8 +1,8 @@
 'use client';
 
-import type { NoticeItem } from '@gabby/types/notice';
 import { NoticePopup } from '@gabby/lib/components/notice/NoticePopup';
 import { NOTICE_LABELS_JA } from '@gabby/lib/notice/labels';
+import type { NoticeItem } from '@gabby/types/notice';
 
 interface NoticePopupDialogProps {
   notice: NoticeItem;

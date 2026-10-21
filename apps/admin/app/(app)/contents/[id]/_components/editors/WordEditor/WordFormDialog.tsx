@@ -1,20 +1,20 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { CheckCircle2, Edit, Languages, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { useToast } from '@gabby/lib/hooks/useToast';
+import { WORD_STATUS, type WordRecord, type WordStatus } from '@gabby/types/word';
+import { upsertWord, type WordInput } from '@/actions/adminWordAction';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@gabby/lib/hooks/useToast';
-import { upsertWord } from '@/actions/adminWordAction';
-import { AlertCircle, PlusCircle, CheckCircle2, Edit, Languages } from 'lucide-react';
-import { Alert } from '@/components/ui/alert';
-import { WordRecord, WORD_STATUS, WordStatus } from '@gabby/types/word';
 
 /**
  * バリデーションスキーマ
@@ -72,7 +72,7 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
   const onSubmit = async (values: WordFormValues) => {
     setServerError(null);
     try {
-      const payload: Partial<WordRecord> = {
+      const payload: WordInput = {
         content_id: contentId,
         word_en: values.word_en,
         word_ja: values.word_ja,
@@ -87,13 +87,13 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
       const result = await upsertWord(payload);
 
       if (result.success) {
-        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), "success");
+        showToast(mode === 'create' ? t('toastCreated') : t('toastUpdated'), 'success');
         setOpen(false);
         onSuccess?.();
       } else {
         setServerError(result.message || t('serverErrorDefault'));
       }
-    } catch (error) {
+    } catch {
       setServerError(t('systemError'));
     }
   };
@@ -122,12 +122,8 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
         )}
       </DialogTrigger>
 
-      {/* 改善ポイント: 
-          1. focus:outline-none で起動時の白い縁取りを防止
-          2. [&>button]:... セレクタで、右上の×ボタンを白く、かつホバー時のみくっきり表示
-      */}
+      {/* focus:outline-none: 開いた時の白い縁取りを出さない。[&>button]: 右上の×ボタンを白くし、ホバー時だけはっきり表示する */}
       <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl focus:outline-none [&>button]:text-white [&>button]:opacity-70 [&>button:hover]:opacity-100 [&>button:focus]:ring-0 [&>button:focus]:outline-none">
-        
         {/* 起動時の最初のフォーカスを吸い込むためのダミー要素。
             これにより×ボタンや入力欄が不自然に光るのを防ぎます。
         */}
@@ -136,99 +132,169 @@ export function WordFormDialog({ mode = 'create', initialData, contentId, onSucc
         <DialogHeader className="p-6 bg-slate-900 text-white -mx-1 -mt-1 rounded-t-none border-b border-slate-800">
           <DialogTitle className="flex items-center gap-2 text-lg font-black">
             {isConfirming ? (
-              <><CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}</>
+              <>
+                <CheckCircle2 size={18} className="text-emerald-400" /> {t('confirmTitle')}
+              </>
             ) : mode === 'create' ? (
-              <><PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}</>
+              <>
+                <PlusCircle size={18} className="text-brand-400" /> {t('createTitle')}
+              </>
             ) : (
-              <><Languages size={18} className="text-brand-400" /> {t('editTitle')}</>
+              <>
+                <Languages size={18} className="text-brand-400" /> {t('editTitle')}
+              </>
             )}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-4 bg-white">
-            
             {/* 英語表記 */}
-            <FormField control={form.control} name="word_en" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">English Word</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-base font-bold text-slate-800 border border-slate-100">{field.value}</div>
-                ) : (
-                  <FormControl><Input {...field} placeholder="example" className="rounded-xl border-slate-200 font-bold" /></FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="word_en"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    English Word
+                  </FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-base font-bold text-slate-800 border border-slate-100">
+                      {field.value}
+                    </div>
+                  ) : (
+                    <FormControl>
+                      <Input {...field} placeholder="example" className="rounded-xl border-slate-200 font-bold" />
+                    </FormControl>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* 日本語表記 */}
-            <FormField control={form.control} name="word_ja" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('japaneseLabel')}</FormLabel>
-                {isConfirming ? (
-                  <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-600 border border-slate-100">{field.value}</div>
-                ) : (
-                  <FormControl><Input {...field} placeholder={t('japanesePlaceholder')} className="rounded-xl border-slate-200" /></FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
+            <FormField
+              control={form.control}
+              name="word_ja"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {t('japaneseLabel')}
+                  </FormLabel>
+                  {isConfirming ? (
+                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-600 border border-slate-100">
+                      {field.value}
+                    </div>
+                  ) : (
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder={t('japanesePlaceholder')}
+                        className="rounded-xl border-slate-200"
+                      />
+                    </FormControl>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               {/* ステータス */}
-              <FormField control={form.control} name="status" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('statusLabel')}</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-bold border border-slate-100">
-                      {WORD_STATUS[field.value as WordStatus]?.label}
-                    </div>
-                  ) : (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="rounded-xl border-slate-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.entries(WORD_STATUS).map(([key, info]) => (
-                          <SelectItem key={key} value={key}>{info.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {t('statusLabel')}
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm font-bold border border-slate-100">
+                        {WORD_STATUS[field.value as WordStatus]?.label}
+                      </div>
+                    ) : (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-slate-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(WORD_STATUS).map(([key, info]) => (
+                            <SelectItem key={key} value={key}>
+                              {info.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormItem>
+                )}
+              />
 
               {/* 表示順 */}
-              <FormField control={form.control} name="frequency_rank" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rank / Seq</FormLabel>
-                  {isConfirming ? (
-                    <div className="p-3 bg-slate-50 rounded-xl text-sm font-bold border border-slate-100">{field.value}</div>
-                  ) : (
-                    <FormControl><Input {...field} type="number" className="rounded-xl border-slate-200" /></FormControl>
-                  )}
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="frequency_rank"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Rank / Seq
+                    </FormLabel>
+                    {isConfirming ? (
+                      <div className="p-3 bg-slate-50 rounded-xl text-sm font-bold border border-slate-100">
+                        {field.value}
+                      </div>
+                    ) : (
+                      <FormControl>
+                        <Input {...field} type="number" className="rounded-xl border-slate-200" />
+                      </FormControl>
+                    )}
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* アクションボタン */}
             <div className="pt-4 mt-6 border-t border-slate-100">
               {isConfirming ? (
                 <div className="space-y-4">
-                  <p className="text-xs font-bold text-center text-slate-400 uppercase tracking-tighter">Please confirm the details above</p>
-                  {serverError && <Alert variant="destructive" className="text-xs py-2">{serverError}</Alert>}
+                  <p className="text-xs font-bold text-center text-slate-400 uppercase tracking-tighter">
+                    Please confirm the details above
+                  </p>
+                  {serverError && (
+                    <Alert variant="destructive" className="text-xs py-2">
+                      {serverError}
+                    </Alert>
+                  )}
                   <div className="flex gap-3">
-                    <Button type="button" variant="ghost" className="flex-1 rounded-xl font-bold" onClick={() => setIsConfirming(false)} disabled={isSubmitting}>{t('backButton')}</Button>
-                    <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold" disabled={isSubmitting}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="flex-1 rounded-xl font-bold"
+                      onClick={() => setIsConfirming(false)}
+                      disabled={isSubmitting}
+                    >
+                      {t('backButton')}
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold"
+                      disabled={isSubmitting}
+                    >
                       {isSubmitting ? t('saving') : t('confirmButton')}
                     </Button>
                   </div>
                 </div>
               ) : (
-                <Button type="button" className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11"
-                  onClick={async () => { if (await form.trigger()) setIsConfirming(true); }}>
+                <Button
+                  type="button"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11"
+                  onClick={async () => {
+                    if (await form.trigger()) setIsConfirming(true);
+                  }}
+                >
                   {t('confirmDetailsButton')}
                 </Button>
               )}

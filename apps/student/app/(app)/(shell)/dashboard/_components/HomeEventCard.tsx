@@ -1,24 +1,24 @@
 'use client';
 
-import { useState } from 'react';
 import { CalendarDays, ChevronRight, ExternalLink, UsersRound } from 'lucide-react';
+import { useState } from 'react';
 import { useNow } from '@gabby/lib/hooks/useNow';
-import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useServerSyncedState } from '@gabby/lib/hooks/useServerSyncedState';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getCalendarEventPhase, withParticipation, type CalendarEventItem } from '@gabby/types/calendarEvent';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { AddToCalendarMenu } from '@/components/calendarEvent/AddToCalendarMenu';
 import { EventDetailDrawer } from '@/components/calendarEvent/EventDetailDrawer';
-import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
 import {
   EventCoachLine,
   EventDetailLink,
   EventSeriesLabel,
   EventTiming,
-  JoinedBadge,
   formatEventSlot,
+  JoinedBadge,
 } from '@/components/calendarEvent/EventMeta';
+import { useEventParticipation } from '@/components/calendarEvent/useEventParticipation';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { HomeCard } from './HomeCard';
 
@@ -69,7 +69,9 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
       <EventSeriesLabel event={event} className="mt-1" />
       <p className="mt-0.5 text-sm font-bold text-ink">{event.title}</p>
       <EventCoachLine event={event} className="mt-1" />
-      {event.description && <p className="mt-1 line-clamp-2 text-xs text-ink-soft whitespace-pre-line">{event.description}</p>}
+      {event.description && (
+        <p className="mt-1 line-clamp-2 text-xs text-ink-soft whitespace-pre-line">{event.description}</p>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {!event.rsvp_enabled ? (
@@ -94,7 +96,12 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
             <AddToCalendarMenu event={event} />
           </>
         ) : (
-          <Button type="button" pending={isSubmitting} icon={<UsersRound />} onClick={() => join(event.calendar_event_id)}>
+          <Button
+            type="button"
+            pending={isSubmitting}
+            icon={<UsersRound />}
+            onClick={() => join(event.calendar_event_id)}
+          >
             参加する
           </Button>
         )}
@@ -111,7 +118,15 @@ function FeaturedEvent({ event, nowMs, timezone, onParticipationChanged, onOpenD
 }
 
 /** 2件目以降のイベント（日時・タイトルだけを並べ、押すと詳細を開く） */
-function OtherEvents({ events, timezone, onOpenDetail }: { events: CalendarEventItem[]; timezone: string; onOpenDetail: (id: string) => void }) {
+function OtherEvents({
+  events,
+  timezone,
+  onOpenDetail,
+}: {
+  events: CalendarEventItem[];
+  timezone: string;
+  onOpenDetail: (id: string) => void;
+}) {
   return (
     <section className={EVENT_LAYOUT.block}>
       <h3 className={EVENT_LAYOUT.blockTitle}>このあとの予定</h3>
@@ -135,7 +150,10 @@ function OtherEvents({ events, timezone, onOpenDetail }: { events: CalendarEvent
                   <p className="truncate text-sm font-semibold text-ink">{event.title}</p>
                   <EventSeriesLabel event={event} />
                 </div>
-                <ChevronRight size={16} className="shrink-0 text-ink-subtle transition-transform group-hover:translate-x-0.5" />
+                <ChevronRight
+                  size={16}
+                  className="shrink-0 text-ink-subtle transition-transform group-hover:translate-x-0.5"
+                />
               </button>
             </li>
           );
@@ -152,7 +170,9 @@ function EmptyEvents() {
         <CalendarDays size={18} className="mt-0.5 shrink-0 text-ink-subtle" />
         <div>
           <p className="text-sm text-ink">次回の開催は、決まり次第ここでお知らせします。</p>
-          <p className="mt-1 text-xs text-ink-muted">Gabbyのプロコーチから直接学べる、ご契約中の方限定の無料セッションです。</p>
+          <p className="mt-1 text-xs text-ink-muted">
+            Gabbyのプロコーチから直接学べる、ご契約中の方限定の無料セッションです。
+          </p>
         </div>
       </div>
     </section>
@@ -176,7 +196,9 @@ export function HomeEventCard({ events: serverEvents }: { events: CalendarEventI
   const detailEvent = events.find((e) => e.calendar_event_id === detailId) ?? null;
 
   const handleParticipationChanged = (calendarEventId: string, isJoined: boolean) => {
-    setEvents((prev) => prev.map((e) => (e.calendar_event_id === calendarEventId ? withParticipation(e, isJoined) : e)));
+    setEvents((prev) =>
+      prev.map((e) => (e.calendar_event_id === calendarEventId ? withParticipation(e, isJoined) : e)),
+    );
   };
 
   return (

@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import type { useTranslations } from 'next-intl';
+import { z } from 'zod';
 import type { CalendarEventItem } from '@gabby/types/calendarEvent';
 import type { SeriesSessionCommon, SeriesSessionRow } from '@/actions/adminCalendarEventSeriesAction';
 import { addDaysToDateStr, todayJstDateStr, utcToJstParts } from '../../_lib/jst';
@@ -32,7 +32,7 @@ export function createSeriesSessionsShape(t: SeriesT) {
           description: z.string(),
           location_url: z.string(),
           coach_ids: z.array(z.string()),
-        })
+        }),
       )
       .min(1),
   };
@@ -89,7 +89,15 @@ export interface SeriesSessionsValues {
  */
 export function nextSessionFrom(previous: SessionValues | null): SessionValues {
   if (!previous) {
-    return { date: todayJstDateStr(), start_time: '21:00', end_time: '21:30', title: '', description: '', location_url: '', coach_ids: [] };
+    return {
+      date: todayJstDateStr(),
+      start_time: '21:00',
+      end_time: '21:30',
+      title: '',
+      description: '',
+      location_url: '',
+      coach_ids: [],
+    };
   }
   return { ...previous, date: addDaysToDateStr(previous.date, 7), title: '', description: '', location_url: '' };
 }
@@ -143,12 +151,20 @@ export function sessionsCopiedFrom(sourceSessions: CalendarEventItem[]): SeriesS
   const spanDays = Math.round((Date.parse(rows[rows.length - 1].date) - Date.parse(rows[0].date)) / DAY_MS);
   return {
     ...commonFromEvents(sourceSessions),
-    sessions: rows.map((row) => ({ ...row, date: addDaysToDateStr(row.date, spanDays + 7), title: '', description: '' })),
+    sessions: rows.map((row) => ({
+      ...row,
+      date: addDaysToDateStr(row.date, spanDays + 7),
+      title: '',
+      description: '',
+    })),
   };
 }
 
 /** 入力値をサーバーアクションに渡す形にする（参加URLは、回ごとの設定なら各回の値、そうでなければ共通の値を使う） */
-export function toSeriesSessionsPayload(values: SeriesSessionsValues): { common: SeriesSessionCommon; rows: SeriesSessionRow[] } {
+export function toSeriesSessionsPayload(values: SeriesSessionsValues): {
+  common: SeriesSessionCommon;
+  rows: SeriesSessionRow[];
+} {
   return {
     common: {
       location_url: values.per_session_url ? null : values.location_url || null,
@@ -167,4 +183,3 @@ export function toSeriesSessionsPayload(values: SeriesSessionsValues): { common:
     })),
   };
 }
-

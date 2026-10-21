@@ -21,7 +21,13 @@ export function MonthSwitcher({
   return (
     <div className="flex items-center gap-3">
       <div className="inline-flex items-center rounded-control border border-line bg-surface p-0.5">
-        <button type="button" onClick={() => handleMonthChange('prev')} disabled={isPending} className={ARROW_BUTTON_CLASS} aria-label="前月">
+        <button
+          type="button"
+          onClick={() => handleMonthChange('prev')}
+          disabled={isPending}
+          className={ARROW_BUTTON_CLASS}
+          aria-label="前月"
+        >
           <ChevronLeft size={18} />
         </button>
         <div className="flex h-10 min-w-32 items-center justify-center px-2 tabular-nums">
@@ -34,7 +40,13 @@ export function MonthSwitcher({
             </span>
           )}
         </div>
-        <button type="button" onClick={() => handleMonthChange('next')} disabled={isPending} className={ARROW_BUTTON_CLASS} aria-label="翌月">
+        <button
+          type="button"
+          onClick={() => handleMonthChange('next')}
+          disabled={isPending}
+          className={ARROW_BUTTON_CLASS}
+          aria-label="翌月"
+        >
           <ChevronRight size={18} />
         </button>
       </div>

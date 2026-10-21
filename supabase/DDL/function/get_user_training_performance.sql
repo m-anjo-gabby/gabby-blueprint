@@ -80,7 +80,7 @@ BEGIN
 END;
 $$;
 
--- 🚨 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
+-- 全体への実行権限を剥奪し、認証済みユーザーにのみ付与
 ALTER FUNCTION public.get_user_training_performance(TEXT) OWNER TO postgres;
 REVOKE EXECUTE ON FUNCTION public.get_user_training_performance(TEXT) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.get_user_training_performance(TEXT) TO authenticated;

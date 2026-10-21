@@ -1,17 +1,18 @@
-import { getTranslations } from 'next-intl/server';
 import { Pencil } from 'lucide-react';
-import { getRoles } from '@/actions/adminUserAction';
-import { getClientsFilter } from '@/actions/adminClientAction';
-import { Button } from '@/components/ui/button';
+import { getTranslations } from 'next-intl/server';
 import { formatToJstDateTime } from '@gabby/lib/date/date';
 import { USER_TYPES } from '@gabby/types/user';
+import { getClientsFilter } from '@/actions/adminClientAction';
+import { getRoles } from '@/actions/adminUserAction';
+import { Button } from '@/components/ui/button';
 import { LicenseFormDialog } from '../_components/LicenseFormDialog';
 import { LicenseSummary } from '../_components/LicenseSummary';
-import { isRegisteredUser } from '../_lib/userSchema';
-import { requireUserForTab } from './_lib/userDetail';
+import { canManageAccount, isRegisteredUser } from '../_lib/userSchema';
 import { BASIC_TAB_GRID, DetailSection } from './_components/DetailSection';
+import { UserAccountActions } from './_components/UserAccountActions';
 import { UserBasicInfoForm } from './_components/UserBasicInfoForm';
 import { UserIdField } from './_components/UserIdField';
+import { requireUserForTab } from './_lib/userDetail';
 
 /** ユーザー詳細の基本情報タブ（基本情報の編集・ライセンス・アカウント） */
 export default async function UserBasicTabPage({ params }: { params: Promise<{ id: string }> }) {
@@ -61,10 +62,18 @@ export default async function UserBasicTabPage({ params }: { params: Promise<{ i
             </div>
             <div className="space-y-1">
               <dt className="text-xs font-bold text-slate-600">{t('lastSignIn')}</dt>
-              <dd className="text-slate-700">{user.last_sign_in_at ? formatToJstDateTime(user.last_sign_in_at) : t('neverSignedIn')}</dd>
+              <dd className="text-slate-700">
+                {user.last_sign_in_at ? formatToJstDateTime(user.last_sign_in_at) : t('neverSignedIn')}
+              </dd>
             </div>
           </dl>
         </DetailSection>
+
+        {canManageAccount(user) && (
+          <DetailSection title={t('accountActionsTitle')}>
+            <UserAccountActions user={user} />
+          </DetailSection>
+        )}
       </div>
     </div>
   );

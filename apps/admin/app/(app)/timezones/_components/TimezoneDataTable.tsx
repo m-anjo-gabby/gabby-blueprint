@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import type { TimezoneMaster } from '@gabby/types/timezone';
+import { useState, useTransition } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
+import type { TimezoneMaster } from '@gabby/types/timezone';
 import { deleteTimezone } from '@/actions/adminTimezoneAction';
 import { DataTable } from '@/components/list/DataTable';
+import { boldChunks, DeleteConfirmDialog } from '@/components/list/DeleteConfirmDialog';
 import { ListToolbar } from '@/components/list/ListToolbar';
 import { useListQuery } from '@/components/list/useListQuery';
 import { paginateLocally } from '@/lib/list';
-import { DeleteConfirmDialog, boldChunks } from '@/components/list/DeleteConfirmDialog';
 import { createColumns } from './columns';
 
 /** 検索の対象（日英の表示名・短い名前・IANA名） */
@@ -35,6 +35,8 @@ export function TimezoneDataTable({ data }: TimezoneDataTableProps) {
       const result = await deleteTimezone(timezone.timezone);
       if (result.success) {
         showToast(t('toastDeleted'), 'success');
+      } else if (result.errorCode === 'in_use') {
+        showToast(t('toastInUse'), 'error');
       } else {
         showToast(result.message || t('toastDeleteFailed'), 'error');
       }
@@ -63,7 +65,12 @@ export function TimezoneDataTable({ data }: TimezoneDataTableProps) {
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
         title={t('deleteDialogTitle')}
-        description={(timezone) => t.rich('deleteDialogBody', { name: locale === 'en' ? timezone.display_name_en : timezone.display_name_ja, bold: boldChunks })}
+        description={(timezone) =>
+          t.rich('deleteDialogBody', {
+            name: locale === 'en' ? timezone.display_name_en : timezone.display_name_ja,
+            bold: boldChunks,
+          })
+        }
         confirmLabel={t('deleteConfirm')}
       />
     </div>

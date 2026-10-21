@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
-import { getNoticeReadStatus } from '@/actions/adminNoticeAction';
 import { getClientsFilter } from '@/actions/adminClientAction';
+import { getNoticeReadStatus } from '@/actions/adminNoticeAction';
 import { BackLink, PageHeader } from '@/components/common/PageHeader';
 import { parseListParams, toPageCount, type RawSearchParams } from '@/lib/list';
 import { NoticeReadStatusTable } from './_components/NoticeReadStatusTable';
