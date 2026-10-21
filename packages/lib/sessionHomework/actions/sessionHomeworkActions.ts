@@ -9,6 +9,7 @@ import { createServerClient } from '@gabby/lib/supabase/server';
 import {
   type AddHomeworkCommentResult,
   type CreateSessionHomeworkResult,
+  type GetLatestSessionHomeworkResult,
   type GetRecentSessionHomeworkResult,
   type GetSessionHomeworkResult,
   type PendingHomeworkAttachment,
@@ -126,6 +127,56 @@ export async function getRecentSessionHomeworkCore(
   } catch (err) {
     unstable_rethrow(err);
     logger.error('sessionHomework:get_recent_homework_unexpected', getErrorMessage(err), { ...ctx, err });
+    return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * 生徒のホームのライブセッションのカード向け。ログイン中の生徒の、指定した契約（チケット）のセッションに出された
+ * 最新の宿題を、セッションの日時・コーチ名・フォローアップコメントとともに取得する（セッション結果画面へ行かずに読めるようにするため）。
+ */
+export async function getMyLatestSessionHomeworkCore(ticketId: string): Promise<GetLatestSessionHomeworkResult> {
+  const ctx = await getLogContext();
+
+  try {
+    const supabase = await createServerClient();
+    const user = await getAuthUser();
+    if (!user) return { success: false, errorCode: 'unauthorized' };
+
+    const { data, error } = await supabase
+      .from('com_t_session_homework')
+      .select(
+        `${HOMEWORK_SELECT_WITH_COMMENTS}, session:com_t_session!inner(ticket_id, start_datetime), coach:com_m_user!com_t_session_homework_coach_id_fkey(user_name)`,
+      )
+      .eq('student_id', user.id)
+      .eq('session.ticket_id', ticketId)
+      .order('insert_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      logger.error('sessionHomework:get_latest_homework_failed', error.message, {
+        ...ctx,
+        err: error,
+        userId: user.id,
+        payload: { ticketId },
+      });
+      return { success: false, errorCode: 'unexpected_error' };
+    }
+    if (!data) return { success: true, homework: null };
+
+    const { session, coach, ...row } = data;
+    return {
+      success: true,
+      homework: {
+        ...normalizeHomeworkRow(row),
+        session_start_datetime: session.start_datetime,
+        coach_name: coach?.user_name ?? null,
+      },
+    };
+  } catch (err) {
+    unstable_rethrow(err);
+    logger.error('sessionHomework:get_latest_homework_unexpected', getErrorMessage(err), { ...ctx, err });
     return { success: false, errorCode: 'unexpected_error' };
   }
 }

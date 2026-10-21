@@ -3,10 +3,11 @@
 import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import {
+  getMyLatestSessionHomeworkCore,
   getSessionHomeworkCore,
   markSessionHomeworkViewedCore,
 } from '@gabby/lib/sessionHomework/actions/sessionHomeworkActions';
-import { type SessionHomeworkEntry } from '@gabby/types/sessionHomework';
+import { type LatestSessionHomework, type SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 
 const logger = createLogger('student');
 
@@ -30,4 +31,17 @@ export async function getSessionHomework(sessionId: string): Promise<SessionHome
  */
 export async function markSessionHomeworkViewed(sessionId: string): Promise<void> {
   await markSessionHomeworkViewedCore(sessionId);
+}
+
+/**
+ * ホームのライブセッションのカードに出す、表示中の契約の最新の宿題（補助の区画のため、取得の失敗はログに残して出さない）。
+ */
+export async function getMyLatestSessionHomework(ticketId: string): Promise<LatestSessionHomework | null> {
+  const result = await getMyLatestSessionHomeworkCore(ticketId);
+  if (!result.success) {
+    const ctx = await getLogContext();
+    logger.error('student:get_latest_session_homework_failed', result.errorCode, ctx);
+    return null;
+  }
+  return result.homework;
 }

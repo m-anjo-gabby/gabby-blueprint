@@ -84,6 +84,15 @@ export type GetSessionHomeworkResult =
 export type GetRecentSessionHomeworkResult =
   { success: true; entries: SessionHomeworkEntry[] } | { success: false; errorCode: SessionHomeworkErrorCode };
 
+/** 生徒のホームに出す、表示中の契約の最新の宿題（セッションの日時・コーチ名を添える） */
+export interface LatestSessionHomework extends SessionHomeworkEntry {
+  session_start_datetime: string;
+  coach_name: string | null;
+}
+
+export type GetLatestSessionHomeworkResult =
+  { success: true; homework: LatestSessionHomework | null } | { success: false; errorCode: SessionHomeworkErrorCode };
+
 export type CreateSessionHomeworkResult =
   { success: true; entry: SessionHomeworkEntry } | { success: false; errorCode: SessionHomeworkErrorCode };
 

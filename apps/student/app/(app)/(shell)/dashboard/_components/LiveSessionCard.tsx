@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { LiveSessionOverview } from '@gabby/types/matching';
 import type { SessionListItem } from '@gabby/types/session';
+import type { LatestSessionHomework } from '@gabby/types/sessionHomework';
 import { SessionBreakdown } from '@/app/(app)/(shell)/live-room/_components/SessionBreakdown';
 import { JoinSessionButton } from '@/components/session/JoinSessionButton';
 import { SessionCoachHeading, SessionCoachHeadingSkeleton } from '@/components/session/SessionCoachHeading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { HomeCard } from './HomeCard';
+import { LatestHomeworkBlock } from './LatestHomeworkBlock';
 
 /**
  * ライブセッションで生徒の対応が必要なこと（ホームではライブセッション管理等への導線だけを出す）。
@@ -32,17 +34,21 @@ interface LiveSessionCardProps {
   /** 予約リクエスト・振替候補の回答待ちの件数（未予約のうち調整中として表示する） */
   adjustingCount: number;
   actions: LiveSessionAction[];
+  /** 表示中の契約の最新の宿題（無い・取得できない場合は null） */
+  latestHomework: LatestSessionHomework | null;
 }
 
 const CARD_TITLE = 'ライブセッション';
 const CARD_ACTION = { label: '詳しく見る', href: '/live-room' };
 
 /**
- * カードの中の並び（本番と骨組みで共有する）。幅が広いときは「次回」と「契約の状況」を横に並べる。
+ * カードの中の並び（本番と骨組みで共有する）。幅が広いときは「次回」と「契約の状況」を横に並べ、
+ * 前回の宿題がある場合はその下の段に2列分で置く（3列にすると契約の状況の内訳が狭くなり折り返すため）。
  * 列の幅は grid-cols-1 で枠に収める（1行で省略するコーチ名の長さまで枠が広がらないように）
  */
 const LIVE_LAYOUT = {
   grid: 'grid grid-cols-1 gap-3 @2xl:grid-cols-2',
+  homework: '@2xl:col-span-2',
   block: 'rounded-control bg-canvas p-4',
   blockTitle: 'text-xs text-ink-muted',
 } as const;
@@ -70,10 +76,17 @@ function NextSessionBlock({ session }: { session: SessionListItem | null }) {
 
 /**
  * ホームのライブセッション（ライブセッション付きの契約がある生徒だけ）。
- * 対応が必要なこと（コーチ未選択・未予約・振替候補）を先頭に出し、次回のセッションと契約の回数の内訳を並べる。
- * 「今日やること」は自主トレーニングに限るため、入室もこのカードから行う（入室ボタンは常に押せる状態で、押した時に判定する）。詳細・操作はライブセッション管理に任せる。
+ * 対応が必要なこと（コーチ未選択・未予約・振替候補）を先頭に出し、次回のセッションと契約の回数の内訳、前回の宿題を並べる。
+ * 今日のトレーニングメニューは自主トレーニングに限るため、入室もこのカードから行う（入室ボタンは常に押せる状態で、押した時に判定する）。詳細・操作はライブセッション管理に任せる。
  */
-export function LiveSessionCard({ nextSession, overview, isCurrent, adjustingCount, actions }: LiveSessionCardProps) {
+export function LiveSessionCard({
+  nextSession,
+  overview,
+  isCurrent,
+  adjustingCount,
+  actions,
+  latestHomework,
+}: LiveSessionCardProps) {
   return (
     <HomeCard title={CARD_TITLE} action={CARD_ACTION}>
       {actions.length > 0 && (
@@ -124,6 +137,7 @@ export function LiveSessionCard({ nextSession, overview, isCurrent, adjustingCou
               <p className="mt-2 text-sm text-ink-muted">契約の状況を取得できませんでした。</p>
             )}
           </section>
+          {latestHomework && <LatestHomeworkBlock homework={latestHomework} className={LIVE_LAYOUT.homework} />}
         </div>
       </div>
     </HomeCard>

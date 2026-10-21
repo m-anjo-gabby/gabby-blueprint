@@ -13,7 +13,8 @@
 | コーチ | セッション結果（宿題の投稿・コメント・今回は宿題なし） | `coach` `/students/[id]/sessions/[sessionId]/result` | `HomeworkComposer.tsx`, `components/session/HomeworkViewedStatus.tsx`, `createSessionHomework`, `addHomeworkComment`, `setSessionHomeworkNotNeeded`, `uploadSessionHomeworkAttachment`（`apps/coach/actions/sessionHomeworkAction.ts`。失敗理由のコードを英語の文言にする）。画面仕様: [docs/screens/coach/students/session-result.md](../../../../docs/screens/coach/students/session-result.md) |
 | コーチ | セッションハブ（前回の宿題） | `coach` `/students/[id]/sessions/[sessionId]` | `LastHomeworkList.tsx`, `getRecentSessionHomework`。画面仕様: [docs/screens/coach/students/session-detail.md](../../../../docs/screens/coach/students/session-detail.md) |
 | コーチ | ダッシュボード（Homework not posted） | `coach` `/dashboard` | `getMySessionTasks`。画面仕様: [docs/screens/coach/dashboard.md](../../../../docs/screens/coach/dashboard.md) |
-| 生徒 | セッション結果（宿題の確認） | `student` `/live-room/sessions/[sessionId]/result` | `markSessionHomeworkViewed`（画面をサーバーで描く時に記録）。画面仕様: [docs/screens/student/live-room/session-result.md](../../../../docs/screens/student/live-room/session-result.md) |
+| 生徒 | セッション結果（宿題の確認） | `student` `/live-room/sessions/[sessionId]/result` | `markSessionHomeworkViewed`（画面をサーバーで描く時に記録）、表示は `components/session/SessionHomeworkContent.tsx`。画面仕様: [docs/screens/student/live-room/session-result.md](../../../../docs/screens/student/live-room/session-result.md) |
+| 生徒 | ホーム（ライブセッションのカードの前回の宿題） | `student` `/dashboard` | `LatestHomeworkBlock.tsx`, `getMyLatestSessionHomework`（表示中の契約の最新の宿題）、シートを開いた時に `markSessionHomeworkViewed`。画面仕様: [docs/screens/student/dashboard.md](../../../../docs/screens/student/dashboard.md) |
 
 ## 前提条件
 
@@ -31,7 +32,7 @@
 
 1. コーチが結果画面の New Homework に指示文（必須）・添付を入れて「Post Homework」を押す。添付は選んだ時点で先にアップロードし、本体・添付をまとめて登録する。
 2. 登録すると生徒へ `HOMEWORK_POSTED` を通知する（リンクは生徒のセッション結果画面。メールの対象: [notification/mail-dispatch.md](../notification/mail-dispatch.md)）。コーチの結果画面は投稿済みの表示（Instructions / Follow-up Comments）に切り替わり、「Not viewed by the student yet」が出る。
-3. 生徒がセッション結果画面を開くと、宿題を開いた日時（`student_viewed_at`）を記録する（`mark_session_homework_viewed`。開くたびに更新）。コーチの結果画面とハブの Last Homework に「Viewed by the student · 日時」が出る。
+3. 生徒がセッション結果画面を開く、またはホームの「前回の宿題」のシートを開くと、宿題を開いた日時（`student_viewed_at`）を記録する（`mark_session_homework_viewed`。結果画面は開くたびに更新、ホームは未読・新しい追記がある時だけ）。コーチの結果画面とハブの Last Homework に「Viewed by the student · 日時」が出る。
 4. コーチが追記のコメント（本文または添付のどちらかは必須）を送ると、生徒の画面に追加され、同じ `HOMEWORK_POSTED` の通知が更新されて未読に戻る（1セッションにつき通知は1件）。生徒が最新のコメントより後に開いていなければ、コーチの画面に「your latest comment isn’t viewed yet」が添えられる。
 5. 次回のセッションのハブの Last Homework に、このセッションの宿題が「前回の宿題」として出る（そのハブのセッション自身の宿題を除く）。
 6. 確定から14日以内で宿題の無い実施済みセッションは、コーチのダッシュボードの Session Tasks に「Homework not posted」として出る。生徒の欠席（`completion_result=3`）の回と、コーチが結果画面で「No homework this time」にした回（`com_t_session.homework_not_needed`）は出ない。「Post homework instead」で取り消すと投稿のフォームに戻る。
@@ -66,4 +67,5 @@
 | 中 | 追記のコメントで通知が未読に戻り、生徒が開くまで「最新の追記を見ていない」と出る | 実装済み: 同上（4） |
 | 中 | 前回の宿題が次回のハブに出る | 実装済み: 同上（5） |
 | 中 | 欠席の回・「今回は宿題なし」の回は Homework not posted に出ない | 実装済み: 同上（6・取り消し） |
+| 中 | 生徒のホームに前回の宿題が新着で出て、シートで開くと見たことが記録される | 実装済み: 同上 |
 | 低 | 添付の形式・サイズの制限 | #6 |

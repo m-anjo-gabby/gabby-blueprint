@@ -6,6 +6,7 @@ import {
   type AuthFixture,
 } from '../../support/authFixtures.ts';
 import { openCoachContext } from '../../support/coachApp.ts';
+import { clickUntilVisible } from '../../support/hydration.ts';
 import {
   approveMatchingRequest,
   createCompletedSessionWithHomework,
@@ -21,6 +22,7 @@ import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
  * - 手順4: コーチの追記のコメントが生徒の画面に出て、宿題の通知（1セッション1件）が未読に戻る。生徒が開くまで「最新の追記を見ていない」と出る
  * - 手順5: 結果画面で投稿した宿題が、次回のセッションのハブの Last Homework に出る（投稿したセッション自身のハブには出ない）
  * - 手順6: Session Tasks の「Homework not posted」に、生徒の欠席の回と「今回は宿題なし」にした回は出ない
+ * - 生徒のホームのライブセッションのカードに「前回の宿題」が出て、シートで全文を開くと見たことが記録される
  * 宿題の投稿の画面操作はジャーニー（tests/journeys/coach-live-session.spec.ts）で確かめているため、ここでは宿題を直接作る
  * （登録時のトリガーで生徒への通知が作られる）。使い捨てデータを作るため desktop だけで実行する。
  */
@@ -323,4 +325,45 @@ test('Session Tasks の「Homework not posted」に、生徒の欠席の回と�
   } finally {
     await context.close();
   }
+});
+
+test('生徒のホームのライブセッションのカードに前回の宿題が新着で出て、シートで開くと見たことが記録される', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', '使い捨てデータを作るため desktop だけで実行する');
+  test.setTimeout(180_000);
+  const { f, p, scheduleId } = await setUpPair('hwhome');
+  const homework = await createCompletedSessionWithHomework(f, p, scheduleId, { daysAgo: 1 });
+
+  await loginAsNewStudent(page, p.studentEmail, PASSWORD);
+  await page.goto('/dashboard');
+  const block = page.locator('section').filter({ has: page.getByRole('heading', { name: '前回の宿題', exact: true }) });
+
+  await test.step('まだ開いていない宿題は「新着」として本文の抜粋が出る', async () => {
+    await expect(block.getByText(homework.homeworkText)).toBeVisible({ timeout: 30_000 });
+    await expect(block.getByText('新着', { exact: true })).toBeVisible();
+  });
+
+  await test.step('「宿題を見る」でシートに全文が出て、見たことが記録される', async () => {
+    const sheet = page.getByRole('dialog');
+    await clickUntilVisible(block.getByRole('button', { name: '宿題を見る' }), sheet);
+    await expect(sheet.getByText(homework.homeworkText)).toBeVisible();
+    await expect(sheet.getByRole('link', { name: 'セッションの結果を見る' })).toBeVisible();
+    await expect
+      .poll(async () => {
+        const { data } = await f.admin
+          .from('com_t_session_homework')
+          .select('student_viewed_at')
+          .eq('session_id', homework.sessionId)
+          .single();
+        return data?.student_viewed_at ?? null;
+      })
+      .not.toBeNull();
+  });
+
+  await test.step('開いた後は「新着」が消える', async () => {
+    await page.goto('/dashboard');
+    await expect(block.getByText(homework.homeworkText)).toBeVisible({ timeout: 30_000 });
+    await expect(block.getByText('新着', { exact: true })).toHaveCount(0);
+  });
 });

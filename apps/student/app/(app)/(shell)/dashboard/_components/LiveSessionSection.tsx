@@ -7,6 +7,7 @@ import {
   getMyRescheduleProposalGroups,
   getMyUpcomingSessions,
 } from '@/actions/sessionAction';
+import { getMyLatestSessionHomework } from '@/actions/sessionHomeworkAction';
 import { getNextContractMatching } from '@/lib/liveSessionContracts';
 import { LiveSessionCard, type LiveSessionAction } from './LiveSessionCard';
 
@@ -14,6 +15,7 @@ import { LiveSessionCard, type LiveSessionAction } from './LiveSessionCard';
  * ホームのライブセッションの区画（サーバーで取得し、ページ側の Suspense で遅れて表示する）。
  * 対応が必要なことの判定は、ライブセッション管理（LiveSessionHub）の「対応が必要です」と同じ条件にする。
  * contracts はライブセッション契約の一覧（現在の契約と並ぶ次の契約の判定に使う）。
+ * 表示中の契約のセッションに出された最新の宿題を「前回の宿題」として添える。
  */
 export async function LiveSessionSection({
   contract,
@@ -32,6 +34,7 @@ export async function LiveSessionSection({
     bookingRequests,
     nextMatching,
     pendingRatings,
+    latestHomework,
   ] = await Promise.all([
     getMyUpcomingSessions(1),
     getMyLiveSessionOverview(contract.ticket_id),
@@ -41,6 +44,7 @@ export async function LiveSessionSection({
     getMyBookingRequests(),
     isCurrent ? getNextContractMatching(contracts) : Promise.resolve(null),
     getMyPendingCoachRatings(),
+    getMyLatestSessionHomework(contract.ticket_id),
   ]);
 
   const adjustingCount = isCurrent ? bookingRequests.length + proposalGroups.length + proposedGroups.length : 0;
@@ -117,6 +121,7 @@ export async function LiveSessionSection({
       isCurrent={isCurrent}
       adjustingCount={adjustingCount}
       actions={actions}
+      latestHomework={latestHomework}
     />
   );
 }
