@@ -11,7 +11,7 @@ import { clickUntilVisible } from '../../support/hydration.ts';
 import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 
 /**
- * ホームの今日のトレーニングメニュー（docs/screens/student/dashboard.md「今日のトレーニングメニュー」）。
+ * ホームの今日のトレーニングメニュー（機能: e2e/specs/training/training-menu.md、画面: docs/screens/student/dashboard.md）。
  * 使い捨てのアプリのみ契約の生徒（ステージ0）で、標準メニューが作られること、やることから種別・レベルを選んだ状態で
  * スプリントを開けること、各トレーニングの記録からやることが完了になることを確かめる。
  * トレーニングの実施は音声の入出力が必要なため、記録は DB に直接作る。desktop だけで実行する。

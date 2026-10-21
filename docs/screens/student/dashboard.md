@@ -165,6 +165,7 @@
 
 ## 関連する業務フロー仕様書
 
+- [今日のトレーニングメニュー](../../../testing/e2e/specs/training/training-menu.md) — メニューの作り方・標準メニューの組み方・完了の判定
 - [コーチ評価](../../../testing/e2e/specs/rating/coach-rating.md) — ライブセッションのカードに出す評価のお願いの条件
 
 ## 実装参照（エンジニア向け）
