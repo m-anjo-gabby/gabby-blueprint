@@ -63,6 +63,9 @@ test.describe('使い捨てのアプリのみ契約の生徒', () => {
     if (accessError) throw new Error(`教材の公開先の追加に失敗しました: ${accessError.message}`);
 
     await loginAsNewStudent(page, email, PASSWORD);
+    // 規約の同意の後の再描画で作られたメニューを消し、メニューを作る描画そのもので出ることを確かめる
+    await f.admin.from('student_t_training_menu').delete().eq('user_id', userId);
+    await page.goto('/dashboard');
 
     const card = menuCard(page);
     await test.step('ステージ0の生徒には、Speed・Builders の Lv.1 のタイムアタックが出る', async () => {

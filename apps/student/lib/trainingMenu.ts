@@ -73,14 +73,15 @@ export async function getTodayTrainingMenu(): Promise<CoreResult<{ data: TodayTr
     const now = Date.now();
     const menuDate = toIsoDateInZone(now, timezone);
 
-    let menu = await selectMenu(supabase, user.id, menuDate);
+    let menu = await selectMenu(supabase, { userId: user.id, menuDate });
     if (!menu) {
       const items = await composeStandardMenu(supabase, user.id, now);
       if (items.length === 0) return { success: true, data: null };
-      const { error } = await supabase.rpc('create_training_menu', { p_items: items });
+      const { data: menuId, error } = await supabase.rpc('create_training_menu', { p_items: items });
       if (error) throw error;
-      menu = await selectMenu(supabase, user.id, menuDate);
-      if (!menu) return { success: true, data: null };
+      // 作る前と同じ問い合わせで読み直すと、1回の描画の中では同じ GET の結果（まだ無い）が使い回されるため、作ったメニューの ID で読む
+      menu = await selectMenu(supabase, { menuId });
+      if (!menu) throw new Error(`Created training menu was not readable: ${menuId}`);
     }
 
     const facts = await collectFacts(supabase, user.id, menu.items, menuDate, timezone, now);
@@ -114,13 +115,15 @@ export async function getTodayTrainingMenu(): Promise<CoreResult<{ data: TodayTr
   }
 }
 
-async function selectMenu(supabase: ServerClient, userId: string, menuDate: string) {
-  const { data, error } = await supabase
+async function selectMenu(supabase: ServerClient, target: { userId: string; menuDate: string } | { menuId: string }) {
+  const query = supabase
     .from('student_t_training_menu')
-    .select(`menu_id, completed_at, items:student_t_training_menu_item(${MENU_ITEM_SELECT})`)
-    .eq('user_id', userId)
-    .eq('menu_date', menuDate)
-    .maybeSingle();
+    .select(`menu_id, completed_at, items:student_t_training_menu_item(${MENU_ITEM_SELECT})`);
+  const { data, error } = await (
+    'menuId' in target
+      ? query.eq('menu_id', target.menuId)
+      : query.eq('user_id', target.userId).eq('menu_date', target.menuDate)
+  ).maybeSingle();
   if (error) throw error;
   if (!data) return null;
   return { ...data, items: [...data.items].sort((a, b) => a.seq_no - b.seq_no) };
