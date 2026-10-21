@@ -10,6 +10,7 @@
 | ログ | `docs/LOGGING.md` |
 | 依存パッケージ・版 | `docs/DEPENDENCIES.md` |
 | データの削除 | `docs/DATA-DELETION.md` |
+| 用語（サービス・契約・教材） | `docs/GLOSSARY.md` |
 | テーブル設計・DDL | `supabase/DDL/README.md` |
 | リリース | `docs/RELEASE.md` |
 | テスト | `testing/CONVENTIONS.md` / `testing/e2e/CONVENTIONS.md` |
@@ -46,6 +47,7 @@
 - コーディング規約: 書式・命名・ファイル構成・型・エラーの返し方・コメントは `docs/CODING.md` が正本。書式は Prettier（`pnpm format`）に任せる。サーバーアクションは `ActionResult`（`packages/types/action.ts`）を返し、失敗の `message` はアプリの言語の文言にする（admin は next-intl。DB・例外の本文を入れずログに残す）。共通部分の `*Core` は `errorCode` だけを返す。admin のアクションは先頭で `requireAdminRole`（`apps/admin/lib/adminAuth.ts`）を呼び、サーバー側の `catch` は先頭で `unstable_rethrow` を呼ぶ（どちらも単体テストで検査）。コメントは日本語の常体で「なぜ」を書き、変更の経緯・絵文字・区切り線・コメントアウトしたコードを残さない。
 - 認可（全アプリ共通）: 正本は `docs/SECURITY.md`。サーバーアクションは公開の画面のパスからも呼べるため、proxy に頼らず各アクションで守る。service_role（`createAdminClient`）を使う処理は、先に `getAuthUser()` と対象への権利（参加者・当事者・本人）を確かめる。公開のパスを増やす場合は、ログインの代わりの守り方（秘密の値・署名・CAPTCHA 等）を決める。SECURITY DEFINER の関数は `search_path` の固定・PUBLIC と anon からの `REVOKE`・呼び出し元の確認をそろえる（`supabase/DDL/README.md`「関数の権限」。どれも単体テストで検査）。
 - 共通化: 複数アプリ（admin/coach/student）にまたがるロジック・型定義は `packages/types` や `packages/lib` に集約し、アプリごとの重複実装を避けること。
+- 用語（全アプリ共通）: サービス・契約・教材の言葉は `docs/GLOSSARY.md` が正本。画面の文言・メール・仕様書・資料は「使う言葉」で書き、「使わない言い方」を使わない。新しい言葉や揺れに気付いたら先に用語集に足し、決まった言葉を変える場合も先に用語集を直す。
 - ブランド色（全アプリ共通）: 画面・共通UIのブランド色は `brand` / `brand-strong` / `brand-soft` / `brand-N`（および `gold`）トークンで書き、パレット名（`indigo-*` 等）を直接書かない。詳細は `docs/UI.md`「ブランド色」。
 - 画面の作り方: 正本は `docs/UI.md`（全アプリ共通: ブランド色・ローディング表示・初期表示のデータ取得・長い文字の省略と折り返し・ダイアログのフォーカス・チャット）、`docs/UI-ADMIN.md`（admin: 一覧・next-intl）、`docs/UI-STUDENT.md`（student: UI実装規約）。各アプリと `packages/lib` の `CLAUDE.md` が読み込むため、そのファイルを触ると自動で読まれる。要点: 画面の枠は本物にし、データに依存する区画だけを本番と同じ形の骨組みにする。初期表示に必要なデータは表示後にブラウザからサーバーアクションで取りに行かず、サーバーで取得する。
 - ログ（全アプリ共通）: 規約は `docs/LOGGING.md` が正本。サーバーは `createLogger(service)`、ブラウザは `clientLogger` を使い、`console.*` は使わない（ESLint の `no-console`）。イベント名は `<domain>:<action>_<outcome>`。エラーは `err` にエラーそのものを渡す。氏名・本文等の個人情報は `payload` に入れない。監査・業務の履歴はログではなく DB に残す。
