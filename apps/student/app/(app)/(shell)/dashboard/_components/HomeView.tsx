@@ -11,14 +11,11 @@ import { useToast } from '@gabby/lib/hooks/useToast';
 import { clientLogger } from '@gabby/lib/logger/client';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
-import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
 import type { ResumeContentResponse } from '@gabby/types/training';
 import { clearResumeContent } from '@/actions/contentAction';
 import type { MyPlan } from '@/actions/dashboardAction';
 import type { TrainingLifetimeStats } from '@/actions/performanceAction';
-import { cn } from '@/lib/utils';
 import { buildCurrentWeek, resolveStreakDays, type TrainingActivity } from '../_lib/weeklyActivity';
-import { CoachAssignmentsCard } from './CoachAssignmentsCard';
 import { ContinueCard } from './ContinueCard';
 import { HOME_LAYOUT } from './HomeCard';
 import { HomeHeaderSkeleton, WeeklyActivityCardSkeleton } from './HomeSkeleton';
@@ -29,7 +26,6 @@ import { TodayMenuCard, type TodayMenuState } from './TodayMenuCard';
 import { WeeklyActivityCard } from './WeeklyActivityCard';
 
 interface HomeViewProps {
-  assignments: DialogueAssignmentSummary[];
   /** 今週を含む月のトレーニング実績（実施日時と件数）。今週の実施日数・発話回数の算出に使う */
   activities: TrainingActivity[];
   /** 通算のトレーニング実績（未実施の場合は null） */
@@ -40,7 +36,7 @@ interface HomeViewProps {
   resume: ResumeContentResponse | null;
   /** 有効な契約（利用中・開始前） */
   plans: MyPlan[];
-  /** 今日のトレーニングメニュー（取得に失敗した場合は 'error'） */
+  /** 今日のトレーニングメニュー（取得に失敗した場合は 'error'。出さない環境・組めない生徒は null） */
   todayMenu: TodayMenuState;
   /** お知らせのカード（表示方法が「ホームのカード」の未読がある場合だけ。無ければ null） */
   noticeCard: React.ReactNode;
@@ -61,12 +57,11 @@ const getGreeting = (hour: number) => {
 /**
  * ホーム画面。
  * 1行目に今日のトレーニングメニュー（主役）と今週のトレーニング、続けて「これからの予定」としてライブセッション（契約がある場合だけ）とグループセッションを1行ずつ、
- * その下にこれまでの歩みとご契約プラン、最後に「続きから」とコーチからの課題を並べる（モバイル=1列、PC(lg以上)=3列グリッド）。
+ * その下にこれまでの歩みとご契約プラン、最後に「続きから」を並べる（モバイル=1列、PC(lg以上)=3列グリッド）。
  * プランによる違いはライブセッションの行の有無だけにする。トレーニングの各画面への入口はシェルのトレーニングタブ（TrainingSectionNav）が受け持つ。
  * 現在時刻の確定前（初回表示のハイドレーション時）は、時刻に依存する部分を loading.tsx と同じ骨組みで描く。
  */
 export function HomeView({
-  assignments,
   activities,
   lifetimeStats,
   timezoneNames,
@@ -109,11 +104,8 @@ export function HomeView({
     }
   };
 
-  const pendingAssignments = assignments.filter((a) => !a.is_set_completed);
   const week = nowMs !== null ? buildCurrentWeek(activities, timezone, nowMs) : null;
   const streakDays = nowMs !== null ? resolveStreakDays(lifetimeStats, timezone, nowMs) : 0;
-  const showAssignments = pendingAssignments.length > 0;
-  const showContinue = resume !== null;
 
   return (
     <div className={HOME_LAYOUT.page}>
@@ -164,13 +156,10 @@ export function HomeView({
         />
         {plans.length > 0 && <PlanCard plans={plans} nowMs={nowMs} timezone={timezone} />}
 
-        {/* 途中の教材の再開とコーチからの課題。両方あるときは半分ずつ、片方だけなら全幅 */}
-        {(showContinue || showAssignments) && (
-          <div
-            className={cn('grid grid-cols-1 gap-4 lg:col-span-3', showContinue && showAssignments && 'lg:grid-cols-2')}
-          >
-            {showContinue && <ContinueCard resume={resume} onClear={handleClearResume} />}
-            {showAssignments && <CoachAssignmentsCard assignments={pendingAssignments} />}
+        {/* 途中の教材の再開 */}
+        {resume && (
+          <div className={HOME_LAYOUT.fullRow}>
+            <ContinueCard resume={resume} onClear={handleClearResume} />
           </div>
         )}
       </div>

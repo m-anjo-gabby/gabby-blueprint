@@ -5,6 +5,7 @@ import { ConfirmContainer } from '@gabby/lib/components/common/ConfirmContainer'
 import { ToastContainer } from '@gabby/lib/components/common/ToastContainer';
 import { loadCommonShellData } from '@gabby/lib/shell/loadCommonShellData';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
+import { isTrainingMenuEnabled } from '@gabby/lib/trainingMenu/availability';
 import { checkPendingAgreements } from '@/actions/termAction';
 import { AudioDiagnosticsReporter } from '@/components/common/AudioDiagnosticsReporter';
 import { ColorVowelLookupProvider } from '@/components/common/ColorVowelLookupProvider';
@@ -48,6 +49,7 @@ export default async function StudentAppLayout({ children }: { children: React.R
     hasLiveSession: contracts.some((c) => c.is_active),
     hasLiveSessionContract: contracts.length > 0,
     isMonitor: roles.includes('monitor'),
+    trainingMenuEnabled: isTrainingMenuEnabled(),
   };
   // ヘッダー・ナビの未読・件数はサーバーで並列に取得し、await せず Promise のまま渡す
   // （画面の表示を待たせず、ブラウザからのサーバーアクションの往復も発生させない）

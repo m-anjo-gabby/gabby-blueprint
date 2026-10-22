@@ -18,6 +18,7 @@
 --
 -- 【環境変数（このスクリプトの適用の後、Deploy の前）】
 --   admin・student に R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_VIDEO_BUCKET を追加する。
+--   student に TRAINING_MENU_ENABLED を追加する（staging は true、本番は試験運用の間 false。今日のトレーニングメニューの表示）。
 --     pnpm vercel-env --env=<staging|prod> --apply
 --
 -- 【ビデオの取り込み（Deploy の後）】
@@ -219,6 +220,7 @@ COMMIT;
 --   3. create_training_menu（その日のメニューとやることを1トランザクションで作る RPC）
 --   完了は各トレーニングの記録（self_t_sprint・student_m_video_progress）から判定し、生徒本人が completed_at だけを書く。
 --   メニューは学習の記録ではなく案内のため、教材・ビデオの削除では一緒に消す（CASCADE。実績は各トレーニングの記録に残る）。
+--   本番は試験運用の間、student の TRAINING_MENU_ENABLED=false でメニューを出さない（表は作るが行はできない）。
 --
 -- 対応ファイル:
 --   DDL/table/student_t_training_menu.sql（新規）, DDL/table/student_t_training_menu_item.sql（新規）,

@@ -11,8 +11,8 @@ export function DialoguePageHeader() {
 }
 
 /**
- * ダイアログ（課題の詳細）の読み込み中表示（loading.tsx 用）。
- * 見出しは本物、課題の概要カード（教材名・割当日・進捗）とセッションの行を骨組みにする。
+ * ダイアログ（コーチが割り当てた教材の詳細）の読み込み中表示（loading.tsx 用）。
+ * 見出しは本物、教材の概要カード（教材名・割当日・進捗）とセッションの行を骨組みにする。
  */
 export function DialogueSkeleton() {
   return (

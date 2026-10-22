@@ -1,8 +1,7 @@
-import type { DialogueAssignmentSummary } from '@gabby/types/dialogue';
+import { isTrainingMenuEnabled } from '@gabby/lib/trainingMenu/availability';
 import type { ResumeContentResponse } from '@gabby/types/training';
 import { getLatestResumeContent } from '@/actions/contentAction';
 import { getMyActivePlans, type MyPlan } from '@/actions/dashboardAction';
-import { getMyDialogueAssignments } from '@/actions/dialogueAction';
 import {
   getMyTrainingLifetimeStats,
   getUserTrainingPerformance,
@@ -14,7 +13,6 @@ import type { TodayMenuState } from '../_components/TodayMenuCard';
 import { collectActivities, getMonthKeysCoveringThisWeek, type TrainingActivity } from './weeklyActivity';
 
 export interface HomeData {
-  assignments: DialogueAssignmentSummary[];
   activities: TrainingActivity[];
   lifetimeStats: TrainingLifetimeStats | null;
   /** タイムゾーンマスタの表示名（IANA名 → 日本語名）。日付行のずれ警告で設定側の名称に使う */
@@ -23,7 +21,7 @@ export interface HomeData {
   resume: ResumeContentResponse | null;
   /** 有効な契約（利用中・開始前）。ご契約プランのカードに使う */
   plans: MyPlan[];
-  /** 今日のトレーニングメニュー（主役のカード） */
+  /** 今日のトレーニングメニュー（主役のカード）。出さない環境では null（教材・お気に入りへの案内になる） */
   todayMenu: TodayMenuState;
 }
 
@@ -31,23 +29,21 @@ export interface HomeData {
 export async function fetchHomeData(): Promise<HomeData> {
   const monthKeys = getMonthKeysCoveringThisWeek(Date.now());
 
-  const [assignments, performances, lifetimeStats, timezones, resume, plans, todayMenu] = await Promise.all([
-    getMyDialogueAssignments(),
+  const [performances, lifetimeStats, timezones, resume, plans, todayMenu] = await Promise.all([
     Promise.all(monthKeys.map((month) => getUserTrainingPerformance(month))),
     getMyTrainingLifetimeStats(),
     getTimezoneList(),
     getLatestResumeContent(),
     getMyActivePlans(),
-    getTodayTrainingMenu(),
+    isTrainingMenuEnabled() ? getTodayTrainingMenu() : null,
   ]);
 
   return {
-    assignments,
     activities: collectActivities(performances.filter((res) => res.success).map((res) => res.data)),
     lifetimeStats,
     timezoneNames: Object.fromEntries(timezones.map((tz) => [tz.timezone, tz.display_name_ja])),
     resume: resume?.com_m_contents ? resume : null,
     plans,
-    todayMenu: todayMenu.success ? todayMenu.data : 'error',
+    todayMenu: todayMenu === null ? null : todayMenu.success ? todayMenu.data : 'error',
   };
 }

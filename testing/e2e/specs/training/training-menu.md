@@ -5,7 +5,10 @@
 生徒ごと・日ごと（生徒のタイムゾーンでの日付）の自主トレーニングの「やること」の並び。その日に初めてホームを開いた時に作り、
 同じ日の中では作り直さない。中身は今は標準メニュー（旧システムのメニュー RunNow を引き継ぎ、スプリントの到達レベルと
 視聴の記録から決まりで組む）だけ。やることの完了は各トレーニングの記録から、ホームを開いた時に判定する。
-コーチからの課題（ダイアログ）・宿題はメニューに入れず、ホームの別のカードに出す。
+宿題はメニューに入れず、ホームのライブセッションのカードに出す。
+student の環境変数 `TRAINING_MENU_ENABLED` が `true` の環境（dev・staging）だけで出し、本番は試験運用の間 `false`
+（メニューを作らず、教材・お気に入りへの案内を出す。判定は `packages/lib/trainingMenu/availability.ts`、単体テストは
+`testing/unit/training-menu-availability.test.ts`）。
 
 ## 関与ロール・画面
 
@@ -17,6 +20,7 @@
 
 ## 前提条件
 
+- student の `TRAINING_MENU_ENABLED=true`（dev・staging・手元の `.env.local`）。`false`・未設定ではメニューが出ず、テストは流せない。
 - 使い捨ての生徒（`createAuthFixture` / `createDisposableStudent` / `grantAppLicense`）でログインする（メニューを作るため）。
 - 汎用スプリント（`Gabby NLT`）は顧客限定の公開のため、使い捨ての顧客に公開してから使う（`com_m_contents_access`）。
 - 発音トレーニングのビデオ（`category_id = 1`）は dev に取り込み済みのもの（全体公開）を使う。テストではメニューに入ったビデオを DB から読み、視聴の記録を作る。

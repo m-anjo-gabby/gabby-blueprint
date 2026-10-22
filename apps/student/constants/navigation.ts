@@ -16,6 +16,8 @@ export interface ShellNavContext {
   hasLiveSessionContract: boolean;
   /** モニター（顧客担当者）ロールを保持しているか */
   isMonitor: boolean;
+  /** 今日のトレーニングメニューを出す環境か（TRAINING_MENU_ENABLED）。ホームの読み込み中の骨組みの出し分けに使う */
+  trainingMenuEnabled: boolean;
 }
 
 export type ShellNavId = 'home' | 'learn' | 'live' | 'chat' | 'monitor';
@@ -48,7 +50,7 @@ export const SHELL_NAV_ITEMS: ShellNavItem[] = [
     label: 'トレーニング',
     href: '/library',
     icon: BookOpen,
-    // トレーニング記録・履歴・ダイアログ課題・ビデオ教材（シェル内のトレーニング画面）もトレーニングタブ配下として扱う
+    // トレーニング記録・履歴・ダイアログ・ビデオ教材（シェル内のトレーニング画面）もトレーニングタブ配下として扱う
     matchPaths: [
       '/library',
       '/favorites',

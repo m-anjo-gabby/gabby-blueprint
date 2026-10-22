@@ -60,17 +60,17 @@ export interface LiveSessionIntroContent {
 export const LIVE_SESSION_INTRO: LiveSessionIntroContent = {
   eyebrow: 'ライブセッション',
   title: '専属コーチと、\n話せる英語へ。',
-  lead: 'アプリでの自主トレーニングに、専属コーチとのオンラインレッスン「ライブセッション」を組み合わせたプランです。',
+  lead: 'アプリでの自主トレーニングに、専属コーチとのオンラインのセッション「ライブセッション」を組み合わせたプランです。',
   features: [
     {
       icon: UserRound,
       title: '専属コーチが担当',
-      description: 'あなたの目標とレベルに合わせて、専属のコーチがレッスンを行います。',
+      description: 'あなたの目標とレベルに合わせて、専属のコーチがライブセッションを行います。',
     },
     {
       icon: MessagesSquare,
-      title: 'レッスンと自主トレがつながる',
-      description: 'レッスン後の課題や練習にも、このアプリで取り組めます。',
+      title: 'ライブセッションと自主トレーニングがつながる',
+      description: 'ライブセッション後の宿題や練習にも、このアプリで取り組めます。',
     },
     {
       icon: Video,

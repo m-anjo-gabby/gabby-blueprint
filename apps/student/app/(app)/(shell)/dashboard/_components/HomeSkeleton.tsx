@@ -37,8 +37,11 @@ function HeroBar({ className }: { className?: string }) {
   return <div aria-hidden className={cn('animate-pulse rounded-md bg-white/15', className)} />;
 }
 
-/** 主役カード「今日のトレーニングメニュー」の骨組み（面は本番と同じブランドのグラデーション。やることは標準メニューの4件分） */
-export function TodayMenuCardSkeleton() {
+/**
+ * 主役カード「今日のトレーニングメニュー」の骨組み（面は本番と同じブランドのグラデーション。やることは標準メニューの4件分）。
+ * メニューを出さない環境（menuEnabled=false）では、教材・お気に入りへの案内の形（見出し・案内文・ボタン2つ）にする。
+ */
+export function TodayMenuCardSkeleton({ menuEnabled }: { menuEnabled: boolean }) {
   return (
     <section
       aria-hidden
@@ -51,17 +54,31 @@ export function TodayMenuCardSkeleton() {
       <div className="relative mt-2 flex h-7 items-center sm:h-8">
         <HeroBar className="h-5 w-3/4 sm:h-6" />
       </div>
-      <div className="relative mt-4">
-        <HeroBar className="h-1.5 w-full rounded-full" />
-      </div>
-      <div className="relative mt-5 space-y-2">
-        {[0, 1, 2, 3].map((i) => (
-          <HeroBar key={i} className="h-14 w-full rounded-control" />
-        ))}
-      </div>
-      <div className="relative mt-auto pt-6">
-        <HeroBar className="h-12 w-40 rounded-control" />
-      </div>
+      {menuEnabled ? (
+        <>
+          <div className="relative mt-4">
+            <HeroBar className="h-1.5 w-full rounded-full" />
+          </div>
+          <div className="relative mt-5 space-y-2">
+            {[0, 1, 2, 3].map((i) => (
+              <HeroBar key={i} className="h-14 w-full rounded-control" />
+            ))}
+          </div>
+          <div className="relative mt-auto pt-6">
+            <HeroBar className="h-12 w-40 rounded-control" />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="relative mt-2 flex h-5 items-center">
+            <HeroBar className="h-3.5 w-full max-w-md" />
+          </div>
+          <div className="relative mt-auto flex gap-3 pt-6">
+            <HeroBar className="h-12 w-36 rounded-control" />
+            <HeroBar className="h-12 w-36 rounded-control" />
+          </div>
+        </>
+      )}
     </section>
   );
 }
@@ -129,16 +146,16 @@ export function LifetimeStatsCardSkeleton({ className }: { className?: string })
 /**
  * ホーム画面の読み込み中表示（loading.tsx 用）。
  * 今日のトレーニングメニュー＋今週 / ライブセッション（ライブセッション付きの契約がある場合だけ、1行） / グループセッション（1行） / 歩み2列分＋ご契約プラン。
- * ライブセッションの有無はシェルのナビと同じ判定（ShellNavProvider）で、外側の読み込み中から本番と同じ並びにする。
+ * ライブセッションの有無と主役のカードの形はシェルのナビと同じ判定（ShellNavProvider）で、外側の読み込み中から本番と同じ並びにする。
  */
 export function HomeSkeleton() {
-  const { hasLiveSession } = useShellNavContext();
+  const { hasLiveSession, trainingMenuEnabled } = useShellNavContext();
   return (
     <RouteSkeleton className={HOME_LAYOUT.page}>
       <HomeHeaderSkeleton />
       <div className={HOME_LAYOUT.grid}>
         <div className={HOME_LAYOUT.focus}>
-          <TodayMenuCardSkeleton />
+          <TodayMenuCardSkeleton menuEnabled={trainingMenuEnabled} />
         </div>
         <WeeklyActivityCardSkeleton />
         {hasLiveSession && (

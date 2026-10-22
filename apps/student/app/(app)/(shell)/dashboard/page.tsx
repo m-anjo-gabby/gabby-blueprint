@@ -12,7 +12,7 @@ import { fetchHomeData } from './_lib/fetchHomeData';
 
 /**
  * ホーム（ダッシュボード）
- * サーバー側で今日のトレーニングメニュー・課題・今週・通算のトレーニング実績・再開情報（ブックマーク）・契約をまとめて取得する。
+ * サーバー側で今日のトレーニングメニュー・今週・通算のトレーニング実績・再開情報（ブックマーク）・契約をまとめて取得する。
  * 開くたびに取得するため、トレーニング後のメニューの完了・再開情報もそのまま反映される。
  * ライブセッションとグループセッションの区画は、区画ごとに Suspense で遅れて表示する。
  * グループセッションは全プランの生徒に出す。
@@ -21,7 +21,7 @@ import { fetchHomeData } from './_lib/fetchHomeData';
  */
 export default async function DashboardPage() {
   // 契約一覧は (app)/layout.tsx と同じ取得を使う（1リクエスト内で1回）
-  const [{ assignments, activities, lifetimeStats, timezoneNames, resume, plans, todayMenu }, liveContracts, notices] =
+  const [{ activities, lifetimeStats, timezoneNames, resume, plans, todayMenu }, liveContracts, notices] =
     await Promise.all([fetchHomeData(), getMyLiveSessionContractsCached(), getNoticesCached()]);
   // 取得順（重要→公開日の新しい順）のまま先頭を出す
   const homeNotices = (notices.success ? notices.data : []).filter((n) => n.display_mode === 'HOME' && !n.is_read);
@@ -29,7 +29,6 @@ export default async function DashboardPage() {
 
   return (
     <HomeView
-      assignments={assignments}
       activities={activities}
       lifetimeStats={lifetimeStats}
       timezoneNames={timezoneNames}

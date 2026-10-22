@@ -10,7 +10,7 @@ import type { TodayTrainingMenu, TodayTrainingMenuItem } from '@/lib/trainingMen
 import { cn } from '@/lib/utils';
 import { HeroBackdrop, ProgressBar } from './HomeCard';
 
-/** 今日のメニューの取得結果（取得に失敗した場合は 'error'。組めるやることが無い生徒は null） */
+/** 今日のメニューの取得結果（取得に失敗した場合は 'error'。メニューを出さない環境・組めるやることが無い生徒は null） */
 export type TodayMenuState = TodayTrainingMenu | null | 'error';
 
 interface TodayMenuCardProps {
@@ -67,7 +67,7 @@ function MenuItemRow({ item }: { item: TodayTrainingMenuItem }) {
 
 /**
  * ホームの主役カード「今日のトレーニングメニュー」。その日のやることを並べ、次にやることへ案内する。
- * メニューを組めない生徒（見える教材が無い等）には、教材・お気に入りへの案内を出す。
+ * メニューを出さない環境（TRAINING_MENU_ENABLED）と、メニューを組めない生徒（見える教材が無い等）には、教材・お気に入りへの案内を出す。
  */
 export function TodayMenuCard({ menu }: TodayMenuCardProps) {
   if (menu === 'error') {

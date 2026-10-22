@@ -14,7 +14,7 @@ interface HomeCardProps {
  * ホーム画面の外形（HomeView と読み込み中の HomeSkeleton で共有し、骨組み→本番で形がずれないようにする）。
  * PCで横に並ぶカードは行ごとに高さを揃える（各カードは h-full で行の高さいっぱいに広がる）。
  * モバイルも grid-cols-1（minmax(0,1fr)）を明示する。暗黙の列は中身の最小幅まで広がるため、
- * truncate した長いコーチ名・課題名が省略前の幅で列を押し広げ、画面外へはみ出してしまう
+ * truncate した長いコーチ名・教材名が省略前の幅で列を押し広げ、画面外へはみ出してしまう
  */
 export const HOME_LAYOUT = {
   page: 'space-y-6 pb-6',

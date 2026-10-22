@@ -8,6 +8,7 @@ const DEFAULT_NAV_CONTEXT: ShellNavContextValue = {
   hasLiveSession: false,
   hasLiveSessionContract: false,
   isMonitor: false,
+  trainingMenuEnabled: false,
 };
 
 const ShellNavReactContext = createContext<ShellNavContextValue>(DEFAULT_NAV_CONTEXT);

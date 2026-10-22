@@ -224,6 +224,17 @@ export const MANIFEST = [
     value: { default: 'true', prod: 'false' },
     note: '本番で受付を始めるときは prod を true に変えて --apply し、デプロイし直す（コーポレートサイトのリンクの差し替えと同じ時期に）',
   },
+  // ---------------------------------------------------------------- 今日のトレーニングメニュー
+  {
+    key: 'TRAINING_MENU_ENABLED',
+    apps: ['student'],
+    group: '今日のトレーニングメニュー',
+    description:
+      'ホームの主役に今日のトレーニングメニューを出すか（true / false）。false・未設定ならメニューを作らず、教材・お気に入りへの案内を出す。本番は試験運用の間 false',
+    validate: ['true', 'false'],
+    value: { default: 'true', prod: 'false' },
+    note: '本番で始めるときは prod を true に変えて --apply し、デプロイし直す',
+  },
   // ---------------------------------------------------------------- Cloudflare Turnstile（CAPTCHA）
   {
     key: 'NEXT_PUBLIC_TURNSTILE_SITE_KEY',

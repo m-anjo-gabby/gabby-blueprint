@@ -46,6 +46,7 @@ DB・コードの名前（`contract_type` 等）は変えずに残してよく�
 | **NLT（Neuro-Language Training）** | トレーニング・教材作成の方法論。汎用教材・コーパス教材のどちらも NLT に準拠し、ダイアログ・ビデオも NLT の考え方に基づく | Neuro-Language Training | トレーニングの区分・教材の種類の名前としての NLT | — | 確定 |
 | **自主トレーニング** | 生徒がアプリで1人で行うトレーニング | Self-training | 自主トレ・セルフトレーニング・NLT | 生徒アプリの「トレーニング」タブ | 確定 |
 | **ライブセッション** | コーチと1対1で行うオンラインのセッション | Live session | レッスン・コーチング・セッション（単独で） | `com_t_session` | 確定 |
+| **宿題** | ライブセッションの後に、コーチがセッション結果の画面で生徒へ出す指示（自由な文章・添付と、追記のフォローアップコメント）。生徒はセッション結果の画面と、ホームのライブセッションのカードの「前回の宿題」で見る | Homework | 課題（宿題の意味で） | `com_t_session_homework` / `com_t_session_homework_attachment` | 確定 |
 | **汎用教材** | 特定の顧客に依らず作った教材 | Generic content | 共通教材 | スプリントは `metadata.sprint_type = '0'`（`packages/types/content.ts`） | 確定 |
 | **コーパス教材** | 顧客の IP 資産から作った単語・フレーズに基づく教材。Blueprint の契約で使う | Corpus content | 自社教材・カスタム教材・顧客専用教材 | スプリントは `sprint_type = '1'`、ダイアログは分類 `Corpus`（`category_id = 4`） | 確定 |
 | **公開範囲：全体公開 / 顧客限定** | 教材を誰に見せるか。全体公開はすべての顧客、顧客限定は許可した顧客だけ | Public / Client-limited | クライアント限定 | `com_m_contents.content_scope`（0 / 1）、許可は `com_m_contents_access` | 確定 |
@@ -68,6 +69,7 @@ DB・コードの名前（`contract_type` 等）は変えずに残してよく�
 | admin のライブセッションの有無の選択肢（`hasCoachNo`） | 無し（Blueprintのみ）/ None (Blueprint only) | 無し（アプリのみ）/ None (App only) |
 | アプリ名（ページのタイトル・メールのテンプレート・コーチポータル名・Webトライアルの画面） | Gabby Blueprint | §5 の 1 で決まった名前 |
 | `docs/`・`testing/` の文書 | ライブ付き・ライブ契約・共通教材・顧客専用・レッスン 等 | §2・§3 の「使う言葉」 |
+| student のコーチの評価の項目の説明（`apps/student/constants/coachRating.ts`）・`packages/lib` のコメント（個別レッスンセッション・レッスン結果画面 等） | レッスン | ライブセッション |
 
 ## 5. MTG で確認する項目
 
