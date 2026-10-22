@@ -13,7 +13,7 @@ import { expect, loginAsNewStudent, test } from '../../support/studentApp.ts';
 /**
  * ホームの今日のトレーニングメニュー（機能: e2e/specs/training/training-menu.md、画面: docs/screens/student/dashboard.md）。
  * 使い捨てのアプリのみ契約の生徒（ステージ0）で、標準メニューが作られること、やることから種別・レベルを選んだ状態で
- * スプリントを開けること、各トレーニングの記録からやることが完了になることを確かめる。
+ * スプリントを開けること、ビデオをその場で再生できること、各トレーニングの記録からやることが完了になることを確かめる。
  * トレーニングの実施は音声の入出力が必要なため、記録は DB に直接作る。desktop だけで実行する。
  */
 
@@ -81,6 +81,18 @@ test.describe('使い捨てのアプリのみ契約の生徒', () => {
       .single();
     expect(menu, 'その日のメニューが1件作られる').not.toBeNull();
     const videoIds = menu!.items.flatMap((i) => (i.video_id ? [i.video_id] : []));
+
+    if (videoIds.length > 0) {
+      await test.step('ビデオを押すと画面を移らずにその場で再生し、端末の「戻る」でダイアログだけを閉じる', async () => {
+        const dialog = page.getByRole('dialog');
+        await clickUntilVisible(card.getByRole('listitem').getByRole('button').first(), dialog);
+        await expect(dialog.locator('video')).toBeVisible();
+        await page.goBack();
+        await expect(dialog).toBeHidden();
+        await expect(page).toHaveURL(/\/dashboard$/);
+        await expect(card.getByText('UG Speed Lv.1', { exact: true })).toBeVisible();
+      });
+    }
 
     await test.step('やることを押すと、その種別・レベルを選んだ状態でスプリントの選択画面が開く', async () => {
       await clickUntilVisible(

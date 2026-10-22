@@ -11,7 +11,7 @@ import { getVideoFileUrls } from '@gabby/lib/video/storage';
 import type { ActionResult, BasicErrorCode, CoreResult } from '@gabby/types/action';
 import { CONTENT_STATUS } from '@gabby/types/content';
 import type { VideoResumeMetadata } from '@gabby/types/training';
-import type { StudentVideoContent, StudentVideoProgress } from '@gabby/types/video';
+import type { StudentVideoContent, StudentVideoItem, StudentVideoProgress } from '@gabby/types/video';
 import { saveResumeContent } from './contentAction';
 
 const logger = createLogger('student');
@@ -97,6 +97,58 @@ export async function getStudentVideoContent(
     unstable_rethrow(err);
     logger.error('video:get_content_failed', getErrorMessage(err), { ...ctx, err, payload: { contentId } });
     return { success: false, errorCode: 'unexpected_error' };
+  }
+}
+
+/**
+ * ビデオ1本の再生用のデータ（ホームのその場の再生で、開いた時に取得する）。公開中の教材のビデオだけで、
+ * 見えないビデオは data が null。教材の画面と同じく、本人の権限（RLS）で読めた行にだけ署名付き URL を作る
+ */
+export async function getStudentVideo(videoId: string): Promise<ActionResult<{ data: StudentVideoItem | null }>> {
+  const ctx = await getLogContext();
+  try {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: 'ログインしてください' };
+    const supabase = await createServerClient();
+
+    const [{ data: video, error }, { data: progress, error: progressError }] = await Promise.all([
+      supabase
+        .from('com_m_video')
+        .select(
+          'video_id, title, description, duration_sec, video_path, thumbnail_path, com_m_video_section!inner(com_m_contents!inner(content_type, status))',
+        )
+        .eq('video_id', videoId)
+        .eq('com_m_video_section.com_m_contents.content_type', VIDEO_CONTENT_TYPE)
+        .eq('com_m_video_section.com_m_contents.status', CONTENT_STATUS.PUBLISHED)
+        .maybeSingle(),
+      supabase
+        .from('student_m_video_progress')
+        .select('last_position_sec, completed_at')
+        .eq('user_id', user.id)
+        .eq('video_id', videoId)
+        .maybeSingle(),
+    ]);
+    if (error) throw error;
+    if (progressError) throw progressError;
+    if (!video) return { success: true, data: null };
+
+    const urls = await getVideoFileUrls([video.video_path, video.thumbnail_path]);
+    return {
+      success: true,
+      data: {
+        video_id: video.video_id,
+        title: video.title,
+        description: video.description,
+        duration_sec: video.duration_sec,
+        video_url: urls.get(video.video_path) ?? null,
+        thumbnail_url: video.thumbnail_path ? (urls.get(video.thumbnail_path) ?? null) : null,
+        progress: progress ?? null,
+      },
+    };
+  } catch (err) {
+    unstable_rethrow(err);
+    logger.error('video:get_video_failed', getErrorMessage(err), { ...ctx, err, payload: { videoId } });
+    return { success: false, message: '動画を読み込めませんでした' };
   }
 }
 

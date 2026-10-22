@@ -72,7 +72,9 @@ PC は再生画面の右にビデオの一覧を並べ、スマホは再生画�
 ## 実装参照（エンジニア向け）
 
 - `apps/student/app/(app)/(shell)/training/video/[id]/page.tsx`（`v`・`resume`・`resume_id` から最初に開くビデオを決める）
-- `apps/student/app/(app)/(shell)/training/video/_components/VideoContentView.tsx`（再生・視聴の記録の保存・ブックマーク）
+- `apps/student/app/(app)/(shell)/training/video/_components/VideoContentView.tsx`（ビデオの切り替え・ブックマーク）
+- `apps/student/components/video/useVideoWatchProgress.ts`（続きの位置からの再生・視聴の記録の保存。ホームのその場の再生 `VideoPlayerDialog` と共用）
+- `apps/student/components/video/VideoPlayer.tsx`（再生画面・読み込めない時の案内）
 - `apps/student/app/(app)/(shell)/training/video/_components/VideoList.tsx`
 - `apps/student/app/(app)/(shell)/training/video/_components/VideoContentSkeleton.tsx`（見出し・並びの定義を本番と共有）
 - `apps/student/actions/videoAction.ts`（`getStudentVideoContent`, `saveVideoProgress`, `saveVideoBookmark`）、

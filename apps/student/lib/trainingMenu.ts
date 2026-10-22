@@ -38,6 +38,8 @@ export interface TodayTrainingMenuItem {
   itemType: TrainingMenuItemType;
   /** スプリントは「UG Speed Lv.1」、ビデオはビデオのタイトル */
   title: string;
+  /** ビデオの ID（ホームでその場で再生する。スプリントは null） */
+  videoId: string | null;
   /** ビデオの教材名（スプリントは null） */
   contentName: string | null;
   /** ビデオのサムネイルの署名付き URL（スプリント・サムネイルの無いビデオは null） */
@@ -302,6 +304,7 @@ function toViewItem(
     return {
       ...base,
       title: row.com_m_video?.title ?? '',
+      videoId: row.video_id,
       contentName: row.com_m_contents?.content_name ?? null,
       thumbnailUrl: thumbnailPath ? (thumbnailUrls.get(thumbnailPath) ?? null) : null,
       durationSec: row.com_m_video?.duration_sec ?? null,
@@ -321,6 +324,7 @@ function toViewItem(
   return {
     ...base,
     title: getSprintTitle(type, level),
+    videoId: null,
     contentName: null,
     thumbnailUrl: null,
     durationSec: null,

@@ -2,11 +2,14 @@
 
 import { ArrowRight, CheckCircle2, ChevronRight, Play } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useRef, useState } from 'react';
 import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 import { SectionLoadError } from '@gabby/lib/components/common/SectionLoadError';
 import { getContentTypeConfig, getTrainingMetricConfig, SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
 import { formatVideoDuration } from '@gabby/lib/video/format';
 import { TRAINING_MENU_ITEM_TYPE } from '@gabby/types/trainingMenu';
+import { VideoPlayerDialog } from '@/components/video/VideoPlayerDialog';
 import { LOAD_ERROR_MESSAGE, RELOAD_LABEL } from '@/constants/network';
 import type { TodayTrainingMenu, TodayTrainingMenuItem } from '@/lib/trainingMenu';
 import { cn } from '@/lib/utils';
@@ -79,8 +82,14 @@ function ItemStatus({ isCompleted }: { isCompleted: boolean }) {
   );
 }
 
+interface MenuItemProps {
+  item: TodayTrainingMenuItem;
+  /** ビデオをその場で再生する */
+  onPlay: (item: TodayTrainingMenuItem) => void;
+}
+
 /** スプリントのやること1件の行（白い面。終えたものはチェックを付けて控えめにする） */
-function SprintItemRow({ item }: { item: TodayTrainingMenuItem }) {
+function SprintItemRow({ item }: MenuItemProps) {
   const { icon: Icon, theme } = SPRINT;
   return (
     <li>
@@ -100,14 +109,14 @@ function SprintItemRow({ item }: { item: TodayTrainingMenuItem }) {
   );
 }
 
-/** ビデオのやること1件（サムネイルで中身が分かるようにし、タイトルは2行まで出す） */
-function VideoItemCard({ item }: { item: TodayTrainingMenuItem }) {
+/** ビデオのやること1件（サムネイルで中身が分かるようにし、タイトルは2行まで出す）。押すとその場で再生する */
+function VideoItemCard({ item, onPlay }: MenuItemProps) {
   const detail = [item.contentName ?? VIDEO.label, item.durationSec !== null && formatVideoDuration(item.durationSec)]
     .filter(Boolean)
     .join('・');
   return (
     <li>
-      <Link href={item.href} className={cn(itemLinkClass, 'p-2 pr-3')}>
+      <button type="button" onClick={() => onPlay(item)} className={cn(itemLinkClass, 'w-full p-2 pr-3 text-left')}>
         <span className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-control bg-canvas">
           {item.thumbnailUrl ? (
             <ExternalImage src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
@@ -134,17 +143,22 @@ function VideoItemCard({ item }: { item: TodayTrainingMenuItem }) {
           <p className="mt-0.5 truncate text-xs text-ink-muted">{detail}</p>
         </div>
         <ItemStatus isCompleted={item.isCompleted} />
-      </Link>
+      </button>
     </li>
   );
 }
 
 /**
  * ホームの主役カード「今日のトレーニングメニュー」。その日のやることをスプリント・ビデオに分けて並べ、次にやることへ案内する。
- * 見出しには今週のトレーニングの帯を添える。
+ * 見出しには今週のトレーニングの帯を添える。ビデオは画面を移らずにその場で再生し、初めて見終えたら閉じた後にメニューを取り直す。
  * メニューを出さない環境（TRAINING_MENU_ENABLED）と、メニューを組めない生徒（見える教材が無い等）には、教材・お気に入りへの案内を出す。
  */
 export function TodayMenuCard({ menu, week }: TodayMenuCardProps) {
+  const router = useRouter();
+  const [playing, setPlaying] = useState<TodayTrainingMenuItem | null>(null);
+  /** その場の再生で見終えた時の保存（閉じた後、保存を待ってからメニューを取り直して完了を反映する） */
+  const completedSave = useRef<Promise<unknown> | null>(null);
+
   if (menu === 'error') {
     return (
       <HeroFrame
@@ -195,6 +209,7 @@ export function TodayMenuCard({ menu, week }: TodayMenuCardProps) {
   const doneItems = menu.items.filter((i) => i.isCompleted).length;
   const nextItem = menu.items.find((i) => !i.isCompleted);
   const remaining = menu.items.length - doneItems;
+  const startLabel = doneItems === 0 ? 'メニューを始める' : '続きを始める';
   const groups = [
     {
       label: SPRINT_GROUP_LABEL,
@@ -229,7 +244,7 @@ export function TodayMenuCard({ menu, week }: TodayMenuCardProps) {
             <p className="mb-2 text-xs font-semibold text-brand-100">{label}</p>
             <ul className={TODAY_MENU_LAYOUT.items(groups.length)}>
               {items.map((item) => (
-                <Item key={item.itemId} item={item} />
+                <Item key={item.itemId} item={item} onPlay={setPlaying} />
               ))}
             </ul>
           </div>
@@ -237,9 +252,14 @@ export function TodayMenuCard({ menu, week }: TodayMenuCardProps) {
       </div>
 
       <div className={TODAY_MENU_LAYOUT.actions}>
-        {nextItem ? (
+        {nextItem?.videoId ? (
+          <button type="button" onClick={() => setPlaying(nextItem)} className={primaryLinkClass}>
+            {startLabel}
+            <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        ) : nextItem ? (
           <Link href={nextItem.href} className={primaryLinkClass}>
-            {doneItems === 0 ? 'メニューを始める' : '続きを始める'}
+            {startLabel}
             <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
         ) : (
@@ -251,6 +271,23 @@ export function TodayMenuCard({ menu, week }: TodayMenuCardProps) {
           教材を選ぶ
         </Link>
       </div>
+
+      <VideoPlayerDialog
+        target={
+          playing?.videoId
+            ? { videoId: playing.videoId, title: playing.title, subtitle: playing.contentName, href: playing.href }
+            : null
+        }
+        onClose={() => {
+          setPlaying(null);
+          const saved = completedSave.current;
+          completedSave.current = null;
+          if (saved) void saved.then(() => router.refresh());
+        }}
+        onCompleted={(saved) => {
+          completedSave.current = saved;
+        }}
+      />
     </HeroFrame>
   );
 }
