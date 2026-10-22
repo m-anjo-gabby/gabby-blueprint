@@ -1,16 +1,16 @@
 'use client';
 
-import { TrainingMetricIcon } from '@/components/common/TrainingMetricIcon';
 import { RouteSkeleton } from '@/components/shell/RouteLoading';
 import { useShellNavContext } from '@/components/shell/ShellNavContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { WEEKDAY_LABELS } from '../_lib/weeklyActivity';
 import { HeroBackdrop, HOME_LAYOUT, HomeCard } from './HomeCard';
 import { HomeEventCardSkeleton } from './HomeEventCard';
 import { LIFETIME_ITEMS, LIFETIME_LAYOUT, LifetimeBlock } from './LifetimeStatsCard';
 import { LiveSessionCardSkeleton } from './LiveSessionCard';
 import { PlanCardSkeleton } from './PlanCard';
+import { TODAY_MENU_LAYOUT } from './TodayMenuCard';
+import { WeekStripSkeleton } from './WeekStrip';
 
 /*
  * ホーム画面の骨組み。各カードの見出し・曜日などデータに依存しない部分は本物を描き、数値や文言だけを骨組みにする。
@@ -38,74 +38,61 @@ function HeroBar({ className }: { className?: string }) {
 }
 
 /**
- * 主役カード「今日のトレーニングメニュー」の骨組み（面は本番と同じブランドのグラデーション。やることは標準メニューの4件分）。
- * メニューを出さない環境（menuEnabled=false）では、教材・お気に入りへの案内の形（見出し・案内文・ボタン2つ）にする。
+ * 主役カード「今日のトレーニングメニュー」の骨組み（面・今週の帯の見出し・曜日は本物。やることは標準メニューの
+ * スプリント2件・ビデオ2件の2列）。メニューを出さない環境（menuEnabled=false）では、教材・お気に入りへの案内の形
+ * （見出し・案内文・ボタン2つ）にする。
  */
 export function TodayMenuCardSkeleton({ menuEnabled }: { menuEnabled: boolean }) {
   return (
-    <section
-      aria-hidden
-      className="relative flex h-full flex-col overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 shadow-md shadow-brand/15"
-    >
+    <section aria-hidden className={TODAY_MENU_LAYOUT.frame}>
       <HeroBackdrop />
-      <div className="relative flex h-4 items-center">
-        <HeroBar className="h-3 w-40" />
-      </div>
-      <div className="relative mt-2 flex h-7 items-center sm:h-8">
-        <HeroBar className="h-5 w-3/4 sm:h-6" />
+      <div className={TODAY_MENU_LAYOUT.header}>
+        <div className={TODAY_MENU_LAYOUT.heading}>
+          <div className="flex h-4 items-center">
+            <HeroBar className="h-3 w-40" />
+          </div>
+          <div className="mt-2 flex h-7 items-center sm:h-8">
+            <HeroBar className="h-5 w-3/4 sm:h-6" />
+          </div>
+          {menuEnabled ? (
+            <div className="mt-4 flex h-11 items-center">
+              <HeroBar className="h-1 w-full rounded-full" />
+            </div>
+          ) : (
+            <div className="mt-2 flex h-5 items-center">
+              <HeroBar className="h-3.5 w-full max-w-md" />
+            </div>
+          )}
+        </div>
+        <WeekStripSkeleton />
       </div>
       {menuEnabled ? (
         <>
-          <div className="relative mt-4">
-            <HeroBar className="h-1.5 w-full rounded-full" />
-          </div>
-          <div className="relative mt-5 space-y-2">
-            {[0, 1, 2, 3].map((i) => (
-              <HeroBar key={i} className="h-14 w-full rounded-control" />
+          <div className={TODAY_MENU_LAYOUT.groups(2)}>
+            {[0, 1].map((group) => (
+              <div key={group} className="min-w-0">
+                <div className="mb-2 flex h-4 items-center">
+                  <HeroBar className="h-3 w-16" />
+                </div>
+                <div className={TODAY_MENU_LAYOUT.items(2)}>
+                  {[0, 1].map((i) => (
+                    <HeroBar key={i} className="h-17.5 w-full rounded-control" />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
-          <div className="relative mt-auto pt-6">
+          <div className={TODAY_MENU_LAYOUT.actions}>
             <HeroBar className="h-12 w-40 rounded-control" />
           </div>
         </>
       ) : (
-        <>
-          <div className="relative mt-2 flex h-5 items-center">
-            <HeroBar className="h-3.5 w-full max-w-md" />
-          </div>
-          <div className="relative mt-auto flex gap-3 pt-6">
-            <HeroBar className="h-12 w-36 rounded-control" />
-            <HeroBar className="h-12 w-36 rounded-control" />
-          </div>
-        </>
+        <div className={TODAY_MENU_LAYOUT.actions}>
+          <HeroBar className="h-12 w-36 rounded-control" />
+          <HeroBar className="h-12 w-36 rounded-control" />
+        </div>
       )}
     </section>
-  );
-}
-
-/** 「今週のトレーニング」の骨組み（曜日・発話の見出しは本物） */
-export function WeeklyActivityCardSkeleton() {
-  return (
-    <HomeCard title="今週のトレーニング" action={{ label: '記録を見る', href: '/training/performance' }}>
-      <div className="flex h-9 items-center">
-        <Skeleton className="h-7 w-36" />
-      </div>
-
-      <ol className="mt-4 grid grid-cols-7 gap-1.5">
-        {WEEKDAY_LABELS.map((label) => (
-          <li key={label} className="flex flex-col items-center gap-1.5">
-            <Skeleton className="size-8 rounded-full" />
-            <span className="text-[11px] text-ink-muted">{label}</span>
-          </li>
-        ))}
-      </ol>
-
-      <div className="mt-4 flex items-center gap-1.5 border-t border-line pt-3 text-sm text-ink-muted">
-        <TrainingMetricIcon metric="speech" />
-        今週の発話
-        <Skeleton className="ml-auto h-4 w-10" />
-      </div>
-    </HomeCard>
   );
 }
 
@@ -145,7 +132,7 @@ export function LifetimeStatsCardSkeleton({ className }: { className?: string })
 
 /**
  * ホーム画面の読み込み中表示（loading.tsx 用）。
- * 今日のトレーニングメニュー＋今週 / ライブセッション（ライブセッション付きの契約がある場合だけ、1行） / グループセッション（1行） / 歩み2列分＋ご契約プラン。
+ * 今日のトレーニングメニュー（今週の帯を含む） / ライブセッション（ライブセッション付きの契約がある場合だけ、1行） / グループセッション（1行） / 歩み2列分＋ご契約プラン。
  * ライブセッションの有無と主役のカードの形はシェルのナビと同じ判定（ShellNavProvider）で、外側の読み込み中から本番と同じ並びにする。
  */
 export function HomeSkeleton() {
@@ -154,10 +141,9 @@ export function HomeSkeleton() {
     <RouteSkeleton className={HOME_LAYOUT.page}>
       <HomeHeaderSkeleton />
       <div className={HOME_LAYOUT.grid}>
-        <div className={HOME_LAYOUT.focus}>
+        <div className={HOME_LAYOUT.fullRow}>
           <TodayMenuCardSkeleton menuEnabled={trainingMenuEnabled} />
         </div>
-        <WeeklyActivityCardSkeleton />
         {hasLiveSession && (
           <div className={HOME_LAYOUT.fullRow}>
             <LiveSessionCardSkeleton />

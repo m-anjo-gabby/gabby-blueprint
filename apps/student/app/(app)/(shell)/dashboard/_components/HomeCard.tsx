@@ -20,11 +20,9 @@ export const HOME_LAYOUT = {
   page: 'space-y-6 pb-6',
   header: 'space-y-1 px-1',
   grid: 'grid grid-cols-1 gap-4 lg:grid-cols-3',
-  /** 主役カード「今日のトレーニングメニュー」の区画 */
-  focus: 'lg:col-span-2',
   /** 2列分のカード（ご契約プランと並ぶ「これまでの歩み」） */
   wide: 'lg:col-span-2',
-  /** 1行を占めるカード（ライブセッション、グループセッション、ご契約プランが無い場合の「これまでの歩み」） */
+  /** 1行を占めるカード（今日のトレーニングメニュー、ライブセッション、グループセッション、ご契約プランが無い場合の「これまでの歩み」） */
   fullRow: 'lg:col-span-3',
 } as const;
 
@@ -51,8 +49,6 @@ export function HomeCard({ title, action, className, children }: HomeCardProps) 
 
 const PROGRESS_TONES = {
   brand: { track: 'h-1.5 bg-canvas', bar: 'bg-brand' },
-  /** ブランドのグラデーション面の上 */
-  light: { track: 'h-1.5 bg-white/25', bar: 'bg-white' },
   /** 淡い下地（canvas）の上に置く補助的な進捗（節目までの進み具合等） */
   subtle: { track: 'h-1 bg-line', bar: 'bg-brand-500' },
 } as const;

@@ -1,99 +1,185 @@
 'use client';
 
-import { ArrowRight, CheckCircle2, ChevronRight } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ChevronRight, Play } from 'lucide-react';
 import Link from 'next/link';
+import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 import { SectionLoadError } from '@gabby/lib/components/common/SectionLoadError';
 import { getContentTypeConfig, getTrainingMetricConfig, SPRINT_MODE_LABEL } from '@gabby/lib/content/ui';
+import { formatVideoDuration } from '@gabby/lib/video/format';
 import { TRAINING_MENU_ITEM_TYPE } from '@gabby/types/trainingMenu';
 import { LOAD_ERROR_MESSAGE, RELOAD_LABEL } from '@/constants/network';
 import type { TodayTrainingMenu, TodayTrainingMenuItem } from '@/lib/trainingMenu';
 import { cn } from '@/lib/utils';
-import { HeroBackdrop, ProgressBar } from './HomeCard';
+import { HeroBackdrop } from './HomeCard';
+import { MenuProgressTrack } from './MenuProgressTrack';
+import { WeekStrip, type WeekSummary } from './WeekStrip';
 
 /** 今日のメニューの取得結果（取得に失敗した場合は 'error'。メニューを出さない環境・組めるやることが無い生徒は null） */
 export type TodayMenuState = TodayTrainingMenu | null | 'error';
 
 interface TodayMenuCardProps {
   menu: TodayMenuState;
+  /** 今週の実績（現在時刻の確定前は null で骨組みにする） */
+  week: WeekSummary | null;
 }
 
 const SPRINT = getTrainingMetricConfig('sprint');
 const VIDEO = getContentTypeConfig(1);
+const SPRINT_GROUP_LABEL = getContentTypeConfig(2).label;
 
 const primaryLinkClass =
   'group inline-flex h-12 items-center gap-2 rounded-control bg-white px-6 text-sm font-bold text-brand shadow-sm hover:bg-brand-soft active:scale-[0.98] transition-all';
 const secondaryLinkClass =
   'inline-flex h-12 items-center rounded-control border border-white/30 px-5 text-sm font-semibold text-white hover:bg-white/10 active:scale-[0.98] transition-all';
+/** やること1件の面。スプリントの行もサムネイルのあるビデオ（サムネイル＋上下の余白）と同じ高さにそろえる */
+const itemLinkClass =
+  'group flex min-h-17.5 items-center gap-3 rounded-control bg-white text-ink shadow-xs hover:bg-brand-soft transition-colors';
 
-function HeroFrame({ children }: { children: React.ReactNode }) {
+/**
+ * 主役カードの外形（本番と骨組みで共有する）。見出しの右（lg未満は下）に今週の帯を置き、その下にやること・ボタンを並べる。
+ * ホームの1行を占め、やることの数で高さが変わっても隣のカードを引き伸ばさない
+ */
+export const TODAY_MENU_LAYOUT = {
+  frame: 'relative overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 text-white shadow-md shadow-brand/15',
+  header: 'relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between',
+  heading: 'min-w-0 flex-1',
+  /** スプリントとビデオの区画（両方ある時は md 以上で2列。片方だけの時は区画の中のやることを2列にする） */
+  groups: (groupCount: number) =>
+    cn('relative mt-6 grid grid-cols-1 gap-x-4 gap-y-5', groupCount > 1 && 'md:grid-cols-2'),
+  items: (groupCount: number) => cn('grid grid-cols-1 gap-2', groupCount === 1 && 'md:grid-cols-2'),
+  actions: 'relative mt-6 flex flex-wrap items-center gap-3',
+} as const;
+
+function HeroFrame({
+  week,
+  heading,
+  children,
+}: {
+  week: WeekSummary | null;
+  heading: React.ReactNode;
+  children?: React.ReactNode;
+}) {
   return (
-    <section className="relative flex h-full flex-col overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 text-white shadow-md shadow-brand/15">
+    <section className={TODAY_MENU_LAYOUT.frame}>
       <HeroBackdrop />
+      <div className={TODAY_MENU_LAYOUT.header}>
+        <div className={TODAY_MENU_LAYOUT.heading}>{heading}</div>
+        <WeekStrip week={week} />
+      </div>
       {children}
     </section>
   );
 }
 
-/** やること1件の行（白い面。終えたものはチェックを付けて控えめにする） */
-function MenuItemRow({ item }: { item: TodayTrainingMenuItem }) {
-  const isSprint = item.itemType === TRAINING_MENU_ITEM_TYPE.SPRINT;
-  const { icon: Icon, theme } = isSprint ? SPRINT : VIDEO;
-  const detail = isSprint
-    ? `${SPRINT_MODE_LABEL.sprint} ${item.doneCount} / ${item.targetCount}回`
-    : `${VIDEO.label}${item.contentName ? `・${item.contentName}` : ''}`;
+function ItemStatus({ isCompleted }: { isCompleted: boolean }) {
+  return isCompleted ? (
+    <CheckCircle2 size={20} className="shrink-0 text-emerald-500" aria-label="完了" />
+  ) : (
+    <ChevronRight size={18} className="shrink-0 text-ink-subtle group-hover:text-ink-muted transition-colors" />
+  );
+}
 
+/** スプリントのやること1件の行（白い面。終えたものはチェックを付けて控えめにする） */
+function SprintItemRow({ item }: { item: TodayTrainingMenuItem }) {
+  const { icon: Icon, theme } = SPRINT;
   return (
     <li>
-      <Link
-        href={item.href}
-        className="group flex items-center gap-3 rounded-control bg-white px-3 py-2.5 text-ink shadow-xs hover:bg-brand-soft transition-colors"
-      >
-        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-control', theme.iconTile)}>
-          <Icon size={17} />
+      <Link href={item.href} className={cn(itemLinkClass, 'px-3 py-2')}>
+        <div className={cn('flex size-11 shrink-0 items-center justify-center rounded-control', theme.iconTile)}>
+          <Icon size={20} />
         </div>
         <div className="min-w-0 flex-1">
           <p className={cn('truncate text-sm font-bold', item.isCompleted && 'text-ink-muted')}>{item.title}</p>
-          <p className="truncate text-xs text-ink-muted">{detail}</p>
+          <p className="truncate text-xs text-ink-muted">
+            {`${SPRINT_MODE_LABEL.sprint} ${item.doneCount} / ${item.targetCount}回`}
+          </p>
         </div>
-        {item.isCompleted ? (
-          <CheckCircle2 size={20} className="shrink-0 text-emerald-500" aria-label="完了" />
-        ) : (
-          <ChevronRight size={18} className="shrink-0 text-ink-subtle group-hover:text-ink-muted transition-colors" />
-        )}
+        <ItemStatus isCompleted={item.isCompleted} />
+      </Link>
+    </li>
+  );
+}
+
+/** ビデオのやること1件（サムネイルで中身が分かるようにし、タイトルは2行まで出す） */
+function VideoItemCard({ item }: { item: TodayTrainingMenuItem }) {
+  const detail = [item.contentName ?? VIDEO.label, item.durationSec !== null && formatVideoDuration(item.durationSec)]
+    .filter(Boolean)
+    .join('・');
+  return (
+    <li>
+      <Link href={item.href} className={cn(itemLinkClass, 'p-2 pr-3')}>
+        <span className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-control bg-canvas">
+          {item.thumbnailUrl ? (
+            <ExternalImage src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className={cn('flex h-full w-full items-center justify-center', VIDEO.theme.iconTile)}>
+              <VIDEO.icon size={18} aria-hidden />
+            </span>
+          )}
+          {!item.isCompleted && (
+            <span className="absolute inset-0 flex items-center justify-center bg-ink/20 text-white">
+              <Play size={18} fill="currentColor" aria-hidden />
+            </span>
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              'line-clamp-2 text-sm font-bold leading-snug wrap-anywhere',
+              item.isCompleted && 'text-ink-muted',
+            )}
+          >
+            {item.title}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-ink-muted">{detail}</p>
+        </div>
+        <ItemStatus isCompleted={item.isCompleted} />
       </Link>
     </li>
   );
 }
 
 /**
- * ホームの主役カード「今日のトレーニングメニュー」。その日のやることを並べ、次にやることへ案内する。
+ * ホームの主役カード「今日のトレーニングメニュー」。その日のやることをスプリント・ビデオに分けて並べ、次にやることへ案内する。
+ * 見出しには今週のトレーニングの帯を添える。
  * メニューを出さない環境（TRAINING_MENU_ENABLED）と、メニューを組めない生徒（見える教材が無い等）には、教材・お気に入りへの案内を出す。
  */
-export function TodayMenuCard({ menu }: TodayMenuCardProps) {
+export function TodayMenuCard({ menu, week }: TodayMenuCardProps) {
   if (menu === 'error') {
     return (
-      <HeroFrame>
-        <p className="relative text-xs font-semibold tracking-wide text-brand-100">今日のトレーニングメニュー</p>
-        <SectionLoadError
-          message={LOAD_ERROR_MESSAGE}
-          retryLabel={RELOAD_LABEL}
-          className="relative mt-4 border-solid border-transparent bg-surface"
-        />
-      </HeroFrame>
+      <HeroFrame
+        week={week}
+        heading={
+          <>
+            <p className="text-xs font-semibold tracking-wide text-brand-100">今日のトレーニングメニュー</p>
+            <SectionLoadError
+              message={LOAD_ERROR_MESSAGE}
+              retryLabel={RELOAD_LABEL}
+              className="mt-4 border-solid border-transparent bg-surface"
+            />
+          </>
+        }
+      />
     );
   }
 
   if (!menu) {
     return (
-      <HeroFrame>
-        <p className="relative text-xs font-semibold tracking-wide text-brand-100">今日のトレーニング</p>
-        <h2 className="relative mt-2 text-xl sm:text-2xl font-bold leading-snug tracking-tight">
-          今日も少しだけ、英語に触れましょう
-        </h2>
-        <p className="relative mt-2 text-sm text-white/85">
-          教材を選んでトレーニングを始めましょう。お気に入りからの復習もおすすめです。
-        </p>
-        <div className="relative mt-auto flex flex-wrap items-center gap-3 pt-6">
+      <HeroFrame
+        week={week}
+        heading={
+          <>
+            <p className="text-xs font-semibold tracking-wide text-brand-100">今日のトレーニング</p>
+            <h2 className="mt-2 text-xl sm:text-2xl font-bold leading-snug tracking-tight">
+              今日も少しだけ、英語に触れましょう
+            </h2>
+            <p className="mt-2 text-sm text-white/85">
+              教材を選んでトレーニングを始めましょう。お気に入りからの復習もおすすめです。
+            </p>
+          </>
+        }
+      >
+        <div className={TODAY_MENU_LAYOUT.actions}>
           <Link href="/library" className={primaryLinkClass}>
             教材を選ぶ
             <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
@@ -109,29 +195,48 @@ export function TodayMenuCard({ menu }: TodayMenuCardProps) {
   const doneItems = menu.items.filter((i) => i.isCompleted).length;
   const nextItem = menu.items.find((i) => !i.isCompleted);
   const remaining = menu.items.length - doneItems;
+  const groups = [
+    {
+      label: SPRINT_GROUP_LABEL,
+      items: menu.items.filter((i) => i.itemType === TRAINING_MENU_ITEM_TYPE.SPRINT),
+      Item: SprintItemRow,
+    },
+    {
+      label: VIDEO.label,
+      items: menu.items.filter((i) => i.itemType === TRAINING_MENU_ITEM_TYPE.VIDEO),
+      Item: VideoItemCard,
+    },
+  ].filter((g) => g.items.length > 0);
 
   return (
-    <HeroFrame>
-      <div className="relative flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold tracking-wide text-brand-100">今日のトレーニングメニュー</p>
-        <span className="shrink-0 text-xs font-semibold text-brand-100">
-          {doneItems} / {menu.items.length} 完了
-        </span>
-      </div>
-      <h2 className="relative mt-2 text-xl sm:text-2xl font-bold leading-snug tracking-tight">
-        {menu.isCompleted ? '今日のメニューを達成しました' : `あと${remaining}つで今日のメニューを達成`}
-      </h2>
-      <div className="relative mt-4">
-        <ProgressBar percent={(doneItems / menu.items.length) * 100} tone="light" />
-      </div>
-
-      <ul className="relative mt-5 space-y-2">
-        {menu.items.map((item) => (
-          <MenuItemRow key={item.itemId} item={item} />
+    <HeroFrame
+      week={week}
+      heading={
+        <>
+          <p className="text-xs font-semibold tracking-wide text-brand-100">今日のトレーニングメニュー</p>
+          <h2 className="mt-2 text-xl sm:text-2xl font-bold leading-snug tracking-tight">
+            {menu.isCompleted ? '今日のメニューを達成しました' : `あと${remaining}つで今日のメニューを達成`}
+          </h2>
+          <div className="mt-4">
+            <MenuProgressTrack doneCount={doneItems} total={menu.items.length} />
+          </div>
+        </>
+      }
+    >
+      <div className={TODAY_MENU_LAYOUT.groups(groups.length)}>
+        {groups.map(({ label, items, Item }) => (
+          <div key={label} className="min-w-0">
+            <p className="mb-2 text-xs font-semibold text-brand-100">{label}</p>
+            <ul className={TODAY_MENU_LAYOUT.items(groups.length)}>
+              {items.map((item) => (
+                <Item key={item.itemId} item={item} />
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
 
-      <div className="relative mt-auto flex flex-wrap items-center gap-3 pt-6">
+      <div className={TODAY_MENU_LAYOUT.actions}>
         {nextItem ? (
           <Link href={nextItem.href} className={primaryLinkClass}>
             {doneItems === 0 ? 'メニューを始める' : '続きを始める'}

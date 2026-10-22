@@ -14,6 +14,7 @@ import {
   type TrainingMenuFacts,
 } from '@gabby/lib/trainingMenu/progress';
 import { buildStandardMenu, type StandardMenuVideoCandidate } from '@gabby/lib/trainingMenu/standardMenu';
+import { getVideoFileUrls } from '@gabby/lib/video/storage';
 import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
 import { CONTENT_STATUS } from '@gabby/types/content';
 import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
@@ -39,6 +40,10 @@ export interface TodayTrainingMenuItem {
   title: string;
   /** ビデオの教材名（スプリントは null） */
   contentName: string | null;
+  /** ビデオのサムネイルの署名付き URL（スプリント・サムネイルの無いビデオは null） */
+  thumbnailUrl: string | null;
+  /** ビデオの再生時間（秒。スプリント・未計測は null） */
+  durationSec: number | null;
   doneCount: number;
   targetCount: number;
   isCompleted: boolean;
@@ -56,7 +61,7 @@ export interface TodayTrainingMenu {
 }
 
 const MENU_ITEM_SELECT =
-  'item_id, seq_no, item_type, content_id, video_id, question_type, difficulty_level, target_count, completed_at, com_m_contents(content_name), com_m_video(title)';
+  'item_id, seq_no, item_type, content_id, video_id, question_type, difficulty_level, target_count, completed_at, com_m_contents(content_name), com_m_video(title, duration_sec, thumbnail_path)';
 
 /**
  * 今日のトレーニングメニュー（ホームの主役）。その日に初めて開いた時は標準メニューを組んで作る。
@@ -84,7 +89,11 @@ export async function getTodayTrainingMenu(): Promise<CoreResult<{ data: TodayTr
       if (!menu) throw new Error(`Created training menu was not readable: ${menuId}`);
     }
 
-    const facts = await collectFacts(supabase, user.id, menu.items, menuDate, timezone, now);
+    const [facts, thumbnailUrls] = await Promise.all([
+      collectFacts(supabase, user.id, menu.items, menuDate, timezone, now),
+      // 本人の権限で読めたメニューのビデオのサムネイルにだけ署名付き URL を作る（docs/SECURITY.md 4章）
+      getVideoFileUrls(menu.items.map((i) => i.com_m_video?.thumbnail_path)),
+    ]);
     const items = menu.items.map((item) => {
       const progress = resolveTrainingMenuItemProgress(item, facts);
       // 一度終えたやることは、後で記録の日付がずれても（タイムゾーンの変更等）完了のままにする
@@ -105,7 +114,7 @@ export async function getTodayTrainingMenu(): Promise<CoreResult<{ data: TodayTr
         menuId: menu.menu_id,
         menuDate,
         isCompleted: items.every((i) => i.isCompleted),
-        items: items.map(({ row, doneCount, isCompleted }) => toViewItem(row, doneCount, isCompleted)),
+        items: items.map(({ row, doneCount, isCompleted }) => toViewItem(row, doneCount, isCompleted, thumbnailUrls)),
       },
     };
   } catch (err) {
@@ -281,13 +290,21 @@ async function markCompleted(supabase: ServerClient, menu: MenuRow, itemIds: str
   }
 }
 
-function toViewItem(row: MenuItemRow, doneCount: number, isCompleted: boolean): TodayTrainingMenuItem {
+function toViewItem(
+  row: MenuItemRow,
+  doneCount: number,
+  isCompleted: boolean,
+  thumbnailUrls: Map<string, string>,
+): TodayTrainingMenuItem {
   const base = { itemId: row.item_id, itemType: row.item_type, doneCount, targetCount: row.target_count, isCompleted };
   if (row.item_type === TRAINING_MENU_ITEM_TYPE.VIDEO && row.video_id) {
+    const thumbnailPath = row.com_m_video?.thumbnail_path;
     return {
       ...base,
       title: row.com_m_video?.title ?? '',
       contentName: row.com_m_contents?.content_name ?? null,
+      thumbnailUrl: thumbnailPath ? (thumbnailUrls.get(thumbnailPath) ?? null) : null,
+      durationSec: row.com_m_video?.duration_sec ?? null,
       href: `/training/video/${row.content_id}?v=${row.video_id}`,
     };
   }
@@ -305,6 +322,8 @@ function toViewItem(row: MenuItemRow, doneCount: number, isCompleted: boolean): 
     ...base,
     title: getSprintTitle(type, level),
     contentName: null,
+    thumbnailUrl: null,
+    durationSec: null,
     href: `/training/sprint/play?${params.toString()}`,
   };
 }

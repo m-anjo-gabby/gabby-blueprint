@@ -18,12 +18,11 @@ import type { TrainingLifetimeStats } from '@/actions/performanceAction';
 import { buildCurrentWeek, resolveStreakDays, type TrainingActivity } from '../_lib/weeklyActivity';
 import { ContinueCard } from './ContinueCard';
 import { HOME_LAYOUT } from './HomeCard';
-import { HomeHeaderSkeleton, WeeklyActivityCardSkeleton } from './HomeSkeleton';
+import { HomeHeaderSkeleton } from './HomeSkeleton';
 import { LifetimeStatsCard } from './LifetimeStatsCard';
 import { PlanCard } from './PlanCard';
 import { TodayDateLine } from './TodayDateLine';
 import { TodayMenuCard, type TodayMenuState } from './TodayMenuCard';
-import { WeeklyActivityCard } from './WeeklyActivityCard';
 
 interface HomeViewProps {
   /** 今週を含む月のトレーニング実績（実施日時と件数）。今週の実施日数・発話回数の算出に使う */
@@ -56,7 +55,7 @@ const getGreeting = (hour: number) => {
 
 /**
  * ホーム画面。
- * 1行目に今日のトレーニングメニュー（主役）と今週のトレーニング、続けて「これからの予定」としてライブセッション（契約がある場合だけ）とグループセッションを1行ずつ、
+ * 1行目に今日のトレーニングメニュー（主役。見出しに今週のトレーニングの帯を添える）、続けて「これからの予定」としてライブセッション（契約がある場合だけ）とグループセッションを1行ずつ、
  * その下にこれまでの歩みとご契約プラン、最後に「続きから」を並べる（モバイル=1列、PC(lg以上)=3列グリッド）。
  * プランによる違いはライブセッションの行の有無だけにする。トレーニングの各画面への入口はシェルのトレーニングタブ（TrainingSectionNav）が受け持つ。
  * 現在時刻の確定前（初回表示のハイドレーション時）は、時刻に依存する部分を loading.tsx と同じ骨組みで描く。
@@ -129,20 +128,12 @@ export function HomeView({
       {noticeCard}
 
       <div className={HOME_LAYOUT.grid}>
-        <div className={HOME_LAYOUT.focus}>
-          <TodayMenuCard menu={todayMenu} />
-        </div>
-
-        {week ? (
-          <WeeklyActivityCard
-            days={week.days}
-            activeCount={week.activeCount}
-            assessmentCount={week.assessmentCount}
-            streakDays={streakDays}
+        <div className={HOME_LAYOUT.fullRow}>
+          <TodayMenuCard
+            menu={todayMenu}
+            week={week && { days: week.days, activeCount: week.activeCount, streakDays }}
           />
-        ) : (
-          <WeeklyActivityCardSkeleton />
-        )}
+        </div>
 
         {/* 2行目以降: これからの予定。ライブセッション（契約がある場合だけ）とグループセッションをそれぞれ1行で縦に並べる（全幅にするとカード内の区画が横に並び、各カードが低くなる） */}
         {liveSection && <div className={HOME_LAYOUT.fullRow}>{liveSection}</div>}
