@@ -43,9 +43,11 @@ const itemLinkClass =
  * ホームの1行を占め、やることの数で高さが変わっても隣のカードを引き伸ばさない
  */
 export const TODAY_MENU_LAYOUT = {
-  frame: 'relative overflow-hidden rounded-card bg-brand-hero p-6 sm:p-8 text-white shadow-md shadow-brand/15',
-  header: 'relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between',
-  heading: 'min-w-0 flex-1',
+  frame: 'relative isolate overflow-hidden rounded-card p-6 sm:p-8 text-white shadow-md shadow-brand/15',
+  /** PC（今週の帯と横並び）は見出しの列を帯と同じ高さに伸ばし、進み具合を列の下端（帯の下端の高さ）に置く */
+  header: 'relative flex flex-col gap-5 lg:flex-row lg:items-stretch lg:justify-between',
+  heading: 'flex min-w-0 flex-1 flex-col',
+  progress: 'mt-4 lg:mt-auto lg:pt-6',
   /** スプリントとビデオの区画（両方ある時は md 以上で2列。片方だけの時は区画の中のやることを2列にする） */
   groups: (groupCount: number) =>
     cn('relative mt-6 grid grid-cols-1 gap-x-4 gap-y-5', groupCount > 1 && 'md:grid-cols-2'),
@@ -232,7 +234,7 @@ export function TodayMenuCard({ menu, week }: TodayMenuCardProps) {
           <h2 className="mt-2 text-xl sm:text-2xl font-bold leading-snug tracking-tight">
             {menu.isCompleted ? '今日のメニューを達成しました' : `あと${remaining}つで今日のメニューを達成`}
           </h2>
-          <div className="mt-4">
+          <div className={TODAY_MENU_LAYOUT.progress}>
             <MenuProgressTrack doneCount={doneItems} total={menu.items.length} />
           </div>
         </>

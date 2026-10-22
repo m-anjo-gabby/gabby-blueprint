@@ -55,8 +55,10 @@ export function TodayMenuCardSkeleton({ menuEnabled }: { menuEnabled: boolean })
             <HeroBar className="h-5 w-3/4 sm:h-6" />
           </div>
           {menuEnabled ? (
-            <div className="mt-4 flex h-11 items-center">
-              <HeroBar className="h-1 w-full rounded-full" />
+            <div className={TODAY_MENU_LAYOUT.progress}>
+              <div className="flex h-11 items-center">
+                <HeroBar className="h-1 w-full rounded-full" />
+              </div>
             </div>
           ) : (
             <div className="mt-2 flex h-5 items-center">

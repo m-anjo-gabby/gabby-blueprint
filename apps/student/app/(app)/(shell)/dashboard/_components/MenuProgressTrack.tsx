@@ -94,18 +94,24 @@ export function MenuProgressTrack({ doneCount, total }: MenuProgressTrackProps) 
 
       {!isCompleted && (
         <div className={cn('pointer-events-none absolute top-1/2', TRACK_INSET_CLASS)}>
+          {/*
+           * 走る人は白の形だけにし（白い丸の印と見分けるため）、線の上に立たせる（線と重ねると足元が線に溶ける）。
+           * 中心合わせ・跳ねる動きに transform / translate を使わない（iPhone の Safari は transform の掛かった要素を
+           * 別の層で描き、止まった後にその範囲が背景のグラデーションと違う色の四角に見える）。幅の半分の負の余白で中心に合わせ、
+           * 跳ねる動きは下の余白で付ける
+           */}
           <motion.span
-            className="absolute top-0 -translate-x-1/2 -translate-y-1/2"
+            className="absolute bottom-0.5 -ml-3 sm:-ml-4"
             initial={{ left: '0%' }}
             animate={{ left: positionOf(runnerAt, total) }}
             transition={runTransition}
           >
             <motion.span
-              className="flex size-7 items-center justify-center rounded-full bg-white text-brand shadow-md sm:size-9"
-              animate={reduceMotion ? undefined : { y: [0, -3, 0] }}
+              className="block text-white"
+              animate={reduceMotion ? undefined : { marginBottom: [0, 3, 0] }}
               transition={bobTransition}
             >
-              <RunnerFigure className="size-5 sm:size-6" />
+              <RunnerFigure shadow className="size-6 sm:size-8" />
             </motion.span>
           </motion.span>
         </div>

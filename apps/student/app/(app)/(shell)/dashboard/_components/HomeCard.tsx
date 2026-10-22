@@ -68,13 +68,15 @@ export function ProgressBar({ percent, tone = 'brand' }: { percent: number; tone
 }
 
 /**
- * 主役カード（ブランドのグラデーション面）の背景の装飾。本番と骨組みで共有する。
+ * 主役カードの背景（ブランドのグラデーション面と装飾）。本番と骨組みで共有する。
  * 右下から広がる同心円（発話の広がり）を白で薄く重ね、右上に明るい青の光を置いて奥行きを出す。
  * 親は relative + overflow-hidden、手前の中身は relative にする。
+ * 背景は独立した層（transform-gpu）にまとめ、一度描いたら描き直さない。iPhone の Safari はグラデーションを部分的に
+ * 描き直すと少し濃い色になり、手前で動くもの（進み具合の走る人）の跡が濃い青の筋・四角に見えるため
  */
 export function HeroBackdrop() {
   return (
-    <>
+    <div aria-hidden className="pointer-events-none absolute inset-0 transform-gpu bg-brand-hero">
       <svg
         aria-hidden
         viewBox="0 0 560 560"
@@ -88,6 +90,6 @@ export function HeroBackdrop() {
         ))}
       </svg>
       <div className="pointer-events-none absolute -top-30 right-20 size-70 rounded-full bg-brand-400/35 blur-3xl" />
-    </>
+    </div>
   );
 }
