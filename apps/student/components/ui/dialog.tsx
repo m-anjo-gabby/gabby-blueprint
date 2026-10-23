@@ -50,7 +50,8 @@ const DialogContent = React.forwardRef<
       }}
       className={cn(
         // 中身が画面の高さを超えたら、ダイアログの中でスクロールする（画面の外へはみ出して閉じられなくなるのを防ぐ）
-        'outline-none fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
+        // grid-cols-1: 列を明示しないと、1行で省略する長い値（プルダウンの選択値等）の省略前の幅まで中身が広がり、右端を突き抜ける
+        'outline-none fixed left-[50%] top-[50%] z-50 grid grid-cols-1 w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
         className,
       )}
       {...props}

@@ -53,7 +53,8 @@ const DialogContent = React.forwardRef<
         // max-w(各ダイアログで個別指定)未満の場合に左右マージンが一切無くなり、
         // ダイアログが画面端まで広がってしまう(内部コンテンツが右端に押し込まれる形で発覚)。
         // 最低限の左右余白(片側1rem)を保証する。max-wはこれまで通り各ダイアログ側で上書きされる。
-        'outline-none fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg',
+        // grid-cols-1: 列を明示しないと、1行で省略する長い値（プルダウンの選択値等）の省略前の幅まで中身が広がり、右端を突き抜ける
+        'outline-none fixed left-[50%] top-[50%] z-50 grid grid-cols-1 w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg',
         className,
       )}
       {...props}
