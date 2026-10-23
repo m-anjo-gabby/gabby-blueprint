@@ -40,7 +40,9 @@ test.beforeEach(async ({}, testInfo) => {
   contentIds = [];
 });
 
-test.afterEach(async () => {
+test.afterEach(async ({}, testInfo) => {
+  // beforeEach で飛ばしたテストでも afterEach は走るため、準備をしていないプロジェクトでは後始末しない
+  if (testInfo.project.name !== 'desktop') return;
   // 視聴の記録が残っているとビデオを消せないため、生徒を先に消す
   await cleanupAuthFixture(fixture);
   fixture = undefined;

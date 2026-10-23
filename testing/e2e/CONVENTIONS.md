@@ -176,6 +176,7 @@ E2E 実行自体はトークンを消費しない。消費するのは結果・�
 
 - 使い捨ての顧客・ユーザーは `support/authFixtures.ts`（`createAuthFixture` / `createDisposableCoach`）で作り、`cleanupAuthFixture` で消す。業務の記録（セッション・担当枠・チケット・ライセンス・評価・担当関係等）は `deleteBusinessRecords` が参照する側から順に消す（`fn_purge_client` と同じ順序）。
 - `createAuthFixture` の接頭辞は英小文字だけにする（タグの先頭に `e2e` が付き、残骸の確認が `e2e<英小文字><数字>-` で探す）。
+- `beforeEach` の `test.skip` で飛ばしたテストでも `afterEach` は走る。準備（クライアント・フィクスチャの作成）を `beforeEach` で行う場合、`afterEach` は同じ条件で抜けるか、準備したものの有無を確かめてから後始末する（準備の無い変数を使うと、飛ばしたはずのプロジェクトで失敗になる。例: `tests/admin/video-editor.spec.ts`）。
 - 後始末の失敗は警告だけでテストは成功する。テストを足した・変えた後と、外部キーの `ON DELETE` を変えた後は、`pnpm exec tsx e2e/support/authFixtures.leftovers.ts` で残骸が0件かを確かめる（`--delete` で片付ける）。
 - `com_m_user` を参照するテーブル・トリガー、業務の記録のテーブル（`RESTRICT` で参照するもの）を追加したら、同じタスクで `deleteBusinessRecords`・`authFixtures.leftovers.ts`・`fn_purge_client` に削除の順序を足す。
 - テストから実JWTでデータを書き換えた後のログアウトは `signOutRole`（`scope: 'local'`）。既定の `signOut()`（global）は同じユーザーのブラウザ・保存済みのログイン状態まで切る。
