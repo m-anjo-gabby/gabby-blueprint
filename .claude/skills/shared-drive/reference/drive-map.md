@@ -45,7 +45,9 @@ A_開発の各フォルダの細かい使い方はまだ決めていない（HIS
 | 30_機能の説明 | `1T8ab5be_KVo9denslezn3cykUlMRE90M` | 機能ごとの「できること・できないこと」 |
 | 40_検討中の提案 | `1Hl23mvC--PD4l5AK9SCiq2f7ZXwQ8Cj9` | 判断をお願いしている案 |
 | 50_リリース情報 | `1g7AA-mLxDcHscS3jyplwQMNnuaE0Y92h` | リリースごとの変更内容（変更概要資料のPDF） |
-| 60_メール文面 | `1IB0X9BVsT_ozIGQ6RYWk6B7RYCBIU0VS` | アプリが送るメールの一覧（メール文面カタログのPDF） |
+| 60_アプリの文言 | `1IB0X9BVsT_ozIGQ6RYWk6B7RYCBIU0VS` | アプリが出す文言の一覧と、運営に文言を確かめてもらう一覧（題材ごとにフォルダ） |
+| 60_…/メール文面 | `1hugnsBcTmUyjak1p_AEYkaG3pfSdRQS1` | アプリが送るメールの一覧（メール文面カタログのPDF） |
+| 60_…/発話評価コメント | `1pdfH4dUKPtbvijlsdF8vcSs8_VrVJTAL` | 発話の評価のコメントの確認の一覧（xlsx。`speech-feedback` スキル） |
 | 70_要望・不具合の受付 | `1Gs5vpWWA5XvgzTSmXxeZGdrNg51y2qLF` | 受付フォームと受付台帳 |
 | 70_…/補足資料 | `1YFgRw0w1khdTwulxnB4IqXYn8U3lGhZO` | 起票者がスクリーンショット・ログを1件1フォルダで置く |
 | 80_システム移行 | `1E7oZfksdbUcLP-KRz8rA_Bf2F7JN12tB` | 旧システムからの移行で運営に確認してもらう資料（題材ごとにフォルダ） |
@@ -59,10 +61,15 @@ A_開発の各フォルダの細かい使い方はまだ決めていない（HIS
 | はじめにお読みください | ドキュメント | `13uTP3XkhEPljGRRCc2DAANNuyjB_42u9qadbXxT2gS8` | 00 フォルダ。タブは `t.0` の1つ、ページなし形式 |
 | Gabby Blueprint 要望・不具合の受付 | フォーム | `1DLcRf7JdhzHgwfEAXP1jS5XCMI8wH8UosVaW6dUfdsg` | 70 フォルダ。回答用は `…/forms/d/<ID>/viewform` |
 | ビデオ教材 確認表 | スプレッドシート | `17YISzHc4ZlHLixTPLZ7fMVdRUr2pjv8v3rIaokRljM4` | 80_…/ビデオ教材。タブ: 説明・教材一覧・セクション一覧（sheetId 2）・ビデオ一覧（sheetId 3）。リポジトリの `scripts/video-import/catalog.json` から作り、回答は開発チームが catalog.json に反映する |
+| 発話評価コメント一覧_YYYYMMDD.xlsx | Excel | 例: `1QqhUP7f90SW-Ira_gZjyQB017ObolfVH`（20261023） | 60_…/発話評価コメント。`scripts/speech-feedback/review_xlsx.py` で作り、運営が「修正案」を書いたものを G: から `apply_xlsx.py` で取り込む。Googleスプレッドシートに変えない（取り込めなくなる） |
 | 要望・不具合の受付台帳 | スプレッドシート | `1zDKOht5jWxq0nEdvuMbDDf9KR5FkijE7aoW3wpPUOkI` | 70 フォルダ。シート「受付台帳」（sheetId `1156693813`） |
 
-## 共有ドライブ直下（A/B の外）
+## C_教材制作（コンテンツチームと開発チーム）
 
-| フォルダ | ID | 備考 |
+`10IZhnEa-ls1KfxbkTqkJVkL5XTgCdp_X`（旧 `11_教材データ管理`。ID は同じ）
+
+| フォルダ | ID | 役割 |
 |---|---|---|
-| 11_教材データ管理 | `10IZhnEa-ls1KfxbkTqkJVkL5XTgCdp_X` | 整備前からあるフォルダ（CV辞書・スプリント教材の受け渡し。`cv-dictionary-tsv` スキルの作業で使う）。A/B のどちらに入れるかは未決 |
+| 10_教材データ | `14VGrg_kXpTHlq4R9wX5d8ZAVf3kwt_0L` | 教材の受け渡し。回ごとに `YYYYMMDD_顧客名` のフォルダ（元データ・変換したTSV/CSV・辞書の作業フォルダ） |
+| 20_CV辞書 | `1i5XSWV4gtr_-IbMmwzd1jqvuTutzMk8q` | CV辞書の確認依頼・補正結果の Excel（顧客をまたぐ1つの辞書のため、回のフォルダに置かずここに集める。`cv-dictionary-tsv` スキル） |
+| 30_変換ツール | `1r3VOS636bLVZ7PMcDqwqiaCKquC_doIr` | 変換ブック（.xlsm）・データ連携フォーマットの見本の最新版。回のフォルダの変換ブックはその回の控え |

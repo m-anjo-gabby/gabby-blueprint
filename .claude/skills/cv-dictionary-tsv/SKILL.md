@@ -95,7 +95,7 @@ npx tsx .claude/skills/cv-dictionary-tsv/scripts/ledger.ts sync --work "<作業�
 python .claude/skills/cv-dictionary-tsv/scripts/review_xlsx.py --dict "<辞書TSV>" [--out "<出力xlsx>"] [--title "<表題（例: セブン＆アイ様向け Lv1）>"] [--title-en "<英語の表題（例: Seven & i Lv1）>"] [--all-pending]
 ```
 
-- 既定の出力先は辞書TSVと同じフォルダの `<辞書TSV名>_確認依頼.xlsx`。表題は顧客名・レベルが分かるものを `--title` / `--title-en` で渡す。
+- 既定の出力先は辞書TSVと同じフォルダの `<辞書TSV名>_確認依頼.xlsx`。共有ドライブでコンテンツチームに渡す場合は `C_教材制作/20_CV辞書` に置く（補正結果サマリーも同じ。`shared-drive` スキルの drive-map.md）。表題は顧客名・レベルが分かるものを `--title` / `--title-en` で渡す。
 - 日英併記の書き方: 「はじめに」は日本語・英語を別の列、①②の本文は同じセルの上段に日本語・下段に英語（間に薄い破線）、
   ③登録データ一覧は見出しだけ併記（データ部は日本語のまま）。補正結果サマリーも同じ部品（`review_xlsx.py` の `bi()` 等）を使う。
 - 回答欄の選択肢は「日本語 / English」の1つの文言（`ANS_POLICY` / `ANS_WORD`、方針は `options` と `options_en` を組み合わせる）。
