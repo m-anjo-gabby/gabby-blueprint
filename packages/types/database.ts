@@ -1769,7 +1769,6 @@ export type Database = {
       com_t_admin_impersonation_log: {
         Row: {
           admin_id: string | null
-          expires_at: string | null
           impersonation_id: string
           reason: string
           redeemed_at: string | null
@@ -1778,7 +1777,6 @@ export type Database = {
         }
         Insert: {
           admin_id?: string | null
-          expires_at?: string | null
           impersonation_id?: string
           reason: string
           redeemed_at?: string | null
@@ -1787,7 +1785,6 @@ export type Database = {
         }
         Update: {
           admin_id?: string | null
-          expires_at?: string | null
           impersonation_id?: string
           reason?: string
           redeemed_at?: string | null

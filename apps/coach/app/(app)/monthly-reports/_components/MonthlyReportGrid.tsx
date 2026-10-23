@@ -47,7 +47,7 @@ export function MonthlyReportGrid({ report }: { report: CoachMonthlyReport }) {
   if (report.students.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-200 py-12 text-center text-sm text-slate-400">
-        No students with an active contract this month.
+        No students with an active contract or sessions this month.
       </div>
     );
   }

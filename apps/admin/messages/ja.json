@@ -407,7 +407,8 @@
       "title": "代理ログイン",
       "warning": "{name} さんとして{portal}に実際にログインします。画面上の操作は全て本人の操作として実際に反映されるため、障害対応・問合せ調査の範囲に限定して利用してください。実行内容は監査ログに記録されます。",
       "reasonLabel": "実行理由（チケット番号・問合せ内容等）",
-      "reasonPlaceholder": "例: サポートチケット #1234 の画面表示不具合の調査のため",
+      "reasonPlaceholder": "例: サポートチケット #1234 の画面表示不具合の調査のため（氏名・メールアドレスは書かない）",
+      "endNote": "代理ログインに時間の制限はありません。調査が終わったら、開いたタブでログアウトしてください。ログアウトするまでの操作は代理ログインとして記録されます。",
       "openPortal": "{portal}を開く",
       "toastOpened": "代理ログイン用のタブを開きました",
       "toastFailed": "代理ログインの開始に失敗しました"
@@ -1161,6 +1162,7 @@
       "totalSessionsLabel": "総セッション数: ",
       "breakdownLabel": "（完了 {completed}・12時間以内キャンセル {lateCancel}・No Show {noShow}）",
       "approveBlockedTooltip": "終了処理未実施のセッションが残っているため承認できません",
+      "approveFutureMonthTooltip": "今月より後の月は承認できません",
       "approveButton": "承認する",
       "revokeButton": "承認を取り消す",
       "revokeConfirmTitle": "承認を取り消しますか？",
@@ -1170,6 +1172,7 @@
       "confirmRevoke": "取り消す",
       "confirmApprove": "承認する",
       "unresolvedWarning": "終了処理未実施のセッションが{count}件あります。承認前に該当セッションの終了処理を完了してください。",
+      "changedSinceApprovalWarning": "承認の後にセッションの件数が変わっています（今の件数: 合計 {total}・完了 {completed}・12時間以内キャンセル {lateCancel}・No Show {noShow}）。請求書・支払通知書は承認時の件数のままです。今の件数で支払う場合は、承認を取り消してから承認し直してください。",
       "timezoneNote": "※セッション数はコーチのタイムゾーン（{timezone}）を基準に日付を集計しています。",
       "toastApproved": "月次レポートを承認しました",
       "toastRevoked": "承認を取り消しました",
@@ -1197,7 +1200,7 @@
     "grid": {
       "studentColumn": "生徒",
       "totalColumn": "合計",
-      "noStudents": "対象月に有効契約を持つ生徒がいません。"
+      "noStudents": "対象月に有効な契約またはセッションのある生徒がいません。"
     },
     "exportCsv": {
       "button": "CSV出力"
@@ -1208,6 +1211,8 @@
     "errors": {
       "fetchFailed": "レポートの取得に失敗しました。",
       "unfinishedSessions": "終了処理未実施のセッションが残っているため承認できません。先に該当セッションの終了処理を完了してください。",
+      "futureMonth": "今月より後の月は承認できません。",
+      "alreadyApproved": "この月はすでに承認されています。画面を更新してください。",
       "approveFailed": "承認に失敗しました。",
       "unapproveFailed": "承認の取消しに失敗しました。"
     }

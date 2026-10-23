@@ -1,11 +1,14 @@
 import { CalendarCheck, Download, TriangleAlert } from 'lucide-react';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
+import { getApprovedCounts, getCurrentCounts } from '@gabby/lib/monthlyReport/reportCounts';
 import { type CoachMonthlyReport } from '@gabby/types/monthlyReport';
 
 /** timezoneName: コーチのタイムゾーンのマスタの表示名（例: "Japan (Tokyo)"） */
 export function SummaryCard({ report, timezoneName }: { report: CoachMonthlyReport; timezoneName: string }) {
   const isApproved = report.approval?.status === 2;
   const hasUnresolved = report.unresolved_count > 0;
+  // 承認済みの月は支払通知書と同じ承認時点の件数を出す
+  const counts = getApprovedCounts(report.approval) ?? getCurrentCounts(report);
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
@@ -27,11 +30,10 @@ export function SummaryCard({ report, timezoneName }: { report: CoachMonthlyRepo
         )}
 
         <span className="text-sm text-slate-500">
-          Total sessions: <span className="font-bold text-slate-800">{report.grand_total}</span>
+          Total sessions: <span className="font-bold text-slate-800">{counts.total}</span>
           <span className="text-xs text-slate-400">
             {' '}
-            (Completed {report.completed_count} &middot; Late cancel {report.late_cancel_count} &middot; No-show{' '}
-            {report.no_show_count})
+            (Completed {counts.completed} &middot; Late cancel {counts.late_cancel} &middot; No-show {counts.no_show})
           </span>
         </span>
 

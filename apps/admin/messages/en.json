@@ -407,7 +407,8 @@
       "title": "Log in as user",
       "warning": "You are about to actually log in to the {portal} as {name}. All on-screen actions will be reflected as if performed by this user, so please use this only for incident response or support investigations. This action will be recorded in the audit log.",
       "reasonLabel": "Reason (ticket number, inquiry details, etc.)",
-      "reasonPlaceholder": "e.g. Investigating a display issue reported in support ticket #1234",
+      "reasonPlaceholder": "e.g. Investigating a display issue reported in support ticket #1234 (do not include names or email addresses)",
+      "endNote": "There is no time limit. When you finish, log out in the opened tab. Everything until you log out is recorded as a login-as-user session.",
       "openPortal": "Open {portal}",
       "toastOpened": "Opened a tab for logging in as the user",
       "toastFailed": "Failed to start the login-as-user session"
@@ -1161,6 +1162,7 @@
       "totalSessionsLabel": "Total sessions: ",
       "breakdownLabel": " (Completed {completed} · Cancelled within 12h {lateCancel} · No-show {noShow})",
       "approveBlockedTooltip": "Cannot approve while there are sessions with unresolved completion",
+      "approveFutureMonthTooltip": "Months after the current month cannot be approved",
       "approveButton": "Approve",
       "revokeButton": "Revoke approval",
       "revokeConfirmTitle": "Revoke this approval?",
@@ -1170,6 +1172,7 @@
       "confirmRevoke": "Revoke",
       "confirmApprove": "Approve",
       "unresolvedWarning": "There {count, plural, one {is # session} other {are # sessions}} with unresolved completion. Please complete the wrap-up for those sessions before approving.",
+      "changedSinceApprovalWarning": "Session counts have changed since approval (current: total {total}, completed {completed}, late cancel {lateCancel}, no show {noShow}). The invoice and pay notice keep the counts at approval. To pay on the current counts, revoke the approval and approve again.",
       "timezoneNote": "* Session counts are aggregated by date in the coach's timezone ({timezone}).",
       "toastApproved": "Monthly report approved",
       "toastRevoked": "Approval revoked",
@@ -1197,7 +1200,7 @@
     "grid": {
       "studentColumn": "Student",
       "totalColumn": "Total",
-      "noStudents": "No students have an active contract for this month."
+      "noStudents": "No students have an active contract or sessions for this month."
     },
     "exportCsv": {
       "button": "Export CSV"
@@ -1208,6 +1211,8 @@
     "errors": {
       "fetchFailed": "Failed to load the report.",
       "unfinishedSessions": "Cannot approve because some sessions have not been ended. End those sessions first.",
+      "futureMonth": "Months after the current month cannot be approved.",
+      "alreadyApproved": "This month has already been approved. Please refresh the page.",
       "approveFailed": "Failed to approve.",
       "unapproveFailed": "Failed to cancel the approval."
     }

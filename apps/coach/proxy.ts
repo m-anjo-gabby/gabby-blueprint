@@ -1,11 +1,10 @@
 // apps/coach/proxy.ts
 import { type NextRequest } from 'next/server';
 import {
-  decodeImpersonationCookie,
   IMPERSONATION_COOKIE_NAME,
   IMPERSONATION_REQUEST_HEADER_ADMIN_ID,
   IMPERSONATION_REQUEST_HEADER_ID,
-  isImpersonationExpired,
+  resolveImpersonation,
 } from '@gabby/lib/impersonation';
 import { createRequestLogger } from '@gabby/lib/logger';
 import {
@@ -21,31 +20,19 @@ import { USER_TYPES } from '@gabby/types/user';
 import { canAccessPath } from './lib/navigation';
 
 export async function proxy(req: NextRequest) {
-  const { res, user, userType, roles, requestId, supabase } = await createSupabaseProxy(req);
+  const { res, user, userType, roles, requestId } = await createSupabaseProxy(req);
   const { pathname } = req.nextUrl;
   const loginPath = '/login';
   const dashboardPath = '/dashboard';
 
   const logger = createRequestLogger('coach', req, requestId);
 
-  // --- 代理ログインセッションのTTLチェック ---
-  // Cookieは非表示(httpOnly)のためコーチUIには一切影響しない。ログのタグ付けと、
-  // 一定時間経過後の自動サインアウトのためだけに使用する。
-  const impersonation = decodeImpersonationCookie(req.cookies.get(IMPERSONATION_COOKIE_NAME)?.value);
+  // --- 代理ログイン ---
+  // Cookieは非表示(httpOnly)のためコーチUIには一切影響しない。ログに代理ログインの相関情報を付けるためだけに使う。
+  // 期限は無く、管理者がログアウトするまで続く。ログイン中の本人への代理ログインの Cookie だけを使う。
+  const impersonation = resolveImpersonation(req.cookies.get(IMPERSONATION_COOKIE_NAME)?.value, user?.id);
 
-  if (user && impersonation && isImpersonationExpired(impersonation)) {
-    logger.warn('proxy:impersonation_expired', `Impersonation session expired (User ID: ${user.id})`, {
-      userId: user.id,
-      payload: { impersonationId: impersonation.id, adminId: impersonation.adminId },
-    });
-
-    await supabase.auth.signOut();
-    const expiredResponse = redirectAndClearSession(req, loginPath);
-    expiredResponse.cookies.delete(IMPERSONATION_COOKIE_NAME);
-    return expiredResponse;
-  }
-
-  if (user && impersonation) {
+  if (impersonation) {
     // Server Action / Server Component側で headers() 経由で取得し、ログに相関情報として付与する
     res.headers.set(IMPERSONATION_REQUEST_HEADER_ID, impersonation.id);
     res.headers.set(IMPERSONATION_REQUEST_HEADER_ADMIN_ID, impersonation.adminId);

@@ -17,12 +17,15 @@
 
 ## 前提条件
 
-- 縦軸の生徒: そのコーチと担当の関係（`com_m_coach_student_relationship`。コーチ交代後も行は残る）があり、対象月と期間が重なる
-  有効なライセンス（`com_t_user_license.status=1`）を、有効な契約（`com_m_contract.status=1`）で持つ生徒。
+- 縦軸の生徒（`get_coach_monthly_active_students`）: 次のどちらかに当たる生徒。
+  - そのコーチと担当の関係（`com_m_coach_student_relationship`。コーチ交代後も行は残る）があり、対象月と期間が重なる
+    有効なライセンス（`com_t_user_license.status=1`）を、有効な契約（`com_m_contract.status=1`）で持つ生徒。
+  - 対象月にこのコーチとの件数に入る・未処理のセッションがある生徒（月の途中でライセンスを停止した・契約を解約した生徒も、
+    実施したセッションは合計・承認・支払額に入る）。
 - 単価: 承認の時点で最新の `com_m_session_pay_rate`（`/payment-settings`）を承認の行に写す。
 - コーチ名: PDF は正式な氏名（`com_m_user_legal`、未登録なら画面の名前）。
-- E2E は固定のコーチ（[FIXTURES.md](../../../FIXTURES.md)）の過去の月に使い捨てのセッションを作り、承認・取り消しの後に承認の行・通知・
-  セッションを削除する（固定データの承認状態を変えない）。
+- E2E は使い捨てのコーチ・生徒（`createPendingMatchingRequest`）のセッションで承認・取り消しを行い、後始末で承認の行ごと消す
+  （固定データの承認状態を変えない）。
 
 ## 集計の規則（`get_coach_monthly_sessions` が唯一の実装）
 
@@ -44,14 +47,19 @@
 1. コーチが終了したセッションを End Session で確定する（[session-completion.md](../session-lifecycle/session-completion.md)）。
    未処理が残る日はコーチの画面で黄（amber）、アドミンの画面で黄のセルになり、詳細から終了処理の画面へ移れる。
 2. アドミンが `/monthly-reports` でコーチと月を選ぶ。月の指定が無ければ、そのコーチのタイムゾーンでの今月を開く。
-3. 未処理が0件なら「承認する」が押せる。確認の上で承認すると（`approve_coach_monthly_report`）:
+3. 未処理が0件で、今月以前（コーチのタイムゾーン）の未承認の月なら「承認する」が押せる（セッションが0件の月・今月の途中も承認できる）。
+   確認の上で承認すると（`approve_coach_monthly_report`）:
    - 承認の行（`com_t_coach_monthly_report_approval`、コーチ×月で1行）が `status=2` になり、件数のスナップショット
-     （合計と生徒ごとの件数）・単価・通貨・承認者・承認日時を記録する。
+     （合計・内訳〔完了・12時間以内キャンセル・No Show〕・生徒ごとの件数）・単価・通貨・承認者・承認日時を記録する。
    - コーチに通知 `COACH_REPORT_APPROVED`（リンクは `/monthly-reports?month=YYYY-MM`）が届き、メールの配信の対象になる
      （[mail-dispatch.md](../notification/mail-dispatch.md)。区分の配信停止に従う）。
-4. 承認済みの月は、アドミンに「請求書(INVOICE)PDF」、コーチに「Download Pay Notice (PDF)」が出る。金額は「承認時の単価 × 画面の合計件数」。
+4. 承認済みの月は、アドミンに「請求書(INVOICE)PDF」、コーチに「Download Pay Notice (PDF)」が出る。PDF の件数・内訳は承認時の
+   スナップショット、金額は「承認時の単価 × 承認時の合計件数」で、承認後にセッションの記録が変わっても変わらない。
    請求書番号は対象月とコーチから決まり、何度ダウンロードしても同じ（`buildInvoiceNumber.ts`）。
-5. 誤って承認した場合、アドミンが「承認を取り消す」と（`revoke_coach_monthly_report_approval`）、承認の行が `status=1` に戻って
+   承認済みの月の画面の合計・内訳（アドミンの承認バー・コーチの Summary）も承認時の件数を出す（表のセルは今の記録）。
+5. 承認後にアドミンが実施結果を修正する（`admin_correct_session_outcome`）等で今の件数・内訳が承認時と違ってくると、アドミンの承認バーに
+   今の件数を添えた警告を出す。今の件数で支払う場合は、承認を取り消してから承認し直す（コーチには取り消し・承認の通知が届く）。
+6. 誤って承認した場合、アドミンが「承認を取り消す」と（`revoke_coach_monthly_report_approval`）、承認の行が `status=1` に戻って
    スナップショット・単価・承認者・承認日時が空になり、コーチに通知 `COACH_REPORT_APPROVAL_REVOKED` が届く。PDF は出なくなる。
 
 ## 異常系・バリデーション一覧
@@ -59,23 +67,14 @@
 | # | 条件 | 期待結果 | 発生層 |
 |---|---|---|---|
 | 1 | 未処理（予定のまま終了時刻を過ぎた）セッションが1件以上ある月を承認 | 「承認する」が押せず、理由のツールチップと警告文を出す。RPC も `unresolved session(s) remain` で拒否（`unresolved_sessions_exist`） | 両方 |
+| 1b | コーチのタイムゾーンで今月より後の月を承認 | 「承認する」が押せない（ツールチップ）。RPC も `cannot approve a future month` で拒否（`future_month`） | 両方 |
+| 1c | 承認済みの月をもう一度承認（二重送信・別の画面から） | RPC が `already approved` で拒否（`already_approved`。スナップショット・承認日時を上書きせず、通知も送らない）。画面では承認済みの月に「承認する」を出さない | RPC |
 | 2 | 承認されていない月の承認を取り消す | `this monthly report is not approved` で拒否（`not_actionable`）。画面では未承認の月に取り消しのボタンを出さない | RPC（UI導線なし） |
 | 3 | システム管理者以外（コンテンツ管理者・コーチ・生徒）が承認・取り消し・アドミンのレポート取得 | アクションの先頭の `requireAdminRole(SYSTEM_ADMIN_ONLY)` で止める。RPC も JWT がシステム管理者でなければ `not authorized` で拒否 | 両方 |
 | 4 | コーチが他のコーチのレポート（`get_coach_monthly_sessions` / `get_coach_monthly_active_students`）を取得 | `not authorized to view this coach's monthly report` で拒否（本人かアドミンだけ） | RPC（UI導線なし） |
 | 5 | 承認されていない月の PDF（`/api/monthly-reports/invoice`・`/pay-notice`）を直接開く | 403 を返す（PDF は承認済み `status=2` のみ。請求書はシステム管理者だけ、支払通知書はログイン中のコーチ本人の月だけ） | Route Handler |
-| 6 | 対象月に縦軸の生徒が0人 | 「対象月に有効契約を持つ生徒がいません。」（コーチは英語）。CSV 出力は押せない | UI |
+| 6 | 対象月に縦軸の生徒が0人 | 「対象月に有効な契約またはセッションのある生徒がいません。」（コーチは英語）。CSV 出力は押せない | UI |
 | 7 | 月の境界（コーチのタイムゾーンで月末 23:30 開始のセッション） | コーチのタイムゾーンの月に入る（日本時間の月ではない） | RPC |
-
-### 今の動作で確認が必要な点（仕様として決まっていない）
-
-- **承認後の件数の変化と PDF の金額**: 承認後にアドミンが実施結果を修正（`admin_correct_session_outcome`）しても、承認のスナップショットは
-  変わらない（関数の注記どおり）。一方、PDF の金額・件数はスナップショットではなく、開いた時点の画面の合計件数で計算するため、
-  承認後の修正で「PAID」と印字した金額が変わる。スナップショットは保存するだけで、画面・PDF のどこにも使っていない。
-- **縦軸に出ない生徒のセッション**: 月の途中でライセンスを停止した・契約を解約（`status=9`）した生徒は縦軸に出ず、画面の合計件数・PDF の
-  金額に入らない。一方、内訳（完了・12時間以内キャンセル・No Show）と承認のスナップショットはその生徒のセッションも数えるため、
-  合計と内訳の和が合わない場合がある。
-- **承認できる月**: 未来の月・セッションが0件の月も承認できる（未処理の有無だけを見る）。承認済みの月をもう一度承認すると、
-  スナップショット・単価・承認日時を上書きし、通知をもう一度送る（画面では承認済みの月に「承認する」を出さない）。
 
 ## 関連RPC・テーブル
 
@@ -85,7 +84,8 @@
 - 実装参照: `packages/lib/monthlyReport/actions/monthlyReportActions.ts`（取得・承認・取り消しの共通部分。アドミンからは service_role で
   呼ぶため、認可はアクション側の `requireAdminRole`）、`packages/lib/monthlyReport/buildInvoiceNumber.ts`、`apps/admin/lib/pdf/InvoiceDocument.tsx`、
   `apps/coach/lib/pdf/PayNoticeDocument.tsx`
-- 単体テスト: `testing/unit/invoice-number.test.ts`
+- 実装参照（件数）: `packages/lib/monthlyReport/reportCounts.ts`（承認時の件数・今の件数・変化の判定・今月より後の月の判定）
+- 単体テスト: `testing/unit/invoice-number.test.ts`, `testing/unit/monthly-report-counts.test.ts`
 - 用語（status値等）: [_GLOSSARY.md](../_GLOSSARY.md)
 
 ## E2Eテストケース候補
@@ -93,7 +93,9 @@
 | 優先度 | シナリオ | 概要 |
 |---|---|---|
 | 高 | 未処理があると承認できない | 過去の月に予定のまま終了したセッションを作り、「承認する」が押せないこと・警告文。コーチが End Session で確定すると押せるようになる（異常系1） |
-| 高 | 承認と取り消し | 承認でコーチに通知が届き、コーチの画面が「Approved」と支払通知書のリンクになる。取り消しで「Not yet reviewed」に戻り PDF が出なくなる（フロー3〜5） |
+| 高 | 承認の件数の固定・承認後の変化・取り消しと承認し直し | 実装済み: `e2e/tests/admin/monthly-report-approval.spec.ts`（フロー3〜6・異常系1b・1c。スナップショットの合計・内訳、承認後の変化の警告、請求書の取得、取り消して承認し直すと今の件数） |
+| 高 | 承認と取り消しのコーチの画面 | 承認でコーチに通知が届き、コーチの画面が「Approved」と支払通知書のリンクになる。取り消しで「Not yet reviewed」に戻り PDF が出なくなる |
+| 中 | 縦軸に出る生徒 | 月の途中でライセンスを停止した生徒のセッションが縦軸に出て、合計・スナップショットに入る（前提条件） |
 | 高 | 集計の規則 | 完了・早期終了・欠席・12時間以内キャンセル・返還ありのキャンセルを1件ずつ作り、合計・内訳・セルの色が上の表どおり（表） |
 | 中 | 権限 | コンテンツ管理者は画面・アクションを使えない。コーチの JWT で他のコーチの `get_coach_monthly_sessions` を呼ぶと拒否（異常系3・4） |
 | 中 | 月の境界 | コーチのタイムゾーン（`America/New_York` 等）で月末の夜のセッションがその月に入る（異常系7） |

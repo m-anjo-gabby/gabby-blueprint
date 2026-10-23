@@ -37,18 +37,13 @@ export async function MonthlyReportSection({ coachId, yearMonth, coachName }: Mo
       <ApprovalControlBar
         coachId={coachId}
         reportMonth={yearMonth}
-        grandTotal={result.report.grand_total}
-        completedCount={result.report.completed_count}
-        lateCancelCount={result.report.late_cancel_count}
-        noShowCount={result.report.no_show_count}
-        unresolvedCount={result.report.unresolved_count}
+        report={result.report}
         coachTimezoneName={pickTimezoneName(
           result.report.coach_timezone,
           timezoneNames.get(result.report.coach_timezone),
           'display',
           locale === 'en' ? 'en' : 'ja',
         )}
-        approval={result.report.approval}
       />
       <div className="flex justify-end gap-2">
         {result.report.approval?.status === 2 && (

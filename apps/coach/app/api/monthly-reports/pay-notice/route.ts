@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfile';
 import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
 import { getCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
+import { getApprovedCounts } from '@gabby/lib/monthlyReport/reportCounts';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { createServerClient } from '@gabby/lib/supabase/server';
 import { fetchLegalName } from '@gabby/lib/userLegal/fetchLegalName';
@@ -32,7 +33,10 @@ export async function GET(request: NextRequest) {
   if (!result.success) {
     return NextResponse.json({ error: result.errorCode }, { status: result.errorCode === 'unauthorized' ? 401 : 403 });
   }
-  if (result.report.approval?.status !== 2) {
+  // 件数・内訳・金額は承認時点のスナップショットで作る（承認後に実施結果を直しても書面の金額を変えない）
+  const approval = result.report.approval;
+  const approvedCounts = getApprovedCounts(approval);
+  if (!approval || !approvedCounts) {
     return NextResponse.json({ error: 'monthly report is not approved yet' }, { status: 403 });
   }
 
@@ -50,10 +54,9 @@ export async function GET(request: NextRequest) {
   // service_role経由で読む（コーチ自身に直接SELECT権限は与えない）。発行元はバンクーバー法人。
   const companyProfile = await fetchCompanyProfile(DOCUMENT_ISSUER.coachPayNotice);
 
-  const approval = result.report.approval;
   // 単価自体は書面に表示しない（今後コーチ別に単価が変わり得るため）が、支払額の算出には
   // 承認時点のスナップショット値(approval.rate_amount)を使う。
-  const totalEarnings = (approval.rate_amount ?? 0) * result.report.grand_total;
+  const totalEarnings = (approval.rate_amount ?? 0) * approvedCounts.total;
   const currencyCode = approval.rate_currency ?? '';
 
   // Issue Dateはダウンロード時刻ではなく、アドミンが承認した日時とする（再ダウンロードしても
@@ -87,10 +90,10 @@ export async function GET(request: NextRequest) {
       periodLabel,
       issueDateLabel,
       currencyCode,
-      totalSessions: result.report.grand_total,
-      completedCount: result.report.completed_count,
-      lateCancelCount: result.report.late_cancel_count,
-      noShowCount: result.report.no_show_count,
+      totalSessions: approvedCounts.total,
+      completedCount: approvedCounts.completed,
+      lateCancelCount: approvedCounts.late_cancel,
+      noShowCount: approvedCounts.no_show,
       totalEarnings,
     }),
   );

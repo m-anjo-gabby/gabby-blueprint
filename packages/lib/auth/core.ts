@@ -8,8 +8,10 @@
 import { unstable_rethrow } from 'next/navigation';
 import 'server-only';
 import { type User } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { USER_TYPES } from '@gabby/types/user';
+import { IMPERSONATION_COOKIE_NAME } from '../impersonation';
 import { issueInitialLicense, resolvePerformedBy } from '../license/issue';
 import { createLogger } from '../logger';
 import { getLogContext } from '../logger/context';
@@ -226,6 +228,8 @@ export async function signInCore(
 export async function signOutCore(): Promise<AuthResponse> {
   const supabase = await createServerClient();
   const { error } = await supabase.auth.signOut();
+  // 代理ログインはログアウトで終わる。印の Cookie も消す（残っても本人と違えば proxy が使わないが、残さない）
+  (await cookies()).delete(IMPERSONATION_COOKIE_NAME);
 
   if (error) {
     logger.error('auth:supabase_signout_failed', error.message, { err: error });

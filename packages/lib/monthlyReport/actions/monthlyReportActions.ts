@@ -26,6 +26,7 @@ import { createLogger } from '../../logger';
 import { getLogContext } from '../../logger/context';
 import { createAdminClient } from '../../supabase/admin';
 import { createServerClient } from '../../supabase/server';
+import { isFutureReportMonth } from '../reportCounts';
 
 const logger = createLogger('common');
 
@@ -54,13 +55,15 @@ function classifyMonthlyReportRpcError(message: string | undefined): MonthlyRepo
   if (!message) return 'unexpected_error';
   if (message.includes('not authorized')) return 'forbidden';
   if (message.includes('unresolved session')) return 'unresolved_sessions_exist';
+  if (message.includes('future month')) return 'future_month';
+  if (message.includes('already approved')) return 'already_approved';
   if (message.includes('not approved')) return 'not_actionable';
   return 'unexpected_error';
 }
 
 /**
  * コーチ・アドミンいずれの呼び出しでも共通のレポート組み立てロジック。
- * get_coach_monthly_active_students(縦軸=有効契約を持つ生徒)とget_coach_monthly_sessions(生データ)を
+ * get_coach_monthly_active_students(縦軸=有効契約を持つ生徒と、その月にセッションがある生徒)とget_coach_monthly_sessions(生データ)を
  * 並列取得し、生徒×日付のグリッドに整形する。カウント規則・注意色判定はいずれもDB側RPC
  * (get_coach_monthly_sessions)が唯一の実装箇所であり、ここでは集計するのみ。
  */
@@ -197,6 +200,7 @@ async function buildMonthlyReport(
     late_cancel_count: lateCancelCount,
     no_show_count: noShowCount,
     unresolved_count: unresolvedCount,
+    is_future_month: isFutureReportMonth(reportMonth, toIsoDateInZone(new Date(), coachTimezone)),
     coach_timezone: coachTimezone,
     approval,
   };

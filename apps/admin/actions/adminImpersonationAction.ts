@@ -110,9 +110,10 @@ export async function startImpersonation(targetUserId: string, reason: string): 
       return { success: false, message: t('users.errors.loginLinkFailed') };
     }
 
-    logger.warn('impersonation:started', `Admin started impersonation of user: ${authUserData.user.email}`, {
+    logger.warn('impersonation:started', 'Admin started impersonation', {
       ...ctx,
-      payload: { impersonationId: logRow.impersonation_id, targetUserId: targetUser.id, reason: trimmedReason },
+      // 理由は自由記述で個人情報を含み得るため、ログには出さず監査の記録（DB）にだけ残す
+      payload: { impersonationId: logRow.impersonation_id, targetUserId: targetUser.id },
     });
 
     const portalEnvKey =

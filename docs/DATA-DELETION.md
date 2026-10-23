@@ -53,6 +53,7 @@
 | `com_m_video_section` | — | 物理（ビデオが残っているセクションは admin で削除させない） |
 | `com_m_calendar_event_series` / `com_m_coach_availability` / `com_m_contents_access` / `com_m_contents_tag` / `com_m_phrase` / `com_m_ai_knowledge_base` | — | 物理 |
 | `com_m_color_vowel` / `com_m_role` | — | 固定のマスタ。画面からは削除しない |
+| `com_t_admin_impersonation_log` | — | 消さない（代理ログインの監査の記録）。B・D でユーザーを消しても、対象・管理者を `SET NULL` にして行を残す。理由（自由記述）には氏名・メールアドレスを書かない運用にする（入力欄に案内） |
 
 ## 3. 外部キーの `ON DELETE`
 
@@ -89,6 +90,7 @@
 | Webトライアルの申込 | 氏名・メールアドレス・国と都市を消す。要望・知ったきっかけ・職業はマーケティングのため残す |
 | チャット・セッション内のチャットの本文と添付 | **残す**（送信者は「退会済みユーザー」と表示。必要なら admin がルームを削除する） |
 | セッション・チケット・ライセンス・契約・評価の点数・研修レポート・学習の記録・イベントの参加の記録・規約への同意の記録 | 残す（匿名の実績） |
+| 代理ログインの監査の記録（`com_t_admin_impersonation_log`） | 残す（管理者の操作の監査のため。対象は「退会済みユーザー」の行を指したまま） |
 | 削除の記録 | `com_t_data_deletion_log` に種類・対象の ID・消した件数・実行者・日時を残す（氏名・メールアドレスは含めない） |
 
 - 退会済みのユーザーは、代理ログイン・停止・再開の対象外。admin のユーザー一覧には「退会済み」として残る（`vw_user_list.user_status`）。

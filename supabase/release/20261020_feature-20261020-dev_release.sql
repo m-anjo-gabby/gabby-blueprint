@@ -383,3 +383,195 @@ REVOKE EXECUTE ON FUNCTION public.create_training_menu(jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.create_training_menu(jsonb) TO authenticated;
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】月次コーチングレポートの承認の件数の固定・代理ログインの期限の廃止
+--
+-- 【内容】
+--   1. approve_coach_monthly_report: 承認のスナップショットに内訳（完了・12時間未満のキャンセル・欠席）を足し、
+--      請求書・支払通知書（PDF）の件数・内訳・金額をスナップショットから作れるようにする（これまでは PDF を開いた時点の
+--      件数で計算していたため、承認後の実施結果の修正で支払額が変わっていた）。
+--      あわせて、今月より後の月と承認済みの月（上書き・通知の二重送信）の承認を拒否する。
+--   2. 承認済みの月のスナップショットに内訳を足す（今のセッションの記録から数える。合計は承認時の値のまま）。
+--   3. get_coach_monthly_active_students: 月の途中でライセンスを停止した・契約を解約した生徒も、その月にセッションが
+--      あれば縦軸に出す（これまでは画面の合計・PDF の金額から漏れ、スナップショットの合計とずれていた）。
+--   4. com_t_admin_impersonation_log.expires_at を消す。代理ログインの30分の期限を廃止し、終わるのは
+--      アドミンが代理ログイン先でログアウトした時にする（運用の手順で守る）。期限で Cookie が消えると、以降の操作が
+--      代理ログインの印の無い本人の操作としてログに残っていたため、印を残すことを優先する。
+--
+-- 対応ファイル:
+--   DDL/function/approve_coach_monthly_report.sql, DDL/function/get_coach_monthly_active_students.sql,
+--   DDL/table/com_t_admin_impersonation_log.sql
+-- =========================================================================
+
+BEGIN;
+
+-- 1. 承認（関数の本体は DDL/function/approve_coach_monthly_report.sql と同じ）
+CREATE OR REPLACE FUNCTION public.approve_coach_monthly_report(
+    p_coach_id uuid,
+    p_report_month date,
+    p_approved_by uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_month date := date_trunc('month', p_report_month)::date;
+    v_coach_timezone text;
+    v_snapshot jsonb;
+    v_unresolved_count integer;
+    v_rate_amount numeric(10, 2);
+    v_rate_currency text;
+BEGIN
+    IF public.get_jwt_user_type() IS NOT NULL AND NOT public.is_system_admin() THEN
+        RAISE EXCEPTION 'not authorized to approve this monthly report';
+    END IF;
+
+    SELECT COALESCE(u.timezone, 'Asia/Tokyo') INTO v_coach_timezone FROM public.com_m_user u WHERE u.id = p_coach_id;
+    IF v_month > date_trunc('month', NOW() AT TIME ZONE COALESCE(v_coach_timezone, 'Asia/Tokyo'))::date THEN
+        RAISE EXCEPTION 'cannot approve a future month';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.com_t_coach_monthly_report_approval a
+        WHERE a.coach_id = p_coach_id AND a.report_month = v_month AND a.status = 2
+    ) THEN
+        RAISE EXCEPTION 'monthly report is already approved';
+    END IF;
+
+    SELECT COUNT(*) INTO v_unresolved_count
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month) s
+    WHERE s.is_unresolved;
+
+    IF v_unresolved_count > 0 THEN
+        RAISE EXCEPTION 'cannot approve while % unresolved session(s) remain for this month', v_unresolved_count;
+    END IF;
+
+    SELECT jsonb_build_object(
+        'total', COUNT(*),
+        'completed', COUNT(*) FILTER (WHERE s.status = 2 AND s.completion_result IS DISTINCT FROM 3),
+        'late_cancel', COUNT(*) FILTER (WHERE s.status = 3),
+        'no_show', COUNT(*) FILTER (WHERE s.status = 2 AND s.completion_result = 3),
+        'by_student', COALESCE(
+            (SELECT jsonb_agg(jsonb_build_object('student_id', per_student.student_id, 'count', per_student.cnt))
+             FROM (
+                 SELECT ps.student_id, COUNT(*) AS cnt
+                 FROM public.get_coach_monthly_sessions(p_coach_id, v_month) ps
+                 WHERE ps.counts_toward_total
+                 GROUP BY ps.student_id
+             ) per_student),
+            '[]'::jsonb
+        )
+    )
+    INTO v_snapshot
+    FROM public.get_coach_monthly_sessions(p_coach_id, v_month) s
+    WHERE s.counts_toward_total;
+
+    SELECT rate_amount, currency_code INTO v_rate_amount, v_rate_currency
+    FROM public.com_m_session_pay_rate
+    ORDER BY update_date DESC
+    LIMIT 1;
+
+    INSERT INTO public.com_t_coach_monthly_report_approval (
+        coach_id, report_month, status, session_count_snapshot, rate_amount, rate_currency, approved_by, approved_at, update_date
+    ) VALUES (
+        p_coach_id, v_month, 2, v_snapshot, v_rate_amount, v_rate_currency, p_approved_by, NOW(), NOW()
+    )
+    ON CONFLICT (coach_id, report_month) DO UPDATE
+    SET status = 2,
+        session_count_snapshot = v_snapshot,
+        rate_amount = v_rate_amount,
+        rate_currency = v_rate_currency,
+        approved_by = p_approved_by,
+        approved_at = NOW(),
+        update_date = NOW();
+
+    INSERT INTO public.com_t_notification (user_id, notification_type, payload, link_path)
+    VALUES (
+        p_coach_id,
+        'COACH_REPORT_APPROVED',
+        jsonb_build_object('report_month', v_month),
+        -- 対象の月を開く（月の指定が無いと今月が開くため）
+        '/monthly-reports?month=' || to_char(v_month, 'YYYY-MM')
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_coach_monthly_report(uuid, date, uuid) TO authenticated;
+
+-- 2. 承認済みの月のスナップショットに内訳を足す（合計・生徒ごとの件数は承認時の値を残す）
+UPDATE public.com_t_coach_monthly_report_approval a
+SET session_count_snapshot = a.session_count_snapshot || (
+        SELECT jsonb_build_object(
+            'completed', COUNT(*) FILTER (WHERE s.status = 2 AND s.completion_result IS DISTINCT FROM 3),
+            'late_cancel', COUNT(*) FILTER (WHERE s.status = 3),
+            'no_show', COUNT(*) FILTER (WHERE s.status = 2 AND s.completion_result = 3)
+        )
+        FROM public.get_coach_monthly_sessions(a.coach_id, a.report_month) s
+        WHERE s.counts_toward_total
+    )
+WHERE a.status = 2
+  AND a.session_count_snapshot IS NOT NULL
+  AND NOT (a.session_count_snapshot ? 'completed');
+
+-- 3. 縦軸の生徒（関数の本体は DDL/function/get_coach_monthly_active_students.sql と同じ）
+CREATE OR REPLACE FUNCTION public.get_coach_monthly_active_students(p_coach_id uuid, p_report_month date)
+RETURNS TABLE(student_id uuid, user_name text, icon_path text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_coach_timezone text;
+    v_month_start_utc timestamptz;
+    v_month_end_utc timestamptz;
+BEGIN
+    PERFORM public.fn_assert_actor_or_admin(p_coach_id, 'not authorized to view this coach''s monthly report');
+
+    SELECT COALESCE(u.timezone, 'Asia/Tokyo') INTO v_coach_timezone FROM public.com_m_user u WHERE u.id = p_coach_id;
+    IF v_coach_timezone IS NULL THEN
+        v_coach_timezone := 'Asia/Tokyo'; -- 対象コーチが存在しない場合のフォールバック（結果は0件になる）
+    END IF;
+
+    v_month_start_utc := date_trunc('month', p_report_month::timestamp) AT TIME ZONE v_coach_timezone;
+    v_month_end_utc := (date_trunc('month', p_report_month::timestamp) + interval '1 month') AT TIME ZONE v_coach_timezone;
+
+    RETURN QUERY
+    SELECT u.id, u.user_name, u.icon_path
+    FROM public.com_m_user u
+    WHERE u.id IN (
+        SELECT r.student_id
+        FROM public.com_m_coach_student_relationship r
+        WHERE r.coach_id = p_coach_id
+          AND EXISTS (
+              SELECT 1
+              FROM public.com_t_user_license l
+              JOIN public.com_m_contract c ON c.contract_id = l.contract_id
+              WHERE l.user_id = r.student_id
+                AND l.status = 1
+                AND c.status = 1
+                AND l.start_date <= v_month_end_utc
+                AND l.end_date >= v_month_start_utc
+          )
+        UNION
+        SELECT s.student_id
+        FROM public.get_coach_monthly_sessions(p_coach_id, p_report_month) s
+    )
+    ORDER BY u.user_name;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_coach_monthly_active_students(uuid, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_coach_monthly_active_students(uuid, date) TO authenticated;
+
+-- 4. 代理ログインの期限の列を消す
+ALTER TABLE public.com_t_admin_impersonation_log DROP COLUMN expires_at;
+
+COMMENT ON TABLE public.com_t_admin_impersonation_log IS '管理者の代理ログイン（対象の生徒・コーチとしてのログイン）の監査ログ';
+COMMENT ON COLUMN public.com_t_admin_impersonation_log.target_user_id IS '代理ログインの対象の生徒・コーチのUUID (com_m_user.id)';
+COMMENT ON COLUMN public.com_t_admin_impersonation_log.redeemed_at IS '生徒・コーチのポータルでリンクが使われ、セッションができた日時';
+
+COMMIT;

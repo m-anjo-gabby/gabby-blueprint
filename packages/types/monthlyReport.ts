@@ -11,7 +11,14 @@ import { type CancelCategory, type CompletionResult, type SessionStatus } from '
  */
 
 export type MonthlyReportErrorCode =
-  'unauthorized' | 'forbidden' | 'invalid_input' | 'not_actionable' | 'unresolved_sessions_exist' | 'unexpected_error';
+  | 'unauthorized'
+  | 'forbidden'
+  | 'invalid_input'
+  | 'not_actionable'
+  | 'unresolved_sessions_exist'
+  | 'future_month'
+  | 'already_approved'
+  | 'unexpected_error';
 
 export const MONTHLY_REPORT_APPROVAL_STATUS = {
   UNAPPROVED: 1,
@@ -45,10 +52,23 @@ export interface MonthlyReportStudentRow {
   month_total: number; // counts_toward_total===trueの件数合計
 }
 
+/** 実績に数える件数と内訳（完了には早期終了を含める。completed + late_cancel + no_show === total） */
+export interface MonthlyReportCounts {
+  total: number;
+  completed: number;
+  late_cancel: number; // 生徒の12時間未満のキャンセル
+  no_show: number;
+}
+
+/** 承認時点の集計（approve_coach_monthly_report が保存する。請求書・支払通知書はこの値で作る） */
+export interface MonthlyReportSnapshot extends MonthlyReportCounts {
+  by_student: { student_id: string; count: number }[];
+}
+
 /** com_t_coach_monthly_report_approval の表示用型 */
 export interface MonthlyReportApproval {
   status: MonthlyReportApprovalStatus;
-  session_count_snapshot: { total: number; by_student: { student_id: string; count: number }[] } | null;
+  session_count_snapshot: MonthlyReportSnapshot | null;
   rate_amount: number | null; // 承認時点のセッション単価スナップショット（com_m_session_pay_rateより）
   rate_currency: string | null; // 承認時点の通貨コードスナップショット（例: CAD）
   approved_by: string | null;
@@ -69,6 +89,7 @@ export interface CoachMonthlyReport {
   late_cancel_count: number; // 生徒都合12時間以内キャンセル(status=3かつticket_refunded=false)の件数
   no_show_count: number; // 生徒No show(status=6)の件数
   unresolved_count: number; // 終了処理未実施(is_unresolved=true)の件数。1件でもあれば承認不可
+  is_future_month: boolean; // コーチのタイムゾーンで今月より後の月か。承認不可
   coach_timezone: string; // 日毎の集計に使用したコーチのIANAタイムゾーン名(com_m_user.timezone)。UI上の注意書き表示用
   approval: MonthlyReportApproval | null; // 未承認のまま一度も操作されていない場合はnull
 }

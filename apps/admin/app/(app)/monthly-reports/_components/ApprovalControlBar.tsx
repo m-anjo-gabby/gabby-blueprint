@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { formatDateTimeByZone } from '@gabby/lib/date/date';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import { type MonthlyReportApproval } from '@gabby/types/monthlyReport';
+import { getApprovedCounts, getCurrentCounts, hasCountsChanged } from '@gabby/lib/monthlyReport/reportCounts';
+import { type CoachMonthlyReport } from '@gabby/types/monthlyReport';
 import { approveMonthlyReport, revokeMonthlyReportApproval } from '@/actions/adminMonthlyReportAction';
 import {
   AlertDialog,
@@ -24,32 +25,29 @@ import { Button } from '@/components/ui/button';
 export function ApprovalControlBar({
   coachId,
   reportMonth,
-  grandTotal,
-  completedCount,
-  lateCancelCount,
-  noShowCount,
-  unresolvedCount,
+  report,
   coachTimezoneName,
-  approval,
 }: {
   coachId: string;
   reportMonth: string;
-  grandTotal: number;
-  completedCount: number;
-  lateCancelCount: number;
-  noShowCount: number;
-  unresolvedCount: number;
+  report: CoachMonthlyReport;
   /** コーチのタイムゾーンの表示名称（マスタの display_name_*。画面の言語のもの） */
   coachTimezoneName: string;
-  approval: MonthlyReportApproval | null;
 }) {
   const t = useTranslations('monthlyReports.approvalBar');
   const tCommon = useTranslations('common');
   const router = useRouter();
   const { showToast } = useToast();
   const [isPending, setIsPending] = useState(false);
+  const { approval, unresolved_count: unresolvedCount } = report;
   const isApproved = approval?.status === 2;
   const isBlockedByUnresolved = !isApproved && unresolvedCount > 0;
+  const isBlockedByFutureMonth = !isApproved && report.is_future_month;
+  const currentCounts = getCurrentCounts(report);
+  // 承認済みの月は請求書・支払通知書と同じ承認時点の件数を出し、その後に変わった場合は今の件数を添えて知らせる
+  const approvedCounts = getApprovedCounts(approval);
+  const shownCounts = approvedCounts ?? currentCounts;
+  const isChangedSinceApproval = approvedCounts !== null && hasCountsChanged(approvedCounts, currentCounts);
 
   const handleApprove = async () => {
     setIsPending(true);
@@ -97,16 +95,20 @@ export function ApprovalControlBar({
           </span>
         )}
 
-        <span className="text-sm text-slate-500">
+        <span className="text-sm text-slate-500" data-testid="monthly-report-counts">
           {t('totalSessionsLabel')}
-          <span className="font-bold text-slate-800">{grandTotal}</span>
+          <span className="font-bold text-slate-800">{shownCounts.total}</span>
           <span className="text-xs text-slate-400">
-            {t('breakdownLabel', { completed: completedCount, lateCancel: lateCancelCount, noShow: noShowCount })}
+            {t('breakdownLabel', {
+              completed: shownCounts.completed,
+              lateCancel: shownCounts.late_cancel,
+              noShow: shownCounts.no_show,
+            })}
           </span>
         </span>
 
-        {isBlockedByUnresolved ? (
-          <Button disabled title={t('approveBlockedTooltip')}>
+        {isBlockedByUnresolved || isBlockedByFutureMonth ? (
+          <Button disabled title={isBlockedByUnresolved ? t('approveBlockedTooltip') : t('approveFutureMonthTooltip')}>
             <CalendarCheck size={14} className="mr-1.5" />
             {t('approveButton')}
           </Button>
@@ -135,7 +137,7 @@ export function ApprovalControlBar({
               <AlertDialogHeader>
                 <AlertDialogTitle>{isApproved ? t('revokeConfirmTitle') : t('approveConfirmTitle')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {isApproved ? t('revokeConfirmBody') : t('approveConfirmBody', { count: grandTotal })}
+                  {isApproved ? t('revokeConfirmBody') : t('approveConfirmBody', { count: currentCounts.total })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -156,6 +158,21 @@ export function ApprovalControlBar({
         <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-amber-700">
           <TriangleAlert size={14} />
           {t('unresolvedWarning', { count: unresolvedCount })}
+        </p>
+      )}
+
+      {isChangedSinceApproval && (
+        <p
+          className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-amber-700"
+          data-testid="monthly-report-changed-warning"
+        >
+          <TriangleAlert size={14} />
+          {t('changedSinceApprovalWarning', {
+            total: currentCounts.total,
+            completed: currentCounts.completed,
+            lateCancel: currentCounts.late_cancel,
+            noShow: currentCounts.no_show,
+          })}
         </p>
       )}
 

@@ -4,6 +4,7 @@ import { fetchCompanyProfile } from '@gabby/lib/companyProfile/fetchCompanyProfi
 import { getCompanyLogoUrl } from '@gabby/lib/companyProfile/getCompanyLogoUrl';
 import { getAdminCoachMonthlyReportCore } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
 import { buildInvoiceNumber } from '@gabby/lib/monthlyReport/buildInvoiceNumber';
+import { getApprovedCounts } from '@gabby/lib/monthlyReport/reportCounts';
 import { createAdminClient } from '@gabby/lib/supabase/admin';
 import { fetchLegalName } from '@gabby/lib/userLegal/fetchLegalName';
 import { formatLegalName } from '@gabby/lib/userLegal/formatLegalName';
@@ -37,7 +38,10 @@ export async function GET(request: NextRequest) {
   if (!result.success) {
     return NextResponse.json({ error: result.errorCode }, { status: 403 });
   }
-  if (result.report.approval?.status !== 2) {
+  // 件数・内訳・金額は承認時点のスナップショットで作る（承認後に実施結果を直しても書面の金額を変えない）
+  const approval = result.report.approval;
+  const approvedCounts = getApprovedCounts(approval);
+  if (!approval || !approvedCounts) {
     return NextResponse.json({ error: 'monthly report is not approved yet' }, { status: 403 });
   }
 
@@ -48,9 +52,8 @@ export async function GET(request: NextRequest) {
     fetchLegalName(coachId),
   ]);
 
-  const approval = result.report.approval;
   // 支払通知書(PayNoticeDocument)と同じ算出方法。単価自体は書面に表示しない。
-  const totalEarnings = (approval.rate_amount ?? 0) * result.report.grand_total;
+  const totalEarnings = (approval.rate_amount ?? 0) * approvedCounts.total;
   const currencyCode = approval.rate_currency ?? '';
 
   // Issue Dateは支払通知書と同じくアドミンの承認日時とする（再ダウンロードしても常に
@@ -83,10 +86,10 @@ export async function GET(request: NextRequest) {
       periodLabel,
       issueDateLabel,
       currencyCode,
-      totalSessions: result.report.grand_total,
-      completedCount: result.report.completed_count,
-      lateCancelCount: result.report.late_cancel_count,
-      noShowCount: result.report.no_show_count,
+      totalSessions: approvedCounts.total,
+      completedCount: approvedCounts.completed,
+      lateCancelCount: approvedCounts.late_cancel,
+      noShowCount: approvedCounts.no_show,
       totalEarnings,
     }),
   );

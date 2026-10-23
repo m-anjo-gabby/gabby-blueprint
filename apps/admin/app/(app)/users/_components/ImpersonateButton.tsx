@@ -89,6 +89,8 @@ export function ImpersonateButton({ user, compact = false }: ImpersonateButtonPr
             </p>
           </div>
 
+          <p className="text-xs leading-relaxed text-slate-600">{t('endNote')}</p>
+
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('reasonLabel')}</label>
             <Textarea

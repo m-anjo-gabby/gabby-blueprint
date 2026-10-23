@@ -14,6 +14,8 @@ const MONTHLY_REPORT_ERROR_MESSAGES_EN: Record<MonthlyReportErrorCode, string> =
   invalid_input: 'Please check the month you selected.',
   not_actionable: 'This action is no longer available.',
   unresolved_sessions_exist: 'Some sessions still need to be finalized before this report can be approved.',
+  future_month: 'Months after the current month cannot be approved.',
+  already_approved: 'This month has already been approved.',
   unexpected_error: 'An unexpected error occurred.',
 };
 

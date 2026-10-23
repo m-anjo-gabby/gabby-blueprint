@@ -11,7 +11,7 @@ import {
 } from '@gabby/lib/monthlyReport/actions/monthlyReportActions';
 import type { ActionResult } from '@gabby/types/action';
 import { type AdminCoachSummary } from '@gabby/types/adminLiveSession';
-import { type CoachMonthlyReport } from '@gabby/types/monthlyReport';
+import { type CoachMonthlyReport, type MonthlyReportErrorCode } from '@gabby/types/monthlyReport';
 import { requireAdminRole, SYSTEM_ADMIN_ONLY } from '@/lib/adminAuth';
 import { getCoachesForMatching } from './adminLiveSessionAction';
 
@@ -48,11 +48,12 @@ export async function approveMonthlyReport(coachId: string, reportMonth: string)
 
   if (!result.success) {
     logger.error('admin:approve_monthly_report_failed', result.errorCode, ctx);
-    const message =
-      result.errorCode === 'unresolved_sessions_exist'
-        ? t('monthlyReports.errors.unfinishedSessions')
-        : t('monthlyReports.errors.approveFailed');
-    return { success: false, message };
+    const messages: Partial<Record<MonthlyReportErrorCode, string>> = {
+      unresolved_sessions_exist: t('monthlyReports.errors.unfinishedSessions'),
+      future_month: t('monthlyReports.errors.futureMonth'),
+      already_approved: t('monthlyReports.errors.alreadyApproved'),
+    };
+    return { success: false, message: messages[result.errorCode] ?? t('monthlyReports.errors.approveFailed') };
   }
 
   revalidatePath('/monthly-reports');
