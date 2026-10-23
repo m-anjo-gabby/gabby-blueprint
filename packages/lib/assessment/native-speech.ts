@@ -1,6 +1,7 @@
 // packages/lib/assessment/native-speech.ts
 import { type AnalysisResult, type WordMatch } from '@gabby/types/speechAssessment';
 import { getScoreTier, type ScoreTier } from './feedbackConfig';
+import { FEEDBACK_MESSAGES, fillMessage, type IssueKind, type MessageValues } from './feedbackMessages';
 import { preprocessInputWords } from './inputNormalization';
 import { detectPhoneticConfusion, type PhoneticConfusionRule } from './phoneticConfusions';
 import { isArticle } from './wordClassification';
@@ -17,42 +18,7 @@ const WEIGHTS = {
   ARTICLE_MULTIPLIER: 1.2,
 };
 
-// excellent/great帯で、指摘(issues)が全く無い場合にのみ使う手放しの称賛コメント。
-// 判定結果に差が無い場面でのみ使う表現のバリエーションなので、ランダム選出で問題ない。
-const PRAISE_COMMENTS: Record<'excellent' | 'great', string[]> = {
-  excellent: [
-    '非常に明瞭で正確な発音です。この高い基準を維持しましょう。',
-    '完璧なリズムと流暢さです。自信を持って活用してください。',
-    '素晴らしいパフォーマンスです。今の感覚をぜひ定着させましょう。',
-  ],
-  great: [
-    '全体的にとても良い発音です。この調子で続けましょう。',
-    '自然なリズムで発音できています。自信を持って次に進みましょう。',
-  ],
-};
-
-// excellent/great帯だが、非メイン単語のFUZZY/COMBINED等が1つでも残っている場合の称賛コメント。
-// 長文では些細な1語の乱れがあってもスコアが高くなり得るため、「完璧」と言い切らず、
-// 詳細はissues側に譲ることを明示する。
-const PRAISE_WITH_MINOR_NOTE: Record<'excellent' | 'great', string[]> = {
-  excellent: [
-    '全体的に非常に高いレベルの発話です。細かい点はアドバイス欄も確認してみましょう。',
-    'ほぼ完璧な仕上がりです。さらに磨きたい方はアドバイスもチェックしてみてください。',
-  ],
-  great: [
-    '全体的にとても良い発音です。気になる点はアドバイス欄で確認できます。',
-    '自然な発音で伝わっています。さらに良くしたい部分はアドバイスを参考にしてください。',
-  ],
-};
-
-// メインコメント(summary)で、事実の診断文の後に添える一言（good/fair/poor帯のみ使用）。
-// 「どう直すか」の具体策はissues側の役割なので、ここではモチベーション維持のための短い言葉に留める。
-const ENCOURAGEMENT_BY_TIER: Record<Exclude<ScoreTier, 'excellent' | 'great'>, string[]> = {
-  good: ['練習を重ねれば、さらに伝わりやすくなります。', 'この調子で続けていきましょう。'],
-  fair: ['焦らず、繰り返し練習していきましょう。', '反復すれば必ず慣れてきます。'],
-  poor: ['諦めず、もう一度チャレンジしてみましょう。', '反復練習で必ず上達します。'],
-};
-
+// 一言（summary）の文言は候補から無作為に選ぶ。同じ判定結果での言い回しの違いだけなので、結果に差は出ない。
 function pickRandom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
@@ -289,10 +255,33 @@ function formatWordPairs(pairs: WordEvidence[], max = 2): string {
 
 /**
  * 音素混同ルールが検出できた場合のみ、summary文に添える補足（例:「（「L」と「R」が近い音として認識されやすい発音です）」）を返す。
- * 未検出の場合は空文字を返し、従来通り事実（heard語）だけの表現に留める。
+ * 未検出の場合は空文字を返し、事実（heard語）だけの表現に留める。
  */
 function formatConfusionNote(confusion?: PhoneticConfusionRule): string {
-  return confusion ? `（${confusion.label}が近い音として認識されやすい発音です）` : '';
+  return confusion ? fillMessage(FEEDBACK_MESSAGES.summary.confusionNote, { label: confusion.label }) : '';
+}
+
+function fuzzyDiagnosisValues(evidence: WordEvidence): MessageValues {
+  return { word: evidence.word, heard: evidence.heard, confusionNote: formatConfusionNote(evidence.confusion) };
+}
+
+/**
+ * 一言（summary）で取り上げる指摘を、優先順（重要語 → 冠詞 → その他の語、欠落 → 聞き違い → 2語に分かれた）で1つ選ぶ。
+ * 指摘が無ければnullを返す。
+ */
+function findTopIssue(groups: IssueGroups): { kind: IssueKind; values: MessageValues } | null {
+  const { missingMainWords, fuzzyMainWords, missingArticles, fuzzyArticles, missingWords, fuzzyWords, combinedWords } =
+    groups;
+  if (missingMainWords.length > 0) return { kind: 'missingMainWord', values: { words: formatWords(missingMainWords) } };
+  if (fuzzyMainWords.length > 0) return { kind: 'fuzzyMainWord', values: fuzzyDiagnosisValues(fuzzyMainWords[0]) };
+  if (missingArticles.length > 0) return { kind: 'missingArticle', values: { words: formatWords(missingArticles) } };
+  if (fuzzyArticles.length > 0) return { kind: 'fuzzyArticle', values: fuzzyDiagnosisValues(fuzzyArticles[0]) };
+  if (missingWords.length > 0) return { kind: 'missingWord', values: { words: formatWords(missingWords) } };
+  if (fuzzyWords.length > 0) return { kind: 'fuzzyWord', values: fuzzyDiagnosisValues(fuzzyWords[0]) };
+  if (combinedWords.length > 0) {
+    return { kind: 'combinedWord', values: { words: formatWords(combinedWords.map((c) => c.word)) } };
+  }
+  return null;
 }
 
 /**
@@ -301,51 +290,23 @@ function formatConfusionNote(confusion?: PhoneticConfusionRule): string {
  * excellent/great帯はスコアそのものが「ほぼ完璧」を表しているため、非メイン単語の
  * 些細な指摘だけでトーンを診断寄りに崩さない（例: 長文中の1単語だけFUZZYでもスコア91点、
  * のようなケースで「〜のように聞こえました」＋「自信を持って」が同居する矛盾を避ける）。
- * 指摘(issues)が実在する場合は、称賛コメントの中で「詳細はアドバイス欄へ」と一言だけ添える。
+ * 指摘(issues)が実在する場合は、称賛コメントの中で「詳細は改善のヒントへ」と一言だけ添える。
  *
- * good/fair/poor帯は指摘そのものがスコアの主要因なので、従来通り事実（何がどう聞き取られたか）を
- * 優先順位付きで1点だけ取り上げ、スコア帯に応じた短い一言でモチベーションを支える。
+ * good/fair/poor帯は指摘そのものがスコアの主要因なので、事実（何がどう聞き取られたか）を
+ * 優先順位付きで1点だけ取り上げ、その指摘と帯の組に合った一言を続ける。帯だけで選ぶと
+ * 「冠詞の「a」が聞き取れませんでした。この調子で続けていきましょう。」のように、指摘を打ち消して読めてしまう。
  */
 function buildSummary(tier: ScoreTier, groups: IssueGroups): string {
-  const { missingMainWords, fuzzyMainWords, missingArticles, fuzzyArticles, missingWords, fuzzyWords, combinedWords } =
-    groups;
-  const hasAnyIssue =
-    missingMainWords.length > 0 ||
-    fuzzyMainWords.length > 0 ||
-    missingArticles.length > 0 ||
-    fuzzyArticles.length > 0 ||
-    missingWords.length > 0 ||
-    fuzzyWords.length > 0 ||
-    combinedWords.length > 0;
+  const { summary } = FEEDBACK_MESSAGES;
+  const top = findTopIssue(groups);
 
   if (tier === 'excellent' || tier === 'great') {
-    const pool = hasAnyIssue ? PRAISE_WITH_MINOR_NOTE[tier] : PRAISE_COMMENTS[tier];
-    return pickRandom(pool);
+    return pickRandom(top ? summary.highWithNote[tier] : summary.perfect);
   }
+  // good/fair/poor帯なのに指摘が無いケース(理論上ほぼ無いが型の網羅性のための保険)
+  if (!top) return pickRandom(summary.perfect);
 
-  let diagnosis: string | null = null;
-  if (missingMainWords.length > 0) {
-    diagnosis = `重要な単語 ${formatWords(missingMainWords)} が聞き取れませんでした。`;
-  } else if (fuzzyMainWords.length > 0) {
-    diagnosis = `重要な単語の「${fuzzyMainWords[0].word}」が「${fuzzyMainWords[0].heard}」のように聞こえました${formatConfusionNote(fuzzyMainWords[0].confusion)}。`;
-  } else if (missingArticles.length > 0) {
-    diagnosis = `冠詞の ${formatWords(missingArticles)} が聞き取れませんでした。`;
-  } else if (fuzzyArticles.length > 0) {
-    diagnosis = `冠詞の「${fuzzyArticles[0].word}」が「${fuzzyArticles[0].heard}」のように聞こえました${formatConfusionNote(fuzzyArticles[0].confusion)}。`;
-  } else if (missingWords.length > 0) {
-    diagnosis = `${formatWords(missingWords)} が聞き取れませんでした。`;
-  } else if (fuzzyWords.length > 0) {
-    diagnosis = `「${fuzzyWords[0].word}」が「${fuzzyWords[0].heard}」のように聞こえました${formatConfusionNote(fuzzyWords[0].confusion)}。`;
-  } else if (combinedWords.length > 0) {
-    diagnosis = `${formatWords(combinedWords.map((c) => c.word))} は単語同士がつながって聞こえました。`;
-  }
-
-  if (diagnosis) {
-    return `${diagnosis} ${pickRandom(ENCOURAGEMENT_BY_TIER[tier])}`;
-  }
-
-  // good/fair/poor帯なのにissuesが全て空になるケース(理論上ほぼ無いが型の網羅性のための保険)
-  return pickRandom(PRAISE_COMMENTS.great);
+  return `${fillMessage(summary.diagnosis[top.kind], top.values)} ${pickRandom(summary.encouragement[top.kind][tier])}`;
 }
 
 /**
@@ -360,40 +321,33 @@ function buildSummary(tier: ScoreTier, groups: IssueGroups): string {
 function buildIssues(groups: IssueGroups): string[] {
   const { missingMainWords, fuzzyMainWords, missingArticles, fuzzyArticles, missingWords, fuzzyWords, combinedWords } =
     groups;
+  const { advice, defaultTip } = FEEDBACK_MESSAGES;
   const issues: string[] = [];
 
   if (missingMainWords.length > 0) {
-    issues.push(
-      `重要な単語の ${formatWords(missingMainWords)} は、口を大きく開けてゆっくり発音するところから練習してみましょう。`,
-    );
+    issues.push(fillMessage(advice.missingMainWord, { words: formatWords(missingMainWords) }));
   } else if (fuzzyMainWords.length > 0) {
-    const tip = fuzzyMainWords[0].confusion?.tip ?? '一音ずつ区切って強調すると、さらに伝わりやすくなります。';
-    issues.push(`重要な単語の ${formatWordPairs(fuzzyMainWords)} と認識されています。${tip}`);
+    const tip = fuzzyMainWords[0].confusion?.tip ?? defaultTip.fuzzyMainWord;
+    issues.push(fillMessage(advice.fuzzyMainWord, { pairs: formatWordPairs(fuzzyMainWords), tip }));
   }
   if (missingArticles.length > 0) {
-    issues.push(
-      `冠詞の ${formatWords(missingArticles)} が抜けています。ネイティブは前後の単語とつなげて弱く発音するため聞き取りにくくなりますが、意識してはっきり発音してみましょう。`,
-    );
+    issues.push(fillMessage(advice.missingArticle, { words: formatWords(missingArticles) }));
   } else if (fuzzyArticles.length > 0) {
-    issues.push(
-      `冠詞の ${formatWordPairs(fuzzyArticles)} と認識されています。"a"は「ア」というより弱く短い「ə」、"the"も弱く添えるように発音すると自然に聞き取られやすくなります。`,
-    );
+    issues.push(fillMessage(advice.fuzzyArticle, { pairs: formatWordPairs(fuzzyArticles) }));
   }
   if (missingWords.length > 0) {
-    issues.push(`${formatWords(missingWords)} が認識されていません。息をしっかり出して、はっきり発音してみましょう。`);
+    issues.push(fillMessage(advice.missingWord, { words: formatWords(missingWords) }));
   }
   if (fuzzyWords.length > 0) {
-    const tip = fuzzyWords[0].confusion?.tip ?? '似た音の単語と聞き比べながら練習すると効果的です。';
-    issues.push(`${formatWordPairs(fuzzyWords)} と認識されています。${tip}`);
+    const tip = fuzzyWords[0].confusion?.tip ?? defaultTip.fuzzyWord;
+    issues.push(fillMessage(advice.fuzzyWord, { pairs: formatWordPairs(fuzzyWords), tip }));
   }
   if (combinedWords.length > 0) {
     // combinedWordsは常に「本来1語のターゲットが、認識結果では音の近い2語に割れて聞こえた」
     // ケース（例: filtrate → filter rate、six-membered → six member）。ターゲットは元々1語なので
     // 「区切って発音する」方向のアドバイスは矛盾する。単語内の音をなめらかに一続きに
-    // つなげる（リンキング）方向で助言する。
-    issues.push(
-      `${formatWordPairs(combinedWords)} のように2語に分かれて聞こえています。音を区切らず、なめらかに1語としてつなげて（リンキングを意識して）発音すると、さらに伝わりやすくなります。`,
-    );
+    // つなげる（リンキング）方向で助言する（文言は feedbackMessages.json）。
+    issues.push(fillMessage(advice.combinedWord, { pairs: formatWordPairs(combinedWords) }));
   }
 
   return issues.slice(0, 2);

@@ -1,8 +1,11 @@
 // packages/lib/assessment/phoneticConfusions.ts
 
+import { FEEDBACK_MESSAGES } from './feedbackMessages';
+
 /**
  * 日本語話者に頻出する音素混同パターン。
- * 新しいパターンを追加する場合はこの配列に1件足すだけでよく、検出ロジック側の変更は不要。
+ * 新しいパターンを追加する場合は、ここに音の組を1件、feedbackMessages.json の confusions に同じ id で表示名とこつを足す
+ * （検出ロジック側の変更は不要。両者の id がそろっていることは単体テストで検査する）。
  */
 export interface PhoneticConfusionRule {
   id: string;
@@ -14,44 +17,19 @@ export interface PhoneticConfusionRule {
   pair: [string, string];
 }
 
-export const PHONETIC_CONFUSION_RULES: PhoneticConfusionRule[] = [
-  {
-    id: 'l-r',
-    label: '「L」と「R」',
-    tip: '舌先を上の歯の裏に軽く当てる「L」と、どこにも触れずに丸める「R」の違いを意識してみましょう。',
-    pair: ['l', 'r'],
-  },
-  {
-    id: 'b-v',
-    label: '「B」と「V」',
-    tip: '上下の唇を閉じて出す「B」と、上の歯を下唇に当てて出す「V」を区別してみましょう。',
-    pair: ['b', 'v'],
-  },
-  {
-    id: 'p-f',
-    label: '「P」と「F」',
-    tip: '唇を閉じて破裂させる「P」と、歯で息を摩擦させる「F」を区別してみましょう。',
-    pair: ['p', 'f'],
-  },
-  {
-    id: 's-th',
-    label: '「S」と「TH」',
-    tip: '舌を上下の歯で軽く挟んで息を出す「TH」の音を意識してみましょう。',
-    pair: ['s', 'th'],
-  },
-  {
-    id: 'd-th',
-    label: '「D」と「TH（濁音）」',
-    tip: '舌先を上下の歯の間に軽く挟んで出す、濁った「TH」の音を意識してみましょう。',
-    pair: ['d', 'th'],
-  },
-  {
-    id: 'z-s',
-    label: '「Z」と「S」',
-    tip: '喉を震わせる濁った「Z」と、震わせない「S」の違いを意識してみましょう。',
-    pair: ['z', 's'],
-  },
+const CONFUSION_PAIRS: Pick<PhoneticConfusionRule, 'id' | 'pair'>[] = [
+  { id: 'l-r', pair: ['l', 'r'] },
+  { id: 'b-v', pair: ['b', 'v'] },
+  { id: 'p-f', pair: ['p', 'f'] },
+  { id: 's-th', pair: ['s', 'th'] },
+  { id: 'd-th', pair: ['d', 'th'] },
+  { id: 'z-s', pair: ['z', 's'] },
 ];
+
+export const PHONETIC_CONFUSION_RULES: PhoneticConfusionRule[] = CONFUSION_PAIRS.map((rule) => ({
+  ...rule,
+  ...FEEDBACK_MESSAGES.confusions[rule.id],
+}));
 
 function normalize(word: string): string {
   return word.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '');
