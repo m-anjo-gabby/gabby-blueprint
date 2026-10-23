@@ -4,7 +4,8 @@ import { Film, FolderPlus, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useState } from 'react';
 import { useToast } from '@gabby/lib/hooks/useToast';
-import type { AdminVideoItem, AdminVideoSection, VideoStatus } from '@gabby/types/video';
+import { videoPairPositions } from '@gabby/lib/video/pairs';
+import { VIDEO_STATUS, type AdminVideoItem, type AdminVideoSection, type VideoStatus } from '@gabby/types/video';
 import {
   deleteVideo,
   deleteVideoSection,
@@ -76,6 +77,10 @@ export function VideoEditor({ contentId, initialSections }: VideoEditorProps) {
 
   const videoCount = sections.reduce((sum, s) => sum + s.videos.length, 0);
   const lastSectionId = sections.at(-1)?.section_id;
+  // 今日のトレーニングメニューと同じく、生徒に見える（公開中の）ビデオの並びで組を決める
+  const pairPositions = videoPairPositions(
+    sections.flatMap((s) => s.videos).filter((v) => v.status === VIDEO_STATUS.PUBLISHED),
+  );
 
   return (
     <div className="flex flex-col h-full bg-slate-50/30 overflow-hidden">
@@ -125,6 +130,7 @@ export function VideoEditor({ contentId, initialSections }: VideoEditorProps) {
                     isFirst={index === 0}
                     isLast={index === sections.length - 1}
                     busyId={busyId}
+                    pairPositions={pairPositions}
                     onMoveSection={(direction) =>
                       run(section.section_id, () => moveVideoSection(section.section_id, direction))
                     }

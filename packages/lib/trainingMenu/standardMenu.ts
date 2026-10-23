@@ -11,13 +11,9 @@ import { hasSprintQuestionsForType, isSprintLevelSelectable, pickSprintLevel } f
  */
 export const STANDARD_MENU_SPRINT_COUNTS = [2, 1] as const;
 
-/** 標準メニューに入れるビデオの最大本数（2本目は1本目と同じセクションの続きの場合だけ） */
-export const STANDARD_MENU_MAX_VIDEOS = 2;
-
-/** 標準メニューの候補のビデオ（未視聴のものを、教材・セクション・ビデオの並び順に並べたもの） */
+/** 標準メニューの候補のビデオ */
 export interface StandardMenuVideoCandidate {
   contentId: string;
-  sectionId: string;
   videoId: string;
 }
 
@@ -28,8 +24,11 @@ export interface StandardMenuInput {
   progress: StudentSprintProgress | null;
   /** 直近7日の種別ごとのタイムアタックの回数（練習の少ない種別を先に出すため） */
   recentSessionCounts: Partial<Record<SprintQuestionType, number>>;
-  /** 候補のビデオ（未視聴のもの、並び順） */
-  videos: StandardMenuVideoCandidate[];
+  /**
+   * 候補のビデオ。ペアの組（packages/lib/video/pairs.ts）ごとに、未視聴のものだけを教材・セクション・ビデオの並び順に並べる
+   * （組の片方を見終えていれば、残りの1本だけの組になる。見終えた組は含めない）
+   */
+  videoGroups: StandardMenuVideoCandidate[][];
   /** 2つ目の種別を選ぶ乱数（0以上1未満。テストで差し替える） */
   random?: () => number;
 }
@@ -76,7 +75,7 @@ function resolvePracticeLevel(
  * 旧システムのメニューを引き継いだ標準メニューのやることを組む。
  * - スプリント2つ: 1つ目は直近7日で練習の少ない種別（同数なら次のステージまでの差が大きい種別）、2つ目は残りから無作為に選ぶ。
  *   レベルは到達レベルの次。
- * - ビデオ: 未視聴の最初の1本と、同じセクションの続きがあればもう1本。
+ * - ビデオ: 未視聴のビデオの最初の組。シングルは1本、ペアは2本（片方を見終えていれば残りの1本）。
  * やることが1つも無ければ空の配列を返す（メニューを作らない）。
  */
 export function buildStandardMenu(input: StandardMenuInput): TrainingMenuItemInput[] {
@@ -112,10 +111,9 @@ export function buildStandardMenu(input: StandardMenuInput): TrainingMenuItemInp
     });
   }
 
-  const [firstVideo, ...laterVideos] = input.videos;
-  if (firstVideo) {
-    const sameSection = laterVideos.filter((v) => v.sectionId === firstVideo.sectionId);
-    [firstVideo, ...sameSection].slice(0, STANDARD_MENU_MAX_VIDEOS).forEach((video) => {
+  const firstGroup = input.videoGroups.find((group) => group.length > 0);
+  if (firstGroup) {
+    firstGroup.forEach((video) => {
       items.push({
         seq_no: items.length + 1,
         item_type: TRAINING_MENU_ITEM_TYPE.VIDEO,

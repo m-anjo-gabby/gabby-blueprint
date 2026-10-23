@@ -54,6 +54,7 @@ DB・コードの名前（`contract_type` 等）は変えずに残してよく�
 | **問題種類** | スプリントの問題の種類。UG Speed / UG Builders / UG Structure / UG Mastery の4つ | 同左 | Structure・Mastery（UG を省いた形）・UG Master | `QUESTION_TYPES`（`packages/types/sprint.ts`） | 確定 |
 | **今日のトレーニングメニュー** | 生徒ごと・日ごとの自主トレーニングのやることの並び。ホームの主役に出す | Today's training menu | 今日やること（ホームの主役の名前として）・RunNow（旧システムの名前） | `student_t_training_menu` / `student_t_training_menu_item` | 確定 |
 | **標準メニュー** | 今日のトレーニングメニューの中身のうち、旧システムのメニューを引き継いで決まりで組むもの（スプリント2種類＋発音トレーニングのビデオ）。コースに参加していない生徒に出す | Standard menu | — | `menu_source = 1`（`TRAINING_MENU_SOURCE.STANDARD`） | 仮置き |
+| **シングル / ペア（ビデオ）** | 標準メニューでビデオを割り当てる単位。シングルは1本、ペアは並び順で続く2本を同じ日に割り当てる | Single / Pair | 組・セット | `com_m_video.pair_with_next`（組の1本目に true）、`packages/lib/video/pairs.ts` | 仮置き |
 | **タイムアタック / ドリル** | スプリントの2つのやり方（制限時間あり / なし）。「スプリント」は教材の種類の名前にだけ使う | — | スプリント（やり方の名前として） | `mode: 'sprint' \| 'drill'`、表示名は `SPRINT_MODE_LABEL` | 確定 |
 
 - **出どころと公開範囲は別の軸**。「顧客限定＝コーパス教材」ではない。法人ごとに割り当てを変えるために、汎用教材を顧客限定にすることがある。

@@ -2641,6 +2641,9 @@
           "moveUp": "上へ",
           "moveDown": "下へ",
           "moveToSection": "別のセクションへ移す",
+          "pairFirst": "ペア 1/2",
+          "pairSecond": "ペア 2/2",
+          "pairHint": "今日のトレーニングメニューで、この2本を同じ日に割り当てます",
           "edit": "編集",
           "delete": "削除"
         },
@@ -2672,6 +2675,8 @@
           "removeThumbnail": "サムネイルを外す",
           "publishedLabel": "公開する",
           "publishedDescription": "非公開のビデオは生徒に表示されません。",
+          "pairLabel": "次のビデオとペアにする",
+          "pairDescription": "今日のトレーニングメニューで、教材の中の並び順で次のビデオと2本を同じ日に割り当てます。教材の最後のビデオでは使いません。",
           "uploading": "アップロード中... {percent}%",
           "uploadFailed": "ファイルのアップロードに失敗しました。もう一度お試しください",
           "toastCreated": "ビデオを追加しました",

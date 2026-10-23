@@ -49,6 +49,7 @@ function createVideoSchema(t: FormT) {
     title: z.string().trim().min(1, t('errors.titleRequired')),
     title_en: z.string(),
     description: z.string(),
+    pair_with_next: z.boolean(),
     published: z.boolean(),
   });
 }
@@ -71,7 +72,14 @@ export function VideoFormDialog({ target, sections, onClose, onSaved }: VideoFor
   const { showToast } = useToast();
   const form = useForm<FormValues>({
     resolver: zodResolver(createVideoSchema(t)),
-    defaultValues: { section_id: '', title: '', title_en: '', description: '', published: false },
+    defaultValues: {
+      section_id: '',
+      title: '',
+      title_en: '',
+      description: '',
+      pair_with_next: false,
+      published: false,
+    },
   });
 
   const [videoFile, setVideoFile] = useState<PickedFile | null>(null);
@@ -94,9 +102,17 @@ export function VideoFormDialog({ target, sections, onClose, onSaved }: VideoFor
             title: next.video.title,
             title_en: next.video.title_en ?? '',
             description: next.video.description ?? '',
+            pair_with_next: next.video.pair_with_next,
             published: next.video.status === VIDEO_STATUS.PUBLISHED,
           }
-        : { section_id: next.sectionId, title: '', title_en: '', description: '', published: false },
+        : {
+            section_id: next.sectionId,
+            title: '',
+            title_en: '',
+            description: '',
+            pair_with_next: false,
+            published: false,
+          },
     );
     setVideoFile(null);
     setDurationSec(null);
@@ -198,6 +214,7 @@ export function VideoFormDialog({ target, sections, onClose, onSaved }: VideoFor
         title: values.title,
         title_en: values.title_en,
         description: values.description,
+        pair_with_next: values.pair_with_next,
         status: values.published ? VIDEO_STATUS.PUBLISHED : VIDEO_STATUS.UNPUBLISHED,
         video_key: keys.video,
         thumbnail_key: keys.thumbnail,
@@ -354,6 +371,22 @@ export function VideoFormDialog({ target, sections, onClose, onSaved }: VideoFor
             </div>
 
             {fileError && <p className="text-sm font-medium text-destructive">{fileError}</p>}
+
+            <FormField
+              control={form.control}
+              name="pair_with_next"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between gap-4 rounded-xl border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel>{t('pairLabel')}</FormLabel>
+                    <FormDescription>{t('pairDescription')}</FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

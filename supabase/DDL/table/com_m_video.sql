@@ -12,6 +12,12 @@
 -- （署名付き URL・ブラウザのキャッシュに古いファイルが残らないようにするため）。
 -- 行の削除の後に、その行のファイルも消す（docs/DATA-DELETION.md §1）。
 --
+-- 【ペア】
+-- pair_with_next が true のビデオは、教材の中の並び順（セクション・ビデオの seq_no）で次のビデオと組になり、
+-- 今日のメニューでは2本を同じ日に割り当てる（旧システムの COM_M_RUNNOW_VIDEO の PAIR_ID）。
+-- 相手を ID で持たず並び順で決めるため、並べ替えると組の相手も変わる（admin の画面で組を括って見せる）。
+-- 教材の最後のビデオの印は意味を持たない（教材をまたぐ組は作らない）。
+--
 -- 【書き込み】
 -- admin（service_role）だけ。旧システムからの移行は legacy_code（旧ファイル名）で突き合わせる。
 --
@@ -34,6 +40,7 @@ CREATE TABLE public.com_m_video (
     insert_date              timestamp with time zone NOT NULL DEFAULT now(),
     update_date              timestamp with time zone NOT NULL DEFAULT now(),
     title_en                 text,
+    pair_with_next           boolean      NOT NULL DEFAULT false,
     CONSTRAINT chk_video_duration_sec CHECK (duration_sec IS NULL OR duration_sec >= 0),
     CONSTRAINT chk_video_status CHECK (status = ANY (ARRAY[0, 1]))
 );
@@ -52,6 +59,7 @@ COMMENT ON COLUMN public.com_m_video.legacy_code IS '旧システムのファイ
 COMMENT ON COLUMN public.com_m_video.insert_date IS '登録日時';
 COMMENT ON COLUMN public.com_m_video.update_date IS '更新日時';
 COMMENT ON COLUMN public.com_m_video.title_en IS 'タイトル（英名・任意。コーチ向け画面で使用し、未入力時はtitleにフォールバックする）';
+COMMENT ON COLUMN public.com_m_video.pair_with_next IS '次のビデオとペアか（true:教材の中の並び順で次のビデオと2本を1回分として今日のメニューに割り当てる）';
 
 CREATE INDEX idx_video_section_seq ON public.com_m_video (section_id, seq_no);
 CREATE UNIQUE INDEX uq_video_legacy_code ON public.com_m_video (legacy_code) WHERE legacy_code IS NOT NULL;

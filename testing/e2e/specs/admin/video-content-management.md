@@ -36,6 +36,8 @@
 7. 「別のセクションへ移す」で、移動先の教材（別の教材も選べる）とセクションを選ぶ。→ 移動先の末尾に入る。今のセクションは選べない。
 8. ビデオを削除する。→ 行を消した後に動画・サムネイルのファイルを消す。
 9. 教材一覧のビデオ教材の行の「ビデオを編集」（と教材名のリンク）から教材詳細エディタへ移れる。
+10. ビデオの編集で「次のビデオとペアにする」を入れて保存する。→ `pair_with_next` が true になり、公開中のビデオの並び（教材全体。セクションをまたぐ）で
+    そのビデオに「ペア 1/2」、次のビデオに「ペア 2/2」を出す。相手を非公開にする等で次のビデオが無くなると印は出ない（今日のトレーニングメニューと同じ組み方）。
 
 ## 異常系・バリデーション一覧
 
@@ -60,7 +62,7 @@
 - RPC: なし（`com_m_video_section`・`com_m_video` へのサーバーアクションからの直接の読み書き。並べ替えは並び順が変わった行を1行ずつ更新する）
 - テーブル: `com_m_contents`（`content_type = 1`、`category_id` = ビデオの種類）、`com_m_video_section`、`com_m_video`、`student_m_video_progress`
 - 実装参照: `apps/admin/actions/adminVideoAction.ts`、`apps/admin/actions/adminContentAction.ts`（作成時のセクション・削除時のファイル）、
-  `apps/admin/lib/videoUpload.ts`、`packages/lib/video/`（`files.ts`・`order.ts`・`format.ts`・`storage.ts`）、`packages/types/video.ts`
+  `apps/admin/lib/videoUpload.ts`、`packages/lib/video/`（`files.ts`・`order.ts`・`format.ts`・`storage.ts`・`pairs.ts`）、`packages/types/video.ts`
 - ファイルの削除の規約: [docs/DATA-DELETION.md](../../../../docs/DATA-DELETION.md)（`com_m_video`）
 - 用語（status値等）: [_GLOSSARY.md](../_GLOSSARY.md)
 
@@ -73,6 +75,7 @@
 | 高 | 教材の作成とセクションの操作 | フロー1〜2、異常系 #1・#11（作成時のセクション・`category_id`・並び順を DB で確かめる）【実装済み】 |
 | 高 | ビデオの登録・プレビュー・差し替え・サムネイルを外す | フロー3〜5、異常系 #2（キーの形・再生時間・古いファイルが消えることを Storage で確かめる）【実装済み】 |
 | 高 | 並べ替え・公開の切り替え・別の教材への移動・一覧からの導線 | フロー6・7・9（並び順・公開状態・移動先のセクションと末尾を DB で確かめる）【実装済み】 |
+| 中 | ペアの印 | フロー10（印の保存を DB で、セクションをまたぐ組・非公開での外れを画面で確かめる）【実装済み】 |
 | 高 | 削除 | フロー8、異常系 #9・#10（ファイルが消えること・視聴の記録があると残ること）【実装済み】 |
 | 低 | アップロードの失敗・保存の失敗での後片付け | 異常系 #7・#8（通信の遮断等で再現する） |
 | 低 | 大きすぎるファイル | 異常系 #3（500MB を超えるファイルを作って選ぶ） |

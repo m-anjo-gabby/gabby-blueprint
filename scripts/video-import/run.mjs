@@ -266,6 +266,7 @@ async function importVideo(opts, supabase, storage, sectionId, { video, seq }) {
         // 公開は教材の単位で決める（教材は非公開で作るため、ビデオは公開にしておく）
         status: VIDEO_STATUS.PUBLISHED,
         legacy_code: video.legacyCode,
+        pair_with_next: video.pairWithNext === true,
       },
       'video_id',
     );

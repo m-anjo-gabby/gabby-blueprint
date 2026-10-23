@@ -2641,6 +2641,9 @@
           "moveUp": "Move up",
           "moveDown": "Move down",
           "moveToSection": "Move to another section",
+          "pairFirst": "Pair 1/2",
+          "pairSecond": "Pair 2/2",
+          "pairHint": "These two videos are assigned on the same day in today's training menu",
           "edit": "Edit",
           "delete": "Delete"
         },
@@ -2672,6 +2675,8 @@
           "removeThumbnail": "Remove thumbnail",
           "publishedLabel": "Publish",
           "publishedDescription": "Unpublished videos are not shown to students.",
+          "pairLabel": "Pair with the next video",
+          "pairDescription": "In today's training menu, this video and the next one in the content's order are assigned on the same day. Ignored for the last video of the content.",
           "uploading": "Uploading... {percent}%",
           "uploadFailed": "The file upload failed. Please try again",
           "toastCreated": "Video added",

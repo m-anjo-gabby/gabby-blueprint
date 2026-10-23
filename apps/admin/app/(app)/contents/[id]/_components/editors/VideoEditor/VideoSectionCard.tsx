@@ -2,6 +2,7 @@
 
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import type { VideoPairPosition } from '@gabby/lib/video/pairs';
 import type { AdminVideoItem, AdminVideoSection, VideoStatus } from '@gabby/types/video';
 import { Button } from '@/components/ui/button';
 import { VideoListItem } from './VideoListItem';
@@ -11,6 +12,8 @@ interface VideoSectionCardProps {
   isFirst: boolean;
   isLast: boolean;
   busyId: string | null;
+  /** 公開中のビデオのペアの中の位置（教材全体で決める） */
+  pairPositions: ReadonlyMap<string, VideoPairPosition>;
   onMoveSection: (direction: -1 | 1) => void;
   onRenameSection: () => void;
   onDeleteSection: () => void;
@@ -29,6 +32,7 @@ export function VideoSectionCard({
   isFirst,
   isLast,
   busyId,
+  pairPositions,
   onMoveSection,
   onRenameSection,
   onDeleteSection,
@@ -123,6 +127,7 @@ export function VideoSectionCard({
               isFirst={index === 0}
               isLast={index === section.videos.length - 1}
               isBusy={busyId === video.video_id}
+              pairPosition={pairPositions.get(video.video_id) ?? null}
               onEdit={() => onEditVideo(video)}
               onPreview={() => onPreviewVideo(video)}
               onMoveToSection={() => onMoveVideoToSection(video)}

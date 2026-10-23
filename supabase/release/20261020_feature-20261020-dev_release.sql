@@ -575,3 +575,23 @@ COMMENT ON COLUMN public.com_t_admin_impersonation_log.target_user_id IS '代理
 COMMENT ON COLUMN public.com_t_admin_impersonation_log.redeemed_at IS '生徒・コーチのポータルでリンクが使われ、セッションができた日時';
 
 COMMIT;
+
+-- =========================================================================
+-- 【追加セクション】ビデオのペア（今日のメニューで2本を1回分として割り当てる）
+--
+-- 【内容】
+--   旧システム（COM_M_RUNNOW_VIDEO の PAIR_TYPE / PAIR_ID）と同じく、発音トレーニングのビデオを
+--   「シングル（1本）」と「ペア（並び順で続く2本）」に分け、今日のメニューではペアの2本を同じ日に割り当てる。
+--   1. com_m_video.pair_with_next（true: 教材の中の並び順で次のビデオとペア。教材をまたぐペアは持たない）
+--   取り込み済みのビデオの印は scripts/video-import（catalog.json の pairWithNext）で付ける。
+--
+-- 対応ファイル: DDL/table/com_m_video.sql
+-- =========================================================================
+
+BEGIN;
+
+ALTER TABLE public.com_m_video ADD COLUMN pair_with_next boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.com_m_video.pair_with_next IS '次のビデオとペアか（true:教材の中の並び順で次のビデオと2本を1回分として今日のメニューに割り当てる）';
+
+COMMIT;

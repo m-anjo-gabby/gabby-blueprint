@@ -1637,6 +1637,7 @@ export type Database = {
           duration_sec: number | null
           insert_date: string
           legacy_code: string | null
+          pair_with_next: boolean
           section_id: string
           seq_no: number
           status: 0 | 1
@@ -1652,6 +1653,7 @@ export type Database = {
           duration_sec?: number | null
           insert_date?: string
           legacy_code?: string | null
+          pair_with_next?: boolean
           section_id: string
           seq_no?: number
           status?: 0 | 1
@@ -1667,6 +1669,7 @@ export type Database = {
           duration_sec?: number | null
           insert_date?: string
           legacy_code?: string | null
+          pair_with_next?: boolean
           section_id?: string
           seq_no?: number
           status?: 0 | 1

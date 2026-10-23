@@ -343,6 +343,8 @@ export interface SaveVideoInput {
   title: string;
   title_en: string;
   description: string;
+  /** 次のビデオとペアにするか（今日のトレーニングメニューで2本を同じ日に割り当てる） */
+  pair_with_next: boolean;
   status: VideoStatus;
   /** 新しくアップロードした動画のキー（登録時は必須。編集時は差し替える時だけ） */
   video_key?: string;
@@ -406,6 +408,7 @@ export async function saveVideo(input: SaveVideoInput): Promise<ActionResult> {
         title,
         title_en: titleEn,
         description: input.description.trim() || null,
+        pair_with_next: input.pair_with_next === true,
         status: input.status,
         video_path: input.video_key,
         thumbnail_path: input.thumbnail_key ?? null,
@@ -427,6 +430,7 @@ export async function saveVideo(input: SaveVideoInput): Promise<ActionResult> {
         title,
         title_en: titleEn,
         description: input.description.trim() || null,
+        pair_with_next: input.pair_with_next === true,
         status: input.status,
         thumbnail_path: thumbnailPath,
         ...(input.video_key ? { video_path: input.video_key, duration_sec: durationSec } : {}),

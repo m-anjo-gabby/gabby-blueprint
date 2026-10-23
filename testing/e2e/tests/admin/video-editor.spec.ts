@@ -62,6 +62,7 @@ async function videoRowOf(videoId: string) {
     duration_sec: number | null;
     seq_no: number;
     status: number;
+    pair_with_next: boolean;
   };
 }
 
@@ -261,6 +262,47 @@ test('ビデオの並べ替え・公開の切り替え・別の教材のセク�
     await expect(videoRow(s1, 'E2E video 1')).toHaveCount(0);
     const moved = await videoRowOf(v1.videoId);
     expect(moved).toMatchObject({ section_id: target.sections[0].sectionId, seq_no: 1, status: 1 });
+  } finally {
+    await context.close();
+  }
+});
+
+test('ペアの印（次のビデオとペアにする）: セクションをまたいで公開中の次のビデオと組になり、非公開にすると外れる', async ({
+  browser,
+}) => {
+  const seeded = await seedVideoContent(admin, tag, [
+    {
+      name: 'S1',
+      videos: [
+        { title: 'E2E pair 1', status: 1 },
+        { title: 'E2E pair 2', status: 1 },
+      ],
+    },
+    { name: 'S2', videos: [{ title: 'E2E pair 3', status: 1 }] },
+  ]);
+  contentIds.push(seeded.contentId);
+  const v2 = seeded.sections[0].videos[1];
+
+  const { context, page } = await openAdminContext(browser);
+  try {
+    await page.goto(`/contents/${seeded.contentId}`);
+    const [s1, s2] = [sectionCard(page, 'S1'), sectionCard(page, 'S2')];
+    await expect(videoRow(s1, 'E2E pair 1')).toBeVisible();
+    await expect(page.getByText(/ペア [12]\/2/)).toHaveCount(0);
+
+    const dialog = await openDialogBy(page, videoRow(s1, 'E2E pair 2').getByRole('button', { name: '編集' }));
+    await dialog.getByRole('switch', { name: '次のビデオとペアにする' }).click();
+    await dialog.getByRole('button', { name: '保存' }).click();
+    await expect(page.getByText('ビデオを更新しました')).toBeVisible();
+    expect((await videoRowOf(v2.videoId)).pair_with_next).toBe(true);
+    await expect(videoRow(s1, 'E2E pair 2')).toContainText('ペア 1/2');
+    await expect(videoRow(s2, 'E2E pair 3')).toContainText('ペア 2/2');
+    await expect(videoRow(s1, 'E2E pair 1')).not.toContainText('ペア');
+
+    // 組は公開中のビデオの並びで決めるため、相手を非公開にすると組が外れる
+    await videoRow(s2, 'E2E pair 3').getByRole('switch').click();
+    await expect(page.getByText('公開状態を変更しました')).toBeVisible();
+    await expect(page.getByText(/ペア [12]\/2/)).toHaveCount(0);
   } finally {
     await context.close();
   }

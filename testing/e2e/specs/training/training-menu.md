@@ -34,7 +34,7 @@ student の環境変数 `TRAINING_MENU_ENABLED` が `true` の環境（dev・sta
    - スプリントのタイムアタック2つ: 見える汎用スプリントの教材（並び順の最初の1つ）で、次のステージの到達条件に入っている種別から選ぶ。
      1つ目は直近7日のタイムアタックが少ない種別（同数なら次のステージまでの差が大きい種別）で2回、2つ目は残りから無作為に選び1回。
      レベルは到達レベルの次（問題が無い・選べないレベルなら、選べて問題のある最も低いレベル）。
-   - ビデオ（最大2本）: 発音トレーニングのビデオを教材・セクション・ビデオの並び順で見て、まだ最後まで見ていない最初の1本と、同じセクションの続きの1本。
+   - ビデオ（1〜2本）: 発音トレーニングのビデオを教材ごとに並び順（セクション・ビデオ）でシングル（1本）・ペア（`pair_with_next` の付いたビデオと次の1本）の組に分け、まだ最後まで見ていないビデオがある最初の組を出す。シングルは1本、ペアは2本（片方を見終えていれば残りの1本。前の日に片方だけ見た場合も同じ）。組は生徒に見える（公開中の）ビデオの並びで決める。
 3. ホームに「今日のトレーニングメニュー」「n / m 完了」「あとnつで今日のメニューを達成」とやることの一覧を出す。
 4. スプリントのやることを押すと、その種別・レベル・推奨の制限時間を選んだ状態のスプリントの選択画面を開く。ビデオのやることはそのビデオを開く。
 5. ホームを開くたびに完了を判定する。スプリントはその日の同じ教材・種別・レベルのタイムアタックの回数が回数に届いたら、ビデオは最後まで見たら完了。
@@ -59,9 +59,10 @@ student の環境変数 `TRAINING_MENU_ENABLED` が `true` の環境（dev・sta
 - RPC: `create_training_menu`
 - テーブル: `student_t_training_menu`、`student_t_training_menu_item`。完了の判定に `self_t_sprint`・`student_m_video_progress`、組み方に `student_m_sprint_progress`・`com_m_contents`・`com_m_video_section`・`com_m_video`
 - 実装参照: `apps/student/lib/trainingMenu.ts`（取得・作成・完了の判定）、`packages/lib/trainingMenu/standardMenu.ts`（標準メニューの組み方）、
-  `packages/lib/trainingMenu/progress.ts`（完了の判定）、`packages/types/trainingMenu.ts`。単体テスト `testing/unit/training-menu.test.ts`
+  `packages/lib/trainingMenu/progress.ts`（完了の判定）、`packages/lib/video/pairs.ts`（ペアの組み方）、`packages/types/trainingMenu.ts`。
+  単体テスト `testing/unit/training-menu.test.ts`・`testing/unit/video-pairs.test.ts`
 - 未実装: 旧システムのミニテスト（すべて終えた後のラストラン。アプリのみの生徒のレベルアップの判定）。コースのメニュー（`menu_source` に値を足す）
-- 用語（status値等）: [_GLOSSARY.md](../_GLOSSARY.md)、サービスの用語は `docs/GLOSSARY.md`（今日のトレーニングメニュー・標準メニュー）
+- 用語（status値等）: [_GLOSSARY.md](../_GLOSSARY.md)、サービスの用語は `docs/GLOSSARY.md`（今日のトレーニングメニュー・標準メニュー・シングル / ペア）
 
 ## E2Eテストケース候補
 

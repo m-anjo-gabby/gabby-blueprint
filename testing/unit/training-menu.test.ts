@@ -29,7 +29,7 @@ const input = (overrides: Partial<StandardMenuInput> = {}): StandardMenuInput =>
   sprint: { contentId: 'nlt', availableLevels: ALL_LEVELS },
   progress: null,
   recentSessionCounts: {},
-  videos: [],
+  videoGroups: [],
   random: () => 0,
   ...overrides,
 });
@@ -88,13 +88,9 @@ test('教材に問題の無い種別は出さず、スプリントの教材が�
   assert.deepEqual(buildStandardMenu(input({ sprint: null })), []);
 });
 
-test('ビデオ: 未視聴の最初の1本と、同じセクションの続きの1本までを、スプリントの後に出す', () => {
-  const videos = [
-    { contentId: 'f1', sectionId: 's1', videoId: 'v1' },
-    { contentId: 'f1', sectionId: 's1', videoId: 'v2' },
-    { contentId: 'f1', sectionId: 's1', videoId: 'v3' },
-  ];
-  const items = buildStandardMenu(input({ videos }));
+test('ビデオ: 未視聴の最初の組（シングルは1本、ペアは2本）を、スプリントの後に出す', () => {
+  const video = (videoId: string) => ({ contentId: 'f1', videoId });
+  const items = buildStandardMenu(input({ videoGroups: [[video('v1'), video('v2')], [video('v3')]] }));
   assert.deepEqual(
     items.map((i) => [i.seq_no, i.item_type === TRAINING_MENU_ITEM_TYPE.VIDEO ? i.video_id : i.question_type]),
     [
@@ -105,19 +101,12 @@ test('ビデオ: 未視聴の最初の1本と、同じセクションの続き�
     ],
   );
 
-  const nextSection = buildStandardMenu(
-    input({
-      sprint: null,
-      videos: [
-        { contentId: 'f1', sectionId: 's1', videoId: 'v9' },
-        { contentId: 'f1', sectionId: 's2', videoId: 'v10' },
-      ],
-    }),
-  );
+  const single = buildStandardMenu(input({ sprint: null, videoGroups: [[video('v3')], [video('v4'), video('v5')]] }));
   assert.deepEqual(
-    nextSection.map((i) => (i.item_type === TRAINING_MENU_ITEM_TYPE.VIDEO ? i.video_id : null)),
-    ['v9'],
+    single.map((i) => (i.item_type === TRAINING_MENU_ITEM_TYPE.VIDEO ? i.video_id : null)),
+    ['v3'],
   );
+  assert.deepEqual(buildStandardMenu(input({ sprint: null, videoGroups: [[], []] })), []);
 });
 
 test('完了の判定: スプリントは同じ教材・種別・レベルの回数、ビデオは最後まで見たか', () => {

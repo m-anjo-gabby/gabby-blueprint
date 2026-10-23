@@ -4,7 +4,9 @@ import { ArrowDown, ArrowUp, FolderInput, ImageOff, Pencil, Play, Trash2 } from 
 import { useTranslations } from 'next-intl';
 import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 import { formatVideoDuration } from '@gabby/lib/video/format';
+import type { VideoPairPosition } from '@gabby/lib/video/pairs';
 import { VIDEO_STATUS, type AdminVideoItem, type VideoStatus } from '@gabby/types/video';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 
@@ -13,6 +15,8 @@ interface VideoListItemProps {
   isFirst: boolean;
   isLast: boolean;
   isBusy: boolean;
+  /** ペアの中の位置（シングル・非公開は null） */
+  pairPosition: VideoPairPosition;
   onEdit: () => void;
   onPreview: () => void;
   onMoveToSection: () => void;
@@ -27,6 +31,7 @@ export function VideoListItem({
   isFirst,
   isLast,
   isBusy,
+  pairPosition,
   onEdit,
   onPreview,
   onMoveToSection,
@@ -60,7 +65,18 @@ export function VideoListItem({
       <div className="flex-1 min-w-0 space-y-1">
         <p className="text-sm font-bold text-slate-800 truncate">{video.title}</p>
         {video.title_en && <p className="text-[11px] text-slate-500 italic truncate">{video.title_en}</p>}
-        <p className="text-[11px] font-bold text-slate-400">{formatVideoDuration(video.duration_sec)}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-[11px] font-bold text-slate-400">{formatVideoDuration(video.duration_sec)}</p>
+          {pairPosition && (
+            <Badge
+              variant="outline"
+              className="h-5 px-1.5 text-[10px] font-bold border-brand-100 bg-brand-50 text-brand"
+              title={t('pairHint')}
+            >
+              {pairPosition === 1 ? t('pairFirst') : t('pairSecond')}
+            </Badge>
+          )}
+        </div>
       </div>
 
       <label className="flex items-center gap-2 shrink-0 text-xs font-bold text-slate-500">

@@ -76,6 +76,9 @@ test('定義の誤りを見つける', () => {
   bad.contents[1].sections[1].videos[1].title = '';
   bad.contents[0].sections.push({ name: 'empty', videos: [] });
   bad.contents[0].sections.push({ name: null, nameEn: 'English only', videos: [] });
+  bad.contents[1].sections[0].videos[0].pairWithNext = true;
+  bad.contents[1].sections[1].videos[0].pairWithNext = true;
+  bad.contents[1].sections[1].videos[1].pairWithNext = true;
   assert.deepEqual(validateCatalog(bad), [
     'ビデオの無いセクションがあります: A empty',
     'セクションの見出しが重複しています: A null',
@@ -85,6 +88,8 @@ test('定義の誤りを見つける', () => {
     'ビデオの種類の値が不正です: A 9',
     '旧ファイル名が重複しています: a1.mp4',
     'タイトルがありません: b3.mp4',
+    'ペアの2本目に次とのペアの印があります: a1.mp4',
+    '教材の最後のビデオにペアの印があります: b3.mp4',
   ]);
 });
 

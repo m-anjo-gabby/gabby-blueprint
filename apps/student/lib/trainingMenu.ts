@@ -14,6 +14,7 @@ import {
   type TrainingMenuFacts,
 } from '@gabby/lib/trainingMenu/progress';
 import { buildStandardMenu, type StandardMenuVideoCandidate } from '@gabby/lib/trainingMenu/standardMenu';
+import { groupVideoPairs } from '@gabby/lib/video/pairs';
 import { getVideoFileUrls } from '@gabby/lib/video/storage';
 import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
 import { CONTENT_STATUS } from '@gabby/types/content';
@@ -143,9 +144,9 @@ async function selectMenu(supabase: ServerClient, target: { userId: string; menu
 type MenuRow = NonNullable<Awaited<ReturnType<typeof selectMenu>>>;
 type MenuItemRow = MenuRow['items'][number];
 
-/** 標準メニューの材料（汎用スプリントの教材・到達レベル・直近の練習・未視聴の発音トレーニングのビデオ）を集めて組む */
+/** 標準メニューの材料（汎用スプリントの教材・到達レベル・直近の練習・未視聴の発音トレーニングのビデオの組）を集めて組む */
 async function composeStandardMenu(supabase: ServerClient, userId: string, now: number) {
-  const [sprintContent, progress, recent, videos] = await Promise.all([
+  const [sprintContent, progress, recent, videoGroups] = await Promise.all([
     supabase
       .from('com_m_contents')
       .select('content_id')
@@ -165,7 +166,7 @@ async function composeStandardMenu(supabase: ServerClient, userId: string, now: 
       .select('question_type')
       .eq('user_id', userId)
       .gte('insert_date', new Date(now - RECENT_DAYS * DAY_MS).toISOString()),
-    selectUnwatchedPronunciationVideos(supabase, userId),
+    selectUnwatchedPronunciationVideoGroups(supabase, userId),
   ]);
   if (sprintContent.error) throw sprintContent.error;
   if (progress.error) throw progress.error;
@@ -186,19 +187,22 @@ async function composeStandardMenu(supabase: ServerClient, userId: string, now: 
     sprint: sprintContentId ? { contentId: sprintContentId, availableLevels } : null,
     progress: progress.data,
     recentSessionCounts,
-    videos,
+    videoGroups,
   });
 }
 
-/** 発音トレーニングのビデオのうち、まだ最後まで見ていないものを教材・セクション・ビデオの並び順で返す */
-async function selectUnwatchedPronunciationVideos(
+/**
+ * 発音トレーニングのビデオを教材ごとにペアの組に分け、まだ最後まで見ていないものを組ごとに並び順で返す。
+ * 組は生徒に見える（公開中の）ビデオの並びで決める。
+ */
+async function selectUnwatchedPronunciationVideoGroups(
   supabase: ServerClient,
   userId: string,
-): Promise<StandardMenuVideoCandidate[]> {
+): Promise<StandardMenuVideoCandidate[][]> {
   const [{ data: contents, error }, { data: watched, error: watchedError }] = await Promise.all([
     supabase
       .from('com_m_contents')
-      .select('content_id, seq_no, com_m_video_section(section_id, seq_no, com_m_video(video_id, seq_no))')
+      .select('content_id, seq_no, com_m_video_section(seq_no, com_m_video(video_id, seq_no, pair_with_next))')
       .eq('content_type', VIDEO_CONTENT_TYPE)
       .eq('category_id', VIDEO_CATEGORY.PRONUNCIATION)
       .eq('status', CONTENT_STATUS.PUBLISHED)
@@ -210,14 +214,18 @@ async function selectUnwatchedPronunciationVideos(
 
   const watchedIds = new Set((watched ?? []).map((w) => w.video_id));
   const bySeq = (a: { seq_no: number }, b: { seq_no: number }) => a.seq_no - b.seq_no;
-  return (contents ?? []).flatMap((content) =>
-    [...content.com_m_video_section].sort(bySeq).flatMap((section) =>
-      [...section.com_m_video]
-        .sort(bySeq)
-        .filter((video) => !watchedIds.has(video.video_id))
-        .map((video) => ({ contentId: content.content_id, sectionId: section.section_id, videoId: video.video_id })),
-    ),
-  );
+  return (contents ?? []).flatMap((content) => {
+    const videos = [...content.com_m_video_section]
+      .sort(bySeq)
+      .flatMap((section) => [...section.com_m_video].sort(bySeq));
+    return groupVideoPairs(videos)
+      .map((group) =>
+        group
+          .filter((video) => !watchedIds.has(video.video_id))
+          .map((video) => ({ contentId: content.content_id, videoId: video.video_id })),
+      )
+      .filter((group) => group.length > 0);
+  });
 }
 
 /** 完了の判定に使う実績（その日のタイムアタックの回数・見終えたビデオ）を集める */

@@ -109,6 +109,13 @@ export function validateCatalog(catalog) {
         if (!video.title) errors.push(`タイトルがありません: ${video.legacyCode}`);
       }
     }
+    // ペアは教材の中の並び順で次のビデオと組む（教材をまたがず、1本が2つの組に入らない）
+    const videos = content.sections.flatMap((s) => s.videos);
+    for (const [i, video] of videos.entries()) {
+      if (!video.pairWithNext) continue;
+      if (i === videos.length - 1) errors.push(`教材の最後のビデオにペアの印があります: ${video.legacyCode}`);
+      else if (videos[i - 1]?.pairWithNext) errors.push(`ペアの2本目に次とのペアの印があります: ${video.legacyCode}`);
+    }
   }
   return errors;
 }
