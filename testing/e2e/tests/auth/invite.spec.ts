@@ -71,6 +71,20 @@ test('ライブ付き契約の招待から本登録すると、契約管理か�
     contractId,
   });
 
+  // 本登録後のログインのリダイレクトを失敗と取り違えると、遷移の直前に一瞬だけエラーが出るため、出た警告を記録しておく
+  const alerts: string[] = [];
+  await page.exposeFunction('reportAlert', (text: string) => {
+    if (!alerts.includes(text)) alerts.push(text);
+  });
+  await page.addInitScript(() => {
+    const report = (window as unknown as { reportAlert: (text: string) => void }).reportAlert;
+    new MutationObserver(() => {
+      document.querySelectorAll('[role="alert"]').forEach((el) => {
+        if (el.textContent) report(el.textContent);
+      });
+    }).observe(document, { subtree: true, childList: true, characterData: true });
+  });
+
   await page.goto(`/auth/invite?token=${token}`);
   await page.getByLabel('新しいパスワード', { exact: true }).fill(PASSWORD);
   await page.getByLabel('新しいパスワード（確認用）').fill(PASSWORD);
@@ -79,6 +93,7 @@ test('ライブ付き契約の招待から本登録すると、契約管理か�
 
   const userId = await trackUserByEmail(fixture!, email);
   expect(userId).not.toBeNull();
+  expect(alerts).toEqual([]);
   const { admin } = fixture!;
   const { data: license } = await admin
     .from('com_t_user_license')

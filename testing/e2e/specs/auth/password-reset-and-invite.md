@@ -71,7 +71,7 @@
 | 未登録アドレスのパスワード忘れ | `password-reset.spec.ts` | 中 | 異常系5 |
 | パスワード忘れから届いたメールのリンクで再設定を始める | `password-reset.spec.ts` | 中 | 正常系2。`RESEND_TEST_READ_API_KEY` 未設定ならスキップ。desktop のみ（実際に送信する） |
 | 招待から本登録（同じリンクは再利用不可） | `invite.spec.ts` | 高 | 正常系3、異常系6・8 |
-| ライブ付き契約の招待から本登録（チケット・履歴・ダイアログプラクティスが付く） | `invite.spec.ts` | 高 | 正常系3。プラン `LIVE_WEEKLY2_3M` の使い捨て契約（`createDisposableContract`） |
+| ライブ付き契約の招待から本登録（チケット・履歴・ダイアログプラクティスが付く。遷移までにエラーの表示を挟まない） | `invite.spec.ts` | 高 | 正常系3。プラン `LIVE_WEEKLY2_3M` の使い捨て契約（`createDisposableContract`）。自動ログインのリダイレクトを失敗と取り違えると遷移の直前に一瞬だけ出るため、表示された警告を記録して確かめる |
 | 期限切れ・存在しない招待 | `invite.spec.ts` | 中 | 異常系6・7 |
 | ログイン失敗・リンクエラーの案内・外部への next | `login-notice.spec.ts` | 中 | 異常系9・10 |
 

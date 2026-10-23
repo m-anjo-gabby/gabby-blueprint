@@ -2,7 +2,7 @@
 
 import { AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { unstable_rethrow, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { SubmitButton } from '../common/SubmitButton';
 import { AuthHeading, AuthLinkButton, AuthPage, AuthStatus, AuthStep, FormError } from './AuthLayout';
@@ -98,7 +98,9 @@ function InviteSetupContent({ actions, labels, passwordLabels }: InviteSetupFlow
       loginFormData.append('password', password.password);
       const loginResult = await actions.signIn(loginFormData);
       if (loginResult && !loginResult.success) setError(loginResult.message);
-    } catch {
+    } catch (error) {
+      // ログイン成功時のサーバー側のリダイレクトは、画面側では reject として届く（失敗ではないため Next.js に返す）
+      unstable_rethrow(error);
       setError(labels.unexpected);
     }
   };
