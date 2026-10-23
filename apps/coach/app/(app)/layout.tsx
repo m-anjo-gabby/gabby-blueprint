@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
-import { UserStoreInitializer } from '@gabby/lib/auth/UserStoreInitializer';
+import { loadViewerProfile } from '@gabby/lib/auth/viewerProfile';
+import { ViewerProvider } from '@gabby/lib/auth/ViewerProvider';
 import { ConfirmContainer } from '@gabby/lib/components/common/ConfirmContainer';
 import { ToastContainer } from '@gabby/lib/components/common/ToastContainer';
 import { type UserAppMetadata } from '@gabby/lib/stores/useUserStore';
@@ -24,13 +25,14 @@ export default async function CoachAppLayout({ children }: { children: React.Rea
   // ヘッダー・サイドバーの未読・件数はサーバーで並列に取得し、await せず Promise のまま渡す
   // （画面の表示を待たせず、ブラウザからのサーバーアクションの往復も発生させない）
   const shellData = loadCoachShellData();
+  // 日時をサーバーの描画の時点から利用者のタイムゾーンで出すため、プロフィールは待ってから描く
+  const profile = await loadViewerProfile(user);
 
   return (
-    <>
-      {/* Zustandへのデータ流し込みとAuth監視 */}
-      <UserStoreInitializer
-        user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }}
-      />
+    <ViewerProvider
+      user={{ id: user.id, email: user.email, app_metadata: user.app_metadata as UserAppMetadata }}
+      profile={profile}
+    >
       <ShellDataLoader data={shellData} />
 
       {/* ヘッダーエリア / サイドメニュー / メインエリアの3ペイン構成 */}
@@ -49,6 +51,6 @@ export default async function CoachAppLayout({ children }: { children: React.Rea
       <ToastContainer />
       <ConfirmContainer />
       <GlobalNoticePopup />
-    </>
+    </ViewerProvider>
   );
 }

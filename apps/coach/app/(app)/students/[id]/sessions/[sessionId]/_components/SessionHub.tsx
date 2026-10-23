@@ -18,9 +18,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { LIVE_SESSION_EARLY_JOIN_BEFORE_MS, LIVE_SESSION_END_AFTER_MS } from '@gabby/lib/liveSessionRoom/constants';
 import { useLiveSessionEndSignal } from '@gabby/lib/liveSessionRoom/hooks/useLiveSessionEndSignal';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import {
   isConductedOutcome,
   SESSION_STATUS,
@@ -80,12 +80,7 @@ interface SessionHubProps {
  */
 export function SessionHub({ studentId, session, dialoguePractice, prep, selfTraining }: SessionHubProps) {
   const router = useRouter();
-  const user = useUserStore((state) => state.user);
-  const timezone = user?.timezone || 'Asia/Tokyo';
-  // UserStoreInitializerはDBからのプロフィール取得が完了するまでuser_id: 0の仮ユーザーを
-  // セットする（timezoneも仮値のAsia/Tokyoになる）。その仮値でセッション日時を表示すると、
-  // 実際のコーチのタイムゾーンに切り替わった瞬間にちらつくため、確定するまでは表示しない。
-  const isTimezoneReady = !!user && user.user_id !== 0;
+  const timezone = useTimezone();
   const badge = getSessionStatusBadge(session);
   // 別タブ（通話ルーム）で通話が終了した瞬間にこのハブタブへ知らせてもらい、End Session忘れを防ぐ
   const { hasEnded: hasCallEndedElsewhere } = useLiveSessionEndSignal(session.session_id);
@@ -162,12 +157,9 @@ export function SessionHub({ studentId, session, dialoguePractice, prep, selfTra
             >
               {badge.label}
             </span>
-            {isTimezoneReady && (
-              <span className="hidden md:inline text-[11px] font-bold text-slate-500 whitespace-nowrap">
-                {formatDateTimeEn(session.start_datetime, timezone)} –{' '}
-                {formatDateTimeEn(session.end_datetime, timezone)}
-              </span>
-            )}
+            <span className="hidden md:inline text-[11px] font-bold text-slate-500 whitespace-nowrap">
+              {formatDateTimeEn(session.start_datetime, timezone)} – {formatDateTimeEn(session.end_datetime, timezone)}
+            </span>
           </div>
         }
       />
@@ -204,14 +196,10 @@ export function SessionHub({ studentId, session, dialoguePractice, prep, selfTra
 
                 {/* 誤ったセッションを操作してしまうことを防ぐため、日時は強調して表示する */}
                 <div className="rounded-xl bg-slate-50/80 border border-slate-100 px-4 py-3">
-                  {isTimezoneReady ? (
-                    <p className="text-base font-black text-slate-800 tracking-tight">
-                      {formatDateTimeEn(session.start_datetime, timezone)} –{' '}
-                      {formatDateTimeEn(session.end_datetime, timezone)}
-                    </p>
-                  ) : (
-                    <div className="h-5 w-56 max-w-full rounded bg-slate-200 animate-pulse" />
-                  )}
+                  <p className="text-base font-black text-slate-800 tracking-tight">
+                    {formatDateTimeEn(session.start_datetime, timezone)} –{' '}
+                    {formatDateTimeEn(session.end_datetime, timezone)}
+                  </p>
                 </div>
 
                 {isActionable ? (
@@ -253,8 +241,8 @@ export function SessionHub({ studentId, session, dialoguePractice, prep, selfTra
                       <p className="flex items-center gap-1 text-[11px] text-amber-600 font-semibold">
                         <TriangleAlert size={11} className="shrink-0" />
                         You can record the outcome once the session has started (
-                        {isTimezoneReady ? formatDateTimeEn(session.start_datetime, timezone) : '…'}). To cancel before
-                        then, use Cancel on the student’s overview.
+                        {formatDateTimeEn(session.start_datetime, timezone)}). To cancel before then, use Cancel on the
+                        student’s overview.
                       </p>
                     )}
                     {isPastActionWindow ? (

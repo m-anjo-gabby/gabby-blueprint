@@ -166,6 +166,7 @@ E2E 実行自体はトークンを消費しない。消費するのは結果・�
 | Realtime の反映 | 「画面に件数が出た」を購読の完了の合図にしない。ページを開く前に `support/realtime.ts` の `watchRealtime(page)` を呼び、送信の前に戻り値の `waitForSubscribed("<チャンネルの接頭辞>")` を待つ |
 | 楽観的に表示を切り替える操作の後の DB | 画面の表示は保存の完了を意味しない。`expect.poll` で DB の値を待つ |
 | CAPTCHA（Turnstile）付きのフォーム | 隠し項目 `input[name="cf-turnstile-response"]` に値が入ってから送る（中身は iframe のため `error-context.md` には出ない） |
+| ハイドレーションの前だけ表示が違う（後から正しい値に切り替わる）不具合の確認 | 画面では切り替わった後しか見分けられないため、`page.request.get(<パス>)` で JavaScript を動かす前の HTML を取り、`html.includes(...)` の真偽で確かめる（`toContain` は失敗時に HTML 全体を出力する）。例: `tests/chat/chat-messaging.spec.ts` の「時刻」 |
 | 新しい画面への最初の遷移（dev） | 初回のコンパイルで10秒を超える。遷移の待ち（`waitForURL`）だけを60秒にする。推測で他の待ち時間を延ばさない |
 
 - 遷移の操作そのものを確かめないテストは、別のテストで確かめた画面へ URL で直接移る（一覧から押す操作は並列実行の負荷で不安定になりやすい）。

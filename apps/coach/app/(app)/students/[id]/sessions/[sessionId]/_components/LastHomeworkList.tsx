@@ -1,13 +1,13 @@
 'use client';
 
 import { formatDateTimeEn } from '@gabby/lib/date/dateEn';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { SessionHomeworkEntry } from '@gabby/types/sessionHomework';
 import { HomeworkViewedStatus } from '@/components/session/HomeworkViewedStatus';
 
 /** Session Hub「Last Homework」の一覧（投稿日時はコーチのタイムゾーンで表示する。生徒が見たかも出す） */
 export function LastHomeworkList({ entries }: { entries: SessionHomeworkEntry[] }) {
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
 
   if (entries.length === 0) {
     return <p className="text-xs text-slate-400 italic">No homework posted yet.</p>;

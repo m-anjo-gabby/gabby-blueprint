@@ -1,6 +1,7 @@
 // app/(app)/layout.tsx
 import { redirect } from 'next/navigation';
-import { UserStoreInitializer } from '@gabby/lib/auth/UserStoreInitializer';
+import { loadViewerProfile } from '@gabby/lib/auth/viewerProfile';
+import { ViewerProvider } from '@gabby/lib/auth/ViewerProvider';
 import { ConfirmContainer } from '@gabby/lib/components/common/ConfirmContainer';
 import { ToastContainer } from '@gabby/lib/components/common/ToastContainer';
 import { loadCommonShellData } from '@gabby/lib/shell/loadCommonShellData';
@@ -39,10 +40,12 @@ export default async function StudentAppLayout({ children }: { children: React.R
   // --- 2. 規約同意チェック ---
   // ログイン後の全ページで共通して、最新規約への同意状況を確認します。
   // 未同意がある場合は TermsAgreementModal が表示され、操作をロックします。
-  // 規約の同意状況と、シェルのナビ項目の表示可否（ライブセッション付き契約の有無）を並列に取得する
-  const [pendingTerms, contracts] = await Promise.all([
+  // 規約の同意状況と、シェルのナビ項目の表示可否（ライブセッション付き契約の有無）、
+  // 日時の表示に使うプロフィール（タイムゾーン）を並列に取得する
+  const [pendingTerms, contracts, profile] = await Promise.all([
     checkPendingAgreements(user.id),
     getMyLiveSessionContractsCached(),
+    loadViewerProfile(user),
   ]);
   const roles = (user.app_metadata?.roles as string[] | undefined) ?? [];
   const navContext: ShellNavContext = {
@@ -59,11 +62,7 @@ export default async function StudentAppLayout({ children }: { children: React.R
   // リクエスト単位に実施済みのため、ここでは「未ログイン」の最終防御ラインのみを担う。
 
   return (
-    <>
-      {/* Zustandへのデータ流し込みとAuth監視 
-          クライアント側で常にユーザー情報を参照可能にします。
-      */}
-      <UserStoreInitializer user={user} />
+    <ViewerProvider user={user} profile={profile}>
       <NavigationScrollReset />
       {/* 音声の中断・復旧の発生状況をログへ送る（表示なし） */}
       <AudioDiagnosticsReporter />
@@ -92,6 +91,6 @@ export default async function StudentAppLayout({ children }: { children: React.R
       <ConfirmContainer />
       {/* ポップアップ（お知らせ等）: 規約が未同意の間は一切表示しない */}
       <PopupHost hasPendingGate={pendingTerms.length > 0} />
-    </>
+    </ViewerProvider>
   );
 }

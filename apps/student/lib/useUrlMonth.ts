@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { toIsoMonthInZone } from '@gabby/lib/date/date';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 
 /**
  * 月ごとの画面（トレーニング記録・単語帳/スプリントの履歴・カレンダー）の読み込み中表示で使う表示月（YYYY-MM）。
@@ -11,6 +11,6 @@ import { useUserStore } from '@gabby/lib/stores/useUserStore';
  */
 export function useUrlMonth(): string {
   const searchParams = useSearchParams();
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   return searchParams.get('month') || toIsoMonthInZone(new Date(), timezone);
 }

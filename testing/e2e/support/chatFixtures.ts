@@ -10,7 +10,8 @@ import { getPersonaPassword, PERSONAS } from './personas.ts';
  * - コーチ側の操作（送信・既読）は、実際にサインインしたコーチのJWTで行う（RLS配下の操作のため。CLAUDE.md 6章）
  */
 
-const COACH_EMAIL = 'qa-coach-us-01@gabby-qa-test.example';
+/** 担当外コーチUS01（`America/New_York`。日本時間以外の利用者の表示の確認にも使う） */
+export const CHAT_COACH_EMAIL = 'qa-coach-us-01@gabby-qa-test.example';
 /** 使い捨てデータの目印（固定フィクスチャと区別する。FIXTURES.md） */
 const ROOM_NAME_PREFIX = '【QAテスト】チャットE2E';
 
@@ -62,7 +63,7 @@ async function createRoom(
 export async function createChatFixture(): Promise<ChatE2EFixture> {
   const admin = await createAdminClient();
   const studentId = await findUserIdByEmail(admin, PERSONAS.liveStudent.email);
-  const coachId = await findUserIdByEmail(admin, COACH_EMAIL);
+  const coachId = await findUserIdByEmail(admin, CHAT_COACH_EMAIL);
   const { data: coachUser } = await admin.from('com_m_user').select('user_name').eq('id', coachId).single();
   const tag = `${Date.now()}`;
   const members = [
@@ -103,7 +104,7 @@ export async function createChatFixture(): Promise<ChatE2EFixture> {
     .eq('room_id', oneOnOneRoomId)
     .eq('user_id', coachId);
 
-  const coach = await signInAsRole(COACH_EMAIL, getPersonaPassword());
+  const coach = await signInAsRole(CHAT_COACH_EMAIL, getPersonaPassword());
   return {
     admin,
     coach,

@@ -32,7 +32,7 @@ admin / coach / student と共通部品（`packages/lib/components`）の画面�
 
 - 書式は `packages/lib/date/date.ts`（`formatZonedDate` / `formatDateTimeByZone` / `toIsoDateInZone` / `toIsoMonthInZone` 等）、coach の英語表記は `date/dateEn.ts` を使う。
 - どのタイムゾーンで出すかは画面の基準に合わせる。admin の一覧・契約期間は日本時間、集計期間は `date/reporting.ts` の `REPORTING_TIMEZONE`、コーチの暦で区切るもの（月次レポート・カレンダー）はコーチの `timezone`。
-- ログイン中の利用者のタイムゾーン（`useTimezone`）はストアの値のため、サーバーで描く区画では使わず、サーバーで取得して渡す。
+- ログイン中の利用者のタイムゾーンは、クライアント部品では `useTimezone`（`packages/lib/hooks/`）で読む。各アプリの `(app)/layout.tsx` が `loadViewerProfile`（`packages/lib/auth/viewerProfile.ts`）でサーバー取得し、`ViewerProvider`（`packages/lib/auth/`）で渡すため、サーバーの描画の時点から正しい値になる。ストアの `user.timezone` を直接読まない（ストアはハイドレーションの後に入るため、それまで日本時間で描かれて表示が切り替わる）。名前・アイコン等の表示も同じ理由で `useViewer` から読む。Server Component では `loadViewerProfile` の値を使う。
 
 ## 長い文字の省略と折り返し（全アプリ共通）
 

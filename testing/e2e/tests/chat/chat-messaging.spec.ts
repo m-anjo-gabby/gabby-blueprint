@@ -1,11 +1,13 @@
 import type { Page } from '@playwright/test';
 import {
+  CHAT_COACH_EMAIL,
   cleanupChatFixture,
   createChatFixture,
   markReadAsCoach,
   sendAsCoach,
   type ChatE2EFixture,
 } from '../../support/chatFixtures.ts';
+import { openCoachContext } from '../../support/coachApp.ts';
 import { getPersonaPassword, PERSONAS, storageStatePath } from '../../support/personas.ts';
 import { watchRealtime } from '../../support/realtime.ts';
 import { expect, mainNav, navTab, test } from '../../support/studentApp.ts';
@@ -212,4 +214,45 @@ test.describe('未ログインで開いたリンク', () => {
     // PCは左の一覧のプレビューにも同じ文面が出るため、ルーム（タイムライン）の中で確かめる
     await expect(page.locator('section').getByText(fixture.coachMessages[2])).toBeVisible();
   });
+});
+
+test('時刻: 日本時間以外のコーチにも、サーバーが描いた時点から自分のタイムゾーンで出る', async ({
+  browser,
+}, testInfo) => {
+  // 画面の幅に依らない確認のため、PCだけで行う
+  test.skip(testInfo.project.name.startsWith('mobile'));
+  const { context, page } = await openCoachContext(browser, {
+    email: CHAT_COACH_EMAIL,
+    password: getPersonaPassword(),
+  });
+  try {
+    const [{ data: first }, { data: coach }] = await Promise.all([
+      fixture.admin
+        .from('com_t_chat')
+        .select('created_at')
+        .eq('room_id', fixture.oneOnOneRoomId)
+        .order('created_at')
+        .limit(1)
+        .single(),
+      fixture.admin.from('com_m_user').select('timezone').eq('id', fixture.coachId).single(),
+    ]);
+    const timeIn = (timeZone: string) =>
+      new Date(first!.created_at as string).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone,
+      });
+    expect(coach!.timezone).not.toBe('Asia/Tokyo');
+
+    // ハイドレーションの後には正しい値に切り替わるため、JavaScript を動かす前のサーバーの HTML で確かめる
+    const html = await (await page.request.get(roomPath(fixture.oneOnOneRoomId))).text();
+    // 失敗時に HTML 全体を出力しないよう、含むかどうかだけを比べる
+    const coachTime = timeIn(coach!.timezone as string);
+    const jstTime = timeIn('Asia/Tokyo');
+    expect(html.includes(fixture.coachMessages[0]), 'メッセージがサーバーで描かれている').toBe(true);
+    expect(html.includes(coachTime), `コーチのタイムゾーンの時刻 ${coachTime}`).toBe(true);
+    expect(html.includes(jstTime), `日本時間の時刻 ${jstTime} を出さない`).toBe(false);
+  } finally {
+    await context.close();
+  }
 });

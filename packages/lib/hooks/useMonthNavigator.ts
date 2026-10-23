@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useMemo, useTransition } from 'react';
 import { toIsoMonthInZone } from '../date/date';
-import { useUserStore } from '../stores/useUserStore';
+import { useTimezone } from './useTimezone';
 
 export interface UseMonthNavigatorOptions {
   /** 表示中の月（"YYYY-MM"形式） */
@@ -23,7 +23,7 @@ export interface UseMonthNavigatorOptions {
 export function useMonthNavigator({ targetMonth, basePath, navigate = 'push' }: UseMonthNavigatorOptions) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
 
   const currentMonthStr = useMemo(() => toIsoMonthInZone(new Date(), timezone), [timezone]);
 

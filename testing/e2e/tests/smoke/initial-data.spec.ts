@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
-import { storageStatePath } from '../../support/personas.ts';
+import { signInAsRole, signOutRole } from '../../../helpers/auth.ts';
+import { getPersonaPassword, PERSONAS, storageStatePath } from '../../support/personas.ts';
 import { expect, test } from '../../support/studentApp.ts';
 
 /**
@@ -38,3 +39,22 @@ for (const [persona, label] of [
     }
   });
 }
+
+test.describe('サーバーが描いた時点のヘッダー', () => {
+  test.use({ storageState: storageStatePath('liveStudent'), javaScriptEnabled: false });
+
+  test('ヘッダーの名前は、ハイドレーションを待たずに自分の名前で出る', async ({ page }, testInfo) => {
+    // 名前はスマートフォンの幅では出さない
+    test.skip(testInfo.project.name.startsWith('mobile'));
+    const student = await signInAsRole(PERSONAS.liveStudent.email, getPersonaPassword());
+    try {
+      const { data: auth } = await student.auth.getUser();
+      const { data: me } = await student.from('com_m_user').select('user_name').eq('id', auth.user!.id).single();
+      // JavaScript を動かさないため、表示はサーバーの HTML のまま（後からストアで埋まる値では通らない）
+      await page.goto('/dashboard');
+      await expect(page.getByRole('button', { name: 'アカウントメニュー' })).toContainText(me!.user_name as string);
+    } finally {
+      await signOutRole(student);
+    }
+  });
+});

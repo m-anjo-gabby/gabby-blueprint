@@ -9,10 +9,10 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { focusDialogContent } from '@gabby/lib/components/common/dialogFocus';
 import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
+import { useViewer } from '@gabby/lib/hooks/useViewer';
 import { clientLogger } from '@gabby/lib/logger/client';
 import { reloadTo } from '@gabby/lib/navigation/reloadTo';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { TermDocument } from '@gabby/types/term';
 import { signOut } from '@/actions/authAction';
 import { getLatestTerms } from '@/actions/termAction';
@@ -28,7 +28,7 @@ import { NotificationCenterDropdown } from './NotificationCenterDropdown';
 import { TermsAgreementModal } from './TermsAgreementModal';
 
 export function Header() {
-  const user = useUserStore((state) => state.user);
+  const user = useViewer();
   const profileIconUrl = getProfileIconUrl(user?.icon_path);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);

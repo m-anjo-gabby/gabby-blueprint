@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { formatZonedDate } from '@gabby/lib/date/date';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getNotificationDisplay } from '@gabby/lib/notification/display';
 import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
 import { useNotificationStore } from '@gabby/lib/stores/useNotificationStore';
@@ -25,13 +26,13 @@ const UnreadDot = () => <span className="inline-block w-1.5 h-1.5 rounded-full b
 export function NotificationDropdown() {
   const { notifications, unreadCount, isLoading, fetchNotifications, markAsRead, markAllAsRead } =
     useNotificationStore();
-  const user = useUserStore((state) => state.user);
-  const timezone = user?.timezone || 'Asia/Tokyo';
+  const userId = useUserStore((state) => state.user?.id ?? null);
+  const timezone = useTimezone();
   const router = useRouter();
   const t = useTranslations('notification.dropdown');
   const locale = useLocale() === 'en' ? 'en' : 'ja';
 
-  useNotificationRealtime(user?.id ?? null);
+  useNotificationRealtime(userId);
 
   useEffect(() => {
     fetchNotifications();

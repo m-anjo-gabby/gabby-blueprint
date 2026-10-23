@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { toIsoMonthInZone } from '@gabby/lib/date/date';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { PageHeader, PageSkeletonFrame } from '@/components/common/PageHeader';
 import { ScheduleTabs } from '@/components/common/ScheduleTabs';
 import { CalendarBoard } from './CalendarBoard';
@@ -29,7 +29,7 @@ export function CalendarPageHeader() {
  */
 export function CalendarSkeleton() {
   const searchParams = useSearchParams();
-  const timezone = useUserStore((state) => state.user?.timezone) || 'Asia/Tokyo';
+  const timezone = useTimezone();
   const month = searchParams.get('month') || toIsoMonthInZone(new Date(), timezone);
 
   return (

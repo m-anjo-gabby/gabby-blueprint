@@ -6,9 +6,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ExternalImage } from '@gabby/lib/components/common/ExternalImage';
 import { useConfirm } from '@gabby/lib/hooks/useConfirm';
+import { useViewer } from '@gabby/lib/hooks/useViewer';
 import { getProfileIconUrl } from '@gabby/lib/profile/getProfileIconUrl';
 import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { signOut } from '@/actions/adminAuthAction';
 import {
   DropdownMenu,
@@ -22,7 +22,7 @@ import { NotificationDropdown } from './NotificationDropdown';
 
 export function Header() {
   const t = useTranslations('common');
-  const user = useUserStore((state) => state.user);
+  const user = useViewer();
   const profileIconUrl = getProfileIconUrl(user?.icon_path);
   const isMobileSidebarOpen = useSidebarStore((state) => state.isOpen);
   const toggleMobileSidebar = useSidebarStore((state) => state.toggle);

@@ -77,7 +77,6 @@ export function HomeView({
   const { showToast } = useToast();
   const { showConfirm } = useConfirm();
   const userName = useUserStore((state) => state.user?.user_name);
-  const settingTimezone = useUserStore((state) => state.user?.timezone ?? null);
   const fetchNotices = useNoticeStore((state) => state.fetchNotices);
   const [resume, setResume] = useServerSyncedState(serverResume);
   // 「戻る・進む」等でキャッシュ済みの画面が再利用された場合は、最新のデータに取り直す
@@ -110,12 +109,7 @@ export function HomeView({
     <div className={HOME_LAYOUT.page}>
       {nowMs !== null ? (
         <header className={HOME_LAYOUT.header}>
-          <TodayDateLine
-            nowMs={nowMs}
-            timezone={timezone}
-            settingTimezone={settingTimezone}
-            timezoneNames={timezoneNames}
-          />
+          <TodayDateLine nowMs={nowMs} timezone={timezone} timezoneNames={timezoneNames} />
           <h1 className="text-2xl font-bold tracking-tight text-ink">
             {getGreeting(getHourInZone(new Date(nowMs).toISOString(), timezone))}
             {userName && <span className="text-ink-muted">、{userName}さん</span>}

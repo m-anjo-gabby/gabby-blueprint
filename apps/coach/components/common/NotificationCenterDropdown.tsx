@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
+import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { getNotificationDisplay } from '@gabby/lib/notification/display';
 import { useNotificationRealtime } from '@gabby/lib/notification/realtime/useNotificationRealtime';
 import { useNoticeStore } from '@gabby/lib/stores/useNoticeStore';
@@ -60,11 +61,11 @@ export function NotificationCenterDropdown() {
     markAllAsRead,
   } = useNotificationStore();
 
-  const user = useUserStore((state) => state.user);
-  const timezone = user?.timezone || 'Asia/Tokyo';
+  const userId = useUserStore((state) => state.user?.id ?? null);
+  const timezone = useTimezone();
   const router = useRouter();
 
-  useNotificationRealtime(user?.id ?? null);
+  useNotificationRealtime(userId);
 
   useEffect(() => {
     fetchNotices();

@@ -34,10 +34,8 @@ const formatToday = (nowMs: number, timeZone: string) =>
 
 interface TodayDateLineProps {
   nowMs: number;
-  /** 日付の表示に使うタイムゾーン */
+  /** 日付の表示に使うタイムゾーン（プロフィールのタイムゾーン設定） */
   timezone: string;
-  /** プロフィールのタイムゾーン設定（ユーザー情報の読み込み前は null。その間はずれを判定しない） */
-  settingTimezone: string | null;
   /** タイムゾーンマスタの表示名（IANA名 → 日本語名） */
   timezoneNames: Record<string, string>;
 }
@@ -48,14 +46,14 @@ interface TodayDateLineProps {
  * タップで内容とプロフィール設定への導線をポップオーバーで表示する。
  * useNow が値を返した後（クライアント側）にだけ描画される前提のため、端末情報を描画中に読んでよい。
  */
-export function TodayDateLine({ nowMs, timezone, settingTimezone, timezoneNames }: TodayDateLineProps) {
+export function TodayDateLine({ nowMs, timezone, timezoneNames }: TodayDateLineProps) {
   const [deviceTimezone] = useState(getDeviceTimezone);
   const [dismissed, setDismissed] = useState(readDismissed);
   const today = formatToday(nowMs, timezone);
 
-  const pairKey = settingTimezone && deviceTimezone ? `${settingTimezone}|${deviceTimezone}` : null;
+  const pairKey = deviceTimezone ? `${timezone}|${deviceTimezone}` : null;
   const showWarning =
-    pairKey !== null && dismissed !== pairKey && hasTimezoneMismatch(settingTimezone!, deviceTimezone!, nowMs);
+    pairKey !== null && dismissed !== pairKey && hasTimezoneMismatch(timezone, deviceTimezone!, nowMs);
 
   if (!showWarning) return <p className="text-sm text-ink-muted">{today}</p>;
 
@@ -66,7 +64,7 @@ export function TodayDateLine({ nowMs, timezone, settingTimezone, timezoneNames 
 
   // 設定側はマスタから選ばれた値なのでマスタの名称、端末側はマスタに無い地域もあり得るためUTC時差の固定表記で示す
   const rows = [
-    { label: 'タイムゾーン設定', name: timezoneNames[settingTimezone!] ?? settingTimezone!, zone: settingTimezone! },
+    { label: 'タイムゾーン設定', name: timezoneNames[timezone] ?? timezone, zone: timezone },
     { label: 'お使いの端末', name: formatUtcOffset(deviceTimezone!, nowMs) ?? deviceTimezone!, zone: deviceTimezone! },
   ];
 
