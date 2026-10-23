@@ -23,6 +23,7 @@
 
 import type { LogEventName } from '../../logger';
 import { clientLogger } from '../../logger/client';
+import { timeStretch } from './timeStretch';
 
 /**
  * 'ok': 通常状態。
@@ -76,9 +77,18 @@ const inflightLoads = new Map<string, Promise<AudioBuffer>>();
 let chimeBuffer: AudioBuffer | null = null;
 let chimePromise: Promise<AudioBuffer | null> | null = null;
 
+/** 速度を変えた音声のキャッシュ。キー: 元の音声 → 速度 */
+const stretchedCache = new WeakMap<AudioBuffer, Map<number, AudioBuffer>>();
+
 interface ActiveClip {
   source: AudioBufferSourceNode;
   ownerId: number;
+  /** 元の（速度を変える前の）音声 */
+  buffer: AudioBuffer;
+  rate: number;
+  /** 今の source を始めた時刻（context.currentTime）と、その時の元の音声での再生位置（秒） */
+  startedAt: number;
+  startPosition: number;
   /** 再生を終えた扱いにして待っている Promise を解決する（停止・終了・中断のいずれでも1回だけ） */
   finish: (result: PlayClipResult) => void;
 }
@@ -443,13 +453,55 @@ export function stopAudioClip(ownerId?: number) {
   stopActiveClip('stopped');
 }
 
-/** 再生中のクリップの再生速度を変える */
+/**
+ * 速度に合わせて伸び縮みさせた音声を返す（等倍で再生すると、高さを変えずにその速度で聞こえる）。
+ * playbackRate で速度を変えると高さも変わるため使わない。
+ */
+function getStretchedBuffer(context: BaseAudioContext, buffer: AudioBuffer, rate: number): AudioBuffer {
+  if (rate === 1) return buffer;
+  let byRate = stretchedCache.get(buffer);
+  const cached = byRate?.get(rate);
+  if (cached) return cached;
+
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c));
+  const stretched = timeStretch(channels, rate, buffer.sampleRate);
+  const result = context.createBuffer(stretched.length, stretched[0].length, buffer.sampleRate);
+  stretched.forEach((data, c) => result.copyToChannel(data, c));
+
+  if (!byRate) {
+    byRate = new Map();
+    stretchedCache.set(buffer, byRate);
+  }
+  byRate.set(rate, result);
+  return result;
+}
+
+/**
+ * 再生中のクリップの再生速度を変える。伸び縮みさせた音声に差し替え、元の音声で同じ位置から続ける。
+ */
 export function setAudioClipRate(rate: number) {
-  if (!activeClip) return;
+  const clip = activeClip;
+  const context = ctx;
+  if (!clip || !context || clip.rate === rate) return;
+
+  const position = clip.startPosition + (context.currentTime - clip.startedAt) * clip.rate;
+  if (position >= clip.buffer.duration) return;
+
+  const oldSource = clip.source;
   try {
-    activeClip.source.playbackRate.value = rate;
-  } catch {
-    /* no-op */
+    const source = context.createBufferSource();
+    source.buffer = getStretchedBuffer(context, clip.buffer, rate);
+    source.connect(context.destination);
+    source.onended = oldSource.onended;
+    oldSource.onended = null;
+    oldSource.stop();
+    source.start(0, position / rate);
+    clip.source = source;
+    clip.rate = rate;
+    clip.startedAt = context.currentTime;
+    clip.startPosition = position;
+  } catch (err) {
+    clientLogger.warn('audio:clip_rate_change_failed', 'Changing clip rate failed', { err });
   }
 }
 
@@ -511,11 +563,21 @@ export async function playAudioClip(
 
   stopActiveClip('stopped');
 
+  const rate = opts.playbackRate ?? 1.0;
+  let playBuffer: AudioBuffer;
+  try {
+    playBuffer = getStretchedBuffer(context, buffer, rate);
+  } catch (err) {
+    // 伸び縮みに失敗しても無音にはせず、高さが変わる従来の方法で再生する
+    clientLogger.warn('audio:clip_stretch_failed', 'Time-stretching clip failed', { err, payload: { rate } });
+    playBuffer = buffer;
+  }
+  const stretchFailed = playBuffer === buffer && rate !== 1;
+
   return new Promise<PlayClipResult>((resolve) => {
     const source = context.createBufferSource();
-    const rate = opts.playbackRate ?? 1.0;
-    source.buffer = buffer;
-    source.playbackRate.value = rate;
+    source.buffer = playBuffer;
+    if (stretchFailed) source.playbackRate.value = rate;
     source.connect(context.destination);
 
     let finished = false;
@@ -523,6 +585,10 @@ export async function playAudioClip(
     const clip: ActiveClip = {
       source,
       ownerId: opts.ownerId,
+      buffer,
+      rate,
+      startedAt: context.currentTime,
+      startPosition: 0,
       finish: (result) => {
         if (finished) return;
         finished = true;

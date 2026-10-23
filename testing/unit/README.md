@@ -43,5 +43,5 @@ URL・画像の処理（`profile/cropImage.ts`・`getProfileIconUrl.ts`・`count
 
 ### 対象外（単体テストでは確かめない）
 
-`ai/`（外部の API）、`audio/`（ブラウザの音声の機能。E2E の偽の認識器で確かめる）、`speech/`、ログイン・認証の画面の処理（`auth/callback.ts`・`portalActions.ts`。E2E で確かめる）、
+`ai/`（外部の API）、`audio/`（ブラウザの音声の機能。E2E の偽の認識器で確かめる。ただし速度の変更の計算 `audio/core/timeStretch.ts` は単体テストで確かめる）、`speech/`、ログイン・認証の画面の処理（`auth/callback.ts`・`portalActions.ts`。E2E で確かめる）、
 型・定数だけのファイル（`security/frameHeaders.ts`・`sprint/constants.ts`・`shell/shellDataTypes.ts` 等）。
