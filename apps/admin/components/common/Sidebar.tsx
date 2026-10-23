@@ -5,9 +5,9 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useViewer } from '@gabby/lib/hooks/useViewer';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { ADMIN_NAV_CONFIG, type NavGroup, type NavItem, type NavLeaf } from '@/lib/navigation';
 
 // サブコンポーネント
@@ -190,7 +190,7 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const tCommon = useTranslations('common');
   const pathname = usePathname();
-  const user = useUserStore((state) => state.user);
+  const user = useViewer();
   const userRoles: string[] = user?.app_metadata?.roles || [];
   const isOpen = useSidebarStore((state) => state.isOpen);
   const closeMobileSidebar = useSidebarStore((state) => state.close);

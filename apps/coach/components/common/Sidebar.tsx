@@ -4,9 +4,9 @@ import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, X } from 'luc
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useViewer } from '@gabby/lib/hooks/useViewer';
 import { useChatStore } from '@gabby/lib/stores/useChatStore';
 import { useSidebarStore } from '@gabby/lib/stores/useSidebarStore';
-import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import { COACH_NAV_CONFIG, type NavGroup, type NavItem, type NavLeaf } from '@/lib/navigation';
 import { useRequestsStore } from '@/stores/useRequestsStore';
 
@@ -180,7 +180,7 @@ function GroupItem({ item, isCollapsed, currentPathname, onLinkClick }: GroupIte
 export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
-  const user = useUserStore((state) => state.user);
+  const user = useViewer();
   const userRoles: string[] = user?.app_metadata?.roles || [];
   const isOpen = useSidebarStore((state) => state.isOpen);
   const closeMobileSidebar = useSidebarStore((state) => state.close);

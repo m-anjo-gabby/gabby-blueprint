@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { openAdminContext } from '../../support/adminApp.ts';
+import { ADMIN_BASE_URL, openAdminContext } from '../../support/adminApp.ts';
 import { clickUntilVisible } from '../../support/hydration.ts';
 
 /**
@@ -53,6 +53,28 @@ test('主要画面を開いた時、シェルの未読・件数のためにブ�
     });
     expect(fetchCount).toBe(1);
     await expect(page.getByRole('heading', { level: 1, name: '通知' })).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test('サイドバーの権限で出し分けるメニューは、ハイドレーションを待たずに出る', async ({ browser }) => {
+  const { context: loginContext } = await openAdminContext(browser);
+  const storageState = await loginContext.storageState();
+  await loginContext.close();
+  // JavaScript を動かさないため、表示はサーバーの HTML のまま（後からストアで埋まる権限では通らない）
+  const context = await browser.newContext({
+    baseURL: ADMIN_BASE_URL,
+    ignoreHTTPSErrors: true,
+    viewport: { width: 1440, height: 900 },
+    javaScriptEnabled: false,
+    storageState,
+  });
+  try {
+    const page = await context.newPage();
+    await page.goto('/dashboard');
+    // 顧客はアドミンの権限が要るメニュー（apps/admin/lib/navigation.ts）
+    await expect(page.locator('aside a[href="/clients"]')).toBeVisible();
   } finally {
     await context.close();
   }
