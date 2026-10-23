@@ -18,7 +18,7 @@
 
 ## 前提条件
 
-- アドミン: [`../../FIXTURES.md`](../../FIXTURES.md) の `qa-admin`。
+- アドミン: [`../../FIXTURES.md`](../../../FIXTURES.md) の `qa-admin`。
 - 生徒: 配信対象の顧客に所属していること（「生徒全体」なら全生徒）。プランは問わない（アプリのみ契約を含む）。リマインダーメールはライセンスが有効な生徒にだけ送る。
 - 状態を変えるテスト（参加登録・公開）は、使い捨ての顧客を配信対象にする（`support/calendarEventFixtures.ts`、`support/authFixtures.ts`）。開発・ステージングで「生徒全体」に公開しない。
 

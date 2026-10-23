@@ -17,7 +17,7 @@
 ## 前提条件
 
 - モニターロール保有の生徒アカウントが必要（`com_t_user_role`に`role_id='monitor'`の行を持つ
-  こと）。固定アカウントはまだ無いため[`../../FIXTURES.md`](../../FIXTURES.md)に追加予定
+  こと）。固定アカウントはまだ無いため[`../../FIXTURES.md`](../../../FIXTURES.md)に追加予定
   （未投入。実行前に都度ロールを付与するか、投入スクリプトを拡張する）。
 - ロール変更（`com_t_user_role`への追加）はJWTの`app_metadata.roles`に即時反映されない
   可能性がある（`packages/lib/proxy-base.ts`がJWTクレームから`roles`を読む構成のため）。

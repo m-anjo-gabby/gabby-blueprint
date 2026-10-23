@@ -33,7 +33,7 @@
 
 ## 前提条件
 
-- アドミンアカウント: [`../../FIXTURES.md`](../../FIXTURES.md) の `qa-admin@gabby-qa-test.example`。
+- アドミンアカウント: [`../../FIXTURES.md`](../../../FIXTURES.md) の `qa-admin@gabby-qa-test.example`。
 - dev の既存データを読むだけで足りる（データは作らない）。ユーザーのページ送りは、生徒が10件より多いこと。
 - お知らせの既読状況は、お知らせが1件以上あること。
 

@@ -16,7 +16,7 @@
 
 ## 前提条件
 
-- アドミンアカウント: [`../../FIXTURES.md`](../../FIXTURES.md) の `qa-admin@gabby-qa-test.example`。
+- アドミンアカウント: [`../../FIXTURES.md`](../../../FIXTURES.md) の `qa-admin@gabby-qa-test.example`。
 - 生徒・契約・ライセンスは状態を変えるため、使い捨ての顧客に作る（`support/authFixtures.ts` の `createAuthFixture` / `createDisposableContract` / `createDisposableStudent`）。
   顧客の付け替えを再現する場合は使い捨ての顧客を2つ作り、後始末の前に生徒を元の顧客へ戻す（生徒が所属したままの顧客は消せない）。
 - ユーザー管理のダイアログは本登録済みの生徒にだけ出る（招待中は「本登録の完了後に割り当てられます。」）。

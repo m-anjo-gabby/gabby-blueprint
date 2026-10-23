@@ -55,3 +55,4 @@
 - `apps/coach/app/(app)/monthly-reports/_components/AttentionCellDialog.tsx`
 - `apps/coach/app/(app)/monthly-reports/_components/sessionStatusLabel.ts`
 - `apps/coach/actions/monthlyReportAction.ts`
+- 業務フロー（集計の規則・承認・取り消し・PDF）: [testing/e2e/specs/monthly-report/coach-monthly-report.md](../../../testing/e2e/specs/monthly-report/coach-monthly-report.md)

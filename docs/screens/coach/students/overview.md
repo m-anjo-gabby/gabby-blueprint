@@ -142,7 +142,7 @@
 
 ## 関連する業務フロー仕様書
 
-- [個別予約リクエスト・振替候補フロー](../../../testing/e2e/specs/booking/individual-booking-and-reschedule.md)
+- [個別予約リクエスト・振替候補フロー](../../../../testing/e2e/specs/booking/individual-booking-and-reschedule.md)
   — Live Sessionsカードの「Cancel」から行うキャンセル・振替候補提案が、相手側の承諾・却下を
   経てどう確定するか、異常系の一覧
 

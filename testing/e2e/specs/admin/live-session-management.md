@@ -15,7 +15,7 @@
 
 ## 前提条件
 
-- アドミンアカウント: [`../../FIXTURES.md`](../../FIXTURES.md)の`qa-admin@gabby-qa-test.example`で足りる。
+- アドミンアカウント: [`../../FIXTURES.md`](../../../FIXTURES.md)の`qa-admin@gabby-qa-test.example`で足りる。
 - 対象の生徒: ライブセッション付き契約（`com_t_user_session_ticket`を伴う契約）を1件以上保有していること。固定アカウントには現状ライブセッション契約を持つものが無いため、`testing/features/branches/`方式で都度シードする（`admin_match_student_with_coach`経由で定期スケジュール枠を作成するのが最短）。
 - コーチ交代・直接マッチングの検証には、担当コーチとは別のコーチアカウントが必要。
 

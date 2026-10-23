@@ -81,5 +81,4 @@
   （`getAdminCoachMonthlyReportCore`, `approveCoachMonthlyReportCore`,
   `revokeCoachMonthlyReportApprovalCore`）、`packages/lib/monthlyReport/buildInvoiceNumber.ts`
   （請求書番号の決定的生成）
-- 備考: `testing/e2e/specs/_INDEX.md`には`monthly-report/`ドメインが「未着手」（仕様書未作成）と
-  記載されており、コーチ側の月次レポート画面とあわせた業務フロー仕様書は現時点で存在しない
+- 業務フロー（集計の規則・承認・取り消し・PDF）: [testing/e2e/specs/monthly-report/coach-monthly-report.md](../../../testing/e2e/specs/monthly-report/coach-monthly-report.md)
