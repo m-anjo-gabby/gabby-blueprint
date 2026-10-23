@@ -40,9 +40,9 @@
 | 「← Back to Students」リンク | 常時 | 担当生徒一覧（`/students`）へ戻る |
 | 生徒アバター・氏名・タイムゾーン | 常時。タイムゾーンは生徒のプロフィールの設定を、タイムゾーンマスタの英語の表示名称で表示する（例: "Timezone: Japan (Tokyo)"。マスタに無い場合は IANA 名） | 操作なし |
 | Current Contractカード | 現在有効な契約がある場合、プラン名・期間を緑系で表示 | 操作なし |
-| 契約セッション内訳（Total/Scheduled/Completed/Unbooked） | 現在有効な契約がある場合のみ表示。値は**自分が担当している分のみ**の集計（他コーチ担当分は合算しない） | 操作なし。Unbookedが1件以上あると数字が橙色で強調される |
+| 契約セッション内訳（Total/Scheduled/Completed/Unbooked） | 現在有効な契約がある場合のみ表示。値は**自分が担当している分のみ**の集計（他コーチ担当分は合算しない） | 操作なし。Unbookedが1件以上あると数字が橙色で強調される。右端の `?` で集計の範囲（自分の担当分のみ・Unbookedの意味）を説明する |
 | 「+ n session(s) handled by another coach」 | 週2回契約等で他コーチと分担しており、他コーチ担当セッションがある場合 | 操作なし（参考情報） |
-| Sprint Progressパネル（レーダーチャート） | 常時。Stage番号と、Speed/Structure/Builders/Masteryそれぞれの現在レベル（習得済みのレベル）を表示。Speed/Structureの0は「Basic」、Lv.1から始まるBuilders/Masteryの0は「Not yet」（幅を取らない短い表記。マウスを乗せると「Not reached yet (Lv.1 not acquired)」）。アドミンがレベル管理をオフにした生徒は「All levels unlocked」を併記（自主トレで全レベルを選択可） | 「Manage Levels」ボタンでレベル管理ダイアログを開く |
+| Sprint Progressパネル（レーダーチャート） | 常時。Stage番号と、Speed/Structure/Builders/Masteryそれぞれの現在レベル（習得済みのレベル）を表示。Speed/Structureの0は「Basic」、Lv.1から始まるBuilders/Masteryの0は「Not yet」（幅を取らない短い表記。マウスを乗せると「Not reached yet (Lv.1 not acquired)」）。アドミンがレベル管理をオフにした生徒は「All levels unlocked」を併記（自主トレで全レベルを選択可）。見出しの横の `?` で習得済みのレベルとStageの意味を説明する | 「Manage Levels」ボタンでレベル管理ダイアログを開く |
 | Next Live Sessionパネル | 実施可能な次回セッションがあれば日時＋「Open Session」ボタン、無ければ「Start Live Sprint」ボタン | 「Open Session」はセッションハブ（`/students/[id]/sessions/[sessionId]`）へ、「Start Live Sprint」はLive Sprint画面（単独実施）へ遷移 |
 
 ### レベル管理ダイアログ（Manage Levels）
@@ -110,6 +110,8 @@
 
 ## Coach Notes カード
 
+見出しの横の `?` で、本人だけが見られ・編集と削除ができないことを説明する。
+
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|
 | メモ入力欄＋「Save Note」 | 常時表示 | 空欄で保存しようとするとエラートースト。保存すると一覧の先頭に追加され、入力欄はクリアされる |
@@ -117,6 +119,8 @@
 | メモ行（最大5件、新しい順） | 折りたたみ表示（1行プレビュー）。クリックで展開し全文＋登録日時を表示 | メモは自分のみ閲覧可能で、追記のみ（編集・削除機能は無い） |
 
 ## Training Reports カード
+
+見出しの横の `?` で、確定後は編集できず、直したい場合は運営（admin）にチャットで連絡することを説明する。
 
 | 要素 | 表示条件・内容 | 操作した時の挙動 |
 |---|---|---|

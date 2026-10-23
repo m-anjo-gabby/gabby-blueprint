@@ -5,7 +5,7 @@ import { createLogger } from '@gabby/lib/logger';
 import { getLogContext } from '@gabby/lib/logger/context';
 import { getErrorMessage } from '@gabby/lib/logger/errorMessage';
 import { fetchSprintAvailableLevels } from '@gabby/lib/sprint/availableLevels';
-import { getSprintTitle } from '@gabby/lib/sprint/utils';
+import { getRecommendedSprintTimeSec, getSprintTitle } from '@gabby/lib/sprint/utils';
 import { getAuthUser } from '@gabby/lib/supabase/authUser';
 import { createServerClient } from '@gabby/lib/supabase/server';
 import {
@@ -17,7 +17,7 @@ import { buildStandardMenu, type StandardMenuVideoCandidate } from '@gabby/lib/t
 import { getVideoFileUrls } from '@gabby/lib/video/storage';
 import type { BasicErrorCode, CoreResult } from '@gabby/types/action';
 import { CONTENT_STATUS } from '@gabby/types/content';
-import { QUESTION_TYPES, type SprintQuestionType } from '@gabby/types/sprint';
+import type { SprintQuestionType } from '@gabby/types/sprint';
 import { TRAINING_MENU_ITEM_TYPE, type TrainingMenuItemType } from '@gabby/types/trainingMenu';
 import { VIDEO_CATEGORY } from '@gabby/types/video';
 import { getMyTimezone } from './userTimezone';
@@ -317,7 +317,7 @@ function toViewItem(
     mode: 'sprint',
     type,
     level: String(level),
-    time_limit_sec: String(QUESTION_TYPES[type].recommendedTimeSec),
+    time_limit_sec: String(getRecommendedSprintTimeSec(type, level)),
     content_id: row.content_id,
     sprint_type: '0',
   });

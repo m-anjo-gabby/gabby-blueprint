@@ -1,5 +1,6 @@
 import { ArrowLeft, BadgeCheck, BadgeX } from 'lucide-react';
 import Link from 'next/link';
+import { HelpTip } from '@gabby/lib/components/common/HelpTip';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import type {
   StudentContractSessionSummary,
@@ -7,6 +8,7 @@ import type {
   StudentSessionHistoryItem,
 } from '@gabby/types/coachStudent';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { HELP } from '@/constants/help';
 import { SprintProgressRadar } from './SprintProgressRadar';
 import { TodaysLessonPanel } from './TodaysLessonPanel';
 
@@ -40,17 +42,22 @@ function ContractSessionSummaryStats({ summary }: { summary: StudentContractSess
 
   return (
     <div className="mt-2 pt-2 border-t border-emerald-100/80">
-      <div className="grid grid-cols-4 gap-1.5">
-        {stats.map((s) => (
-          <div key={s.label} className="text-center">
-            <p
-              className={`text-sm font-bold ${s.label === 'Unbooked' && s.value > 0 ? 'text-amber-600' : 'text-emerald-700'}`}
-            >
-              {s.value}
-            </p>
-            <p className="text-[9px] font-semibold text-emerald-500/70 uppercase tracking-wide">{s.label}</p>
-          </div>
-        ))}
+      <div className="flex items-start gap-1.5">
+        <div className="grid flex-1 grid-cols-4 gap-1.5">
+          {stats.map((s) => (
+            <div key={s.label} className="text-center">
+              <p
+                className={`text-sm font-bold ${s.label === 'Unbooked' && s.value > 0 ? 'text-amber-600' : 'text-emerald-700'}`}
+              >
+                {s.value}
+              </p>
+              <p className="text-[9px] font-semibold text-emerald-500/70 uppercase tracking-wide">{s.label}</p>
+            </div>
+          ))}
+        </div>
+        <HelpTip label={HELP.contractSessionSummary.label} className="text-emerald-500/70 hover:text-emerald-700">
+          {HELP.contractSessionSummary.text}
+        </HelpTip>
       </div>
       {summary.other_coach_sessions > 0 && (
         <p className="mt-1.5 text-[10px] text-emerald-600/70">

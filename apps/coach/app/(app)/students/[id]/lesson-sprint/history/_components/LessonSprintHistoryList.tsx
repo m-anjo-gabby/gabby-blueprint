@@ -1,10 +1,12 @@
 'use client';
 
+import { HelpTip } from '@gabby/lib/components/common/HelpTip';
 import { formatMonthYearEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import type { LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
 import { getLessonSprintHistoryPage } from '@/actions/lessonSprintAction';
 import { HistoryList } from '@/components/common/HistoryList';
+import { HELP } from '@/constants/help';
 import { LessonSprintHistoryRow } from '../../../_components/LessonSprintHistoryRow';
 
 const HISTORY_PAGE_SIZE = 20;
@@ -56,12 +58,15 @@ export function LessonSprintHistoryList({ studentId, initialItems, initialCursor
               (() => {
                 const { count, avgScore } = summarizeMonth(items, monthLabel, timezone);
                 return (
-                  <p className="sticky top-0 z-10 bg-slate-50 px-1 py-2 text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                  <p className="sticky top-0 z-10 flex items-center bg-slate-50 px-1 py-2 text-[11px] font-black text-slate-400 uppercase tracking-wider">
                     {monthLabel}
-                    <span className="ml-1.5 font-bold normal-case text-slate-400/80">
+                    <span className="ml-1.5 mr-1 font-bold normal-case text-slate-400/80">
                       · {count} sprint{count === 1 ? '' : 's'}
                       {avgScore !== null && ` · avg ${avgScore}/5`}
                     </span>
+                    <HelpTip label={HELP.sprintHistoryMonth.label} align="start">
+                      {HELP.sprintHistoryMonth.text}
+                    </HelpTip>
                   </p>
                 );
               })()}

@@ -49,6 +49,10 @@ admin / coach / student と共通部品（`packages/lib/components`）の画面�
 - 入力された値を折り返す要素には `wrap-anywhere` を付ける。空白の無い URL・長い英単語は、指定が無いと折り返されない。`wrap-break-word` は中身に合わせて幅が決まる枠（`inline-block` の吹き出し・`min-w-0` の無い flex の子・列の指定が無い grid）の幅を縮めないため、`wrap-anywhere` にそろえる。
 - 確かめ方: スマホの幅（375px）で、長い値（全角30文字程度・空白の無い URL）を入れて崩れないことを見る。
 
+## 画面内のヘルプ（全アプリ共通）
+
+表示・用語・指標の意味は、見出しや表示の横の `?`（`HelpTip`、`packages/lib/components/common/HelpTip.tsx`）で説明する。押して開く形のため、タッチ端末でも読める。文面は画面に直接書かず、各アプリの `constants/help.ts` にまとめる（coach は英語、student は日本語）。文面の元は運営向けの操作マニュアルの「表示・用語・指標の意味」と同じにし、画面の動作を変えたら両方を直す。画面の上に既に同じ説明の文がある場合は `?` を足さない。
+
 ## ダイアログ・シートを開いた時のフォーカス（全アプリ共通）
 
 開いただけで中の要素（×ボタン等）にフォーカスの枠が出ないよう、各アプリの `components/ui`（dialog / alert-dialog / sheet / drawer）の Content は `onOpenAutoFocus` の既定を `focusDialogContent`（`packages/lib/components/common/dialogFocus.ts`。枠そのものにフォーカスする）にしている。画面ごとに `onOpenAutoFocus={(e) => e.preventDefault()}` を書かない。Radix の Dialog を直接使う場合も `onOpenAutoFocus={focusDialogContent}` を渡す。開いた時に特定の要素へフォーカスが必要な場合（入力が主のダイアログ等）だけ、その要素に `autoFocus` を付ける。

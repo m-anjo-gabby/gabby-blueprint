@@ -3,11 +3,13 @@
 import { FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { HelpTip } from '@gabby/lib/components/common/HelpTip';
 import { formatDateEn } from '@gabby/lib/date/dateEn';
 import { useTimezone } from '@gabby/lib/hooks/useTimezone';
 import { useUserStore } from '@gabby/lib/stores/useUserStore';
 import type { ContractTrainingReport, StudentLiveSessionContractSummary } from '@gabby/types/coachStudent';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HELP } from '@/constants/help';
 import { TrainingReportContractRow } from './TrainingReportContractRow';
 
 interface TrainingReportCardProps {
@@ -53,6 +55,9 @@ export function TrainingReportCard({ studentId, contracts, initialReports }: Tra
           <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
             <FileText size={14} className="text-slate-400" />
             Training Reports
+            <HelpTip label={HELP.trainingReports.label} align="start">
+              {HELP.trainingReports.text}
+            </HelpTip>
           </CardTitle>
           <p className="text-[11px] text-slate-400">
             Visible to coaches assigned to this student. Locked once finalized.

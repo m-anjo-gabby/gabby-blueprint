@@ -93,6 +93,12 @@ export const pickSprintLevel = (
   return options.availableLevels?.[type]?.[0] ?? meta.minLevel;
 };
 
+/** 種別とレベルに応じた推奨の制限時間（秒）。レベルの無い教材は Lv.5 までの値を使う */
+export const getRecommendedSprintTimeSec = (type: SprintQuestionType, level: number): number => {
+  const { upToLv5, fromLv6 } = QUESTION_TYPES[type].recommendedTimeSec;
+  return level >= 6 ? fromLv6 : upToLv5;
+};
+
 // getFeedbackConfig / getScoreTier は packages/lib/assessment/feedbackConfig.ts に一元化。
 // Word/Sprint双方の発話評価UIから共通参照するため、`@gabby/lib` 経由でも従来通り利用できるよう再エクスポートする。
 export { getFeedbackConfig, getScoreTier } from '../assessment/feedbackConfig';

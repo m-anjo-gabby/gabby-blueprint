@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import {
   formatSprintLevelLabel,
+  getRecommendedSprintTimeSec,
   getSprintTitle,
   hasSprintQuestionsForType,
   isSprintLevelAvailable,
@@ -12,6 +13,7 @@ import {
   resolveCoachContentName,
   resolveSprintHasLevel,
 } from '@gabby/lib';
+import { HelpTip } from '@gabby/lib/components/common/HelpTip';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import type { StudentOverviewProfile } from '@gabby/types/coachStudent';
 import type { LessonSprintContentSummary, LessonSprintHistoryListItem } from '@gabby/types/lessonSprint';
@@ -26,6 +28,7 @@ import {
 import { getLessonSprintQuestions } from '@/actions/lessonSprintAction';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { HELP } from '@/constants/help';
 import { cn } from '@/lib/utils';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { StudentSnapshotPanel } from './StudentSnapshotPanel';
@@ -56,7 +59,7 @@ export function LessonSprintSetup({
   const { setConfig, setContentName, setContentMetadata } = useLessonSprintStore();
 
   // 初期値は直近の実施条件を踏襲する。前回コンテンツが現在の一覧に無ければ先頭コンテンツにフォールバック。
-  // ただし制限時間だけは例外で、前回値を引き継がずQuestion Typeに応じたRecommended値を初期値にする
+  // ただし制限時間だけは例外で、前回値を引き継がずQuestion Typeとレベルに応じたRecommended値を初期値にする
   // （「Repeat Same Settings」から遷移した場合はこのSetup画面自体を経由せず、ストアに前回の
   // 制限時間をそのまま設定してPlayerへ直行するため、ここでの初期値変更の影響を受けない。
   // RepeatSprintButton.tsx参照）。
@@ -70,10 +73,11 @@ export function LessonSprintSetup({
     hasLastContent ? lastSession.content_id : (contents[0]?.content_id ?? ''),
   );
   const [questionType, setQuestionType] = useState<SprintQuestionType>(initialQuestionType);
-  const [level, setLevel] = useState<string>(
-    hasLastContent ? String(lastSession.difficulty_level) : String(QUESTION_TYPES['0'].minLevel),
+  const initialLevel = hasLastContent ? lastSession.difficulty_level : QUESTION_TYPES['0'].minLevel;
+  const [level, setLevel] = useState<string>(String(initialLevel));
+  const [timeLimitSec, setTimeLimitSec] = useState<number>(
+    getRecommendedSprintTimeSec(initialQuestionType, initialLevel),
   );
-  const [timeLimitSec, setTimeLimitSec] = useState<number>(QUESTION_TYPES[initialQuestionType].recommendedTimeSec);
   const [isLoading, setIsLoading] = useState(false);
 
   const selectedContent = useMemo(() => contents.find((c) => c.content_id === contentId), [contents, contentId]);
@@ -96,17 +100,25 @@ export function LessonSprintSetup({
 
   // 教材切り替え時（初回表示を含む）、選択中の種別が選べなければ最初に選べる種別へ、
   // レベルに問題が無ければ問題のあるレベルへリセットする（きっかけは教材の変化だけ。選択の変更そのもので直し続けない）
+  // 種別・レベルを変えたら、制限時間もその組み合わせのRecommendedに戻す
+  const selectTypeAndLevel = (typeId: SprintQuestionType, nextLevel: number) => {
+    setQuestionType(typeId);
+    setLevel(String(nextLevel));
+    setTimeLimitSec(getRecommendedSprintTimeSec(typeId, nextLevel));
+  };
+
   const fitSelectionToContent = useEffectEvent(() => {
     if (!selectedContent) return;
     if (!isTypeSupported(questionType)) {
       const firstSupported = sortedTypes.find((t) => isTypeSupported(t.value));
       if (firstSupported) {
-        setQuestionType(firstSupported.value);
-        setLevel(String(pickSprintLevel(firstSupported.value, { hasLevel, availableLevels })));
-        setTimeLimitSec(firstSupported.recommendedTimeSec);
+        selectTypeAndLevel(firstSupported.value, pickSprintLevel(firstSupported.value, { hasLevel, availableLevels }));
       }
     } else if (hasLevel && !isSprintLevelAvailable(availableLevels, questionType, Number(level))) {
-      setLevel(String(pickSprintLevel(questionType, { hasLevel, availableLevels, preferred: Number(level) })));
+      selectTypeAndLevel(
+        questionType,
+        pickSprintLevel(questionType, { hasLevel, availableLevels, preferred: Number(level) }),
+      );
     }
   });
   useEffect(() => {
@@ -126,9 +138,7 @@ export function LessonSprintSetup({
   }, [questionType, hasLevel, availableLevels]);
 
   const handleTypeChange = (typeId: SprintQuestionType) => {
-    setQuestionType(typeId);
-    setLevel(String(pickSprintLevel(typeId, { hasLevel, availableLevels })));
-    setTimeLimitSec(QUESTION_TYPES[typeId].recommendedTimeSec);
+    selectTypeAndLevel(typeId, pickSprintLevel(typeId, { hasLevel, availableLevels }));
   };
 
   const handleStart = async (answerType: SprintAnswerType = '0') => {
@@ -232,7 +242,12 @@ export function LessonSprintSetup({
 
                 <Card className="rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold text-slate-800">Question Type</CardTitle>
+                    <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                      Question Type
+                      <HelpTip label={HELP.questionType.label} align="start">
+                        {HELP.questionType.text}
+                      </HelpTip>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-2">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -277,7 +292,7 @@ export function LessonSprintSetup({
                           <button
                             key={item.value}
                             type="button"
-                            onClick={() => setLevel(item.value)}
+                            onClick={() => selectTypeAndLevel(questionType, Number(item.value))}
                             className={cn(
                               'h-10 rounded-xl border text-xs font-black transition-all',
                               level === item.value
@@ -299,12 +314,17 @@ export function LessonSprintSetup({
 
                 <Card className="rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-bold text-slate-800">Time Limit</CardTitle>
+                    <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                      Time Limit
+                      <HelpTip label={HELP.timeLimit.label} align="start">
+                        {HELP.timeLimit.text}
+                      </HelpTip>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-2">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {sortedTimes.map((opt) => {
-                        const isRecommended = opt.value === QUESTION_TYPES[questionType].recommendedTimeSec;
+                        const isRecommended = opt.value === getRecommendedSprintTimeSec(questionType, Number(level));
                         return (
                           <button
                             key={opt.seq_no}

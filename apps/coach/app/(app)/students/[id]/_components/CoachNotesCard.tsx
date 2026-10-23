@@ -3,12 +3,14 @@
 import { StickyNote } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { HelpTip } from '@gabby/lib/components/common/HelpTip';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import type { CoachStudentNote } from '@gabby/types/coachStudent';
 import { addCoachStudentNote } from '@/actions/studentAction';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { HELP } from '@/constants/help';
 import { CoachNoteEntry } from './CoachNoteEntry';
 
 const COACH_NOTES_CARD_LIMIT = 5;
@@ -52,6 +54,9 @@ export function CoachNotesCard({ studentId, initialNotes }: CoachNotesCardProps)
           <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
             <StickyNote size={14} className="text-slate-400" />
             Coach Notes
+            <HelpTip label={HELP.coachNotes.label} align="start">
+              {HELP.coachNotes.text}
+            </HelpTip>
           </CardTitle>
           <p className="text-[11px] text-slate-400">Private notes only visible to you. Newest first.</p>
         </div>

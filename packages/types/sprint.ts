@@ -60,7 +60,11 @@ export interface QuestionTypeMetadata {
   hasBasic: boolean; // レベル0(Basic)が存在するかどうか
   minLevel: number; // 最小レベル (0 または 1)
   maxLevel: number; // 上限レベル (5 または 10)
-  recommendedTimeSec: number; // 種別に応じた推奨スプリント制限時間（秒）
+  /**
+   * 推奨の制限時間（秒）。レベルが上がるほど長くする現行システムの目安に合わせ、Lv.5 までと Lv.6 からで分ける
+   * （Lv.0 の Basic は Lv.5 までに含める）。レベルに応じた値は `getRecommendedSprintTimeSec` で求める
+   */
+  recommendedTimeSec: { upToLv5: number; fromLv6: number };
 }
 
 /**
@@ -75,7 +79,7 @@ export const QUESTION_TYPES: Record<SprintQuestionType, QuestionTypeMetadata> = 
     hasBasic: true,
     minLevel: 0,
     maxLevel: 10,
-    recommendedTimeSec: 60,
+    recommendedTimeSec: { upToLv5: 60, fromLv6: 90 },
   },
   '5': {
     label: 'UG Builders',
@@ -85,7 +89,7 @@ export const QUESTION_TYPES: Record<SprintQuestionType, QuestionTypeMetadata> = 
     hasBasic: false,
     minLevel: 1,
     maxLevel: 5,
-    recommendedTimeSec: 90,
+    recommendedTimeSec: { upToLv5: 90, fromLv6: 90 },
   },
   '4': {
     label: 'UG Structure',
@@ -95,7 +99,7 @@ export const QUESTION_TYPES: Record<SprintQuestionType, QuestionTypeMetadata> = 
     hasBasic: true,
     minLevel: 0,
     maxLevel: 10,
-    recommendedTimeSec: 120,
+    recommendedTimeSec: { upToLv5: 90, fromLv6: 120 },
   },
   '6': {
     label: 'UG Mastery',
@@ -105,7 +109,7 @@ export const QUESTION_TYPES: Record<SprintQuestionType, QuestionTypeMetadata> = 
     hasBasic: false,
     minLevel: 1,
     maxLevel: 10,
-    recommendedTimeSec: 120,
+    recommendedTimeSec: { upToLv5: 90, fromLv6: 120 },
   },
 } as const;
 

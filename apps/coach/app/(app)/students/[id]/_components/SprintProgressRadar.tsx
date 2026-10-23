@@ -13,9 +13,11 @@ import {
   type BaseTickContentProps,
 } from 'recharts';
 import { formatAcquiredSprintLevelLabel, isSprintLevelNotReached } from '@gabby/lib';
+import { HelpTip } from '@gabby/lib/components/common/HelpTip';
 import type { StudentSprintProgress } from '@gabby/types/coachStudent';
 import { QUESTION_TYPES } from '@gabby/types/sprint';
 import { Button } from '@/components/ui/button';
+import { HELP } from '@/constants/help';
 import {
   SPRINT_LEVEL_NOT_REACHED,
   SPRINT_LEVEL_NOT_REACHED_HINT,
@@ -82,7 +84,12 @@ export function SprintProgressRadar({ studentId, progress: initialProgress }: Sp
     <div className="w-full">
       <div className="flex items-start gap-4">
         <div className="shrink-0 h-56 flex flex-col">
-          <span className="self-start text-[11px] font-bold text-slate-400 tracking-wide">Sprint Progress</span>
+          <span className="self-start inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 tracking-wide">
+            Sprint Progress
+            <HelpTip label={HELP.sprintProgress.label} align="start">
+              {HELP.sprintProgress.text}
+            </HelpTip>
+          </span>
           <div className="flex-1 flex flex-col justify-center space-y-1.5">
             <span className="inline-flex self-center text-[11px] font-black text-brand bg-brand-50 border border-brand-100 rounded-full px-2.5 py-0.5">
               Stage {progress.stage}

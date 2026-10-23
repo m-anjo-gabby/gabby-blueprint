@@ -24,11 +24,13 @@ import {
   SPRINT_THEMES_EN,
   tokenizeWordsWithPunctuation,
 } from '@gabby/lib';
+import { HelpTip } from '@gabby/lib/components/common/HelpTip';
 import { useExitConfirmFlow } from '@gabby/lib/hooks/useExitConfirmFlow';
 import { useToast } from '@gabby/lib/hooks/useToast';
 import { DEFAULT_LESSON_SPRINT_SCORE, type LessonSprintHistoryItem } from '@gabby/types/lessonSprint';
 import { createLessonSprintResult } from '@/actions/lessonSprintAction';
 import { Textarea } from '@/components/ui/textarea';
+import { HELP } from '@/constants/help';
 import { cn } from '@/lib/utils';
 import { useLessonSprintStore } from '@/stores/useLessonSprintStore';
 import { useAutoRedirectCountdown, useLessonSprintCountdown } from '../_hooks/useLessonSprintTimers';
@@ -349,8 +351,11 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
                 </div>
 
                 <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-4">
-                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider mb-2 text-center">
+                  <p className="flex items-center justify-center gap-1 text-[10px] font-black text-emerald-600 uppercase tracking-wider mb-2 text-center">
                     Answer{isSpeedMode ? (config.answerType === '1' ? ' (NO)' : ' (YES)') : ''} — tap words to mark
+                    <HelpTip label={HELP.answerHighlight.label} className="text-emerald-500 hover:text-emerald-700">
+                      {HELP.answerHighlight.text}
+                    </HelpTip>
                   </p>
                   {currentQuestion && (
                     <WordHighlightAnswer
@@ -365,6 +370,12 @@ export function LessonSprintPlayer({ studentId, sessionId, onExit, onComplete }:
 
             {/* フッター: 評価 */}
             <div className="shrink-0 px-6 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-slate-100/60 bg-white">
+              <div className="flex items-center justify-center gap-1 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                Score
+                <HelpTip label={HELP.score.label} side="top">
+                  {HELP.score.text}
+                </HelpTip>
+              </div>
               <ScoreButtons onScore={handleScore} disabled={isSaving} />
             </div>
           </>
